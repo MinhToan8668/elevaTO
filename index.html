@@ -455,7 +455,7 @@ footer p{font-size:12px;color:var(--muted2)}
       <p>Những gì mình dạy là những gì mình thực sự dùng. Không phải vì nghe hay — mà vì đó là thứ duy nhất mình biết đủ rõ để giải thích tại sao.</p>
       <p><strong>Tài liệu mỗi buổi được soạn chi tiết</strong> — bạn không cần vừa nghe vừa chép. Sau khóa vẫn mở ra ôn lại được bất cứ lúc nào.</p>
       <div class="inst-cta-box">
-        <p>Cohort 05 sắp mở. <strong>Còn 4 suất Early Bird</strong> ở mức giá 3M.</p>
+        <p id="inst-cta-text">Cohort 05 sắp mở. <strong>Còn 4 suất Early Bird</strong> ở mức giá 3M.</p>
         <button class="btn-primary" style="width:fit-content;padding:13px 30px;font-size:14px;" onclick="openForm()">Giữ chỗ của tôi →</button>
       </div>
     </div>
@@ -745,6 +745,15 @@ function updateCounter(total){
     : '🎉 Đã đủ '+CONFIG.maxSlots+' người — '+CONFIG.cohort+' sắp mở!';
   const ct=document.getElementById('counter-text');if(ct)ct.textContent=txt;
   const hc=document.getElementById('hero-counter');if(hc)hc.textContent=n+' người';
+  // Cập nhật box instructor
+  const ic=document.getElementById('inst-cta-text');
+  if(ic){
+    if(rem>0){
+      ic.innerHTML=CONFIG.cohort+' sắp mở. <strong>Còn '+rem+' suất Early Bird</strong> ở mức giá '+CONFIG.earlyBirdPrice+'.';
+    } else {
+      ic.innerHTML='<strong>'+CONFIG.cohort+' đã đủ người!</strong> Đăng ký để vào danh sách chờ '+CONFIG.nextCohort+'.';
+    }
+  }
 }
 
 function toggleFaq(el){
