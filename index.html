@@ -275,7 +275,7 @@ footer p{font-size:12px;color:var(--muted2)}
       <b id="hero-counter">6 người</b>&nbsp;đang trong waitlist
     </div>
   </div>
-  <p class="hero-note">Chỉ mất 60 giây · 5 trường thông tin · Cohort mở khi đủ <b>10 người</b></p>
+  <p class="hero-note">Chỉ mất 60 giây · 5 trường thông tin · Cohort mở khi đủ <b>10 người</b> · Lịch học: <b style="color:var(--emerald)">T7 & CN · 9h–11h sáng</b></p>
 </div>
 </div>
 
@@ -352,7 +352,7 @@ footer p{font-size:12px;color:var(--muted2)}
     </div>
     <div class="module" style="grid-column:1/-1">
       <span class="module-num mn-t">05</span>
-      <div><h4>Sensitivity, Scenario & Football Field Chart</h4><p>Data table 2 chiều, scenario analysis, và cách trình bày kết quả định giá như một investment memo thật.</p></div>
+      <div><h4>Sensitivity & Scenario Analysis</h4><p>Data table 2 chiều, scenario analysis — hiểu model nhạy với biến nào nhất và cách trình bày kết quả định giá rõ ràng, thuyết phục.</p></div>
     </div>
   </div>
 
@@ -597,7 +597,7 @@ footer p{font-size:12px;color:var(--muted2)}
     <div id="success-view">
       <div class="success-icon">✅</div>
       <div class="success-title">Đã nhận đăng ký!</div>
-      <p class="success-body">Mình sẽ liên hệ lại qua SĐT trong vòng <strong style="color:var(--white)">24 giờ</strong>.<br>Sau khi được duyệt sẽ có thông tin thanh toán và lịch học.</p>
+      <p class="success-body">Mình sẽ liên hệ lại qua SĐT trong vòng <strong style="color:var(--white)">24 giờ</strong>.</p>
       <div class="status-badge">⏳ Đang chờ xác nhận</div>
     </div>
   </div>
@@ -623,18 +623,18 @@ footer p{font-size:12px;color:var(--muted2)}
 <script>
 // ── CONFIG (chỉnh tại đây) ──────────────────────────────────
 const CONFIG = {
-  cohort: 'Cohort 05',              // tên cohort hiện tại
-  storageKey: 'elevato_c5',         // đổi khi sang cohort mới (c6, c7...)
-  baseCount: 6,                     // số người đã đăng ký ngoài hệ thống
-  maxSlots: 10,                     // tổng số chỗ mỗi cohort
+  cohort: 'Cohort 05',              // ← đổi tên cohort mới tại đây
+  nextCohort: 'Cohort 06',          // ← tên cohort tiếp theo (tự động thông báo khi đủ người)
+  storageKey: 'elevato_c5',         // ← đổi key khi sang cohort mới (c6, c7...)
+  baseCount: 6,                     // ← số người đã đăng ký ngoài hệ thống
+  maxSlots: 10,                     // ← tổng số chỗ mỗi cohort
   earlyBirdPrice: '3M',
   regularPrice: '4M',
   schedule: 'Thứ 7 & CN · 9h–11h sáng',
-  // Google Sheets Webhook (dán URL Apps Script Web App vào đây)
+  scheduleDetail: 'Thứ 7 & Chủ Nhật, 9h00 - 11h00 (GMT+7, Việt Nam)', // ← chỉnh giờ tại đây nếu cần
   sheetsWebhookUrl: 'https://script.google.com/macros/s/AKfycbyi7g6uGcK1vXf1O86BUPh_4vkpNy0TIW2xRHSFIiJad4gM21iZi4hJEJUm3m4YOrNDlw/exec',
-  // Telegram Bot
-  telegramBotToken: '8692249468:AAGghjo8J-WymnsSZNvnFWED5ECUxDnJCVs',             // dạng: 123456789:ABCdefGHI...
-  telegramChatId: '5116087301',               // dạng: -100123456789 (group) hoặc 123456789 (cá nhân)
+  telegramBotToken: '8692249468:AAGghjo8J-WymnsSZNvnFWED5ECUxDnJCVs',
+  telegramChatId: '5116087301',
 };
 // ────────────────────────────────────────────────────────────
 
@@ -686,6 +686,11 @@ function submitReg(){
   }
   // Telegram
   if(CONFIG.telegramBotToken && CONFIG.telegramChatId){
+    var allRegs=getRegs();
+    var approvedCount=allRegs.filter(function(r){return r.status==='approved';}).length;
+    var totalCount=CONFIG.baseCount+allRegs.length;
+    var remaining=Math.max(0,CONFIG.maxSlots-totalCount);
+
     var lines=[
       '\u{1F514} *\u0110\u0103ng k\u00FD m\u1EDBi \u2014 '+CONFIG.cohort+'*',
       '',
@@ -697,13 +702,35 @@ function submitReg(){
     if(entry.email) lines.push('\u2709\uFE0F '+entry.email);
     lines.push('\u{1F3AF} _"'+entry.goal+'"_');
     lines.push('');
+    lines.push('\u{1F4C5} *L\u1ECBch h\u1ECDc:* '+CONFIG.scheduleDetail);
     lines.push('\u{1F550} '+entry.submittedAt);
+    lines.push('');
+    lines.push('\u{1F4CA} *T\u1ED5ng:* '+totalCount+'/'+CONFIG.maxSlots+' ch\u1ED7  |  *\u0110\u00E3 duy\u1EC7t:* '+approvedCount+'  |  *C\u00F2n:* '+remaining+' su\u1EA5t');
     var msg=lines.join('\n');
-    fetch('https://api.telegram.org/bot'+CONFIG.telegramBotToken+'/sendMessage',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:CONFIG.telegramChatId,text:msg,parse_mode:'Markdown'})
-    }).catch(function(){});
+
+    function sendTele(m){
+      fetch('https://api.telegram.org/bot'+CONFIG.telegramBotToken+'/sendMessage',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({chat_id:CONFIG.telegramChatId,text:m,parse_mode:'Markdown'})
+      }).catch(function(){});
+    }
+    sendTele(msg);
+
+    // Khi đủ maxSlots người đăng ký → thông báo chuyển cohort
+    if(totalCount >= CONFIG.maxSlots){
+      var alertMsg=[
+        '\u{1F389} *'+CONFIG.cohort+' \u0110\u00C3 \u0110\u1EE6 '+CONFIG.maxSlots+' NG\u01AF\u1EDEI!*',
+        '',
+        'H\u00E3y c\u1EADp nh\u1EADt web sang *'+CONFIG.nextCohort+'*:',
+        '1. M\u1EDF file HTML',
+        '2. \u0110\u1ED5i CONFIG.cohort th\u00E0nh \u201C'+CONFIG.nextCohort+'\u201D',
+        '3. \u0110\u1ED5i CONFIG.storageKey th\u00E0nh elevato_c6',
+        '4. \u0110\u1ED5i CONFIG.baseCount v\u1EC1 0',
+        '5. Deploy l\u1EA1i l\u00EAn Netlify/GitHub'
+      ].join('\n');
+      setTimeout(function(){sendTele(alertMsg);}, 1500);
+    }
   }
 }
 
