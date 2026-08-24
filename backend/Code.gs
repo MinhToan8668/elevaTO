@@ -91,6 +91,22 @@ function defaultConfig() {
     announcement: {
       show: false,           // /thongbao <nội dung>  /xoathongbao
       text: ''
+    },
+
+    media: {
+      videoUrl: '',          // /video <link youtube hoặc google drive>
+      videoTitle: 'Học thử một buổi — trích Module 1',
+      showSlides: true,      // /slide on|off
+      showModel: true        // /model on|off
+    },
+
+    company: {
+      ticker: 'DGW',
+      name: 'Digiworld Corporation (CTCP Thế Giới Số)',
+      exchange: 'HOSE',
+      sheets: 21,
+      checks: 5,
+      industries: 17
     }
   };
 }
@@ -447,6 +463,11 @@ function handleTelegram(u) {
 
     case 'cohortmoi': return cmdNewCohort(chatId);
 
+    case 'video':     return cmdVideo(chatId, args);
+    case 'xoavideo':  return cmdVideo(chatId, '');
+    case 'slide':     return cmdToggle(chatId, args, 'media.showSlides', 'Mục slide bài giảng');
+    case 'model':     return cmdToggle(chatId, args, 'media.showModel', 'Mục model bàn giao');
+
     case 'ds':
     case 'dsdangky':  return cmdList(chatId, args);
     case 'duyet':     return cmdApprove(chatId, args, 'approved');
@@ -545,6 +566,12 @@ function cmdMenu(chatId) {
     '/day — đã đủ chỗ (chuyển sang waitlist)',
     '/dong — đóng đăng ký',
     '',
+    '*🎬 Nội dung trên web*',
+    '/video `<link YouTube hoặc Drive>` — bật video học thử',
+    '/xoavideo — ẩn video',
+    '/slide `on` hoặc `off` — mục slide bài giảng',
+    '/model `on` hoặc `off` — mục model bàn giao',
+    '',
     '*📢 Thông báo trên web*',
     '/thongbao `Khai giảng 15/09` — hiện banner đầu trang',
     '/xoathongbao — tắt banner',
@@ -588,6 +615,10 @@ function cmdStatus(chatId) {
     '📚 ' + c.schedule.sessions + ' buổi (' + c.schedule.theory + ' lý thuyết + ' +
       c.schedule.practice + ' thực hành)',
     '🎓 Đã hoàn thành: ' + c.stats.cohortsDone + ' cohort',
+    '',
+    '🎬 Video học thử: ' + (c.media.videoUrl ? '✅ đang bật' : '— chưa có'),
+    '🖼 Slide: ' + (c.media.showSlides ? 'hiện' : 'ẩn') +
+      '  ·  Model: ' + (c.media.showModel ? 'hiện' : 'ẩn'),
     c.announcement.show ? '\n📢 Banner: _' + c.announcement.text + '_' : '',
     '',
     '_Cập nhật lúc ' + (c.updatedAt || '—') + '_'
@@ -716,6 +747,37 @@ function cmdApprove(chatId, args, status) {
   setRegStatus(reg, status);
   tgSend(chatId, (status === 'approved' ? '✅ Đã duyệt ' : '❌ Đã từ chối ') +
                  '*' + reg.name + '* · `' + reg.phone + '`');
+}
+
+function cmdVideo(chatId, url) {
+  url = String(url || '').trim();
+  if (url && !/^https?:\/\//i.test(url)) {
+    return tgSend(chatId, 'Link phải bắt đầu bằng http:// hoặc https://\n\n' +
+      'Ví dụ:\n`/video https://youtu.be/abc123xyz90`\n' +
+      '`/video https://drive.google.com/file/d/XXXX/view`');
+  }
+  var cfg = getConfig();
+  cfg.media.videoUrl = url;
+  saveConfig(cfg);
+  if (!url) return tgSend(chatId, '✅ Đã ẩn mục video học thử trên web.');
+  var kind = url.indexOf('youtu') > -1 ? 'YouTube'
+           : url.indexOf('drive.google') > -1 ? 'Google Drive' : 'link nhúng';
+  tgSend(chatId, '🎬 Đã bật video học thử (' + kind + ').\n\n' +
+    'Web sẽ hiện mục *Học thử* trong ~1 phút.\n\n' +
+    '_Lưu ý: video trên Google Drive phải để quyền "Bất kỳ ai có đường liên kết" thì người xem mới thấy._');
+}
+
+function cmdToggle(chatId, args, path, label) {
+  var a = String(args || '').trim().toLowerCase();
+  var on;
+  if (['on', 'bat', 'bật', '1', 'hien', 'hiện'].indexOf(a) > -1) on = true;
+  else if (['off', 'tat', 'tắt', '0', 'an', 'ẩn'].indexOf(a) > -1) on = false;
+  else return tgSend(chatId, 'Cú pháp: `/' + path.split('.')[1].replace('show','').toLowerCase() +
+                             ' on` hoặc `off`');
+  var cfg = getConfig();
+  setPath(cfg, path, on);
+  saveConfig(cfg);
+  tgSend(chatId, (on ? '👁 Đã hiện ' : '🙈 Đã ẩn ') + label + ' trên web.');
 }
 
 function cmdSheet(chatId) {

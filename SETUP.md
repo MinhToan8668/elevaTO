@@ -113,6 +113,10 @@ Gõ `/menu` bất cứ lúc nào để xem lại.
 | `/mo` `/day` `/dong` | Mở đăng ký · Đánh dấu đủ chỗ · Đóng đăng ký |
 | `/thongbao Khai giảng 15/09` | Hiện banner xanh đầu trang web |
 | `/xoathongbao` | Tắt banner |
+| `/video <link>` | Bật mục **Học thử** — nhận link YouTube hoặc Google Drive |
+| `/xoavideo` | Ẩn mục học thử |
+| `/slide on` · `/slide off` | Hiện/ẩn mục slide bài giảng |
+| `/model on` · `/model off` | Hiện/ẩn mục model bàn giao |
 | `/ds` | Danh sách đăng ký (`/ds cho` = lọc chờ duyệt) |
 | `/duyet 0901234567` | Duyệt theo SĐT hoặc mã đăng ký |
 | `/tuchoi 0901234567` | Từ chối |
@@ -138,6 +142,16 @@ duyệt vẫn làm trên Telegram.
 
 **Chống trùng:** cùng một số điện thoại đăng ký lại trong cùng cohort sẽ được
 báo "đã có trong danh sách", không ghi thêm dòng vào Sheet.
+
+**Video học thử.** Gõ `/video <link>` là xong — trang tự nhận diện YouTube hay Google Drive
+và nhúng đúng kiểu. Link YouTube nhận cả 3 dạng (`youtu.be/...`, `watch?v=...`, `/embed/...`).
+Với Google Drive, video phải để quyền **"Bất kỳ ai có đường liên kết"** thì người xem mới thấy.
+Chưa đặt link thì mục này tự ẩn, không để lại khoảng trống trên trang.
+
+**Ảnh slide và ảnh model** nằm trong `assets/slides/` và `assets/model/`. Mỗi ảnh có 2 bản:
+`<tên>.webp` (bản lớn, mở khi bấm vào) và `<tên>-thumb.webp` (bản nhỏ trong lưới). Muốn thay
+hoặc thêm ảnh: bỏ file vào đúng thư mục rồi sửa mảng `SLIDES` / `MODELSHOTS` trong `index.html`.
+Ảnh hiện tại được trích từ bộ slide Module 1 và từ file model DGW.
 
 **Đổi nội dung không do bot quản lý** (tên bài học, câu hỏi FAQ, phần "Vấn đề thật"):
 sửa mảng `MODULES` và `FAQS` trong `index.html`. Đây là nội dung giáo trình,
