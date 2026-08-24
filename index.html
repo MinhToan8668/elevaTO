@@ -234,39 +234,60 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 .feat h4{font-size:14.5px;font-weight:700;margin-bottom:8px}
 .feat p{font-size:13.5px;color:var(--muted);line-height:1.6}
 
-/* ═══════════════ SLIDE GALLERY ═══════════════ */
-.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
-.gal-item{position:relative;border:1px solid var(--border2);border-radius:var(--r-sm);
-  overflow:hidden;background:var(--card);cursor:zoom-in;width:100%;padding:0;
-  display:flex;flex-direction:column;align-items:stretch;text-align:left;
-  transition:border-color .25s,transform .25s var(--ease)}
-.gal-item:hover{border-color:var(--emerald);transform:translateY(-3px)}
-.gal-item img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;
-  object-position:top center;display:block;background:#f4f4f2}
-.gal-item.tall img{aspect-ratio:auto;object-fit:contain}
-.gal-cap{padding:12px 14px;font-size:12.5px;color:var(--muted);line-height:1.45;text-align:left;
-  border-top:1px solid var(--border);background:var(--card);margin-top:auto}
-.gal-item:hover .gal-cap{color:var(--text)}
-.gal-zoom{position:absolute;top:9px;right:9px;width:28px;height:28px;border-radius:8px;
-  background:rgba(8,8,8,.72);backdrop-filter:blur(6px);color:var(--white);font-size:13px;
+/* ═══════════════ SLIDE WALKTHROUGH ═══════════════ */
+.m1-intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,340px);
+  gap:clamp(24px,4vw,52px);align-items:center;margin-bottom:clamp(34px,5vw,52px)}
+.m1-map{border:1px solid var(--border2);border-radius:var(--r-sm);overflow:hidden;
+  background:#f4f4f2;cursor:zoom-in;display:block;width:100%;padding:0;position:relative}
+.m1-map img{width:100%;height:auto;display:block}
+.m1-map:hover{border-color:var(--emerald)}
+
+.part{border-top:1px solid var(--border);padding-top:clamp(26px,3.6vw,40px);
+  margin-top:clamp(26px,3.6vw,40px)}
+.part:first-child{border-top:none;margin-top:0;padding-top:0}
+.part-hd{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;
+  align-items:start;margin-bottom:22px}
+.part-badge{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-family:'Syne',sans-serif;font-size:19px;font-weight:800;
+  color:var(--emerald);background:var(--emerald-soft);border:1px solid rgba(0,200,150,.22)}
+.part-en{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);
+  font-weight:500;margin-bottom:5px}
+.part-hd h3{font-family:'Syne',sans-serif;font-size:clamp(19px,2.4vw,24px);font-weight:700;
+  letter-spacing:-.02em;margin-bottom:10px;line-height:1.2}
+.part-take{font-size:14.5px;color:var(--text);line-height:1.7;max-width:68ch;opacity:.92}
+
+.pslides{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px}
+.pcard{display:flex;flex-direction:column;text-align:left;width:100%;padding:0;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);
+  overflow:hidden;cursor:zoom-in;transition:border-color .25s,transform .25s var(--ease)}
+.pcard:hover{border-color:var(--emerald);transform:translateY(-3px)}
+.pcard-img{position:relative;background:#f4f4f2}
+.pcard-img img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;
+  object-position:top center;display:block}
+.pcard-zoom{position:absolute;top:8px;right:8px;width:27px;height:27px;border-radius:8px;
+  background:rgba(8,8,8,.7);backdrop-filter:blur(6px);color:#fff;font-size:12px;
   display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .22s}
-.gal-item:hover .gal-zoom{opacity:1}
+.pcard:hover .pcard-zoom{opacity:1}
+.pcard-txt{padding:14px 16px 16px;font-size:13px;color:var(--text);line-height:1.6;
+  border-top:1px solid var(--border);opacity:.88}
+.swipe-hint{display:none;font-size:11.5px;color:var(--muted2);margin-top:10px;
+  align-items:center;gap:6px}
 
 /* lightbox */
-#lb{display:none;position:fixed;inset:0;z-index:260;background:rgba(4,4,4,.94);
-  backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:22px}
+#lb{display:none;position:fixed;inset:0;z-index:260;background:rgba(4,4,4,.95);
+  backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px}
 #lb.on{display:flex}
 .lb-fig{max-width:1180px;width:100%;display:flex;flex-direction:column;gap:14px}
 .lb-fig img{width:100%;border-radius:var(--r-sm);border:1px solid var(--border2);background:#fff}
 .lb-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.lb-cap{font-size:13.5px;color:var(--text)}
+.lb-cap{font-size:13.5px;color:var(--text);line-height:1.6;flex:1;min-width:220px}
 .lb-cap b{display:block;font-family:'Syne',sans-serif;font-size:11px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--muted2);margin-bottom:3px;font-weight:600}
+  text-transform:uppercase;color:var(--muted2);margin-bottom:4px;font-weight:600}
 .lb-nav{display:flex;gap:8px;align-items:center}
-.lb-btn{width:38px;height:38px;border-radius:9px;border:1px solid var(--border2);color:var(--text);
-  font-size:16px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.lb-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--border2);color:var(--text);
+  font-size:17px;display:flex;align-items:center;justify-content:center;transition:.2s}
 .lb-btn:hover{border-color:var(--emerald);color:var(--emerald);background:var(--emerald-soft)}
-.lb-count{font-size:12.5px;color:var(--muted2);font-variant-numeric:tabular-nums;min-width:52px;text-align:center}
+.lb-count{font-size:12.5px;color:var(--muted2);font-variant-numeric:tabular-nums;min-width:54px;text-align:center}
 
 /* ═══════════════ MODEL SHOWCASE ═══════════════ */
 .model-sec{background:#0b0b0b;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
@@ -294,15 +315,39 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 /* ═══════════════ VIDEO ═══════════════ */
 .vid-wrap{max-width:900px;margin:0 auto}
 .vid-frame{position:relative;aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;
-  border:1px solid var(--border2);background:#000}
-.vid-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  border:1px solid var(--border2);background:linear-gradient(160deg,#141414,#0b0b0b)}
+.vid-frame::before{content:'Đang tải video…';position:absolute;inset:0;display:flex;
+  align-items:center;justify-content:center;color:var(--muted2);font-size:13px;letter-spacing:.02em}
+.vid-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:1}
 .vid-meta{display:flex;align-items:center;justify-content:space-between;gap:16px;
   margin-top:16px;flex-wrap:wrap}
 .vid-meta p{font-size:13px;color:var(--muted)}
 
 @media(max-width:900px){
   .model-top{grid-template-columns:1fr}
-  .lb-fig{gap:10px}
+  .m1-intro{grid-template-columns:1fr;gap:24px}
+}
+
+/* ── ĐIỆN THOẠI: slide chuyển thành dải vuốt ngang ── */
+@media(max-width:720px){
+  .pslides{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+    margin-inline:calc(var(--pad) * -1);padding-inline:var(--pad);padding-bottom:4px}
+  .pslides::-webkit-scrollbar{display:none}
+  .pcard{flex:0 0 82%;scroll-snap-align:center}
+  .swipe-hint{display:flex}
+  .part-hd{grid-template-columns:auto 1fr;gap:14px}
+  .part-badge{width:38px;height:38px;font-size:16px;border-radius:10px}
+  .part-take{font-size:14px}
+  .pcard-txt{font-size:13px;padding:13px 15px 15px}
+
+  /* lightbox gọn cho màn nhỏ */
+  #lb{padding:12px;align-items:flex-start}
+  .lb-fig{gap:10px;margin-top:auto;margin-bottom:auto}
+  .lb-bar{flex-direction:column-reverse;align-items:stretch;gap:12px}
+  .lb-nav{justify-content:center}
+  .lb-cap{font-size:13px;text-align:center;min-width:0}
+  .lb-btn{width:48px;height:48px}
 }
 
 /* ═══════════════ PERKS ═══════════════ */
@@ -494,7 +539,7 @@ footer a:hover{color:var(--emerald)}
   .pain-grid,.feats,.perks{grid-template-columns:1fr}
   .price-grid{grid-template-columns:1fr;max-width:440px}
   #sticky{display:block}
-  body{padding-bottom:0}
+  body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
   .foot-in{flex-direction:column;text-align:center}
   .mod{grid-template-columns:1fr;gap:12px;padding:22px 20px}
   .mod-side{flex-direction:row;align-items:baseline;gap:10px}
@@ -662,10 +707,22 @@ footer a:hover{color:var(--emerald)}
 <section class="sec" id="slides" data-show="media.showSlides"><div class="shell">
   <div class="sec-head rv">
     <div class="eyebrow">Tài liệu giảng dạy</div>
-    <h2 class="h2">Slide thật của khóa.<br>Không phải <em>ảnh minh hoạ.</em></h2>
-    <p class="lead">Đây là bộ slide Module 1 — bạn xem trước để biết chính xác mình sẽ học bằng tài liệu như thế nào. Bấm vào bất kỳ slide nào để xem cỡ lớn.</p>
+    <h2 class="h2">Toàn bộ mạch Module 1.<br>Đọc lướt <em>hai phút.</em></h2>
+    <p class="lead">Đây là slide thật của buổi đầu tiên, xếp đúng thứ tự đã dạy. Đọc phần chữ là nắm được mạch bài; bấm vào slide nếu muốn xem chi tiết.</p>
   </div>
-  <div class="gal" id="slideGal"></div>
+
+  <div class="m1-intro">
+    <div class="rv">
+      <div class="part-en">Module 1 of 8</div>
+      <h3 style="font-family:'Syne',sans-serif;font-size:clamp(20px,2.6vw,27px);font-weight:700;letter-spacing:-.02em;line-height:1.22;margin-bottom:12px">Overview of Valuation<br>and the DCF Model</h3>
+      <p class="part-take">Buổi mở màn trả lời câu hỏi gốc: vì sao một doanh nghiệp đáng giá bằng ngần đó tiền. Từ đó đi hết chuỗi NOPAT → dòng tiền tự do → giá trị doanh nghiệp → giá mỗi cổ phiếu, rồi khép lại bằng hai bảng tra dự phóng dùng suốt bảy module còn lại.</p>
+    </div>
+    <button class="m1-map rv" data-lb="slide" data-i="0" aria-label="Xem Course Map cỡ lớn">
+      <img src="assets/slides/course-map-thumb.webp" alt="Course Map — 8 module của khóa" loading="lazy" width="680" height="383">
+    </button>
+  </div>
+
+  <div id="parts"></div>
 </div></section>
 
 <!-- ════════ HỌC THỬ QUA VIDEO ════════ -->
@@ -966,7 +1023,8 @@ var FALLBACK = {
   schedule:{days:'Thứ 7 & CN',time:'9h–11h sáng',
             detail:'Thứ 7 & Chủ Nhật, 9h00 – 11h00 (GMT+7, Việt Nam)',
             platform:'MS Teams',sessions:8,theory:5,practice:3,modules:8,hoursPerSession:2},
-  media:{videoUrl:'',videoTitle:'Học thử một buổi — trích Module 1',
+  media:{videoUrl:'https://drive.google.com/file/d/1NW1h_XqO_85XHf_Gl3YDNL5pnr0FNwE7/view?usp=drivesdk',
+         videoTitle:'Buổi học thử — Module 1: Tổng quan định giá & mô hình DCF',
          showSlides:true,showModel:true},
   company:{ticker:'DGW',name:'Digiworld Corporation (CTCP Thế Giới Số)',
            exchange:'HOSE',sheets:21,checks:5,industries:17},
@@ -1083,21 +1141,49 @@ var FAQS = [
    a:'Có. Học viên vào group chat sau khóa để hỏi đáp, chia sẻ model, nhận tư vấn thoải mái. Tài liệu và recording giữ lại vĩnh viễn.'}
 ];
 
-/* Ảnh slide thật — trích từ bộ Module 1 */
-var SLIDES=[
-  ['course-map',   'Course Map — 8 module của khóa'],
-  ['five-inputs',  'Năm input của một mô hình DCF'],
-  ['nopat',        'NOPAT — lợi nhuận hoạt động sau thuế'],
-  ['working-cap',  'Vốn lưu động và tác động lên dòng tiền'],
-  ['ufcf',         'Dựng Unlevered Free Cash Flow từng bước'],
-  ['discounting',  'Chiết khấu dòng tiền từng năm về hiện tại'],
-  ['wacc',         'WACC — chi phí vốn bình quân gia quyền'],
-  ['ev-bridge',    'Cầu nối Enterprise Value → Equity Value'],
-  ['forecast-pl',  'Bảng tra: dự phóng từng khoản mục P&L'],
-  ['practice-q',   'Bài tập cuối module'],
-  ['practice-a',   'Lời giải và lỗi thường gặp'],
-  ['recap',        'Recap — các ý chính của Module 1']
+/* Module 1 — mạch bài giảng thật, mỗi slide kèm một ý chốt đọc được */
+var MODULE1=[
+ {p:'A', en:'Overview of company valuation', vi:'Tổng quan định giá doanh nghiệp',
+  take:'Bắt đầu từ câu hỏi của nhà đầu tư, không phải từ bảng tính. Cổ tức và giá bán lại đều truy về cùng một nguồn — dòng tiền tương lai. Nên giá trị doanh nghiệp cũng là hàm của dòng tiền đó.',
+  s:[['value-function','Giá trị là hàm của dòng tiền tương lai — nên việc tiếp theo là tìm xem cái gì tạo ra dòng tiền đó.'],
+     ['growth-profit','Hai đường tới dòng tiền cao hơn: làm doanh nghiệp to ra, hoặc chuyển được nhiều tiền hơn trên mỗi đồng doanh thu.'],
+     ['why-value','Định giá phục vụ bốn việc: định giá giao dịch, ra quyết định đầu tư, đặt KPI sau thương vụ, và học đọc báo cáo cho tử tế.']]},
+
+ {p:'B', en:'What you need for a DCF model', vi:'Những gì một mô hình DCF cần',
+  take:'Năm input, một chuỗi. NOPAT thành dòng tiền tự do, dòng tiền tự do thành giá trị doanh nghiệp, giá trị doanh nghiệp thành giá mỗi cổ phiếu. Mọi thứ còn lại đều được suy ra.',
+  s:[['five-inputs','Năm input: dự phóng dòng tiền, kế hoạch vốn lưu động và capex, giả định giá trị cuối kỳ, tỷ lệ chiết khấu, nợ ròng. Đổi một cái là cả chuỗi đổi theo.'],
+     ['nopat','NOPAT = EBIT × (1 − t). Không có lãi vay trong đó, nên nó phản ánh lợi nhuận từ hoạt động cốt lõi bất kể doanh nghiệp vay hay không.'],
+     ['working-cap','Số dư vốn lưu động phình ra là hút tiền. Tác động lên tiền chính là số âm của phần thay đổi — phải trả tăng thì lại cộng vào tiền.'],
+     ['ufcf','UFCF = NOPAT + khấu hao − Δ vốn lưu động − Δ tài sản hoạt động khác − capex. Đây là dòng tiền thuộc về cả chủ nợ lẫn cổ đông.'],
+     ['discounting','Dòng tiền năm thứ năm đáng giá thấp hơn hẳn cùng số tiền ở năm đầu — đó là lý do WACC làm kết quả định giá xê dịch mạnh đến vậy.']]},
+
+ {p:'C', en:'The discount rate', vi:'Tỷ lệ chiết khấu',
+  take:'Dòng tiền tự do phục vụ cả chủ nợ lẫn cổ đông, nên tỷ lệ dùng để chiết khấu nó phải phản ánh cả hai.',
+  s:[['wacc','WACC = D/(D+E) × kd × (1−t) + E/(D+E) × ke. Thuế chỉ áp lên phần nợ, vì chỉ lãi vay mới được khấu trừ.'],
+     ['cost-components','Chi phí nợ suy từ lãi vay chia dư nợ. Chi phí vốn chủ dùng CAPM: lãi suất phi rủi ro + beta × phần bù rủi ro thị trường.']]},
+
+ {p:'D', en:'From cash flows to a share price', vi:'Từ dòng tiền tới giá cổ phiếu',
+  take:'Hai giai đoạn dự phóng, một giá trị doanh nghiệp, và một cây cầu gạt bỏ phần thuộc về chủ nợ.',
+  s:[['two-stages','Giai đoạn dự phóng 5–10 năm cộng giá trị cuối kỳ. Hơn một nửa giá trị thường nằm ở giai đoạn 2 — nên tăng trưởng dài hạn g đáng soi kỹ ngang phần dự phóng.'],
+     ['ev-bridge','Equity value = Enterprise value + tiền − tổng nợ − các khoản mang tính nợ. Nợ thuộc về chủ nợ nên phải trừ ra khỏi phần cổ đông nhận được.'],
+     ['intrinsic-market','Giá thị trường có xu hướng hội tụ về giá trị nội tại — cho tới khi doanh nghiệp đổi chiến lược, lúc đó dự phóng cũ không còn đúng nữa.']]},
+
+ {p:'E', en:'Forecasting, in outline', vi:'Khung dự phóng để tra lại',
+  take:'Hai bảng tra dùng suốt khóa: dự phóng từng khoản mục kết quả kinh doanh, và từng khoản mục cân đối kế toán.',
+  s:[['forecast-pl','Khoản nào theo % doanh thu, khoản nào cần lịch riêng, khoản nào phải bằng 0 trong mô hình dự phóng.'],
+     ['forecast-bs','Phải thu theo DSO, tồn kho theo DIO, phải trả theo DPO. Tài sản cố định và nợ vay cần roll-forward, tiền là số cân đối.']]},
+
+ {p:'✓', en:'Practice and recap', vi:'Bài tập và tổng kết',
+  take:'Mỗi module đóng lại bằng một bài tập chạy hết chuỗi, một lời giải từng bước, và bốn ý phải nhớ.',
+  s:[['practice-q','Bài tập cho sẵn EBIT, thuế suất, khấu hao, vốn lưu động, capex — yêu cầu ra tới giá trị nội tại mỗi cổ phiếu.'],
+     ['practice-a','Lời giải từng bước, kèm lỗi hay gặp: quên nhân (1 − t) vào phần chi phí nợ khi tính WACC.'],
+     ['recap','Bốn ý phải nắm trước khi sang Module 2 — báo cáo kết quả kinh doanh.']]}
 ];
+
+/* Mảng phẳng dùng cho lightbox */
+var SLIDES=[['course-map','Course Map — 8 module của khóa']];
+MODULE1.forEach(function(pt){ pt.s.forEach(function(x){ SLIDES.push(x) }) });
+
 /* Ảnh chụp model bàn giao */
 var MODELSHOTS=[
   ['dashboard',       'Dashboard một trang — KPI, 6 biểu đồ, football field'],
@@ -1351,18 +1437,32 @@ function buildFaq(){
 function bindFaqText(){ if(CFG) bindAll(CFG,$('#faqList')); }
 
 /* ══════════════ 6b. GALLERY · LIGHTBOX · VIDEO ══════════════ */
-var GAL={slide:{items:SLIDES,dir:'assets/slides/',kind:'Slide bài giảng'},
+var GAL={slide:{items:SLIDES,dir:'assets/slides/',kind:'Module 1 · slide bài giảng'},
          model:{items:MODELSHOTS,dir:'assets/model/',kind:'Model bàn giao'}};
 var lbSet='slide', lbIdx=0, galBuilt=false;
 
 function buildGalleries(){
   if(galBuilt) return;
-  var sg=$('#slideGal');
-  if(sg) sg.innerHTML=SLIDES.map(function(s,i){
-    return '<button class="gal-item rv" data-lb="slide" data-i="'+i+'">'+
-      '<img src="assets/slides/'+s[0]+'-thumb.webp" alt="'+esc(s[1])+'" loading="lazy" width="640" height="360">'+
-      '<span class="gal-zoom">⤢</span>'+
-      '<span class="gal-cap">'+esc(s[1])+'</span></button>';
+
+  var ps=$('#parts');
+  if(ps) ps.innerHTML=MODULE1.map(function(pt){
+    var cards=pt.s.map(function(x){
+      var idx=SLIDES.findIndex(function(s){return s[0]===x[0]});
+      return '<button class="pcard" data-lb="slide" data-i="'+idx+'">'+
+        '<span class="pcard-img"><img src="assets/slides/'+x[0]+'-thumb.webp" alt="'+esc(x[1])+
+          '" loading="lazy" width="680" height="383"><span class="pcard-zoom">⤢</span></span>'+
+        '<span class="pcard-txt">'+esc(x[1])+'</span></button>';
+    }).join('');
+    return '<section class="part rv">'+
+      '<div class="part-hd">'+
+        '<span class="part-badge">'+esc(pt.p)+'</span>'+
+        '<div><div class="part-en">'+esc(pt.en)+'</div>'+
+          '<h3>'+esc(pt.vi)+'</h3>'+
+          '<p class="part-take">'+esc(pt.take)+'</p></div>'+
+      '</div>'+
+      '<div class="pslides">'+cards+'</div>'+
+      '<div class="swipe-hint">← vuốt ngang để xem tiếp '+pt.s.length+' slide</div>'+
+    '</section>';
   }).join('');
 
   var mg=$('#modelGal');
@@ -1378,7 +1478,7 @@ function buildGalleries(){
     if(b) openLb(b.getAttribute('data-lb'), +b.getAttribute('data-i'));
   });
   galBuilt=true;
-  observe(sg); observe(mg);
+  observe(ps); observe(mg);
 }
 
 function openLb(set,i){
@@ -1406,6 +1506,19 @@ function paintLb(){
   $('#lbCount').textContent=(lbIdx+1)+' / '+g.items.length;
 }
 function initLb(){
+  // vuốt ngang để chuyển slide trên điện thoại
+  var x0=null,y0=null;
+  var fig=$('.lb-fig');
+  fig.addEventListener('touchstart',function(e){
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY;
+  },{passive:true});
+  fig.addEventListener('touchend',function(e){
+    if(x0===null) return;
+    var dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0;
+    if(Math.abs(dx)>46 && Math.abs(dx)>Math.abs(dy)) stepLb(dx<0?1:-1);
+    x0=y0=null;
+  },{passive:true});
+
   $('#lbClose').addEventListener('click',closeLb);
   $('#lbPrev').addEventListener('click',function(){stepLb(-1)});
   $('#lbNext').addEventListener('click',function(){stepLb(1)});

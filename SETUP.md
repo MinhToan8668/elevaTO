@@ -148,6 +148,10 @@ và nhúng đúng kiểu. Link YouTube nhận cả 3 dạng (`youtu.be/...`, `wa
 Với Google Drive, video phải để quyền **"Bất kỳ ai có đường liên kết"** thì người xem mới thấy.
 Chưa đặt link thì mục này tự ẩn, không để lại khoảng trống trên trang.
 
+**Nội dung phần slide** nằm ở mảng `MODULE1` trong `index.html`. Mỗi phần (A–E) có tiêu đề,
+một đoạn ý chốt, và danh sách slide kèm câu tóm tắt riêng. Câu tóm tắt này là thứ học viên
+đọc lướt để nắm bài mà không cần mở từng slide — nên viết nó cho ra ý, đừng chỉ đặt nhãn.
+
 **Ảnh slide và ảnh model** nằm trong `assets/slides/` và `assets/model/`. Mỗi ảnh có 2 bản:
 `<tên>.webp` (bản lớn, mở khi bấm vào) và `<tên>-thumb.webp` (bản nhỏ trong lưới). Muốn thay
 hoặc thêm ảnh: bỏ file vào đúng thư mục rồi sửa mảng `SLIDES` / `MODELSHOTS` trong `index.html`.
