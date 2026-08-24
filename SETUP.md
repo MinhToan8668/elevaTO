@@ -143,14 +143,20 @@ duyệt vẫn làm trên Telegram.
 **Chống trùng:** cùng một số điện thoại đăng ký lại trong cùng cohort sẽ được
 báo "đã có trong danh sách", không ghi thêm dòng vào Sheet.
 
-**Video học thử.** Gõ `/video <link>` là xong — trang tự nhận diện YouTube hay Google Drive
+**Video học thử.** Trang chỉ nạp iframe khi người xem bấm nút play — trước đó chỉ là một
+mặt tiền tĩnh, nên trang nhẹ và người xem biết rõ phải bấm vào đâu. Gõ `/video <link>` là xong — trang tự nhận diện YouTube hay Google Drive
 và nhúng đúng kiểu. Link YouTube nhận cả 3 dạng (`youtu.be/...`, `watch?v=...`, `/embed/...`).
 Với Google Drive, video phải để quyền **"Bất kỳ ai có đường liên kết"** thì người xem mới thấy.
 Chưa đặt link thì mục này tự ẩn, không để lại khoảng trống trên trang.
 
-**Nội dung phần slide** nằm ở mảng `MODULE1` trong `index.html`. Mỗi phần (A–E) có tiêu đề,
-một đoạn ý chốt, và danh sách slide kèm câu tóm tắt riêng. Câu tóm tắt này là thứ học viên
-đọc lướt để nắm bài mà không cần mở từng slide — nên viết nó cho ra ý, đừng chỉ đặt nhãn.
+**Nội dung phần "Modeling là gì"** nằm ở mảng `CORE` trong `index.html` — bốn ý cốt lõi,
+mỗi ý một slide. Mỗi mục có `f` (tên file ảnh), `k` (nhãn nhỏ), `t` (tiêu đề), `d` (đoạn giải
+thích) và `n` (câu ghi chú viền xanh). Muốn thêm ý thứ năm thì thêm một mục vào mảng — bố cục
+tự xen kẽ trái/phải.
+
+Thư mục `assets/slides/` còn 14 ảnh slide khác đã xuất sẵn nhưng chưa dùng (five-inputs, nopat,
+working-cap, wacc, two-stages, forecast-pl, forecast-bs, practice-q, practice-a, recap...).
+Muốn đưa ý nào lên trang thì thêm vào mảng `CORE`, không phải xuất lại ảnh.
 
 **Ảnh slide và ảnh model** nằm trong `assets/slides/` và `assets/model/`. Mỗi ảnh có 2 bản:
 `<tên>.webp` (bản lớn, mở khi bấm vào) và `<tên>-thumb.webp` (bản nhỏ trong lưới). Muốn thay
