@@ -303,8 +303,8 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
   display:flex;flex-direction:column;align-items:stretch;text-align:left;
   transition:border-color .25s,transform .25s var(--ease)}
 .gal-item:hover{border-color:var(--emerald);transform:translateY(-3px)}
-.gal-item img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;
-  object-position:top center;display:block;background:#0d1117}
+.gal-item img{width:100%;height:auto;aspect-ratio:16/9;object-fit:contain;
+  object-position:center;display:block;background:#0d1117}
 .gal-item.tall img{aspect-ratio:auto;object-fit:contain}
 .gal-cap{padding:12px 15px;font-size:12.5px;color:var(--muted);line-height:1.5;
   border-top:1px solid var(--border);background:var(--card);margin-top:auto}
@@ -1261,7 +1261,7 @@ CORE.forEach(function(c){ SLIDES.push([c.f, c.t]) });
 var MODELSHOTS=[
   ['dashboard',       'Dashboard: đổi năm, đổi kịch bản, đổi số năm dự phóng'],
   ['control',         'Bảng điều khiển: năm actual cuối, kịch bản, số năm dự phóng, và 5 ô kiểm tra'],
-  ['dcf-sensitivity', 'Sheet DCF: WACC, dòng tiền chiết khấu và bảng độ nhạy']
+  ['drivers',         'Sheet giả định: mỗi mảng có ba kịch bản Base, Bull, Bear và dòng đang áp dụng']
 ];
 
 /* ══════════════ 2. HELPERS ══════════════ */
