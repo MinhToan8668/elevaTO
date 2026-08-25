@@ -161,7 +161,7 @@ Muốn đưa ý nào lên trang thì thêm vào mảng `CORE`, không phải xu�
 **Ảnh slide và ảnh model** nằm trong `assets/slides/` và `assets/model/`. Mỗi ảnh có 2 bản:
 `<tên>.webp` (bản lớn, mở khi bấm vào) và `<tên>-thumb.webp` (bản nhỏ trong lưới). Muốn thay
 hoặc thêm ảnh: bỏ file vào đúng thư mục rồi sửa mảng `SLIDES` / `MODELSHOTS` trong `index.html`.
-Ảnh hiện tại được trích từ bộ slide Module 1 và từ file model DGW.
+Ảnh hiện tại trích từ bộ slide Module 1 và từ file model DGW v4.
 
 **Đổi nội dung không do bot quản lý** (tên bài học, câu hỏi FAQ, phần "Vấn đề thật"):
 sửa mảng `MODULES` và `FAQS` trong `index.html`. Đây là nội dung giáo trình,

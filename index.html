@@ -287,6 +287,24 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 .lb-btn:hover{border-color:var(--emerald);color:var(--emerald);background:var(--emerald-soft)}
 .lb-count{font-size:12.5px;color:var(--muted2);font-variant-numeric:tabular-nums;min-width:54px;text-align:center}
 
+/* ═══════════════ GALLERY ẢNH MODEL ═══════════════ */
+.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:36px}
+.gal-item{position:relative;border:1px solid var(--border2);border-radius:var(--r-sm);
+  overflow:hidden;background:var(--card);cursor:zoom-in;width:100%;padding:0;
+  display:flex;flex-direction:column;align-items:stretch;text-align:left;
+  transition:border-color .25s,transform .25s var(--ease)}
+.gal-item:hover{border-color:var(--emerald);transform:translateY(-3px)}
+.gal-item img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;
+  object-position:top center;display:block;background:#0d1117}
+.gal-item.tall img{aspect-ratio:auto;object-fit:contain}
+.gal-cap{padding:12px 15px;font-size:12.5px;color:var(--muted);line-height:1.5;
+  border-top:1px solid var(--border);background:var(--card);margin-top:auto}
+.gal-item:hover .gal-cap{color:var(--text)}
+.gal-zoom{position:absolute;top:9px;right:9px;width:28px;height:28px;border-radius:8px;
+  background:rgba(8,8,8,.72);backdrop-filter:blur(6px);color:var(--white);font-size:13px;
+  display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .22s}
+.gal-item:hover .gal-zoom{opacity:1}
+
 /* ═══════════════ MODEL SHOWCASE ═══════════════ */
 .model-sec{background:#0b0b0b;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .model-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);
@@ -494,7 +512,7 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
   <div class="sec-head rv">
     <div class="eyebrow">Chương trình học</div>
     <h2 class="h2" data-html="{{schedule.modules}} module. {{schedule.sessions}} buổi.<br>Một công ty niêm yết <em>xuyên suốt.</em>"></h2>
-    <p class="lead" data-tpl="{{schedule.modules}} module lý thuyết được dạy trong {{schedule.theory}} buổi, rồi {{schedule.practice}} buổi thực hành dựng nguyên một model chạy được trên báo cáo tài chính đã kiểm toán."></p>
+    <p class="lead" data-tpl="{{schedule.modules}} module lý thuyết dạy trong {{schedule.theory}} buổi. {{schedule.practice}} buổi còn lại ngồi dựng model trên báo cáo tài chính đã kiểm toán của một doanh nghiệp niêm yết."></p>
   </div>
 
   <div class="tabs rv" role="tablist">
@@ -519,7 +537,7 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
   <div class="sec-head rv" style="text-align:center;max-width:660px;margin-left:auto;margin-right:auto">
     <div class="eyebrow em" style="justify-content:center">Miễn phí · không cần đăng ký</div>
     <h2 class="h2">Bấm vào để <em>học thử ngay.</em></h2>
-    <p class="lead" style="margin-left:auto;margin-right:auto">Trọn vẹn Module 1, đúng buổi dạy thật — không phải trailer, không cắt ghép. Xem xong tự biết khóa này có hợp với mình không.</p>
+    <p class="lead" style="margin-left:auto;margin-right:auto">Trọn Module 1, quay đúng buổi dạy thật. Xem xong bạn tự biết khoá này có hợp với mình không.</p>
   </div>
   <div class="vid-wrap rv">
     <div class="vid-frame" id="vidFrame"></div>
@@ -535,7 +553,7 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
   <div class="sec-head rv">
     <div class="eyebrow">Modeling là gì</div>
     <h2 class="h2">Bốn ý là hiểu được<br>định giá <em>làm gì.</em></h2>
-    <p class="lead">Chưa cần biết Excel cũng đọc được. Mỗi ý kèm một slide thật của Module 1 — vừa nắm được nội dung, vừa thấy tài liệu bạn sẽ học trông thế nào.</p>
+    <p class="lead">Không cần biết Excel vẫn đọc được. Mỗi ý kèm một slide thật của Module 1, vừa để nắm nội dung vừa để xem tài liệu trông thế nào.</p>
   </div>
 
   <div class="core" id="core"></div>
@@ -543,7 +561,7 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
   <div class="core-foot">
     <div class="rv">
       <h4>Đó mới là buổi đầu tiên.</h4>
-      <p>Module 1 có 33 slide, và còn bảy module nữa — báo cáo kết quả kinh doanh, cân đối kế toán, lưu chuyển tiền tệ, liên kết ba báo cáo, phân tích chỉ số, chi phí vốn, định giá so sánh.</p>
+      <p>Module 1 có 33 slide. Còn bảy module nữa: báo cáo kết quả kinh doanh, cân đối kế toán, lưu chuyển tiền tệ, liên kết ba báo cáo, phân tích chỉ số, chi phí vốn, định giá so sánh.</p>
     </div>
     <button class="map-btn rv" data-lb="slide" data-i="0" aria-label="Xem Course Map cỡ lớn">
       <img src="assets/slides/course-map-thumb.webp" alt="Course Map — 8 module của khóa" loading="lazy" width="680" height="383">
@@ -555,27 +573,27 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 <section class="sec model-sec" id="model" data-show="media.showModel"><div class="shell">
   <div class="sec-head rv">
     <div class="eyebrow">File bạn mang về</div>
-    <h2 class="h2">Không phải template điền chỗ trống.<br>Là một model <em>chạy được.</em></h2>
-    <p class="lead">Kết thúc 3 buổi thực hành, bạn có nguyên một mô hình định giá đầy đủ trên một doanh nghiệp niêm yết thật. Có báo cáo tài chính năm mới? Dán số vào một sheet, tăng một ô, xong — không phải chèn cột, không vỡ công thức.</p>
+    <h2 class="h2">Cuối khoá bạn có<br>một file <em>chạy được.</em></h2>
+    <p class="lead">Ba buổi thực hành làm ra nguyên một mô hình định giá trên doanh nghiệp niêm yết thật. Sang năm có báo cáo mới, bạn dán số vào một sheet và tăng một ô là xong. Không chèn cột, không sửa lại công thức.</p>
   </div>
 
   <div class="model-top">
     <button class="gal-item tall rv" data-lb="model" data-i="0">
-      <img src="assets/model/dashboard-thumb.webp" alt="Dashboard của model: KPI, biểu đồ doanh thu theo mảng, biên lợi nhuận, football field" loading="lazy" width="720" height="775">
+      <img src="assets/model/dashboard-thumb.webp" alt="Dashboard của model: chỉ số chính, doanh thu theo mảng, biên lợi nhuận và football field" loading="lazy" width="720" height="775">
       <span class="gal-zoom">⤢</span>
-      <span class="gal-cap">Dashboard một trang — KPI, 6 biểu đồ, football field và bảng tổng hợp 2019A–2032F</span>
+      <span class="gal-cap">Dashboard: đổi năm, đổi kịch bản, đổi số năm dự phóng, biểu đồ và định giá chạy lại theo</span>
     </button>
     <div class="rv">
       <div class="spec-list">
         <div class="spec"><span>Số sheet trong file</span><b data-bind="company.sheets">21</b></div>
         <div class="spec"><span>Ô kiểm tra tự động</span><b data-tpl="{{company.checks}} ô"></b></div>
         <div class="spec"><span>Kịch bản dự phóng</span><b>Base · Bull · Bear</b></div>
-        <div class="spec"><span>Tham chiếu vòng</span><b>Không có</b></div>
+        <div class="spec"><span>Số năm dự phóng</span><b>1–10 năm</b></div>
         <div class="spec"><span>Cập nhật BCTC năm mới</span><b>3 bước</b></div>
         <div class="spec"><span>Cẩm nang dự phóng</span><b data-tpl="{{company.industries}} ngành"></b></div>
       </div>
       <div class="disclaimer">
-        Số liệu trong ảnh là bài tập minh hoạ phục vụ giảng dạy trên một doanh nghiệp niêm yết,
+        Số liệu trong ảnh là bài tập giảng dạy trên một doanh nghiệp niêm yết,
         <b style="color:var(--gold);font-weight:500">không phải khuyến nghị đầu tư</b>.
       </div>
     </div>
@@ -583,23 +601,23 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 
   <div class="mfeat">
     <div class="mfeat-card rv"><div class="mfeat-ic">🔁</div>
-      <h4>Thêm năm mới không vỡ công thức</h4>
-      <p>Một trục thời gian dùng chung cho tất cả các sheet. Mỗi ô tự chọn lấy số actual hay công thức dự phóng, nên bạn không bao giờ phải chèn cột hay xoá công thức bằng tay.</p></div>
+      <h4>Thêm năm mới không phải sửa công thức</h4>
+      <p>Tất cả sheet dùng chung một trục thời gian. Mỗi ô tự biết nên lấy số thực tế hay chạy công thức dự phóng, nên bạn không phải chèn cột hay xoá công thức bằng tay.</p></div>
     <div class="mfeat-card rv"><div class="mfeat-ic">✔</div>
       <h4>Năm ô kiểm tra luôn nhìn thấy</h4>
-      <p>Cân đối kế toán, tiền trên lưu chuyển tiền tệ, doanh thu theo mảng, lịch tài sản cố định và lịch vốn chủ. Sai ở đâu là hiện ngay, không phải dò cả file.</p></div>
+      <p>Cân đối kế toán, tiền trên lưu chuyển tiền tệ, doanh thu theo mảng, lịch tài sản cố định, lịch vốn chủ. Sai chỗ nào là hiện đỏ ngay chỗ đó.</p></div>
     <div class="mfeat-card rv"><div class="mfeat-ic">🔀</div>
       <h4>Đổi kịch bản bằng một ô</h4>
-      <p>Base, Bull hay Bear — toàn bộ dự phóng, DCF và giá mục tiêu đổi theo. Kèm bảng độ nhạy hai chiều WACC × tăng trưởng dài hạn.</p></div>
+      <p>Base, Bull hay Bear. Chọn xong thì dự phóng, DCF và giá mục tiêu đổi theo. Kèm bảng độ nhạy WACC nhân tăng trưởng dài hạn.</p></div>
     <div class="mfeat-card rv"><div class="mfeat-ic">🚫</div>
       <h4>Không có tham chiếu vòng</h4>
-      <p>Lãi vay tính trên dư nợ đầu kỳ, doanh thu tài chính tính trên tiền đầu kỳ. Không cần bật Iterative Calculation, kết quả không đổi theo số vòng lặp.</p></div>
+      <p>Lãi vay tính trên dư nợ đầu kỳ, lãi tiền gửi tính trên số dư đầu kỳ. Khỏi bật Iterative Calculation, kết quả không đổi theo số vòng lặp.</p></div>
     <div class="mfeat-card rv"><div class="mfeat-ic">📚</div>
       <h4>Cẩm nang dự phóng 17 ngành</h4>
-      <p>Ngân hàng, bất động sản, bán lẻ, sản xuất, logistics, doanh nghiệp chưa có lãi… mỗi ngành một cách dự phóng doanh thu, bội số nên dùng và bẫy hay gặp.</p></div>
-    <div class="mfeat-card rv"><div class="mfeat-ic">🔍</div>
-      <h4>Sheet mổ xẻ lỗi model</h4>
-      <p>Một sheet riêng đối chiếu cách dự phóng sai thường gặp với cách làm đúng, theo từng khoản mục — thứ giúp bạn tự soi model của chính mình sau này.</p></div>
+      <p>Ngân hàng, bất động sản, bán lẻ, sản xuất, logistics, doanh nghiệp chưa có lãi. Mỗi ngành một cách dự phóng doanh thu, bội số nên dùng, và bẫy hay gặp.</p></div>
+    <div class="mfeat-card rv"><div class="mfeat-ic">📅</div>
+      <h4>Tự chọn dự phóng bao nhiêu năm</h4>
+      <p>Muốn nhìn 3 năm hay 10 năm là tuỳ bạn, chọn ngay trên dashboard. Mô hình tự dựng lại chuỗi chiết khấu và giá trị cuối kỳ theo lựa chọn đó.</p></div>
   </div>
 
   <div class="gal" id="modelGal"></div>
@@ -855,85 +873,83 @@ var FALLBACK = {
 var MODULES = [
   {k:'t',n:'01',en:'Overview of valuation and the DCF model',
    t:'Tổng quan định giá & mô hình DCF',
-   d:'Vì sao giá trị doanh nghiệp là hàm của dòng tiền tương lai. Năm input của một mô hình DCF, và chuỗi biến đổi NOPAT → FCFF → Enterprise Value → giá mỗi cổ phiếu.',
-   pts:['Hai động lực giá trị: tăng trưởng và khả năng chuyển doanh thu thành tiền',
-        'NOPAT = EBIT × (1 − t) — vì sao không có lãi vay trong đó',
-        'Dựng Unlevered Free Cash Flow: cộng lại D&A, trừ Δ vốn lưu động, trừ capex',
-        'Cầu nối EV → Equity Value: cộng tiền, trừ nợ, trừ debt-like items',
-        'Hai bảng tra dự phóng: từng khoản mục P&L và từng khoản mục cân đối'],
-   slide:'course-map'},
+   d:'Buổi mở màn trả lời câu hỏi gốc: vì sao doanh nghiệp này đáng giá ngần đó tiền. Đi hết chuỗi từ lợi nhuận hoạt động ra dòng tiền tự do, chiết khấu về hôm nay, rồi ra giá mỗi cổ phiếu.',
+   pts:['Hai động lực của giá trị: tăng trưởng và khả năng chuyển doanh thu thành tiền',
+        'NOPAT = EBIT × (1 − t), và vì sao trong đó không có lãi vay',
+        'Dựng dòng tiền tự do: cộng khấu hao, trừ vốn lưu động, trừ capex',
+        'Cầu nối từ giá trị doanh nghiệp sang giá trị vốn chủ',
+        'Hai bảng tra dự phóng dùng suốt bảy module còn lại']},
   {k:'t',n:'02',en:'The income statement',
    t:'Báo cáo kết quả kinh doanh',
-   d:'Nơi mọi dự phóng bắt đầu. Đọc cấu trúc doanh thu — giá vốn — chi phí hoạt động, và nhận ra chỗ nào trong báo cáo dễ bị "làm đẹp" nhất.',
+   d:'Chỗ mọi dự phóng bắt đầu. Đọc kỹ cấu trúc doanh thu, giá vốn và chi phí hoạt động, đồng thời nhận ra khoản nào trong báo cáo dễ bị làm đẹp nhất.',
    pts:['Ghi nhận doanh thu và các dạng trình bày báo cáo',
-        'Dự phóng giá vốn và chi phí hoạt động theo % doanh thu — khi nào cách này sai',
-        'Tách chi phí biến đổi và chi phí bán cố định',
-        'Các khoản bất thường phải bằng 0 trong mô hình dự phóng']},
+        'Dự phóng giá vốn theo phần trăm doanh thu, và khi nào cách này hỏng',
+        'Tách chi phí biến đổi khỏi chi phí bán cố định',
+        'Vì sao khoản bất thường phải để bằng 0 khi dự phóng']},
   {k:'t',n:'03',en:'Analyzing balance sheets',
    t:'Phân tích bảng cân đối kế toán',
-   d:'Mỗi khoản mục trên bảng cân đối phải gắn với một khoản mục vận hành. Vốn lưu động, tài sản cố định, nợ vay và vốn chủ — dự phóng bằng driver chứ không ngoại suy.',
-   pts:['DSO / DIO / DPO và vòng quay tiền mặt',
-        'Roll-forward tài sản cố định: đầu kỳ + capex − khấu hao',
+   d:'Mỗi dòng trên bảng cân đối phải gắn với một hoạt động cụ thể. Vốn lưu động, tài sản cố định, nợ vay, vốn chủ đều dự phóng bằng driver chứ không kéo ngang từ năm trước.',
+   pts:['DSO, DIO, DPO và vòng quay tiền mặt',
+        'Roll-forward tài sản cố định: đầu kỳ cộng capex trừ khấu hao',
         'Roll-forward nợ vay và vốn chủ sở hữu',
-        'Vì sao tiền phải là số cân đối, không phải số dự phóng']},
+        'Vì sao tiền phải là số cân đối chứ không phải số dự phóng']},
   {k:'t',n:'04',en:'The cash flow statement',
    t:'Báo cáo lưu chuyển tiền tệ',
-   d:'Dựng lưu chuyển tiền gián tiếp từ chênh lệch bảng cân đối. Phân biệt lợi nhuận kế toán và tiền thật — chỗ nhiều người học xong vẫn nhầm.',
+   d:'Dựng lưu chuyển tiền gián tiếp từ chênh lệch bảng cân đối. Đây là chỗ phân biệt rạch ròi lãi kế toán với tiền thật, thứ nhiều người học xong vẫn còn lẫn.',
    pts:['Từ lợi nhuận sau thuế về dòng tiền hoạt động',
         'Dòng tiền đầu tư và dòng tiền tài chính',
-        'FCFF và FCFE — khác nhau ở đâu và dùng cho ai',
-        'Ô kiểm tra: tiền cuối kỳ trên LCTT phải khớp tiền trên CĐKT']},
+        'FCFF khác FCFE ở đâu, và mỗi cái dùng cho ai',
+        'Ô kiểm tra: tiền cuối kỳ phải khớp tiền trên bảng cân đối']},
   {k:'t',n:'05',en:'Linking the three statements',
    t:'Liên kết ba báo cáo',
-   d:'Buổi bản lề của cả khóa. Ba báo cáo trở thành một mô hình chạy được — và bạn hiểu tại sao bảng cân đối không cân.',
-   pts:['Chuỗi liên kết: lợi nhuận → vốn chủ; khấu hao → TSCĐ; tiền → cân đối',
-        'Tránh tham chiếu vòng: lãi vay tính trên dư nợ ĐẦU KỲ',
+   d:'Buổi bản lề. Ba báo cáo rời rạc ghép thành một mô hình chạy được, và bạn biết vì sao bảng cân đối không cân.',
+   pts:['Lợi nhuận chạy vào vốn chủ, khấu hao chạy vào tài sản, tiền là số cân',
+        'Tránh tham chiếu vòng bằng cách tính lãi vay trên dư nợ đầu kỳ',
         'Đặt ô kiểm tra ngay từ đầu thay vì dò lỗi lúc cuối',
-        'Quy trình debug khi Tổng tài sản ≠ Tổng nguồn vốn']},
+        'Quy trình tìm lỗi khi tổng tài sản không bằng tổng nguồn vốn']},
   {k:'t',n:'06',en:'Ratio analysis and DuPont',
    t:'Phân tích chỉ số & mô hình DuPont',
-   d:'Đọc mô hình sau khi đã dựng xong. Tách ROE thành biên lợi nhuận × vòng quay tài sản × đòn bẩy để biết doanh nghiệp kiếm tiền bằng cách nào.',
-   pts:['Tăng trưởng, biên lợi nhuận, ROE / ROA / ROIC',
+   d:'Đọc lại mô hình sau khi đã dựng xong. Tách ROE thành biên lợi nhuận nhân vòng quay tài sản nhân đòn bẩy để thấy doanh nghiệp kiếm tiền bằng cách nào.',
+   pts:['Tăng trưởng, biên lợi nhuận, ROE, ROA, ROIC',
         'Phân rã DuPont ba tầng',
-        'Chỉ tiêu thanh khoản và đòn bẩy: Net debt / EBITDA, khả năng trả lãi',
-        'Đối chiếu chỉ số dự phóng với lịch sử — con số nào vô lý thì lộ ra ngay']},
+        'Thanh khoản và đòn bẩy: nợ ròng trên EBITDA, khả năng trả lãi',
+        'Soi chỉ số dự phóng cạnh lịch sử để con số vô lý tự lộ ra']},
   {k:'t',n:'07',en:'Cost of capital and WACC',
    t:'Chi phí vốn và WACC',
-   d:'Con số làm định giá thay đổi nhiều nhất. Ước lượng chi phí nợ, chi phí vốn chủ bằng CAPM, và hồi quy beta từ dữ liệu giá thật.',
-   pts:['WACC = D/(D+E) × kd × (1−t) + E/(D+E) × ke',
+   d:'Con số làm định giá xê dịch nhiều nhất. Ước lượng chi phí nợ, tính chi phí vốn chủ bằng CAPM, và hồi quy beta từ dữ liệu giá thật.',
+   pts:['WACC ghép từ chi phí nợ sau thuế và chi phí vốn chủ',
         'CAPM: lãi suất phi rủi ro, phần bù rủi ro thị trường, beta',
         'Hồi quy beta từ chuỗi lợi suất ngày và hiệu chỉnh Blume',
-        'Unlever / relever beta cho doanh nghiệp chưa niêm yết']},
+        'Unlever và relever beta cho doanh nghiệp chưa niêm yết']},
   {k:'t',n:'08',en:'Multiples and relative valuation',
    t:'Định giá so sánh theo bội số',
-   d:'Định giá tương đối để kiểm chứng DCF. Chọn peer đúng, chuẩn hoá số liệu, và đọc chênh lệch giữa hai phương pháp thay vì tin một con số.',
-   pts:['P/E, P/B, EV/EBITDA, EV/Revenue — bội số nào cho ngành nào',
-        'Chọn nhóm so sánh và xử lý peer đa quốc gia, đa tiền tệ',
+   d:'Định giá tương đối để đối chiếu với DCF. Chọn peer cho đúng, chuẩn hoá số liệu, rồi đọc chênh lệch giữa hai phương pháp thay vì bám vào một con số.',
+   pts:['P/E, P/B, EV/EBITDA, EV/Revenue và bội số nào hợp ngành nào',
+        'Chọn nhóm so sánh, xử lý peer khác quốc gia khác tiền tệ',
         'Football field: bày kết quả từng phương pháp cạnh nhau',
         'Giá mục tiêu bình quân gia quyền và cách bảo vệ trọng số']},
 
-  {k:'p',n:'09',t:'Thực hành 1 — Dựng 3-Statement Model từ BCTC thật',
-   d:'Mở báo cáo tài chính đã kiểm toán của một doanh nghiệp niêm yết, nhập vào sheet input duy nhất, rồi tự tay dựng P&L → Cân đối → Lưu chuyển tiền tệ cho tới khi cả ba khớp nhau.',
-   pts:['Chuẩn hoá BCTC vào một sheet input duy nhất',
-        'Dự phóng doanh thu bottom-up theo từng mảng kinh doanh',
-        'Dựng đủ các schedule: vốn lưu động, TSCĐ, nợ vay, vốn chủ, thuế',
-        'Debug tới khi cả 5 ô kiểm tra hiện ✔ OK'],
-   slide:'control'},
+  {k:'p',n:'09',t:'Thực hành 1 — Dựng ba báo cáo từ BCTC thật',
+   d:'Mở báo cáo tài chính đã kiểm toán của một doanh nghiệp niêm yết, nhập vào một sheet duy nhất, rồi tự tay dựng ba báo cáo cho tới khi chúng khớp nhau.',
+   pts:['Chuẩn hoá báo cáo tài chính vào một sheet nhập liệu duy nhất',
+        'Dự phóng doanh thu từ dưới lên theo từng mảng kinh doanh',
+        'Dựng đủ schedule: vốn lưu động, tài sản cố định, nợ vay, vốn chủ, thuế',
+        'Sửa tới khi cả năm ô kiểm tra hiện ✔ OK']},
   {k:'p',n:'10',t:'Thực hành 2 — DCF hoàn chỉnh & bảng độ nhạy',
-   d:'Nối 3-statement vào DCF: hồi quy beta, dựng WACC, chiết khấu FCFF, tính giá trị cuối kỳ, rồi làm bảng độ nhạy hai chiều WACC × g.',
+   d:'Nối ba báo cáo vào DCF. Hồi quy beta, dựng WACC, chiết khấu dòng tiền, tính giá trị cuối kỳ, rồi làm bảng độ nhạy hai chiều.',
    pts:['Hồi quy beta từ dữ liệu giá ngày',
-        'Dựng WACC và kiểm tra từng cấu phần',
-        'Chiết khấu FCFF tự dịch chuyển khi thêm năm actual',
-        'Bảng độ nhạy 7 × 7 và cách đọc nó'],
-   slide:'dcf-sensitivity'},
-  {k:'p',n:'11',t:'Thực hành 3 — Comps, Dashboard & bàn giao model',
-   d:'Hoàn thiện nhóm so sánh, dựng football field, và ráp dashboard một trang. Kết thúc buổi bạn có một file chạy được, cập nhật BCTC năm mới chỉ mất 3 bước.',
-   pts:['Trading comps và bội số peer trung vị',
-        'Football field + giá mục tiêu bình quân gia quyền',
-        'Dashboard: KPI, biểu đồ, vòng tròn tỷ lệ',
-        'Kiểm thử: thêm một năm actual và xác nhận không vỡ công thức'],
-   tag:'Mang về làm portfolio', slide:'dashboard'}
+        'Dựng WACC và kiểm lại từng cấu phần',
+        'Chiết khấu tự dịch chuyển khi thêm một năm actual',
+        'Bảng độ nhạy WACC nhân tăng trưởng dài hạn, và cách đọc nó']},
+  {k:'p',n:'11',t:'Thực hành 3 — Comps, dashboard & bàn giao',
+   d:'Hoàn thiện nhóm so sánh, dựng football field, ráp dashboard. Hết buổi bạn có một file chạy được, sang năm có báo cáo mới thì cập nhật trong ba bước.',
+   pts:['Trading comps và bội số trung vị của nhóm so sánh',
+        'Football field và giá mục tiêu bình quân gia quyền',
+        'Dashboard: chọn năm, chọn kịch bản, chọn số năm dự phóng',
+        'Thử thêm một năm actual để chắc chắn công thức không vỡ'],
+   tag:'Mang về làm portfolio'}
 ];
+
 
 var FAQS = [
   {q:'Tôi chưa có nền tảng tài chính có học được không?',
@@ -943,9 +959,9 @@ var FAQS = [
   {q:'Nếu bỏ lỡ một buổi thì sao?',
    a:'Toàn bộ buổi học được record và gửi trong vòng 24 giờ. Bạn không mất buổi nào — và có tài liệu chi tiết để tự ôn lại theo lịch của mình.'},
   {q:'Khóa này khác gì các khóa Financial Modeling khác?',
-   a:'Phần lớn khóa dạy từ template điền chỗ trống. Ở đây bạn tự build từng bước — đúng cách làm trong deal thật. Mọi case đều là công ty Việt Nam niêm yết, số liệu thực. Slide và model bàn giao đều xem trước được ngay trên trang này, không phải nghe mô tả.'},
+   a:'Phần lớn khoá dạy từ template điền sẵn. Ở đây bạn tự dựng từng bước, đúng cách làm trong deal thật, và mọi case đều là công ty Việt Nam niêm yết với số liệu thực. Slide lẫn model bàn giao đều xem trước được ngay trên trang này chứ không phải nghe mô tả suông.'},
   {q:'File model bàn giao có gì, và tôi dùng lại được không?',
-   a:'Một file {{company.sheets}} sheet đầy đủ: input BCTC, driver dự phóng, 3 báo cáo liên kết, các schedule vốn lưu động / tài sản cố định / nợ vay / vốn chủ, DCF, comps, dashboard. Có báo cáo tài chính năm mới thì dán số vào một sheet và tăng một ô — <strong>không phải chèn cột, không vỡ công thức</strong>. Kèm cẩm nang dự phóng {{company.industries}} ngành để bạn áp sang doanh nghiệp khác.'},
+   a:'Một file {{company.sheets}} sheet: nơi nhập báo cáo tài chính, bảng giả định, ba báo cáo liên kết, các lịch vốn lưu động, tài sản cố định, nợ vay, vốn chủ, rồi DCF, comps và dashboard. Sang năm có báo cáo mới thì dán số vào một sheet và tăng một ô là xong, <strong>không chèn cột, không sửa công thức</strong>. Kèm cẩm nang dự phóng {{company.industries}} ngành để áp sang doanh nghiệp khác.'},
   {q:'Thanh toán như thế nào?',
    a:'Sau khi đăng ký được xác nhận (trong 24h), mình sẽ tư vấn định hướng cho bạn. <strong>Bạn học thử 1 buổi rồi quyết định</strong> — thấy phù hợp mới đóng học phí {{computed.price.earlyBird}}.'},
   {q:'Sau khóa có được hỗ trợ tiếp không?',
@@ -956,29 +972,30 @@ var FAQS = [
    Mỗi ý kèm đúng một slide thật từ Module 1. */
 var CORE=[
  {f:'value-function',
-  k:'Điểm xuất phát',
-  t:'Một doanh nghiệp đáng giá bằng dòng tiền nó sẽ tạo ra',
-  d:'Nhà đầu tư mua cổ phiếu để nhận cổ tức và bán lại. Cả hai đều là hàm của dòng tiền tương lai — nên giá trị doanh nghiệp cũng vậy. Chỉ có hai cách làm dòng tiền đó lớn lên: bán được nhiều hơn, hoặc giữ lại được nhiều tiền hơn trên mỗi đồng doanh thu.',
-  n:'Toàn bộ phần còn lại của khóa là đi tìm con số dòng tiền đó cho một doanh nghiệp cụ thể.'},
+  k:'Bắt đầu từ đâu',
+  t:'Doanh nghiệp đáng giá bao nhiêu là do tiền nó làm ra',
+  d:'Bạn mua cổ phiếu để lấy cổ tức và bán lại kiếm lời. Cả hai khoản đó đều đi ra từ tiền doanh nghiệp kiếm được trong tương lai. Vậy nên định giá thực chất là ước lượng số tiền đó. Muốn nó lớn lên thì chỉ có hai đường: bán nhiều hơn, hoặc mỗi đồng doanh thu giữ lại được nhiều tiền hơn.',
+  n:'Bảy module còn lại đều xoay quanh việc ước lượng con số này cho một doanh nghiệp cụ thể.'},
 
  {f:'ufcf',
-  k:'Việc chính của người dựng model',
-  t:'Lợi nhuận kế toán không phải tiền — phải dựng lại',
-  d:'Bắt đầu từ NOPAT (lợi nhuận hoạt động sau thuế), cộng lại khấu hao vì nó không làm mất tiền, trừ phần vốn lưu động bị hút vào hàng tồn và công nợ, trừ tiền bỏ ra mua tài sản. Kết quả là dòng tiền tự do — thứ thực sự thuộc về người bỏ vốn.',
-  n:'Đây là chỗ phần lớn model sai, và cũng là chỗ chiếm nhiều thời gian nhất trong ba buổi thực hành.'},
+  k:'Phần mất thời gian nhất',
+  t:'Lãi trên báo cáo không phải tiền trong tài khoản',
+  d:'Lấy lợi nhuận hoạt động sau thuế làm gốc. Cộng lại khấu hao, vì khoản này trừ trên sổ chứ không ai chi ra đồng nào. Trừ phần tiền bị kẹt trong hàng tồn và công nợ. Trừ tiền mua máy móc nhà xưởng. Còn lại mới là tiền thật, và đó mới là thứ đem đi định giá.',
+  n:'Trong ba buổi thực hành, đây là phần bạn ngồi lâu nhất và cũng dễ sai nhất.'},
 
  {f:'discounting',
-  k:'Vì sao cần chiết khấu',
+  k:'Vì sao phải chiết khấu',
   t:'Một đồng năm năm nữa không bằng một đồng hôm nay',
-  d:'Mỗi năm dòng tiền được chia cho hệ số chiết khấu luỹ tiến, nên tiền càng xa càng nhẹ. Tỷ lệ dùng để chiết khấu là WACC — chi phí vốn bình quân của cả chủ nợ lẫn cổ đông, vì dòng tiền tự do phục vụ cả hai.',
-  n:'Đổi WACC một chút là kết quả định giá đổi rất nhiều — nên buổi học có riêng bảng độ nhạy để thấy điều đó.'},
+  d:'Tiền càng về sau càng bị chia cho hệ số lớn hơn, nên đóng góp vào giá trị càng ít. Hệ số đó là WACC, tức chi phí vốn bình quân của cả ngân hàng lẫn cổ đông. Dùng WACC vì dòng tiền tự do là phần chia cho cả hai bên.',
+  n:'WACC nhích 1% là giá mục tiêu đổi cả chục phần trăm. Buổi học có bảng độ nhạy riêng để bạn tự thấy.'},
 
  {f:'ev-bridge',
-  k:'Ra kết quả cuối cùng',
+  k:'Ra con số cuối',
   t:'Từ giá trị doanh nghiệp về giá một cổ phiếu',
-  d:'Cộng dòng tiền đã chiết khấu lại được giá trị doanh nghiệp. Trừ nợ vì phần đó thuộc chủ nợ, cộng tiền mặt vì phần đó thuộc cổ đông, rồi chia cho số cổ phiếu đang lưu hành.',
-  n:'Con số ra được là giá trị nội tại — để so với giá thị trường, không phải để tin tuyệt đối.'}
+  d:'Cộng hết dòng tiền đã chiết khấu lại thành giá trị doanh nghiệp. Trừ nợ ra vì phần đó của ngân hàng. Cộng tiền mặt vào vì phần đó của cổ đông. Chia cho số cổ phiếu đang lưu hành là ra giá.',
+  n:'Con số này là giá trị nội tại, dùng để đối chiếu với giá thị trường. Nó không nói cho bạn biết ngày mai cổ phiếu lên hay xuống.'}
 ];
+
 
 /* Mảng phẳng dùng cho lightbox: course map đứng đầu */
 var SLIDES=[['course-map','Course Map — 8 module của khóa']];
@@ -986,10 +1003,9 @@ CORE.forEach(function(c){ SLIDES.push([c.f, c.t]) });
 
 /* Ảnh chụp model bàn giao */
 var MODELSHOTS=[
-  ['dashboard',       'Dashboard một trang — KPI, 6 biểu đồ, football field'],
-  ['control',         'Bảng điều khiển — 5 ô kiểm tra đều ✔ OK'],
-  ['dcf-sensitivity', 'Sheet DCF — WACC, FCFF chiết khấu và bảng độ nhạy 7×7'],
-  ['review',          'Sheet rà soát — lỗi dự phóng thường gặp và cách xử lý']
+  ['dashboard',       'Dashboard: đổi năm, đổi kịch bản, đổi số năm dự phóng'],
+  ['control',         'Bảng điều khiển: năm actual cuối, kịch bản, số năm dự phóng, và 5 ô kiểm tra'],
+  ['dcf-sensitivity', 'Sheet DCF: WACC, dòng tiền chiết khấu và bảng độ nhạy']
 ];
 
 /* ══════════════ 2. HELPERS ══════════════ */
