@@ -25,6 +25,21 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
                           └───────────────┘
 ```
 
+### Cái gì sửa ở đâu
+
+| Sửa bằng | Gồm những gì |
+|---|---|
+| **Bot Telegram** | cohort, số chỗ, giá, lịch học, số buổi, năm kinh nghiệm, video, banner, trạng thái |
+| **Sửa thẳng `index.html`** | người dạy và các dòng chứng chỉ, link TikTok, thông tin công ty mẫu, toàn bộ chữ trên trang |
+
+Ranh giới này là **bắt buộc**, không phải quy ước cho vui. Backend chỉ gửi cho
+trang những khối nó sửa được. Nếu nó gửi cả mấy khối chữ kia thì bản lưu trong
+Script Properties sẽ **đè lên** bản trong `index.html` — sửa file bao nhiêu lần
+trang cũng không đổi, mà không có lỗi nào báo ra cả.
+
+Đã dính đúng lỗi đó một lần: link TikTok và dòng chứng chỉ CFA sửa trong
+`index.html` nhưng trang vẫn hiện bản cũ, vì backend đang gửi đè.
+
 Điểm mấu chốt: `index.html` **không hardcode** cohort / giá / số chỗ nữa.
 Nó tải config từ Apps Script rồi render ra. Bot đổi config → web đổi theo.
 
@@ -195,12 +210,13 @@ Bấm nút **Menu** xanh cạnh ô chat để xem toàn bộ lệnh kèm mô t�
 | `/cohort 8` | Đổi sang Cohort 08 (web đổi ở **tất cả** vị trí cùng lúc) |
 | `/slot 12` | Đổi tổng số chỗ mỗi cohort |
 | `/base 4` | Số người đã đăng ký ngoài hệ thống (bạn tự nhận qua inbox) |
-| `/cohortmoi` | Mở cohort kế tiếp: tự +1 số, reset bộ đếm, +1 cohort đã hoàn thành |
+| `/cohortmoi` | Mở cohort kế tiếp: tự +1 số, reset bộ đếm |
 | `/giasom 3000000` | Giá Early Bird — nhận cả `3tr` hoặc `3M` |
 | `/giagoc 4000000` | Giá gốc (giá gạch ngang, % tiết kiệm tự tính) |
 | `/giatuhoc 1500000` | Giá gói Self-paced |
 | `/lich Thứ 3 & Thứ 5 \| 20h–22h tối` | Đổi lịch học |
 | `/buoi 10 6 4` | Tổng buổi / lý thuyết / thực hành |
+| `/kinhnghiem 3+` | Số năm kinh nghiệm ở dải chỉ số đầu trang — nhận `3`, `3+`, `2.5+` |
 | `/mo` `/day` `/dong` | Mở đăng ký · Đánh dấu đủ chỗ · Đóng đăng ký |
 | `/thongbao Khai giảng 15/09` | Hiện banner xanh đầu trang web |
 | `/xoathongbao` | Tắt banner |
@@ -214,6 +230,15 @@ Bấm nút **Menu** xanh cạnh ô chat để xem toàn bộ lệnh kèm mô t�
 | `/sheet` | Link Google Sheet |
 
 Mỗi đăng ký mới bot gửi kèm 2 nút **✅ Duyệt / ❌ Từ chối** — bấm là xong.
+
+### Số cohort đã hoàn thành không có lệnh riêng
+
+Nó **tự bằng số cohort hiện tại trừ 1**. Cohort 08 đang chạy thì đã xong 7 cohort.
+Đổi bằng `/cohort 8` hay `/cohortmoi` đều được, con số kia đi theo — không còn
+cách nào để hai số lệch nhau.
+
+Trước đây nó là giá trị lưu rời và chỉ `/cohortmoi` mới cộng, nên nhảy sang cohort
+mới bằng `/cohort` thì nó đứng nguyên.
 
 ---
 

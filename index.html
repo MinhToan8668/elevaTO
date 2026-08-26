@@ -426,7 +426,8 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 .price-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:860px}
 .price-grid.solo{grid-template-columns:minmax(0,1fr);max-width:440px}
 .price-card{position:relative;border:1px solid var(--border2);border-radius:var(--r);
-  padding:34px 32px;background:var(--card);display:flex;flex-direction:column;transition:border-color .3s}
+  padding:34px 32px;background:var(--card);display:flex;flex-direction:column;transition:border-color .3s;
+  container-type:inline-size}
 .price-card.hero-plan{border-color:rgba(0,200,150,.45);
   background:linear-gradient(165deg,rgba(0,200,150,.05),var(--card) 45%)}
 .price-badge{position:absolute;top:-11px;left:28px;background:var(--emerald);color:#04150f;
@@ -434,9 +435,15 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
   text-transform:uppercase;padding:5px 12px;border-radius:999px}
 .price-type{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
 .price-was{font-size:13px;color:var(--muted2);text-decoration:line-through}
-.price-amt{font-family:'Syne',sans-serif;font-size:clamp(34px,4.6vw,46px);font-weight:800;
-  letter-spacing:-.04em;line-height:1;color:var(--white);margin:6px 0 10px}
-.price-amt .u{font-size:13px;color:var(--muted);font-weight:400;letter-spacing:0}
+/* Cỡ chữ bám theo bề ngang của chính thẻ giá (cqi), không bám màn hình.
+   Số tiền dài thêm một chữ số, hay trình duyệt người xem để cỡ chữ gốc lớn
+   hơn, thì con số tự co lại cho vừa thẻ thay vì tràn ra ngoài viền. */
+.price-amt{font-family:'Syne',sans-serif;font-size:clamp(26px,11.5cqi,44px);font-weight:800;
+  letter-spacing:-.04em;line-height:1.05;color:var(--white);margin:6px 0 10px}
+.price-amt .n{display:block;white-space:nowrap}
+.price-amt .u{display:block;font-size:13px;color:var(--muted);font-weight:400;
+  letter-spacing:0;margin-top:5px}
+@supports not (font-size:1cqi){ .price-amt{font-size:clamp(30px,4.2vw,42px)} }
 .price-save{font-size:12px;color:var(--gold);font-weight:500;margin-bottom:16px}
 .price-desc{font-size:13.5px;color:var(--muted);line-height:1.6;padding-bottom:20px;
   border-bottom:1px solid var(--border);margin-bottom:20px}
@@ -663,7 +670,7 @@ footer a:hover{color:var(--emerald)}
     <a href="#top" aria-label="elevaTO"><img class="logo" src="assets/logo-on-dark.svg" alt="elevaTO" width="218" height="81"></a>
     <div class="nav-links">
       <button class="nav-link" data-go="curriculum">Chương trình</button>
-      <button class="nav-link" data-go="demo">Học thử</button>
+      <button class="nav-link" data-go="demo" data-show="media.videoUrl">Học thử</button>
       <button class="nav-link" data-go="slides">Modeling là gì</button>
       <button class="nav-link" data-go="model">Model</button>
       <button class="nav-link" data-go="instructor">Người dạy</button>
@@ -765,6 +772,28 @@ footer a:hover{color:var(--emerald)}
     <div class="pain-card rv"><div class="pain-ic">🎯</div>
       <h3>Chưa thấy quy trình của deal thật</h3>
       <p>Cách tư duy đằng sau mỗi assumption trong giao dịch thực — thứ đó không có trong sách và không Google được.</p></div>
+  </div>
+</div></section>
+
+<!-- ════════ PERKS ════════ -->
+<section class="sec"><div class="shell">
+  <div class="sec-head rv">
+    <div class="eyebrow">Đặc quyền học viên</div>
+    <h2 class="h2">Không chỉ là khóa học.<br>Là cả một <em style="color:var(--gold)">network.</em></h2>
+  </div>
+  <div class="perks">
+    <div class="perk rv"><div class="perk-ic">🧭</div><div>
+      <h4>Tư vấn định hướng nghề nghiệp</h4>
+      <p>Kết nối với anh chị đang làm tại IB, PE, Big4, Corporate Finance. Hỏi thật, nghe thật — không phải nói chuyện xa vời.</p></div></div>
+    <div class="perk rv"><div class="perk-ic">📄</div><div>
+      <h4>Review CV theo từng ngành cụ thể</h4>
+      <p>CV cho IB khác Corp Finance, khác PE. Được review đúng tiêu chí ngành bạn muốn vào — không phải chỉnh kiểu "nhìn đẹp hơn".</p></div></div>
+    <div class="perk rv"><div class="perk-ic">🤝</div><div>
+      <h4>Giới thiệu từ người trong ngành</h4>
+      <p>Được giới thiệu đến đúng người trong mạng lưới — không phải LinkedIn cold message. Cơ hội đến từ người biết bạn là ai.</p></div></div>
+    <div class="perk rv"><div class="perk-ic">🏆</div><div>
+      <h4>Portfolio model để phỏng vấn</h4>
+      <p>File model từ buổi cuối là tài sản thật của bạn. Đưa vào portfolio phỏng vấn và giải thích từng dòng — vì tự tay build.</p></div></div>
   </div>
 </div></section>
 
@@ -884,28 +913,6 @@ footer a:hover{color:var(--emerald)}
   <div class="gal" id="modelGal"></div>
 </div></section>
 
-<!-- ════════ PERKS ════════ -->
-<section class="sec"><div class="shell">
-  <div class="sec-head rv">
-    <div class="eyebrow">Đặc quyền học viên</div>
-    <h2 class="h2">Không chỉ là khóa học.<br>Là cả một <em style="color:var(--gold)">network.</em></h2>
-  </div>
-  <div class="perks">
-    <div class="perk rv"><div class="perk-ic">🧭</div><div>
-      <h4>Tư vấn định hướng nghề nghiệp</h4>
-      <p>Kết nối với anh chị đang làm tại IB, PE, Big4, Corporate Finance. Hỏi thật, nghe thật — không phải nói chuyện xa vời.</p></div></div>
-    <div class="perk rv"><div class="perk-ic">📄</div><div>
-      <h4>Review CV theo từng ngành cụ thể</h4>
-      <p>CV cho IB khác Corp Finance, khác PE. Được review đúng tiêu chí ngành bạn muốn vào — không phải chỉnh kiểu "nhìn đẹp hơn".</p></div></div>
-    <div class="perk rv"><div class="perk-ic">🤝</div><div>
-      <h4>Giới thiệu từ người trong ngành</h4>
-      <p>Được giới thiệu đến đúng người trong mạng lưới — không phải LinkedIn cold message. Cơ hội đến từ người biết bạn là ai.</p></div></div>
-    <div class="perk rv"><div class="perk-ic">🏆</div><div>
-      <h4>Portfolio model để phỏng vấn</h4>
-      <p>File model từ buổi cuối là tài sản thật của bạn. Đưa vào portfolio phỏng vấn và giải thích từng dòng — vì tự tay build.</p></div></div>
-  </div>
-</div></section>
-
 <!-- ════════ INSTRUCTOR ════════ -->
 <section class="sec" id="instructor"><div class="shell">
   <div class="sec-head rv"><div class="eyebrow">Người dạy</div></div>
@@ -940,7 +947,7 @@ footer a:hover{color:var(--emerald)}
       <span class="price-badge">Early Bird</span>
       <div class="price-type" data-tpl="Live Class · {{computed.cohortLabel}}"></div>
       <div class="price-was" data-bind="computed.price.regular">—</div>
-      <div class="price-amt"><span data-bind="computed.price.earlyBird">—</span><span class="u"> / khóa</span></div>
+      <div class="price-amt"><span class="n" data-bind="computed.price.earlyBird">—</span><span class="u">/ khóa</span></div>
       <div class="price-save" data-tpl="Tiết kiệm {{computed.price.saveAmount}} ({{computed.price.savePercent}}%) · đóng khi đủ {{slots.max}} người"></div>
       <p class="price-desc" data-tpl="Dành cho người đăng ký waitlist trước khi {{computed.cohortLabel}} đủ {{slots.max}} người."></p>
       <ul class="price-feats">
@@ -956,7 +963,7 @@ footer a:hover{color:var(--emerald)}
 
     <div class="price-card rv" data-show="pricing.showSelfPaced">
       <div class="price-type">Self-paced · Tự học</div>
-      <div class="price-amt"><span data-bind="computed.price.selfPaced">—</span><span class="u"> / khóa</span></div>
+      <div class="price-amt"><span class="n" data-bind="computed.price.selfPaced">—</span><span class="u">/ khóa</span></div>
       <div class="price-save" style="color:var(--muted)" data-tpl="Mở sau {{computed.cohortLabel}}"></div>
       <p class="price-desc">Toàn bộ nội dung recorded. Học theo lịch trình riêng của bạn, truy cập vĩnh viễn.</p>
       <ul class="price-feats">
@@ -1317,6 +1324,9 @@ function compute(c){
   var isFull=remaining<=0||c.cohort.status==='full';
   var isClosed=c.cohort.status==='closed';
   var reg2=Number(c.pricing.regular)||0, eb=Number(c.pricing.earlyBird)||0;
+
+  // Cùng một quy tắc với backend: Cohort 08 đang chạy thì đã xong 7 cohort.
+  c.stats.cohortsDone=Math.max(0,Number(c.cohort.number)-1);
 
   c.computed={
     cohortLabel:'Cohort '+pad2(c.cohort.number),
