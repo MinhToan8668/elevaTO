@@ -275,19 +275,26 @@ function json(obj) {
 
 /** GET ?action=config  → landing page gọi cái này khi load */
 function doGet(e) {
-  var p = (e && e.parameter) || {};
-  var action = p.action || 'config';
+  try {
+    var p = (e && e.parameter) || {};
+    var action = p.action || 'config';
 
-  if (action === 'config') return json({ ok: true, config: publicConfig() });
+    if (action === 'config') return json({ ok: true, config: publicConfig() });
 
-  if (action === 'regs') {
-    if (p.key !== props().getProperty(PROP_ADMINKEY)) {
-      return json({ ok: false, error: 'unauthorized' });
+    if (action === 'regs') {
+      if (p.key !== props().getProperty(PROP_ADMINKEY)) {
+        return json({ ok: false, error: 'unauthorized' });
+      }
+      return json({ ok: true, regs: allRegs(), config: publicConfig() });
     }
-    return json({ ok: true, regs: allRegs(), config: publicConfig() });
-  }
 
-  return json({ ok: false, error: 'unknown action' });
+    return json({ ok: false, error: 'unknown action' });
+  } catch (err) {
+    // Trang web bắt được ok:false thì tự dùng cấu hình dự phòng, còn ném lỗi
+    // ra ngoài thì nó nhận về HTML và chết ở bước đọc JSON.
+    ghiLoi('doGet', err);
+    return json({ ok: false, error: 'internal' });
+  }
 }
 
 /**
@@ -315,17 +322,36 @@ function daXuLy(updateId) {
 }
 
 function doPost(e) {
-  var body = {};
-  try { body = JSON.parse(e.postData.contents); } catch (err) { body = {}; }
+  // Bọc TOÀN BỘ. Để một lỗi ném ra ngoài doPost là Apps Script trả về trang
+  // báo lỗi của nó, mà nó phục vụ trang đó qua một lệnh chuyển hướng — Telegram
+  // nhận "302 Found", kết luận webhook hỏng rồi ngừng gửi. Bot chết câm lặng
+  // vì một lỗi lẻ ở đâu đó bên trong. Luôn trả về 200 tử tế.
+  try {
+    var body = {};
+    try { body = JSON.parse(e.postData.contents); } catch (err) { body = {}; }
 
-  if (body.update_id !== undefined) {
-    if (!daXuLy(body.update_id)) handleTelegram(body);
-    return json({ ok: true });
+    if (body.update_id !== undefined) {
+      if (!daXuLy(body.update_id)) handleTelegram(body);
+      return json({ ok: true });
+    }
+
+    if (body.action === 'register') return json(handleRegister(body));
+
+    return json({ ok: false, error: 'unknown action' });
+  } catch (err) {
+    ghiLoi('doPost', err);
+    return json({ ok: false, error: 'internal' });
   }
+}
 
-  if (body.action === 'register') return json(handleRegister(body));
-
-  return json({ ok: false, error: 'unknown action' });
+/** Ghi lỗi ra sheet Log để còn lần ra được, thay vì mất hút. */
+function ghiLoi(cho, err) {
+  var dong = cho + ': ' + err + (err && err.stack ? '\n' + err.stack : '');
+  try { Logger.log(dong); } catch (e2) {}
+  try {
+    var sh = ss().getSheetByName(SHEET_LOG) || ss().insertSheet(SHEET_LOG);
+    sh.appendRow([nowVN(), cho, String(err), String(err && err.stack || '')]);
+  } catch (e3) {}
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1053,10 +1079,41 @@ function setup() {
   // dòng là Telegram nhận về chuyển hướng 302 và im hẳn, không báo gì cho ta.
   // Chế độ hỏi định kỳ đi theo chiều ngược lại: script tự gọi ra Telegram, nên
   // không có URL nào để hỏng, không có quyền truy cập nào để đặt sai.
+  // Ưu tiên webhook vì nó cho phản hồi tức thì. Chỉ nối khi đã tự thử và
+  // thấy /exec thật sự trả 200 — nối bừa thì Telegram im lặng bỏ cuộc và bot
+  // chết câm, đúng thứ đã xảy ra trước đây.
+  var tucThi = false;
+  if (webhookDungDuoc()) {
+    try { goLichHoi(); } catch (e1) {}          // hai đường sẽ xử lý trùng
+    var hook = tgApi('setWebhook', {
+      url: String(WEBAPP_URL).trim(),
+      allowed_updates: ['message', 'callback_query'],
+      drop_pending_updates: true
+    });
+    tucThi = !!(hook && hook.ok);
+  }
+
+  if (tucThi) {
+    out.push('✔ Đã nối webhook — bot trả lời TỨC THÌ');
+    out.push('  Đã tự thử /exec trước khi nối và thấy trả về 200.');
+    out.push('  Nếu sau này bot im, chạy  batCheDoHoi  để lùi về chế độ chậm mà chắc.');
+    Logger.log(out.join('\n'));
+    tgSend(adminIds()[0],
+      '✅ *Backend elevaTO đã sẵn sàng*\n\nBot: @' + me.result.username +
+      '\n\nGõ /menu để xem danh sách lệnh.');
+    return;
+  }
+
+  out.push('• /exec chưa trả về 200 → không nối webhook (nối bừa thì bot sẽ câm)');
+  out.push('  Thường là do bản đang triển khai vẫn là code cũ. Deploy phiên bản');
+  out.push('  mới rồi chạy lại setup là có phản hồi tức thì.');
+  out.push('  Chạy  kiemTraWebApp  để xem chi tiết.');
+  out.push('');
+
   try {
     datLichHoi();
-    out.push('✔ Bot chạy bằng chế độ hỏi định kỳ (lịch chạy mỗi phút)');
-    out.push('  Không dùng webhook → không còn lỗi 302 hay quyền truy cập nữa.');
+    out.push('✔ Tạm chạy bằng chế độ hỏi định kỳ (lịch chạy mỗi phút)');
+    out.push('  Không dùng webhook → không dính lỗi 302 hay quyền truy cập.');
     out.push('  Tin đầu chờ tối đa 1 phút, các tin sau gần như tức thì.');
   } catch (err) {
     out.push('');
@@ -1201,6 +1258,36 @@ function dungBot() {
     out.push('  hoiTelegram → Xoá trình kích hoạt.');
   }
   Logger.log(out.join('\n'));
+}
+
+/**
+ * Webhook có dùng được không: tự gọi /exec đúng kiểu Telegram gọi và xem
+ * cuối cùng có ra 200 không.
+ *
+ * Apps Script LUÔN trả 302 rồi mới chuyển tới nội dung thật — chuyện đó bình
+ * thường, Telegram đi theo được. Cái làm Telegram bó tay là khi chuyển hướng
+ * dẫn tới trang báo lỗi thay vì câu trả lời, tức là doPost đã ném lỗi.
+ * Nên phép thử đúng là đi theo chuyển hướng rồi xem mã cuối cùng.
+ *
+ * Lưu ý: hàm này thử bản ĐANG TRIỂN KHAI, không phải code trong trình soạn
+ * thảo — đúng thứ Telegram sẽ gặp. Sửa code xong phải deploy phiên bản mới
+ * thì kết quả ở đây mới đổi.
+ */
+function webhookDungDuoc() {
+  var url = String(WEBAPP_URL || '').trim();
+  if (url.slice(-5) !== '/exec') return false;
+  try {
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ ping: true }),
+      followRedirects: true,
+      muteHttpExceptions: true
+    });
+    return res.getResponseCode() === 200;
+  } catch (err) {
+    return false;
+  }
 }
 
 /**
