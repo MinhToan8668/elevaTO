@@ -145,7 +145,24 @@ file đó không chứa token, token nằm trong Script Properties của Apps Sc
 
 ## Bảng lệnh Telegram
 
-Gõ `/menu` bất cứ lúc nào để xem lại.
+### Cách thao tác
+
+Hai loại lệnh, thao tác khác nhau:
+
+**Lệnh không cần giá trị** — `/status` `/ds` `/sheet` `/mo` `/day` `/dong`
+`/cohortmoi` `/xoavideo` `/xoathongbao` — **bấm thẳng vào chữ xanh là chạy.**
+
+**Lệnh cần kèm giá trị** — `/cohort` `/slot` `/base` `/giasom` `/giagoc`
+`/giatuhoc` `/lich` `/buoi` `/video` `/thongbao` `/duyet` `/tuchoi` — bấm vào
+chữ xanh thì Telegram **chỉ gửi mỗi tên lệnh**, không gửi con số hiển thị phía
+sau. Bot sẽ trả về thẻ cho biết giá trị đang dùng kèm một dòng lệnh mẫu: **bấm
+vào dòng mẫu để Telegram copy**, dán vào ô chat, sửa số rồi gửi.
+
+Với các lệnh số và lệnh bật/tắt, thẻ đó còn kèm nút bấm sẵn (`➖ ➕`, `👁 🙈`) —
+đổi một nấc thì bấm nút cho nhanh, đổi hẳn sang giá trị khác thì gõ.
+
+Bấm nút **Menu** xanh cạnh ô chat để xem toàn bộ lệnh kèm mô tả — danh sách này
+được nạp lúc chạy `setup`.
 
 | Lệnh | Tác dụng |
 |---|---|
