@@ -156,9 +156,9 @@ function isPlainObject(v) {
 }
 
 /** Config đã "nấu chín": thêm các giá trị tính toán sẵn để client chỉ việc hiển thị. */
-function publicConfig() {
+function publicConfig(preloaded) {
   var c = getConfig();
-  var registered = countRegs();
+  var registered = countRegs(preloaded);
   c.slots.registered = registered;
 
   var total = Number(c.slots.base) + registered;
@@ -242,9 +242,9 @@ function allRegs() {
 }
 
 /** Chỉ đếm đăng ký của cohort hiện tại và chưa bị từ chối. */
-function countRegs() {
+function countRegs(preloaded) {
   var label = cohortLabel(getConfig().cohort.number);
-  return allRegs().filter(function (r) {
+  return (preloaded || allRegs()).filter(function (r) {
     return r.cohort === label && r.status !== 'rejected';
   }).length;
 }
@@ -295,12 +295,30 @@ function doGet(e) {
  *   • Landing page gửi form → body có action:'register'
  * Client gửi Content-Type: text/plain để tránh CORS preflight.
  */
+/**
+ * Telegram gửi lại đúng update đó nếu không nhận được phản hồi kịp.
+ * Apps Script chạy chậm (mở Sheet, gọi API) nên chuyện này xảy ra thường xuyên,
+ * và mỗi lần gửi lại là bot nhắn thêm một tin — thành vòng lặp spam.
+ * Nhớ update_id đã xử lý trong cache 6 tiếng để bỏ qua các lần gửi lại.
+ */
+function daXuLy(updateId) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var key = 'tgu_' + updateId;
+    if (cache.get(key)) return true;
+    cache.put(key, '1', 21600);          // 6 giờ, mức tối đa của CacheService
+    return false;
+  } catch (err) {
+    return false;                        // cache lỗi thì vẫn xử lý, thà trùng còn hơn mất
+  }
+}
+
 function doPost(e) {
   var body = {};
   try { body = JSON.parse(e.postData.contents); } catch (err) { body = {}; }
 
   if (body.update_id !== undefined) {
-    handleTelegram(body);
+    if (!daXuLy(body.update_id)) handleTelegram(body);
     return json({ ok: true });
   }
 
@@ -596,8 +614,9 @@ function cmdMenu(chatId) {
 }
 
 function cmdStatus(chatId) {
-  var c = publicConfig();
-  var regs = allRegs().filter(function (r) { return r.cohort === c.computed.cohortLabel; });
+  var all = allRegs();                   // đọc sheet đúng một lần
+  var c = publicConfig(all);
+  var regs = all.filter(function (r) { return r.cohort === c.computed.cohortLabel; });
   var pend = regs.filter(function (r) { return r.status === 'pending'; }).length;
   var appr = regs.filter(function (r) { return r.status === 'approved'; }).length;
 
@@ -859,7 +878,11 @@ function setup() {
     out.push('✘ WEBAPP_URL phải kết thúc bằng /exec, đang là: ' + url);
     out.push('  URL /dev không dùng được vì Telegram không đăng nhập được vào đó.');
   } else {
-    var hook = tgApi('setWebhook', { url: url, allowed_updates: ['message', 'callback_query'] });
+    var hook = tgApi('setWebhook', {
+      url: url,
+      allowed_updates: ['message', 'callback_query'],
+      drop_pending_updates: true          // xoá hàng chờ cũ, tránh bot nhắn lại loạt tin tồn
+    });
     if (hook && hook.ok) {
       // hỏi lại Telegram để chắc chắn, không tin mỗi câu trả lời của lệnh set
       var chk = tgApi('getWebhookInfo', {});
@@ -946,8 +969,24 @@ function noiWebhook() {
     Logger.log('✘ WEBAPP_URL ở đầu file phải là URL kết thúc bằng /exec. Đang là: ' + url);
     return;
   }
-  var r = tgApi('setWebhook', { url: url, allowed_updates: ['message', 'callback_query'] });
+  var r = tgApi('setWebhook', {
+    url: url,
+    allowed_updates: ['message', 'callback_query'],
+    drop_pending_updates: true
+  });
   Logger.log(r && r.ok ? '✔ Đã nối webhook: ' + url : '✘ Lỗi: ' + JSON.stringify(r));
+}
+
+/**
+ * DỪNG KHẨN CẤP — bot đang nhắn liên tục thì chạy hàm này.
+ * Ngắt webhook và xoá sạch hàng chờ, bot im ngay lập tức.
+ * Sửa xong thì chạy lại noiWebhook (hoặc setup) để nối lại.
+ */
+function dungBot() {
+  var r = tgApi('deleteWebhook', { drop_pending_updates: true });
+  Logger.log(r && r.ok
+    ? '✔ Đã ngắt webhook và xoá hàng chờ. Bot sẽ im ngay.\n  Chạy noiWebhook() để nối lại.'
+    : '✘ Lỗi: ' + JSON.stringify(r));
 }
 
 function xoaWebhook()   { Logger.log(JSON.stringify(tgApi('deleteWebhook', {}))); }

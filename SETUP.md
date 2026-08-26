@@ -99,6 +99,15 @@ Chạy `kiemTra()` và đọc dòng **Webhook**. Ba trường hợp:
 Trường hợp cuối hay gặp nhất: sau khi sửa code phải **tạo phiên bản mới**, nếu
 không thì URL `/exec` vẫn phục vụ code của lần triển khai trước.
 
+### Bot nhắn liên tục cùng một tin
+
+Telegram gửi lại đúng update đó nếu không nhận được phản hồi trong vài giây.
+Apps Script hay chậm vì phải mở Sheet và gọi API, nên mỗi lần gửi lại là bot
+nhắn thêm một tin — thành vòng lặp.
+
+Code đã ghi nhớ `update_id` đã xử lý trong cache 6 tiếng nên bỏ qua các lần gửi
+lại. Nếu vẫn gặp: chạy `dungBot()` để im ngay, rồi `noiWebhook()` để nối lại.
+
 Lưu ý: đăng ký vẫn vào được Google Sheet ngay cả khi token chưa lưu — phần ghi
 Sheet chạy trước phần gửi Telegram. Thấy Sheet có dòng mới mà Telegram im lặng
 thì gần như chắc chắn là token chưa lưu hoặc webhook chưa nối.
@@ -108,7 +117,8 @@ thì gần như chắc chắn là token chưa lưu hoặc webhook chưa nối.
 | Hàm | Dùng khi |
 |---|---|
 | `kiemTra()` | Xem tình trạng: token, webhook, số đăng ký, cấu hình hiện tại, ADMIN_KEY |
-| `noiWebhook()` | Khi `setup` báo không nối được webhook — dán URL `/exec` vào rồi Run |
+| `noiWebhook()` | Nối lại webhook bằng `WEBAPP_URL` khai ở đầu file |
+| `dungBot()` | **Dừng khẩn cấp** — bot nhắn liên tục thì chạy hàm này, bot im ngay |
 
 ---
 
