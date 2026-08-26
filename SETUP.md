@@ -30,6 +30,10 @@ Nó tải config từ Apps Script rồi render ra. Bot đổi config → web đ�
 
 ---
 
+> **Trạng thái:** backend đã được cài và nối vào trang. `index.html` đang trỏ tới
+> Web App tại `AKfycbwHtZ-rxy…/exec`. Phần dưới giữ lại để tham khảo khi cần
+> dựng lại từ đầu, đổi bot, hoặc chuyển sang tài khoản Google khác.
+
 ## Cài đặt — 4 bước
 
 ### Bước 1 — Tạo Google Sheet
