@@ -76,8 +76,8 @@ function defaultConfig() {
     },
 
     stats: {
-      years: '2.5+',
-      cohortsDone: 6,        // /cohortmoi tự +1
+      years: '2.5+',         // /kinhnghiem 3+
+      cohortsDone: 6,        // KHÔNG sửa tay: tự suy ra = số cohort hiện tại - 1
       students: '50+'
     },
 
@@ -164,6 +164,10 @@ function publicConfig(preloaded) {
 
   var total = Number(c.slots.base) + registered;
   var remaining = Math.max(0, Number(c.slots.max) - total);
+
+  // Cohort 08 đang chạy thì đã xong 7 cohort. Suy ra thay vì lưu rời, để đổi
+  // số cohort bằng /cohort là con số này đi theo, không bao giờ lệch nhau.
+  c.stats.cohortsDone = Math.max(0, Number(c.cohort.number) - 1);
 
   c.computed = {
     cohortLabel: cohortLabel(c.cohort.number),
@@ -544,6 +548,9 @@ function handleTelegram(u) {
     case 'giagoc':
     case 'giatuhoc':  return cmdSetVal(chatId, args, cmd);
 
+    case 'kinhnghiem':
+    case 'nam':       return cmdYears(chatId, args);
+
     case 'lich':      return cmdSchedule(chatId, args);
     case 'buoi':      return cmdSessions(chatId, args);
 
@@ -702,15 +709,17 @@ function cmdMenu(chatId) {
     '/slot `12` — tổng số chỗ mỗi cohort',
     '/base `4` — số người đăng ký ngoài hệ thống',
     '/cohortmoi — mở cohort kế tiếp (tự +1, reset đếm)',
+    '_Số cohort đã hoàn thành tự bằng số cohort hiện tại trừ 1._',
     '',
     '*💰 Học phí*',
     '/giasom `3000000` — giá Early Bird',
     '/giagoc `4000000` — giá gốc (giá gạch)',
     '/giatuhoc `1500000` — giá Self-paced',
     '',
-    '*📅 Lịch học*',
+    '*📅 Lịch học & hồ sơ*',
     '/lich `Thứ 7 & CN | 9h–11h sáng`',
     '/buoi `8 5 3` — tổng buổi, lý thuyết, thực hành',
+    '/kinhnghiem `3+` — số năm kinh nghiệm hiện đầu trang',
     '',
     '*🚦 Trạng thái*',
     '/mo — đang mở đăng ký',
@@ -828,6 +837,24 @@ function moneyStep(spec) {
   return spec.money ? moneyShort(spec.step) : String(spec.step);
 }
 
+/** Số năm kinh nghiệm hiện trên dải chỉ số đầu trang. Nhận cả '3' lẫn '2.5+'. */
+function cmdYears(chatId, args) {
+  var v = String(args || '').trim();
+  if (!v) {
+    return cmdHint(chatId, 'kinhnghiem',
+      'Số năm kinh nghiệm đang là *' + getConfig().stats.years + '*',
+      '/kinhnghiem 3+', 'Viết sao hiện y vậy: `3`, `3+`, `2.5+` đều được');
+  }
+  if (!/^[0-9]+([.,][0-9]+)?\+?$/.test(v)) {
+    return cmdHint(chatId, 'kinhnghiem', 'Không đọc được `' + v + '`',
+                   '/kinhnghiem 3+', 'Chỉ nhận số, có thể kèm dấu `+` ở cuối');
+  }
+  var cfg = getConfig();
+  cfg.stats.years = v;
+  saveConfig(cfg);
+  tgSend(chatId, '✅ Kinh nghiệm = *' + v + '* năm\n\nWeb sẽ cập nhật trong ~1 phút.');
+}
+
 function cmdSchedule(chatId, args) {
   if (!args) {
     var sc = getConfig().schedule;
@@ -893,13 +920,12 @@ function cmdNewCohort(chatId) {
   cfg.cohort.number = Number(cfg.cohort.number) + 1;
   cfg.cohort.status = 'open';
   cfg.slots.base = 0;
-  cfg.stats.cohortsDone = Number(cfg.stats.cohortsDone) + 1;
-  saveConfig(cfg);
+  saveConfig(cfg);           // cohortsDone tự suy ra, không cộng tay ở đây
   tgSend(chatId,
     '🚀 Đã mở *' + cohortLabel(cfg.cohort.number) + '*\n\n' +
     '• ' + old + ' được lưu lại trong Sheet (không mất dữ liệu)\n' +
     '• Bộ đếm reset về 0, trạng thái 🟢 mở\n' +
-    '• Số cohort đã hoàn thành: ' + cfg.stats.cohortsDone + '\n\n' +
+    '• Số cohort đã hoàn thành: ' + Math.max(0, cfg.cohort.number - 1) + '\n\n' +
     'Web tự cập nhật — *không cần sửa dòng code nào.*');
   cmdStatus(chatId);
 }
@@ -1055,6 +1081,7 @@ function setup() {
     { command: 'giatuhoc',    description: '💰 Giá Self-paced — /giatuhoc 1500000' },
     { command: 'lich',        description: '📅 Lịch học — /lich Thứ 7 & CN | 9h–11h' },
     { command: 'buoi',        description: '📚 Số buổi — /buoi 8 5 3' },
+    { command: 'kinhnghiem',  description: '🎯 Năm kinh nghiệm — /kinhnghiem 3+' },
     { command: 'mo',          description: '🟢 Mở đăng ký' },
     { command: 'day',         description: '🟡 Đã đủ chỗ' },
     { command: 'dong',        description: '🔴 Đóng đăng ký' },
