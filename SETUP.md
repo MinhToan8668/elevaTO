@@ -25,6 +25,21 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
                           └───────────────┘
 ```
 
+### Cái gì sửa ở đâu
+
+| Sửa bằng | Gồm những gì |
+|---|---|
+| **Bot Telegram** | cohort, số chỗ, giá, lịch học, số buổi, năm kinh nghiệm, video, banner, trạng thái |
+| **Sửa thẳng `index.html`** | người dạy và các dòng chứng chỉ, link TikTok, thông tin công ty mẫu, toàn bộ chữ trên trang |
+
+Ranh giới này là **bắt buộc**, không phải quy ước cho vui. Backend chỉ gửi cho
+trang những khối nó sửa được. Nếu nó gửi cả mấy khối chữ kia thì bản lưu trong
+Script Properties sẽ **đè lên** bản trong `index.html` — sửa file bao nhiêu lần
+trang cũng không đổi, mà không có lỗi nào báo ra cả.
+
+Đã dính đúng lỗi đó một lần: link TikTok và dòng chứng chỉ CFA sửa trong
+`index.html` nhưng trang vẫn hiện bản cũ, vì backend đang gửi đè.
+
 Điểm mấu chốt: `index.html` **không hardcode** cohort / giá / số chỗ nữa.
 Nó tải config từ Apps Script rồi render ra. Bot đổi config → web đổi theo.
 

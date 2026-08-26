@@ -81,22 +81,9 @@ function defaultConfig() {
       students: '50+'
     },
 
-    instructor: {
-      name: 'Minh Toàn',
-      role: 'Assistant Relationship Manager (Wholesale Banking) · Vietnam International Bank (VIB)',
-      badges: [
-        '2.5+ năm kinh nghiệm M&A & Investment Analysis',
-        'Corporate Banking — Vietnam International Bank (VIB)',
-        'CFA Candidate · elevaTO Founder',
-        'TikTok: Toàn Thích Trải Nghiệm'
-      ]
-    },
-
-    contact: {
-      tiktok: 'Toàn Thích Trải Nghiệm',
-      tiktokUrl: 'https://www.tiktok.com/@toanthichtrainghiem',
-      email: ''
-    },
+    // Người dạy, liên hệ, thông tin công ty mẫu: KHÔNG để ở đây.
+    // Bot không có lệnh nào sửa được chúng, nên chúng sống trong index.html.
+    // Xem thêm ghi chú ở configChoWeb.
 
     announcement: {
       show: false,           // /thongbao <nội dung>  /xoathongbao
@@ -110,15 +97,27 @@ function defaultConfig() {
       showModel: true        // /model on|off
     },
 
-    company: {
-      ticker: 'DGW',
-      name: 'Digiworld Corporation (CTCP Thế Giới Số)',
-      exchange: 'HOSE',
-      sheets: 21,
-      checks: 5,
-      industries: 17
-    }
+    dummy: null   // giữ chỗ, không dùng
   };
+}
+
+/**
+ * Cấu hình gửi cho trang web.
+ *
+ * Chỉ gửi những gì bot sửa được. Mấy khối chữ như người dạy, liên hệ, thông
+ * tin công ty mẫu thì sửa thẳng trong index.html — nếu backend cũng gửi
+ * chúng thì bản lưu trong Script Properties sẽ ĐÈ LÊN bản trong index.html,
+ * và sửa file bao nhiêu lần trang cũng không đổi. Đã dính đúng lỗi đó với
+ * link TikTok và dòng chứng chỉ CFA.
+ */
+function configChoWeb(preloaded) {
+  var c = publicConfig(preloaded);
+  ['instructor', 'contact', 'company', 'dummy'].forEach(function (k) { delete c[k]; });
+  delete c.pricing.note;
+  delete c.stats.students;
+  delete c.schedule.platform;
+  delete c.cohort.openText;
+  return c;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -283,13 +282,13 @@ function doGet(e) {
     var p = (e && e.parameter) || {};
     var action = p.action || 'config';
 
-    if (action === 'config') return json({ ok: true, config: publicConfig() });
+    if (action === 'config') return json({ ok: true, config: configChoWeb() });
 
     if (action === 'regs') {
       if (p.key !== props().getProperty(PROP_ADMINKEY)) {
         return json({ ok: false, error: 'unauthorized' });
       }
-      return json({ ok: true, regs: allRegs(), config: publicConfig() });
+      return json({ ok: true, regs: allRegs(), config: configChoWeb() });
     }
 
     return json({ ok: false, error: 'unknown action' });
@@ -382,7 +381,7 @@ function handleRegister(d) {
       return r.cohort === label && normPhone(r.phone) === normPhone(phone);
     })[0];
     if (dup) {
-      return { ok: true, duplicate: true, config: publicConfig(),
+      return { ok: true, duplicate: true, config: configChoWeb(),
                message: 'Số điện thoại này đã có trong danh sách rồi nhé!' };
     }
 
@@ -408,7 +407,7 @@ function handleRegister(d) {
         'Khi muốn mở cohort mới, gõ /cohortmoi (không cần sửa code).');
     }
 
-    return { ok: true, id: id, config: publicConfig() };
+    return { ok: true, id: id, config: configChoWeb() };
   } finally {
     lock.releaseLock();
   }
