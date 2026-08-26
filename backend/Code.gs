@@ -11,6 +11,15 @@
  * ============================================================
  */
 
+// ═════════════════════════════════════════════════════════════
+//  ĐIỀN 3 GIÁ TRỊ NÀY RỒI CHẠY HÀM  setup
+// ═════════════════════════════════════════════════════════════
+var TG_TOKEN   = 'DAN_TOKEN_BOT';          // token từ @BotFather
+var TG_ADMIN   = 'DAN_CHAT_ID';            // chat id của bạn, từ @userinfobot
+var WEBAPP_URL = 'DAN_URL_EXEC';           // URL Web App, PHẢI kết thúc bằng /exec
+// ═════════════════════════════════════════════════════════════
+
+
 // ─────────────────────────────────────────────────────────────
 // 0. HẰNG SỐ
 // ─────────────────────────────────────────────────────────────
@@ -807,25 +816,19 @@ function cmdSheet(chatId) {
  * Chạy lại nhiều lần cũng an toàn, cấu hình đang có sẽ không bị ghi đè.
  */
 function setup() {
-  var TOKEN = 'DAN_TOKEN_BOT_VAO_DAY';
-  var ADMIN = 'DAN_CHAT_ID_CUA_BAN_VAO_DAY';   // nhiều người: '111,222'
-
-  // Để trống thì tự dò. Nếu tự dò không ra (hoặc ra URL /dev), dán URL /exec vào đây.
-  var WEBAPP_URL = '';
-
   var out = [];
-  if (TOKEN.indexOf('DAN_') === 0 || ADMIN.indexOf('DAN_') === 0) {
-    throw new Error('Bạn chưa điền TOKEN và ADMIN ở đầu hàm setup().');
+
+  if (TG_TOKEN.indexOf('DAN_') === 0 || TG_ADMIN.indexOf('DAN_') === 0) {
+    throw new Error('Chưa điền TG_TOKEN và TG_ADMIN ở đầu file. Kéo lên đầu, điền vào, rồi chạy lại setup.');
   }
 
-  props().setProperty(PROP_TOKEN, TOKEN.trim());
-  props().setProperty(PROP_ADMIN, ADMIN.trim());
+  props().setProperty(PROP_TOKEN, TG_TOKEN.trim());
+  props().setProperty(PROP_ADMIN, TG_ADMIN.trim());
   if (!props().getProperty(PROP_ADMINKEY)) {
     props().setProperty(PROP_ADMINKEY, Utilities.getUuid());
   }
   out.push('✔ Đã lưu token và chat id admin');
 
-  // giữ nguyên cấu hình cũ nếu đã có, chỉ nạp mặc định lần đầu
   if (!props().getProperty(PROP_CONFIG)) {
     saveConfig(defaultConfig());
     out.push('✔ Đã nạp cấu hình mặc định');
@@ -836,43 +839,44 @@ function setup() {
   regSheet();
   out.push('✔ Sheet "' + SHEET_REGS + '" sẵn sàng');
 
-  // kiểm tra token bằng getMe
   var me = tgApi('getMe', {});
   if (!me || !me.ok) {
-    out.push('✘ Token không hợp lệ. Kiểm tra lại với @BotFather rồi chạy lại setup.');
+    out.push('✘ Token không hợp lệ — kiểm tra lại với @BotFather rồi chạy lại setup');
     Logger.log(out.join('\n'));
     return;
   }
   out.push('✔ Bot: @' + me.result.username);
 
-  // tìm URL web app rồi nối webhook
+  // URL webhook. KHÔNG suy ra từ ScriptApp.getService().getUrl() được:
+  // hàm đó trả URL /dev, mà /dev và /exec dùng hai loại ID khác nhau nên
+  // không đổi qua lại bằng cách cắt chuỗi. Phải lấy URL /exec thật.
   var url = String(WEBAPP_URL || '').trim();
-  if (!url) {
-    try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; }
-  }
-  // Chạy từ trình soạn thảo, getUrl() hay trả URL /dev. Telegram không dùng được
-  // /dev vì nó đòi đăng nhập, nên đổi sang /exec.
-  if (url.slice(-4) === '/dev') url = url.slice(0, -4) + '/exec';
 
-  if (url.slice(-5) === '/exec') {
+  if (url.indexOf('DAN_') === 0 || !url) {
+    out.push('✘ Chưa điền WEBAPP_URL ở đầu file → bot sẽ KHÔNG trả lời lệnh nào');
+    out.push('  Lấy URL ở: Triển khai → Quản lý bản triển khai → cột URL ứng dụng web');
+  } else if (url.slice(-5) !== '/exec') {
+    out.push('✘ WEBAPP_URL phải kết thúc bằng /exec, đang là: ' + url);
+    out.push('  URL /dev không dùng được vì Telegram không đăng nhập được vào đó.');
+  } else {
     var hook = tgApi('setWebhook', { url: url, allowed_updates: ['message', 'callback_query'] });
     if (hook && hook.ok) {
-      out.push('✔ Đã nối webhook: ' + url);
+      // hỏi lại Telegram để chắc chắn, không tin mỗi câu trả lời của lệnh set
+      var chk = tgApi('getWebhookInfo', {});
+      var live = chk && chk.ok ? chk.result.url : '';
+      out.push(live === url ? '✔ Webhook đã nối và Telegram xác nhận'
+                            : '⚠ Đã gửi lệnh nối nhưng Telegram báo URL: ' + (live || 'trống'));
     } else {
       out.push('✘ Nối webhook lỗi: ' + JSON.stringify(hook));
-      out.push('  Thường do URL chưa đúng. Dán URL /exec vào biến WEBAPP_URL ở đầu setup() rồi chạy lại.');
     }
-  } else {
-    out.push('✘ Chưa tìm được URL web app (nhận được: ' + (url || 'trống') + ')');
-    out.push('  Dán URL /exec vào biến WEBAPP_URL ở đầu hàm setup() rồi chạy lại.');
   }
 
   out.push('');
   out.push('─── DÁN VÀO index.html, thay dòng bắt đầu bằng  var API =  ───');
-  out.push("var API = '" + (url || 'URL_WEB_APP_CUA_BAN') + "';");
+  out.push("var API = '" + url + "';");
   out.push('');
   out.push('─── Xem danh sách đăng ký trên web ───');
-  out.push('https://<tên-miền-của-bạn>/?admin=' + props().getProperty(PROP_ADMINKEY));
+  out.push('https://<tên-miền>/?admin=' + props().getProperty(PROP_ADMINKEY));
   out.push('');
   out.push('Xong. Vào Telegram nhắn bot /menu để kiểm tra.');
 
@@ -886,8 +890,15 @@ function setup() {
 function kiemTra() {
   var out = [];
   var tk = token();
-  out.push('Token: ' + (tk ? 'đã có' : '✘ CHƯA CÓ'));
-  out.push('Admin chat id: ' + (adminIds().join(', ') || '✘ CHƯA CÓ'));
+  if (!tk) {
+    out.push('╔══════════════════════════════════════════════╗');
+    out.push('║  CHƯA CHẠY setup()                           ║');
+    out.push('║  Chọn hàm  setup  ở thanh trên rồi bấm Run.  ║');
+    out.push('╚══════════════════════════════════════════════╝');
+    out.push('');
+  }
+  out.push('Token: ' + (tk ? 'đã lưu' : '✘ chưa lưu'));
+  out.push('Admin chat id: ' + (adminIds().join(', ') || '✘ chưa lưu'));
 
   var me = tgApi('getMe', {});
   out.push('Bot: ' + (me && me.ok ? '@' + me.result.username : '✘ token sai hoặc mạng lỗi'));
@@ -917,7 +928,11 @@ function kiemTra() {
   out.push('Giá Early Bird: ' + c.computed.price.earlyBird);
   out.push('Video học thử: ' + (c.media.videoUrl || 'chưa đặt'));
   out.push('');
-  out.push('URL web app: ' + (ScriptApp.getService().getUrl() || 'chưa triển khai'));
+  var devUrl = '';
+  try { devUrl = ScriptApp.getService().getUrl() || ''; } catch (e) {}
+  out.push('URL từ getService(): ' + (devUrl || 'không có') +
+           (devUrl.slice(-4) === '/dev' ? '   ← đây là URL /dev, KHÔNG dùng cho webhook được' : ''));
+  out.push('WEBAPP_URL khai ở đầu file: ' + WEBAPP_URL);
   out.push('ADMIN_KEY: ' + props().getProperty(PROP_ADMINKEY));
 
   Logger.log(out.join('\n'));
@@ -926,8 +941,11 @@ function kiemTra() {
 /** Dùng khi setup không tự tìm được URL: dán URL /exec vào đây rồi Run. */
 /** Dán URL /exec vào rồi Run — dùng khi setup không tự nối được webhook. */
 function noiWebhook() {
-  var url = 'DAN_URL_WEB_APP_EXEC_VAO_DAY';
-  if (url.slice(-4) === '/dev') url = url.slice(0, -4) + '/exec';
+  var url = String(WEBAPP_URL || '').trim();
+  if (url.slice(-5) !== '/exec') {
+    Logger.log('✘ WEBAPP_URL ở đầu file phải là URL kết thúc bằng /exec. Đang là: ' + url);
+    return;
+  }
   var r = tgApi('setWebhook', { url: url, allowed_updates: ['message', 'callback_query'] });
   Logger.log(r && r.ok ? '✔ Đã nối webhook: ' + url : '✘ Lỗi: ' + JSON.stringify(r));
 }

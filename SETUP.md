@@ -42,12 +42,18 @@ Tạo một Google Sheet mới, đặt tên `elevaTO Đăng ký`.
 ### Bước 2 — Dán code
 **Tiện ích mở rộng → Apps Script**, xoá hết code mẫu, dán toàn bộ `backend/Code.gs` vào, bấm 💾.
 
-Sửa hai dòng đầu hàm `setup()` ở cuối file:
+Điền ba giá trị ở **đầu file**:
 
 ```js
-var TOKEN = '<token từ @BotFather>';
-var ADMIN = '<chat id của bạn, lấy từ @userinfobot>';
+var TG_TOKEN   = '<token từ @BotFather>';
+var TG_ADMIN   = '<chat id của bạn, lấy từ @userinfobot>';
+var WEBAPP_URL = '<URL Web App, phải kết thúc bằng /exec>';
 ```
+
+`WEBAPP_URL` lấy sau bước 3, ở **Triển khai → Quản lý bản triển khai**, cột
+*URL ứng dụng web*. Không suy ra được từ code: hàm `ScriptApp.getService().getUrl()`
+trả URL `/dev`, mà `/dev` và `/exec` dùng hai loại ID hoàn toàn khác nhau nên
+không đổi qua lại được. Telegram cũng không gọi được `/dev` vì URL đó đòi đăng nhập.
 
 ### Bước 3 — Triển khai
 **Triển khai → Bản triển khai mới → Ứng dụng web**
@@ -84,14 +90,18 @@ Trong `index.html`, tìm dòng bắt đầu bằng `var API =` (đang là
 
 Chạy `kiemTra()` và đọc dòng **Webhook**. Ba trường hợp:
 
-| Dòng Webhook hiện | Nghĩa là | Xử lý |
+| `kiemTra()` báo | Nghĩa là | Xử lý |
 |---|---|---|
-| `✘ CHƯA NỐI` | Telegram không biết gửi tin đi đâu | Dán URL `/exec` vào biến `WEBAPP_URL` đầu hàm `setup()`, chạy lại |
-| URL kết thúc bằng `/dev` | Telegram không gọi được vì `/dev` đòi đăng nhập | Như trên |
-| Có URL `/exec` nhưng vẫn im | Deployment đang chạy code cũ | Triển khai → Quản lý bản triển khai → Chỉnh sửa → Phiên bản: **Phiên bản mới** |
+| `Token: ✘ chưa lưu` | `setup()` chưa chạy xong lần nào | Chọn đúng hàm `setup` rồi Run |
+| `Webhook: ✘ CHƯA NỐI` | Telegram không biết gửi tin đi đâu | Điền `WEBAPP_URL` ở đầu file rồi chạy lại `setup` |
+| Có URL `/exec` nhưng bot vẫn im | Bản triển khai đang chạy code cũ | Triển khai → Quản lý bản triển khai → Chỉnh sửa → Phiên bản: **Phiên bản mới** |
 
-Trường hợp thứ ba hay gặp nhất: sau khi sửa code phải **tạo phiên bản mới**, nếu
+Trường hợp cuối hay gặp nhất: sau khi sửa code phải **tạo phiên bản mới**, nếu
 không thì URL `/exec` vẫn phục vụ code của lần triển khai trước.
+
+Lưu ý: đăng ký vẫn vào được Google Sheet ngay cả khi token chưa lưu — phần ghi
+Sheet chạy trước phần gửi Telegram. Thấy Sheet có dòng mới mà Telegram im lặng
+thì gần như chắc chắn là token chưa lưu hoặc webhook chưa nối.
 
 ### Hai hàm tiện ích
 
