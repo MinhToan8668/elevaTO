@@ -8,10 +8,10 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
 ## Kiến trúc
 
 ```
-        ┌──────────────┐   webhook    ┌─────────────────────┐
-        │  Bot Telegram │ ───────────▶ │  Google Apps Script │
-        │  (điều khiển) │ ◀─────────── │   backend/Code.gs   │
-        └──────────────┘   thông báo   └──────────┬──────────┘
+        ┌──────────────┐  script tự hỏi ┌─────────────────────┐
+        │  Bot Telegram │ ◀───────────── │  Google Apps Script │
+        │  (điều khiển) │ ─────────────▶ │   backend/Code.gs   │
+        └──────────────┘   tin & lệnh    └──────────┬──────────┘
                                                   │
                                   ┌───────────────┼───────────────┐
                                   │               │               │
@@ -28,6 +28,15 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
 Điểm mấu chốt: `index.html` **không hardcode** cohort / giá / số chỗ nữa.
 Nó tải config từ Apps Script rồi render ra. Bot đổi config → web đổi theo.
 
+Chiều mũi tên phía bot là chuyện đáng chú ý. Cách thông thường là dùng *webhook*:
+Telegram gọi ngược vào URL `/exec` mỗi khi có tin. Cách đó phụ thuộc vào bản
+triển khai và quyền truy cập của nó — chỉ cần hộp thoại deploy đặt lại một dòng
+là Telegram nhận về chuyển hướng `302` rồi im hẳn, không báo gì cho ta cả.
+
+Ở đây làm ngược lại: một lịch chạy mỗi phút khiến chính script tự gọi ra Telegram
+hỏi có tin mới không. **Không có URL nào để hỏng, không có quyền truy cập nào để
+đặt sai.** URL `/exec` chỉ còn phục vụ landing page đọc cấu hình.
+
 ---
 
 > **Trạng thái:** backend đã được cài và nối vào trang. `index.html` đang trỏ tới
@@ -42,12 +51,18 @@ Tạo một Google Sheet mới, đặt tên `elevaTO Đăng ký`.
 ### Bước 2 — Dán code
 **Tiện ích mở rộng → Apps Script**, xoá hết code mẫu, dán toàn bộ `backend/Code.gs` vào, bấm 💾.
 
-Sửa hai dòng đầu hàm `setup()` ở cuối file:
+Điền ba giá trị ở **đầu file**:
 
 ```js
-var TOKEN = '<token từ @BotFather>';
-var ADMIN = '<chat id của bạn, lấy từ @userinfobot>';
+var TG_TOKEN   = '<token từ @BotFather>';
+var TG_ADMIN   = '<chat id của bạn, lấy từ @userinfobot>';
+var WEBAPP_URL = '<URL Web App, phải kết thúc bằng /exec>';
 ```
+
+Bot chỉ cần hai giá trị đầu. `WEBAPP_URL` là để landing page đọc cấu hình —
+lấy sau bước 3, ở **Triển khai → Quản lý bản triển khai**, cột *URL ứng dụng web*.
+Không suy ra được từ code: hàm `ScriptApp.getService().getUrl()` trả URL `/dev`,
+mà `/dev` và `/exec` dùng hai loại ID hoàn toàn khác nhau nên không đổi qua lại được.
 
 ### Bước 3 — Triển khai
 **Triển khai → Bản triển khai mới → Ứng dụng web**
@@ -64,9 +79,11 @@ trông vẫn bình thường — rất dễ tưởng đã xong.
 ### Bước 4 — Chạy `setup`
 Chọn hàm `setup` ở thanh trên, bấm **Run**, cấp quyền khi Google hỏi.
 
-Hàm này tự làm hết: lưu token, tạo sheet, nạp cấu hình, kiểm tra token,
-tự tìm URL web app và tự nối webhook Telegram. Chạy lại nhiều lần cũng an
-toàn, cấu hình đang có không bị ghi đè.
+Hàm này tự làm hết: lưu token, tạo sheet, nạp cấu hình, kiểm tra token, nạp danh
+sách lệnh lên Telegram (để nút **Menu** xanh hiện cạnh ô chat), và đặt lịch chạy
+mỗi phút cho bot. Chạy lại nhiều lần cũng an toàn, cấu hình đang có không bị ghi đè.
+
+Google sẽ hỏi quyền chạy theo lịch — phải cho, đó là cách bot nhận lệnh.
 
 Xong thì bot nhắn cho bạn một tin xác nhận. Mở **Nhật ký** (Ctrl+Enter) để
 lấy dòng:
@@ -80,12 +97,53 @@ Trong `index.html`, tìm dòng bắt đầu bằng `var API =` (đang là
 
 **Xong.** Từ giờ mọi thay đổi đều qua Telegram.
 
+### Bot trả lời chậm bao lâu
+
+Lịch chạy nổ mỗi phút, nên **tin đầu tiên chờ tối đa một phút**. Nhưng hễ có lệnh
+thật thì lượt chạy đó bám lại thêm khoảng nửa phút, nên **từ tin thứ hai trở đi
+gần như tức thì**. Bạn ngừng gõ thì nó tự thôi bám để khỏi tiêu hết hạn mức thời
+gian chạy mà Apps Script cho mỗi ngày.
+
+### Nếu bot không trả lời
+
+Chạy `kiemTra` và đọc dòng **Chế độ chạy**:
+
+| `kiemTra` báo | Nghĩa là | Xử lý |
+|---|---|---|
+| `Token: ✘ chưa lưu` | `setup` chưa chạy xong lần nào | Chọn đúng hàm `setup` rồi Run |
+| `Chế độ chạy: ✘ KHÔNG có lịch chạy nào` | Lịch bị xoá, hoặc Google chưa được cấp quyền | Chạy `batCheDoHoi` |
+| `Bot: ✘ token sai` | Token không đúng | Lấy lại từ @BotFather, sửa đầu file, chạy lại `setup` |
+
+Dòng **Webhook** giờ không quan trọng nữa — chế độ hỏi không dùng webhook, nên
+báo `không nối` là đúng. Nếu ở đó còn dấu vết lỗi `302` cũ thì cũng bỏ qua.
+
+Muốn bot im ngay lập tức: chạy `dungBot`. Bật lại: `batCheDoHoi`.
+
+### Vì sao không dùng webhook
+
+Đã thử và hỏng. Telegram báo `Wrong response from the webhook: 302 Found`: nó gọi
+được URL `/exec` nhưng nhận về lệnh chuyển hướng chứ không phải câu trả lời, mà
+Telegram không đi theo chuyển hướng. Nguyên nhân nằm ở hộp thoại *Chỉnh sửa bản
+triển khai* — nó hay tự đặt lại quyền truy cập, và khi đó Google đá mọi request
+về trang đăng nhập.
+
+Vấn đề không phải là không sửa được, mà là nó **hỏng lại mỗi lần deploy** và
+hỏng một cách im lặng. Chế độ hỏi định kỳ không có điểm hỏng đó.
+
+Vẫn muốn dùng webhook thì có sẵn `noiWebhook` (tự gỡ lịch hỏi để hai đường không
+xử lý trùng) và `kiemTraWebApp` để chẩn đoán. Quay về chế độ chuẩn: `batCheDoHoi`.
+
+Lưu ý: đăng ký vẫn vào được Google Sheet ngay cả khi token chưa lưu — phần ghi
+Sheet chạy trước phần gửi Telegram. Thấy Sheet có dòng mới mà Telegram im lặng
+thì gần như chắc chắn là token chưa lưu hoặc webhook chưa nối.
+
 ### Hai hàm tiện ích
 
 | Hàm | Dùng khi |
 |---|---|
 | `kiemTra()` | Xem tình trạng: token, webhook, số đăng ký, cấu hình hiện tại, ADMIN_KEY |
-| `setWebhookThuCong()` | Khi `setup` báo không tự tìm được URL — dán URL `/exec` vào rồi Run |
+| `noiWebhook()` | Nối lại webhook bằng `WEBAPP_URL` khai ở đầu file |
+| `dungBot()` | **Dừng khẩn cấp** — bot nhắn liên tục thì chạy hàm này, bot im ngay |
 
 ---
 
@@ -112,7 +170,24 @@ file đó không chứa token, token nằm trong Script Properties của Apps Sc
 
 ## Bảng lệnh Telegram
 
-Gõ `/menu` bất cứ lúc nào để xem lại.
+### Cách thao tác
+
+Hai loại lệnh, thao tác khác nhau:
+
+**Lệnh không cần giá trị** — `/status` `/ds` `/sheet` `/mo` `/day` `/dong`
+`/cohortmoi` `/xoavideo` `/xoathongbao` — **bấm thẳng vào chữ xanh là chạy.**
+
+**Lệnh cần kèm giá trị** — `/cohort` `/slot` `/base` `/giasom` `/giagoc`
+`/giatuhoc` `/lich` `/buoi` `/video` `/thongbao` `/duyet` `/tuchoi` — bấm vào
+chữ xanh thì Telegram **chỉ gửi mỗi tên lệnh**, không gửi con số hiển thị phía
+sau. Bot sẽ trả về thẻ cho biết giá trị đang dùng kèm một dòng lệnh mẫu: **bấm
+vào dòng mẫu để Telegram copy**, dán vào ô chat, sửa số rồi gửi.
+
+Với các lệnh số và lệnh bật/tắt, thẻ đó còn kèm nút bấm sẵn (`➖ ➕`, `👁 🙈`) —
+đổi một nấc thì bấm nút cho nhanh, đổi hẳn sang giá trị khác thì gõ.
+
+Bấm nút **Menu** xanh cạnh ô chat để xem toàn bộ lệnh kèm mô tả — danh sách này
+được nạp lúc chạy `setup`.
 
 | Lệnh | Tác dụng |
 |---|---|
@@ -139,6 +214,40 @@ Gõ `/menu` bất cứ lúc nào để xem lại.
 | `/sheet` | Link Google Sheet |
 
 Mỗi đăng ký mới bot gửi kèm 2 nút **✅ Duyệt / ❌ Từ chối** — bấm là xong.
+
+---
+
+## Bot không trả lời — Telegram báo `302 Found`
+
+Chạy `kiemTra`, mục Webhook hiện `✘ Lỗi gần nhất: Wrong response from the webhook:
+302 Found` và số tin đang chờ tăng dần. Nghĩa là Telegram gọi được URL `/exec`
+nhưng nhận về một lệnh chuyển hướng chứ không phải câu trả lời — Telegram không
+đi theo chuyển hướng nên coi như thất bại.
+
+Gần như luôn là do bản triển khai bị đặt lại quyền truy cập. Hộp thoại
+**Chỉnh sửa bản triển khai** hay tự nhảy về `Chỉ mình tôi`, khi đó Google đá mọi
+request về trang đăng nhập.
+
+Chạy hàm `kiemTraWebApp` để biết chắc — nó tự gọi chính URL của mình và in ra mã
+trả về cùng địa chỉ bị chuyển hướng tới:
+
+| Kết quả | Nghĩa là | Sửa |
+|---|---|---|
+| `200` | Web app bình thường | Chạy lại `setup` để nối lại webhook |
+| Chuyển tới `accounts.google.com` | Web app đang bắt đăng nhập | Triển khai → Quản lý bản triển khai → bút chì → **Người có quyền truy cập: Bất kỳ ai** → Phiên bản mới → Triển khai → chạy lại `setup` |
+| `302` tới địa chỉ khác | Telegram không dùng được URL này | Chạy `batCheDoHoi` |
+
+### Chế độ hỏi định kỳ — không cần webhook
+
+Chạy hàm `batCheDoHoi` một lần. Bot bỏ hẳn webhook và thay bằng một lịch chạy mỗi
+phút tự hỏi Telegram xem có tin mới không. Không phụ thuộc URL `/exec`, không dính
+lỗi chuyển hướng, không cần quyền truy cập công khai.
+
+Đổi lại bot trả lời chậm hơn — tối đa khoảng một phút. Với bảng điều khiển của
+admin thì chấp nhận được; landing page vẫn đọc config qua `/exec` như cũ nên tốc
+độ trang không đổi.
+
+Muốn quay lại webhook: chạy `tatCheDoHoi` rồi `setup`.
 
 ---
 
