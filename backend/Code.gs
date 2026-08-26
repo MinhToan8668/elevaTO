@@ -1237,7 +1237,11 @@ function noiWebhook() {
     drop_pending_updates: true
   });
   Logger.log(r && r.ok
-    ? '✔ Đã nối webhook: ' + url + '\n  Đã gỡ lịch hỏi định kỳ để tránh xử lý trùng.'
+    ? '✔ Đã nối webhook: ' + url + '\n' +
+      '  Đã gỡ lịch hỏi định kỳ để tránh xử lý trùng.\n\n' +
+      '  THỬ NGAY: nhắn /menu cho bot, phải trả lời trong một hai giây.\n' +
+      '  Quá 30 giây không thấy gì → chạy  batCheDoHoi  để lùi về chế độ\n' +
+      '  chậm mà chắc. Lúc này bot chỉ nghe qua webhook, không còn lịch hỏi.'
     : '✘ Lỗi: ' + JSON.stringify(r));
 }
 
@@ -1277,14 +1281,25 @@ function webhookDungDuoc() {
   var url = String(WEBAPP_URL || '').trim();
   if (url.slice(-5) !== '/exec') return false;
   try {
+    // KHÔNG dùng followRedirects: true ở đây. UrlFetchApp không đi theo
+    // chuyển hướng trên một POST, nên nó luôn báo 302 và ta kết luận oan là
+    // web app hỏng. Phải tự đọc chỗ nó chuyển tới rồi tự phán.
     var res = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify({ ping: true }),
-      followRedirects: true,
+      followRedirects: false,
       muteHttpExceptions: true
     });
-    return res.getResponseCode() === 200;
+    if (res.getResponseCode() === 200) return true;
+
+    var h = res.getAllHeaders();
+    var loc = String(h.Location || h.location || '');
+
+    // Apps Script LUÔN trả 302 sang googleusercontent/macros/echo — đó là
+    // đường phục vụ nội dung bình thường của nó, không phải dấu hiệu hỏng.
+    // Hỏng là khi chuyển hướng dẫn về trang đăng nhập.
+    return loc.indexOf('script.googleusercontent.com/macros/echo') > -1;
   } catch (err) {
     return false;
   }
@@ -1331,9 +1346,16 @@ function kiemTraWebApp() {
     out.push('       · Người có quyền truy cập: Bất kỳ ai      ← đổi lại dòng này');
     out.push('       · Phiên bản: Phiên bản mới');
     out.push('       → Triển khai, rồi chạy lại  setup');
+  } else if (loc.indexOf('script.googleusercontent.com/macros/echo') > -1) {
+    out.push('✔ Chuyển hướng LÀNH MẠNH — đây là đường Apps Script phục vụ nội');
+    out.push('  dung bình thường, không phải trang đăng nhập hay trang lỗi.');
+    out.push('  Web app đang chạy tốt, webhook nhiều khả năng dùng được.');
+    out.push('');
+    out.push('  Thử luôn: chạy hàm  noiWebhook  rồi nhắn /menu cho bot.');
+    out.push('  Không thấy trả lời trong 30 giây thì chạy  batCheDoHoi  để lùi lại.');
   } else if (code >= 300 && code < 400) {
-    out.push('⚠ Web app trả ' + code + ' chuyển hướng. Telegram không đi theo chuyển hướng');
-    out.push('  nên webhook không dùng được.');
+    out.push('⚠ Web app trả ' + code + ' chuyển hướng tới một chỗ lạ.');
+    out.push('  Không phải đường phục vụ nội dung bình thường của Apps Script.');
     out.push('');
     out.push('  CÁCH CHẮC ĂN: chạy hàm  batCheDoHoi');
     out.push('  Bot sẽ chạy bằng chế độ tự hỏi Telegram mỗi phút, bỏ hẳn webhook.');
