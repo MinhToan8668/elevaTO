@@ -89,6 +89,27 @@ Trong `index.html`, tìm dòng bắt đầu bằng `var API =` (đang là
 
 ---
 
+## Hosting — GitHub Pages
+
+Repo đã sẵn sàng phục vụ trực tiếp: `index.html` ở thư mục gốc, ảnh dùng đường
+dẫn tương đối nên chạy đúng cả khi site nằm ở đường dẫn con `/elevaTO/`. File
+`.nojekyll` tắt bộ xử lý Jekyll của GitHub.
+
+Bật lần đầu:
+
+1. Gộp nhánh vào `main`
+2. Repo → **Settings → Pages**
+3. **Source**: Deploy from a branch · **Branch**: `main` · **Folder**: `/ (root)` → Save
+4. Đợi 1–2 phút, site lên tại `https://minhtoan8668.github.io/elevaTO/`
+
+Từ lần sau, mỗi lần push vào `main` là site tự cập nhật sau khoảng một phút.
+
+**Lưu ý:** GitHub Pages chỉ miễn phí với repo công khai. Repo riêng tư cần tài
+khoản trả phí. Repo công khai đồng nghĩa `backend/Code.gs` ai cũng đọc được —
+file đó không chứa token, token nằm trong Script Properties của Apps Script.
+
+---
+
 ## Bảng lệnh Telegram
 
 Gõ `/menu` bất cứ lúc nào để xem lại.

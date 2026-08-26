@@ -12,6 +12,9 @@
 <meta property="og:description" content="Build models. Get hired. 8 buổi live, tự tay build model trên số liệu công ty Việt Nam niêm yết.">
 <meta property="og:locale" content="vi_VN">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:image" content="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
@@ -514,6 +517,7 @@ footer a:hover{color:var(--emerald)}
 .fg{display:flex;flex-direction:column;gap:6px}
 .fl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
 .fi2{display:grid;grid-template-columns:1.4fr 1fr;gap:15px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .inp{background:#0a0a0a;border:1px solid var(--border2);border-radius:var(--r-sm);
   padding:13px 15px;color:var(--white);font-family:inherit;font-size:14.5px;font-weight:300;
   outline:none;transition:border-color .2s,background .2s;resize:vertical;width:100%}
@@ -1050,6 +1054,9 @@ footer a:hover{color:var(--emerald)}
         <div class="fg"><label class="fl" for="f-job">Công việc hiện tại *</label>
           <input class="inp" id="f-job" name="job" placeholder="Sinh viên năm 4 / Analyst tại...">
           <span class="err">Vui lòng điền công việc hiện tại</span></div>
+        <div class="hp" aria-hidden="true">
+          <label>Để trống ô này<input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
         <div class="fg"><label class="fl" for="f-goal">Mục tiêu học là gì? *</label>
           <textarea class="inp" id="f-goal" name="goal" rows="3" placeholder="Ví dụ: tự tin hơn khi phỏng vấn IB, chuẩn bị cho công việc phân tích..."></textarea>
           <span class="err">Cho mình biết mục tiêu của bạn nhé</span></div>
@@ -1745,8 +1752,13 @@ function initForm(){
     els.forEach(function(el){ if(!validateField(el) && !bad) bad=el; });
     if(bad){ bad.focus(); msg('Vui lòng kiểm tra lại các trường được tô đỏ.'); return; }
 
+    // bot tự động thường điền hết mọi ô, kể cả ô ẩn
+    var trap=$('#f-website');
+    if(trap && trap.value.trim()){ showDone(false); return; }
+
     var data={action:'register',source:'web'};
     els.forEach(function(el){ data[el.name]=el.value.trim() });
+    data.website='';
 
     btn.classList.add('busy');
     $('#formMsg').className='form-msg';

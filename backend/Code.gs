@@ -308,6 +308,9 @@ function handleRegister(d) {
   try { lock.waitLock(20000); } catch (err) { return { ok: false, error: 'busy' }; }
 
   try {
+    // ô bẫy: người thật để trống, bot điền. Trả ok để bot không biết bị chặn.
+    if (String(d.website || '').trim()) return { ok: true, id: 'spam' };
+
     var name  = String(d.name  || '').trim();
     var phone = String(d.phone || '').trim();
     if (!name || !phone) return { ok: false, error: 'missing_fields' };
