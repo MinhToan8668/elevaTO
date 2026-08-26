@@ -409,18 +409,48 @@ function tgApi(method, payload) {
 
 function tgSend(chatId, text, keyboard) {
   if (!chatId) return;
+  // Telegram chặn tin dài quá 4096 ký tự — /ds nhiều người là chạm ngay,
+  // và tin bị chặn thì không có gì hiện ra cả. Cắt theo dòng cho an toàn.
+  var manh = catNho(String(text), 3800);
+  var r = null;
+  for (var i = 0; i < manh.length; i++) {
+    r = guiMotTin(chatId, manh[i], i === manh.length - 1 ? keyboard : null);
+  }
+  return r;
+}
+
+function guiMotTin(chatId, text, keyboard) {
   var p = { chat_id: chatId, text: text, parse_mode: 'Markdown',
             disable_web_page_preview: true };
   if (keyboard) p.reply_markup = { inline_keyboard: keyboard };
   var r = tgApi('sendMessage', p);
-  // Markdown lệch (thiếu một dấu ` hoặc *) khiến Telegram từ chối CẢ tin nhắn,
-  // nhìn từ ngoài giống hệt "bot không trả lời". Gửi lại dạng chữ thường.
+  // Markdown lệch (thiếu một dấu ` hoặc *, hay tên người có dấu _) khiến
+  // Telegram từ chối CẢ tin nhắn — nhìn từ ngoài giống hệt "bot không trả lời".
+  // Gửi lại dạng chữ thường để không tin nào mất trắng.
   if (r && r.ok === false) {
     delete p.parse_mode;
     p.text = String(text).replace(/[`*_]/g, '');
     r = tgApi('sendMessage', p);
   }
   return r;
+}
+
+function catNho(s, max) {
+  if (s.length <= max) return [s];
+  var out = [], cur = '';
+  var dong = s.split('\n');
+  for (var i = 0; i < dong.length; i++) {
+    var d = dong[i];
+    while (d.length > max) {                       // một dòng dài quá thì cắt cứng
+      if (cur) { out.push(cur); cur = ''; }
+      out.push(d.slice(0, max));
+      d = d.slice(max);
+    }
+    if (cur && cur.length + d.length + 1 > max) { out.push(cur); cur = d; }
+    else cur = cur ? cur + '\n' + d : d;
+  }
+  if (cur) out.push(cur);
+  return out;
 }
 
 function tgAnswer(cbId, text) {
@@ -1016,37 +1046,33 @@ function setup() {
     ? '✔ Đã nạp danh sách lệnh — nút Menu xanh hiện cạnh ô chat'
     : '• Không nạp được danh sách lệnh (không ảnh hưởng việc gõ lệnh tay)');
 
-  // URL webhook. KHÔNG suy ra từ ScriptApp.getService().getUrl() được:
-  // hàm đó trả URL /dev, mà /dev và /exec dùng hai loại ID khác nhau nên
-  // không đổi qua lại bằng cách cắt chuỗi. Phải lấy URL /exec thật.
-  var url = String(WEBAPP_URL || '').trim();
-
-  if (url.indexOf('DAN_') === 0 || !url) {
-    out.push('✘ Chưa điền WEBAPP_URL ở đầu file → bot sẽ KHÔNG trả lời lệnh nào');
-    out.push('  Lấy URL ở: Triển khai → Quản lý bản triển khai → cột URL ứng dụng web');
-  } else if (url.slice(-5) !== '/exec') {
-    out.push('✘ WEBAPP_URL phải kết thúc bằng /exec, đang là: ' + url);
-    out.push('  URL /dev không dùng được vì Telegram không đăng nhập được vào đó.');
-  } else {
-    var hook = tgApi('setWebhook', {
-      url: url,
-      allowed_updates: ['message', 'callback_query'],
-      drop_pending_updates: true          // xoá hàng chờ cũ, tránh bot nhắn lại loạt tin tồn
-    });
-    if (hook && hook.ok) {
-      // hỏi lại Telegram để chắc chắn, không tin mỗi câu trả lời của lệnh set
-      var chk = tgApi('getWebhookInfo', {});
-      var live = chk && chk.ok ? chk.result.url : '';
-      out.push(live === url ? '✔ Webhook đã nối và Telegram xác nhận'
-                            : '⚠ Đã gửi lệnh nối nhưng Telegram báo URL: ' + (live || 'trống'));
-    } else {
-      out.push('✘ Nối webhook lỗi: ' + JSON.stringify(hook));
-    }
+  // Bot KHÔNG dùng webhook nữa.
+  //
+  // Webhook bắt Telegram gọi ngược vào URL /exec, mà URL đó phụ thuộc vào bản
+  // triển khai và quyền truy cập của nó — chỉ cần hộp thoại deploy đặt lại một
+  // dòng là Telegram nhận về chuyển hướng 302 và im hẳn, không báo gì cho ta.
+  // Chế độ hỏi định kỳ đi theo chiều ngược lại: script tự gọi ra Telegram, nên
+  // không có URL nào để hỏng, không có quyền truy cập nào để đặt sai.
+  try {
+    datLichHoi();
+    out.push('✔ Bot chạy bằng chế độ hỏi định kỳ (lịch chạy mỗi phút)');
+    out.push('  Không dùng webhook → không còn lỗi 302 hay quyền truy cập nữa.');
+    out.push('  Tin đầu chờ tối đa 1 phút, các tin sau gần như tức thì.');
+  } catch (err) {
+    out.push('✘ Không đặt được lịch chạy: ' + err);
+    out.push('  Thử lại: Apps Script → Đồng hồ bấm giờ (bên trái) → xoá lịch cũ → chạy lại setup');
   }
 
+  // WEBAPP_URL giờ chỉ còn phục vụ landing page đọc cấu hình. Bot không cần nó.
+  var url = String(WEBAPP_URL || '').trim();
   out.push('');
-  out.push('─── DÁN VÀO index.html, thay dòng bắt đầu bằng  var API =  ───');
-  out.push("var API = '" + url + "';");
+  if (url.slice(-5) === '/exec') {
+    out.push('─── DÁN VÀO index.html, thay dòng bắt đầu bằng  var API =  ───');
+    out.push("var API = '" + url + "';");
+  } else {
+    out.push('• WEBAPP_URL chưa đúng dạng /exec — bot vẫn chạy bình thường,');
+    out.push('  chỉ landing page là chưa đọc được cấu hình từ đây.');
+  }
   out.push('');
   out.push('─── Xem danh sách đăng ký trên web ───');
   out.push('https://<tên-miền>/?admin=' + props().getProperty(PROP_ADMINKEY));
@@ -1076,10 +1102,19 @@ function kiemTra() {
   var me = tgApi('getMe', {});
   out.push('Bot: ' + (me && me.ok ? '@' + me.result.username : '✘ token sai hoặc mạng lỗi'));
 
+  var polling = ScriptApp.getProjectTriggers().filter(function (t) {
+    return t.getHandlerFunction() === 'hoiTelegram';
+  }).length;
+  out.push('');
+  out.push('Chế độ chạy: ' + (polling
+    ? '✔ hỏi định kỳ (' + polling + ' lịch chạy mỗi phút) — đây là chế độ chuẩn'
+    : '✘ KHÔNG có lịch chạy nào → bot sẽ không nhận lệnh. Chạy  batCheDoHoi'));
+  out.push('Đã đọc tới update: ' + (props().getProperty(PROP_OFFSET) || 'chưa có'));
+
   var wh = tgApi('getWebhookInfo', {});
   if (wh && wh.ok) {
     var w = wh.result;
-    out.push('Webhook: ' + (w.url || '✘ CHƯA NỐI — bot sẽ không trả lời lệnh nào'));
+    out.push('Webhook: ' + (w.url || 'không nối (đúng — chế độ hỏi không cần webhook)'));
     if (w.url && w.url.slice(-5) !== '/exec') {
       out.push('  ⚠ URL không kết thúc bằng /exec, Telegram sẽ không gọi được');
     }
@@ -1087,21 +1122,13 @@ function kiemTra() {
     if (w.last_error_message) {
       out.push('  ✘ Lỗi gần nhất: ' + w.last_error_message);
       out.push('    lúc: ' + new Date(w.last_error_date * 1000));
-      if (String(w.last_error_message).indexOf('302') > -1) {
-        out.push('');
-        out.push('  ⇒ Telegram gọi được URL nhưng bị chuyển hướng, thường là do web app');
-        out.push('    đang bắt đăng nhập Google. Chạy hàm  kiemTraWebApp  để biết chắc,');
-        out.push('    hoặc chạy  batCheDoHoi  để bot chạy không cần webhook.');
-      }
+      out.push('    (lỗi cũ của webhook — không ảnh hưởng khi đang chạy chế độ hỏi)');
     }
   } else {
     out.push('Webhook: không hỏi được (token sai hoặc mạng lỗi)');
   }
 
-  var polling = ScriptApp.getProjectTriggers().filter(function (t) {
-    return t.getHandlerFunction() === 'hoiTelegram';
-  }).length;
-  out.push('Chế độ hỏi định kỳ: ' + (polling ? 'ĐANG BẬT (mỗi phút)' : 'tắt'));
+
 
   var c = publicConfig();
   out.push('');
@@ -1130,12 +1157,15 @@ function noiWebhook() {
     Logger.log('✘ WEBAPP_URL ở đầu file phải là URL kết thúc bằng /exec. Đang là: ' + url);
     return;
   }
+  goLichHoi();          // hai đường cùng chạy sẽ xử lý trùng mỗi lệnh hai lần
   var r = tgApi('setWebhook', {
     url: url,
     allowed_updates: ['message', 'callback_query'],
     drop_pending_updates: true
   });
-  Logger.log(r && r.ok ? '✔ Đã nối webhook: ' + url : '✘ Lỗi: ' + JSON.stringify(r));
+  Logger.log(r && r.ok
+    ? '✔ Đã nối webhook: ' + url + '\n  Đã gỡ lịch hỏi định kỳ để tránh xử lý trùng.'
+    : '✘ Lỗi: ' + JSON.stringify(r));
 }
 
 /**
@@ -1144,10 +1174,11 @@ function noiWebhook() {
  * Sửa xong thì chạy lại noiWebhook (hoặc setup) để nối lại.
  */
 function dungBot() {
+  var n = goLichHoi();
   var r = tgApi('deleteWebhook', { drop_pending_updates: true });
-  Logger.log(r && r.ok
-    ? '✔ Đã ngắt webhook và xoá hàng chờ. Bot sẽ im ngay.\n  Chạy noiWebhook() để nối lại.'
-    : '✘ Lỗi: ' + JSON.stringify(r));
+  Logger.log('✔ Đã gỡ ' + n + ' lịch chạy và ngắt webhook (' +
+             (r && r.ok ? 'ok' : JSON.stringify(r)) + ').\n' +
+             '  Bot im ngay lập tức. Chạy  batCheDoHoi  để bật lại.');
 }
 
 /**
@@ -1209,53 +1240,99 @@ function kiemTraWebApp() {
 //     Không cần URL công khai, không dính lỗi chuyển hướng 302.
 //     Đổi lại: bot trả lời chậm hơn, tối đa khoảng 1 phút.
 // ─────────────────────────────────────────────────────────────
+var HOI_TRAN_GIAY = 30;   // trần thời gian một lượt chạy được phép bám
+var HOI_CHO_GIAY  = 10;   // mỗi lần hỏi nằm chờ bao lâu khi đang có việc
+var HOI_RONG_TOI  = 2;    // im lặng mấy lượt liền thì thôi bám, nhường lượt sau
+
+/** Bật chế độ hỏi định kỳ. Gọi tay khi cần; setup cũng tự gọi. */
 function batCheDoHoi() {
-  tgApi('deleteWebhook', { drop_pending_updates: false });   // giữ lại tin đang chờ
-
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'hoiTelegram') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('hoiTelegram').timeBased().everyMinutes(1).create();
-
-  hoiTelegram();                                             // chạy ngay một lần
-  Logger.log('✔ Đã bật chế độ hỏi định kỳ (mỗi phút).\n' +
-             '  Webhook đã ngắt, bot không còn phụ thuộc URL /exec nữa.\n' +
-             '  Nhắn /menu cho bot, chờ tối đa 1 phút là có trả lời.\n' +
-             '  Muốn quay lại webhook: chạy  tatCheDoHoi  rồi  setup.');
+  datLichHoi();
+  Logger.log('✔ Đã bật chế độ hỏi định kỳ.\n' +
+             '  Webhook đã ngắt — bot không còn phụ thuộc URL /exec nữa,\n' +
+             '  nên lỗi 302 và chuyện quyền truy cập không còn ảnh hưởng gì.\n\n' +
+             '  Nhắn /menu cho bot. Tin đầu tiên có thể chờ tới 1 phút;\n' +
+             '  từ tin thứ hai trở đi trả lời gần như tức thì.');
 }
 
 function tatCheDoHoi() {
+  Logger.log('✔ Đã gỡ ' + goLichHoi() + ' lịch chạy.\n' +
+             '  Bot sẽ không nhận lệnh nữa cho tới khi chạy lại  batCheDoHoi.');
+}
+
+/** Ngắt webhook, dựng lại lịch chạy mỗi phút, bỏ qua các tin cũ còn tồn. */
+function datLichHoi() {
+  tgApi('deleteWebhook', { drop_pending_updates: false });
+  goLichHoi();
+  ScriptApp.newTrigger('hoiTelegram').timeBased().everyMinutes(1).create();
+  datMocMoiNhat();
+}
+
+function goLichHoi() {
   var n = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'hoiTelegram') { ScriptApp.deleteTrigger(t); n++; }
   });
-  Logger.log('✔ Đã tắt chế độ hỏi định kỳ (' + n + ' lịch chạy).\n' +
-             '  Chạy  setup  để nối lại webhook.');
+  return n;
 }
 
-/** Hỏi Telegram xem có tin mới không. Lịch chạy tự gọi hàm này mỗi phút. */
+/**
+ * Dời mốc đọc qua hết các tin đang tồn mà không xử lý chúng.
+ * Không có bước này, bật bot lên là nó trả lời dồn cả loạt lệnh cũ từ hôm trước.
+ */
+function datMocMoiNhat() {
+  var r = tgApi('getUpdates', { offset: -1, timeout: 0, limit: 1 });
+  if (r && r.ok && r.result && r.result.length) {
+    props().setProperty(PROP_OFFSET, String(r.result[0].update_id + 1));
+  }
+}
+
+/**
+ * Lịch chạy gọi hàm này mỗi phút.
+ *
+ * Hầu hết các lần chạy là lúc bạn không dùng bot: hỏi một cái rồi thoát ngay,
+ * tốn khoảng một giây. Nhưng hễ có lệnh thật thì nghĩa là bạn đang ngồi thao
+ * tác, nên nó bám lại thêm một lúc bằng long polling — các lệnh tiếp theo
+ * trong cùng phiên được trả lời gần như tức thì thay vì phải chờ lượt sau.
+ * Cách này giữ tổng thời gian chạy trong hạn mức của Apps Script.
+ */
 function hoiTelegram() {
   var lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) return;               // lần chạy trước chưa xong thì bỏ qua
+  if (!lock.tryLock(1000)) return;          // lượt trước còn đang bám, để nó làm
   try {
-    var off = Number(props().getProperty(PROP_OFFSET) || 0);
-    var r = tgApi('getUpdates', {
-      offset: off, timeout: 0, limit: 20,
-      allowed_updates: ['message', 'callback_query']
-    });
-    if (!r || !r.ok || !r.result || !r.result.length) return;
-
-    // Dời mốc TRƯỚC khi xử lý: một tin gây lỗi cũng không làm kẹt vòng lặp mãi.
-    var maxId = off;
-    r.result.forEach(function (u) { if (u.update_id >= maxId) maxId = u.update_id + 1; });
-    props().setProperty(PROP_OFFSET, String(maxId));
-
-    r.result.forEach(function (u) {
-      try { handleTelegram(u); } catch (err) { Logger.log('Lỗi xử lý update: ' + err); }
-    });
+    if (motLuotHoi(0) <= 0) return;         // rảnh hoặc lỗi mạng — thoát ngay
+    // Bám lại một lúc, nhưng thôi ngay khi bạn ngừng gõ. Apps Script chỉ cho
+    // tổng cộng 90 phút chạy theo lịch mỗi ngày, không tiêu hoang được.
+    var het = Date.now() + HOI_TRAN_GIAY * 1000;
+    var rong = 0;
+    while (Date.now() < het && rong < HOI_RONG_TOI) {
+      var n = motLuotHoi(HOI_CHO_GIAY);
+      if (n < 0) break;
+      rong = (n === 0) ? rong + 1 : 0;
+    }
   } finally {
     lock.releaseLock();
   }
+}
+
+/** Trả về số update đã xử lý, 0 nếu không có, -1 nếu gọi Telegram lỗi. */
+function motLuotHoi(choGiay) {
+  var off = Number(props().getProperty(PROP_OFFSET) || 0);
+  var r = tgApi('getUpdates', {
+    offset: off, timeout: choGiay, limit: 20,
+    allowed_updates: ['message', 'callback_query']
+  });
+  if (!r || !r.ok || !r.result) return -1;
+  if (!r.result.length) return 0;
+
+  // Dời mốc TRƯỚC khi xử lý: một tin gây lỗi cũng không làm kẹt hàng chờ mãi.
+  var maxId = off;
+  r.result.forEach(function (u) { if (u.update_id >= maxId) maxId = u.update_id + 1; });
+  props().setProperty(PROP_OFFSET, String(maxId));
+
+  r.result.forEach(function (u) {
+    try { handleTelegram(u); } catch (err) { Logger.log('Lỗi xử lý update: ' + err); }
+  });
+  return r.result.length;
 }
 
 function xoaWebhook()   { Logger.log(JSON.stringify(tgApi('deleteWebhook', {}))); }

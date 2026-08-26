@@ -8,10 +8,10 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
 ## Kiến trúc
 
 ```
-        ┌──────────────┐   webhook    ┌─────────────────────┐
-        │  Bot Telegram │ ───────────▶ │  Google Apps Script │
-        │  (điều khiển) │ ◀─────────── │   backend/Code.gs   │
-        └──────────────┘   thông báo   └──────────┬──────────┘
+        ┌──────────────┐  script tự hỏi ┌─────────────────────┐
+        │  Bot Telegram │ ◀───────────── │  Google Apps Script │
+        │  (điều khiển) │ ─────────────▶ │   backend/Code.gs   │
+        └──────────────┘   tin & lệnh    └──────────┬──────────┘
                                                   │
                                   ┌───────────────┼───────────────┐
                                   │               │               │
@@ -27,6 +27,15 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
 
 Điểm mấu chốt: `index.html` **không hardcode** cohort / giá / số chỗ nữa.
 Nó tải config từ Apps Script rồi render ra. Bot đổi config → web đổi theo.
+
+Chiều mũi tên phía bot là chuyện đáng chú ý. Cách thông thường là dùng *webhook*:
+Telegram gọi ngược vào URL `/exec` mỗi khi có tin. Cách đó phụ thuộc vào bản
+triển khai và quyền truy cập của nó — chỉ cần hộp thoại deploy đặt lại một dòng
+là Telegram nhận về chuyển hướng `302` rồi im hẳn, không báo gì cho ta cả.
+
+Ở đây làm ngược lại: một lịch chạy mỗi phút khiến chính script tự gọi ra Telegram
+hỏi có tin mới không. **Không có URL nào để hỏng, không có quyền truy cập nào để
+đặt sai.** URL `/exec` chỉ còn phục vụ landing page đọc cấu hình.
 
 ---
 
@@ -50,10 +59,10 @@ var TG_ADMIN   = '<chat id của bạn, lấy từ @userinfobot>';
 var WEBAPP_URL = '<URL Web App, phải kết thúc bằng /exec>';
 ```
 
-`WEBAPP_URL` lấy sau bước 3, ở **Triển khai → Quản lý bản triển khai**, cột
-*URL ứng dụng web*. Không suy ra được từ code: hàm `ScriptApp.getService().getUrl()`
-trả URL `/dev`, mà `/dev` và `/exec` dùng hai loại ID hoàn toàn khác nhau nên
-không đổi qua lại được. Telegram cũng không gọi được `/dev` vì URL đó đòi đăng nhập.
+Bot chỉ cần hai giá trị đầu. `WEBAPP_URL` là để landing page đọc cấu hình —
+lấy sau bước 3, ở **Triển khai → Quản lý bản triển khai**, cột *URL ứng dụng web*.
+Không suy ra được từ code: hàm `ScriptApp.getService().getUrl()` trả URL `/dev`,
+mà `/dev` và `/exec` dùng hai loại ID hoàn toàn khác nhau nên không đổi qua lại được.
 
 ### Bước 3 — Triển khai
 **Triển khai → Bản triển khai mới → Ứng dụng web**
@@ -70,9 +79,11 @@ trông vẫn bình thường — rất dễ tưởng đã xong.
 ### Bước 4 — Chạy `setup`
 Chọn hàm `setup` ở thanh trên, bấm **Run**, cấp quyền khi Google hỏi.
 
-Hàm này tự làm hết: lưu token, tạo sheet, nạp cấu hình, kiểm tra token,
-tự tìm URL web app và tự nối webhook Telegram. Chạy lại nhiều lần cũng an
-toàn, cấu hình đang có không bị ghi đè.
+Hàm này tự làm hết: lưu token, tạo sheet, nạp cấu hình, kiểm tra token, nạp danh
+sách lệnh lên Telegram (để nút **Menu** xanh hiện cạnh ô chat), và đặt lịch chạy
+mỗi phút cho bot. Chạy lại nhiều lần cũng an toàn, cấu hình đang có không bị ghi đè.
+
+Google sẽ hỏi quyền chạy theo lịch — phải cho, đó là cách bot nhận lệnh.
 
 Xong thì bot nhắn cho bạn một tin xác nhận. Mở **Nhật ký** (Ctrl+Enter) để
 lấy dòng:
@@ -86,27 +97,41 @@ Trong `index.html`, tìm dòng bắt đầu bằng `var API =` (đang là
 
 **Xong.** Từ giờ mọi thay đổi đều qua Telegram.
 
+### Bot trả lời chậm bao lâu
+
+Lịch chạy nổ mỗi phút, nên **tin đầu tiên chờ tối đa một phút**. Nhưng hễ có lệnh
+thật thì lượt chạy đó bám lại thêm khoảng nửa phút, nên **từ tin thứ hai trở đi
+gần như tức thì**. Bạn ngừng gõ thì nó tự thôi bám để khỏi tiêu hết hạn mức thời
+gian chạy mà Apps Script cho mỗi ngày.
+
 ### Nếu bot không trả lời
 
-Chạy `kiemTra()` và đọc dòng **Webhook**. Ba trường hợp:
+Chạy `kiemTra` và đọc dòng **Chế độ chạy**:
 
-| `kiemTra()` báo | Nghĩa là | Xử lý |
+| `kiemTra` báo | Nghĩa là | Xử lý |
 |---|---|---|
-| `Token: ✘ chưa lưu` | `setup()` chưa chạy xong lần nào | Chọn đúng hàm `setup` rồi Run |
-| `Webhook: ✘ CHƯA NỐI` | Telegram không biết gửi tin đi đâu | Điền `WEBAPP_URL` ở đầu file rồi chạy lại `setup` |
-| Có URL `/exec` nhưng bot vẫn im | Bản triển khai đang chạy code cũ | Triển khai → Quản lý bản triển khai → Chỉnh sửa → Phiên bản: **Phiên bản mới** |
+| `Token: ✘ chưa lưu` | `setup` chưa chạy xong lần nào | Chọn đúng hàm `setup` rồi Run |
+| `Chế độ chạy: ✘ KHÔNG có lịch chạy nào` | Lịch bị xoá, hoặc Google chưa được cấp quyền | Chạy `batCheDoHoi` |
+| `Bot: ✘ token sai` | Token không đúng | Lấy lại từ @BotFather, sửa đầu file, chạy lại `setup` |
 
-Trường hợp cuối hay gặp nhất: sau khi sửa code phải **tạo phiên bản mới**, nếu
-không thì URL `/exec` vẫn phục vụ code của lần triển khai trước.
+Dòng **Webhook** giờ không quan trọng nữa — chế độ hỏi không dùng webhook, nên
+báo `không nối` là đúng. Nếu ở đó còn dấu vết lỗi `302` cũ thì cũng bỏ qua.
 
-### Bot nhắn liên tục cùng một tin
+Muốn bot im ngay lập tức: chạy `dungBot`. Bật lại: `batCheDoHoi`.
 
-Telegram gửi lại đúng update đó nếu không nhận được phản hồi trong vài giây.
-Apps Script hay chậm vì phải mở Sheet và gọi API, nên mỗi lần gửi lại là bot
-nhắn thêm một tin — thành vòng lặp.
+### Vì sao không dùng webhook
 
-Code đã ghi nhớ `update_id` đã xử lý trong cache 6 tiếng nên bỏ qua các lần gửi
-lại. Nếu vẫn gặp: chạy `dungBot()` để im ngay, rồi `noiWebhook()` để nối lại.
+Đã thử và hỏng. Telegram báo `Wrong response from the webhook: 302 Found`: nó gọi
+được URL `/exec` nhưng nhận về lệnh chuyển hướng chứ không phải câu trả lời, mà
+Telegram không đi theo chuyển hướng. Nguyên nhân nằm ở hộp thoại *Chỉnh sửa bản
+triển khai* — nó hay tự đặt lại quyền truy cập, và khi đó Google đá mọi request
+về trang đăng nhập.
+
+Vấn đề không phải là không sửa được, mà là nó **hỏng lại mỗi lần deploy** và
+hỏng một cách im lặng. Chế độ hỏi định kỳ không có điểm hỏng đó.
+
+Vẫn muốn dùng webhook thì có sẵn `noiWebhook` (tự gỡ lịch hỏi để hai đường không
+xử lý trùng) và `kiemTraWebApp` để chẩn đoán. Quay về chế độ chuẩn: `batCheDoHoi`.
 
 Lưu ý: đăng ký vẫn vào được Google Sheet ngay cả khi token chưa lưu — phần ghi
 Sheet chạy trước phần gửi Telegram. Thấy Sheet có dòng mới mà Telegram im lặng
