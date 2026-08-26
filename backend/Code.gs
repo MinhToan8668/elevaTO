@@ -785,31 +785,128 @@ function cmdSheet(chatId) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 9. CÀI ĐẶT — chạy tay 1 lần trong trình soạn thảo Apps Script
+// 9. CÀI ĐẶT — chạy tay trong trình soạn thảo Apps Script
 // ─────────────────────────────────────────────────────────────
 
-/** BƯỚC 1: điền 3 giá trị rồi bấm Run. */
+/**
+ * CHẠY MỘT LẦN LÀ XONG.
+ *
+ * Thứ tự đúng:
+ *   1. Dán file này vào Apps Script của Google Sheet
+ *   2. Điền 2 giá trị TOKEN và ADMIN ngay dưới đây
+ *   3. Triển khai → Bản triển khai mới → Ứng dụng web
+ *        · Thực thi với tư cách: Tôi
+ *        · Ai có quyền truy cập: Bất kỳ ai        ← bắt buộc
+ *   4. Quay lại đây, chọn hàm setup rồi bấm Run
+ *
+ * Hàm này tự làm hết: lưu token, tạo sheet, nạp cấu hình mặc định,
+ * tự tìm URL web app và tự nối webhook Telegram.
+ * Chạy lại nhiều lần cũng an toàn, cấu hình đang có sẽ không bị ghi đè.
+ */
 function setup() {
-  props().setProperties({
-    'TG_BOT_TOKEN': 'DAN_TOKEN_BOT_VAO_DAY',
-    'TG_ADMIN_IDS': 'DAN_CHAT_ID_CUA_BAN_VAO_DAY',
-    'ADMIN_KEY':    Utilities.getUuid()
-  });
-  saveConfig(defaultConfig());
+  var TOKEN = 'DAN_TOKEN_BOT_VAO_DAY';
+  var ADMIN = 'DAN_CHAT_ID_CUA_BAN_VAO_DAY';   // nhiều người: '111,222'
+
+  var out = [];
+  if (TOKEN.indexOf('DAN_') === 0 || ADMIN.indexOf('DAN_') === 0) {
+    throw new Error('Bạn chưa điền TOKEN và ADMIN ở đầu hàm setup().');
+  }
+
+  props().setProperty(PROP_TOKEN, TOKEN.trim());
+  props().setProperty(PROP_ADMIN, ADMIN.trim());
+  if (!props().getProperty(PROP_ADMINKEY)) {
+    props().setProperty(PROP_ADMINKEY, Utilities.getUuid());
+  }
+  out.push('✔ Đã lưu token và chat id admin');
+
+  // giữ nguyên cấu hình cũ nếu đã có, chỉ nạp mặc định lần đầu
+  if (!props().getProperty(PROP_CONFIG)) {
+    saveConfig(defaultConfig());
+    out.push('✔ Đã nạp cấu hình mặc định');
+  } else {
+    out.push('• Cấu hình đã có sẵn, giữ nguyên');
+  }
+
   regSheet();
-  Logger.log('Đã lưu. ADMIN_KEY = ' + props().getProperty('ADMIN_KEY'));
+  out.push('✔ Sheet "' + SHEET_REGS + '" sẵn sàng');
+
+  // kiểm tra token bằng getMe
+  var me = tgApi('getMe', {});
+  if (!me || !me.ok) {
+    out.push('✘ Token không hợp lệ. Kiểm tra lại với @BotFather rồi chạy lại setup.');
+    Logger.log(out.join('\n'));
+    return;
+  }
+  out.push('✔ Bot: @' + me.result.username);
+
+  // tự tìm URL web app và nối webhook
+  var url = '';
+  try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; }
+
+  if (url && url.slice(-5) === '/exec') {
+    var hook = tgApi('setWebhook', { url: url, allowed_updates: ['message', 'callback_query'] });
+    out.push(hook && hook.ok ? '✔ Đã nối webhook Telegram' : '✘ Nối webhook lỗi: ' + JSON.stringify(hook));
+  } else {
+    out.push('✘ Chưa tìm thấy URL web app. Bạn đã Triển khai chưa?');
+    out.push('  Nếu đã triển khai rồi, dán URL /exec vào hàm setWebhookThuCong rồi chạy hàm đó.');
+  }
+
+  out.push('');
+  out.push('─── DÁN VÀO index.html, thay dòng bắt đầu bằng  var API =  ───');
+  out.push("var API = '" + (url || 'URL_WEB_APP_CUA_BAN') + "';");
+  out.push('');
+  out.push('─── Xem danh sách đăng ký trên web ───');
+  out.push('https://<tên-miền-của-bạn>/?admin=' + props().getProperty(PROP_ADMINKEY));
+  out.push('');
+  out.push('Xong. Vào Telegram nhắn bot /menu để kiểm tra.');
+
+  Logger.log(out.join('\n'));
+  tgSend(adminIds()[0],
+    '✅ *Backend elevaTO đã sẵn sàng*\n\nBot: @' + me.result.username +
+    '\n\nGõ /menu để xem danh sách lệnh.');
 }
 
-/** BƯỚC 2: sau khi Deploy web app, dán URL /exec vào đây rồi bấm Run. */
-function setWebhook() {
+/** Kiểm tra sức khoẻ hệ thống — chạy bất cứ lúc nào. */
+function kiemTra() {
+  var out = [];
+  var tk = token();
+  out.push('Token: ' + (tk ? 'đã có' : '✘ CHƯA CÓ'));
+  out.push('Admin chat id: ' + (adminIds().join(', ') || '✘ CHƯA CÓ'));
+
+  var me = tgApi('getMe', {});
+  out.push('Bot: ' + (me && me.ok ? '@' + me.result.username : '✘ token sai hoặc mạng lỗi'));
+
+  var wh = tgApi('getWebhookInfo', {});
+  if (wh && wh.ok) {
+    out.push('Webhook: ' + (wh.result.url || '✘ chưa nối'));
+    if (wh.result.last_error_message) {
+      out.push('  Lỗi gần nhất: ' + wh.result.last_error_message);
+    }
+  }
+
+  var c = publicConfig();
+  out.push('');
+  out.push('Cohort: ' + c.computed.cohortLabel + ' · ' + c.cohort.status);
+  out.push('Chỗ: ' + c.computed.totalRegistered + '/' + c.slots.max +
+           ' (còn ' + c.computed.remaining + ')');
+  out.push('Đăng ký trong sheet: ' + allRegs().length + ' dòng');
+  out.push('Giá Early Bird: ' + c.computed.price.earlyBird);
+  out.push('Video học thử: ' + (c.media.videoUrl || 'chưa đặt'));
+  out.push('');
+  out.push('URL web app: ' + (ScriptApp.getService().getUrl() || 'chưa triển khai'));
+  out.push('ADMIN_KEY: ' + props().getProperty(PROP_ADMINKEY));
+
+  Logger.log(out.join('\n'));
+}
+
+/** Dùng khi setup không tự tìm được URL: dán URL /exec vào đây rồi Run. */
+function setWebhookThuCong() {
   var url = 'DAN_URL_WEB_APP_EXEC_VAO_DAY';
   Logger.log(JSON.stringify(tgApi('setWebhook', {
-    url: url,
-    allowed_updates: ['message', 'callback_query']
+    url: url, allowed_updates: ['message', 'callback_query']
   })));
 }
 
-function deleteWebhook() { Logger.log(JSON.stringify(tgApi('deleteWebhook', {}))); }
-function webhookInfo()   { Logger.log(JSON.stringify(tgApi('getWebhookInfo', {}))); }
-function showAdminKey()  { Logger.log(props().getProperty('ADMIN_KEY')); }
-function resetConfig()   { saveConfig(defaultConfig()); Logger.log('Đã reset config.'); }
+function xoaWebhook()   { Logger.log(JSON.stringify(tgApi('deleteWebhook', {}))); }
+function xemAdminKey()  { Logger.log(props().getProperty(PROP_ADMINKEY)); }
+function resetConfig()  { saveConfig(defaultConfig()); Logger.log('Đã reset cấu hình về mặc định.'); }

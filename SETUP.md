@@ -1,6 +1,6 @@
 # elevaTO — Hướng dẫn cài đặt
 
-Sau khi làm xong 6 bước dưới đây, bạn **không bao giờ phải mở file code nữa**.
+Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở file code nữa**.
 Đổi cohort, giá, số chỗ, lịch học, thông báo — tất cả làm bằng tin nhắn Telegram.
 
 ---
@@ -30,67 +30,58 @@ Nó tải config từ Apps Script rồi render ra. Bot đổi config → web đ�
 
 ---
 
-## Bước 1 — Tạo Google Sheet + Apps Script
+## Cài đặt — 4 bước
 
-1. Tạo một Google Sheet mới, đặt tên `elevaTO Đăng ký`.
-2. Menu **Tiện ích mở rộng → Apps Script**.
-3. Xoá hết code mẫu, dán **toàn bộ nội dung `backend/Code.gs`** vào.
-4. Bấm 💾 lưu.
+### Bước 1 — Tạo Google Sheet
+Tạo một Google Sheet mới, đặt tên `elevaTO Đăng ký`.
 
-## Bước 2 — Tạo bot Telegram & lấy Chat ID
+### Bước 2 — Dán code
+**Tiện ích mở rộng → Apps Script**, xoá hết code mẫu, dán toàn bộ `backend/Code.gs` vào, bấm 💾.
 
-1. Nhắn [@BotFather](https://t.me/BotFather) → `/newbot` → đặt tên → **copy token**
-   (dạng `8692249468:AAF...`).
-2. Nhắn [@userinfobot](https://t.me/userinfobot) → nó trả về **Chat ID** của bạn
-   (dạng `5116087301`).
-
-> ⚠️ Token cũ trong file HTML trước đây đã bị lộ công khai trên GitHub.
-> **Hãy tạo bot mới, hoặc vào BotFather → `/revoke` để đổi token cũ.**
-> Token mới chỉ nằm trong Apps Script, không bao giờ xuất hiện trong HTML.
-
-## Bước 3 — Nạp cấu hình vào Apps Script
-
-Trong trình soạn thảo Apps Script, sửa hàm `setup()` ở cuối file:
+Sửa hai dòng đầu hàm `setup()` ở cuối file:
 
 ```js
-'TG_BOT_TOKEN': '8692249468:AAF...',   // token từ BotFather
-'TG_ADMIN_IDS': '5116087301',          // Chat ID của bạn (nhiều người: '111,222')
+var TOKEN = '<token từ @BotFather>';
+var ADMIN = '<chat id của bạn, lấy từ @userinfobot>';
 ```
 
-Chọn hàm `setup` ở thanh trên → bấm **Run** → cấp quyền khi Google hỏi.
-Mở **Nhật ký (Logs)**, copy lại dòng `ADMIN_KEY = ...` (dùng ở bước 6).
+### Bước 3 — Triển khai
+**Triển khai → Bản triển khai mới → Ứng dụng web**
 
-## Bước 4 — Deploy Web App
+| Mục | Chọn |
+|---|---|
+| Thực thi với tư cách | **Tôi** |
+| Ai có quyền truy cập | **Bất kỳ ai** |
 
-1. **Triển khai → Bản triển khai mới → Loại: Ứng dụng web**
-2. Cấu hình:
-   - *Thực thi với tư cách*: **Tôi**
-   - *Ai có quyền truy cập*: **Bất kỳ ai** ← bắt buộc, nếu không web không đọc được config
-3. Bấm **Triển khai** → copy **URL Ứng dụng web** (kết thúc bằng `/exec`).
+Cấu hình "Ai có quyền truy cập" phải là **Bất kỳ ai**. Để mặc định thì web
+không đọc được cấu hình, trang vẫn chạy bằng số liệu dự phòng nhúng sẵn nên
+trông vẫn bình thường — rất dễ tưởng đã xong.
 
-## Bước 5 — Nối bot với backend
+### Bước 4 — Chạy `setup`
+Chọn hàm `setup` ở thanh trên, bấm **Run**, cấp quyền khi Google hỏi.
 
-Quay lại Apps Script, sửa hàm `setWebhook()`:
+Hàm này tự làm hết: lưu token, tạo sheet, nạp cấu hình, kiểm tra token,
+tự tìm URL web app và tự nối webhook Telegram. Chạy lại nhiều lần cũng an
+toàn, cấu hình đang có không bị ghi đè.
+
+Xong thì bot nhắn cho bạn một tin xác nhận. Mở **Nhật ký** (Ctrl+Enter) để
+lấy dòng:
 
 ```js
-var url = 'https://script.google.com/macros/s/AKfy.../exec';   // URL vừa copy
+var API = 'https://script.google.com/macros/s/.../exec';
 ```
 
-Chọn hàm `setWebhook` → **Run**. Log trả về `{"ok":true,...}` là thành công.
-
-Vào Telegram nhắn bot `/menu` — nếu hiện bảng lệnh là xong phần backend.
-
-## Bước 6 — Nối landing page
-
-Mở `index.html`, tìm dòng **duy nhất** cần sửa (dòng 776):
-
-```js
-var API = 'PASTE_APPS_SCRIPT_WEB_APP_URL_HERE';
-```
-
-Thay bằng URL `/exec` ở bước 4. Lưu, deploy lên Netlify / GitHub Pages.
+Trong `index.html`, tìm dòng bắt đầu bằng `var API =` (đang là
+`PASTE_APPS_SCRIPT_WEB_APP_URL_HERE`) và thay bằng dòng đó. Lưu, deploy lại lên hosting.
 
 **Xong.** Từ giờ mọi thay đổi đều qua Telegram.
+
+### Hai hàm tiện ích
+
+| Hàm | Dùng khi |
+|---|---|
+| `kiemTra()` | Xem tình trạng: token, webhook, số đăng ký, cấu hình hiện tại, ADMIN_KEY |
+| `setWebhookThuCong()` | Khi `setup` báo không tự tìm được URL — dán URL `/exec` vào rồi Run |
 
 ---
 
@@ -137,7 +128,7 @@ config cache, hoặc bản `FALLBACK` nhúng sẵn trong `index.html`. Không ba
 trắng trang.
 
 **Xem danh sách đăng ký trên web:** mở `https://<web>/?admin=<ADMIN_KEY>`
-(key lấy ở bước 3, hoặc chạy hàm `showAdminKey`). Bảng này **chỉ để xem** —
+(key hiện trong Nhật ký sau khi chạy `setup`, hoặc chạy `kiemTra`). Bảng này **chỉ để xem** —
 duyệt vẫn làm trên Telegram.
 
 **Chống trùng:** cùng một số điện thoại đăng ký lại trong cùng cohort sẽ được
