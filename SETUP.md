@@ -192,6 +192,40 @@ Mỗi đăng ký mới bot gửi kèm 2 nút **✅ Duyệt / ❌ Từ chối** �
 
 ---
 
+## Bot không trả lời — Telegram báo `302 Found`
+
+Chạy `kiemTra`, mục Webhook hiện `✘ Lỗi gần nhất: Wrong response from the webhook:
+302 Found` và số tin đang chờ tăng dần. Nghĩa là Telegram gọi được URL `/exec`
+nhưng nhận về một lệnh chuyển hướng chứ không phải câu trả lời — Telegram không
+đi theo chuyển hướng nên coi như thất bại.
+
+Gần như luôn là do bản triển khai bị đặt lại quyền truy cập. Hộp thoại
+**Chỉnh sửa bản triển khai** hay tự nhảy về `Chỉ mình tôi`, khi đó Google đá mọi
+request về trang đăng nhập.
+
+Chạy hàm `kiemTraWebApp` để biết chắc — nó tự gọi chính URL của mình và in ra mã
+trả về cùng địa chỉ bị chuyển hướng tới:
+
+| Kết quả | Nghĩa là | Sửa |
+|---|---|---|
+| `200` | Web app bình thường | Chạy lại `setup` để nối lại webhook |
+| Chuyển tới `accounts.google.com` | Web app đang bắt đăng nhập | Triển khai → Quản lý bản triển khai → bút chì → **Người có quyền truy cập: Bất kỳ ai** → Phiên bản mới → Triển khai → chạy lại `setup` |
+| `302` tới địa chỉ khác | Telegram không dùng được URL này | Chạy `batCheDoHoi` |
+
+### Chế độ hỏi định kỳ — không cần webhook
+
+Chạy hàm `batCheDoHoi` một lần. Bot bỏ hẳn webhook và thay bằng một lịch chạy mỗi
+phút tự hỏi Telegram xem có tin mới không. Không phụ thuộc URL `/exec`, không dính
+lỗi chuyển hướng, không cần quyền truy cập công khai.
+
+Đổi lại bot trả lời chậm hơn — tối đa khoảng một phút. Với bảng điều khiển của
+admin thì chấp nhận được; landing page vẫn đọc config qua `/exec` như cũ nên tốc
+độ trang không đổi.
+
+Muốn quay lại webhook: chạy `tatCheDoHoi` rồi `setup`.
+
+---
+
 ## Ghi chú vận hành
 
 **Web cập nhật sau bao lâu?** Ngay lập tức với người mới vào trang. Người đang mở

@@ -27,6 +27,7 @@ var PROP_CONFIG   = 'SITE_CONFIG';     // JSON config hiện tại
 var PROP_TOKEN    = 'TG_BOT_TOKEN';    // token bot Telegram (BÍ MẬT)
 var PROP_ADMIN    = 'TG_ADMIN_IDS';    // chat id được phép ra lệnh, phân cách bởi dấu phẩy
 var PROP_ADMINKEY = 'ADMIN_KEY';       // key xem danh sách đăng ký từ web
+var PROP_OFFSET   = 'TG_OFFSET';       // vị trí đã đọc tới, dùng cho chế độ hỏi định kỳ
 var SHEET_REGS    = 'DangKy';
 var SHEET_LOG     = 'Log';
 
@@ -1086,10 +1087,21 @@ function kiemTra() {
     if (w.last_error_message) {
       out.push('  ✘ Lỗi gần nhất: ' + w.last_error_message);
       out.push('    lúc: ' + new Date(w.last_error_date * 1000));
+      if (String(w.last_error_message).indexOf('302') > -1) {
+        out.push('');
+        out.push('  ⇒ Telegram gọi được URL nhưng bị chuyển hướng, thường là do web app');
+        out.push('    đang bắt đăng nhập Google. Chạy hàm  kiemTraWebApp  để biết chắc,');
+        out.push('    hoặc chạy  batCheDoHoi  để bot chạy không cần webhook.');
+      }
     }
   } else {
     out.push('Webhook: không hỏi được (token sai hoặc mạng lỗi)');
   }
+
+  var polling = ScriptApp.getProjectTriggers().filter(function (t) {
+    return t.getHandlerFunction() === 'hoiTelegram';
+  }).length;
+  out.push('Chế độ hỏi định kỳ: ' + (polling ? 'ĐANG BẬT (mỗi phút)' : 'tắt'));
 
   var c = publicConfig();
   out.push('');
@@ -1136,6 +1148,114 @@ function dungBot() {
   Logger.log(r && r.ok
     ? '✔ Đã ngắt webhook và xoá hàng chờ. Bot sẽ im ngay.\n  Chạy noiWebhook() để nối lại.'
     : '✘ Lỗi: ' + JSON.stringify(r));
+}
+
+/**
+ * Telegram báo `Wrong response from the webhook: 302 Found` nghĩa là nó gọi
+ * URL /exec nhưng nhận về một lệnh chuyển hướng chứ không phải câu trả lời.
+ * Hàm này tự gọi chính URL đó để xem chuyển hướng đi đâu, từ đó biết nguyên nhân.
+ */
+function kiemTraWebApp() {
+  var url = String(WEBAPP_URL || '').trim();
+  var out = ['Đang tự gọi URL web app của chính mình:', url, ''];
+
+  var res;
+  try {
+    res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ action: 'ping' }),
+      followRedirects: false,             // KHÔNG đi theo, để thấy đúng thứ Telegram thấy
+      muteHttpExceptions: true
+    });
+  } catch (err) {
+    Logger.log(out.join('\n') + '\n✘ Không gọi được: ' + err);
+    return;
+  }
+
+  var code = res.getResponseCode();
+  var h    = res.getAllHeaders();
+  var loc  = String(h.Location || h.location || '');
+  out.push('Mã trả về: ' + code);
+  if (loc) out.push('Chuyển hướng tới: ' + loc);
+  out.push('');
+
+  if (code === 200) {
+    out.push('✔ Web app trả thẳng 200. Webhook Telegram dùng được bình thường.');
+    out.push('  Nếu bot vẫn không trả lời, chạy lại  setup  để nối lại webhook.');
+  } else if (loc.indexOf('accounts.google.com') > -1 || loc.indexOf('/u/0/') > -1) {
+    out.push('✘ ĐÂY LÀ NGUYÊN NHÂN: web app đang bắt đăng nhập Google.');
+    out.push('  Telegram không có tài khoản Google nên bị đá về trang đăng nhập → 302.');
+    out.push('');
+    out.push('  SỬA: Triển khai → Quản lý bản triển khai → bút chì (Chỉnh sửa)');
+    out.push('       · Người có quyền truy cập: Bất kỳ ai      ← đổi lại dòng này');
+    out.push('       · Phiên bản: Phiên bản mới');
+    out.push('       → Triển khai, rồi chạy lại  setup');
+  } else if (code >= 300 && code < 400) {
+    out.push('⚠ Web app trả ' + code + ' chuyển hướng. Telegram không đi theo chuyển hướng');
+    out.push('  nên webhook không dùng được.');
+    out.push('');
+    out.push('  CÁCH CHẮC ĂN: chạy hàm  batCheDoHoi');
+    out.push('  Bot sẽ chạy bằng chế độ tự hỏi Telegram mỗi phút, bỏ hẳn webhook.');
+  } else {
+    out.push('⚠ Mã lạ. Nội dung trả về:');
+    out.push(res.getContentText().slice(0, 400));
+  }
+  Logger.log(out.join('\n'));
+}
+
+// ─────────────────────────────────────────────────────────────
+// 10. CHẾ ĐỘ HỎI ĐỊNH KỲ — dùng khi webhook không chạy được
+//     Không cần URL công khai, không dính lỗi chuyển hướng 302.
+//     Đổi lại: bot trả lời chậm hơn, tối đa khoảng 1 phút.
+// ─────────────────────────────────────────────────────────────
+function batCheDoHoi() {
+  tgApi('deleteWebhook', { drop_pending_updates: false });   // giữ lại tin đang chờ
+
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'hoiTelegram') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('hoiTelegram').timeBased().everyMinutes(1).create();
+
+  hoiTelegram();                                             // chạy ngay một lần
+  Logger.log('✔ Đã bật chế độ hỏi định kỳ (mỗi phút).\n' +
+             '  Webhook đã ngắt, bot không còn phụ thuộc URL /exec nữa.\n' +
+             '  Nhắn /menu cho bot, chờ tối đa 1 phút là có trả lời.\n' +
+             '  Muốn quay lại webhook: chạy  tatCheDoHoi  rồi  setup.');
+}
+
+function tatCheDoHoi() {
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'hoiTelegram') { ScriptApp.deleteTrigger(t); n++; }
+  });
+  Logger.log('✔ Đã tắt chế độ hỏi định kỳ (' + n + ' lịch chạy).\n' +
+             '  Chạy  setup  để nối lại webhook.');
+}
+
+/** Hỏi Telegram xem có tin mới không. Lịch chạy tự gọi hàm này mỗi phút. */
+function hoiTelegram() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;               // lần chạy trước chưa xong thì bỏ qua
+  try {
+    var off = Number(props().getProperty(PROP_OFFSET) || 0);
+    var r = tgApi('getUpdates', {
+      offset: off, timeout: 0, limit: 20,
+      allowed_updates: ['message', 'callback_query']
+    });
+    if (!r || !r.ok || !r.result || !r.result.length) return;
+
+    // Dời mốc TRƯỚC khi xử lý: một tin gây lỗi cũng không làm kẹt vòng lặp mãi.
+    var maxId = off;
+    r.result.forEach(function (u) { if (u.update_id >= maxId) maxId = u.update_id + 1; });
+    props().setProperty(PROP_OFFSET, String(maxId));
+
+    r.result.forEach(function (u) {
+      try { handleTelegram(u); } catch (err) { Logger.log('Lỗi xử lý update: ' + err); }
+    });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function xoaWebhook()   { Logger.log(JSON.stringify(tgApi('deleteWebhook', {}))); }
