@@ -1059,8 +1059,19 @@ function setup() {
     out.push('  Không dùng webhook → không còn lỗi 302 hay quyền truy cập nữa.');
     out.push('  Tin đầu chờ tối đa 1 phút, các tin sau gần như tức thì.');
   } catch (err) {
-    out.push('✘ Không đặt được lịch chạy: ' + err);
-    out.push('  Thử lại: Apps Script → Đồng hồ bấm giờ (bên trái) → xoá lịch cũ → chạy lại setup');
+    out.push('');
+    out.push('┌──────────────────────────────────────────────────────────┐');
+    out.push('│  CÒN ĐÚNG MỘT VIỆC: ĐẶT LỊCH CHẠY CHO BOT                │');
+    out.push('└──────────────────────────────────────────────────────────┘');
+    out.push('Mọi thứ khác đã xong. Webhook đã ngắt, token đã lưu, lệnh đã nạp.');
+    out.push('');
+    if (thieuQuyenLich(err)) {
+      out.push(huongDanDatLichTay());
+    } else {
+      out.push('Lỗi: ' + err);
+      out.push('');
+      out.push(huongDanDatLichTay());
+    }
   }
 
   // WEBAPP_URL giờ chỉ còn phục vụ landing page đọc cấu hình. Bot không cần nó.
@@ -1102,13 +1113,17 @@ function kiemTra() {
   var me = tgApi('getMe', {});
   out.push('Bot: ' + (me && me.ok ? '@' + me.result.username : '✘ token sai hoặc mạng lỗi'));
 
-  var polling = ScriptApp.getProjectTriggers().filter(function (t) {
-    return t.getHandlerFunction() === 'hoiTelegram';
-  }).length;
+  var polling = demLich();
   out.push('');
-  out.push('Chế độ chạy: ' + (polling
-    ? '✔ hỏi định kỳ (' + polling + ' lịch chạy mỗi phút) — đây là chế độ chuẩn'
-    : '✘ KHÔNG có lịch chạy nào → bot sẽ không nhận lệnh. Chạy  batCheDoHoi'));
+  out.push('Chế độ chạy: ' + (
+    polling > 0 ? '✔ hỏi định kỳ (' + polling + ' lịch chạy mỗi phút) — chế độ chuẩn' :
+    polling === 0 ? '✘ KHÔNG có lịch chạy nào → bot sẽ không nhận lệnh' :
+    '? không đọc được danh sách lịch (thiếu quyền script.scriptapp)'));
+  if (polling <= 0) {
+    out.push('');
+    out.push(huongDanDatLichTay());
+    out.push('');
+  }
   out.push('Đã đọc tới update: ' + (props().getProperty(PROP_OFFSET) || 'chưa có'));
 
   var wh = tgApi('getWebhookInfo', {});
@@ -1157,7 +1172,8 @@ function noiWebhook() {
     Logger.log('✘ WEBAPP_URL ở đầu file phải là URL kết thúc bằng /exec. Đang là: ' + url);
     return;
   }
-  goLichHoi();          // hai đường cùng chạy sẽ xử lý trùng mỗi lệnh hai lần
+  // hai đường cùng chạy sẽ xử lý trùng mỗi lệnh hai lần
+  try { goLichHoi(); } catch (err) { Logger.log('⚠ Không gỡ được lịch hỏi: ' + err); }
   var r = tgApi('setWebhook', {
     url: url,
     allowed_updates: ['message', 'callback_query'],
@@ -1174,11 +1190,17 @@ function noiWebhook() {
  * Sửa xong thì chạy lại noiWebhook (hoặc setup) để nối lại.
  */
 function dungBot() {
-  var n = goLichHoi();
   var r = tgApi('deleteWebhook', { drop_pending_updates: true });
-  Logger.log('✔ Đã gỡ ' + n + ' lịch chạy và ngắt webhook (' +
-             (r && r.ok ? 'ok' : JSON.stringify(r)) + ').\n' +
-             '  Bot im ngay lập tức. Chạy  batCheDoHoi  để bật lại.');
+  var out = ['✔ Đã ngắt webhook (' + (r && r.ok ? 'ok' : JSON.stringify(r)) + ')'];
+  try {
+    out.push('✔ Đã gỡ ' + goLichHoi() + ' lịch chạy. Bot im ngay lập tức.');
+    out.push('  Chạy  batCheDoHoi  để bật lại.');
+  } catch (err) {
+    out.push('✘ Không gỡ được lịch chạy bằng code.');
+    out.push('  Gỡ tay: cột trái → biểu tượng đồng hồ → ba chấm ở dòng');
+    out.push('  hoiTelegram → Xoá trình kích hoạt.');
+  }
+  Logger.log(out.join('\n'));
 }
 
 /**
@@ -1246,7 +1268,12 @@ var HOI_RONG_TOI  = 2;    // im lặng mấy lượt liền thì thôi bám, nh�
 
 /** Bật chế độ hỏi định kỳ. Gọi tay khi cần; setup cũng tự gọi. */
 function batCheDoHoi() {
-  datLichHoi();
+  try {
+    datLichHoi();
+  } catch (err) {
+    Logger.log('✘ Không đặt được lịch chạy.\n\n' + huongDanDatLichTay());
+    return;
+  }
   Logger.log('✔ Đã bật chế độ hỏi định kỳ.\n' +
              '  Webhook đã ngắt — bot không còn phụ thuộc URL /exec nữa,\n' +
              '  nên lỗi 302 và chuyện quyền truy cập không còn ảnh hưởng gì.\n\n' +
@@ -1255,16 +1282,26 @@ function batCheDoHoi() {
 }
 
 function tatCheDoHoi() {
-  Logger.log('✔ Đã gỡ ' + goLichHoi() + ' lịch chạy.\n' +
-             '  Bot sẽ không nhận lệnh nữa cho tới khi chạy lại  batCheDoHoi.');
+  try {
+    Logger.log('✔ Đã gỡ ' + goLichHoi() + ' lịch chạy.\n' +
+               '  Bot sẽ không nhận lệnh nữa cho tới khi chạy lại  batCheDoHoi.');
+  } catch (err) {
+    Logger.log('✘ Không gỡ được lịch bằng code: ' + err + '\n\n' +
+               '  Gỡ tay: cột trái → biểu tượng đồng hồ → ba chấm ở dòng\n' +
+               '  hoiTelegram → Xoá trình kích hoạt.');
+  }
 }
 
-/** Ngắt webhook, dựng lại lịch chạy mỗi phút, bỏ qua các tin cũ còn tồn. */
+/**
+ * Ngắt webhook, bỏ qua tin cũ, rồi dựng lại lịch chạy mỗi phút.
+ * Hai việc đầu làm trước vì chúng luôn chạy được; việc cuối cần quyền
+ * script.scriptapp, mà quyền đó có thể bị thiếu (xem đếmLich bên dưới).
+ */
 function datLichHoi() {
   tgApi('deleteWebhook', { drop_pending_updates: false });
+  datMocMoiNhat();
   goLichHoi();
   ScriptApp.newTrigger('hoiTelegram').timeBased().everyMinutes(1).create();
-  datMocMoiNhat();
 }
 
 function goLichHoi() {
@@ -1273,6 +1310,50 @@ function goLichHoi() {
     if (t.getHandlerFunction() === 'hoiTelegram') { ScriptApp.deleteTrigger(t); n++; }
   });
   return n;
+}
+
+/**
+ * Đếm lịch chạy đang có. Trả -1 nếu không đọc được.
+ *
+ * Danh sách quyền của project bị chốt trong file appsscript.json. Nếu ở đó
+ * thiếu script.scriptapp thì Google KHÔNG hỏi xin thêm quyền mà ném lỗi thẳng,
+ * nên mọi chỗ đụng tới ScriptApp đều phải chịu được chuyện này.
+ */
+function demLich() {
+  try {
+    return ScriptApp.getProjectTriggers().filter(function (t) {
+      return t.getHandlerFunction() === 'hoiTelegram';
+    }).length;
+  } catch (err) {
+    return -1;
+  }
+}
+
+function thieuQuyenLich(err) {
+  return String(err).indexOf('script.scriptapp') > -1 ||
+         String(err).indexOf('ScriptApp') > -1;
+}
+
+/** Hướng dẫn khi script không được phép tự đặt lịch. */
+function huongDanDatLichTay() {
+  return [
+    'Script không được phép tự đặt lịch. Hai cách, chọn một:',
+    '',
+    'CÁCH NHANH — tự thêm lịch bằng tay, khỏi đụng gì khác:',
+    '  1. Cột trái Apps Script, bấm biểu tượng đồng hồ (Trình kích hoạt)',
+    '  2. Nút "Thêm trình kích hoạt" góc dưới phải',
+    '  3. Chọn: hàm  hoiTelegram  ·  Nguồn: Trình kích hoạt theo thời gian',
+    '     ·  Loại: Hẹn giờ theo phút  ·  Khoảng: Mỗi phút',
+    '  4. Lưu, cấp quyền khi Google hỏi',
+    '  Xong. Hàm hoiTelegram không cần quyền đó nên chạy bình thường.',
+    '',
+    'CÁCH GỐC — mở quyền cho script tự làm:',
+    '  1. Cài đặt dự án (bánh răng bên trái)',
+    '  2. Tích "Hiển thị tệp kê khai appsscript.json trong trình chỉnh sửa"',
+    '  3. Mở file appsscript.json, thêm vào mảng oauthScopes dòng:',
+    '     "https://www.googleapis.com/auth/script.scriptapp"',
+    '  4. Lưu, chạy lại setup, cấp quyền mới khi Google hỏi'
+  ].join('\n');
 }
 
 /**
