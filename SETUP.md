@@ -80,12 +80,25 @@ Trong `index.html`, tìm dòng bắt đầu bằng `var API =` (đang là
 
 **Xong.** Từ giờ mọi thay đổi đều qua Telegram.
 
+### Nếu bot không trả lời
+
+Chạy `kiemTra()` và đọc dòng **Webhook**. Ba trường hợp:
+
+| Dòng Webhook hiện | Nghĩa là | Xử lý |
+|---|---|---|
+| `✘ CHƯA NỐI` | Telegram không biết gửi tin đi đâu | Dán URL `/exec` vào biến `WEBAPP_URL` đầu hàm `setup()`, chạy lại |
+| URL kết thúc bằng `/dev` | Telegram không gọi được vì `/dev` đòi đăng nhập | Như trên |
+| Có URL `/exec` nhưng vẫn im | Deployment đang chạy code cũ | Triển khai → Quản lý bản triển khai → Chỉnh sửa → Phiên bản: **Phiên bản mới** |
+
+Trường hợp thứ ba hay gặp nhất: sau khi sửa code phải **tạo phiên bản mới**, nếu
+không thì URL `/exec` vẫn phục vụ code của lần triển khai trước.
+
 ### Hai hàm tiện ích
 
 | Hàm | Dùng khi |
 |---|---|
 | `kiemTra()` | Xem tình trạng: token, webhook, số đăng ký, cấu hình hiện tại, ADMIN_KEY |
-| `setWebhookThuCong()` | Khi `setup` báo không tự tìm được URL — dán URL `/exec` vào rồi Run |
+| `noiWebhook()` | Khi `setup` báo không nối được webhook — dán URL `/exec` vào rồi Run |
 
 ---
 

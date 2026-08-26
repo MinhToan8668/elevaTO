@@ -94,8 +94,8 @@ function defaultConfig() {
     },
 
     media: {
-      videoUrl: '',          // /video <link youtube hoặc google drive>
-      videoTitle: 'Học thử một buổi — trích Module 1',
+      videoUrl: 'https://drive.google.com/file/d/1NW1h_XqO_85XHf_Gl3YDNL5pnr0FNwE7/view',
+      videoTitle: 'Buổi học thử — Module 1: Tổng quan định giá & mô hình DCF',
       showSlides: true,      // /slide on|off
       showModel: true        // /model on|off
     },
@@ -810,6 +810,9 @@ function setup() {
   var TOKEN = 'DAN_TOKEN_BOT_VAO_DAY';
   var ADMIN = 'DAN_CHAT_ID_CUA_BAN_VAO_DAY';   // nhiều người: '111,222'
 
+  // Để trống thì tự dò. Nếu tự dò không ra (hoặc ra URL /dev), dán URL /exec vào đây.
+  var WEBAPP_URL = '';
+
   var out = [];
   if (TOKEN.indexOf('DAN_') === 0 || ADMIN.indexOf('DAN_') === 0) {
     throw new Error('Bạn chưa điền TOKEN và ADMIN ở đầu hàm setup().');
@@ -842,16 +845,26 @@ function setup() {
   }
   out.push('✔ Bot: @' + me.result.username);
 
-  // tự tìm URL web app và nối webhook
-  var url = '';
-  try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; }
+  // tìm URL web app rồi nối webhook
+  var url = String(WEBAPP_URL || '').trim();
+  if (!url) {
+    try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; }
+  }
+  // Chạy từ trình soạn thảo, getUrl() hay trả URL /dev. Telegram không dùng được
+  // /dev vì nó đòi đăng nhập, nên đổi sang /exec.
+  if (url.slice(-4) === '/dev') url = url.slice(0, -4) + '/exec';
 
-  if (url && url.slice(-5) === '/exec') {
+  if (url.slice(-5) === '/exec') {
     var hook = tgApi('setWebhook', { url: url, allowed_updates: ['message', 'callback_query'] });
-    out.push(hook && hook.ok ? '✔ Đã nối webhook Telegram' : '✘ Nối webhook lỗi: ' + JSON.stringify(hook));
+    if (hook && hook.ok) {
+      out.push('✔ Đã nối webhook: ' + url);
+    } else {
+      out.push('✘ Nối webhook lỗi: ' + JSON.stringify(hook));
+      out.push('  Thường do URL chưa đúng. Dán URL /exec vào biến WEBAPP_URL ở đầu setup() rồi chạy lại.');
+    }
   } else {
-    out.push('✘ Chưa tìm thấy URL web app. Bạn đã Triển khai chưa?');
-    out.push('  Nếu đã triển khai rồi, dán URL /exec vào hàm setWebhookThuCong rồi chạy hàm đó.');
+    out.push('✘ Chưa tìm được URL web app (nhận được: ' + (url || 'trống') + ')');
+    out.push('  Dán URL /exec vào biến WEBAPP_URL ở đầu hàm setup() rồi chạy lại.');
   }
 
   out.push('');
@@ -881,10 +894,18 @@ function kiemTra() {
 
   var wh = tgApi('getWebhookInfo', {});
   if (wh && wh.ok) {
-    out.push('Webhook: ' + (wh.result.url || '✘ chưa nối'));
-    if (wh.result.last_error_message) {
-      out.push('  Lỗi gần nhất: ' + wh.result.last_error_message);
+    var w = wh.result;
+    out.push('Webhook: ' + (w.url || '✘ CHƯA NỐI — bot sẽ không trả lời lệnh nào'));
+    if (w.url && w.url.slice(-5) !== '/exec') {
+      out.push('  ⚠ URL không kết thúc bằng /exec, Telegram sẽ không gọi được');
     }
+    if (w.pending_update_count) out.push('  Tin đang chờ xử lý: ' + w.pending_update_count);
+    if (w.last_error_message) {
+      out.push('  ✘ Lỗi gần nhất: ' + w.last_error_message);
+      out.push('    lúc: ' + new Date(w.last_error_date * 1000));
+    }
+  } else {
+    out.push('Webhook: không hỏi được (token sai hoặc mạng lỗi)');
   }
 
   var c = publicConfig();
@@ -903,11 +924,12 @@ function kiemTra() {
 }
 
 /** Dùng khi setup không tự tìm được URL: dán URL /exec vào đây rồi Run. */
-function setWebhookThuCong() {
+/** Dán URL /exec vào rồi Run — dùng khi setup không tự nối được webhook. */
+function noiWebhook() {
   var url = 'DAN_URL_WEB_APP_EXEC_VAO_DAY';
-  Logger.log(JSON.stringify(tgApi('setWebhook', {
-    url: url, allowed_updates: ['message', 'callback_query']
-  })));
+  if (url.slice(-4) === '/dev') url = url.slice(0, -4) + '/exec';
+  var r = tgApi('setWebhook', { url: url, allowed_updates: ['message', 'callback_query'] });
+  Logger.log(r && r.ok ? '✔ Đã nối webhook: ' + url : '✘ Lỗi: ' + JSON.stringify(r));
 }
 
 function xoaWebhook()   { Logger.log(JSON.stringify(tgApi('deleteWebhook', {}))); }
