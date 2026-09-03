@@ -155,6 +155,8 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 .hero .lead{font-size:clamp(15px,1.8vw,18px);margin-bottom:30px}
 .hero .lead strong{color:var(--white);font-weight:500}
 .hero-actions{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:26px}
+.hero-alt{font-size:13px;color:var(--muted);margin:-10px 0 22px;line-height:1.6}
+.hero-alt b{color:var(--emerald);font-weight:600}
 .hero-meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--muted2)}
 .hero-meta span{display:inline-flex;align-items:center;gap:6px}
 .hero-meta b{color:var(--text);font-weight:400}
@@ -571,6 +573,16 @@ footer a:hover{color:var(--emerald)}
 .fl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
 .fi2{display:grid;grid-template-columns:1.4fr 1fr;gap:15px}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.plan-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plan-opt{display:flex;flex-direction:column;gap:3px;text-align:left;
+  border:1px solid var(--border2);border-radius:var(--r-sm);padding:13px 14px;
+  transition:border-color .2s,background .2s}
+.plan-opt b{font-family:'Syne',sans-serif;font-size:13.5px;color:var(--white);font-weight:700}
+.plan-opt .pp{font-family:'Syne',sans-serif;font-size:16px;color:var(--emerald);font-weight:700}
+.plan-opt > span:last-child{font-size:11.5px;color:var(--muted);line-height:1.45}
+.plan-opt:hover{border-color:var(--border3)}
+.plan-opt.on{border-color:var(--emerald);background:var(--emerald-soft)}
+@media(max-width:430px){.plan-pick{grid-template-columns:1fr}}
 .inp{background:#0a0a0a;border:1px solid var(--border2);border-radius:var(--r-sm);
   padding:13px 15px;color:var(--white);font-family:inherit;font-size:14.5px;font-weight:300;
   outline:none;transition:border-color .2s,background .2s;resize:vertical;width:100%}
@@ -757,6 +769,7 @@ footer a:hover{color:var(--emerald)}
         <button class="btn btn-em btn-lg" data-open data-cta>Đăng ký giữ chỗ <span class="arw">→</span></button>
         <button class="btn btn-ghost btn-lg" data-go="demo" data-show="media.videoUrl"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6a1 1 0 0 0 1.53.85l10.2-6.8a1 1 0 0 0 0-1.7L9.53 4.35A1 1 0 0 0 8 5.2z"/></svg>Học thử miễn phí</button>
       </div>
+      <p class="hero-alt" data-show="pricing.showSelfPaced">Ngân sách gọn hơn? Có gói <b>tự học</b> chỉ <b data-bind="computed.price.selfPaced">—</b> — chọn ngay trong form đăng ký.</p>
       <div class="hero-meta">
         <span>⏱ <b>60 giây</b> để điền</span>
         <span>📅 <b data-bind="computed.scheduleShort">—</b></span>
@@ -783,6 +796,7 @@ footer a:hover{color:var(--emerald)}
           <span>Học phí Early Bird</span>
           <b><i class="thr" data-bind="computed.price.regular"></i><span data-bind="computed.price.earlyBird"></span></b>
         </div>
+        <div class="slot-row" data-show="pricing.showSelfPaced"><span>Gói tự học (recorded)</span><b data-bind="computed.price.selfPaced"></b></div>
         <div class="slot-row"><span>Lịch học</span><b data-bind="computed.scheduleShort"></b></div>
         <div class="slot-row"><span>Số buổi</span><b data-tpl="{{schedule.sessions}} buổi × {{schedule.hoursPerSession}} tiếng"></b></div>
       </div>
@@ -1051,7 +1065,7 @@ footer a:hover{color:var(--emerald)}
     <div class="price-card rv" data-show="pricing.showSelfPaced">
       <div class="price-type">Self-paced · Tự học</div>
       <div class="price-amt"><span class="n" data-bind="computed.price.selfPaced">—</span><span class="u">/ khóa</span></div>
-      <div class="price-save" style="color:var(--muted)" data-tpl="Mở sau {{computed.cohortLabel}}"></div>
+      <div class="price-save" style="color:var(--muted)">Học theo lịch của riêng bạn</div>
       <p class="price-desc">Toàn bộ nội dung recorded. Học theo lịch trình riêng của bạn, truy cập vĩnh viễn.</p>
       <ul class="price-feats">
         <li data-tpl="{{schedule.sessions}} bài giảng video đầy đủ"></li>
@@ -1059,7 +1073,7 @@ footer a:hover{color:var(--emerald)}
         <li>File Excel tự build + template</li>
         <li>Truy cập vĩnh viễn + update miễn phí</li>
       </ul>
-      <button class="btn btn-ghost btn-md" data-open>Quan tâm — báo tôi khi mở</button>
+      <button class="btn btn-ghost btn-md" data-open data-plan="selfpaced">Đăng ký gói tự học →</button>
     </div>
   </div>
   <p class="price-note" data-html="{{pricing.note}} Có câu hỏi? Nhắn <b>TikTok: {{contact.tiktok}}</b>"></p>
@@ -1132,6 +1146,21 @@ footer a:hover{color:var(--emerald)}
     <div id="formView">
       <h2 id="mTitle">Đăng ký giữ chỗ</h2>
       <p class="modal-sub"><b id="mCohort">—</b><br>Mình xác nhận và liên hệ lại qua SĐT trong 24h.<span data-show="media.videoUrl"> Đăng ký xong là <b>video học thử buổi 1 mở khóa ngay</b>.</span></p>
+      <div class="fg" style="margin-bottom:18px">
+        <span class="fl">Bạn muốn học theo cách nào? *</span>
+        <div class="plan-pick" id="planPick">
+          <button type="button" class="plan-opt on" data-planopt="live">
+            <b>Lớp live</b>
+            <span class="pp" data-bind="computed.price.earlyBird">—</span>
+            <span data-tpl="{{schedule.sessions}} buổi live · hỗ trợ trực tiếp · giá Early Bird"></span>
+          </button>
+          <button type="button" class="plan-opt" data-planopt="selfpaced" data-show="pricing.showSelfPaced">
+            <b>Tự học</b>
+            <span class="pp" data-bind="computed.price.selfPaced">—</span>
+            <span>Trọn bộ video + tài liệu · học theo lịch của bạn</span>
+          </button>
+        </div>
+      </div>
       <form class="fields" id="regForm" novalidate>
         <div class="fg"><label class="fl" for="f-name">Họ và tên *</label>
           <input class="inp" id="f-name" name="name" autocomplete="name" placeholder="Nguyễn Văn A">
@@ -1886,8 +1915,21 @@ function loadConfig(){
 
 /* ══════════════ 9. MODAL + FORM ══════════════ */
 var lastFocus=null;
-function openModal(){
+
+/* Gói đang chọn trong form: 'live' hoặc 'selfpaced' */
+var selPlan='live';
+function setPlan(p){
+  if(p!=='selfpaced') p='live';
+  if(p==='selfpaced' && CFG && !CFG.pricing.showSelfPaced) p='live';
+  selPlan=p;
+  $$('.plan-opt').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-planopt')===p);
+  });
+}
+
+function openModal(plan){
   if(CFG && CFG.computed.isClosed) return;
+  setPlan(typeof plan==='string'?plan:selPlan);
   lastFocus=document.activeElement;
   $('#modal').classList.add('on');
   $('#formView').style.display='block';
@@ -1920,6 +1962,10 @@ function validateField(el){
 }
 
 function initForm(){
+  $$('.plan-opt').forEach(function(b){
+    b.addEventListener('click',function(){ setPlan(b.getAttribute('data-planopt')) });
+  });
+
   $$('#regForm .inp').forEach(function(el){
     el.addEventListener('blur',function(){ if(el.value) validateField(el) });
     el.addEventListener('input',function(){
@@ -1948,7 +1994,10 @@ function initForm(){
     var trap=$('#f-website');
     if(trap && trap.value.trim()){ showDone(false); return; }
 
-    var data={action:'register',source:'web'};
+    // Gói tự học gắn hậu tố vào source — backend hiện tại lưu nguyên chuỗi này
+    // vào cột Nguồn nên phân biệt được ngay cả khi chưa deploy backend mới.
+    var data={action:'register',plan:selPlan,
+              source:selPlan==='selfpaced'?'web-tuhoc':'web'};
     els.forEach(function(el){ data[el.name]=el.value.trim() });
     data.website='';
 
@@ -1998,16 +2047,19 @@ function initForm(){
     $('#doneView').style.display='block';
     var C=CFG?CFG.computed:{};
     var hasVid=!!(CFG && CFG.media && CFG.media.videoUrl);
+    var planLine=selPlan==='selfpaced'
+      ? ' Gói bạn chọn: <strong>Tự học ('+esc(C.price?C.price.selfPaced:'')+')</strong>.'
+      : '';
     var vidLine=hasVid?' <strong>Video học thử buổi 1 đã mở khóa cho bạn</strong> — xem ngay bên dưới nhé.':'';
     if(dup){
       $('#doneTitle').textContent='Bạn đã có trong danh sách rồi!';
       $('#doneBody').innerHTML='Số điện thoại này đã đăng ký '+esc(C.cohortLabel||'')+
-        '. Mình sẽ liên hệ sớm nhất có thể.'+vidLine;
+        '. Mình sẽ liên hệ sớm nhất có thể.'+planLine+vidLine;
       $('#donePill').textContent='✓ Đã ghi nhận trước đó';
     }else{
       $('#doneTitle').textContent='Đã nhận đăng ký!';
       $('#doneBody').innerHTML='Mình sẽ liên hệ lại qua SĐT trong vòng <strong>24 giờ</strong> để '+
-        'tư vấn định hướng và xác nhận chỗ '+esc(C.cohortLabel||'')+'.'+vidLine;
+        'tư vấn định hướng và xác nhận chỗ '+esc(C.cohortLabel||'')+'.'+planLine+vidLine;
       $('#donePill').textContent='⏳ Đang chờ xác nhận';
     }
   }
@@ -2068,7 +2120,10 @@ function initChrome(){
   $$('#drawer a').forEach(function(a){a.addEventListener('click',closeDrawer)});
 
   $$('[data-open]').forEach(function(b){
-    b.addEventListener('click',function(){ closeDrawer(); openModal() });
+    b.addEventListener('click',function(){
+      closeDrawer();
+      openModal(b.getAttribute('data-plan')||undefined);
+    });
   });
   $$('[data-close]').forEach(function(b){ b.addEventListener('click',closeModal) });
   $('#modal').addEventListener('click',function(e){ if(e.target===this) closeModal() });
@@ -2110,7 +2165,9 @@ function initAdmin(){
           '<div class="reg-top"><span class="reg-nm">'+esc(r.name)+'</span>'+
             '<span class="pill '+(r.status==='approved'?'em':'gold')+'">'+ic+'</span>'+
             '<span style="font-size:11.5px;color:var(--muted2)">'+esc(r.time)+' · '+esc(r.id)+'</span></div>'+
-          '<div class="reg-meta"><span>📱 <b>'+esc(r.phone)+'</b></span>'+
+          '<div class="reg-meta">'+
+            (String(r.source||'').indexOf('tuhoc')>-1?'<span>📦 <b>Gói tự học</b></span>':'')+
+            '<span>📱 <b>'+esc(r.phone)+'</b></span>'+
             '<span>🎂 <b>'+esc(r.year)+'</b></span><span>💼 <b>'+esc(r.job)+'</b></span>'+
             (r.email?'<span>✉️ <b>'+esc(r.email)+'</b></span>':'')+'</div>'+
           (r.goal?'<div class="reg-goal">🎯 "'+esc(r.goal)+'"</div>':'')+
