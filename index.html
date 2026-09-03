@@ -413,6 +413,26 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 .perk h4{font-size:15px;font-weight:700;margin-bottom:8px;line-height:1.35}
 .perk p{font-size:13.5px;color:var(--muted);line-height:1.65}
 
+/* ═══════════════ THÀNH QUẢ HỌC VIÊN ═══════════════ */
+.wins-strip{display:grid;grid-auto-flow:column;grid-auto-columns:min(68vw,250px);gap:14px;
+  overflow-x:auto;padding:4px 4px 16px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+  scrollbar-color:var(--border3) transparent}
+.wins-strip::-webkit-scrollbar{height:8px}
+.wins-strip::-webkit-scrollbar-track{background:transparent}
+.wins-strip::-webkit-scrollbar-thumb{background:var(--border3);border-radius:99px}
+.win-card{scroll-snap-align:start;border:1px solid var(--border2);border-radius:var(--r-sm);
+  overflow:hidden;background:var(--card);cursor:zoom-in;padding:0;position:relative;
+  display:flex;flex-direction:column;align-items:stretch;text-align:left;
+  transition:border-color .25s,transform .25s var(--ease)}
+.win-card:hover{border-color:var(--emerald);transform:translateY(-3px)}
+.win-card img{width:100%;height:auto;display:block;background:#dfe7f0}
+.win-card .gal-zoom{opacity:0}
+.win-card:hover .gal-zoom{opacity:1}
+.win-cap{padding:11px 13px;font-size:12px;color:var(--muted);line-height:1.5;
+  border-top:1px solid var(--border);background:var(--card);margin-top:auto}
+.win-card:hover .win-cap{color:var(--text)}
+.wins-note{margin-top:14px;font-size:12px;color:var(--muted2);line-height:1.6}
+
 /* ═══════════════ INSTRUCTOR ═══════════════ */
 .inst{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(0,1.1fr);gap:clamp(32px,5vw,72px);align-items:start}
 .inst-card{background:linear-gradient(165deg,var(--card2),var(--card));border:1px solid var(--border2);
@@ -826,6 +846,17 @@ footer a:hover{color:var(--emerald)}
       <h4>Portfolio model để phỏng vấn</h4>
       <p>File model từ buổi cuối là tài sản thật của bạn. Đưa vào portfolio phỏng vấn và giải thích từng dòng — vì tự tay build.</p></div></div>
   </div>
+</div></section>
+
+<!-- ════════ THÀNH QUẢ HỌC VIÊN ════════ -->
+<section class="sec" id="wins"><div class="shell">
+  <div class="sec-head rv">
+    <div class="eyebrow em">Thành quả học viên</div>
+    <h2 class="h2">Không phải lời hứa.<br>Là <em>tin nhắn thật.</em></h2>
+    <p class="lead">Học viên các cohort trước nhắn về sau khóa học — pass phỏng vấn, nhận offer, vào đúng mảng mình nhắm: M&amp;A, FP&amp;A, tư vấn đầu tư. Bấm vào từng ảnh để xem lớn.</p>
+  </div>
+  <div class="wins-strip rv" id="winsStrip" aria-label="Ảnh chụp tin nhắn thành quả của học viên"></div>
+  <p class="wins-note rv">Ảnh chụp màn hình do học viên chia sẻ. Tên và ảnh đại diện đã được làm mờ để bảo vệ quyền riêng tư. Kết quả tùy thuộc nỗ lực của từng người.</p>
 </div></section>
 
 <!-- ════════ CURRICULUM ════════ -->
@@ -1343,6 +1374,17 @@ var CORE=[
 var SLIDES=[['course-map','Course Map — 8 module của khóa']];
 CORE.forEach(function(c){ SLIDES.push([c.f, c.t]) });
 
+/* Tin nhắn thành quả học viên — tên & avatar đã làm mờ sẵn trong file ảnh */
+var WINS=[
+  ['win1','Pass giai đoạn tập việc — lên chính thức Chuyên viên tư vấn đầu tư'],
+  ['win2','Pass vòng hồ sơ — chờ phỏng vấn trực tiếp với CFO'],
+  ['win3','Nộp 3 nơi, 2 nơi gọi lại — nhờ model tự build'],
+  ['win4','Được gọi phỏng vấn in-person vị trí M&A'],
+  ['win5','"Đặt được 2 chân vào FP&A rồi á"'],
+  ['win6','Bắt đầu từ buổi review CV cùng lớp…'],
+  ['win7','…đến tin nhắn báo đậu Finance Intern']
+];
+
 /* Ảnh chụp model bàn giao */
 var MODELSHOTS=[
   ['dashboard',       'Dashboard: đổi năm, đổi kịch bản, đổi số năm dự phóng'],
@@ -1600,7 +1642,8 @@ function bindFaqText(){ if(CFG) bindAll(CFG,$('#faqList')); }
 
 /* ══════════════ 6b. GALLERY · LIGHTBOX · VIDEO ══════════════ */
 var GAL={slide:{items:SLIDES,dir:'assets/slides/',kind:'Module 1 · slide bài giảng'},
-         model:{items:MODELSHOTS,dir:'assets/model/',kind:'Model bàn giao'}};
+         model:{items:MODELSHOTS,dir:'assets/model/',kind:'Model bàn giao'},
+         wins:{items:WINS,dir:'assets/wins/',kind:'Thành quả học viên'}};
 var lbSet='slide', lbIdx=0, galBuilt=false;
 
 function buildGalleries(){
@@ -1619,6 +1662,14 @@ function buildGalleries(){
         '<p>'+esc(x.d)+'</p>'+
         '<div class="core-note">'+esc(x.n)+'</div>'+
       '</div></div>';
+  }).join('');
+
+  var ws=$('#winsStrip');
+  if(ws) ws.innerHTML=WINS.map(function(s,i){
+    return '<button class="win-card" data-lb="wins" data-i="'+i+'">'+
+      '<img src="assets/wins/'+s[0]+'-thumb.webp" alt="'+esc(s[1])+'" loading="lazy" width="420" height="775">'+
+      '<span class="gal-zoom">⤢</span>'+
+      '<span class="win-cap">'+esc(s[1])+'</span></button>';
   }).join('');
 
   var mg=$('#modelGal');
