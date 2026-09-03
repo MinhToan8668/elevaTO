@@ -371,6 +371,14 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
   margin-top:16px;flex-wrap:wrap}
 .vid-meta p{font-size:13px;color:var(--muted)}
 
+/* ═══════════════ TRẢI NGHIỆM MODEL ═══════════════ */
+.tryout-wrap{max-width:1060px;margin:0 auto;position:relative;z-index:1}
+.tryout-frame{position:relative;height:clamp(430px,72vh,680px);border-radius:var(--r);
+  overflow:hidden;border:1px solid var(--border2);
+  background:linear-gradient(160deg,#141414,#0b0b0b)}
+.tryout-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+@media(max-width:720px){.tryout-frame{height:min(78vh,560px)}}
+
 @media(max-width:900px){
   .model-top{grid-template-columns:1fr}
   .core-row{grid-template-columns:1fr;gap:22px}
@@ -694,6 +702,7 @@ footer a:hover{color:var(--emerald)}
       <button class="nav-link" data-go="demo" data-show="media.videoUrl">Học thử</button>
       <button class="nav-link" data-go="slides">Modeling là gì</button>
       <button class="nav-link" data-go="model">Model</button>
+      <button class="nav-link" data-go="tryout" data-show="media.modelEmbedUrl">Vọc thử model</button>
       <button class="nav-link" data-go="instructor">Người dạy</button>
       <button class="nav-link" data-go="pricing">Học phí</button>
     </div>
@@ -708,6 +717,7 @@ footer a:hover{color:var(--emerald)}
     <a href="#demo" data-show="media.videoUrl">Học thử miễn phí</a>
     <a href="#slides">Modeling là gì</a>
     <a href="#model">Model bàn giao</a>
+    <a href="#tryout" data-show="media.modelEmbedUrl">Vọc thử model</a>
     <a href="#instructor">Người dạy</a>
     <a href="#pricing">Học phí</a>
     <a href="#faq">Câu hỏi thường gặp</a>
@@ -846,9 +856,9 @@ footer a:hover{color:var(--emerald)}
 <!-- ════════ HỌC THỬ ════════ -->
 <section class="sec demo-sec" id="demo" data-show="media.videoUrl"><div class="shell">
   <div class="sec-head rv" style="text-align:center;max-width:660px;margin-left:auto;margin-right:auto">
-    <div class="eyebrow em" style="justify-content:center">Miễn phí · không cần đăng ký</div>
-    <h2 class="h2">Bấm vào để <em>học thử ngay.</em></h2>
-    <p class="lead" style="margin-left:auto;margin-right:auto">Trọn Module 1, quay đúng buổi dạy thật. Xem xong bạn tự biết khoá này có hợp với mình không.</p>
+    <div class="eyebrow em" style="justify-content:center">Miễn phí · mở khóa khi đăng ký</div>
+    <h2 class="h2">Đăng ký là <em>học thử ngay.</em></h2>
+    <p class="lead" style="margin-left:auto;margin-right:auto">Trọn nội dung buổi 1 — Phân tích Bảng cân đối kế toán, quay đúng buổi dạy thật. Điền form 60 giây là video mở khóa ngay tại đây. Xem xong bạn tự biết khoá này có hợp với mình không.</p>
   </div>
   <div class="vid-wrap rv">
     <div class="vid-frame" id="vidFrame"></div>
@@ -932,6 +942,22 @@ footer a:hover{color:var(--emerald)}
   </div>
 
   <div class="gal" id="modelGal"></div>
+</div></section>
+
+<!-- ════════ TRẢI NGHIỆM MODEL (nhúng bản xem thử đã khóa sheet) ════════ -->
+<section class="sec" id="tryout" data-show="media.modelEmbedUrl"><div class="shell">
+  <div class="sec-head rv" style="text-align:center;max-width:680px;margin-left:auto;margin-right:auto">
+    <div class="eyebrow em" style="justify-content:center">Trải nghiệm ngay trên trang</div>
+    <h2 class="h2">Tự tay <em>vọc thử</em> dashboard &amp; model.</h2>
+    <p class="lead" style="margin-left:auto;margin-right:auto">Đây là chính file model bàn giao, nhúng trực tiếp bản xem thử. Các sheet đã được khóa — chỉ chừa lại vài ô điều khiển (chọn kịch bản, số năm dự phóng…) để bạn tự đổi và xem cả model chạy lại theo. Đủ để tự thấy độ chi tiết trước khi quyết định học.</p>
+  </div>
+  <div class="tryout-wrap rv">
+    <div class="tryout-frame" id="tryFrame"></div>
+    <div class="vid-meta">
+      <p>Bản xem thử chỉ mở được các ô điều khiển được đánh dấu — file đầy đủ được bàn giao khi bạn học.</p>
+      <button class="btn btn-em btn-md" data-open data-cta>Đăng ký giữ chỗ <span class="arw">→</span></button>
+    </div>
+  </div>
 </div></section>
 
 <!-- ════════ INSTRUCTOR ════════ -->
@@ -1074,7 +1100,7 @@ footer a:hover{color:var(--emerald)}
 
     <div id="formView">
       <h2 id="mTitle">Đăng ký giữ chỗ</h2>
-      <p class="modal-sub"><b id="mCohort">—</b><br>Mình xác nhận và liên hệ lại qua SĐT trong 24h.</p>
+      <p class="modal-sub"><b id="mCohort">—</b><br>Mình xác nhận và liên hệ lại qua SĐT trong 24h.<span data-show="media.videoUrl"> Đăng ký xong là <b>video học thử buổi 1 mở khóa ngay</b>.</span></p>
       <form class="fields" id="regForm" novalidate>
         <div class="fg"><label class="fl" for="f-name">Họ và tên *</label>
           <input class="inp" id="f-name" name="name" autocomplete="name" placeholder="Nguyễn Văn A">
@@ -1111,7 +1137,10 @@ footer a:hover{color:var(--emerald)}
       <h3 id="doneTitle">Đã nhận đăng ký!</h3>
       <p id="doneBody">Mình sẽ liên hệ lại qua SĐT trong vòng <strong>24 giờ</strong>.</p>
       <span class="pill gold" id="donePill">⏳ Đang chờ xác nhận</span>
-      <div style="margin-top:26px"><button class="btn btn-ghost btn-md" data-close>Đóng</button></div>
+      <div style="margin-top:26px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-em btn-md" id="doneWatch" data-show="media.videoUrl">▶ Xem buổi học thử ngay</button>
+        <button class="btn btn-ghost btn-md" data-close>Đóng</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1143,6 +1172,15 @@ footer a:hover{color:var(--emerald)}
    ══════════════════════════════════════════════════════════════ */
 var API = 'https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec';
 
+/* ══════════════════════════════════════════════════════════════
+   ĐIỂM SỬA THỨ HAI: link bản model xem thử (mục "Vọc thử model").
+   Dán link Google Sheets của file đã khóa sheet, chỉ chừa vài ô nhập
+   (share ở chế độ "Anyone with the link – Editor" thì học viên mới
+   thao tác được các ô đó). Link Excel Online (OneDrive → File → Share
+   → Embed) cũng dùng được. Để chuỗi rỗng '' thì mục này tự ẩn.
+   ══════════════════════════════════════════════════════════════ */
+var MODEL_EMBED = '';
+
 var CACHE_KEY = 'elevato_cfg_v2';
 
 /* ── Config dự phòng: dùng khi chưa cấu hình API hoặc mạng lỗi ── */
@@ -1155,8 +1193,10 @@ var FALLBACK = {
             detail:'Thứ 7 & Chủ Nhật, 9h00 – 11h00 (GMT+7, Việt Nam)',
             platform:'MS Teams',sessions:8,theory:5,practice:3,modules:8,hoursPerSession:2},
   media:{videoUrl:'https://drive.google.com/file/d/1NW1h_XqO_85XHf_Gl3YDNL5pnr0FNwE7/view?usp=drivesdk',
-         videoTitle:'Buổi học thử — Module 1: Tổng quan định giá & mô hình DCF',
-         showSlides:true,showModel:true},
+         videoTitle:'Buổi học thử — Buổi 1: Phân tích Bảng cân đối kế toán',
+         showSlides:true,showModel:true,
+         /* backend không gửi key này nên giá trị ở đây luôn thắng */
+         modelEmbedUrl:MODEL_EMBED},
   company:{ticker:'DGW',name:'Digiworld Corporation (CTCP Thế Giới Số)',
            exchange:'HOSE',sheets:21,checks:5,industries:17},
   stats:{years:'2.5+',cohortsDone:6,students:'50+'},
@@ -1487,6 +1527,7 @@ function render(cfg){
   var at=$('#admTitle'); if(at) at.textContent='⚙️ elevaTO Admin — '+C.cohortLabel;
 
   renderVideo(CFG);
+  renderTryout(CFG);
 
   if(!modulesBuilt) buildModules();
   if(!faqBuilt)     buildFaq();
@@ -1680,24 +1721,82 @@ function embedUrl(u){
     return 'https://drive.google.com/file/d/'+m[1]+'/preview';
   return u;
 }
-var vidSrc='';
+/* Video học thử chỉ mở sau khi đăng ký — nhờ vậy mới thu được thông tin
+   học viên. Cờ mở khóa lưu localStorage để lần sau quay lại vẫn xem được. */
+var TRIAL_KEY='elevato_trial_ok_v1';
+function trialUnlocked(){
+  try{ return localStorage.getItem(TRIAL_KEY)==='1' }catch(e){ return false }
+}
+function unlockTrial(){
+  try{ localStorage.setItem(TRIAL_KEY,'1') }catch(e){}
+  vidSrc=''; // buộc renderVideo vẽ lại mặt video theo trạng thái mới
+  if(CFG) renderVideo(CFG);
+}
+
+var vidSrc='', vidLocked=null;
 function renderVideo(cfg){
   var f=$('#vidFrame'); if(!f) return;
   var src=embedUrl(cfg.media && cfg.media.videoUrl);
   if(!src){ f.innerHTML=''; vidSrc=''; return; }
-  if(src===vidSrc) return;
-  vidSrc=src;
-  // Chỉ nạp iframe khi người xem bấm — trang nhẹ hơn và nút play nói rõ phải làm gì
+  var locked=!trialUnlocked();
+  if(src===vidSrc && locked===vidLocked) return;
+  vidSrc=src; vidLocked=locked;
+
+  if(locked){
+    // Chưa đăng ký: nút mở form thay vì nút play
+    f.innerHTML='<button class="vid-face" id="vidPlay">'+
+        '<span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" '+
+          'fill="currentColor"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3H9z"/></svg></span>'+
+        '<b>Đăng ký để mở khóa buổi học thử</b>'+
+        '<span>Trọn buổi 1 · Phân tích Bảng cân đối kế toán — miễn phí, chỉ mất 60 giây điền form</span>'+
+      '</button>';
+    $('#vidPlay').addEventListener('click',openModal);
+    return;
+  }
+
+  // Đã đăng ký — chỉ nạp iframe khi người xem bấm, trang nhẹ hơn
   f.innerHTML='<button class="vid-face" id="vidPlay">'+
       '<span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" '+
         'fill="currentColor"><path d="M8 5.2v13.6a1 1 0 0 0 1.53.85l10.2-6.8a1 1 0 0 0 0-1.7L9.53 4.35A1 1 0 0 0 8 5.2z"/></svg></span>'+
       '<b>Xem buổi học thử</b>'+
-      '<span>Module 1 · Tổng quan định giá &amp; mô hình DCF — trọn buổi</span>'+
+      '<span>Buổi 1 · Phân tích Bảng cân đối kế toán — trọn buổi</span>'+
     '</button>';
   $('#vidPlay').addEventListener('click',function(){
     f.innerHTML='<iframe src="'+esc(vidSrc)+'" title="'+esc(cfg.media.videoTitle||'Buổi học thử')+
       '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" '+
       'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+  });
+}
+
+/* Chuyển link Google Sheets thành URL nhúng gọn (ẩn menu, giữ ô nhập được).
+   Link Excel Online / OneDrive embed thì dùng nguyên trạng. */
+function sheetEmbedUrl(u){
+  u=String(u||'').trim();
+  if(!u) return '';
+  var m=u.match(/docs\.google\.com\/spreadsheets\/d\/([\w-]+)/);
+  if(m && m[1]!=='e'){
+    var gid=(u.match(/[#?&]gid=(\d+)/)||[])[1];
+    return 'https://docs.google.com/spreadsheets/d/'+m[1]+
+      '/edit?widget=true&headers=false&rm=minimal'+(gid?'#gid='+gid:'');
+  }
+  return u;
+}
+var trySrc='';
+function renderTryout(cfg){
+  var f=$('#tryFrame'); if(!f) return;
+  var src=sheetEmbedUrl(cfg.media && cfg.media.modelEmbedUrl);
+  if(!src){ f.innerHTML=''; trySrc=''; return; }
+  if(src===trySrc) return;
+  trySrc=src;
+  // Cũng nạp khi bấm — file Sheets nhúng khá nặng, không nên tải sẵn
+  f.innerHTML='<button class="vid-face" id="tryOpen">'+
+      '<span class="play" aria-hidden="true" style="padding-left:0;font-size:28px">📊</span>'+
+      '<b>Mở model tương tác</b>'+
+      '<span>Thử đổi kịch bản, số năm dự phóng… và xem cả model chạy lại theo</span>'+
+    '</button>';
+  $('#tryOpen').addEventListener('click',function(){
+    f.innerHTML='<iframe src="'+esc(trySrc)+'" title="Bản xem thử model elevaTO" '+
+      'loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
   });
 }
 
@@ -1843,21 +1942,31 @@ function initForm(){
   }
 
   function showDone(dup){
+    unlockTrial();   // đăng ký xong là video học thử mở khóa ngay
     $('#formView').style.display='none';
     $('#doneView').style.display='block';
     var C=CFG?CFG.computed:{};
+    var hasVid=!!(CFG && CFG.media && CFG.media.videoUrl);
+    var vidLine=hasVid?' <strong>Video học thử buổi 1 đã mở khóa cho bạn</strong> — xem ngay bên dưới nhé.':'';
     if(dup){
       $('#doneTitle').textContent='Bạn đã có trong danh sách rồi!';
       $('#doneBody').innerHTML='Số điện thoại này đã đăng ký '+esc(C.cohortLabel||'')+
-        '. Mình sẽ liên hệ sớm nhất có thể.';
+        '. Mình sẽ liên hệ sớm nhất có thể.'+vidLine;
       $('#donePill').textContent='✓ Đã ghi nhận trước đó';
     }else{
       $('#doneTitle').textContent='Đã nhận đăng ký!';
       $('#doneBody').innerHTML='Mình sẽ liên hệ lại qua SĐT trong vòng <strong>24 giờ</strong> để '+
-        'tư vấn định hướng và xác nhận chỗ '+esc(C.cohortLabel||'')+'.';
+        'tư vấn định hướng và xác nhận chỗ '+esc(C.cohortLabel||'')+'.'+vidLine;
       $('#donePill').textContent='⏳ Đang chờ xác nhận';
     }
   }
+
+  var dw=$('#doneWatch');
+  if(dw) dw.addEventListener('click',function(){
+    closeModal();
+    var t=document.getElementById('demo');
+    if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+  });
 }
 
 /* ══════════════ 10. REVEAL / NAV / STICKY ══════════════ */

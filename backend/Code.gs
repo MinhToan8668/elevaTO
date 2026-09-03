@@ -92,7 +92,7 @@ function defaultConfig() {
 
     media: {
       videoUrl: 'https://drive.google.com/file/d/1NW1h_XqO_85XHf_Gl3YDNL5pnr0FNwE7/view',
-      videoTitle: 'Buổi học thử — Module 1: Tổng quan định giá & mô hình DCF',
+      videoTitle: 'Buổi học thử — Buổi 1: Phân tích Bảng cân đối kế toán',
       showSlides: true,      // /slide on|off
       showModel: true        // /model on|off
     },
