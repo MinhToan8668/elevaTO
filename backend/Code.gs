@@ -249,7 +249,9 @@ function allRegs() {
 function countRegs(preloaded) {
   var label = cohortLabel(getConfig().cohort.number);
   return (preloaded || allRegs()).filter(function (r) {
-    return r.cohort === label && r.status !== 'rejected';
+    // Gói tự học (source có 'tuhoc') không chiếm suất lớp live
+    return r.cohort === label && r.status !== 'rejected' &&
+           String(r.source).indexOf('tuhoc') === -1;
   }).length;
 }
 
@@ -385,16 +387,22 @@ function handleRegister(d) {
                message: 'Số điện thoại này đã có trong danh sách rồi nhé!' };
     }
 
+    // Gói học: web mới gửi plan:'selfpaced' kèm source 'web-tuhoc'. Chuẩn hoá
+    // để dù client gửi kiểu nào, cột Nguồn cũng nhận diện được gói tự học.
+    var src = String(d.source || 'web');
+    if (d.plan === 'selfpaced' && src.indexOf('tuhoc') === -1) src += '-tuhoc';
+    var tuHoc = src.indexOf('tuhoc') > -1;
+
     var id = 'R' + Utilities.formatDate(new Date(), 'GMT+7', 'yyMMddHHmmss');
     regSheet().appendRow([
       id, nowVN(), label, name, "'" + phone,
       String(d.year || ''), String(d.email || ''), String(d.job || ''),
-      String(d.goal || ''), String(d.source || 'web'), 'pending', ''
+      String(d.goal || ''), src, 'pending', ''
     ]);
 
     var pub = publicConfig();
     notifyNewReg({ id: id, name: name, phone: phone, year: d.year, email: d.email,
-                   job: d.job, goal: d.goal }, pub);
+                   job: d.job, goal: d.goal, tuHoc: tuHoc }, pub);
 
     // Đủ chỗ → tự chuyển trạng thái sang full và báo admin
     if (pub.computed.remaining <= 0 && cfg.cohort.status === 'open') {
@@ -496,6 +504,7 @@ function notifyNewReg(r, pub) {
     '💼 ' + (r.job || '—')
   ];
   if (r.email) lines.push('✉️ ' + r.email);
+  if (r.tuHoc) lines.push('📦 Gói: *Tự học (self-paced)* — không tính vào số chỗ lớp live');
   if (r.goal)  lines.push('🎯 _"' + r.goal + '"_');
   lines.push('');
   lines.push('📅 ' + pub.schedule.detail);
