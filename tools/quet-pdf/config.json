@@ -1,0 +1,793 @@
+{
+ "KNOWN_COMPANIES": [
+  {
+   "keys": [
+    "dai quang minh",
+    "thadico",
+    "dqm"
+   ],
+   "full": "Công ty Cổ phần Đầu tư Địa ốc Đại Quang Minh",
+   "short": "CTCP Đầu tư Địa ốc Đại Quang Minh"
+  },
+  {
+   "keys": [
+    "tap doan truong hai",
+    "thaco"
+   ],
+   "full": "Công ty Cổ phần Tập đoàn Trường Hải",
+   "short": "CTCP Tập đoàn Trường Hải"
+  },
+  {
+   "keys": [
+    "o to truong hai"
+   ],
+   "full": "Công ty Cổ phần Ô tô Trường Hải",
+   "short": "CTCP Ô tô Trường Hải"
+  },
+  {
+   "keys": [
+    "thiso retail"
+   ],
+   "full": "Công ty TNHH Thiso Retail",
+   "short": "Công ty TNHH Thiso Retail"
+  }
+ ],
+ "TITLE_MAP": [
+  [
+   "hop dong thi cong xay dung",
+   "Hợp đồng thi công xây dựng"
+  ],
+  [
+   "hop dong tong thau",
+   "Hợp đồng tổng thầu"
+  ],
+  [
+   "hop dong tin dung",
+   "Hợp đồng tín dụng"
+  ],
+  [
+   "hop dong cho vay",
+   "Hợp đồng cho vay"
+  ],
+  [
+   "hop dong the chap",
+   "Hợp đồng thế chấp"
+  ],
+  [
+   "hop dong bao lanh",
+   "Hợp đồng bảo lãnh"
+  ],
+  [
+   "hop dong mua ban",
+   "Hợp đồng mua bán"
+  ],
+  [
+   "hop dong thue",
+   "Hợp đồng thuê"
+  ],
+  [
+   "de xuat cap tin dung",
+   "Đề xuất cấp tín dụng"
+  ],
+  [
+   "de xuat thay doi dieu kien",
+   "Đề xuất thay đổi điều kiện cấp tín dụng"
+  ],
+  [
+   "de xuat bo sung",
+   "Đề xuất bổ sung/Báo cáo rà soát khách hàng"
+  ],
+  [
+   "bao cao tai tham dinh",
+   "Báo cáo tái thẩm định"
+  ],
+  [
+   "bao cao tham dinh",
+   "Báo cáo thẩm định"
+  ],
+  [
+   "bao cao kiem tra su dung von",
+   "Báo cáo kiểm tra sử dụng vốn"
+  ],
+  [
+   "bao cao tai chinh",
+   "Báo cáo tài chính"
+  ],
+  [
+   "bien ban hop kem phe duyet",
+   "Biên bản họp kèm phê duyệt của Ủy ban tín dụng"
+  ],
+  [
+   "de nghi cap tin dung",
+   "Đề nghị cấp tín dụng kiêm phương án sử dụng vốn"
+  ],
+  [
+   "khe uoc nhan no",
+   "Khế ước nhận nợ"
+  ],
+  [
+   "phe duyet giai ngan",
+   "Phê duyệt giải ngân"
+  ],
+  [
+   "uy nhiem chi",
+   "Ủy nhiệm chi"
+  ],
+  [
+   "de nghi thanh toan",
+   "Đề nghị thanh toán"
+  ],
+  [
+   "bien ban doi chieu cong no",
+   "Biên bản đối chiếu công nợ"
+  ],
+  [
+   "thu xac nhan cong no",
+   "Thư xác nhận công nợ"
+  ],
+  [
+   "bien ban kiem tra",
+   "Biên bản kiểm tra khách hàng"
+  ],
+  [
+   "xep hang tin dung",
+   "Xếp hạng tín dụng"
+  ],
+  [
+   "giay nhan no",
+   "Giấy nhận nợ"
+  ],
+  [
+   "giay chung nhan dang ky doanh nghiep",
+   "Giấy chứng nhận đăng ký doanh nghiệp"
+  ],
+  [
+   "giay chung nhan dang ky dau tu",
+   "Giấy chứng nhận đăng ký đầu tư"
+  ],
+  [
+   "giay chung nhan quyen su dung dat",
+   "Giấy chứng nhận quyền sử dụng đất"
+  ],
+  [
+   "giay phep xay dung",
+   "Giấy phép xây dựng"
+  ],
+  [
+   "giay uy quyen",
+   "Giấy ủy quyền"
+  ],
+  [
+   "to trinh",
+   "Tờ trình"
+  ],
+  [
+   "cong van",
+   "Công văn"
+  ],
+  [
+   "thong bao",
+   "Thông báo"
+  ],
+  [
+   "quyet dinh",
+   "Quyết định"
+  ],
+  [
+   "nghi quyet",
+   "Nghị quyết"
+  ],
+  [
+   "bien ban hop",
+   "Biên bản họp"
+  ],
+  [
+   "bien ban",
+   "Biên bản"
+  ],
+  [
+   "phu luc sua doi dieu le",
+   "Phụ lục sửa đổi Điều lệ"
+  ],
+  [
+   "dieu le",
+   "Điều lệ"
+  ],
+  [
+   "danh sach co dong",
+   "Danh sách cổ đông"
+  ],
+  [
+   "so dang ky co dong",
+   "Sổ đăng ký cổ đông"
+  ],
+  [
+   "hoa don",
+   "Hóa đơn"
+  ],
+  [
+   "phuong an",
+   "Phương án"
+  ],
+  [
+   "ke hoach",
+   "Kế hoạch"
+  ]
+ ],
+ "VN_WORDS": {
+  "hop": "hợp",
+  "dong": "đồng",
+  "thi": "thi",
+  "cong": "công",
+  "xay": "xây",
+  "dung": "dựng",
+  "tong": "tổng",
+  "thau": "thầu",
+  "cai": "cải",
+  "tao": "tạo",
+  "mat": "mặt",
+  "bang": "bằng",
+  "thue": "thuê",
+  "giay": "giấy",
+  "chung": "chứng",
+  "nhan": "nhận",
+  "dang": "đăng",
+  "ky": "ký",
+  "doanh": "doanh",
+  "nghiep": "nghiệp",
+  "nghi": "nghị",
+  "quyet": "quyết",
+  "dinh": "định",
+  "uy": "ủy",
+  "quyen": "quyền",
+  "bien": "biên",
+  "ban": "bản",
+  "bao": "báo",
+  "cao": "cáo",
+  "tai": "tài",
+  "chinh": "chính",
+  "rieng": "riêng",
+  "nhat": "nhất",
+  "de": "đề",
+  "xuat": "xuất",
+  "cap": "cấp",
+  "tin": "tín",
+  "kiem": "kiêm",
+  "phuong": "phương",
+  "an": "án",
+  "su": "sử",
+  "von": "vốn",
+  "thay": "thay",
+  "doi": "đổi",
+  "dieu": "điều",
+  "kien": "kiện",
+  "bo": "bổ",
+  "sung": "sung",
+  "ra": "rà",
+  "soat": "soát",
+  "khach": "khách",
+  "hang": "hàng",
+  "tham": "thẩm",
+  "phe": "phê",
+  "duyet": "duyệt",
+  "cua": "của",
+  "giai": "giải",
+  "ngan": "ngân",
+  "khe": "khế",
+  "uoc": "ước",
+  "no": "nợ",
+  "nhiem": "nhiệm",
+  "chi": "chi",
+  "hoa": "hóa",
+  "don": "đơn",
+  "thanh": "thanh",
+  "toan": "toán",
+  "thu": "thư",
+  "xac": "xác",
+  "chieu": "chiếu",
+  "tra": "tra",
+  "le": "lệ",
+  "phu": "phụ",
+  "luc": "lục",
+  "sua": "sửa",
+  "danh": "danh",
+  "sach": "sách",
+  "thong": "thông",
+  "co": "cổ",
+  "phan": "phần",
+  "so": "số",
+  "ke": "kế",
+  "hoach": "hoạch",
+  "dau": "đầu",
+  "tu": "tư",
+  "dia": "địa",
+  "oc": "ốc",
+  "dai": "đại",
+  "quang": "quang",
+  "minh": "minh",
+  "tap": "tập",
+  "doan": "đoàn",
+  "truong": "trường",
+  "hai": "hải",
+  "ty": "ty",
+  "tnhh": "TNHH",
+  "ctcp": "CTCP",
+  "cp": "CP",
+  "thuong": "thương",
+  "mai": "mại",
+  "dich": "dịch",
+  "vu": "vụ",
+  "san": "sản",
+  "bat": "bất",
+  "moi": "môi",
+  "gioi": "giới",
+  "cho": "cho",
+  "vay": "vay",
+  "the": "thế",
+  "chap": "chấp",
+  "quan": "quản",
+  "ly": "lý",
+  "tri": "trị",
+  "hoi": "hội",
+  "vien": "viên",
+  "chu": "chủ",
+  "tich": "tịch",
+  "giam": "giám",
+  "doc": "đốc",
+  "pho": "phó",
+  "nguoi": "người",
+  "dien": "diện",
+  "theo": "theo",
+  "phap": "pháp",
+  "luat": "luật",
+  "can": "căn",
+  "cuoc": "cước",
+  "dan": "dân",
+  "cam": "cam",
+  "ket": "kết",
+  "thoa": "thỏa",
+  "thuan": "thuận",
+  "mua": "mua",
+  "cung": "cung",
+  "be": "bê",
+  "nguyen": "nguyên",
+  "lieu": "liệu",
+  "vat": "vật",
+  "gia": "giá",
+  "dam": "đảm",
+  "lanh": "lãnh",
+  "trung": "trung",
+  "han": "hạn",
+  "muc": "mức",
+  "qua": "quả",
+  "hoat": "hoạt",
+  "kinh": "kinh",
+  "luu": "lưu",
+  "chuyen": "chuyển",
+  "tien": "tiền",
+  "te": "tệ",
+  "khai": "khai",
+  "nop": "nộp",
+  "nha": "nhà",
+  "nuoc": "nước",
+  "kho": "kho",
+  "hoan": "hoán",
+  "xa": "xã",
+  "nghia": "nghĩa",
+  "viet": "việt",
+  "nam": "nam",
+  "lap": "lập",
+  "do": "do",
+  "hanh": "hạnh",
+  "phuc": "phúc",
+  "ve": "về",
+  "viec": "việc",
+  "va": "và",
+  "cac": "các",
+  "dot": "đợt",
+  "ngay": "ngày",
+  "thang": "tháng",
+  "du": "dự",
+  "trinh": "trình",
+  "goi": "gói",
+  "khu": "khu",
+  "van": "văn",
+  "phong": "phòng",
+  "sieu": "siêu",
+  "diem": "điểm",
+  "nang": "năng",
+  "xep": "xếp",
+  "cic": "CIC",
+  "gdbd": "GDBĐ",
+  "tsbd": "TSBĐ",
+  "vib": "VIB",
+  "ubtd": "UBTD",
+  "hdqt": "HĐQT",
+  "hdtv": "HĐTV",
+  "tgd": "TGĐ",
+  "thaco": "THACO",
+  "thadico": "THADICO",
+  "dvkd": "ĐVKD",
+  "kem": "kèm",
+  "tam": "tạm",
+  "ung": "ứng",
+  "quy": "quy",
+  "che": "chế",
+  "noi": "nội",
+  "to": "tờ",
+  "bay": "bày",
+  "mien": "miễn",
+  "bau": "bầu",
+  "ngoai": "ngoại",
+  "mo": "mở",
+  "sao": "sao",
+  "y": "y",
+  "ho": "hồ"
+ },
+ "VN_PHRASES": [
+  [
+   "dang ky doanh nghiep",
+   "đăng ký doanh nghiệp"
+  ],
+  [
+   "can cuoc cong dan",
+   "căn cước công dân"
+  ],
+  [
+   "khe uoc nhan no",
+   "khế ước nhận nợ"
+  ],
+  [
+   "giay chung nhan",
+   "giấy chứng nhận"
+  ],
+  [
+   "dai quang minh",
+   "Đại Quang Minh"
+  ],
+  [
+   "tai tham dinh",
+   "tái thẩm định"
+  ],
+  [
+   "nam tai chinh",
+   "năm tài chính"
+  ],
+  [
+   "mat bang thue",
+   "mặt bằng thuê"
+  ],
+  [
+   "giay uy quyen",
+   "giấy ủy quyền"
+  ],
+  [
+   "bien ban hop",
+   "biên bản họp"
+  ],
+  [
+   "dai hoi dong",
+   "đại hội đồng"
+  ],
+  [
+   "cap tin dung",
+   "cấp tín dụng"
+  ],
+  [
+   "uy nhiem chi",
+   "ủy nhiệm chi"
+  ],
+  [
+   "thu xac nhan",
+   "thư xác nhận"
+  ],
+  [
+   "bat dong san",
+   "bất động sản"
+  ],
+  [
+   "ho chi minh",
+   "Hồ Chí Minh"
+  ],
+  [
+   "nghi quyet",
+   "nghị quyết"
+  ],
+  [
+   "thanh toan",
+   "thanh toán"
+  ],
+  [
+   "mien nhiem",
+   "miễn nhiệm"
+  ],
+  [
+   "truong hai",
+   "Trường Hải"
+  ],
+  [
+   "khach hang",
+   "khách hàng"
+  ],
+  [
+   "quyet dinh",
+   "quyết định"
+  ],
+  [
+   "doi chieu",
+   "đối chiếu"
+  ],
+  [
+   "kiem toan",
+   "kiểm toán"
+  ],
+  [
+   "dieu kien",
+   "điều kiện"
+  ],
+  [
+   "tai chinh",
+   "tài chính"
+  ],
+  [
+   "tong cong",
+   "tổng cộng"
+  ],
+  [
+   "chung chi",
+   "chứng chỉ"
+  ],
+  [
+   "ban chinh",
+   "bản chính"
+  ],
+  [
+   "tong thau",
+   "tổng thầu"
+  ],
+  [
+   "giai ngan",
+   "giải ngân"
+  ],
+  [
+   "ngan hang",
+   "ngân hàng"
+  ],
+  [
+   "trung han",
+   "trung hạn"
+  ],
+  [
+   "van phong",
+   "văn phòng"
+  ],
+  [
+   "phe duyet",
+   "phê duyệt"
+  ],
+  [
+   "thu thiem",
+   "Thủ Thiêm"
+  ],
+  [
+   "phuong an",
+   "phương án"
+  ],
+  [
+   "danh sach",
+   "danh sách"
+  ],
+  [
+   "hop dong",
+   "hợp đồng"
+  ],
+  [
+   "hoi dong",
+   "hội đồng"
+  ],
+  [
+   "kiem tra",
+   "kiểm tra"
+  ],
+  [
+   "xay dung",
+   "xây dựng"
+  ],
+  [
+   "tin dung",
+   "tín dụng"
+  ],
+  [
+   "ban hanh",
+   "ban hành"
+  ],
+  [
+   "ban giao",
+   "bàn giao"
+  ],
+  [
+   "cong hoa",
+   "cộng hòa"
+  ],
+  [
+   "hoan doi",
+   "hoán đổi"
+  ],
+  [
+   "nang luc",
+   "năng lực"
+  ],
+  [
+   "chi dinh",
+   "chỉ định"
+  ],
+  [
+   "xep hang",
+   "xếp hạng"
+  ],
+  [
+   "bo nhiem",
+   "bổ nhiệm"
+  ],
+  [
+   "ngan han",
+   "ngắn hạn"
+  ],
+  [
+   "uy quyen",
+   "ủy quyền"
+  ],
+  [
+   "tap doan",
+   "tập đoàn"
+  ],
+  [
+   "thay doi",
+   "thay đổi"
+  ],
+  [
+   "thi cong",
+   "thi công"
+  ],
+  [
+   "mat bang",
+   "mặt bằng"
+  ],
+  [
+   "cho thue",
+   "cho thuê"
+  ],
+  [
+   "hien huu",
+   "hiện hữu"
+  ],
+  [
+   "hop nhat",
+   "hợp nhất"
+  ],
+  [
+   "de nghi",
+   "đề nghị"
+  ],
+  [
+   "ke toan",
+   "kế toán"
+  ],
+  [
+   "su dung",
+   "sử dụng"
+  ],
+  [
+   "dieu le",
+   "điều lệ"
+  ],
+  [
+   "mua ban",
+   "mua bán"
+  ],
+  [
+   "be tong",
+   "bê tông"
+  ],
+  [
+   "cong no",
+   "công nợ"
+  ],
+  [
+   "tai san",
+   "tài sản"
+  ],
+  [
+   "doc lap",
+   "độc lập"
+  ],
+  [
+   "ban sao",
+   "bản sao"
+  ],
+  [
+   "dai han",
+   "dài hạn"
+  ],
+  [
+   "hoa don",
+   "hóa đơn"
+  ],
+  [
+   "van ban",
+   "văn bản"
+  ],
+  [
+   "bao cao",
+   "báo cáo"
+  ],
+  [
+   "cong ty",
+   "công ty"
+  ],
+  [
+   "co phan",
+   "cổ phần"
+  ],
+  [
+   "cho vay",
+   "cho vay"
+  ],
+  [
+   "ra soat",
+   "rà soát"
+  ],
+  [
+   "bo sung",
+   "bổ sung"
+  ],
+  [
+   "de xuat",
+   "đề xuất"
+  ],
+  [
+   "cai tao",
+   "cải tạo"
+  ],
+  [
+   "co dong",
+   "cổ đông"
+  ],
+  [
+   "phu luc",
+   "phụ lục"
+  ],
+  [
+   "sua doi",
+   "sửa đổi"
+  ],
+  [
+   "noi bo",
+   "nội bộ"
+  ],
+  [
+   "dau tu",
+   "đầu tư"
+  ],
+  [
+   "dia oc",
+   "địa ốc"
+  ],
+  [
+   "so huu",
+   "sở hữu"
+  ],
+  [
+   "tu do",
+   "tự do"
+  ],
+  [
+   "ho so",
+   "hồ sơ"
+  ],
+  [
+   "sao y",
+   "sao y"
+  ]
+ ]
+}

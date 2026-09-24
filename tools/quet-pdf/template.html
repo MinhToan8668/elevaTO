@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trích xuất Danh mục tài liệu</title>
+{{LIBS}}
+<style>
+  :root { --b:#1f4e79; --bg:#f4f6f9; --line:#d9dee5; --warn:#fff4d6; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Segoe UI, Arial, sans-serif; font-size:14px; background:var(--bg); color:#222; }
+  header { background:var(--b); color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; font-weight:600; }
+  main { padding:16px 20px; }
+  #drop { border:2px dashed #9fb3c8; border-radius:8px; padding:26px; text-align:center; background:#fff; cursor:pointer; }
+  #drop.over { background:#e8f0fa; border-color:var(--b); }
+  .opts { display:flex; gap:18px; align-items:center; margin:12px 0; flex-wrap:wrap; }
+  .opts label { display:flex; gap:6px; align-items:center; }
+  button { background:var(--b); color:#fff; border:0; padding:8px 14px; border-radius:5px; cursor:pointer; font-size:14px; }
+  button.sec { background:#fff; color:var(--b); border:1px solid var(--b); }
+  button:disabled { opacity:.5; cursor:default; }
+  #status { margin-left:auto; color:#555; }
+  #bar { height:4px; background:#dfe6ee; border-radius:2px; overflow:hidden; margin-top:6px; display:none; }
+  #bar i { display:block; height:100%; width:0; background:var(--b); transition:width .2s; }
+  table { width:100%; border-collapse:collapse; background:#fff; margin-top:12px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; vertical-align:top; }
+  th { background:#e9eef5; position:sticky; top:0; font-weight:600; }
+  td[contenteditable] { outline:none; min-width:60px; }
+  td[contenteditable]:focus { background:#fffbe6; box-shadow:inset 0 0 0 2px #f0c040; }
+  td.empty { background:var(--warn); }
+  td.stt { text-align:center; color:#666; width:40px; }
+  td.act { white-space:nowrap; width:120px; }
+  td.act a { color:var(--b); cursor:pointer; margin-right:8px; text-decoration:none; font-size:13px; }
+  .tag { display:inline-block; font-size:11px; background:#eef2f7; border-radius:3px; padding:1px 5px; color:#456; }
+  .tag.ocr { background:#fde7d5; color:#8a3b00; }
+  .tag.warn { background:#fff0b3; color:#7a5a00; }
+  small.src { color:#777; display:block; margin-top:2px; }
+  #preview { position:fixed; right:0; top:0; height:100%; width:460px; max-width:100%; background:#fff; border-left:1px solid var(--line); box-shadow:-4px 0 12px rgba(0,0,0,.08); padding:14px; overflow:auto; display:none; white-space:pre-wrap; font-family:Consolas, monospace; font-size:12px; }
+  #preview .x { float:right; cursor:pointer; font-family:Segoe UI; }
+  .err { color:#b00020; margin-top:8px; white-space:pre-wrap; }
+  input[type=text] { padding:5px 8px; border:1px solid var(--line); border-radius:4px; }
+  input[type=number] { width:52px; padding:4px; border:1px solid var(--line); border-radius:4px; }
+  details { margin:8px 0; color:#555; } details summary { cursor:pointer; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Trích xuất Danh mục tài liệu từ PDF</h1>
+  <span style="opacity:.85">{{SUBTITLE}}</span>
+</header>
+<main>
+  <div id="drop">Kéo thả file PDF vào đây, hoặc bấm để chọn (chọn được nhiều file)
+    <input type="file" id="fileInput" accept="application/pdf" multiple hidden>
+  </div>
+  <div id="bar"><i></i></div>
+
+  <div class="opts">
+    <span><b>Tách văn bản:</b></span>
+    <label><input type="radio" name="mode" value="file" checked> 1 file = 1 văn bản</label>
+    <label><input type="radio" name="mode" value="auto"> Tự động tách PDF gộp (đọc mọi trang, chậm)</label>
+    <label><input type="radio" name="mode" value="page"> 1 trang = 1 văn bản</label>
+    <label style="margin-left:10px">OCR <input type="number" id="ocrPages" value="1" min="1"> trang đầu</label>
+    <label><input type="checkbox" id="forceOcr"> Luôn OCR (bỏ qua lớp text của PDF)</label>
+    <span id="status"></span>
+  </div>
+
+  <div class="opts">
+    <label>Mục: <input type="text" id="section" placeholder="VD: I.1 PHÁP LÝ"></label>
+    <button id="btnExport" disabled>⬇ Xuất Excel theo form</button>
+    <button class="sec" id="btnAdd">+ Thêm dòng</button>
+    <button class="sec" id="btnClear">Xóa hết</button>
+  </div>
+  <details><summary>Hướng dẫn nhanh</summary>
+    Ô vàng = chưa trích được, điền tay. Bấm <b>text</b> để xem chữ đọc được của dòng đó. <b>⤴ gộp</b> nhập dòng vào dòng trên (khi 1 văn bản bị tách đôi).
+    Ngày lấy theo thứ tự: phần đầu văn bản → "Địa danh, ngày…" → ngày trong tên file (VD <code>250117_…</code>) → ngày đầu tiên trong nội dung (có cảnh báo).
+    PDF có lớp text sẽ đọc thẳng (nhanh, chính xác); trang scan mới OCR. Thêm loại văn bản / tên công ty chuẩn trong phần <code>rules.js</code>.
+  </details>
+  <div class="err" id="errors"></div>
+
+  <table id="tbl">
+    <thead><tr>
+      <th>STT</th><th>Số văn bản</th><th>Ngày văn bản</th><th>Tên văn bản</th><th>Nội dung văn bản</th><th>Tờ số</th><th>Nguồn</th><th></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</main>
+<div id="preview"><span class="x" onclick="document.getElementById('preview').style.display='none'">✕ đóng</span><div id="pvBody"></div></div>
+
+<script>
+{{RULES}}
+</script>
+<script>
+/* =====================================================================
+   ĐỌC PDF (pdf.js) + OCR (Tesseract.js)
+   ===================================================================== */
+{{OCR_INIT}}
+const MIN_TEXT_CHARS = 40;   // trang có ít hơn ngần này ký tự lớp text -> coi là trang scan -> OCR
+const OCR_SCALE = 3;         // ≈216 dpi; scan mờ thì tăng 3.5–4 (chậm hơn)
+const OCR_PSM = '3';         // 3: tự phân đoạn (hợp bố cục 2 cột / bảng); 6: 1 khối văn bản
+
+async function renderPage(page, scale, gray = true) {
+  const vp = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width = vp.width; canvas.height = vp.height;
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  if (gray) { // chuyển xám: OCR ổn định hơn với scan màu / có dấu mộc đỏ
+    const im = ctx.getImageData(0, 0, canvas.width, canvas.height), d = im.data;
+    for (let k = 0; k < d.length; k += 4) { const g = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]; d[k] = d[k + 1] = d[k + 2] = g; }
+    ctx.putImageData(im, 0, 0);
+  }
+  return canvas;
+}
+function binarize(src, th) {
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const ctx = c.getContext('2d'); ctx.drawImage(src, 0, 0);
+  const im = ctx.getImageData(0, 0, c.width, c.height), d = im.data;
+  for (let i = 0; i < d.length; i += 4) { const v = d[i] > th ? 255 : 0; d[i] = d[i + 1] = d[i + 2] = v; }
+  ctx.putImageData(im, 0, 0); return c;
+}
+async function ocrCanvas(canvas, onStatus, psm = OCR_PSM) {
+  const w = await getOcrWorker(onStatus);
+  await w.setParameters({ tessedit_pageseg_mode: psm });
+  return (await w.recognize(canvas)).data.text;
+}
+// Ghép các item text của pdf.js thành dòng theo tọa độ y (giữ thứ tự đọc trái->phải, trên->dưới)
+function itemsToText(content) {
+  const items = content.items.filter(it => it.str && it.str.trim());
+  items.sort((a, b) => (b.transform[5] - a.transform[5]) || (a.transform[4] - b.transform[4]));
+  const lines = []; let cur = null, curY = null;
+  for (const it of items) {
+    const y = it.transform[5];
+    if (curY === null || Math.abs(y - curY) > 3) { cur = []; lines.push(cur); curY = y; }
+    cur.push(it.str);
+  }
+  return lines.map(l => l.join(' ')).join('\n');
+}
+async function pageTexts(file, maxOcrPages, forceOcr, onStatus, onProgress) {
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const out = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    let text = forceOcr ? '' : itemsToText(await page.getTextContent());
+    let ocr = false;
+    const needOcr = forceOcr || text.trim().length < MIN_TEXT_CHARS || !looksVietnamese(text);
+    if (needOcr && i <= maxOcrPages) {
+      onStatus(`OCR ${file.name} trang ${i}/${pdf.numPages}...`);
+      text = await ocrCanvas(await renderPage(page, OCR_SCALE), onStatus); ocr = true;
+    } else if (needOcr) text = '';
+    out.push({ page: i, text, ocr });
+    onProgress(i, pdf.numPages);
+  }
+  return { pages: out, pdf };
+}
+// CCCD: số 12 chữ số hay bị OCR trượt -> thử lại với ảnh nhị phân hóa ở vài ngưỡng
+async function ocrIdNumber(pdf, onStatus) {
+  const src = await renderPage(await pdf.getPage(1), OCR_SCALE);
+  for (const th of [110, 130, 90]) {
+    onStatus(`Đọc số CCCD (ngưỡng ${th})...`);
+    const m = (await ocrCanvas(binarize(src, th), onStatus, '6')).match(/(?<!\d)(\d{12})(?!\d)/);
+    if (m) return m[1];
+  }
+  return '';
+}
+async function processPdf(file, mode, maxOcrPages, forceOcr, onStatus, onProgress) {
+  const { pages, pdf } = await pageTexts(file, mode === 'file' ? maxOcrPages : Infinity, forceOcr, onStatus, onProgress);
+  const rows = [];
+  for (const d of splitDocuments(pages, mode)) {
+    const f = await extractFields(d.text, file.name, { ocrIdNumber: () => ocrIdNumber(pdf, onStatus) });
+    rows.push({ so: f.so || '', ngay: fmtDate(f.ngay), ten: f.ten || '', noi_dung: f.noi_dung || '', to_so: '', loai: f.loai,
+      nguon: f.ngay ? f.nguon_ngay : '', trang: d.start === d.end ? `${d.start}` : `${d.start}-${d.end}`, ocr: d.ocr, file: file.name, text: d.text.slice(0, 6000) });
+  }
+  return rows;
+}
+
+/* =====================================================================
+   GIAO DIỆN
+   ===================================================================== */
+const rows = [];
+const tbody = document.querySelector('#tbl tbody');
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const status = document.getElementById('status');
+const bar = document.getElementById('bar'), barI = bar.querySelector('i');
+const setStatus = s => status.textContent = s;
+
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); upload(e.dataTransfer.files); };
+fileInput.onchange = () => { upload(fileInput.files); fileInput.value = ''; };
+
+const natKey = s => s.toLowerCase().split(/(\d+)/).map(t => /^\d+$/.test(t) ? t.padStart(8, '0') : t).join('');
+async function upload(files) {
+  const list = [...files].filter(f => f.name.toLowerCase().endsWith('.pdf')).sort((a, b) => natKey(a.name) < natKey(b.name) ? -1 : 1);
+  if (!list.length) return;
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const maxOcrPages = Math.max(1, +document.getElementById('ocrPages').value || 1);
+  const forceOcr = document.getElementById('forceOcr').checked;
+  const errors = []; let added = 0;
+  bar.style.display = 'block';
+  for (let k = 0; k < list.length; k++) {
+    const f = list[k];
+    setStatus(`Đang đọc ${f.name} (${k + 1}/${list.length})...`);
+    try {
+      const rs = await processPdf(f, mode, maxOcrPages, forceOcr, setStatus, (p, n) => barI.style.width = `${(k + p / n) / list.length * 100}%`);
+      rs.forEach(r => rows.push(r)); added += rs.length; render();
+    } catch (e) { errors.push(`${f.name}: ${e.message || e}`); console.error(e); }
+  }
+  bar.style.display = 'none'; barI.style.width = '0';
+  document.getElementById('errors').textContent = errors.join('\n');
+  const thieu = rows.map((r, i) => (!r.so || !r.ngay || !r.ten) ? i + 1 : 0).filter(Boolean);
+  setStatus(`Xong: +${added} dòng (tổng ${rows.length})${thieu.length ? ' · cần kiểm tra dòng ' + thieu.join(', ') : ''}`);
+}
+
+const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function render() {
+  tbody.innerHTML = '';
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    const cell = k => `<td contenteditable data-k="${k}" data-i="${i}" class="${(r[k] || '').trim() ? '' : 'empty'}">${esc(r[k])}</td>`;
+    const warn = r.nguon && r.nguon !== 'văn bản' ? `<span class="tag warn">ngày: ${esc(r.nguon)}</span>` : '';
+    tr.innerHTML = `<td class="stt">${i + 1}</td>${cell('so')}${cell('ngay')}${cell('ten')}${cell('noi_dung')}${cell('to_so')}
+      <td><span class="tag">${esc(r.loai || '')}</span> ${r.ocr ? '<span class="tag ocr">OCR</span>' : ''} ${warn}<small class="src">${esc(r.file || '')} · tr.${esc(r.trang || '')}</small></td>
+      <td class="act"><a data-a="pv" data-i="${i}">text</a><a data-a="up" data-i="${i}" title="Gộp vào dòng trên">⤴ gộp</a><a data-a="del" data-i="${i}">✕</a></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('btnExport').disabled = rows.length === 0;
+}
+tbody.addEventListener('input', e => {
+  const td = e.target.closest('td[contenteditable]'); if (!td) return;
+  rows[+td.dataset.i][td.dataset.k] = td.innerText.trim();
+  td.classList.toggle('empty', !td.innerText.trim());
+});
+tbody.addEventListener('click', e => {
+  const a = e.target.closest('a[data-a]'); if (!a) return;
+  const i = +a.dataset.i;
+  if (a.dataset.a === 'del') { rows.splice(i, 1); render(); }
+  if (a.dataset.a === 'pv') { document.getElementById('pvBody').textContent = rows[i].text || '(không có text)'; document.getElementById('preview').style.display = 'block'; }
+  if (a.dataset.a === 'up' && i > 0) {
+    const p = rows[i - 1], c = rows[i];
+    p.trang = (p.trang || '').split('-')[0] + '-' + (c.trang || '').split('-').pop();
+    p.text = (p.text || '') + '\n' + (c.text || '');
+    ['so', 'ngay', 'ten', 'noi_dung'].forEach(k => { if (!(p[k] || '').trim()) p[k] = c[k]; });
+    rows.splice(i, 1); render();
+  }
+});
+document.getElementById('btnAdd').onclick = () => { rows.push({ so: '', ngay: '', ten: '', noi_dung: '', to_so: '', loai: 'thủ công', file: '', trang: '' }); render(); };
+document.getElementById('btnClear').onclick = () => { if (confirm('Xóa toàn bộ bảng?')) { rows.length = 0; render(); } };
+
+/* ---- Xuất Excel (SheetJS): sheet Danh mục theo form + sheet Chi tiết để đối chiếu ---- */
+document.getElementById('btnExport').onclick = () => {
+  const section = document.getElementById('section').value.trim();
+  const aoa = [['DANH MỤC TÀI LIỆU'], ['STT', 'Số văn bản', 'Ngày văn bản', 'Tên văn bản', 'Nội dung văn bản', 'Tờ số']];
+  if (section) { const [a, ...b] = section.split(' '); aoa.push([a, b.join(' ')]); }
+  rows.forEach((r, i) => {
+    let ngay = r.ngay || '';
+    const m = ngay.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    if (m) ngay = { t: 'n', v: (Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 86400000, z: 'dd/mm/yyyy' }; // số serial Excel, tránh lệch múi giờ
+    aoa.push([i + 1, r.so || '', ngay, r.ten || '', r.noi_dung || '', r.to_so || '']);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+  ws['!cols'] = [6, 26, 14, 55, 55, 10].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Danh mục');
+  const ws2 = XLSX.utils.aoa_to_sheet([['STT', 'File', 'Trang', 'Loại nhận diện', 'OCR', 'Nguồn ngày', 'Text đầu trang'],
+    ...rows.map((r, i) => [i + 1, r.file || '', r.trang || '', r.loai || '', r.ocr ? 'x' : '', r.nguon || '', (r.text || '').replace(/\s+/g, ' ').slice(0, 500)])]);
+  ws2['!cols'] = [6, 40, 8, 16, 6, 22, 100].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws2, 'Chi tiết');
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  XLSX.writeFile(wb, `Danh muc tai lieu ${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.xlsx`);
+};
+</script>
+</body>
+</html>
