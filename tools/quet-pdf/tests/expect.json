@@ -1,0 +1,57 @@
+{
+ "01_bctc_hop_nhat_2024": {
+  "loai": "BCTC",
+  "ngay": "31/12/2024"
+ },
+ "02_to_trinh": {
+  "loai": "Tờ trình",
+  "so": "15/2025/TTr-ĐQM",
+  "ngay": "08/05/2025"
+ },
+ "03_cong_van": {
+  "loai": "Công văn",
+  "so": "123/CV-THACO",
+  "ngay": "05/06/2025"
+ },
+ "04_bao_cao_kiem_tra_von": {
+  "loai": "Báo cáo",
+  "ngay": "15/07/2025"
+ },
+ "05_hop_dong_thi_cong": {
+  "loai": "Hợp đồng",
+  "so": "08/2025/HĐXD/ĐQM-CTV",
+  "ngay": "10/05/2025"
+ },
+ "06_thong_bao_ngay_cuoi": {
+  "loai": "Thông báo",
+  "so": "21/TB-ĐQM",
+  "ngay": "03/07/2025"
+ },
+ "07_quyet_dinh_song_ngu": {
+  "loai": "Quyết định",
+  "so": "09/2025/QĐ-TR",
+  "ngay": "20/02/2025"
+ },
+ "08_khe_uoc_nhan_no": {
+  "loai": "Khế ước",
+  "so": "01/2025/KUNN-VIB",
+  "ngay": "12/06/2025"
+ },
+ "09_gcn_dkdn": {
+  "loai": "GCN ĐKDN",
+  "ngay": "20/05/2024"
+ },
+ "10_bien_ban_hdqt": {
+  "loai": "Biên bản",
+  "so": "03/2025/BB-HĐQT",
+  "ngay": "18/04/2025"
+ },
+ "11_de_xuat_tin_dung_bang": {
+  "loai": "Đề xuất",
+  "ngay": "25/03/2025"
+ },
+ "12_bao_cao_tai_tham_dinh": {
+  "loai": "BCTTĐ",
+  "ngay": "28/03/2025"
+ }
+}

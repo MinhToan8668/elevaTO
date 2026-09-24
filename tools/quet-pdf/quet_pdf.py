@@ -3,6 +3,7 @@
 """
 quet_pdf.py — Quét PDF tiếng Việt (scan hoặc có text) -> OCR -> tách văn bản
 -> trích Số / Ngày / Tên / Nội dung -> xuất Excel "Danh mục tài liệu".
+Cùng bộ rule với bản trình duyệt (rules.py là bản Python của rules.js, cấu hình chung config.json).
 
 Ví dụ:
   python quet_pdf.py ./ho-so                       # quét cả thư mục, ra danh-muc-tai-lieu.xlsx
@@ -51,7 +52,7 @@ def render_page(page: pymupdf.Page, dpi: int, denoise: bool = False) -> Image.Im
 
 def ocr_image(img: Image.Image, lang: str, psm: int, timeout: int) -> str:
     """OCR 1 ảnh; quá thời gian thì thử lại psm 3 (tự động phân đoạn), vẫn quá thì trả về rỗng."""
-    for p in (psm, 3):
+    for p in (psm, 6 if psm != 6 else 3):
         try:
             return pytesseract.image_to_string(img, lang=lang, config=f"--psm {p}", timeout=timeout)
         except RuntimeError:  # pytesseract ném RuntimeError khi timeout
@@ -82,7 +83,8 @@ def page_texts(path: Path, a, log) -> list[dict]:
     max_pages = n if a.pages == "all" else min(n, int(a.pages))
     for i, page in enumerate(doc):
         text = page.get_text("text") if not a.force_ocr else ""
-        if len(text.strip()) >= MIN_TEXT_CHARS or a.no_ocr or i >= max_pages:
+        has_layer = len(text.strip()) >= MIN_TEXT_CHARS and rules.looks_vietnamese(text)  # lớp text hỏng font -> OCR lại
+        if has_layer or a.no_ocr or i >= max_pages:
             out[i] = {"page": i + 1, "text": text, "ocr": False}
         else:
             todo.append(i)
@@ -138,18 +140,12 @@ def process_pdf(path: Path, a, log) -> list[dict]:
 
     rows = []
     for d in rules.split_documents(pages, a.mode):
-        f = rules.extract_fields(d["text"])
-        # Ưu tiên: ngày trong tiêu đề văn bản -> ngày trong tên file (VD 250117_...) -> ngày đầu tiên trong nội dung
-        ngay, nguon = f.ngay, "văn bản"
-        if not ngay:
-            ngay, nguon = rules.date_from_filename(path.name), "tên file"
-        if not ngay:
-            ngay, nguon = rules.first_date(d["text"]), "trong nội dung (kiểm tra!)"
+        f = rules.extract_fields(d["text"], path.name)  # ngày: tiêu đề -> "địa danh, ngày" -> tên file -> nội dung (xem rules.py)
         rows.append({
-            "so": f.so, "ngay": ngay.fmt() if ngay else "", "ten": f.ten, "noi_dung": rules.cap(f.noi_dung.strip()),
+            "so": f.so, "ngay": f.ngay.fmt() if f.ngay else "", "ten": f.ten, "noi_dung": f.noi_dung,
             "to_so": "", "loai": f.loai, "file": path.name,
             "trang": str(d["start"]) if d["start"] == d["end"] else f"{d['start']}-{d['end']}",
-            "ocr": d["ocr"], "nguon_ngay": nguon if ngay else "", "text": d["text"],
+            "ocr": d["ocr"], "nguon_ngay": f.nguon_ngay if f.ngay else "", "text": d["text"],
         })
     return rows
 
@@ -239,7 +235,7 @@ def main():
                     help="file: 1 file = 1 văn bản (mặc định); auto: tự tách văn bản trong PDF gộp (OCR hết trang); page: 1 trang = 1 văn bản")
     ap.add_argument("--lang", default="vie", help="ngôn ngữ tesseract (vie, vie+eng)")
     ap.add_argument("--dpi", type=int, default=300, help="độ phân giải render để OCR (300 chuẩn; 400 nếu scan mờ)")
-    ap.add_argument("--psm", type=int, default=6, help="tesseract page segmentation mode (6: khối văn bản; 4: nhiều cột; 3: tự động)")
+    ap.add_argument("--psm", type=int, default=3, help="tesseract page segmentation mode (3: tự phân đoạn, hợp bố cục 2 cột; 6: 1 khối văn bản)")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1), help="số luồng OCR song song")
     ap.add_argument("--timeout", type=int, default=120, help="giây tối đa OCR 1 trang (quá thì thử psm 3, rồi bỏ trang)")
     ap.add_argument("--denoise", action="store_true", help="lọc nhiễu + nhị phân hóa ảnh trước khi OCR (scan xấu, nền xám)")
