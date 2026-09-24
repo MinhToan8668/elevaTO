@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trích xuất Danh mục tài liệu</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root { --b:#1f4e79; --bg:#f4f6f9; --line:#d9dee5; --warn:#fff4d6; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Segoe UI, Arial, sans-serif; font-size:14px; background:var(--bg); color:#222; }
+  header { background:var(--b); color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; font-weight:600; }
+  main { padding:16px 20px; }
+  #drop { border:2px dashed #9fb3c8; border-radius:8px; padding:26px; text-align:center; background:#fff; cursor:pointer; }
+  #drop.over { background:#e8f0fa; border-color:var(--b); }
+  .opts { display:flex; gap:22px; align-items:center; margin:12px 0; flex-wrap:wrap; }
+  .opts label { display:flex; gap:6px; align-items:center; }
+  button { background:var(--b); color:#fff; border:0; padding:8px 14px; border-radius:5px; cursor:pointer; font-size:14px; }
+  button.sec { background:#fff; color:var(--b); border:1px solid var(--b); }
+  button:disabled { opacity:.5; cursor:default; }
+  #status { margin-left:auto; color:#555; }
+  #bar { height:4px; background:#dfe6ee; border-radius:2px; overflow:hidden; margin-top:6px; display:none; }
+  #bar i { display:block; height:100%; width:0; background:var(--b); transition:width .2s; }
+  table { width:100%; border-collapse:collapse; background:#fff; margin-top:12px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; vertical-align:top; }
+  th { background:#e9eef5; position:sticky; top:0; font-weight:600; }
+  td[contenteditable] { outline:none; min-width:60px; }
+  td[contenteditable]:focus { background:#fffbe6; box-shadow:inset 0 0 0 2px #f0c040; }
+  td.empty { background:var(--warn); }
+  td.stt { text-align:center; color:#666; width:40px; }
+  td.act { white-space:nowrap; width:120px; }
+  td.act a { color:var(--b); cursor:pointer; margin-right:8px; text-decoration:none; font-size:13px; }
+  .tag { display:inline-block; font-size:11px; background:#eef2f7; border-radius:3px; padding:1px 5px; color:#456; }
+  .tag.ocr { background:#fde7d5; color:#8a3b00; }
+  small.src { color:#777; display:block; margin-top:2px; }
+  #preview { position:fixed; right:0; top:0; height:100%; width:420px; max-width:100%; background:#fff; border-left:1px solid var(--line); box-shadow:-4px 0 12px rgba(0,0,0,.08); padding:14px; overflow:auto; display:none; white-space:pre-wrap; font-family:Consolas, monospace; font-size:12px; }
+  #preview .x { float:right; cursor:pointer; font-family:Segoe UI; }
+  .err { color:#b00020; margin-top:8px; white-space:pre-wrap; }
+  input[type=text] { padding:5px 8px; border:1px solid var(--line); border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Trích xuất Danh mục tài liệu từ PDF</h1>
+  <span style="opacity:.85">Rule-based · chạy ngay trong trình duyệt · OCR tiếng Việt (Tesseract.js) · bản Python nhanh hơn: quet_pdf.py</span>
+</header>
+<main>
+  <div id="drop">Kéo thả file PDF vào đây, hoặc bấm để chọn (chọn được nhiều file)
+    <input type="file" id="fileInput" accept="application/pdf" multiple hidden>
+  </div>
+  <div id="bar"><i></i></div>
+
+  <div class="opts">
+    <span><b>Tách văn bản:</b></span>
+    <label><input type="radio" name="mode" value="file" checked> 1 file = 1 văn bản</label>
+    <label><input type="radio" name="mode" value="auto"> Tự động tách văn bản (PDF gộp – OCR hết trang)</label>
+    <label><input type="radio" name="mode" value="page"> 1 trang = 1 văn bản</label>
+    <label style="margin-left:14px"><input type="checkbox" id="ocr" checked> OCR tiếng Việt trang scan</label>
+    <label>OCR <input type="number" id="ocrPages" value="1" min="1" style="width:48px;padding:3px"> trang đầu mỗi file</label>
+    <span id="status"></span>
+  </div>
+
+  <div class="opts">
+    <label>Mục: <input type="text" id="section" placeholder="VD: I.1 PHÁP LÝ"></label>
+    <button id="btnExport" disabled>⬇ Xuất Excel theo form</button>
+    <button class="sec" id="btnAdd">+ Thêm dòng</button>
+    <button class="sec" id="btnClear">Xóa hết</button>
+  </div>
+  <div class="err" id="errors"></div>
+
+  <table id="tbl">
+    <thead><tr>
+      <th>STT</th><th>Số văn bản</th><th>Ngày văn bản</th><th>Tên văn bản</th><th>Nội dung văn bản</th><th>Tờ số</th><th>Nguồn</th><th></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</main>
+<div id="preview"><span class="x" onclick="document.getElementById('preview').style.display='none'">✕ đóng</span><div id="pvBody"></div></div>
+
+<script>
+/* =====================================================================
+   1. ĐỌC PDF (pdf.js) + OCR (Tesseract.js)
+   ===================================================================== */
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const MIN_TEXT_CHARS = 40;   // dưới ngưỡng này coi là trang scan -> OCR
+const OCR_SCALE = 2.5;       // ~180 dpi; tăng 3–3.5 nếu scan mờ (chậm hơn)
+let ocrWorker = null;
+
+async function getOcrWorker(onStatus) {
+  if (ocrWorker) return ocrWorker;
+  onStatus('Đang tải bộ OCR tiếng Việt (lần đầu ~15 MB)...');
+  ocrWorker = await Tesseract.createWorker('vie', 1, {
+    langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/vie/4.0.0_best_int',
+    workerPath: 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/worker.min.js',
+    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0',
+  });
+  await ocrWorker.setParameters({ tessedit_pageseg_mode: '6' }); // khối văn bản đồng nhất – hợp giấy tờ hành chính
+  return ocrWorker;
+}
+
+// Ghép các item text của pdf.js thành dòng theo tọa độ y
+function itemsToText(content) {
+  const items = content.items.filter(it => it.str && it.str.trim());
+  items.sort((a, b) => (b.transform[5] - a.transform[5]) || (a.transform[4] - b.transform[4]));
+  const lines = []; let cur = null, curY = null;
+  for (const it of items) {
+    const y = it.transform[5];
+    if (curY === null || Math.abs(y - curY) > 3) { cur = []; lines.push(cur); curY = y; }
+    cur.push(it.str);
+  }
+  return lines.map(l => l.join(' ')).join('\n');
+}
+
+async function pageTexts(file, useOcr, maxOcrPages, onStatus, onProgress) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const out = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    let text = itemsToText(await page.getTextContent());
+    let ocr = false;
+    if (text.trim().length < MIN_TEXT_CHARS && useOcr && i <= maxOcrPages) {
+      const w = await getOcrWorker(onStatus);
+      onStatus(`OCR ${file.name} trang ${i}/${pdf.numPages}...`);
+      const vp = page.getViewport({ scale: OCR_SCALE });
+      const canvas = document.createElement('canvas');
+      canvas.width = vp.width; canvas.height = vp.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      // chuyển xám để OCR ổn định hơn với scan màu / có dấu mộc
+      const im = ctx.getImageData(0, 0, canvas.width, canvas.height), d = im.data;
+      for (let k = 0; k < d.length; k += 4) { const g = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]; d[k] = d[k + 1] = d[k + 2] = g; }
+      ctx.putImageData(im, 0, 0);
+      const res = await w.recognize(canvas);
+      text = res.data.text; ocr = true;
+    }
+    out.push({ page: i, text, ocr });
+    onProgress(i, pdf.numPages);
+  }
+  return out;
+}
+
+/* =====================================================================
+   2. TIỆN ÍCH TEXT
+   ===================================================================== */
+const stripAccents = s => s.replace(/Đ/g, 'D').replace(/đ/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '');
+const norm = s => stripAccents(s).toLowerCase().replace(/\s+/g, ' ').trim();
+const linesOf = t => t.split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+const isUpper = s => s === s.toUpperCase() && s !== s.toLowerCase();
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const vnTitle = s => s.split(' ').map(w => isUpper(w) ? w[0] + w.slice(1).toLowerCase() : w).join(' ');
+const letterList = s => [...s].filter(c => c.toLowerCase() !== c.toUpperCase());
+const isUpperRatio = (s, r = 0.85) => { const l = letterList(s); return l.length >= 3 && l.filter(c => c === c.toUpperCase()).length / l.length >= r; };
+// các dòng VIẾT HOA trong n dòng đầu = tiêu đề văn bản (bỏ quốc hiệu)
+function titleLines(text, n = 15) {
+  return linesOf(text).slice(0, n).filter(l => isUpperRatio(l))
+    .filter(l => !['cong hoa xa hoi', 'doc lap - tu do', 'doc lap – tu do', 'socialist republic'].some(k => norm(l).includes(k)))
+    .map(l => l.replace(/^[|:!;.\-_'`"“”\s]+|[|:!;.\-_'`"“”\s]+$/g, ''));
+}
+
+const LOAI_RE = '(co phan|tnhh(?: mot thanh vien| mtv| hai thanh vien tro len)?|hop danh)';
+const NAME_STOP = '(?=$|[,;:("“”)]| thong qua| nhu sau| duoc | co | va | la | ngay | theo | tai | ve | ban hanh| kinh gui| cong hoa| doc lap| ma so| dia chi| tru so| von dieu| dang ky| giay chung| so:| sau day| to chuc| hop| quyet dinh| nghi quyet| bien ban| dieu le|\\.)';
+const NAME_RE = new RegExp('cong ty ' + LOAI_RE + ' ([a-z0-9&.\\- ]{3,80}?)' + NAME_STOP, 'g');
+const loaiLabel = g => g === 'co phan' ? 'Cổ phần' : g === 'hop danh' ? 'Hợp danh'
+  : 'TNHH' + ({ ' mot thanh vien': ' Một thành viên', ' mtv': ' MTV', ' hai thanh vien tro len': ' Hai thành viên trở lên' }[g.slice(4)] || '');
+// Tìm mọi "CÔNG TY CỔ PHẦN/TNHH + TÊN" trong phần đầu (không dấu), lấy lại đoạn có dấu, chọn tên xuất hiện nhiều nhất
+function companyName(text) {
+  const ls = linesOf(text.slice(0, 6000));
+  const cands = ls.concat(ls.slice(0, -1).map((l, i) => l + ' ' + ls[i + 1]));
+  const found = [];
+  for (const l of cands) {
+    const wvn = l.split(' '), n = norm(l), wnd = n.split(' ');
+    for (const m of n.matchAll(NAME_RE)) {
+      const key = m[2].trim(); if (key.length < 3) continue;
+      let seg = key, upper = false;
+      if (wvn.length === wnd.length) {
+        const startW = n.slice(0, m.index + ('cong ty ' + m[1] + ' ').length).split(' ').length - 1;
+        const segVn = wvn.slice(startW, startW + key.split(' ').length).join(' ').replace(/^[\s,;(."“”]+|[\s,;(."“”]+$/g, '');
+        upper = isUpperRatio(segVn, 0.5); seg = upper ? vnTitle(segVn) : segVn;
+      }
+      found.push({ key: m[1] + '|' + key, seg, upper });
+    }
+  }
+  if (!found.length) return '';
+  const cnt = {}; found.forEach(f => cnt[f.key] = (cnt[f.key] || 0) + 1);
+  const best = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || b.length - a.length)[0];
+  const vs = found.filter(f => f.key === best).sort((a, b) => (a.upper - b.upper) || (b.seg.length - a.seg.length));
+  const ten = vs[0].seg.replace(/\s+(Mã Số|Địa Chỉ|Số \d|Trụ Sở|Vốn Điều|Đăng Ký|Giấy Chứng|Cộng Hòa|Độc Lập).*$/iu, '');
+  return `Công ty ${loaiLabel(best.split('|')[0])} ${ten}`.trim();
+}
+
+/* =====================================================================
+   3. NGÀY + SỐ VĂN BẢN
+   ===================================================================== */
+const DATE_LONG = /ng[àa]y\s*(\d{1,2})\s*th[áa]ng\s*(\d{1,2})\s*n[ăa]m\s*(\d{4})/giu;
+const DATE_SHORT = /(?<!\d)(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?!\d)/g;
+
+function findDates(text) {
+  const found = [];
+  for (const m of text.matchAll(DATE_LONG)) found.push([m.index, m[1], m[2], m[3]]);
+  for (const m of text.matchAll(DATE_SHORT)) found.push([m.index, m[1], m[2], m[3]]);
+  found.sort((a, b) => a[0] - b[0]);
+  const out = [];
+  for (const [, d, mo, y] of found) {
+    const dd = +d, mm = +mo, yy = +y;
+    if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12 && yy > 1900) out.push({ d: dd, m: mm, y: yy });
+  }
+  return out;
+}
+const fmtDate = x => x ? `${String(x.d).padStart(2, '0')}/${String(x.m).padStart(2, '0')}/${x.y}` : '';
+// Ngày ở phần đầu văn bản ("Tp. HCM, ngày 17 tháng 01 năm 2025"); ngày viết tay OCR không đọc được -> null
+function headerDate(text, n = 12) {
+  const ls = linesOf(text).slice(0, n);
+  for (const l of ls) if (/ng[àa]y/i.test(l)) { const ds = findDates(l); if (ds.length) return ds[0]; }
+  const ds = findDates(ls.join(' ')); return ds[0] || null;
+}
+// Tên file "39._250117_PLS..." -> 17/01/2025 ; "20250117" ; "17.01.2025"
+function dateFromFilename(name) {
+  for (const m of name.matchAll(/(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)/g)) { const d = { d: +m[3], m: +m[2], y: +m[1] }; if (d.m >= 1 && d.m <= 12 && d.d >= 1 && d.d <= 31) return d; }
+  for (const m of name.matchAll(/(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)/g)) { const d = { d: +m[3], m: +m[2], y: 2000 + +m[1] }; if (d.m >= 1 && d.m <= 12 && d.d >= 1 && d.d <= 31 && +m[1] <= 40) return d; }
+  const ds = findDates(name); return ds[0] || null;
+}
+
+function firstDate(text, after) {
+  if (after) {
+    const m = text.match(after);
+    if (m) { const ds = findDates(text.slice(m.index + m[0].length, m.index + m[0].length + 300)); if (ds.length) return ds[0]; }
+  }
+  const ds = findDates(text); return ds[0] || null;
+}
+
+// "Số: 0Ÿ /2024/PLSĐĐL-ĐQM" -> "0/2024/PLSĐĐL-ĐQM" (số viết tay OCR ra ký tự lạ -> bỏ)
+const NUM_RE = /S[ốoôỗộ]\s*[:.]?\s*([^\s\n]{0,6}?\s*(?:[\/\-.]\s*[A-Za-zÀ-ỹ0-9\-.]+){1,5})/gu;
+function docNumber(text) {
+  const head = text.slice(0, 1500);
+  for (const m of head.matchAll(NUM_RE)) {
+    let cand = m[1].replace(/\s/g, '');
+    if (/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}$/.test(cand)) continue; // bắt nhầm ngày
+    if (!/[\/\-]/.test(cand) || !/(19|20)\d{2}|[A-Z]{2,}/.test(cand)) continue; // phải có năm hoặc ký hiệu (NQ, QĐ...)
+    cand = cand.replace(/^[.,:;]+|[.,:;]+$/g, '');
+    if (cand.includes('/')) { const i = cand.indexOf('/'); cand = (cand.slice(0, i).replace(/[^0-9A-Za-z]/g, '') || '…') + cand.slice(i); }
+    return cand;
+  }
+  const m = head.match(/S[ốo]\s*[:.]?\s*([A-Z]{2,5}-\d{5,})/u);
+  return m ? m[1] : '';
+}
+
+const VV = [/^V\/v\b/iu, /^V[ềe] vi[ệe]c\b/iu, /^V[ềe]\s*:/iu];
+function lineAfter(text, patterns, maxlen = 200) {
+  const ls = linesOf(text);
+  for (let i = 0; i < ls.length; i++) for (const p of patterns) {
+    const m = ls[i].match(p);
+    if (m) {
+      let rest = ls[i].slice(m[0].length).replace(/^[\s:.\-–]+|[\s:.\-–]+$/g, '');
+      if (!rest && i + 1 < ls.length) rest = ls[i + 1];
+      return rest.slice(0, maxlen);
+    }
+  }
+  return '';
+}
+
+/* =====================================================================
+   4. PHÂN LOẠI + RULE TỪNG LOẠI GIẤY TỜ  (sửa ở đây khi cần)
+   ===================================================================== */
+const headNorm = (text, n = 25) => norm(linesOf(text).slice(0, n).join(' '));
+
+function vonDieuLe(text) {
+  const m = text.match(/v[ốoôỗ]n [đd]i[ềeêể]u l[ệeê][^\d]{0,60}((?:\d{1,3}\.)+\d{3}|\d[\d.,]*)\s*(t[ỷy]|tri[ệe]u|đ[ồo]ng|VN[ĐD])?/iu);
+  if (!m || m[1].replace(/\D/g, '').length < 4) return '';
+  const dv = m[2] || 'đồng';
+  return `Vốn điều lệ ${m[1].replace(/[.,]+$/, '')} ${dv} đồng`.replace('đồng đồng', 'đồng').replace('VNĐ đồng', 'đồng').replace('VND đồng', 'đồng');
+}
+// "Sửa đổi Khoản 4 Điều 2 Điều lệ" -> "Sửa đổi khoản 4 Điều 2"
+function suaDoiDieu(text) {
+  const m = norm(text.slice(0, 4000)).match(/sua doi(,? bo sung)? (khoan [\d.]+ )?(dieu \d+)/);
+  if (!m) return '';
+  return ('Sửa đổi' + (m[1] ? ', bổ sung' : '') + ' ' + (m[2] || '') + m[3]).replace('dieu', 'Điều').replace('khoan', 'khoản');
+}
+
+const R = {
+  gcn(text) {
+    const m = text.match(/[Đđ]ăng ký thay đổi lần thứ\s*:?\s*(\d+)/iu);
+    const lan = m ? m[1] : '';
+    const ngay = lan ? firstDate(text, /[Đđ]ăng ký thay đổi lần thứ\s*:?\s*\d+/iu) : firstDate(text);
+    const hn = headNorm(text);
+    const loai = hn.includes('cong ty co phan') ? 'Công ty Cổ phần' : hn.includes('cong ty tnhh') ? 'Công ty TNHH' : '';
+    return { so: '', ngay, ten: `Giấy chứng nhận đăng ký doanh nghiệp ${loai}`.trim(), noi_dung: lan ? `Đăng ký thay đổi lần thứ ${lan}` : 'Đăng ký lần đầu' };
+  },
+  cccd(text) {
+    let name = ''; const ls = linesOf(text);
+    for (let i = 0; i < ls.length; i++) {
+      if (/h[ọo] v[àa] t[êe]n|full name/iu.test(ls[i])) {
+        let rest = ls[i].replace(/.*?(h[ọo] v[àa] t[êe]n|full name)\s*[:\/]*\s*/iu, '').replace(/^\/?\s*Full name\s*:?\s*/iu, '').trim();
+        if (!rest && i + 1 < ls.length) rest = ls[i + 1];
+        name = vnTitle(rest); break;
+      }
+    }
+    const m = text.match(/(?<!\d)(\d{12})(?!\d)/);
+    return { so: '', ngay: null, ten: `CCCD ${name}`.trim(), noi_dung: m ? `Số ${m[1]}` : '' };
+  },
+  nq: coQuan => text => {
+    const cty = companyName(text);
+    return { so: docNumber(text), ngay: headerDate(text), ten: `Nghị quyết ${coQuan} ${cty}`.replace(/\s+/g, ' ').trim(), noi_dung: lineAfter(text, VV) };
+  },
+  guq: text => ({ so: docNumber(text), ngay: headerDate(text), ten: 'Giấy ủy quyền', noi_dung: lineAfter(text, VV) }),
+  qd(text) {
+    let nd = lineAfter(text, VV), ten = 'Quyết định';
+    if (headNorm(text).includes('bo nhiem')) {
+      ten = 'Quyết định bổ nhiệm';
+      if (!nd) { const m = text.match(/[Bb]ổ nhiệm\s+(?:ông|bà|Ông|Bà)?\s*([A-ZÀ-Ỹ][a-zà-ỹ]+(?:\s[A-ZÀ-Ỹ][a-zà-ỹ]+){1,4})/u); if (m) nd = `Bổ nhiệm ${m[1]}`; }
+    }
+    return { so: docNumber(text), ngay: headerDate(text), ten, noi_dung: nd };
+  },
+  chungChi: text => ({ so: docNumber(text), ngay: headerDate(text), ten: 'Chứng chỉ năng lực hoạt động xây dựng', noi_dung: '' }),
+  plDieuLe(text) {
+    const parts = [suaDoiDieu(text)];
+    const v = vonDieuLe(text);
+    if (v) parts.push(v); else if (/nguoi dai dien theo phap luat/.test(norm(text.slice(0, 3000)))) parts.push('Thay đổi người đại diện theo pháp luật');
+    return { so: docNumber(text), ngay: headerDate(text), ten: `Phụ lục sửa đổi Điều lệ ${companyName(text)}`.trim(), noi_dung: parts.filter(Boolean).join(' – ') || lineAfter(text, VV) };
+  },
+  dieuLe(text) {
+    const m = norm(text.slice(0, 6000)).match(/sua doi,? bo sung lan thu (\d+)/);
+    let nd = m ? `Sửa đổi, bổ sung lần thứ ${m[1]}` : '';
+    const hl = text.match(/c[óo] hi[ệeê]u l[ựu]c (?:k[ểe] )?t[ừu] ng[àa]y\s*([\d\/\-.]+)/iu);
+    const ngay = hl ? (findDates(hl[0])[0] || null) : null;
+    if (ngay && !nd) nd = `Có hiệu lực từ ngày ${fmtDate(ngay)}`;
+    return { so: '', ngay: ngay || firstDate(text), ten: `Điều lệ ${companyName(text)}`.trim(), noi_dung: nd };
+  },
+  dsCoDong(text) {
+    const ls = linesOf(text); let title = '';
+    for (let i = 0; i < Math.min(15, ls.length); i++) {
+      const n = norm(ls[i]);
+      if (n.includes('danh sach') && n.includes('co dong')) {
+        title = ls[i];
+        for (const nx of ls.slice(i + 1, i + 4)) { if (isUpper(nx) && !norm(nx).includes('von dieu le')) title += ' ' + nx; else break; }
+        break;
+      }
+    }
+    if (isUpper(title)) title = cap(title.toLowerCase());
+    const m = text.match(/ch[ốo]t\s*(?:đ[ếe]n\s*)?ng[àa]y\s*([\d\/\-.]+)/iu);
+    const ngay = (m && findDates(m[0])[0]) || firstDate(text);
+    return { so: '', ngay, ten: title || 'Danh sách cổ đông', noi_dung: vonDieuLe(text) };
+  },
+  soCoDong: text => ({ so: '', ngay: firstDate(text), ten: 'Sổ đăng ký cổ đông', noi_dung: '' }),
+  bienBan(text) {
+    const hn = headNorm(text);
+    const kind = hn.includes('dai hoi dong co dong') ? 'Đại hội đồng cổ đông' : hn.includes('hoi dong quan tri') ? 'Hội đồng quản trị' : hn.includes('hoi dong thanh vien') ? 'Hội đồng thành viên' : '';
+    return { so: docNumber(text), ngay: headerDate(text), ten: `Biên bản họp ${kind} ${companyName(text)}`.replace(/\s+/g, ' ').trim(), noi_dung: lineAfter(text, VV) };
+  },
+  hopDong(text) {
+    const ls = linesOf(text);
+    let title = ls.slice(0, 15).find(l => norm(l).includes('hop dong')) || 'Hợp đồng';
+    if (isUpper(title)) title = cap(title.toLowerCase());
+    return { so: docNumber(text), ngay: headerDate(text), ten: title, noi_dung: lineAfter(text, VV) };
+  },
+  generic(text) {
+    const tl = titleLines(text);
+    return { so: docNumber(text), ngay: headerDate(text), ten: tl.length ? cap(tl.slice(0, 2).join(' ').toLowerCase()) : '', noi_dung: lineAfter(text, VV) };
+  },
+};
+
+// keys: từ khóa KHÔNG DẤU, chữ thường, phải cùng có trong ~25 dòng đầu. Rule đứng trước thắng.
+const RULES = [
+  { name: 'GCN ĐKDN',        keys: ['giay chung nhan dang ky doanh nghiep'], fn: R.gcn },
+  { name: 'GCN ĐKDN',        keys: ['giay chung nhan', 'dang ky doanh nghiep'], fn: R.gcn },
+  { name: 'CCCD',            keys: ['can cuoc'], fn: R.cccd },
+  { name: 'CCCD',            keys: ['citizen identity'], fn: R.cccd },
+  { name: 'Phụ lục điều lệ', keys: ['phu luc', 'dieu le'], fn: R.plDieuLe },
+  { name: 'NQ ĐHĐCĐ',        keys: ['nghi quyet', 'dai hoi dong co dong'], fn: R.nq('Đại hội đồng cổ đông') },
+  { name: 'NQ HĐQT',         keys: ['nghi quyet', 'hoi dong quan tri'], fn: R.nq('Hội đồng quản trị') },
+  { name: 'NQ HĐTV',         keys: ['nghi quyet', 'hoi dong thanh vien'], fn: R.nq('Hội đồng thành viên') },
+  { name: 'Nghị quyết',      keys: ['nghi quyet'], fn: R.nq('') },
+  { name: 'Biên bản',        keys: ['bien ban'], fn: R.bienBan },
+  { name: 'Giấy ủy quyền',   keys: ['giay uy quyen'], fn: R.guq },
+  { name: 'Giấy ủy quyền',   keys: ['uy quyen'], not: ['hop dong'], fn: R.guq },
+  { name: 'Quyết định',      keys: ['quyet dinh'], fn: R.qd },
+  { name: 'Chứng chỉ NLXD',  keys: ['chung chi nang luc'], fn: R.chungChi },
+  { name: 'DS cổ đông',      keys: ['danh sach', 'co dong'], fn: R.dsCoDong },
+  { name: 'Sổ cổ đông',      keys: ['so dang ky co dong'], fn: R.soCoDong },
+  { name: 'Điều lệ',         keys: ['dieu le'], fn: R.dieuLe },
+  { name: 'Hợp đồng',        keys: ['hop dong'], fn: R.hopDong },
+  { name: 'Khác',            keys: [], fn: R.generic },
+];
+
+// Bước 1: khớp trên các dòng VIẾT HOA đầu văn bản – rule có từ khóa xuất hiện sớm nhất thắng (bằng nhau: rule đứng trước).
+// Bước 2: không có -> chứa đủ từ khóa trong ~25 dòng đầu.
+function classify(text) {
+  const tl = norm(titleLines(text).join(' '));
+  let best = null;
+  if (tl) RULES.slice(0, -1).forEach((r, idx) => {
+    if ((r.not || []).some(k => tl.includes(k))) return;
+    const pos = r.keys.map(k => tl.indexOf(k));
+    if (pos.every(p => p >= 0)) { const sc = [Math.min(...pos), idx]; if (!best || sc[0] < best.sc[0] || (sc[0] === best.sc[0] && sc[1] < best.sc[1])) best = { sc, r }; }
+  });
+  if (best) return best.r;
+  const h = headNorm(text);
+  return RULES.find(r => r.keys.every(k => h.includes(k)) && !(r.not || []).some(k => h.includes(k))) || RULES[RULES.length - 1];
+}
+function extractFields(text) {
+  const rule = classify(text);
+  const f = rule.fn(text);
+  f.loai = rule.name;
+  return f;
+}
+
+/* =====================================================================
+   5. TÁCH VĂN BẢN TRONG PDF GỘP
+   ===================================================================== */
+const START_KEYS = ['cong hoa xa hoi chu nghia viet nam', 'socialist republic of vietnam', 'giay chung nhan', 'nghi quyet',
+  'giay uy quyen', 'quyet dinh', 'can cuoc', 'citizen identity', 'danh sach', 'phu luc', 'dieu le', 'chung chi', 'so dang ky',
+  'bien ban', 'hop dong', 'ownership chart', 'to trinh', 'cong van', 'thong bao'];
+
+function isDocStart(text) {
+  const ls = linesOf(text).slice(0, 12);
+  if (!ls.length) return false;
+  const h = norm(ls.join(' '));
+  if (/\btrang\s*([2-9]|\d{2,})\s*\/\s*\d+/.test(h) || /\bpage\s*([2-9]|\d{2,})\b/.test(h)) return false;
+  for (const l of ls) {
+    const letters = [...l].filter(c => c.toLowerCase() !== c.toUpperCase());
+    if (letters.length < 6) continue;
+    const ratio = letters.filter(c => c === c.toUpperCase()).length / letters.length;
+    if (ratio < 0.8) continue;
+    const n = norm(l);
+    if (START_KEYS.some(k => n.startsWith(k))) return true;
+  }
+  return false;
+}
+
+function splitDocuments(pages, mode) {
+  if (!pages.length) return [];
+  let groups;
+  if (mode === 'file') groups = [pages.map((_, i) => i)];
+  else if (mode === 'page') groups = pages.map((_, i) => [i]);
+  else {
+    groups = [[0]];
+    for (let i = 1; i < pages.length; i++) (isDocStart(pages[i].text) ? groups.push([i]) : groups[groups.length - 1].push(i));
+  }
+  return groups.map(g => ({
+    start: pages[g[0]].page, end: pages[g[g.length - 1]].page,
+    text: g.map(i => pages[i].text).join('\n'), ocr: g.some(i => pages[i].ocr),
+  }));
+}
+
+async function processPdf(file, mode, useOcr, maxOcrPages, onStatus, onProgress) {
+  const pages = await pageTexts(file, useOcr, mode === 'file' ? maxOcrPages : Infinity, onStatus, onProgress);
+  return splitDocuments(pages, mode).map(d => {
+    const f = extractFields(d.text);
+    // Ưu tiên: ngày trong tiêu đề -> ngày trong tên file (250117_...) -> ngày đầu tiên trong nội dung
+    let ngay = f.ngay, nguon = '';
+    if (!ngay) { ngay = dateFromFilename(file.name); nguon = ngay ? 'ngày lấy từ tên file' : ''; }
+    if (!ngay) { ngay = firstDate(d.text); nguon = ngay ? 'ngày lấy trong nội dung – kiểm tra!' : ''; }
+    return {
+      so: f.so || '', ngay: fmtDate(ngay), ten: f.ten || '', noi_dung: cap((f.noi_dung || '').trim()), to_so: '',
+      loai: f.loai, trang: d.start === d.end ? `${d.start}` : `${d.start}-${d.end}`, ocr: d.ocr, nguon, file: file.name, text: d.text.slice(0, 4000),
+    };
+  });
+}
+
+/* =====================================================================
+   6. GIAO DIỆN
+   ===================================================================== */
+const rows = [];
+const tbody = document.querySelector('#tbl tbody');
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const status = document.getElementById('status');
+const bar = document.getElementById('bar'), barI = bar.querySelector('i');
+const setStatus = s => status.textContent = s;
+
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); upload(e.dataTransfer.files); };
+fileInput.onchange = () => { upload(fileInput.files); fileInput.value = ''; };
+
+async function upload(files) {
+  const list = [...files].filter(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!list.length) return;
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const useOcr = document.getElementById('ocr').checked;
+  const maxOcrPages = Math.max(1, +document.getElementById('ocrPages').value || 1);
+  const errors = []; let added = 0;
+  bar.style.display = 'block';
+  for (let k = 0; k < list.length; k++) {
+    const f = list[k];
+    setStatus(`Đang đọc ${f.name} (${k + 1}/${list.length})...`);
+    try {
+      const rs = await processPdf(f, mode, useOcr, maxOcrPages, setStatus, (p, n) => barI.style.width = `${(k + p / n) / list.length * 100}%`);
+      rs.forEach(r => rows.push(r)); added += rs.length; render();
+    } catch (e) { errors.push(`${f.name}: ${e.message || e}`); console.error(e); }
+  }
+  bar.style.display = 'none'; barI.style.width = '0';
+  document.getElementById('errors').textContent = errors.join('\n');
+  setStatus(`Xong: +${added} dòng (tổng ${rows.length})`);
+}
+
+const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function render() {
+  tbody.innerHTML = '';
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    const cell = k => `<td contenteditable data-k="${k}" data-i="${i}" class="${(r[k] || '').trim() ? '' : 'empty'}">${esc(r[k])}</td>`;
+    tr.innerHTML = `<td class="stt">${i + 1}</td>${cell('so')}${cell('ngay')}${cell('ten')}${cell('noi_dung')}${cell('to_so')}
+      <td><span class="tag">${esc(r.loai || '')}</span> ${r.ocr ? '<span class="tag ocr">OCR</span>' : ''}<small class="src">${esc(r.file || '')} · tr.${esc(r.trang || '')}${r.nguon ? ' · ' + esc(r.nguon) : ''}</small></td>
+      <td class="act"><a data-a="pv" data-i="${i}">text</a><a data-a="up" data-i="${i}" title="Gộp vào dòng trên">⤴ gộp</a><a data-a="del" data-i="${i}">✕</a></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('btnExport').disabled = rows.length === 0;
+}
+
+tbody.addEventListener('input', e => {
+  const td = e.target.closest('td[contenteditable]'); if (!td) return;
+  rows[+td.dataset.i][td.dataset.k] = td.innerText.trim();
+  td.classList.toggle('empty', !td.innerText.trim());
+});
+tbody.addEventListener('click', e => {
+  const a = e.target.closest('a[data-a]'); if (!a) return;
+  const i = +a.dataset.i;
+  if (a.dataset.a === 'del') { rows.splice(i, 1); render(); }
+  if (a.dataset.a === 'pv') { document.getElementById('pvBody').textContent = rows[i].text || '(không có text)'; document.getElementById('preview').style.display = 'block'; }
+  if (a.dataset.a === 'up' && i > 0) {
+    const p = rows[i - 1], c = rows[i];
+    p.trang = (p.trang || '').split('-')[0] + '-' + (c.trang || '').split('-').pop();
+    p.text = (p.text || '') + '\n' + (c.text || '');
+    ['so', 'ngay', 'ten', 'noi_dung'].forEach(k => { if (!(p[k] || '').trim()) p[k] = c[k]; });
+    rows.splice(i, 1); render();
+  }
+});
+document.getElementById('btnAdd').onclick = () => { rows.push({ so: '', ngay: '', ten: '', noi_dung: '', to_so: '', loai: 'thủ công', file: '', trang: '' }); render(); };
+document.getElementById('btnClear').onclick = () => { if (confirm('Xóa toàn bộ bảng?')) { rows.length = 0; render(); } };
+
+/* ---- Xuất Excel (SheetJS) ---- */
+document.getElementById('btnExport').onclick = () => {
+  const section = document.getElementById('section').value.trim();
+  const aoa = [['DANH MỤC TÀI LIỆU'], ['STT', 'Số văn bản', 'Ngày văn bản', 'Tên văn bản', 'Nội dung văn bản', 'Tờ số']];
+  if (section) { const [a, ...b] = section.split(' '); aoa.push([a, b.join(' ')]); }
+  rows.forEach((r, i) => {
+    let ngay = r.ngay || '';
+    const m = ngay.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    // ghi ngày dạng số serial Excel (tránh lệch múi giờ)
+    if (m) ngay = { t: 'n', v: (Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 86400000, z: 'dd/mm/yyyy' };
+    aoa.push([i + 1, r.so || '', ngay, r.ten || '', r.noi_dung || '', r.to_so || '']);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+  ws['!cols'] = [6, 26, 14, 55, 55, 10].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  XLSX.writeFile(wb, `Danh muc tai lieu ${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.xlsx`);
+};
+</script>
+</body>
+</html>
