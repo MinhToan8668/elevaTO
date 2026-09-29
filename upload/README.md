@@ -29,6 +29,11 @@ không vào được Telegram, vì trang chỉ nói chuyện với Google.
 5. Chọn hàm `caiDat` → **Run** → cho phép quyền Google Drive. Bot nhắn cho bạn
    link trang **kèm sẵn key** — mở link đó một lần trên máy cần tải, trang tự nhớ.
 
+   Báo `403 … Google Drive API has not been used in project …`: Drive API chưa
+   bật. Kiểm tra cột **Dịch vụ** bên trái đã có **Drive** chưa — chưa thì bấm
+   **+ → Drive API → Thêm** (bản `appsscript.json` ở đây đã khai sẵn, dán đúng là
+   có). Vẫn lỗi thì mở link trong thông báo → **Bật**, đợi 2–3 phút rồi chạy lại.
+
 Sửa code sau này: **Triển khai → Quản lý bản triển khai → bút chì → Phiên bản
 mới**. Sửa bản cũ, đừng tạo bản mới — tạo mới là đổi URL `/exec`, phải chạy lại
 `caiDat` để lấy link mới.
