@@ -10,9 +10,10 @@
  * gọi chỉ mang một mảnh nên không chạm giới hạn 50MB / lần của Apps Script,
  * và rớt mạng giữa chừng thì hỏi Drive đã nhận tới đâu rồi gửi tiếp.
  *
- * Vì sao file lên Drive chứ không đi thẳng vào bot: bot Telegram chỉ gửi
- * được file tối đa 50MB. Và ở Việt Nam trình duyệt không gọi được Telegram,
- * nhưng máy chủ Google thì gọi được — nên chính script này nhắn link.
+ * Vì sao file lên Drive trước rồi mới vào Telegram: ở Việt Nam trình duyệt
+ * không gọi được Telegram, nhưng máy chủ Google thì gọi được. Và bot chỉ gửi
+ * được file tối đa 50MB — file lớn hơn được cắt thành các phần .001, .002…
+ * (ghép lại bằng upload/ghep.html). Gửi xong thì bỏ bản trên Drive vào thùng rác.
  *
  * Vì sao trang KHÔNG phục vụ bằng HtmlService: mọi trang HtmlService đều cho
  * người mở nó gọi BẤT KỲ hàm nào trong script qua google.script.run. Trang
@@ -41,6 +42,14 @@ var UP_KHOA_GIAY   = 600;                       // khoá 10 phút
 var DRIVE_FILES    = 'https://www.googleapis.com/drive/v3/files';
 var DRIVE_UPLOAD   = 'https://www.googleapis.com/upload/drive/v3/files';
 var PAGE_URL       = 'https://minhtoan8668.github.io/elevaTO/upload/';
+var GHEP_URL       = PAGE_URL + 'ghep.html';
+
+// Chuyển file vào Telegram. Bot gửi được tối đa 50MB mỗi file (tính cả phần
+// bọc multipart), UrlFetchApp cũng nhận/gửi tối đa 50MB mỗi lần — 45MB chừa đủ dư.
+var TG_PART        = 45 * 1024 * 1024;
+var JOB_PREFIX     = 'TGJOB_';              // mỗi file chờ chuyển là một Script Property
+var WORKER_GIAY    = 240;                   // mỗi lượt chạy dừng sau ~4 phút (giới hạn 6 phút)
+var JOB_MAX_LOI    = 5;                     // lỗi liên tiếp quá số này thì bỏ, giữ file trên Drive
 
 function props() { return PropertiesService.getScriptProperties(); }
 
@@ -69,8 +78,8 @@ function doPost(e) {
   try {
     var data;
     if (b.action === 'upload_start') data = uploadBatDau(b.key, b.info);
-    else if (b.action === 'upload_chunk') data = uploadManh(b.key, b.session, b.start, b.total, b.data, b.share);
-    else if (b.action === 'upload_status') data = uploadTrangThai(b.key, b.session, b.total, b.share);
+    else if (b.action === 'upload_chunk') data = uploadManh(b.key, b.session, b.start, b.total, b.data, b.share, b.tele);
+    else if (b.action === 'upload_status') data = uploadTrangThai(b.key, b.session, b.total, b.share, b.tele);
     else return json({ ok: false, error: 'unknown action', code: 'session' });
     return json({ ok: true, data: data });
   } catch (err) {
@@ -117,7 +126,7 @@ function uploadBatDau(key, info) {
 }
 
 /** Gửi một mảnh. Trả {next: vị trí kế tiếp} hoặc {done: true, ...link} ở mảnh cuối. */
-function uploadManh(key, session, start, total, b64, share) {
+function uploadManh(key, session, start, total, b64, share, tele) {
   kiemKey(key);
   kiemSession(session);
   var bytes = Utilities.base64Decode(String(b64 || ''));
@@ -133,11 +142,11 @@ function uploadManh(key, session, start, total, b64, share) {
     muteHttpExceptions: true,
     followRedirects: false          // Drive trả 308 nghĩa là "nhận rồi, gửi tiếp", không phải chuyển hướng
   });
-  return ketQuaPhien(res, share);
+  return ketQuaPhien(res, share, tele);
 }
 
 /** Hỏi Drive đã nhận tới đâu — dùng khi rớt mạng hoặc mở lại trang giữa chừng. */
-function uploadTrangThai(key, session, total, share) {
+function uploadTrangThai(key, session, total, share, tele) {
   kiemKey(key);
   kiemSession(session);
   var res = UrlFetchApp.fetch(session, {
@@ -148,14 +157,14 @@ function uploadTrangThai(key, session, total, share) {
     followRedirects: false
   });
   if (res.getResponseCode() === 404 || res.getResponseCode() === 410) return { expired: true };
-  return ketQuaPhien(res, share);
+  return ketQuaPhien(res, share, tele);
 }
 
 // ─────────────────────────────────────────────────────────────
 // Nội bộ
 // ─────────────────────────────────────────────────────────────
 
-function ketQuaPhien(res, share) {
+function ketQuaPhien(res, share, tele) {
   var code = res.getResponseCode();
   if (code === 308) {
     // Range: bytes=0-N  → đã nhận tới byte N. Không có Range → chưa nhận byte nào.
@@ -163,14 +172,19 @@ function ketQuaPhien(res, share) {
     return { next: m ? Number(m[1]) + 1 : 0 };
   }
   if (code === 200 || code === 201) {
-    return hoanTat(JSON.parse(res.getContentText()).id, share !== false);
+    return hoanTat(JSON.parse(res.getContentText()).id, share !== false, tele === true);
   }
   ghiLoi('upload', code + ' ' + res.getContentText().slice(0, 500));
   throw new Error('Google Drive báo lỗi ' + code);
 }
 
-/** Mảnh cuối đã lên: mở quyền xem theo link, nhắn admin, trả link cho trang. */
-function hoanTat(fileId, share) {
+/**
+ * Mảnh cuối đã lên: mở quyền xem theo link, trả link cho trang.
+ * tele = true → xếp vào hàng chờ để bot chuyển file vào Telegram rồi xoá khỏi
+ * Drive (việc nặng, chạy nền bằng lịch mỗi phút — xem chuyenTelegram).
+ * tele = false → chỉ nhắn link Drive như trước.
+ */
+function hoanTat(fileId, share, tele) {
   if (share) {
     driveApi('post', DRIVE_FILES + '/' + fileId + '/permissions', { role: 'reader', type: 'anyone' });
   }
@@ -181,25 +195,147 @@ function hoanTat(fileId, share) {
     name: meta.name || '',
     size: Number(meta.size || 0),
     shared: share,
+    tele: tele,
     viewUrl: 'https://drive.google.com/file/d/' + fileId + '/view',
     downloadUrl: 'https://drive.google.com/uc?export=download&id=' + fileId
   };
 
   // Mảnh cuối có thể được hỏi lại (rớt mạng đúng lúc Drive trả lời) —
-  // nhớ trong cache để admin không nhận hai tin cho cùng một file.
+  // nhớ trong cache để không nhắn / xếp hàng hai lần cho cùng một file.
   var cache = CacheService.getScriptCache();
-  if (!cache.get('upxong_' + fileId)) {
-    cache.put('upxong_' + fileId, '1', 21600);
-    guiTelegram([
-      '📥 File mới đã lên Google Drive',
-      '',
-      '🎞 ' + kq.name + ' (' + (kq.size / 1048576).toFixed(1) + 'MB)',
-      '👁 Xem: ' + kq.viewUrl,
-      '⬇️ Tải về: ' + kq.downloadUrl,
-      share ? '' : '(Chỉ tài khoản Google của bạn mở được — chưa bật chia sẻ theo link.)'
-    ].join('\n'));
+  if (cache.get('upxong_' + fileId)) return kq;
+  cache.put('upxong_' + fileId, '1', 21600);
+
+  if (tele) {
+    props().setProperty(JOB_PREFIX + fileId, JSON.stringify({
+      id: fileId, name: kq.name, size: kq.size,
+      parts: Math.max(1, Math.ceil(kq.size / TG_PART)), part: 0, loi: 0
+    }));
+    return kq;
   }
+  guiTelegram([
+    '📥 File mới đã lên Google Drive',
+    '',
+    '🎞 ' + kq.name + ' (' + mbText(kq.size) + ')',
+    '👁 Xem: ' + kq.viewUrl,
+    '⬇️ Tải về: ' + kq.downloadUrl,
+    share ? '' : '(Chỉ tài khoản Google của bạn mở được — chưa bật chia sẻ theo link.)'
+  ].join('\n'));
   return kq;
+}
+
+function mbText(n) { return (Number(n) / 1048576).toFixed(1) + 'MB'; }
+
+// ─────────────────────────────────────────────────────────────
+// Chuyển file từ Drive vào Telegram (chạy nền)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Lịch chạy mỗi phút (caiDat tự đặt). Không có file chờ thì thoát ngay.
+ * Mỗi lượt gửi được bao nhiêu phần thì gửi, nhớ lại chỗ dừng trong Script
+ * Properties, lượt sau làm tiếp — nên file 2GB cũng không chạm giới hạn 6 phút.
+ */
+function chuyenTelegram() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return;            // lượt trước còn đang chạy
+  try {
+    var batDau = Date.now();
+    var all = props().getProperties();
+    var keys = Object.keys(all).filter(function (k) { return k.indexOf(JOB_PREFIX) === 0; });
+    for (var i = 0; i < keys.length; i++) {
+      var job;
+      try { job = JSON.parse(all[keys[i]]); } catch (e) { props().deleteProperty(keys[i]); continue; }
+      if (!chuyenMotFile(job, batDau)) return; // hết giờ, lượt sau làm tiếp
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Trả false khi hết giờ giữa chừng. */
+function chuyenMotFile(job, batDau) {
+  var key = JOB_PREFIX + job.id;
+  while (job.part < job.parts) {
+    if ((Date.now() - batDau) / 1000 > WORKER_GIAY) return false;
+    var ok;
+    try { ok = guiMotPhan(job); }
+    catch (err) { ghiLoi('chuyenTelegram ' + job.name, err); ok = String(err && err.message || err); }
+    if (ok === true) {
+      job.part++; job.loi = 0;
+      props().setProperty(key, JSON.stringify(job));
+      continue;
+    }
+    job.loi = (job.loi || 0) + 1;
+    if (ok === 'mat' || job.loi >= JOB_MAX_LOI) {
+      props().deleteProperty(key);
+      guiTelegram('⚠️ Không chuyển được ' + job.name + ' vào Telegram' +
+        (ok === 'mat' ? ' — file đã không còn trên Drive.' :
+         ' (lỗi: ' + ok + ').\nFile vẫn nằm trên Google Drive: https://drive.google.com/file/d/' + job.id + '/view'));
+      return true;
+    }
+    props().setProperty(key, JSON.stringify(job));
+    return false;                              // lỗi tạm (mạng, Telegram bắt chờ) → lượt sau thử lại
+  }
+  xongMotFile(job);
+  props().deleteProperty(key);
+  return true;
+}
+
+/** Gửi phần job.part. Trả true, 'mat' (file không còn) hoặc chuỗi lỗi. */
+function guiMotPhan(job) {
+  var start = job.part * TG_PART;
+  var end = Math.min(start + TG_PART, job.size) - 1;
+  var res = UrlFetchApp.fetch(DRIVE_FILES + '/' + job.id + '?alt=media', {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), Range: 'bytes=' + start + '-' + end },
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  if (code === 404) return 'mat';
+  if (code !== 200 && code !== 206) return 'Drive ' + code;
+
+  var motFile = job.parts === 1;
+  var ten = motFile ? job.name : job.name + '.' + ('00' + (job.part + 1)).slice(-3);
+  var caption = motFile ? job.name + ' (' + mbText(job.size) + ')'
+                        : job.name + ' — phần ' + (job.part + 1) + '/' + job.parts;
+  var r = guiFileTelegram(res.getBlob().setName(ten), caption);
+  if (r && r.ok) return true;
+  return 'Telegram ' + (r ? (r.error_code || '') + ' ' + (r.description || '') : 'không phản hồi');
+}
+
+function guiFileTelegram(blob, caption) {
+  var token = props().getProperty(PROP_TOKEN), chat = props().getProperty(PROP_CHAT);
+  if (!token || !chat) return { ok: false, description: 'chưa chạy caiDat' };
+  var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendDocument', {
+    method: 'post',
+    payload: { chat_id: chat, caption: caption, disable_content_type_detection: 'true', document: blob },
+    muteHttpExceptions: true
+  });
+  try { return JSON.parse(res.getContentText()); } catch (e) { return null; }
+}
+
+/** Gửi đủ phần: bỏ bản trên Drive vào thùng rác, nhắn cách ghép nếu có nhiều phần. */
+function xongMotFile(job) {
+  var xoa = driveApi('patch', DRIVE_FILES + '/' + job.id, { trashed: true });
+  var dong = [];
+  if (job.parts > 1) {
+    dong.push('✅ ' + job.name + ' (' + mbText(job.size) + ') đã vào Telegram thành ' + job.parts + ' phần.');
+    dong.push('');
+    dong.push('Ghép lại sau khi tải đủ ' + job.parts + ' phần về máy:');
+    dong.push('• Mở ' + GHEP_URL + ' → chọn cả ' + job.parts + ' phần → Ghép');
+    dong.push("• Hoặc trên Mac, mở Terminal ở thư mục chứa các phần: cat '" + job.name + "'.0* > '" + job.name + "'");
+    dong.push('');
+  }
+  dong.push(xoa.code === 200 ? '🗑 Đã bỏ ' + job.name + ' khỏi Google Drive (còn trong Thùng rác 30 ngày).'
+                             : '⚠️ Chưa xoá được ' + job.name + ' khỏi Drive (lỗi ' + xoa.code + '), xoá tay giúp nhé.');
+  guiTelegram(dong.join('\n'));
+}
+
+/** Đặt lịch chạy chuyenTelegram mỗi phút — gọi lại bao nhiêu lần cũng chỉ còn một lịch. */
+function datLichChuyen() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'chuyenTelegram') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('chuyenTelegram').timeBased().everyMinutes(1).create();
 }
 
 /** Thư mục "elevaTO Uploads" trong Drive, tạo lại nếu đã bị xoá. */
@@ -309,11 +445,13 @@ function caiDat() {
   if (!props().getProperty(PROP_KEY)) props().setProperty(PROP_KEY, Utilities.getUuid());
 
   var folder = thuMucUpload();
+  datLichChuyen();
   var link = linkTrang();
   var tg = guiTelegram('📤 Trang tải file lên Google Drive\n\n' + link +
     '\n\nLink đã kèm sẵn key — ĐỪNG gửi cho người khác.\nMở một lần là trang tự nhớ key.');
 
   Logger.log('✔ Thư mục Drive: https://drive.google.com/drive/folders/' + folder);
+  Logger.log('✔ Đã đặt lịch chuyển file vào Telegram (mỗi phút)');
   Logger.log('✔ Trang tải lên (kèm key, đừng chia sẻ):\n' + link);
   Logger.log(tg && tg.ok ? '✔ Đã nhắn link vào Telegram'
                          : '✘ Không nhắn được Telegram — kiểm tra TG_TOKEN / TG_CHAT');

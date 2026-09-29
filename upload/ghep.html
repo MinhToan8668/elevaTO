@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<title>elevaTO — Ghép file</title>
+<style>
+:root{
+  --black:#080808; --card:#101010; --card2:#161616;
+  --border2:#2b2b2b; --border3:#3a3a3a;
+  --emerald:#00c896; --emerald-lt:#3ce0b4; --emerald-soft:rgba(0,200,150,.08);
+  --gold:#d4a843; --red:#e05252;
+  --white:#f4f4f0; --text:#c9c9c4; --muted:#818179;
+  --r:14px; --r-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--black);color:var(--text);font:15px/1.55 system-ui,-apple-system,'Segoe UI',sans-serif;
+  min-height:100vh;display:flex;justify-content:center;padding:32px 16px}
+.wrap{width:100%;max-width:560px}
+h1{color:var(--white);font-size:22px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14px;margin:6px 0 24px}
+.sub code{color:var(--text);background:var(--card2);padding:1px 5px;border-radius:5px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:22px}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;
+  border:1.5px dashed var(--border3);border-radius:var(--r);padding:26px 16px;cursor:pointer;
+  transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--emerald);background:var(--emerald-soft)}
+.drop b{color:var(--white);font-weight:600}
+.drop small{color:var(--muted)}
+.list{list-style:none;margin:14px 0 4px;display:flex;flex-direction:column;gap:6px}
+.list li{display:flex;gap:10px;align-items:center;border:1px solid var(--border2);border-radius:8px;
+  padding:8px 12px;background:#0c0c0c;font-size:14px}
+.list .n{flex:1;min-width:0;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .s{flex:none;color:var(--muted);font-size:12px}
+.sum{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted);margin:10px 0 16px}
+.sum b{color:var(--white);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{width:100%;border:0;border-radius:var(--r-sm);background:var(--emerald);color:#04110c;
+  font:inherit;font-weight:700;padding:13px;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.msg{margin-top:14px;font-size:14px;padding:11px 13px;border-radius:var(--r-sm);display:none}
+.msg.err{display:block;color:#ffb4b4;background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.35)}
+.msg.warn{display:block;color:var(--gold);background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.3)}
+.msg.ok{display:block;color:var(--emerald-lt);background:var(--emerald-soft);border:1px solid rgba(0,200,150,.3)}
+.note{color:var(--muted);font-size:13px;margin-top:14px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Ghép file</h1>
+  <p class="sub">File lớn bot gửi vào Telegram thành nhiều phần <code>.001</code>, <code>.002</code>…
+    Tải đủ các phần về máy, chọn tất cả ở đây rồi bấm <b>Ghép</b>. Ghép ngay trên máy bạn,
+    không gửi file đi đâu.</p>
+
+  <section class="card">
+    <div class="drop" id="drop" role="button" tabindex="0">
+      <b>Bấm để chọn các phần, hoặc kéo thả vào đây</b>
+      <small>Chọn cùng lúc tất cả các phần (Cmd+A trong thư mục)</small>
+    </div>
+    <input type="file" id="file" multiple hidden>
+    <ul class="list" id="list"></ul>
+    <div class="sum" id="sum" hidden><b id="outName"></b><span id="outSize"></span></div>
+    <button class="btn" id="go" disabled>Ghép và tải về</button>
+    <div class="msg" id="msg"></div>
+    <p class="note">Trên Mac cũng ghép được bằng Terminal, mở ở thư mục chứa các phần:
+      <code style="color:var(--text)">cat 'ten-file.mp4'.0* &gt; 'ten-file.mp4'</code></p>
+  </section>
+</main>
+
+<script>
+var PART_RE = /^(.+)\.(\d{3})$/;
+var TG_PART = 45 * 1024 * 1024;   // cỡ mỗi phần bot gửi — khớp TG_PART trong backend/Code.gs
+
+var $ = function (id) { return document.getElementById(id); };
+var parts = [], outName = '', url = '';
+
+function mb(n) { return n < 1048576 ? Math.max(1, Math.round(n / 1024)) + 'KB' : (n / 1048576).toFixed(1) + 'MB'; }
+function show(kind, text) { var m = $('msg'); m.className = 'msg' + (kind ? ' ' + kind : ''); m.textContent = text || ''; }
+function pad(n) { return ('00' + n).slice(-3); }
+
+/**
+ * Kiểm tra bộ phần đã chọn: cùng một file gốc, số thứ tự liền mạch từ 001.
+ * Trả { parts, name } hoặc { error }.
+ */
+function kiemTra(files) {
+  var groups = {}, la = [];
+  [].forEach.call(files, function (f) {
+    var m = f.name.match(PART_RE);
+    if (!m) { la.push(f.name); return; }
+    (groups[m[1]] = groups[m[1]] || []).push({ file: f, no: Number(m[2]) });
+  });
+  var names = Object.keys(groups);
+  if (!names.length) return { error: 'Không thấy phần nào có đuôi .001, .002… — chọn đúng các file bot gửi nhé.' };
+  if (names.length > 1) return { error: 'Đang chọn phần của nhiều file khác nhau (' + names.join(', ') + '). Mỗi lần ghép một file thôi.' };
+
+  var list = groups[names[0]].sort(function (a, b) { return a.no - b.no; });
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].no === i + 1) continue;
+    if (list[i].no === i) return { error: 'Phần ' + pad(i) + ' bị chọn hai lần.' };
+    return { error: 'Thiếu phần ' + pad(i + 1) + '. Tải phần đó từ Telegram về rồi chọn lại cả bộ.' };
+  }
+  return { parts: list.map(function (p) { return p.file; }), name: names[0], la: la };
+}
+
+function chon(files) {
+  if (url) { URL.revokeObjectURL(url); url = ''; }
+  var kq = kiemTra(files || []);
+  parts = kq.parts || []; outName = kq.name || '';
+  render();
+  if (kq.error) return show('err', kq.error);
+  var cuoi = parts[parts.length - 1].size;
+  // Mọi phần trừ phần cuối phải đúng cỡ; phần cuối mà cũng đủ cỡ thì có thể còn phần sau chưa tải.
+  var lech = parts.slice(0, -1).some(function (f) { return f.size !== TG_PART; });
+  if (lech) return show('warn', 'Có phần không đúng cỡ ' + mb(TG_PART) + ' — có thể tải về bị dở. Vẫn ghép được, nhưng file ghép ra có thể hỏng.');
+  if (cuoi === TG_PART) return show('warn', 'Phần cuối (' + pad(parts.length) + ') vẫn đủ ' + mb(TG_PART) +
+    ' — đối chiếu tin nhắn bot ("phần x/N") xem đã đủ N phần chưa.');
+  show(kq.la.length ? 'warn' : '', kq.la.length ? 'Bỏ qua file không phải phần: ' + kq.la.join(', ') : '');
+}
+
+function render() {
+  var ul = $('list');
+  ul.textContent = '';
+  parts.forEach(function (f) {
+    var li = document.createElement('li');
+    var n = document.createElement('span'); n.className = 'n'; n.textContent = f.name;
+    var s = document.createElement('span'); s.className = 's'; s.textContent = mb(f.size);
+    li.appendChild(n); li.appendChild(s); ul.appendChild(li);
+  });
+  var tong = parts.reduce(function (t, f) { return t + f.size; }, 0);
+  $('sum').hidden = !parts.length;
+  $('outName').textContent = outName;
+  $('outSize').textContent = parts.length + ' phần · ' + mb(tong);
+  $('go').disabled = !parts.length;
+}
+
+// Blob chỉ trỏ tới các file trên ổ đĩa, không nạp cả file vào bộ nhớ — ghép 2GB vẫn nhẹ.
+function ghep() {
+  if (!parts.length) return;
+  if (url) URL.revokeObjectURL(url);
+  url = URL.createObjectURL(new Blob(parts, { type: 'application/octet-stream' }));
+  var a = document.createElement('a');
+  a.href = url; a.download = outName;
+  document.body.appendChild(a); a.click(); a.remove();
+  show('ok', 'Đã ghép ' + parts.length + ' phần thành "' + outName + '" — xem trong thư mục Tải về (Downloads).');
+}
+
+$('drop').onclick = function () { $('file').click(); };
+$('drop').onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('drop').click(); } };
+$('file').onchange = function () { chon(this.files); this.value = ''; };
+['dragenter', 'dragover'].forEach(function (t) {
+  $('drop').addEventListener(t, function (e) { e.preventDefault(); $('drop').classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(function (t) {
+  $('drop').addEventListener(t, function (e) { e.preventDefault(); $('drop').classList.remove('over'); });
+});
+$('drop').addEventListener('drop', function (e) { chon(e.dataTransfer.files); });
+$('go').onclick = ghep;
+</script>
+</body>
+</html>

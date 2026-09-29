@@ -76,8 +76,8 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
 <body>
 <main class="wrap">
   <h1>Tải file lên Google Drive</h1>
-  <p class="sub">Video, tài liệu, ảnh, file nén… đều được. File đi thẳng vào thư mục
-    <b>elevaTO Uploads</b> trên Drive của bạn, xong bot Telegram nhắn link xem và link tải về.</p>
+  <p class="sub">Video, tài liệu, ảnh, file nén… đều được. File lên thư mục <b>elevaTO Uploads</b>
+    trên Drive, rồi bot Telegram gửi file vào chat và xoá bản trên Drive — hoặc chỉ nhắn link, tuỳ bạn chọn bên dưới.</p>
 
   <section class="card">
     <div class="row">
@@ -94,6 +94,9 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
       <ul class="list" id="list"></ul>
     </div>
     <div class="row">
+      <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="tele" checked>
+        <span>Gửi file vào chat Telegram rồi xoá khỏi Drive (file trên 45MB được cắt thành
+          nhiều phần, ghép lại bằng <a href="ghep.html" target="_blank" rel="noopener" style="color:var(--emerald-lt)">trang ghép file</a>)</span></label>
       <label class="chk"><input type="checkbox" id="share" checked>
         <span>Ai có link đều xem và tải được (cần bật để tải về ở máy khác mà không phải đăng nhập)</span></label>
     </div>
@@ -105,8 +108,7 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
       <div class="meta"><span id="pSpeed"></span><span id="pEta"></span></div>
     </div>
     <div class="msg" id="msg"></div>
-    <p class="note" id="note" hidden>Mở link tải về ở máy khác — file lớn thì Drive báo
-      "không quét được virus", bấm "Vẫn tải xuống". Bot Telegram cũng đã nhận các link này.</p>
+    <p class="note" id="note" hidden></p>
   </section>
 </main>
 
@@ -124,6 +126,8 @@ var CHUNK = 4 * 1024 * 1024;
 var MAX_BYTES = 2 * 1024 * 1024 * 1024;
 var RETRIES = 5;
 var SAVE_KEY = 'elevato_upload_sessions';   // { chữ ký file: URL phiên } — để tải tiếp
+var TELE_KEY = 'elevato_upload_tele';       // nhớ lựa chọn "gửi vào Telegram"
+var TG_PART = 45 * 1024 * 1024;             // cỡ mỗi phần bot gửi — khớp TG_PART trong Code.gs
 
 var $ = function (id) { return document.getElementById(id); };
 var queue = [];          // [{ file, sig, status: 'wait'|'up'|'done'|'err', note, result }]
@@ -288,8 +292,9 @@ function progress(q, done, text) {
 }
 
 // ─── Tải một file ───
-async function findOffset(q, key, session, share) {
-  var r = await call('upload_status', { key: key, session: session, total: q.file.size, share: share });
+async function findOffset(q, key, session, opt) {
+  var r = await call('upload_status', { key: key, session: session, total: q.file.size,
+                                         share: opt.share, tele: opt.tele });
   if (r.expired) {
     saveSession(q.sig);
     var e = new Error('Phiên tải lên đã hết hạn — bấm Tải lên để bắt đầu lại');
@@ -299,29 +304,29 @@ async function findOffset(q, key, session, share) {
   return r;
 }
 
-async function sendChunk(q, key, session, offset, share) {
+async function sendChunk(q, key, session, offset, opt) {
   var b64 = await readB64(q.file.slice(offset, Math.min(offset + CHUNK, q.file.size)));
   for (var attempt = 1; ; attempt++) {
     try {
       return await call('upload_chunk', { key: key, session: session, start: offset,
-                                          total: q.file.size, data: b64, share: share });
+                                          total: q.file.size, data: b64, share: opt.share, tele: opt.tele });
     } catch (e) {
       if (isFatal(e) || attempt >= RETRIES) throw e;
       progress(q, offset, 'Mạng chập chờn, thử lại lần ' + attempt + '…');
       await sleep(2000 * Math.pow(2, attempt - 1));
       // Có khi mảnh đã tới Drive mà câu trả lời lạc đường — hỏi lại rồi gửi đúng chỗ.
       try {
-        var r = await findOffset(q, key, session, share);
+        var r = await findOffset(q, key, session, opt);
         if (r.done || r.next !== offset) return r;
       } catch (e2) { if (isFatal(e2)) throw e2; }
     }
   }
 }
 
-async function uploadOne(q, key, share) {
+async function uploadOne(q, key, opt) {
   var session = savedSession(q.sig), r = { next: 0 };
   if (session) {
-    try { r = await findOffset(q, key, session, share); }
+    try { r = await findOffset(q, key, session, opt); }
     catch (e) {
       // Phiên cũ hỏng / hết hạn thì mở phiên mới; lỗi khác (sai key, mất mạng) thì báo.
       if (e.code !== 'session' && e.code !== 'expired') throw e;
@@ -336,7 +341,7 @@ async function uploadOne(q, key, share) {
   t0 = Date.now(); sent0 = r.next || 0;
   while (!r.done) {
     progress(q, r.next);
-    r = await sendChunk(q, key, session, r.next, share);
+    r = await sendChunk(q, key, session, r.next, opt);
   }
   progress(q, q.file.size, 'Xong');
   saveSession(q.sig);
@@ -345,9 +350,11 @@ async function uploadOne(q, key, share) {
 
 // ─── Tải cả hàng đợi, lần lượt từng file ───
 async function uploadAll() {
-  var key = $('key').value.trim(), share = $('share').checked;
+  var key = $('key').value.trim();
+  var opt = { share: $('share').checked, tele: $('tele').checked };
   busy = true; show(); $('prog').hidden = false;
   store(CFG_KEY, { api: API, key: key });
+  store(TELE_KEY, opt.tele);
   render();
 
   var list = pending(), ok = 0;
@@ -355,9 +362,12 @@ async function uploadAll() {
     var q = list[i];
     setItem(q, 'up', 'Đang tải…');
     try {
-      q.result = await uploadOne(q, key, share);
+      q.result = await uploadOne(q, key, opt);
       ok++;
-      setItem(q, 'done', '✓ Đã lên Drive' + (q.result.shared ? '' : ' · chưa bật chia sẻ theo link'));
+      setItem(q, 'done', q.result.tele
+        ? '✓ Đã lên Drive · bot đang chuyển vào Telegram' +
+          (q.file.size > TG_PART ? ' (' + Math.ceil(q.file.size / TG_PART) + ' phần)' : '') + ', xong sẽ xoá khỏi Drive'
+        : '✓ Đã lên Drive' + (q.result.shared ? '' : ' · chưa bật chia sẻ theo link'));
     } catch (e) {
       setItem(q, 'err', errText(e));
       // Sai key hay mất mạng hẳn thì file sau cũng hỏng y vậy — dừng, để người dùng bấm lại.
@@ -370,7 +380,13 @@ async function uploadAll() {
     $('prog').hidden = true;
     show('ok', 'Xong ' + ok + ' file. Chọn thêm file nếu cần tải tiếp.');
   }
-  $('note').hidden = !queue.some(function (q) { return q.status === 'done'; });
+  var xong = queue.filter(function (q) { return q.status === 'done'; });
+  var tele = xong.some(function (q) { return q.result.tele; }), drive = xong.some(function (q) { return !q.result.tele; });
+  $('note').textContent = (tele ? 'Bot gửi file vào Telegram trong vài phút (lịch chạy mỗi phút). Trong lúc chờ, ' +
+                                  'link Drive vẫn dùng được; gửi xong bot bỏ file khỏi Drive và link hết hạn. ' : '') +
+    (drive ? 'Mở link tải về ở máy khác — file lớn thì Drive báo "không quét được virus", bấm "Vẫn tải xuống". ' +
+             'Bot Telegram cũng đã nhận các link này.' : '');
+  $('note').hidden = !xong.length;
   render();
 }
 
@@ -407,6 +423,8 @@ window.addEventListener('beforeunload', function (e) { if (busy) { e.preventDefa
   if (location.hash) try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
   API = API_RE.test(cfg.api || '') ? cfg.api : '';
   $('key').value = cfg.key || '';
+  var tele = load(TELE_KEY);
+  if (tele === false) $('tele').checked = false;
   if (!API) show('warn', 'Trang chưa biết máy chủ tải lên. Mở trang bằng link bot Telegram đã gửi ' +
                          '(chạy hàm caiDat trong Apps Script để bot gửi lại).');
   refresh();
