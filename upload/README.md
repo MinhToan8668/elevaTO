@@ -7,15 +7,26 @@ Công cụ **riêng**, tách hẳn khỏi landing page modeling:
   hay bot quản trị. Nó chỉ dùng token bot để **nhắn** link cho bạn.
 
 Mở trang → chọn một hoặc nhiều file (video, tài liệu, ảnh, file nén… mọi loại) →
-**Tải lên**. Các file lần lượt vào thư mục **elevaTO Uploads** trên
-Google Drive, xong mỗi file bot Telegram nhắn link xem và link tải về. Chạy được trên máy
-không vào được Telegram, vì trang chỉ nói chuyện với Google.
+**Tải lên**. Các file lần lượt vào thư mục **elevaTO Uploads** trên Google Drive.
+Trang chạy được trên máy không vào được Telegram, vì nó chỉ nói chuyện với Google.
+
+Sau đó, tuỳ ô **"Gửi file vào chat Telegram rồi xoá khỏi Drive"** trên trang:
+
+- **Bật** (mặc định): trong vòng một phút bot gửi file vào chat Telegram. File trên
+  45MB được cắt thành các phần `.001`, `.002`… (bot chỉ gửi được file tối đa 50MB).
+  Gửi đủ thì bản trên Drive vào Thùng rác (Drive tự xoá hẳn sau 30 ngày).
+- **Tắt**: file ở lại Drive, bot chỉ nhắn link xem và link tải về.
+
+Ghép các phần: tải đủ về máy, mở `ghep.html`
+(`https://minhtoan8668.github.io/elevaTO/upload/ghep.html`) → chọn cả bộ → **Ghép và tải về**.
+Trên Mac cũng được bằng Terminal: `cat 'ten-file.mp4'.0* > 'ten-file.mp4'`.
 
 | File | Là gì |
 |---|---|
 | `index.html` | Trang tải lên, GitHub Pages phục vụ ở `https://minhtoan8668.github.io/elevaTO/upload/` |
+| `ghep.html` | Trang ghép các phần `.001`, `.002`… thành file gốc, chạy ngay trên máy |
 | `backend/Code.gs` | Code dán vào dự án Apps Script riêng |
-| `backend/appsscript.json` | Quyền của dự án đó: `drive.file` + gọi ra ngoài |
+| `backend/appsscript.json` | Quyền của dự án đó: `drive.file`, gọi ra ngoài, đặt lịch chạy |
 
 ## Cài đặt — 5 bước
 
@@ -29,6 +40,8 @@ không vào được Telegram, vì trang chỉ nói chuyện với Google.
    `TG_CHAT` (chat id của bạn), `WEBAPP_URL` (URL vừa chép) → 💾.
 5. Chọn hàm `caiDat` → **Run** → cho phép quyền Google Drive. Bot nhắn cho bạn
    link trang **kèm sẵn key** — mở link đó một lần trên máy cần tải, trang tự nhớ.
+   `caiDat` cũng đặt lịch `chuyenTelegram` chạy mỗi phút để chuyển file vào chat
+   (xem ở **⏰ Trình kích hoạt**). Chạy lại bao nhiêu lần cũng chỉ còn một lịch.
 
    Báo `403 … Google Drive API has not been used in project …`: Drive API chưa
    bật. Kiểm tra cột **Dịch vụ** bên trái đã có **Drive** chưa — chưa thì bấm
@@ -41,8 +54,12 @@ mới**. Sửa bản cũ, đừng tạo bản mới — tạo mới là đổi U
 
 ## Ghi chú
 
-- Vì sao không gửi thẳng file vào bot: bot Telegram chỉ gửi được file **tối đa
-  50MB**. File lớn nằm trên Drive, bot chỉ chuyển link.
+- Vì sao file phải lên Drive trước: trình duyệt ở Việt Nam không gọi được Telegram,
+  máy chủ Google thì gọi được. Bot chỉ gửi được file **tối đa 50MB** nên file lớn
+  bị cắt thành phần 45MB.
+- Chuyển vào Telegram chạy nền: mỗi lượt ~4 phút, nhớ chỗ dừng, lượt sau làm tiếp —
+  file 2GB cũng không chạm giới hạn 6 phút. Telegram lỗi 5 lần liên tiếp thì bot
+  bỏ, **giữ file trên Drive** và nhắn link.
 - Trang cắt file thành mảnh 4MB. Rớt mạng thì tự thử lại; đóng tab giữa chừng thì
   mở lại trang, chọn **đúng file đó** là tải tiếp từ chỗ dừng. Tối đa 2GB mỗi file.
 - Key nằm sau dấu `#` trong link — phần đó trình duyệt không gửi lên máy chủ nào.
