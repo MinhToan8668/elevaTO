@@ -1,5 +1,5 @@
 /**
- * elevaTO Upload — tải video lớn lên Google Drive, bot Telegram nhắn link
+ * elevaTO Upload — tải file lớn (video, tài liệu, mọi loại) lên Google Drive, bot Telegram nhắn link
  * ============================================================
  * Dự án Apps Script RIÊNG, tách hẳn khỏi backend landing page (backend/Code.gs).
  * Không đọc/ghi Sheet đăng ký, không nhận lệnh bot — chỉ dùng token để NHẮN
@@ -10,7 +10,7 @@
  * gọi chỉ mang một mảnh nên không chạm giới hạn 50MB / lần của Apps Script,
  * và rớt mạng giữa chừng thì hỏi Drive đã nhận tới đâu rồi gửi tiếp.
  *
- * Vì sao video lên Drive chứ không đi thẳng vào bot: bot Telegram chỉ gửi
+ * Vì sao file lên Drive chứ không đi thẳng vào bot: bot Telegram chỉ gửi
  * được file tối đa 50MB. Và ở Việt Nam trình duyệt không gọi được Telegram,
  * nhưng máy chủ Google thì gọi được — nên chính script này nhắn link.
  *
@@ -94,7 +94,7 @@ function uploadBatDau(key, info) {
   if (!(size > 0) || Math.floor(size) !== size) throw new Error('PHIEN: File rỗng hoặc dung lượng không hợp lệ');
   if (size > UP_MAX_BYTES) throw new Error('PHIEN: File lớn quá ' + Math.round(UP_MAX_BYTES / 1048576) + 'MB');
 
-  var ten  = String(info.name || '').replace(/[\\\/\u0000-\u001f]/g, ' ').trim().slice(0, 200) || 'video';
+  var ten  = String(info.name || '').replace(/[\\\/\u0000-\u001f]/g, ' ').trim().slice(0, 200) || 'file';
   var mime = /^[\w.+-]+\/[\w.+-]+$/.test(String(info.type || '')) ? info.type : 'application/octet-stream';
 
   var res = UrlFetchApp.fetch(DRIVE_UPLOAD + '?uploadType=resumable', {
@@ -191,7 +191,7 @@ function hoanTat(fileId, share) {
   if (!cache.get('upxong_' + fileId)) {
     cache.put('upxong_' + fileId, '1', 21600);
     guiTelegram([
-      '📥 Video mới đã lên Google Drive',
+      '📥 File mới đã lên Google Drive',
       '',
       '🎞 ' + kq.name + ' (' + (kq.size / 1048576).toFixed(1) + 'MB)',
       '👁 Xem: ' + kq.viewUrl,
@@ -310,7 +310,7 @@ function caiDat() {
 
   var folder = thuMucUpload();
   var link = linkTrang();
-  var tg = guiTelegram('📤 Trang tải video lên Google Drive\n\n' + link +
+  var tg = guiTelegram('📤 Trang tải file lên Google Drive\n\n' + link +
     '\n\nLink đã kèm sẵn key — ĐỪNG gửi cho người khác.\nMở một lần là trang tự nhớ key.');
 
   Logger.log('✔ Thư mục Drive: https://drive.google.com/drive/folders/' + folder);
@@ -323,5 +323,5 @@ function caiDat() {
 function doiKey() {
   props().setProperty(PROP_KEY, Utilities.getUuid());
   Logger.log('✔ Key mới. Link trang mới:\n' + linkTrang());
-  guiTelegram('🔑 Đã đổi key trang tải video. Link mới:\n\n' + linkTrang());
+  guiTelegram('🔑 Đã đổi key trang tải file. Link mới:\n\n' + linkTrang());
 }

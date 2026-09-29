@@ -1,4 +1,4 @@
-# elevaTO Upload — tải video lớn lên Google Drive
+# elevaTO Upload — tải file lớn lên Google Drive
 
 Công cụ **riêng**, tách hẳn khỏi landing page modeling:
 
@@ -6,8 +6,9 @@ Công cụ **riêng**, tách hẳn khỏi landing page modeling:
 - Chạy bằng **dự án Apps Script riêng**, không đụng `backend/Code.gs`, Sheet đăng ký
   hay bot quản trị. Nó chỉ dùng token bot để **nhắn** link cho bạn.
 
-Mở trang → chọn video → **Tải lên**. Video vào thư mục **elevaTO Uploads** trên
-Google Drive, xong bot Telegram nhắn link xem và link tải về. Chạy được trên máy
+Mở trang → chọn một hoặc nhiều file (video, tài liệu, ảnh, file nén… mọi loại) →
+**Tải lên**. Các file lần lượt vào thư mục **elevaTO Uploads** trên
+Google Drive, xong mỗi file bot Telegram nhắn link xem và link tải về. Chạy được trên máy
 không vào được Telegram, vì trang chỉ nói chuyện với Google.
 
 | File | Là gì |
@@ -40,8 +41,8 @@ mới**. Sửa bản cũ, đừng tạo bản mới — tạo mới là đổi U
 
 ## Ghi chú
 
-- Vì sao không gửi thẳng video vào bot: bot Telegram chỉ gửi được file **tối đa
-  50MB**. Video lớn nằm trên Drive, bot chỉ chuyển link.
+- Vì sao không gửi thẳng file vào bot: bot Telegram chỉ gửi được file **tối đa
+  50MB**. File lớn nằm trên Drive, bot chỉ chuyển link.
 - Trang cắt file thành mảnh 4MB. Rớt mạng thì tự thử lại; đóng tab giữa chừng thì
   mở lại trang, chọn **đúng file đó** là tải tiếp từ chỗ dừng. Tối đa 2GB mỗi file.
 - Key nằm sau dấu `#` trong link — phần đó trình duyệt không gửi lên máy chủ nào.
