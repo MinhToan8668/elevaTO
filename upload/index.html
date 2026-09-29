@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<title>elevaTO — Tải video lên</title>
+<style>
+:root{
+  --black:#080808; --card:#101010; --card2:#161616;
+  --border2:#2b2b2b; --border3:#3a3a3a;
+  --emerald:#00c896; --emerald-lt:#3ce0b4; --emerald-soft:rgba(0,200,150,.08);
+  --gold:#d4a843; --red:#e05252;
+  --white:#f4f4f0; --text:#c9c9c4; --muted:#818179;
+  --r:14px; --r-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--black);color:var(--text);font:15px/1.55 system-ui,-apple-system,'Segoe UI',sans-serif;
+  min-height:100vh;display:flex;justify-content:center;padding:32px 16px}
+.wrap{width:100%;max-width:560px}
+h1{color:var(--white);font-size:22px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14px;margin:6px 0 24px}
+.card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:22px}
+label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bottom:8px}
+.inp{width:100%;background:#0a0a0a;border:1px solid var(--border2);border-radius:var(--r-sm);
+  color:var(--white);font:inherit;padding:11px 13px;outline:none}
+.inp:focus{border-color:var(--emerald)}
+.row{margin-bottom:18px}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;
+  border:1.5px dashed var(--border3);border-radius:var(--r);padding:30px 16px;cursor:pointer;
+  transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--emerald);background:var(--emerald-soft)}
+.drop b{color:var(--white);font-weight:600;word-break:break-all}
+.drop small{color:var(--muted)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:400;color:var(--text);cursor:pointer}
+.chk input{margin-top:3px;accent-color:var(--emerald)}
+.btn{width:100%;border:0;border-radius:var(--r-sm);background:var(--emerald);color:#04110c;
+  font:inherit;font-weight:700;padding:13px;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-ghost{background:transparent;border:1px solid var(--border3);color:var(--white);font-weight:600}
+.bar{height:8px;background:var(--card2);border-radius:99px;overflow:hidden;margin:4px 0 8px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--emerald),var(--emerald-lt));
+  transition:width .3s}
+.meta{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted)}
+.msg{margin-top:14px;font-size:14px;padding:11px 13px;border-radius:var(--r-sm);display:none}
+.msg.err{display:block;color:#ffb4b4;background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.35)}
+.msg.warn{display:block;color:var(--gold);background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.3)}
+.done h2{color:var(--emerald);font-size:17px;margin-bottom:12px}
+.link{display:flex;gap:8px;margin-bottom:10px}
+.link .inp{font-size:13px}
+.link button{flex:none;width:auto;padding:0 14px}
+.note{color:var(--muted);font-size:13px;margin-top:14px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Tải video lên Google Drive</h1>
+  <p class="sub">Video đi thẳng vào thư mục <b>elevaTO Uploads</b> trên Drive của bạn.
+    Xong bot Telegram sẽ nhắn link xem và link tải về.</p>
+
+  <section class="card" id="form">
+    <div class="row">
+      <label for="key">Key tải lên</label>
+      <input class="inp" id="key" type="password" autocomplete="off" placeholder="Mở trang bằng link bot gửi là tự điền">
+    </div>
+    <div class="row">
+      <label>Video</label>
+      <div class="drop" id="drop" role="button" tabindex="0">
+        <b id="fileName">Bấm để chọn video, hoặc kéo thả vào đây</b>
+        <small id="fileInfo">Tối đa 2GB mỗi file</small>
+      </div>
+      <input type="file" id="file" accept="video/*" hidden>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="share" checked>
+        <span>Ai có link đều xem và tải được (cần bật để tải về ở máy khác mà không phải đăng nhập)</span></label>
+    </div>
+    <button class="btn" id="go" disabled>Tải lên</button>
+
+    <div id="prog" hidden style="margin-top:20px">
+      <div class="meta"><span id="pText">Đang chuẩn bị…</span><span id="pPct">0%</span></div>
+      <div class="bar"><i id="pBar"></i></div>
+      <div class="meta"><span id="pSpeed"></span><span id="pEta"></span></div>
+    </div>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <section class="card done" id="done" hidden>
+    <h2>✓ Đã tải lên xong</h2>
+    <p id="dName" style="color:var(--white);margin-bottom:14px;word-break:break-all"></p>
+    <label>Link xem</label>
+    <div class="link"><input class="inp" id="dView" readonly><button class="btn btn-ghost" data-copy="dView">Chép</button></div>
+    <label>Link tải về</label>
+    <div class="link"><input class="inp" id="dDown" readonly><button class="btn btn-ghost" data-copy="dDown">Chép</button></div>
+    <p class="note" id="dNote"></p>
+    <button class="btn btn-ghost" id="again" style="margin-top:16px">Tải video khác</button>
+  </section>
+</main>
+
+<script>
+// URL /exec của dự án Apps Script upload (riêng, không phải backend landing page).
+// Không ghi cứng: lấy từ link bot gửi (#api=…&key=…) rồi nhớ trong trình duyệt.
+var API = '';
+var CFG_KEY = 'elevato_upload_cfg';
+var API_RE = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/;
+
+// Mảnh 4MB: phải là bội số của 256KB theo luật resumable upload của Drive.
+// Đổi sang base64 thành ~5.3MB mỗi lần gọi /exec — xa giới hạn
+// 50MB, và rớt mạng thì chỉ phải gửi lại một mảnh nhỏ.
+var CHUNK = 4 * 1024 * 1024;
+var MAX_BYTES = 2 * 1024 * 1024 * 1024;
+var RETRIES = 5;
+var SAVE_KEY = 'elevato_upload';
+
+var $ = function (id) { return document.getElementById(id); };
+var file = null, busy = false;
+
+function store(k, v) {
+  try { v === undefined ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+}
+function load(k) {
+  try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; }
+}
+
+// text/plain để trình duyệt không gửi preflight CORS — Apps Script không trả lời được preflight.
+function call(action, data) {
+  data.action = action;
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                      body: JSON.stringify(data) })
+    .then(function (r) {
+      if (!r.ok) throw new Error('Máy chủ trả lỗi ' + r.status);
+      return r.json().catch(function () { throw new Error('Máy chủ trả về dữ liệu lạ — bản triển khai đã cập nhật chưa?'); });
+    })
+    .then(function (j) {
+      if (j && j.ok) return j.data;
+      var e = new Error((j && j.error) || 'Lỗi không rõ');
+      e.code = (j && j.code) || 'retry';
+      throw e;
+    });
+}
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function mb(n) { return (n / 1048576).toFixed(1) + 'MB'; }
+function errText(e) { return String((e && e.message) || e || 'Lỗi không rõ'); }
+function isFatal(e) { return !!e && (e.code === 'key' || e.code === 'session' || e.code === 'expired'); }
+
+function readB64(blob) {
+  return new Promise(function (ok, fail) {
+    var fr = new FileReader();
+    fr.onload = function () { ok(String(fr.result).split(',')[1] || ''); };
+    fr.onerror = function () { fail(fr.error || new Error('Không đọc được file')); };
+    fr.readAsDataURL(blob);
+  });
+}
+
+function show(kind, text) {
+  var m = $('msg');
+  m.className = 'msg' + (kind ? ' ' + kind : '');
+  m.textContent = text || '';
+}
+function refresh() { $('go').disabled = busy || !API || !file || !$('key').value.trim(); }
+
+function pickFile(f) {
+  if (!f || busy) return;
+  show();
+  if (f.size > MAX_BYTES) { show('err', 'File ' + mb(f.size) + ' lớn quá giới hạn 2GB.'); return; }
+  file = f;
+  $('fileName').textContent = f.name;
+  $('fileInfo').textContent = mb(f.size) + (resumeInfo(f) ? ' · sẽ tải tiếp phần còn dở' : '');
+  refresh();
+}
+
+// Nhớ phiên đang dở để lỡ đóng tab / rớt mạng thì chọn lại đúng file là tải tiếp.
+function fileSig(f) { return f.name + '|' + f.size + '|' + f.lastModified; }
+function resumeInfo(f) { var s = load(SAVE_KEY); return s && s.sig === fileSig(f) ? s : null; }
+
+var t0, sent0;
+function progress(done, total, text) {
+  var pct = total ? Math.floor(done / total * 100) : 0;
+  $('pBar').style.width = pct + '%';
+  $('pPct').textContent = pct + '%';
+  $('pText').textContent = text || (mb(done) + ' / ' + mb(total));
+  var secs = (Date.now() - t0) / 1000, rate = (done - sent0) / Math.max(secs, 1);
+  if (done > sent0 && secs > 2) {
+    $('pSpeed').textContent = mb(rate) + '/s';
+    var left = (total - done) / rate;
+    $('pEta').textContent = 'còn ~' + (left > 90 ? Math.ceil(left / 60) + ' phút' : Math.ceil(left) + ' giây');
+  }
+}
+
+async function findOffset(key, session, share) {
+  var r = await call('upload_status', { key: key, session: session, total: file.size, share: share });
+  if (r.expired) {
+    store(SAVE_KEY);
+    var e = new Error('Phiên tải lên đã hết hạn — bấm Tải lên để bắt đầu lại');
+    e.code = 'expired';
+    throw e;
+  }
+  return r;
+}
+
+async function sendChunk(key, session, offset, share) {
+  var b64 = await readB64(file.slice(offset, Math.min(offset + CHUNK, file.size)));
+  for (var attempt = 1; ; attempt++) {
+    try {
+      return await call('upload_chunk', { key: key, session: session, start: offset,
+                                          total: file.size, data: b64, share: share });
+    } catch (e) {
+      if (isFatal(e) || attempt >= RETRIES) throw e;
+      $('pText').textContent = 'Mạng chập chờn, thử lại lần ' + attempt + '…';
+      await sleep(2000 * Math.pow(2, attempt - 1));
+      // Có khi mảnh đã tới Drive mà câu trả lời lạc đường — hỏi lại rồi gửi đúng chỗ.
+      try {
+        var r = await findOffset(key, session, share);
+        if (r.done || r.next !== offset) return r;
+      } catch (e2) { if (isFatal(e2)) throw e2; }
+    }
+  }
+}
+
+async function upload() {
+  var key = $('key').value.trim(), share = $('share').checked;
+  busy = true; refresh(); show();
+  $('prog').hidden = false;
+  store(CFG_KEY, { api: API, key: key });
+
+  try {
+    var saved = resumeInfo(file), session, r = { next: 0 };
+    if (saved) {
+      try { session = saved.session; r = await findOffset(key, session, share); }
+      catch (e) {
+        // Phiên cũ hỏng / hết hạn thì mở phiên mới; lỗi khác (sai key, mất mạng) thì báo.
+        if (e.code !== 'session' && e.code !== 'expired') throw e;
+        session = null; r = { next: 0 }; store(SAVE_KEY);
+      }
+    }
+    if (!session) {
+      progress(0, file.size, 'Đang mở phiên tải lên…');
+      session = await call('upload_start', { key: key, info: { name: file.name, size: file.size, type: file.type } });
+      store(SAVE_KEY, { sig: fileSig(file), session: session });
+    }
+
+    t0 = Date.now(); sent0 = r.next || 0;
+    while (!r.done) {
+      progress(r.next, file.size);
+      r = await sendChunk(key, session, r.next, share);
+    }
+    progress(file.size, file.size, 'Xong');
+    store(SAVE_KEY);
+    finish(r);
+  } catch (e) {
+    show('err', errText(e) + (isFatal(e) ? '' : '. Bấm Tải lên lần nữa để tải tiếp từ chỗ dừng.'));
+  } finally {
+    busy = false; refresh();
+  }
+}
+
+function finish(r) {
+  $('form').hidden = true;
+  $('done').hidden = false;
+  $('dName').textContent = r.name + ' · ' + mb(r.size);
+  $('dView').value = r.viewUrl;
+  $('dDown').value = r.downloadUrl;
+  $('dNote').textContent = (r.shared
+    ? 'Mở link tải về ở máy khác — Drive sẽ báo "không quét được virus vì file lớn", bấm "Vẫn tải xuống". '
+    : 'File chưa bật chia sẻ: máy khác phải đăng nhập đúng tài khoản Google này mới mở được. ') +
+    'Bot Telegram cũng đã nhận các link này.';
+}
+
+$('drop').onclick = function () { if (!busy) $('file').click(); };
+$('drop').onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('drop').click(); } };
+$('file').onchange = function () { pickFile(this.files[0]); };
+['dragenter', 'dragover'].forEach(function (t) {
+  $('drop').addEventListener(t, function (e) { e.preventDefault(); $('drop').classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(function (t) {
+  $('drop').addEventListener(t, function (e) { e.preventDefault(); $('drop').classList.remove('over'); });
+});
+$('drop').addEventListener('drop', function (e) { pickFile(e.dataTransfer.files[0]); });
+$('key').oninput = refresh;
+$('go').onclick = upload;
+$('again').onclick = function () {
+  file = null; $('file').value = '';
+  $('fileName').textContent = 'Bấm để chọn video, hoặc kéo thả vào đây';
+  $('fileInfo').textContent = 'Tối đa 2GB mỗi file';
+  $('prog').hidden = true; $('pBar').style.width = '0';
+  $('pSpeed').textContent = $('pEta').textContent = '';
+  $('done').hidden = true; $('form').hidden = false;
+  refresh();
+};
+[].forEach.call(document.querySelectorAll('[data-copy]'), function (b) {
+  b.onclick = function () {
+    var inp = $(b.getAttribute('data-copy'));
+    inp.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(inp.value) : Promise.reject())
+      .catch(function () { document.execCommand('copy'); });
+    b.textContent = 'Đã chép';
+    setTimeout(function () { b.textContent = 'Chép'; }, 1500);
+  };
+});
+window.addEventListener('beforeunload', function (e) { if (busy) { e.preventDefault(); e.returnValue = ''; } });
+
+// API + key: lấy từ link (#api=…&key=… — hàm caiDat nhắn vào Telegram) hoặc lần trước.
+// Key đã nhớ chỉ đi với đúng API của nó: link lạ trỏ API khác thì không mang key cũ theo.
+// Đọc xong thì xoá khỏi thanh địa chỉ để không lộ khi chia sẻ màn hình.
+(function () {
+  var cfg = load(CFG_KEY) || {};
+  var h = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
+    var i = kv.indexOf('=');
+    if (i > 0) try { h[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) {}
+  });
+  if (h.api && API_RE.test(h.api)) {
+    if (h.api !== cfg.api) cfg = { api: h.api, key: '' };
+    if (h.key) cfg.key = h.key;
+    store(CFG_KEY, cfg);
+  }
+  if (location.hash) try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  API = API_RE.test(cfg.api || '') ? cfg.api : '';
+  $('key').value = cfg.key || '';
+  if (!API) show('warn', 'Trang chưa biết máy chủ tải lên. Mở trang bằng link bot Telegram đã gửi ' +
+                         '(chạy hàm caiDat trong Apps Script để bot gửi lại).');
+  refresh();
+})();
+</script>
+</body>
+</html>
