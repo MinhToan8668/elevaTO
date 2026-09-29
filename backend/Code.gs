@@ -341,7 +341,6 @@ function doPost(e) {
     }
 
     if (body.action === 'register') return json(handleRegister(body));
-    if (String(body.action).indexOf('upload_') === 0) return json(handleUpload(body));   // Upload.gs
 
     return json({ ok: false, error: 'unknown action' });
   } catch (err) {
@@ -575,8 +574,6 @@ function handleTelegram(u) {
 
     case 'video':     return cmdVideo(chatId, args, false);
     case 'xoavideo':  return cmdVideo(chatId, '', true);
-    case 'upload':
-    case 'taivideo':  return cmdUpload(chatId);             // Upload.gs
     case 'slide':
     case 'model':     return cmdToggle(chatId, args, cmd);
 
@@ -740,7 +737,6 @@ function cmdMenu(chatId) {
     '*🎬 Nội dung trên web*',
     '/video `<link YouTube hoặc Drive>` — bật video học thử',
     '/xoavideo — ẩn video',
-    '/upload — link trang tải video (file lớn) lên Google Drive',
     '/slide `on` hoặc `off` — mục slide bài giảng',
     '/model `on` hoặc `off` — mục model bàn giao',
     '',
@@ -1099,7 +1095,6 @@ function setup() {
     { command: 'dong',        description: '🔴 Đóng đăng ký' },
     { command: 'video',       description: '🎬 Đổi video học thử' },
     { command: 'xoavideo',    description: '🎬 Ẩn video học thử' },
-    { command: 'upload',      description: '📤 Link trang tải video lên Drive' },
     { command: 'slide',       description: '🖼 Hiện/ẩn mục slide' },
     { command: 'model',       description: '📈 Hiện/ẩn mục model' },
     { command: 'thongbao',    description: '📢 Bật banner — /thongbao Khai giảng 15/09' },

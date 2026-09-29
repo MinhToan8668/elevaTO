@@ -162,49 +162,6 @@ thì gần như chắc chắn là token chưa lưu hoặc webhook chưa nối.
 
 ---
 
-## Trang tải video lên (file lớn)
-
-Mở `https://minhtoan8668.github.io/elevaTO/upload.html` (hoặc nhắn bot `/upload`
-để lấy link kèm sẵn key) → chọn video → **Tải lên**. Video vào thư mục
-**elevaTO Uploads** trên Google Drive, xong bot nhắn link xem và link tải về.
-Chạy được trên máy không vào được Telegram, vì trang chỉ nói chuyện với Google.
-
-Vì sao không gửi thẳng video vào bot: bot Telegram chỉ gửi được file **tối đa
-50MB**. Video lớn phải nằm trên Drive, bot chỉ chuyển link.
-
-- Trang cắt file thành mảnh 4MB, POST lần lượt về `/exec`. Rớt mạng thì tự thử
-  lại; đóng tab giữa chừng thì mở lại trang, chọn **đúng file đó** là tải tiếp.
-- Trang chỉ cầm `ADMIN_KEY` (cùng key xem danh sách đăng ký). **Token bot không
-  bao giờ ra tới trình duyệt.** Sai key 20 lần thì khoá 10 phút.
-- Tối đa 2GB mỗi file (`UP_MAX_BYTES` trong `Upload.gs`).
-- `upload.html` cầm cùng URL `/exec` với `index.html` — đổi bản triển khai thì
-  sửa cả hai.
-
-**Đừng phục vụ trang bằng HtmlService.** Trang HtmlService nào cũng cho người mở
-nó gọi *bất kỳ* hàm nào trong script qua `google.script.run` — người lạ mở trang
-rồi gõ `google.script.run.allRegs()` là lấy được cả danh sách đăng ký. Trang tĩnh
-gọi `doPost` thì chỉ mở đúng ba action `upload_start` / `upload_chunk` /
-`upload_status`.
-
-### Cài lần đầu
-
-1. Trong trình soạn thảo Apps Script, bấm **+ → Tập lệnh**, đặt tên `Upload`,
-   dán `backend/Upload.gs`.
-2. Dán lại `backend/Code.gs` (thêm nhánh `upload_*` trong `doPost` và lệnh
-   `/upload`). Token và chat id đã nằm trong Script Properties nên không cần
-   điền lại ba dòng đầu file.
-3. **Cài đặt dự án → Hiện tệp kê khai "appsscript.json"**, dán lại
-   `backend/appsscript.json` (thêm quyền `drive.file` — chỉ đụng tới file do
-   chính script tạo ra, không đọc được file khác trong Drive).
-4. Chọn hàm `capQuyenUpload` → **Run** → cho phép quyền Google Drive. Hàm tạo
-   sẵn thư mục và in link trang.
-5. **Triển khai → Quản lý bản triển khai → bút chì → Phiên bản: Phiên bản mới →
-   Triển khai.** Sửa bản triển khai cũ, đừng tạo bản mới — tạo mới là đổi URL
-   `/exec` và web mất cấu hình.
-6. Gộp nhánh vào `main` để GitHub Pages phục vụ `upload.html`.
-
----
-
 ## Hosting — GitHub Pages
 
 Repo đã sẵn sàng phục vụ trực tiếp: `index.html` ở thư mục gốc, ảnh dùng đường
@@ -265,7 +222,6 @@ Bấm nút **Menu** xanh cạnh ô chat để xem toàn bộ lệnh kèm mô t�
 | `/xoathongbao` | Tắt banner |
 | `/video <link>` | Bật mục **Học thử** — nhận link YouTube hoặc Google Drive |
 | `/xoavideo` | Ẩn mục học thử |
-| `/upload` | Link trang tải video lớn lên Google Drive (kèm sẵn key) |
 | `/slide on` · `/slide off` | Hiện/ẩn mục slide bài giảng |
 | `/model on` · `/model off` | Hiện/ẩn mục model bàn giao |
 | `/ds` | Danh sách đăng ký (`/ds cho` = lọc chờ duyệt) |

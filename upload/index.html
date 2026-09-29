@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="../favicon.ico" sizes="any">
 <title>elevaTO — Tải video lên</title>
 <style>
 :root{
@@ -63,8 +63,8 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
 
   <section class="card" id="form">
     <div class="row">
-      <label for="key">Key quản trị</label>
-      <input class="inp" id="key" type="password" autocomplete="off" placeholder="Dán ADMIN_KEY vào đây">
+      <label for="key">Key tải lên</label>
+      <input class="inp" id="key" type="password" autocomplete="off" placeholder="Mở trang bằng link bot gửi là tự điền">
     </div>
     <div class="row">
       <label>Video</label>
@@ -101,8 +101,11 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
 </main>
 
 <script>
-// Cùng URL /exec với index.html — đổi bản triển khai thì đổi cả hai chỗ.
-var API = 'https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec';
+// URL /exec của dự án Apps Script upload (riêng, không phải backend landing page).
+// Không ghi cứng: lấy từ link bot gửi (#api=…&key=…) rồi nhớ trong trình duyệt.
+var API = '';
+var CFG_KEY = 'elevato_upload_cfg';
+var API_RE = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/;
 
 // Mảnh 4MB: phải là bội số của 256KB theo luật resumable upload của Drive.
 // Đổi sang base64 thành ~5.3MB mỗi lần gọi /exec — xa giới hạn
@@ -157,7 +160,7 @@ function show(kind, text) {
   m.className = 'msg' + (kind ? ' ' + kind : '');
   m.textContent = text || '';
 }
-function refresh() { $('go').disabled = busy || !file || !$('key').value.trim(); }
+function refresh() { $('go').disabled = busy || !API || !file || !$('key').value.trim(); }
 
 function pickFile(f) {
   if (!f || busy) return;
@@ -221,7 +224,7 @@ async function upload() {
   var key = $('key').value.trim(), share = $('share').checked;
   busy = true; refresh(); show();
   $('prog').hidden = false;
-  store('elevato_key', key);
+  store(CFG_KEY, { api: API, key: key });
 
   try {
     var saved = resumeInfo(file), session, r = { next: 0 };
@@ -299,12 +302,26 @@ $('again').onclick = function () {
 });
 window.addEventListener('beforeunload', function (e) { if (busy) { e.preventDefault(); e.returnValue = ''; } });
 
-// Key: lấy từ link (#key=… — bot /upload gửi kèm) hoặc lần nhập trước.
+// API + key: lấy từ link (#api=…&key=… — hàm caiDat nhắn vào Telegram) hoặc lần trước.
+// Key đã nhớ chỉ đi với đúng API của nó: link lạ trỏ API khác thì không mang key cũ theo.
 // Đọc xong thì xoá khỏi thanh địa chỉ để không lộ khi chia sẻ màn hình.
 (function () {
-  var m = location.hash.match(/[#&]key=([^&]+)/);
-  $('key').value = m ? decodeURIComponent(m[1]) : (load('elevato_key') || '');
-  if (m) try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  var cfg = load(CFG_KEY) || {};
+  var h = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
+    var i = kv.indexOf('=');
+    if (i > 0) try { h[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) {}
+  });
+  if (h.api && API_RE.test(h.api)) {
+    if (h.api !== cfg.api) cfg = { api: h.api, key: '' };
+    if (h.key) cfg.key = h.key;
+    store(CFG_KEY, cfg);
+  }
+  if (location.hash) try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  API = API_RE.test(cfg.api || '') ? cfg.api : '';
+  $('key').value = cfg.key || '';
+  if (!API) show('warn', 'Trang chưa biết máy chủ tải lên. Mở trang bằng link bot Telegram đã gửi ' +
+                         '(chạy hàm caiDat trong Apps Script để bot gửi lại).');
   refresh();
 })();
 </script>
