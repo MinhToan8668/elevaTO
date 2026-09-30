@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildDGW, DGW_ROWS } from '../js/targets/dgw.js';
+import { buildModel, MODEL_ROWS } from '../js/targets/model.js';
 import { computeTotals } from '../js/core/statements.js';
 
 const DNP = JSON.parse(readFileSync(new URL('./fixtures/dnp.json', import.meta.url)));
@@ -38,10 +38,10 @@ function sheet(out, year) {
   return x;
 }
 
-const out = buildDGW(ds);
+const out = buildModel(ds);
 
 test('mọi dòng nhập của model đều có định nghĩa, không trùng dòng', () => {
-  const rows = DGW_ROWS.map((d) => d.row);
+  const rows = MODEL_ROWS.map((d) => d.row);
   assert.equal(new Set(rows).size, rows.length);
   for (const r of [8, 9, 32, 54, 78, 89, 98, 109, 112, 123, 126, 132, 140, 150, 185, 191, 202, 208, 214, 216]) {
     assert.ok(rows.includes(r), 'thiếu dòng ' + r);
@@ -114,7 +114,7 @@ test('thuyết minh mảng: ghép theo sơ đồ người dùng chọn, mảng d
     { name: 'Nhựa', revenue: 2e12, gross: 3e11 },
     { name: 'Nước', revenue: 342859550467, gross: 1e11 },
   ] } };
-  const o = buildDGW(ds2, { segmentMap: { 'Dược phẩm': 0, 'Nhựa': 1, 'Nước': 1 } });
+  const o = buildModel(ds2, { segmentMap: { 'Dược phẩm': 0, 'Nhựa': 1, 'Nước': 1 } });
   const c = o.byYear[2026];
   assert.equal(c[132].v, 3e6); assert.equal(c[133].v, 2e6 + 342859.550467);
   assert.equal(c[134].v, 0); assert.equal(c[140].v, 6e5); assert.equal(c[132].src, 'tm');
@@ -131,7 +131,7 @@ test('thuyết minh TSCĐ theo nhóm được dùng khi có, và cảnh báo n�
     ],
     intangible: [{ cls: 'land', cost: v['BS:228'], accDep: v['BS:229'], additions: 0, depreciation: 0 }],
   } } };
-  const o = buildDGW(ds2);
+  const o = buildModel(ds2);
   assert.equal(o.byYear[2026][155].v, 100e3);
   assert.equal(o.byYear[2026][155].src, 'tm');
   // Thuê tài chính (225/226) không có trong thuyết minh TSCĐ hữu hình → cộng vào nhóm "khác" để vẫn khớp dòng 54/55

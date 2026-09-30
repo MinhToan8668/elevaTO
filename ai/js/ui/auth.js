@@ -2,6 +2,7 @@
 // Phiên (token) lưu trong trình duyệt; máy chủ chỉ giữ bản băm và cho sống 30 ngày.
 
 import { h, mount, $ } from './dom.js';
+import { ROLE_NAME } from './store.js';
 import { API } from '../config.js';
 import { callApi, createClient } from '../ai.js';
 
@@ -168,11 +169,11 @@ function renderGate(enter) {
       h('section', { class: 'hero' },
         h('span', { class: 'eyebrow' }, 'Công cụ AI cho học viên elevaTO'),
         h('h1', {}, 'Từ BCTC tới model forecast ', h('em', {}, 'trong vài phút')),
-        h('p', { class: 'hero-sub' }, 'Tải báo cáo tài chính (PDF, ảnh chụp hay Excel), AI đọc đúng mẫu Thông tư 99/2025 và điền thẳng vào model của bạn.'),
+        h('p', { class: 'hero-sub' }, 'Tải báo cáo tài chính (PDF, ảnh chụp hay Excel), xem và tick trang cần lấy — AI tự nhận bảng, đọc số và chuẩn hoá theo mẫu Thông tư 99/2025, kể cả BCTC mẫu cũ.'),
         h('ul', { class: 'feats' },
           feat('01', 'Đọc mọi dạng BCTC', 'PDF điện tử, bản scan, ảnh chụp, file Excel — kể cả báo cáo cũ theo TT200.'),
           feat('02', 'Số được kiểm tra chéo', 'AI chỉ chép số; máy tính tự cộng dồn, đối chiếu và tô đỏ chỗ lệch để bạn sửa.'),
-          feat('03', 'Điền thẳng vào model', 'Model elevaTO, Form nội bộ 2026 hoặc bảng chuẩn hoá — giữ nguyên công thức, biểu đồ.'))),
+          feat('03', 'Xuất đúng mẫu 2026', 'Tải Form chuẩn hóa 2026 (.xlsx); học viên elevaTO điền thẳng vào model forecast, giữ nguyên công thức và biểu đồ.'))),
       h('section', { class: 'auth-card', 'aria-label': 'Đăng nhập' },
         h('h2', {}, 'Chào mừng bạn'),
         h('p', { class: 'auth-sub' }, 'Đăng nhập hoặc tạo tài khoản miễn phí để bắt đầu.'),
@@ -203,7 +204,7 @@ function renderAccount(ctx) {
       h('div', { class: 'acct-pop' },
         h('b', {}, me.ten), h('small', {}, me.email),
         h('p', { class: 'acct-q' }, quotaText(me)),
-        me.vaitro === 'admin' ? h('span', { class: 'tag em' }, 'Quản trị') : null,
+        h('span', { class: `tag ${me.vaitro === 'free' ? '' : 'em'}` }, ROLE_NAME[me.vaitro] || ROLE_NAME.free),
         h('label', { class: 'chk acct-shared' }, h('input', { type: 'checkbox', id: 'sharedPc' }), h('span', {}, 'Máy dùng chung — xoá dữ liệu đang làm khi đăng xuất')),
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => ctx.logout('', { clearWork: $('#sharedPc')?.checked }) }, 'Đăng xuất')));
     mount(box, menu);

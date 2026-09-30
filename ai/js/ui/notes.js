@@ -3,7 +3,7 @@
 
 import { h, fmt } from './dom.js';
 import { periodLabel } from '../core/table.js';
-import { buildDGW, DGW_ROWS, SEGMENT_SLOTS } from '../targets/dgw.js';
+import { buildModel, MODEL_ROWS, SEGMENT_SLOTS } from '../targets/model.js';
 
 const M = 1e6;
 const FA_NAME = { buildings: 'Nhà cửa, vật kiến trúc', machinery: 'Máy móc, thiết bị', transport: 'Phương tiện vận tải', office: 'Thiết bị quản lý', other: 'Khác', land: 'Quyền sử dụng đất', software: 'Phần mềm / vô hình khác' };
@@ -79,12 +79,12 @@ export function renderModel(store) {
   const s = store.get();
   const { ds } = store.data();
   const { map } = effectiveSegmentMap(ds, s.segmentMap);
-  const built = buildDGW(ds, { segmentMap: map });
+  const built = buildModel(ds, { segmentMap: map });
   const years = Object.keys(built.byYear).map(Number).sort();
-  if (!years.length) return h('p', { class: 'msg warn' }, 'Model DGW cần số cả năm (BCTC năm). Chưa có kỳ 12 tháng nào.');
+  if (!years.length) return h('p', { class: 'msg warn' }, 'Model elevaTO cần số cả năm (BCTC năm). Chưa có kỳ 12 tháng nào.');
   let group = '';
   const rows = [];
-  for (const d of DGW_ROWS) {
+  for (const d of MODEL_ROWS) {
     if (!years.some((y) => built.byYear[y][d.row])) continue;
     if (d.group !== group) { group = d.group; rows.push(h('tr', { class: 'lv0' }, h('td', { colspan: String(years.length + 2) }, group))); }
     rows.push(h('tr', {}, h('td', { class: 'c' }, String(d.row)), h('td', { class: 'l' }, d.label),

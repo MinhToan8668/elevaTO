@@ -47,6 +47,7 @@ export function loadGas(path, opts = {}) {
   const calls = [];
   const logs = [];
   const sheets = fakeSheets();
+  const triggers = [];
   let now = opts.now || Date.parse('2026-09-30T03:00:00Z');
   const resp = (code, body = '', headers = {}) => ({
     getResponseCode: () => code,
@@ -66,6 +67,11 @@ export function loadGas(path, opts = {}) {
     LockService: { getScriptLock: () => ({ tryLock: () => true, waitLock: () => {}, releaseLock: () => {} }) },
     UrlFetchApp: { fetch: (url, o = {}) => { calls.push({ url, o }); return opts.fetch(url, o, resp); } },
     SpreadsheetApp: sheets.api,
+    ScriptApp: {
+      getProjectTriggers: () => triggers.map((t) => ({ getHandlerFunction: () => t.fn })),
+      deleteTrigger: (t) => { const i = triggers.findIndex((x) => x.fn === t.getHandlerFunction()); if (i >= 0) triggers.splice(i, 1); },
+      newTrigger: (fn) => { const b = { timeBased: () => b, everyMinutes: (n) => { b.n = n; return b; }, create: () => { triggers.push({ fn, n: b.n }); return {}; } }; return b; },
+    },
     ContentService: { createTextOutput: (t) => ({ setMimeType: () => t }), MimeType: { JSON: 'json' } },
     Utilities: {
       getUuid: () => crypto.randomUUID(),
@@ -83,7 +89,7 @@ export function loadGas(path, opts = {}) {
   vm.createContext(ctx);
   vm.runInContext(readFileSync(path, 'utf8'), ctx, { filename: path });
   return {
-    ctx, props, cache, calls, logs, books: sheets.books,
+    ctx, props, cache, calls, logs, triggers, books: sheets.books,
     post: (body) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } })),
     tick: (ms) => { now += ms; },
     run: (code) => vm.runInContext(code, ctx),

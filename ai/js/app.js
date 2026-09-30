@@ -4,6 +4,7 @@ import { h, mount, $, toast } from './ui/dom.js';
 import { createStore, initialState, watch } from './ui/store.js';
 import { initAuth } from './ui/auth.js';
 import { initFiles } from './ui/files.js';
+import { initPages } from './ui/pages.js';
 import { initExtract } from './ui/extract.js';
 import { initReview } from './ui/review.js';
 import { initExporter, applySession } from './ui/exporter.js';
@@ -20,6 +21,7 @@ ctx.pageImages = (jobId, pages, width, quality) => ctx.io.pageImages(jobId, page
 
 initTheme();
 initFiles(store, ctx);
+initPages(store, ctx);
 initExtract(store, ctx);
 initReview(store, ctx);
 initExporter(store);

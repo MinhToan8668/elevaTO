@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="light dark">
@@ -18,6 +18,7 @@
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
+<div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
 <a class="skip" href="#main">Bỏ qua, tới nội dung</a>
 <header class="top">
   <a class="brand" href="./" aria-label="elevaTO AI BCTC — trang đầu">
@@ -39,7 +40,7 @@
 <div id="app" class="shell" hidden>
   <nav class="rail" aria-label="Các bước">
     <a href="#s2" data-step="2"><span class="n">1</span><span class="t">Tải BCTC</span></a>
-    <a href="#s3" data-step="3"><span class="n">2</span><span class="t">Kiểm trang</span></a>
+    <a href="#s3" data-step="3"><span class="n">2</span><span class="t">Chọn trang</span></a>
     <a href="#s4" data-step="4"><span class="n">3</span><span class="t">Chọn dữ liệu</span></a>
     <a href="#s5" data-step="5"><span class="n">4</span><span class="t">Rà soát &amp; xuất</span></a>
     <div class="hint"><b>AI chỉ chép số.</b> Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</div>
@@ -62,14 +63,14 @@
     </section>
 
     <section class="step" id="s3" aria-labelledby="h3">
-      <div class="step-h"><span class="k">2</span><div><h2 id="h3">Kiểm tra trang</h2>
-        <p class="lead">Máy đã tự đoán trang nào là bảng nào. Xem nhanh và chỉnh nếu sai — gửi đúng trang giúp AI đọc nhanh và chính xác hơn.</p></div></div>
+      <div class="step-h"><span class="k">2</span><div><h2 id="h3">Chọn trang cần trích xuất</h2>
+        <p class="lead">Bấm vào ảnh để xem trang lớn, tick các trang báo cáo và thuyết minh cần lấy. AI tự nhận trang nào thuộc Tình hình tài chính, Kết quả kinh doanh, Lưu chuyển tiền tệ hay thuyết minh — bạn không phải phân loại.</p></div></div>
       <div id="pageMaps"><p class="empty">Chưa có file PDF / ảnh nào.</p></div>
     </section>
 
     <section class="step" id="s4" aria-labelledby="h4">
       <div class="step-h"><span class="k">3</span><div><h2 id="h4">Chọn dữ liệu cần lấy</h2>
-        <p class="lead">Ba báo cáo chính luôn được lấy đủ theo mẫu 2026. Chọn thêm các thuyết minh model cần — bạn chọn dòng nào đưa ra file ở bước 4.</p></div></div>
+        <p class="lead">Ba báo cáo chính luôn được lấy đủ theo mẫu Thông tư 99/2025 (BCTC mẫu cũ năm 2025 trở về trước tự quy đổi). Chọn thêm các thuyết minh cần — dòng nào đưa ra file thì chọn ở bước 4.</p></div></div>
       <div id="pickBox"></div>
       <div class="row run-row" id="runRow"></div>
       <div id="progress"></div>

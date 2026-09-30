@@ -1,6 +1,6 @@
 // E2E: chạy trang thật trong Chromium, máy chủ AI được giả lập (không tốn lượt, không cần key).
 //   cd ai && npm run e2e
-// Tuỳ chọn: DGW_MODEL=/đường/dẫn/model.xlsx FORM_2026=/đường/dẫn/form.xlsx để thử điền file thật.
+// Tuỳ chọn: MODEL_XLSX=/đường/dẫn/model.xlsx để thử điền model elevaTO thật.
 // Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
 // máy chủ AI và Google Fonts được giả lập.
 
@@ -38,8 +38,9 @@ const CF = computeTotals({ 'CF:01': IS['IS:50'], 'CF:02': 10e9, 'CF:09': 30e9 - 
 const DATA = { BS, IS, CF };
 
 const vn = (v) => { const s = Math.abs(Math.round(v)).toLocaleString('de-DE'); return v < 0 ? `(${s})` : s; };
+// BCTC năm 2025 thật in mã theo mẫu cũ TT200 (công cụ phải tự quy đổi sang mẫu 2026).
 const itemsOf = (st) => CHART.filter((i) => i.st === st && Number.isFinite(DATA[st][`${st}:${i.code}`]))
-  .map((i) => ({ c: i.code, n: i.label, v: vn(DATA[st][`${st}:${i.code}`]), p: vn(DATA[st][`${st}:${i.code}`] * 0.9) }));
+  .map((i) => ({ c: st === 'CF' ? i.code : (i.tt200 || i.code), n: i.label, v: vn(DATA[st][`${st}:${i.code}`]), p: vn(DATA[st][`${st}:${i.code}`] * 0.9) }));
 
 const TITLES = { BS: 'BÁO CÁO TÌNH HÌNH TÀI CHÍNH', IS: 'BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH', CF: 'BÁO CÁO LƯU CHUYỂN TIỀN TỆ' };
 function reportHtml() {
@@ -55,7 +56,7 @@ function reportHtml() {
 // ─── Máy chủ elevaTO AI giả (tài khoản + Gemini) ─────────
 const aiCalls = [];
 const accounts = new Map();                 // email → { ten, mk, token }
-const ME = (a) => ({ ten: a.ten, email: a.email, vaitro: 'hv', luot: { dung: aiCalls.length, han: 50 } });
+const ME = (a) => ({ ten: a.ten, email: a.email, vaitro: a.vaitro || 'free', luot: { dung: aiCalls.length, han: 50 } });
 const TOKEN = (email) => `EABCDE.${Buffer.from(email).toString('hex').padEnd(64, '0').slice(0, 64)}`;
 function fakeAI(body) {
   const fail = (code, error) => ({ ok: false, code, error });
@@ -77,7 +78,7 @@ function fakeAI(body) {
   const parts = body.contents[0].parts;
   const prompt = parts.find((p) => p.text).text;
   aiCalls.push({ model: body.model, token: body.token, mimes: parts.filter((p) => p.inlineData).map((p) => p.inlineData.mimeType), prompt: prompt.slice(0, 40) });
-  const meta = { don_vi: 'VND', ngay_ket_thuc: '31/12/2025', so_thang: '12', thong_tu: '99/2025/TT-BTC', ten_cong_ty: 'CTCP Thử Nghiệm', phuong_phap: 'gian_tiep' };
+  const meta = { don_vi: 'VND', ngay_ket_thuc: '31/12/2025', so_thang: '12', thong_tu: '200/2014/TT-BTC', ten_cong_ty: 'CTCP Thử Nghiệm', phuong_phap: 'gian_tiep' };
   let out;
   if (/TÌNH HÌNH TÀI CHÍNH/.test(prompt)) out = { meta, items: itemsOf('BS') };
   else if (/KẾT QUẢ HOẠT ĐỘNG/.test(prompt)) out = { meta, items: itemsOf('IS') };
@@ -178,19 +179,40 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   assert.equal(await page.evaluate(() => typeof window.XLSX), 'undefined', 'thư viện Excel chỉ nạp khi cần');
 
   await page.setInputFiles('#fileInput', pdfPath);
-  await page.waitForSelector('#fileList .file:has-text("tìm thấy CĐKT, KQKD, LCTT")', { timeout: 30_000 });
-  const sum = await page.locator('#pageMaps details summary').innerText();
-  assert.match(sum, /CĐKT: 2/); assert.match(sum, /KQKD: 3/); assert.match(sum, /LCTT: 4/);
-  assert.equal(await page.locator('#pageMaps .th').count(), 5);
-  await page.waitForFunction(() => [...document.querySelectorAll('#pageMaps .img')].every((el) => el.style.backgroundImage || el.classList.contains('noimg')));
-  const noimg = await page.locator('#pageMaps .img.noimg').evaluateAll((els) => els.map((e) => e.title));
+  await page.waitForSelector('#fileList .file:has-text("máy nhận ra CĐKT, KQKD, LCTT")', { timeout: 30_000 });
+  assert.equal(await page.locator('#pageMaps .tile').count(), 5);
+  // PDF có chữ: máy tick sẵn các trang bảng + thuyết minh nhận ra được (trang 2–5), trang bìa không tick
+  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true]);
+  assert.match(await page.locator('#pageMaps .found').innerText(), /CĐKT 2 · KQKD 3 · LCTT 4/);
+  await page.waitForFunction(() => [...document.querySelectorAll('#pageMaps .tile-img')].every((el) => el.style.backgroundImage || el.classList.contains('noimg')));
+  const noimg = await page.locator('#pageMaps .tile-img.noimg').evaluateAll((els) => els.map((e) => e.title));
   assert.deepEqual(noimg, [], 'ảnh thu nhỏ vẽ được mọi trang');
   await shot(page, '1-trang');
   if (process.env.E2E_SHOTS) await page.locator('#pageMaps .thumbs').screenshot({ path: join(process.env.E2E_SHOTS, '1b-thumbs.png') });
-  assert.match(await page.locator('#pageMaps .grp:has-text("mảng") input').inputValue(), /^5$/);
+
+  // Xem trang lớn: bấm ảnh trang 1, sang trang 2 bằng phím →, bỏ chọn rồi chọn lại, Esc để đóng
+  await page.locator('#pageMaps .tile-img').first().click();
+  await page.waitForSelector('dialog.viewer[open] .vw-stage canvas');
+  assert.equal(await page.locator('.vw-pos').innerText(), 'Trang 1 / 5');
+  assert.equal(await page.locator('#vwPick').getAttribute('aria-pressed'), 'false');
+  await shot(page, '1c-xem-trang', { fullPage: false });
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(() => document.querySelector('.vw-pos').textContent === 'Trang 2 / 5');
+  await page.click('#vwPick');
+  await page.waitForFunction(() => !document.querySelectorAll('#pageMaps .tile')[1].classList.contains('on'));
+  await page.click('#vwPick');
+  await page.waitForFunction(() => document.querySelectorAll('#pageMaps .tile')[1].classList.contains('on'));
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('dialog.viewer:not([open])', { state: 'attached' });
+
+  // Tài khoản thường: không có tab / thẻ điền model; giảng viên xếp lên học viên thì mở
+  assert.equal(await page.locator('#exportBox .cardx.locked').count(), 1, 'model khoá với tài khoản thường');
+  accounts.get('hv@elevato.vn').vaitro = 'hv';
 
   await page.click('#runBtn');
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
+  await page.waitForSelector('#exportBox input[type=file]', { state: 'attached' });
+  assert.equal(await page.locator('#exportBox .cardx.locked').count(), 0, 'học viên điền được model');
   assert.ok(aiCalls.length >= 4, `gọi AI ${aiCalls.length} lần`);
   assert.ok(aiCalls.every((c) => c.token === TOKEN('hv@elevato.vn') && c.model === undefined && c.mimes.every((m) => m === 'application/pdf')), JSON.stringify(aiCalls));
 
@@ -243,33 +265,26 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.click('#review .tabs button:has-text("Kết quả KD")');
   await page.locator('#review table.g thead input[type=checkbox]').uncheck();
   await page.locator('#review tr:has(td.c:text-is("60")) input[type=checkbox]').check();
-  const table = await download(page, () => page.click('#exportBox button:has-text("Tải bảng .xlsx")'));
-  assert.match(table.name, /mau 2026\.xlsx$/);
-  const rows = await page.evaluate(async (b64) => {
+  const table = await download(page, () => page.click('#exportBox button:has-text("Tải Form chuẩn hóa 2026")'));
+  assert.match(table.name, /Form chuan hoa 2026\.xlsx$/);
+  await page.addScriptTag({ url: '/ai/vendor/sheetjs/xlsx.full.min.js' });
+  const book = await page.evaluate(async (b64) => {
     const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
-    return window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+    return Object.fromEntries(wb.SheetNames.map((n) => [n, window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })]));
   }, (await readFile(table.path)).toString('base64'));
-  const at = (t) => rows.findIndex((r) => String(r[0]).startsWith(t));
-  const codes = (from, to) => rows.slice(from + 2, to).map((r) => r[0]).filter(Boolean).map(String);
-  assert.deepEqual(codes(at('BÁO CÁO KẾT QUẢ'), at('BÁO CÁO LƯU CHUYỂN')), ['60'], 'KQKD chỉ còn dòng được tick');
-  assert.ok(codes(at('BÁO CÁO TÌNH HÌNH'), at('BÁO CÁO KẾT QUẢ')).includes('111'), 'bảng khác không bị bỏ tick');
+  assert.deepEqual(Object.keys(book), ['Tổng quan', 'Tình hình tài chính', 'Kết quả kinh doanh', 'Lưu chuyển tiền tệ']);
+  const codes = (sheet) => book[sheet].slice(4).map((r) => r[0]).filter(Boolean).map(String);
+  assert.deepEqual(codes('Kết quả kinh doanh'), ['60'], 'KQKD chỉ còn dòng được tick');
+  assert.ok(codes('Tình hình tài chính').includes('111'), 'bảng khác không bị bỏ tick');
 
-  if (process.env.DGW_MODEL) {
+  if (process.env.MODEL_XLSX) {
     const inputs = page.locator('#exportBox input[type=file]');
-    const [d] = await Promise.all([page.waitForEvent('download'), inputs.nth(0).setInputFiles(process.env.DGW_MODEL)]);
+    const [d] = await Promise.all([page.waitForEvent('download'), inputs.nth(0).setInputFiles(process.env.MODEL_XLSX)]);
     const out = join(tmp, d.suggestedFilename()); await d.saveAs(out);
     await page.waitForSelector('#exportBox .msg.ok');
     const v = await readXlsxCell(page, out, '03.Input_FS', /^[A-Z]+8$/);
     assert.ok(Object.values(v).includes(500000), `doanh thu 500.000 triệu ghi vào dòng 8: ${JSON.stringify(v)}`);
   }
-  if (process.env.FORM_2026) {
-    const inputs = page.locator('#exportBox input[type=file]');
-    const [d] = await Promise.all([page.waitForEvent('download'), inputs.nth(1).setInputFiles(process.env.FORM_2026)]);
-    const out = join(tmp, d.suggestedFilename()); await d.saveAs(out);
-    const v = await readXlsxCell(page, out, 'Lưu trữ', /^[A-Z]+6$/);
-    assert.ok(Object.values(v).includes('FY-2025'), JSON.stringify(v));
-  }
-
   // Lưu phiên → tải lại trang → mở lại, không gọi thêm AI
   const sess = await download(page, () => page.click('#exportBox button:has-text("Lưu phiên")'));
   assert.ok(!(await readFile(sess.path, 'utf8')).includes(TOKEN('hv@elevato.vn')), 'file phiên không chứa phiên đăng nhập');

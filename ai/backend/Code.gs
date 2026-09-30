@@ -6,10 +6,11 @@
  * tài khoản nằm trong Google Sheet "elevaTO AI — Tài khoản" do hàm caiDat tạo.
  * Key Gemini cất trong Script Properties, không bao giờ ra tới trình duyệt.
  *
- * Quản trị trên Sheet (tab TaiKhoan):
- *   vaitro    : hv | admin (admin không giới hạn lượt)
+ * Quản trị trên Sheet (tab TaiKhoan) hoặc qua bot Telegram (gõ /help cho bot):
+ *   vaitro    : free (tài khoản thường) | hv (học viên) | gv (giảng viên — không giới hạn lượt)
+ *               Học viên và giảng viên mới điền được model elevaTO trên trang.
  *   trangthai : active | cho (chờ duyệt) | off (khoá)
- *   luot_ngay : số lượt AI mỗi ngày; để trống = mặc định AI_LUOT_MAC_DINH
+ *   luot_ngay : số lượt AI mỗi ngày của riêng người đó; để trống = theo vai trò (AI_LUOT_FREE / AI_LUOT_HV)
  *
  * Giới hạn: UrlFetchApp chờ tối đa ~60 giây mỗi lượt gọi → trang tự chia việc nhỏ;
  * hết giờ thì máy chủ trả code 'timeout' để trang chia nhỏ hơn nữa.
@@ -23,9 +24,14 @@
 //  Chạy xong có thể xoá key khỏi dòng này (key đã cất trong Script Properties).
 // ═════════════════════════════════════════════════════════════
 var GEMINI_KEY_MOI = 'DAN_KEY_GEMINI';
+
+//  BOT TELEGRAM (báo tài khoản mới, duyệt học viên / giảng viên, tra cứu). Chạy caiDat là bot tự kết nối.
+var TG_TOKEN_MOI = 'DAN_TOKEN_BOT';        // token của @BotFather
+var TG_CHAT_MOI  = 'DAN_CHAT_ID';          // chat ID của bạn (chỉ chat này được ra lệnh); nhiều chat: cách nhau dấu phẩy
 // ═════════════════════════════════════════════════════════════
 
-var AI_LUOT_MAC_DINH = 20;                 // lượt AI mỗi ngày cho tài khoản mới (Script Property AI_LUOT_MAC_DINH đè lên)
+var AI_LUOT_FREE    = 10;                  // lượt AI mỗi ngày: tài khoản thường (Script Property AI_LUOT_FREE đè lên)
+var AI_LUOT_HV      = 40;                  //                   học viên (AI_LUOT_HV); giảng viên không giới hạn
 var AI_RPM          = 12;                  // tối đa lượt gọi Gemini mỗi phút cho CẢ hệ thống, tính cho MỖI key
 var AI_RPM_MA       = 6;                   // tối đa lượt mỗi phút cho MỘT tài khoản
 var AI_MAX_SCHEMA   = 20000;               // độ dài tối đa của responseSchema (JSON)
@@ -201,9 +207,15 @@ function boPhien(tk, token) {
   suaPhien(tk, function (con) { return { phien: JSON.stringify(con.filter(function (p) { return !bangNhau(p.h, h); })) }; });
 }
 
+/** 'gv' | 'hv' | 'free' — vai trò 'admin' của bản cũ tính là giảng viên. */
+function vaiTro(tk) {
+  var v = String(tk.vaitro || '').trim().toLowerCase();
+  if (v === 'gv' || v === 'admin') return 'gv';
+  return v === 'hv' ? 'hv' : 'free';
+}
 function hoSo(tk) {
-  var admin = tk.vaitro === 'admin';
-  return { ten: String(tk.ten), email: String(tk.email), vaitro: admin ? 'admin' : 'hv', luot: { dung: daDung(tk), han: admin ? 0 : hanNgay(tk) } };
+  var gv = laGV(tk);
+  return { ten: String(tk.ten), email: String(tk.email), vaitro: vaiTro(tk), luot: { dung: daDung(tk), han: gv ? 0 : hanNgay(tk) } };
 }
 
 // ─── Đăng ký / đăng nhập ────────────────────────────────────
@@ -246,10 +258,11 @@ function dangKy(b) {
     var sh = bangTK(), ds = docTK(sh), k = khoaEmail(email);
     if (ds.some(function (x) { return khoaEmail(x.email) === k; })) return loi('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
     var duyet = /^(1|true|co)$/i.test(String(props().getProperty('AI_CAN_DUYET') || ''));
-    sh.appendRow([maMoi(ds), oChu(email), oChu(ten), "'" + sdt, salt, hash, 'hv', duyet ? 'cho' : 'active', '', '[]',
+    sh.appendRow([maMoi(ds), oChu(email), oChu(ten), "'" + sdt, salt, hash, 'free', duyet ? 'cho' : 'active', '', '[]',
       new Date().toISOString(), '', '']);
     tk = tkTheoEmail(email);
   } finally { lock.releaseLock(); }
+  baoTaiKhoanMoi(tk, sdt);
   if (tk.trangthai !== 'active') return ok({ cho: true });
   return ok({ token: capPhien(tk), me: hoSo(tk) });
 }
@@ -285,10 +298,10 @@ function daDung(tk) { return Number(props().getProperty(khoaLuot(tk)) || 0); }
 function hanNgay(tk) {
   var rieng = Number(tk.luot_ngay);
   if (tk.luot_ngay !== '' && tk.luot_ngay != null && rieng > 0) return rieng;
-  var md = Number(props().getProperty('AI_LUOT_MAC_DINH'));
-  return md > 0 ? md : AI_LUOT_MAC_DINH;
+  var hv = vaiTro(tk) === 'hv', md = Number(props().getProperty(hv ? 'AI_LUOT_HV' : 'AI_LUOT_FREE'));
+  return md > 0 ? md : (hv ? AI_LUOT_HV : AI_LUOT_FREE);
 }
-function laAdmin(tk) { return tk.vaitro === 'admin'; }
+function laGV(tk) { return vaiTro(tk) === 'gv'; }
 function hetLuot(tk) { return loi('quota', 'Hôm nay đã dùng hết ' + hanNgay(tk) + ' lượt AI — mai dùng tiếp, hoặc liên hệ elevaTO xin thêm'); }
 
 /** Giữ 1 lượt TRƯỚC khi gọi Gemini (trong khoá, nên gọi song song không vượt hạn mức). */
@@ -297,7 +310,7 @@ function giuLuot(tk) {
   lock.waitLock(10000);
   try {
     var k = khoaLuot(tk), used = Number(props().getProperty(k) || 0);
-    if (!laAdmin(tk) && used >= hanNgay(tk)) return false;
+    if (!laGV(tk) && used >= hanNgay(tk)) return false;
     props().setProperty(k, String(used + 1));
     var all = props().getProperties();                                       // dọn bộ đếm các ngày trước
     for (var p in all) if (p.indexOf('Q_' + tk.ma + '_') === 0 && p !== k) props().deleteProperty(p);
@@ -321,7 +334,7 @@ function giuNhip(tk) {
     var now = Date.now(), phut = Math.floor(now / 60000);
     var cho = Math.max(1, 60 - Math.floor((now % 60000) / 1000));
     var kMa = 'rpm_' + tk.ma + '_' + phut, nMa = Number(cache.get(kMa) || 0);
-    if (!laAdmin(tk) && nMa >= AI_RPM_MA) return cho;
+    if (!laGV(tk) && nMa >= AI_RPM_MA) return cho;
     var k = 'rpm_' + phut, n = Number(cache.get(k) || 0);
     if (n >= AI_RPM * Math.max(1, dsKey().length)) return cho;
     cache.put(k, String(n + 1), 120);
@@ -377,7 +390,7 @@ function goiGemini(tk, b) {
   if (!dsKey().length) return loi('setup', 'Máy chủ chưa cài key Gemini (chạy hàm caiDat)');
   var body = sachYeuCau(b);
   if (!body) return loi('bad', 'Yêu cầu sai dạng hoặc quá dài');
-  if (!laAdmin(tk) && daDung(tk) >= hanNgay(tk)) return hetLuot(tk);
+  if (!laGV(tk) && daDung(tk) >= hanNgay(tk)) return hetLuot(tk);
   var model = chonModel();
   if (!model) return loi('busy', 'Chưa lấy được danh sách model Gemini — thử lại sau ít phút', { retryAfter: 30 });
 
@@ -418,6 +431,7 @@ function goiMotKey(model, body, key) {
   if (code === 429) { var s = hoiLai(data) || 60; return { nghi: s, cho: s }; }
   if (code === 401 || code === 403 || (code === 400 && /API_KEY|API key/i.test(JSON.stringify(data.error || {})))) {
     console.error('Key Gemini hỏng / bị chặn (HTTP ' + code + ')');
+    baoMotLan('key_hong', 3600, '⚠️ <b>Key Gemini bị từ chối</b> (HTTP ' + code + ') — kiểm tra lại key trong Google AI Studio. Máy chủ đang dùng tạm key khác nếu có.');
     return { nghi: 3600, cho: 30 };
   }
   if (code === 503 || code === 500) return { kq: loi('busy', 'Gemini đang quá tải', { retryAfter: hoiLai(data) || 10 }), traLai: true };
@@ -487,39 +501,245 @@ function sachYeuCau(b) {
 // Chạy tay trong trình soạn thảo
 // ─────────────────────────────────────────────────────────────
 
-/** Cài đặt / kiểm tra: cất key, tạo bảng tài khoản, thử key. Chạy lại bao nhiêu lần cũng được. */
+/** Cài đặt / kiểm tra: cất key, tạo bảng tài khoản, thử key, kết nối bot. Chạy lại bao nhiêu lần cũng được. */
 function caiDat() {
   var moi = String(GEMINI_KEY_MOI || '').split(/[\s,;]+/).filter(function (k) { return k && k.indexOf('DAN_') !== 0; });
   if (moi.length) props().setProperty('GEMINI_KEYS', moi.join('\n'));
   tieu();
   var sh = bangTK();
   Logger.log('✔ Bảng tài khoản: https://docs.google.com/spreadsheets/d/' + props().getProperty('AI_SHEET_ID') + ' (tab ' + sh.getName() + ')');
+  ketNoiTelegram();
   if (!dsKey().length) throw new Error('Chưa có key: dán key Gemini vào GEMINI_KEY_MOI ở đầu file rồi chạy lại.');
   CacheService.getScriptCache().remove('ai_models');
   var model = chonModel();
   Logger.log(model ? '✔ Key dùng được (' + dsKey().length + ' key). Model sẽ dùng: ' + model
                    : '✘ Key không dùng được hoặc không có model nào — kiểm tra lại key trong Google AI Studio');
-  Logger.log('  Lượt AI mặc định mỗi ngày: ' + (Number(props().getProperty('AI_LUOT_MAC_DINH')) || AI_LUOT_MAC_DINH) +
-             '. Đổi cho từng người: cột luot_ngay trên bảng.');
-  Logger.log('  Đăng ký tài khoản của bạn trên trang, rồi sửa email trong hàm taoQuanTri và bấm Chạy để có quyền quản trị.');
+  Logger.log('  Lượt AI mỗi ngày: tài khoản thường ' + luotMacDinh('free') + ', học viên ' + luotMacDinh('hv') + ', giảng viên không giới hạn.');
+  Logger.log('  Đăng ký tài khoản của bạn trên trang, rồi gõ /giangvien <email> cho bot (hoặc sửa email trong taoQuanTri và bấm Chạy).');
+}
+function luotMacDinh(v) {
+  var n = Number(props().getProperty(v === 'hv' ? 'AI_LUOT_HV' : 'AI_LUOT_FREE'));
+  return n > 0 ? n : (v === 'hv' ? AI_LUOT_HV : AI_LUOT_FREE);
 }
 
-/** Cấp quyền quản trị (không giới hạn lượt) cho một tài khoản đã đăng ký. */
+/** Cấp quyền giảng viên (không giới hạn lượt, điền được model) cho một tài khoản đã đăng ký. */
 function datQuanTri(email) {
   var tk = tkTheoEmail(chuanEmail(email));
   if (!tk) throw new Error('Không có tài khoản ' + email);
-  ghiTK(tk, { vaitro: 'admin' });
-  Logger.log('✔ ' + tk.email + ' là quản trị');
+  ghiTK(tk, { vaitro: 'gv' });
+  Logger.log('✔ ' + tk.email + ' là giảng viên');
 }
 function taoQuanTri() { datQuanTri('email-cua-ban@gmail.com'); }
 
-/** Học viên quên mật khẩu: đặt mật khẩu mới rồi báo cho họ (mọi phiên đang mở bị đăng xuất). */
-function datLaiMatKhau(email, mkMoi) {
-  var tk = tkTheoEmail(chuanEmail(email));
-  if (!tk) throw new Error('Không có tài khoản ' + email);
+/** Đặt mật khẩu mới (mọi phiên đang mở bị đăng xuất). */
+function doiMatKhau(tk, mkMoi) {
   if (String(mkMoi || '').length < MK_TOI_THIEU) throw new Error('Mật khẩu mới cần ít nhất ' + MK_TOI_THIEU + ' ký tự');
   var salt = ngauNhien();
   ghiTK(tk, { salt: salt, hash: bamMK(String(mkMoi), salt), phien: '[]' });
+}
+function datLaiMatKhau(email, mkMoi) {
+  var tk = tkTheoEmail(chuanEmail(email));
+  if (!tk) throw new Error('Không có tài khoản ' + email);
+  doiMatKhau(tk, mkMoi);
   Logger.log('✔ Đã đặt lại mật khẩu cho ' + tk.email);
 }
 function datLaiMatKhauHocVien() { datLaiMatKhau('email-hoc-vien@gmail.com', 'mat-khau-moi'); }
+
+// ═════════════════════════════════════════════════════════════
+// BOT TELEGRAM
+// Bot HỎI tin mới mỗi phút (getUpdates) thay vì webhook: Apps Script trả 302 cho webhook nên
+// Telegram cứ gửi lại mãi (cách TMXK đang dùng). Chỉ chat quản trị (TG_ADMIN) ra lệnh được.
+// ═════════════════════════════════════════════════════════════
+
+var HOI_TRAN_GIAY = 40;          // có lệnh thì bám long-poll thêm tối đa bấy nhiêu giây
+var HOI_CHO_GIAY  = 15;
+
+function tgToken() { return props().getProperty('TG_TOKEN') || ''; }
+function tgAdmins() { return String(props().getProperty('TG_ADMIN') || '').split(/[\s,;]+/).filter(Boolean); }
+function laChatQuanTri(id) { return tgAdmins().indexOf(String(id)) >= 0; }
+
+function tgApi(method, payload) {
+  var t = tgToken();
+  if (!t) return null;
+  try {
+    var r = UrlFetchApp.fetch('https://api.telegram.org/bot' + t + '/' + method, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(payload || {}), muteHttpExceptions: true
+    });
+    return JSON.parse(r.getContentText());
+  } catch (e) { console.error('Telegram ' + method + ': ' + e); return null; }
+}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function tgGui(chatId, text, nut) {
+  var p = { chat_id: String(chatId), text: String(text).slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true };
+  if (nut) p.reply_markup = { inline_keyboard: nut };
+  return tgApi('sendMessage', p);
+}
+function tgBaoQuanTri(text, nut) { tgAdmins().forEach(function (id) { tgGui(id, text, nut); }); }
+/** Báo quản trị nhưng tối đa 1 lần mỗi `giay` giây cho cùng một loại việc. */
+function baoMotLan(loai, giay, text) {
+  var c = CacheService.getScriptCache();
+  if (c.get('bao_' + loai)) return;
+  c.put('bao_' + loai, '1', giay);
+  tgBaoQuanTri(text);
+}
+
+var TEN_VT = { free: 'Tài khoản thường', hv: 'Học viên', gv: 'Giảng viên' };
+var TEN_TT = { active: 'đang dùng', cho: 'chờ duyệt', off: 'đã khoá' };
+
+function nutTaiKhoan(tk) {
+  return [
+    [{ text: '🎓 Học viên', callback_data: 'vt|hv|' + tk.ma }, { text: '👨‍🏫 Giảng viên', callback_data: 'vt|gv|' + tk.ma }, { text: '👤 Thường', callback_data: 'vt|free|' + tk.ma }],
+    [tk.trangthai === 'active' ? { text: '🔒 Khoá', callback_data: 'tt|off|' + tk.ma } : { text: '✅ Mở / duyệt', callback_data: 'tt|active|' + tk.ma }]
+  ];
+}
+function moTaTaiKhoan(tk) {
+  return '<b>' + esc(tk.ten) + '</b> · <code>' + esc(tk.ma) + '</code>\n📧 ' + esc(tk.email) + '\n📱 ' + esc(String(tk.sdt).replace(/^'/, '')) +
+    '\n🏷 ' + TEN_VT[vaiTro(tk)] + ' · ' + (TEN_TT[tk.trangthai] || esc(tk.trangthai)) +
+    '\n🤖 Hôm nay ' + daDung(tk) + (laGV(tk) ? ' lượt (không giới hạn)' : '/' + hanNgay(tk) + ' lượt');
+}
+
+function baoTaiKhoanMoi(tk, sdt) {
+  try {
+    if (!tgToken()) return;
+    var cho = tk.trangthai === 'cho';
+    tgBaoQuanTri('🆕 <b>Tài khoản AI BCTC mới</b>' + (cho ? ' — <b>chờ duyệt</b>' : '') + '\n' + moTaTaiKhoan(tk) +
+      '\n\nXếp vai trò để mở quyền điền model elevaTO:', nutTaiKhoan(tk));
+  } catch (e) { console.error('baoTaiKhoanMoi: ' + e); }
+}
+
+/** Kết nối bot: cất token + chat, bỏ webhook cũ, bỏ qua tin tồn, bật lịch hỏi tin mỗi phút. */
+function ketNoiTelegram() {
+  var t = String(TG_TOKEN_MOI || '').trim(), c = String(TG_CHAT_MOI || '').trim();
+  if (t && t.indexOf('DAN_') !== 0) props().setProperty('TG_TOKEN', t);
+  if (c && c.indexOf('DAN_') !== 0) props().setProperty('TG_ADMIN', c);
+  if (!tgToken() || !tgAdmins().length) { Logger.log('ℹ Chưa có token bot Telegram — bỏ qua phần bot.'); return; }
+  tgApi('deleteWebhook', { drop_pending_updates: false });
+  var r = tgApi('getUpdates', { offset: -1, timeout: 0, limit: 1 });
+  if (r && r.ok && r.result && r.result.length) props().setProperty('TG_OFFSET', String(r.result[0].update_id + 1));
+  var co = ScriptApp.getProjectTriggers().some(function (x) { return x.getHandlerFunction() === 'hoiTelegram'; });
+  if (!co) ScriptApp.newTrigger('hoiTelegram').timeBased().everyMinutes(1).create();
+  var gui = tgGui(tgAdmins()[0], '✅ Bot <b>elevaTO AI BCTC</b> đã kết nối.\nGõ /help để xem các lệnh quản trị.');
+  Logger.log(gui && gui.ok ? '✔ Bot Telegram đã kết nối, vừa nhắn thử cho bạn.' : '✘ Bot chưa nhắn được — kiểm tra token / chat ID, và bạn đã bấm Start với bot chưa.');
+}
+/** Tắt bot (xoá lịch hỏi tin). */
+function dungBot() {
+  ScriptApp.getProjectTriggers().forEach(function (x) { if (x.getHandlerFunction() === 'hoiTelegram') ScriptApp.deleteTrigger(x); });
+  Logger.log('✔ Đã tắt bot.');
+}
+
+function daXuLy(updateId) {
+  var c = CacheService.getScriptCache(), k = 'tgu_' + updateId;
+  if (c.get(k)) return true;
+  c.put(k, '1', 21600);
+  return false;
+}
+
+/** Lịch chạy mỗi phút. Rảnh thì ~1 giây; có lệnh thì bám long-poll thêm để trả lời gần như tức thì. */
+function hoiTelegram() {
+  var c = CacheService.getScriptCache();
+  if (c.get('tg_dang_hoi')) return;
+  c.put('tg_dang_hoi', '1', HOI_TRAN_GIAY + 30);
+  try {
+    if (motLuotHoi(0) <= 0) return;
+    var het = Date.now() + HOI_TRAN_GIAY * 1000, rong = 0;
+    while (Date.now() < het && rong < 2) {
+      var n = motLuotHoi(HOI_CHO_GIAY);
+      if (n < 0) break;
+      rong = n === 0 ? rong + 1 : 0;
+    }
+  } finally { c.remove('tg_dang_hoi'); }
+}
+
+/** Số tin đã xử lý, 0 nếu không có, -1 nếu gọi Telegram lỗi. */
+function motLuotHoi(cho) {
+  var off = Number(props().getProperty('TG_OFFSET') || 0);
+  var r = tgApi('getUpdates', { offset: off, timeout: cho, limit: 20, allowed_updates: ['message', 'callback_query'] });
+  if (!r || !r.ok || !r.result) return -1;
+  if (!r.result.length) return 0;
+  var max = off;
+  r.result.forEach(function (u) { if (u.update_id >= max) max = u.update_id + 1; });
+  props().setProperty('TG_OFFSET', String(max));                 // dời mốc trước: tin lỗi không làm kẹt hàng chờ
+  r.result.forEach(function (u) {
+    if (daXuLy(u.update_id)) return;
+    try { xuLyTin(u); } catch (e) { console.error('xuLyTin: ' + e); }
+  });
+  return r.result.length;
+}
+
+function xuLyTin(u) {
+  if (u.callback_query) return xuLyNut(u.callback_query);
+  var m = u.message;
+  if (!m || !m.chat || typeof m.text !== 'string') return;
+  if (!laChatQuanTri(m.chat.id)) { tgGui(m.chat.id, 'Bot này chỉ dành cho quản trị elevaTO.'); return; }
+  var parts = m.text.trim().split(/\s+/), lenh = parts[0].replace(/@.*$/, '').toLowerCase(), arg = parts.slice(1);
+  var kq = chayLenh(lenh, arg);
+  tgGui(m.chat.id, kq.text, kq.nut);
+}
+
+function timTK(email) { return email ? tkTheoEmail(chuanEmail(email)) : null; }
+
+function chayLenh(lenh, arg) {
+  var HELP = ['<b>Bot quản trị elevaTO AI BCTC</b>',
+    '/thongke — số tài khoản, lượt AI hôm nay, key',
+    '/cho — tài khoản đang chờ duyệt',
+    '/tim &lt;email hoặc tên&gt; — tra cứu (kèm nút xếp vai trò)',
+    '/hocvien &lt;email&gt; — xếp học viên (điền được model)',
+    '/giangvien &lt;email&gt; — xếp giảng viên (không giới hạn lượt)',
+    '/free &lt;email&gt; — về tài khoản thường',
+    '/luot &lt;email&gt; &lt;số&gt; — số lượt AI mỗi ngày (0 = theo vai trò)',
+    '/khoa &lt;email&gt; · /mo &lt;email&gt; — khoá / mở (duyệt) tài khoản',
+    '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt lại mật khẩu'].join('\n');
+  if (lenh === '/start' || lenh === '/help') return { text: HELP };
+  if (lenh === '/thongke') {
+    var ds = docTK(), dem = { free: 0, hv: 0, gv: 0, cho: 0, off: 0 }, hom = homNay(), luot = 0, all = props().getProperties();
+    ds.forEach(function (x) { dem[vaiTro(x)]++; if (x.trangthai === 'cho') dem.cho++; if (x.trangthai === 'off') dem.off++; });
+    for (var k in all) if (k.indexOf('Q_') === 0 && k.slice(-hom.length) === hom) luot += Number(all[k]) || 0;
+    var nghi = dsKey().filter(keyDangNghi).length;
+    return { text: '📊 <b>AI BCTC</b>\nTài khoản: ' + ds.length + ' (học viên ' + dem.hv + ' · giảng viên ' + dem.gv + ' · thường ' + dem.free +
+      ' · chờ duyệt ' + dem.cho + ' · khoá ' + dem.off + ')\nLượt AI hôm nay: ' + luot + '\nKey Gemini: ' + dsKey().length +
+      (nghi ? ' (đang nghỉ ' + nghi + ')' : '') + '\nModel: ' + esc(chonModel() || '—') };
+  }
+  if (lenh === '/cho') {
+    var cho = docTK().filter(function (x) { return x.trangthai === 'cho'; });
+    if (!cho.length) return { text: 'Không có tài khoản nào chờ duyệt.' };
+    cho.slice(0, 10).forEach(function (x) { tgBaoQuanTri(moTaTaiKhoan(x), nutTaiKhoan(x)); });
+    return { text: 'Có ' + cho.length + ' tài khoản chờ duyệt' + (cho.length > 10 ? ' (hiện 10 người đầu)' : '') + '.' };
+  }
+  if (lenh === '/tim') {
+    var q = arg.join(' ').toLowerCase();
+    if (!q) return { text: 'Gõ /tim &lt;email hoặc tên&gt;' };
+    var kq = docTK().filter(function (x) { return (String(x.email) + ' ' + String(x.ten)).toLowerCase().indexOf(q) >= 0; });
+    if (!kq.length) return { text: 'Không tìm thấy tài khoản nào khớp "' + esc(q) + '".' };
+    if (kq.length === 1) return { text: moTaTaiKhoan(kq[0]), nut: nutTaiKhoan(kq[0]) };
+    return { text: 'Tìm thấy ' + kq.length + ':\n' + kq.slice(0, 15).map(function (x) { return '• ' + esc(x.ten) + ' — ' + esc(x.email) + ' (' + TEN_VT[vaiTro(x)] + ')'; }).join('\n') };
+  }
+  var VT = { '/hocvien': 'hv', '/giangvien': 'gv', '/free': 'free' }, TT = { '/khoa': 'off', '/mo': 'active', '/duyet': 'active' };
+  if (VT[lenh] || TT[lenh] || lenh === '/luot' || lenh === '/matkhau') {
+    var tk = timTK(arg[0]);
+    if (!tk) return { text: 'Không tìm thấy tài khoản ' + esc(arg[0] || '') + '. Gõ đúng email đã đăng ký.' };
+    if (VT[lenh]) { ghiTK(tk, { vaitro: VT[lenh] }); return { text: '✔ ' + esc(tk.email) + ' → ' + TEN_VT[VT[lenh]] }; }
+    if (TT[lenh]) { ghiTK(tk, TT[lenh] === 'off' ? { trangthai: 'off', phien: '[]' } : { trangthai: 'active' }); return { text: '✔ ' + esc(tk.email) + ' → ' + TEN_TT[TT[lenh]] }; }
+    if (lenh === '/luot') {
+      var n = Math.max(0, Math.floor(Number(arg[1])));
+      if (!isFinite(n)) return { text: 'Gõ /luot &lt;email&gt; &lt;số lượt mỗi ngày&gt;' };
+      ghiTK(tk, { luot_ngay: n || '' });
+      return { text: '✔ ' + esc(tk.email) + ': ' + (n ? n + ' lượt AI mỗi ngày' : 'theo vai trò (' + hanNgay(tk) + ' lượt)') };
+    }
+    try { doiMatKhau(tk, arg.slice(1).join(' ')); } catch (e) { return { text: '✘ ' + esc(e.message) }; }
+    return { text: '✔ Đã đặt mật khẩu mới cho ' + esc(tk.email) + ' (các máy đang đăng nhập bị đăng xuất).' };
+  }
+  return { text: 'Không rõ lệnh. Gõ /help.' };
+}
+
+function xuLyNut(q) {
+  var chat = q.message && q.message.chat && q.message.chat.id;
+  if (!laChatQuanTri(chat) || !laChatQuanTri(q.from && q.from.id)) { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Không có quyền' }); return; }
+  var p = String(q.data || '').split('|'), tk = /^E[A-Z0-9]{5}$/.test(p[2] || '') ? tkTheoMa(p[2]) : null;
+  if (!tk) { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Không tìm thấy tài khoản' }); return; }
+  var bao;
+  if (p[0] === 'vt' && TEN_VT[p[1]]) { ghiTK(tk, { vaitro: p[1] }); bao = TEN_VT[p[1]]; }
+  else if (p[0] === 'tt' && TEN_TT[p[1]] && p[1] !== 'cho') { ghiTK(tk, p[1] === 'off' ? { trangthai: 'off', phien: '[]' } : { trangthai: 'active' }); bao = TEN_TT[p[1]]; }
+  else { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Nút không hợp lệ' }); return; }
+  tgApi('answerCallbackQuery', { callback_query_id: q.id, text: '✔ ' + bao });
+  tgApi('editMessageText', { chat_id: String(chat), message_id: q.message.message_id, parse_mode: 'HTML', text: moTaTaiKhoan(tk), reply_markup: { inline_keyboard: nutTaiKhoan(tk) } });
+}

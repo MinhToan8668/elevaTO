@@ -106,3 +106,41 @@ test('AI trả nhóm thuyết minh lạ ("constructor", "__proto__") khi nhận 
   const r = await mapPagesWithAI(1, io);
   assert.deepEqual(r.notes.debt, [1]);
 });
+
+test('trang đã tick: trang máy đã biết loại giữ nguyên, trang chưa rõ mới nhờ AI nhận (ghi rõ số trang); không tick thì bỏ', async () => {
+  const { planPicked } = await import('../js/core/pipeline.js');
+  const seen = [];
+  const io = {
+    images: async (pages) => { seen.push(pages); return pages.map(() => ({ inlineData: { mimeType: 'image/jpeg', data: 'x' } })); },
+    ai: { json: async ({ parts }) => {
+      const prompt = parts[parts.length - 1].text;
+      assert.match(prompt, /3, 9, 10/);
+      return [{ trang: 3, loai: 'BS' }, { trang: 9, loai: 'NOTES', nhom: ['debt', 'constructor'] }, { trang: 10, loai: 'OTHER' }, { trang: 99, loai: 'IS' }];
+    } },
+  };
+  const job = { numPages: 12, types: ['OTHER', 'UNKNOWN', 'UNKNOWN', 'IS', 'CF', 'OTHER', 'OTHER', 'OTHER', 'UNKNOWN', 'UNKNOWN', 'OTHER', 'OTHER'], notes: { segments: [4], debt: [] } };
+  const r = await planPicked(job, [3, 4, 5, 9, 10], io);
+  assert.deepEqual(seen, [[3, 9, 10]]);
+  assert.deepEqual(r.types.map((t, i) => (t === 'OTHER' ? null : `${i + 1}:${t}`)).filter(Boolean), ['3:BS', '4:IS', '5:CF', '9:NOTES']);
+  assert.deepEqual(r.notes.debt, [9]);
+  assert.deepEqual(r.notes.segments, [], 'trang 4 là KQKD, không phải thuyết minh được tick');
+  assert.equal(r.aiCalls, 1);
+});
+
+test('PDF có chữ, tick toàn trang đã biết loại → không tốn lượt AI nhận trang; chế độ exact không gửi kèm trang sau', async () => {
+  const { planPicked } = await import('../js/core/pipeline.js');
+  const io0 = { images: async () => { throw new Error('không được gọi'); }, ai: { json: async () => { throw new Error('không được gọi'); } } };
+  const r = await planPicked({ ...job, numPages: 8 }, [2, 3, 4, 5, 7], io0);
+  assert.equal(r.aiCalls, 0);
+  assert.deepEqual(r.notes.debt, [7]);
+  const io = makeIO();
+  await extractJob({ name: 'x.pdf', ...r }, io, { noteGroups: ['debt'], exact: true });
+  assert.equal(io.calls.find((c) => c.prompt.startsWith('Đọc thuyết minh VAY')).pages, 'p7');
+});
+
+test('gợi ý trang để tick sẵn: PDF có chữ → các trang bảng + thuyết minh máy nhận ra; bản scan → không tick; ảnh chụp → tick hết', async () => {
+  const { suggestPicks } = await import('../js/core/pipeline.js');
+  assert.deepEqual(suggestPicks({ kind: 'pdf', scanned: false, types: ['OTHER', 'BS', 'BS', 'IS', 'CF', 'NOTES', 'NOTES', 'NOTES'], notes: { debt: [7], segments: [6] } }), [2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(suggestPicks({ kind: 'pdf', scanned: true, types: ['UNKNOWN', 'UNKNOWN'], notes: {} }), []);
+  assert.deepEqual(suggestPicks({ kind: 'img', scanned: true, types: ['UNKNOWN', 'UNKNOWN', 'UNKNOWN'], notes: {} }), [1, 2, 3]);
+});

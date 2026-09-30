@@ -1,4 +1,4 @@
-// Đổ số BCTC (mã TT99, đơn vị đồng) vào sheet "03.Input_FS" của model elevaTO (mẫu DGW).
+// Đổ số BCTC (mã TT99, đơn vị đồng) vào sheet "03.Input_FS" của model elevaTO.
 //
 // Quy ước của model (xem hàng 2 & 7 của sheet): đơn vị TRIỆU đồng, chi phí KQKD nhập số ÂM,
 // dòng (*) trên CĐKT âm, LCTT giữ dấu như BCTC. Chỉ ghi dòng nhập tay — dòng tổng là công thức.
@@ -25,7 +25,7 @@ const GOODWILL_ROW = 185;
 export const SEGMENT_SLOTS = 5;              // dòng 132–136 (doanh thu), 140–144 (LN gộp)
 
 // Định nghĩa dòng: dùng cho giao diện (nhãn, nhóm) và để kiểm tra không sót / trùng dòng.
-export const DGW_ROWS = [
+export const MODEL_ROWS = [
   ...[[8, 'Doanh thu thuần'], [9, 'Giá vốn hàng bán (−)'], [12, 'Doanh thu tài chính'], [13, 'Chi phí lãi vay (−)'],
     [14, 'Chi phí tài chính khác (−)'], [16, 'Lãi/lỗ công ty liên doanh, liên kết'], [17, 'Chi phí bán hàng (−)'],
     [18, 'Chi phí quản lý doanh nghiệp (−)'], [20, 'Thu nhập khác (gồm lãi BĐSĐT)'], [21, 'Chi phí khác (−)'],
@@ -78,7 +78,7 @@ export const DGW_ROWS = [
  * @param opts.segmentMap { [tên mảng trong thuyết minh]: ô 0..4 }
  * @returns { byYear: {[year]: {[row]: {v, src}}}, warnings: string[] }
  */
-export function buildDGW(ds, opts = {}) {
+export function buildModel(ds, opts = {}) {
   const warn = new Set();
   const byYear = {};
   const years = ds.periods.filter((p) => p.months === 12).sort((a, b) => a.year - b.year);

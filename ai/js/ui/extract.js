@@ -3,10 +3,12 @@
 import { h, mount, $, toast, keepFocus } from './dom.js';
 import { PRESETS, NOTE_KEYS, uid, watch } from './store.js';
 import { NOTE_TASKS } from '../core/prompts.js';
-import { extractJob } from '../core/pipeline.js';
+import { extractJob, planPicked } from '../core/pipeline.js';
 import { isSplittable, isFatal } from '../ai.js';
 
-const HAS_TABLE = (j) => ['BS', 'IS', 'CF'].some((t) => j.types?.includes(t));
+const HAS_PICK = (j) => (j.picked?.length || 0) > 0;
+// Trang đã tick mà máy chưa biết loại → AI phải nhận trang trước (12 trang / lượt).
+const unknownPicked = (j) => (j.picked || []).filter((p) => !['BS', 'IS', 'CF', 'NOTES'].includes(j.types?.[p - 1])).length;
 
 export function initExtract(store, ctx) {
   watch(store, ['preset', 'noteGroups', 'running'], (s) => renderPick(s, store));
@@ -32,12 +34,12 @@ function renderPick(s, store) {
 
 function renderRun(s, store, ctx) {
   const todo = s.jobs.filter((j) => j.kind !== 'xls' && j.status === 'ready');
-  const calls = todo.reduce((n, j) => n + 3 + s.noteGroups.filter((g) => j.notes?.[g]?.length).length, 0);
+  const calls = todo.reduce((n, j) => n + Math.ceil(unknownPicked(j) / 12) + 3 + (unknownPicked(j) ? s.noteGroups.length : s.noteGroups.filter((g) => j.notes?.[g]?.some((p) => j.picked?.includes(p))).length), 0);
   const q = s.user?.luot;
   const left = q && q.han ? Math.max(0, q.han - q.dung) : null;
-  const noTable = todo.filter((j) => !HAS_TABLE(j));
+  const noTable = todo.filter((j) => !HAS_PICK(j));
   let hint;
-  if (!todo.length) hint = s.jobs.some((j) => j.status === 'done') ? 'Mọi file đã trích xuất. Đổi loại trang ở bước 2 để làm lại một file.' : 'Tải file PDF / ảnh ở bước 1.';
+  if (!todo.length) hint = s.jobs.some((j) => j.status === 'done') ? 'Mọi file đã trích xuất. Đổi trang đã chọn ở bước 2 để làm lại một file.' : 'Tải file PDF / ảnh ở bước 1.';
   else hint = `${todo.length} file · khoảng ${calls} lượt AI${left !== null ? ` (còn ${left} lượt hôm nay)` : ''}. Mỗi file mất 1–3 phút.`;
   const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || !s.user || noTable.length === todo.length, onclick: () => run(store, ctx) },
     s.running ? 'Đang trích xuất…' : 'Trích xuất bằng AI');
@@ -47,7 +49,7 @@ function renderRun(s, store, ctx) {
   keepFocus(row, () => mount(row,
     h('div', { style: { flex: '0 0 auto', display: 'flex', gap: '10px' } }, runBtn, stopBtn),
     h('p', { class: 'priv', style: { flex: '1 1 300px', margin: 0 } }, hint,
-      noTable.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, `${noTable.length} file chưa chọn trang bảng nào`) : null,
+      noTable.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, `${noTable.length} file chưa tick trang nào`) : null,
       left !== null && calls > left ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, 'không đủ lượt hôm nay') : null)));
 }
 
@@ -61,7 +63,7 @@ async function run(store, ctx) {
   });
   if (!client) return toast('Đăng nhập để trích xuất bằng AI');
   const s = store.get();
-  const todo = s.jobs.filter((j) => j.kind !== 'xls' && j.status === 'ready' && HAS_TABLE(j));
+  const todo = s.jobs.filter((j) => j.kind !== 'xls' && j.status === 'ready' && HAS_PICK(j));
   ctx.stop = false;
   store.set({ running: true });
   mount(box, h('ul', { class: 'prog' }, waitLine));
@@ -78,9 +80,11 @@ async function run(store, ctx) {
         if (label) li.children[1].textContent = label;
         li.children[2].textContent = state === 'split' ? 'dài quá, chia nhỏ' : error ? error.slice(0, 120) : '';
       };
-      const io = { parts: (pages) => ctx.io.pageParts(j.id, pages), ai: client, isSplittable, isFatal };
+      const io = { parts: (pages) => ctx.io.pageParts(j.id, pages), images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6), ai: client, isSplittable, isFatal };
       try {
-        const ext = await extractJob({ name: j.name, types: j.types, notes: j.notes }, io, { noteGroups: store.get().noteGroups, onStep });
+        // Trang đã tick: trang máy biết loại giữ nguyên, trang chưa rõ nhờ AI nhận bảng; chỉ gửi đúng các trang này.
+        const plan = await planPicked(j, j.picked, io, { onStep });
+        const ext = await extractJob({ name: j.name, types: plan.types, notes: plan.notes }, io, { noteGroups: store.get().noteGroups, onStep, exact: true });
         if (!Object.keys(ext.statements).length) throw new Error('Không đọc được bảng nào');
         if (!store.get().jobs.some((x) => x.id === j.id)) continue;          // file đã bị bỏ trong lúc chạy
         store.set((st) => {

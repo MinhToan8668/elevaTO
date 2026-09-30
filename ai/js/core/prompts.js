@@ -146,11 +146,15 @@ export const PAGE_MAP_SCHEMA = arr(obj({
   nhom: arr({ type: 'STRING', enum: ['fixedAssets', 'debt', 'equity', 'segments', 'goodwill', 'params'] }),
 }, ['trang', 'loai']));
 
-export function pageMapTask(firstPage) {
+/** @param pages số trang đầu (các trang liên tiếp) hoặc danh sách số trang theo đúng thứ tự ảnh đính kèm */
+export function pageMapTask(pages) {
+  const intro = Array.isArray(pages)
+    ? `Các ảnh đính kèm lần lượt là các trang số ${pages.join(', ')} của một BCTC (trường "trang" ghi đúng số trang này).`
+    : `Các ảnh đính kèm là các trang liên tiếp của một BCTC, bắt đầu từ trang ${pages}.`;
   return {
     schema: PAGE_MAP_SCHEMA,
     prompt: [
-      `Các ảnh đính kèm là các trang liên tiếp của một BCTC, bắt đầu từ trang ${firstPage}.`,
+      intro,
       'Với MỖI trang, cho biết loai: BS (tình hình tài chính / cân đối kế toán), IS (kết quả kinh doanh), CF (lưu chuyển tiền tệ), NOTES (thuyết minh), OTHER (bìa, mục lục, báo cáo kiểm toán, ban giám đốc…).',
       'Trang tiếp nối của một bảng (không có tiêu đề) vẫn cùng loại với bảng đó.',
       'Với trang NOTES, nhom = các thuyết minh có trên trang: fixedAssets (TSCĐ hữu hình/vô hình), debt (vay và nợ thuê tài chính), equity (biến động vốn chủ sở hữu), segments (báo cáo bộ phận / doanh thu theo mảng), goodwill (lợi thế thương mại), params (số cổ phiếu lưu hành, thuế suất TNDN).',

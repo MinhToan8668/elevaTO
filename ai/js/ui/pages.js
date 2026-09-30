@@ -1,0 +1,221 @@
+// Bước 2: chọn trang như FinLens — xem ảnh từng trang, bấm để xem trang lớn, tick trang cần trích xuất.
+// AI tự nhận trang đã tick thuộc bảng nào (pipeline.planPicked); người dùng không phải chọn loại trang.
+
+import { h, mount, $, pagesText } from './dom.js';
+import { watch } from './store.js';
+
+const SHORT = { BS: 'CĐKT', IS: 'KQKD', CF: 'LCTT', NOTES: 'Thuyết minh' };
+const thumbCache = new Map();          // `${jobId}:${page}` → dataURL
+const panels = new Map();              // jobId → { el, sig } — tick một trang không vẽ lại cả lưới
+const lastClick = new Map();           // jobId → trang tick gần nhất (Shift + tick để chọn một dải)
+
+export function initPages(store, ctx) {
+  ctx.forgetThumbs = (id) => { for (const k of thumbCache.keys()) if (k.startsWith(`${id}:`)) thumbCache.delete(k); panels.delete(id); };
+  ctx.setPicked = (id, picked) => {
+    const j = store.get().jobs.find((x) => x.id === id);
+    if (!j) return;
+    const sorted = [...new Set(picked)].filter((p) => p >= 1 && p <= j.numPages).sort((a, b) => a - b);
+    ctx.patchJob(id, { picked: sorted, status: j.status === 'done' ? 'ready' : j.status });
+  };
+  watch(store, ['jobs', 'running'], (s) => render(s, store, ctx));
+}
+
+const sigOf = (j, s) => JSON.stringify([j.numPages, j.scanned, j.status === 'reading', s.running, j.types?.length]);
+
+function render(s, store, ctx) {
+  const box = $('#pageMaps');
+  const jobs = s.jobs.filter((j) => j.kind !== 'xls' && j.status !== 'error' && j.status !== 'reading');
+  for (const id of panels.keys()) if (!jobs.some((j) => j.id === id)) panels.delete(id);
+  if (!jobs.length) { mount(box, h('p', { class: 'empty' }, 'Chưa có file PDF / ảnh nào. File Excel không cần bước này.')); return; }
+  const els = jobs.map((j, i) => {
+    const sig = sigOf(j, s), had = panels.get(j.id);
+    if (had && had.sig === sig) { had.sync(j); return had.el; }
+    const p = panel(j, store, ctx, had ? had.el.open : i === jobs.length - 1);
+    panels.set(j.id, { ...p, sig });
+    return p.el;
+  });
+  const same = els.length === box.children.length && els.every((el, i) => box.children[i] === el);
+  if (!same) mount(box, els);
+  document.querySelector('.rail a[data-step="3"]').classList.toggle('done', jobs.some((j) => j.picked?.length));
+}
+
+function panel(j0, store, ctx, isOpen) {
+  let j = j0;
+  const count = h('span', { class: 'tag em' });
+  const found = h('span', { class: 'found' });
+  const grid = h('div', { class: 'thumbs', role: 'group', 'aria-label': `Các trang của ${j.name}` });
+  const tiles = [];
+
+  const toggle = (n, on, shift) => {
+    const cur = new Set(store.get().jobs.find((x) => x.id === j.id)?.picked || []);
+    const from = lastClick.get(j.id);
+    const range = shift && from ? [Math.min(from, n), Math.max(from, n)] : [n, n];
+    for (let p = range[0]; p <= range[1]; p++) { if (on) cur.add(p); else cur.delete(p); }
+    lastClick.set(j.id, n);
+    ctx.setPicked(j.id, [...cur]);
+  };
+
+  for (let n = 1; n <= j.numPages; n++) {
+    const img = h('button', { type: 'button', class: 'tile-img', 'aria-label': `Xem lớn trang ${n}`, dataset: { job: j.id, page: String(n) },
+      onclick: () => openViewer(j.id, n, store, ctx) }, h('span', { class: 'pno' }, String(n)));
+    const chk = h('input', { type: 'checkbox', 'aria-label': `Chọn trang ${n}`, disabled: store.get().running });
+    chk.addEventListener('click', (e) => toggle(n, chk.checked, e.shiftKey));
+    const tag = h('span', { class: 'tile-t' });
+    const tile = h('div', { class: 'tile' }, img, h('label', { class: 'tile-chk' }, chk), tag);
+    tiles.push({ tile, chk, tag });
+    grid.append(tile);
+  }
+  lazyThumbs(grid, ctx);
+
+  const sync = (nj) => {
+    j = nj;
+    const set = new Set(j.picked || []);
+    tiles.forEach(({ tile, chk, tag }, i) => {
+      const n = i + 1, on = set.has(n), t = j.scanned ? '' : SHORT[j.types?.[i]] || '';
+      tile.classList.toggle('on', on);
+      if (chk.checked !== on) chk.checked = on;
+      tag.textContent = t;
+      tag.hidden = !t;
+    });
+    count.textContent = `Đã chọn ${set.size}/${j.numPages} trang`;
+    const auto = ['BS', 'IS', 'CF'].map((t) => { const p = j.types.map((x, i) => (x === t ? i + 1 : 0)).filter(Boolean); return p.length ? `${SHORT[t]} ${pagesText(p)}` : ''; }).filter(Boolean);
+    found.textContent = j.scanned ? (j.kind === 'img' ? 'Ảnh chụp — AI sẽ tự nhận bảng' : 'Bản scan — tick trang, AI sẽ tự nhận bảng') : auto.length ? `Máy nhận ra: ${auto.join(' · ')}` : '';
+  };
+
+  const bar = h('div', { class: 'pick-bar' },
+    h('button', { type: 'button', class: 'btn ghost sm', hidden: j.scanned && j.kind !== 'img', disabled: store.get().running, onclick: () => ctx.setPicked(j.id, suggest(j)) }, 'Chọn gợi ý'),
+    h('button', { type: 'button', class: 'btn ghost sm', disabled: store.get().running, onclick: () => ctx.setPicked(j.id, Array.from({ length: j.numPages }, (_, i) => i + 1)) }, 'Chọn tất cả'),
+    h('button', { type: 'button', class: 'btn ghost sm', disabled: store.get().running, onclick: () => ctx.setPicked(j.id, []) }, 'Bỏ chọn'),
+    h('span', { class: 'priv' }, 'Bấm vào ảnh để xem trang lớn · Shift + tick để chọn một dải trang'));
+
+  const el = h('details', { class: 'pmap', dataset: { id: j.id }, open: isOpen },
+    h('summary', {}, h('h3', {}, j.name, ' ', count), found),
+    bar, grid,
+    h('p', { class: 'priv' }, 'Tick các trang Báo cáo tình hình tài chính, Kết quả kinh doanh, Lưu chuyển tiền tệ và các trang thuyết minh cần lấy (TSCĐ, vay, vốn chủ, doanh thu theo mảng…). Chọn càng đúng, AI đọc càng nhanh và ít tốn lượt.'));
+  sync(j);
+  return { el, sync };
+}
+
+function suggest(j) {
+  const set = new Set();
+  j.types.forEach((t, i) => { if (['BS', 'IS', 'CF'].includes(t)) set.add(i + 1); });
+  for (const pages of Object.values(j.notes || {})) for (const p of pages || []) if (j.types[p - 1] === 'NOTES') set.add(p);
+  return j.kind === 'img' ? j.types.map((_, i) => i + 1) : [...set];
+}
+
+function lazyThumbs(grid, ctx) {
+  const io = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      io.unobserve(en.target);
+      paintThumb(en.target, ctx);
+    }
+  }, { rootMargin: '300px' });
+  grid.querySelectorAll('.tile-img').forEach((el) => io.observe(el));
+}
+
+async function paintThumb(el, ctx) {
+  const { job, page } = el.dataset;
+  const key = `${job}:${page}`;
+  const m = ctx.media.get(job);
+  if (!m) return;
+  try {
+    let url = thumbCache.get(key);
+    if (!url && m.urls) url = m.urls[page - 1];
+    if (!url && m.pdf) {
+      const { thumbnail } = await import('../pdf.js');
+      url = await thumbnail(m.pdf.doc, Number(page), 220);
+      thumbCache.set(key, url);
+    }
+    if (url) el.style.backgroundImage = `url("${url}")`;
+  } catch (e) { el.classList.add('noimg'); el.title = `Không vẽ được trang: ${e.message}`; }
+}
+
+// ─── Xem trang lớn ────────────────────────────────────────
+
+let viewer = null;
+
+function openViewer(jobId, page, store, ctx) {
+  viewer ||= buildViewer(store, ctx);
+  viewer.show(jobId, page);
+}
+
+function buildViewer(store, ctx) {
+  const title = h('b', { id: 'vwTitle' });
+  const pos = h('span', { class: 'vw-pos' });
+  const stage = h('div', { class: 'vw-stage', tabindex: '0' });
+  const pick = h('button', { type: 'button', class: 'btn', id: 'vwPick', 'aria-pressed': 'false' });
+  const zoomTxt = h('span', { class: 'vw-zoom' });
+  const dlg = h('dialog', { class: 'viewer', 'aria-labelledby': 'vwTitle' },
+    h('div', { class: 'vw-head' }, title, pos, h('span', { class: 'sp' }),
+      h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': 'Thu nhỏ', onclick: () => zoom(-0.25) }, '−'), zoomTxt,
+      h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': 'Phóng to', onclick: () => zoom(0.25) }, '+'),
+      h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': 'Đóng', onclick: () => dlg.close() }, '✕')),
+    stage,
+    h('div', { class: 'vw-foot' },
+      h('button', { type: 'button', class: 'btn ghost', id: 'vwPrev', onclick: () => go(-1) }, '‹ Trang trước'),
+      pick,
+      h('button', { type: 'button', class: 'btn ghost', id: 'vwNext', onclick: () => go(1) }, 'Trang sau ›')));
+  document.body.append(dlg);
+
+  let jobId = '', page = 1, scale = 1, token = 0, back = null;
+  const job = () => store.get().jobs.find((x) => x.id === jobId);
+
+  async function draw() {
+    const j = job();
+    if (!j) { dlg.close(); return; }
+    const my = ++token;
+    title.textContent = j.name;
+    pos.textContent = `Trang ${page} / ${j.numPages}`;
+    zoomTxt.textContent = `${Math.round(scale * 100)}%`;
+    const on = (j.picked || []).includes(page);
+    pick.textContent = on ? '✓ Đã chọn trang này' : 'Chọn trang này';
+    pick.setAttribute('aria-pressed', String(on));
+    pick.classList.toggle('ghost', !on);
+    $('#vwPrev').disabled = page <= 1; $('#vwNext').disabled = page >= j.numPages;
+    const m = ctx.media.get(jobId);
+    if (!m) return;
+    mount(stage, h('p', { class: 'priv' }, 'Đang vẽ trang…'));
+    try {
+      if (m.urls) {
+        if (my === token) mount(stage, h('img', { src: m.urls[page - 1], alt: `Trang ${page}`, style: { width: `${scale * 100}%` } }));
+        return;
+      }
+      const { renderPage } = await import('../pdf.js');
+      const w = Math.min(2600, Math.round((stage.clientWidth || 900) * scale * (window.devicePixelRatio || 1)));
+      const canvas = await renderPage(m.pdf.doc, page, w);
+      if (my !== token) return;
+      canvas.style.width = `${scale * 100}%`;
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', `Trang ${page}`);
+      mount(stage, canvas);
+    } catch (e) { if (my === token) mount(stage, h('p', { class: 'msg err' }, `Không vẽ được trang: ${e.message}`)); }
+  }
+  function go(d) { const j = job(); if (!j) return; page = Math.min(j.numPages, Math.max(1, page + d)); stage.scrollTop = 0; draw(); }
+  function zoom(d) { scale = Math.min(3, Math.max(0.5, scale + d)); draw(); }
+  function togglePick() {
+    const j = job(); if (!j || store.get().running) return;
+    const cur = new Set(j.picked || []);
+    if (cur.has(page)) cur.delete(page); else cur.add(page);
+    ctx.setPicked(jobId, [...cur]);
+    draw();
+  }
+  pick.addEventListener('click', togglePick);
+  dlg.addEventListener('keydown', (e) => {
+    if (e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    if (e.key === ' ') { e.preventDefault(); togglePick(); }
+  });
+  dlg.addEventListener('close', () => { back?.focus?.(); });
+
+  return {
+    show(id, p) {
+      back = document.activeElement;
+      jobId = id; page = p; scale = 1;
+      if (!dlg.open) dlg.showModal();
+      stage.focus();
+      draw();
+    },
+  };
+}

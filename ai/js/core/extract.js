@@ -105,7 +105,13 @@ export function statementToValues(st, ai, hint = {}) {
   return { cur: out.cur, prev: out.prev, unit, regime, direct, unmapped: [...unmapped], warnings, meta };
 }
 
+// Thông tư 99/2025 áp dụng từ năm tài chính 2026: báo cáo kỳ kết thúc từ 2025 trở về trước chắc chắn theo mẫu TT200
+// (kể cả khi AI ghi nhầm thông tư) → đọc mã theo TT200 rồi quy đổi sang mẫu 2026.
+const yearOf = (d) => { const m = /(\d{4})/.exec(String(d || '')); return m ? Number(m[1]) : 0; };
+
 function regimeFrom(st, meta, cur, items) {
+  const y = yearOf(meta.ngay_ket_thuc);
+  if (y && y <= 2025) return 'TT200';
   const t = String(meta.thong_tu || '');
   if (/200/.test(t)) return 'TT200';
   if (/99/.test(t)) return 'TT99';
@@ -208,7 +214,7 @@ function guessIntangible(name, nhom) {
 const neg = (v) => (v ? -Math.abs(v) : 0);
 const abs = (v) => (v ? Math.abs(v) : 0);
 
-/** Kết quả AI cho một nhóm thuyết minh → dạng dgw.js cần (đơn vị đồng). */
+/** Kết quả AI cho một nhóm thuyết minh → dạng model.js cần (đơn vị đồng). */
 export function noteToModel(kind, ai) {
   const unit = unitScale(ai.meta?.don_vi) || 1;
   const n = (x) => { const v = parseVN(x); return v === null ? 0 : v * unit; };

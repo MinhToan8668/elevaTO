@@ -5,10 +5,14 @@ import { buildDataset, checkDataset } from '../core/dataset.js';
 
 export const NOTE_KEYS = ['segments', 'fixedAssets', 'equity', 'debt', 'goodwill', 'params'];
 export const PRESETS = {
-  dgw: { label: 'Cho model elevaTO (khuyên dùng)', desc: '3 báo cáo + doanh thu/LN gộp theo mảng, TSCĐ theo nhóm, vốn chủ, vay, lợi thế TM, số cổ phiếu', notes: NOTE_KEYS },
+  model: { label: 'Cho model elevaTO (khuyên dùng)', desc: '3 báo cáo + doanh thu/LN gộp theo mảng, TSCĐ theo nhóm, vốn chủ, vay, lợi thế TM, số cổ phiếu', notes: NOTE_KEYS },
   main: { label: 'Chỉ 3 báo cáo chính', desc: 'Nhanh, ít lượt AI nhất. Model vẫn điền được, phần thuyết minh sẽ ước tính', notes: [] },
   custom: { label: 'Tự chọn', desc: 'Tick từng nhóm thuyết minh bên dưới', notes: null },
 };
+
+/** Học viên và giảng viên elevaTO mới điền được model. */
+export const canUseModel = (user) => ['hv', 'gv'].includes(user?.vaitro);
+export const ROLE_NAME = { free: 'Tài khoản thường', hv: 'Học viên elevaTO', gv: 'Giảng viên elevaTO' };
 
 export function initialState() {
   return {
@@ -16,7 +20,7 @@ export function initialState() {
     jobs: [],            // file đang mở: { id, name, kind: 'pdf'|'img'|'xls', status, error, numPages, types, notes, scanned }
     sources: [],         // dữ liệu đã trích: { id, jobId, kind: 'ext'|'period', ext | period+values, meta? }
     edits: [],           // số sửa tay: { period, key, v }
-    preset: 'dgw',
+    preset: 'model',
     noteGroups: [...NOTE_KEYS],
     ticks: null,         // null = mọi dòng có số; mảng khoá = chỉ các dòng này
     unit: 1e6,

@@ -116,5 +116,5 @@ Kiểm thử (Node 20+):
 cd ai
 npm test                 # kiểm thử đơn vị: đọc số, cây cộng dồn, quy đổi TT200, trích xuất, điền Excel, máy chủ…
 npm install && npm run e2e   # chạy trang thật trong Chromium, máy chủ AI giả lập
-# thử điền file thật: DGW_MODEL=model.xlsx FORM_2026=form.xlsx npm run e2e
+# thử điền file thật: MODEL_XLSX=model.xlsx FORM_2026=form.xlsx npm run e2e
 ```

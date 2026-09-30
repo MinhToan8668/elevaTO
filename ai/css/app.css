@@ -303,3 +303,143 @@ table.k td .tag{white-space:normal}
   input.inp,select.inp{font-size:16px}           /* iPhone không tự phóng to khi gõ */
 }
 @media (max-width:420px){ .product{display:none} }
+
+
+/* ════════════════════════════════════════════════════════════
+   LIQUID GLASS — nền chuyển màu + khung kính mờ (kiểu iOS)
+   ════════════════════════════════════════════════════════════ */
+:root{
+  --base:#e9f1ee;
+  --blob1:rgba(24,203,150,.42); --blob2:rgba(34,211,238,.30); --blob3:rgba(99,102,241,.22); --blob4:rgba(250,204,21,.18);
+  --glass:rgba(255,255,255,.58); --glass-strong:rgba(255,255,255,.78); --glass-soft:rgba(255,255,255,.38);
+  --glass-line:rgba(255,255,255,.75); --glass-edge:rgba(16,40,30,.08);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(255,255,255,.25);
+  --glass-shadow:0 1px 1px rgba(16,40,30,.04), 0 12px 40px rgba(16,40,30,.10);
+  --blur:blur(26px) saturate(185%);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --base:#04080a;
+    --blob1:rgba(24,203,150,.30); --blob2:rgba(37,99,235,.26); --blob3:rgba(124,58,237,.24); --blob4:rgba(14,165,233,.14);
+    --glass:rgba(20,28,26,.55); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
+    --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
+    --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
+    --glass-shadow:0 1px 1px rgba(0,0,0,.3), 0 18px 50px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --base:#04080a;
+  --blob1:rgba(24,203,150,.30); --blob2:rgba(37,99,235,.26); --blob3:rgba(124,58,237,.24); --blob4:rgba(14,165,233,.14);
+  --glass:rgba(20,28,26,.55); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
+  --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
+  --glass-shadow:0 1px 1px rgba(0,0,0,.3), 0 18px 50px rgba(0,0,0,.45);
+}
+
+body{background:var(--base);background-image:none}
+/* Nền: các mảng màu mờ trôi chậm + lớp hạt nhẹ cho đỡ phẳng */
+.bg{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.bg i{position:absolute;border-radius:50%;filter:blur(70px);will-change:transform;animation:drift 28s ease-in-out infinite alternate}
+.bg .b1{width:52vmax;height:52vmax;left:-12vmax;top:-18vmax;background:radial-gradient(circle,var(--blob1),transparent 65%)}
+.bg .b2{width:46vmax;height:46vmax;right:-14vmax;top:8vmax;background:radial-gradient(circle,var(--blob2),transparent 65%);animation-duration:34s;animation-delay:-8s}
+.bg .b3{width:50vmax;height:50vmax;left:18vmax;bottom:-26vmax;background:radial-gradient(circle,var(--blob3),transparent 65%);animation-duration:40s;animation-delay:-16s}
+.bg .b4{width:30vmax;height:30vmax;right:18vmax;bottom:6vmax;background:radial-gradient(circle,var(--blob4),transparent 65%);animation-duration:30s;animation-delay:-4s}
+.bg::after{content:'';position:absolute;inset:0;opacity:.35;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
+@media (prefers-reduced-motion:reduce){.bg i{animation:none}}
+
+/* Khung kính: nền trong mờ + viền sáng + ánh phản chiếu phía trên */
+.glass,.step,.auth-card,.top,.rail a.active,.rail .hint,.acct-pop,.viewer,.toast,.cardx,.pmap,.preset,.notes-pick,.banner,.feats .fn,.seg,.tabs,.sum .pc,.icon-btn,.acct summary{
+  background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--glass-line);box-shadow:var(--glass-hi),var(--glass-shadow)}
+.step,.auth-card,.cardx,.pmap{position:relative;isolation:isolate}
+.step::before,.auth-card::before,.cardx::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:linear-gradient(135deg,rgba(255,255,255,.38),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 70%,rgba(255,255,255,.12))}
+:root[data-theme="dark"] .step::before,:root[data-theme="dark"] .auth-card::before,:root[data-theme="dark"] .cardx::before{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,0) 40%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .step::before,:root:not([data-theme="light"]) .auth-card::before,:root:not([data-theme="light"]) .cardx::before{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,0) 40%)}}
+.step{border-radius:24px}
+.auth-card{border-radius:28px;background:var(--glass-strong)}
+.top{border:0;border-bottom:1px solid var(--glass-line);box-shadow:var(--glass-hi);border-radius:0}
+.rail a.active{box-shadow:var(--glass-hi),var(--glass-shadow)}
+.rail .hint{border-style:solid}
+.toast{background:var(--glass-strong);color:var(--strong);border-radius:16px}
+.acct-pop{background:var(--glass-strong)}
+.cardx{background:var(--glass-soft);border-radius:18px}
+.pmap{background:var(--glass-soft);border-radius:18px}
+.preset{background:var(--glass-soft)}
+.preset[aria-pressed="true"]{background:var(--em-soft);border-color:var(--em)}
+.notes-pick{background:var(--glass-soft)}
+.gridwrap,.drop,.inp,select.inp,.file,.prog li,.msg,table.k{-webkit-backdrop-filter:none;backdrop-filter:none}
+.gridwrap{background:var(--glass-strong)}
+table.g thead th{background:var(--glass-strong);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+.drop{background:var(--glass-soft);border-color:var(--glass-line);border-width:2px;border-radius:20px}
+.drop:hover,.drop.over{background:var(--em-soft);border-color:var(--em)}
+.file{background:var(--glass-strong);border-color:var(--glass-line);border-radius:16px}
+.inp,select.inp{background:var(--glass-strong)}
+.seg{border-radius:14px;padding:4px}
+.seg button{border-radius:10px}
+.seg button[aria-pressed="true"]{background:var(--glass-strong);box-shadow:var(--glass-hi),0 2px 10px rgba(0,0,0,.08)}
+.tabs{border-radius:14px}
+.tabs button[aria-selected="true"]{background:var(--glass-strong);box-shadow:var(--glass-hi),0 2px 10px rgba(0,0,0,.08)}
+.sum .pc.ok{background:var(--em-soft);border-color:var(--em-line)}
+.sum .pc.bad{background:var(--red-soft)}
+
+/* Nút kiểu iOS: viên thuốc, nút chính có độ bóng */
+.btn{border-radius:999px;padding:11px 20px;background:linear-gradient(180deg,#3fe3b4,#12b886);color:#03261a;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(0,0,0,.08),0 8px 22px rgba(24,203,150,.32)}
+.btn.ghost{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-line);color:var(--strong);box-shadow:var(--glass-hi)}
+.btn.ghost:hover{border-color:var(--em)}
+.btn.sm{border-radius:999px;padding:6px 13px}
+.btn.big{border-radius:16px}
+.icon-btn.sm{width:34px;height:34px;font-size:17px;font-weight:700;color:var(--strong)}
+
+/* ── Chọn trang ───────────────────────── */
+.pmap > summary{display:flex;flex-direction:column;gap:2px}
+.pmap .found{font-size:12.5px;color:var(--muted);padding-left:18px}
+.pick-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 12px}
+.pick-bar .priv{margin:0 0 0 6px}
+.thumbs{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:12px;max-height:560px;padding:4px}
+.tile{position:relative;border-radius:14px;overflow:hidden;background:var(--glass-strong);border:2px solid var(--glass-line);
+  box-shadow:0 4px 14px rgba(0,0,0,.06);transition:border-color .2s,box-shadow .2s,transform .2s var(--ease)}
+.tile:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.12)}
+.tile.on{border-color:var(--em);box-shadow:0 0 0 3px var(--em-soft),0 10px 24px rgba(24,203,150,.22)}
+.tile-img{display:block;width:100%;aspect-ratio:.707;border:0;padding:0;background:#fff center top/cover no-repeat;cursor:zoom-in;position:relative}
+.tile-img.noimg{background:repeating-linear-gradient(45deg,var(--surface-2) 0 6px,var(--surface-3) 6px 12px)}
+.tile-img:focus-visible{outline:3px solid var(--em);outline-offset:-3px}
+.pno{position:absolute;right:7px;bottom:7px;font:700 11px/1 var(--mono);background:rgba(10,15,13,.72);color:#fff;padding:4px 7px;border-radius:7px}
+.tile-chk{position:absolute;left:7px;top:7px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.tile-chk input{width:19px;height:19px;accent-color:var(--em);cursor:pointer;margin:0}
+.tile.on .tile-chk{background:var(--em)}
+.tile-t{position:absolute;left:7px;bottom:7px;font-size:10.5px;font-weight:800;letter-spacing:.02em;padding:3px 7px;border-radius:7px;background:var(--em);color:#03261a}
+
+/* ── Xem trang lớn ────────────────────── */
+dialog.viewer{width:min(1120px,96vw);height:min(94vh,1100px);max-width:none;max-height:none;margin:auto;padding:0;border-radius:24px;color:var(--text);background:var(--glass-strong);overflow:hidden}
+dialog.viewer[open]{display:flex;flex-direction:column}
+dialog.viewer::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.vw-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--glass-line)}
+.vw-head b{color:var(--strong);max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vw-head .sp{flex:1}
+.vw-pos{font-size:13px;color:var(--muted);white-space:nowrap}
+.vw-zoom{font:600 12.5px var(--mono);color:var(--muted);min-width:44px;text-align:center}
+.vw-stage{flex:1;overflow:auto;padding:18px;background:rgba(0,0,0,.18);outline:none}
+.vw-stage canvas,.vw-stage img{display:block;margin:0 auto;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.35);background:#fff;max-width:none}
+.vw-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-top:1px solid var(--glass-line)}
+#vwPick{min-width:200px}
+
+/* ── Thẻ khoá (model chỉ cho học viên) ── */
+.cardx.locked{opacity:.92}
+.cardx.locked .lock-ic{font-size:22px}
+.fine-l{font-size:12.5px;color:var(--muted)}
+
+@media (max-width:900px){
+  .thumbs{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}
+  .pick-bar .priv{flex-basis:100%;margin:2px 0 0}
+  dialog.viewer{width:100vw;height:100dvh;border-radius:0}
+  .vw-foot .btn{padding:10px 12px;font-size:13px}
+  #vwPick{min-width:0;flex:1}
+}
+/* Nút phụ: viền đủ đậm trên nền sáng; nút bị khoá mờ hẳn */
+.btn.ghost{border-color:var(--field)}
+.btn:disabled,.btn.ghost:disabled{opacity:.42;cursor:not-allowed;filter:none;box-shadow:none;transform:none}

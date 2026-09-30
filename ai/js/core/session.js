@@ -8,7 +8,7 @@ const KEY_RE = /^(BS|IS|CF):(T?\d{1,3}[a-z]?|KP[Q12])$/;
 const PERIOD_RE = /^(FY\d{4}|Q[1-4]-\d{4})$/;
 const UNITS = [1, 1e3, 1e6, 1e9];
 const NOTE_KEYS = ['segments', 'fixedAssets', 'equity', 'debt', 'goodwill', 'params'];
-const PRESETS = ['dgw', 'main', 'custom'];
+const PRESETS = ['model', 'main', 'custom'];
 const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const SLOTS = 5;
 
@@ -34,7 +34,7 @@ export function parseSession(text) {
     segmentMap: Object.fromEntries(Object.entries(obj(d.segmentMap)).filter(([k, v]) => safeKey(k) && Number.isInteger(v) && v >= 0 && v < SLOTS).map(([k, v]) => [str(k, 120), v]).slice(0, 50)),
     segmentNames: Array.from({ length: SLOTS }, (_, i) => str(arr(d.segmentNames, SLOTS)[i], 60)),
     noteGroups: arr(d.noteGroups, 10).filter((g) => NOTE_KEYS.includes(g)),
-    preset: PRESETS.includes(d.preset) ? d.preset : 'custom',
+    preset: d.preset === 'dgw' ? 'model' : PRESETS.includes(d.preset) ? d.preset : 'custom',
     savedAt: str(o.savedAt, 40),
   };
 }
