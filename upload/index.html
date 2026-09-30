@@ -70,6 +70,17 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
   text-decoration:none;cursor:pointer;white-space:nowrap}
 .item-links a:hover,.item-links button:hover{border-color:var(--emerald)}
 .note{color:var(--muted);font-size:13px;margin-top:12px}
+
+/* Kho file trên Telegram */
+.kho{margin-top:18px}
+.kho-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.kho-head h2{color:var(--white);font-size:17px;font-weight:700}
+.btn-sm{flex:none;font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;
+  border:1px solid var(--border3);background:none;color:var(--white);cursor:pointer}
+.btn-sm:hover{border-color:var(--emerald)}
+.btn-sm:disabled{opacity:.45;cursor:not-allowed}
+.item-links .main{background:var(--emerald);border-color:var(--emerald);color:#04110c}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 8px;border:1px dashed var(--border2);border-radius:var(--r-sm)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -95,7 +106,7 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
     </div>
     <div class="row">
       <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="tele" checked>
-        <span>Gửi file vào chat Telegram rồi xoá khỏi Drive (file trên 45MB được cắt thành
+        <span>Gửi file vào chat Telegram rồi xoá khỏi Drive (file trên 19MB được cắt thành
           nhiều phần, ghép lại bằng <a href="ghep.html" target="_blank" rel="noopener" style="color:var(--emerald-lt)">trang ghép file</a>)</span></label>
       <label class="chk"><input type="checkbox" id="share" checked>
         <span>Ai có link đều xem và tải được (cần bật để tải về ở máy khác mà không phải đăng nhập)</span></label>
@@ -109,6 +120,18 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
     </div>
     <div class="msg" id="msg"></div>
     <p class="note" id="note" hidden></p>
+  </section>
+
+  <section class="card kho" id="kho" hidden>
+    <div class="kho-head">
+      <h2>Kho file trên Telegram</h2>
+      <button class="btn-sm" id="khoLoad" type="button">Làm mới</button>
+    </div>
+    <p class="note" style="margin-top:6px">File bot đã gửi vào Telegram. Bấm <b>Lấy về</b>: bot kéo các phần từ
+      Telegram, ghép thành file gốc đặt tạm trên Drive để bạn tải — không cần vào Telegram, không phải ghép tay.
+      Bản tạm tự xoá sau 24 giờ.</p>
+    <ul class="list" id="khoList"></ul>
+    <div class="msg" id="khoMsg"></div>
   </section>
 </main>
 
@@ -127,7 +150,7 @@ var MAX_BYTES = 2 * 1024 * 1024 * 1024;
 var RETRIES = 5;
 var SAVE_KEY = 'elevato_upload_sessions';   // { chữ ký file: URL phiên } — để tải tiếp
 var TELE_KEY = 'elevato_upload_tele';       // nhớ lựa chọn "gửi vào Telegram"
-var TG_PART = 45 * 1024 * 1024;             // cỡ mỗi phần bot gửi — khớp TG_PART trong Code.gs
+var TG_PART = 19 * 1024 * 1024;             // cỡ mỗi phần bot gửi — khớp TG_PART trong Code.gs
 
 var $ = function (id) { return document.getElementById(id); };
 var queue = [];          // [{ file, sig, status: 'wait'|'up'|'done'|'err', note, result }]
@@ -390,6 +413,106 @@ async function uploadAll() {
   render();
 }
 
+// ─── Kho file trên Telegram ───
+var kho = [], khoTimer = null;
+var KHO_HOI_LAI = 8000;          // đang lấy về thì 8 giây hỏi lại một lần
+
+function khoShow(kind, text) {
+  var m = $('khoMsg');
+  m.className = 'msg' + (kind ? ' ' + kind : '');
+  m.textContent = text || '';
+}
+function ngayGio(v) {
+  var d = new Date(v);
+  return isNaN(d) ? '' : d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+}
+
+async function khoTai() {
+  clearTimeout(khoTimer);
+  var key = $('key').value.trim();
+  $('kho').hidden = !API;
+  if (!API || !key) return;
+  $('khoLoad').disabled = true;
+  try { kho = await call('lib_list', { key: key }); khoShow(); }
+  catch (e) { khoShow('err', errText(e)); }
+  $('khoLoad').disabled = false;
+  khoRender();
+  if (kho.some(function (it) { return it.st === 'dang'; })) khoTimer = setTimeout(khoTai, KHO_HOI_LAI);
+}
+
+function khoRender() {
+  var ul = $('khoList');
+  ul.textContent = '';
+  if (!kho.length) {
+    var e = document.createElement('li');
+    e.className = 'empty';
+    e.textContent = 'Chưa có file nào. File tải lên với ô "Gửi file vào chat Telegram" được bật sẽ hiện ở đây sau khi bot gửi xong.';
+    ul.appendChild(e);
+    return;
+  }
+  kho.forEach(function (it) {
+    var li = document.createElement('li');
+    li.className = 'item' + (it.st === 'san' ? ' done' : it.st === 'dang' ? ' up' : it.st === 'loi' ? ' err' : '');
+
+    var top = document.createElement('div');
+    top.className = 'item-top';
+    var name = document.createElement('span');
+    name.className = 'item-name'; name.textContent = it.name; name.title = it.name;
+    var size = document.createElement('span');
+    size.className = 'item-size'; size.textContent = mb(it.size);
+    var x = document.createElement('button');
+    x.className = 'item-x'; x.type = 'button'; x.textContent = '×';
+    x.setAttribute('aria-label', 'Bỏ ' + it.name + ' khỏi kho');
+    x.onclick = function () { khoBoFile(it); };
+    top.appendChild(name); top.appendChild(size); top.appendChild(x);
+    li.appendChild(top);
+
+    var st = document.createElement('div');
+    st.className = 'item-st';
+    st.textContent =
+      it.st === 'dang' ? 'Đang lấy về… ' + (it.done || 0) + '/' + it.parts + ' phần (bot chạy mỗi phút)' :
+      it.st === 'san'  ? '✓ Sẵn sàng tải · tự xoá lúc ' + ngayGio(it.until) :
+      it.st === 'loi'  ? 'Lỗi: ' + it.err + ' — bấm Lấy về để thử lại' :
+      'Gửi lúc ' + ngayGio(it.date) + (it.parts > 1 ? ' · ' + it.parts + ' phần' : '');
+    li.appendChild(st);
+
+    var act = document.createElement('div');
+    act.className = 'item-links';
+    if (it.st === 'san') {
+      var a = document.createElement('a');
+      a.className = 'main'; a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Tải về';
+      act.appendChild(a);
+      act.appendChild(copyBtn('Chép link tải', it.url));
+    } else if (it.st !== 'dang') {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'main'; b.textContent = 'Lấy về';
+      b.onclick = function () { khoLayFile(it, b); };
+      act.appendChild(b);
+    }
+    if (act.childNodes.length) li.appendChild(act);
+    ul.appendChild(li);
+  });
+}
+
+async function khoLayFile(it, btn) {
+  btn.disabled = true;
+  try {
+    var r = await call('lib_restore', { key: $('key').value.trim(), id: it.id });
+    it.st = r.st; it.done = r.done || 0; it.err = '';
+    khoShow();
+  } catch (e) { khoShow('err', errText(e)); }
+  khoRender();
+  clearTimeout(khoTimer);
+  khoTimer = setTimeout(khoTai, KHO_HOI_LAI);
+}
+
+async function khoBoFile(it) {
+  if (!confirm('Bỏ "' + it.name + '" khỏi kho?\n\nTin nhắn trong Telegram vẫn còn, nhưng trang này sẽ không lấy file về được nữa.')) return;
+  try { await call('lib_forget', { key: $('key').value.trim(), id: it.id }); khoShow(); }
+  catch (e) { khoShow('err', errText(e)); }
+  khoTai();
+}
+
 // ─── Sự kiện ───
 $('drop').onclick = function () { if (!busy) $('file').click(); };
 $('drop').onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('drop').click(); } };
@@ -403,6 +526,8 @@ $('file').onchange = function () { addFiles(this.files); this.value = ''; };
 $('drop').addEventListener('drop', function (e) { addFiles(e.dataTransfer.files); });
 $('key').oninput = refresh;
 $('go').onclick = uploadAll;
+$('khoLoad').onclick = khoTai;
+$('key').addEventListener('change', khoTai);
 window.addEventListener('beforeunload', function (e) { if (busy) { e.preventDefault(); e.returnValue = ''; } });
 
 // API + key: lấy từ link (#api=…&key=… — hàm caiDat nhắn vào Telegram) hoặc lần trước.
@@ -428,6 +553,7 @@ window.addEventListener('beforeunload', function (e) { if (busy) { e.preventDefa
   if (!API) show('warn', 'Trang chưa biết máy chủ tải lên. Mở trang bằng link bot Telegram đã gửi ' +
                          '(chạy hàm caiDat trong Apps Script để bot gửi lại).');
   refresh();
+  khoTai();
 })();
 </script>
 </body>

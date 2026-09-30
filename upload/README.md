@@ -13,9 +13,18 @@ Trang chạy được trên máy không vào được Telegram, vì nó chỉ n�
 Sau đó, tuỳ ô **"Gửi file vào chat Telegram rồi xoá khỏi Drive"** trên trang:
 
 - **Bật** (mặc định): trong vòng một phút bot gửi file vào chat Telegram. File trên
-  45MB được cắt thành các phần `.001`, `.002`… (bot chỉ gửi được file tối đa 50MB).
-  Gửi đủ thì bản trên Drive vào Thùng rác (Drive tự xoá hẳn sau 30 ngày).
+  19MB được cắt thành các phần `.001`, `.002`… Gửi đủ thì bản trên Drive vào Thùng
+  rác (Drive tự xoá hẳn sau 30 ngày) và file vào **Kho** (xem dưới).
 - **Tắt**: file ở lại Drive, bot chỉ nhắn link xem và link tải về.
+
+**Kho file trên Telegram** (cuối trang upload): liệt kê file bot đã gửi. Bấm **Lấy về**
+→ trong 1–2 phút bot kéo các phần từ Telegram, ghép thành file gốc đặt tạm trên Drive
+→ nút **Tải về** hiện ra. Không cần vào Telegram, không phải ghép tay. Bản tạm tự vào
+Thùng rác sau 24 giờ (`GIU_BAN_TAM_GIO`). Nút × bỏ file khỏi kho (tin nhắn Telegram vẫn còn).
+
+Vì sao phần 19MB: bot gửi được file tới 50MB nhưng chỉ **tải về** được file tới 20MB.
+File gửi bằng bản cũ (phần 45MB) và file gửi trước khi có kho **không lấy về được** —
+tải chúng từ Telegram trên điện thoại rồi ghép bằng `ghep.html`.
 
 Ghép các phần: tải đủ về máy, mở `ghep.html`
 (`https://minhtoan8668.github.io/elevaTO/upload/ghep.html`) → chọn cả bộ → **Ghép và tải về**.
@@ -55,8 +64,9 @@ mới**. Sửa bản cũ, đừng tạo bản mới — tạo mới là đổi U
 ## Ghi chú
 
 - Vì sao file phải lên Drive trước: trình duyệt ở Việt Nam không gọi được Telegram,
-  máy chủ Google thì gọi được. Bot chỉ gửi được file **tối đa 50MB** nên file lớn
-  bị cắt thành phần 45MB.
+  máy chủ Google thì gọi được — cả lúc gửi đi lẫn lúc lấy về.
+- Kho lưu trong Script Properties: mỗi file một ô `TGLIB_<id>`, mã file_id các phần
+  40 mã một ô `TGFID_<id>_<n>` (mỗi ô tối đa 9KB).
 - Chuyển vào Telegram chạy nền: mỗi lượt ~4 phút, nhớ chỗ dừng, lượt sau làm tiếp —
   file 2GB cũng không chạm giới hạn 6 phút. Telegram lỗi 5 lần liên tiếp thì bot
   bỏ, **giữ file trên Drive** và nhắn link.

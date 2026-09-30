@@ -72,7 +72,8 @@ h1{color:var(--white);font-size:22px;font-weight:700;letter-spacing:-.01em}
 
 <script>
 var PART_RE = /^(.+)\.(\d{3})$/;
-var TG_PART = 45 * 1024 * 1024;   // cỡ mỗi phần bot gửi — khớp TG_PART trong backend/Code.gs
+// Cỡ phần bot cắt: 19MB (bản hiện tại, để bot lấy ngược được) và 45MB (bản cũ).
+var CO_PHAN = [19 * 1024 * 1024, 45 * 1024 * 1024];
 
 var $ = function (id) { return document.getElementById(id); };
 var parts = [], outName = '', url = '';
@@ -113,9 +114,13 @@ function chon(files) {
   if (kq.error) return show('err', kq.error);
   var cuoi = parts[parts.length - 1].size;
   // Mọi phần trừ phần cuối phải đúng cỡ; phần cuối mà cũng đủ cỡ thì có thể còn phần sau chưa tải.
-  var lech = parts.slice(0, -1).some(function (f) { return f.size !== TG_PART; });
-  if (lech) return show('warn', 'Có phần không đúng cỡ ' + mb(TG_PART) + ' — có thể tải về bị dở. Vẫn ghép được, nhưng file ghép ra có thể hỏng.');
-  if (cuoi === TG_PART) return show('warn', 'Phần cuối (' + pad(parts.length) + ') vẫn đủ ' + mb(TG_PART) +
+  // Cỡ phần lấy theo phần đầu, và phần đầu phải đúng một cỡ bot dùng — ghép được cả bản cũ lẫn mới.
+  var co = parts[0].size;
+  if (parts.length === 1) return show('warn', 'Mới có một phần — bot cắt file luôn thành từ 2 phần trở lên. ' +
+    'Đối chiếu tin nhắn bot ("phần x/N") rồi chọn đủ N phần.');
+  var lech = CO_PHAN.indexOf(co) < 0 || parts.slice(0, -1).some(function (f) { return f.size !== co; });
+  if (lech) return show('warn', 'Có phần không đúng cỡ bot cắt (19MB hoặc 45MB) — có thể tải về bị dở. Vẫn ghép được, nhưng file ghép ra có thể hỏng.');
+  if (parts.length > 1 && cuoi === co) return show('warn', 'Phần cuối (' + pad(parts.length) + ') vẫn đủ ' + mb(co) +
     ' — đối chiếu tin nhắn bot ("phần x/N") xem đã đủ N phần chưa.');
   show(kq.la.length ? 'warn' : '', kq.la.length ? 'Bỏ qua file không phải phần: ' + kq.la.join(', ') : '');
 }
