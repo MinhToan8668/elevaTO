@@ -34,6 +34,13 @@ const genCalls = (g) => g.calls.filter((c) => c.url.includes(':generateContent')
 
 // ─── Cài đặt ──────────────────────────────────────────────
 
+test('mở link /exec bằng trình duyệt: biết được phiên bản đang chạy', () => {
+  const g = setup();
+  const r = JSON.parse(g.run('doGet()'));          // ContentService giả lập trả thẳng chuỗi JSON
+  assert.equal(r.ok, true);
+  assert.match(r.ban, /^\d{4}-\d{2}-\d{2}/, JSON.stringify(r));
+});
+
 test('caiDat: cất key vào Script Properties, tạo bảng tài khoản, chạy lại không tạo bảng mới', () => {
   const g = setup(undefined, { keys: `${KEY}, ${KEY2}` });
   assert.equal(g.props.GEMINI_KEYS, `${KEY}\n${KEY2}`);

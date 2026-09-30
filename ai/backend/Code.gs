@@ -52,6 +52,7 @@ var DK_MOI_GIO      = 30;                  // chặn bot: tối đa số tài kh
 var MK_TOI_THIEU    = 8;
 var BAM_VONG        = 1500;                // số vòng băm mật khẩu
 var GEMINI_API      = 'https://generativelanguage.googleapis.com/v1beta/models';
+var PHIEN_BAN       = '2026-09-30c';       // đổi mỗi lần sửa file này, để biết bản nào đang chạy
 var MIME_OK         = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'text/csv'];
 var GEN_KEYS        = ['temperature', 'topP', 'topK', 'maxOutputTokens', 'responseMimeType', 'responseSchema',
                        'responseJsonSchema', 'thinkingConfig', 'seed'];
@@ -64,7 +65,8 @@ function json(obj) { return ContentService.createTextOutput(JSON.stringify(obj))
 function loi(code, error, extra) { var o = { ok: false, code: code, error: error }; for (var k in extra || {}) o[k] = extra[k]; return o; }
 function ok(data) { return { ok: true, data: data }; }
 
-function doGet() { return json({ ok: true, service: 'elevaTO AI' }); }
+// Mở link /exec trên trình duyệt sẽ thấy phiên bản đang chạy — dùng để biết đã Triển khai bản mới chưa.
+function doGet() { return json({ ok: true, service: 'elevaTO AI', ban: PHIEN_BAN }); }
 
 /**
  * { action, … } → { ok:true, data } | { ok:false, code, error, retryAfter? }
@@ -422,9 +424,10 @@ function goiGemini(tk, b) {
   if (cho) return loi('busy', 'Hệ thống đang đông, chờ ' + cho + ' giây', { retryAfter: cho });
   var khoa = giuLuot(tk);
   if (!khoa) return hetLuot(tk);
-  var r = goiLanLuot(models, body);
+  var r = goiLanLuot(models, body) || {};
   if (r.traLai) traLuot(khoa);                         // chỉ trả lượt khi Gemini chưa làm gì
-  return r.kq;
+  // Không bao giờ trả { ok: true } rỗng: trang đọc thiếu trường sẽ hỏng.
+  return r.kq || loi('upstream', 'Máy chủ không nhận được kết quả từ Gemini, thử lại sau ít phút');
 }
 
 /**
