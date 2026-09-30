@@ -6,9 +6,10 @@ import { statementRows, periodLabel } from '../core/table.js';
 import { parseVN } from '../core/numbers.js';
 import { item } from '../core/statements.js';
 import { renderNotes, renderModel } from './notes.js';
+import { renderCharts } from './charts.js';
 
 export const UNITS = [[1, 'đồng'], [1e3, 'nghìn đồng'], [1e6, 'triệu đồng'], [1e9, 'tỷ đồng']];
-const ALL_TABS = [['BS', 'Tình hình tài chính'], ['IS', 'Kết quả KD'], ['CF', 'Lưu chuyển tiền'], ['TM', 'Thuyết minh'], ['MODEL', 'Xem trước model elevaTO']];
+const ALL_TABS = [['BS', 'Tình hình tài chính'], ['IS', 'Kết quả KD'], ['CF', 'Lưu chuyển tiền'], ['CHART', 'Biểu đồ & chỉ số'], ['TM', 'Thuyết minh'], ['MODEL', 'Xem trước model elevaTO']];
 // Tab xem trước model chỉ dành cho học viên / giảng viên.
 let TABS = ALL_TABS;
 const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
@@ -101,7 +102,8 @@ function renderReview(store, ctx) {
     unitSel);
 
   let body;
-  if (ui.tab === 'TM') body = renderNotes(store);
+  if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, (UNITS.find(([v]) => v === s.unit) || [])[1] || 'đồng');
+  else if (ui.tab === 'TM') body = renderNotes(store);
   else if (ui.tab === 'MODEL') body = renderModel(store);
   else body = [crossIssues(ds, checks, ui.tab), grid(store, ui.tab), legend()];
   keepFocus(box, () => mount(box, h('div', { class: 'sum' }, pills), bar,

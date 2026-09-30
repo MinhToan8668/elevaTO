@@ -8,6 +8,7 @@ import { readGrid, gridToSources } from '../core/grid.js';
 import { readCells, parseSharedStrings, sheetPathByName, sheetNames, cellsToRows } from '../core/xlsx.js';
 import { NOTE_TASKS } from '../core/prompts.js';
 import { suggestPicks } from '../core/pipeline.js';
+import { FORMS, formOf } from './store.js';
 import { openZip, loadXLSX } from '../libs.js';
 
 const MAX_FILE = 200 * 1024 * 1024;
@@ -24,6 +25,8 @@ export function initFiles(store, ctx) {
   const patchJob = (id, patch) => store.set((s) => ({ jobs: s.jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)) }));
   ctx.patchJob = patchJob;
   const alive = (id) => store.get().jobs.some((j) => j.id === id);     // người dùng có thể bấm "Bỏ" khi file đang đọc
+  // Trang tick sẵn theo form đang chọn (form phổ thông không lấy thuyết minh và giới hạn số trang).
+  const pickOpts = () => { const f = FORMS[formOf(store.get())]; return { notes: f.notes.length > 0, max: f.maxPages }; };
 
   async function addFiles(files) {
     const imgs = files.filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type));
@@ -50,7 +53,8 @@ export function initFiles(store, ctx) {
       if (!alive(id)) return;
       const c = classifyPages(texts);
       const job = { kind: 'pdf', numPages: pdf.numPages, types: c.types, notes: c.notes, scanned: c.scanned };
-      patchJob(id, { status: 'ready', progress: '', ...job, picked: suggestPicks(job) });
+      const goiY = suggestPicks(job, pickOpts());
+      patchJob(id, { status: 'ready', progress: '', ...job, picked: goiY, goiY });    // goiY: người dùng chưa sửa tay thì đổi form sẽ gợi ý lại
     } catch (e) {
       const msg = /password/i.test(e.name + e.message) ? 'File có mật khẩu — mở khoá rồi tải lại' : `Không mở được PDF: ${e.message}`;
       patchJob(id, { status: 'error', error: msg, progress: '' });
@@ -65,7 +69,7 @@ export function initFiles(store, ctx) {
     store.set((s) => ({ jobs: [...s.jobs, {
       id, name, kind: 'img', status: 'ready', numPages: sorted.length, scanned: true,
       types: sorted.map(() => 'UNKNOWN'), notes: Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []])),
-      picked: sorted.map((_, i) => i + 1),
+      picked: sorted.map((_, i) => i + 1).slice(0, pickOpts().max), goiY: sorted.map((_, i) => i + 1).slice(0, pickOpts().max),
     }] }));
   }
 

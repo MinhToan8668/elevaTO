@@ -12,22 +12,31 @@ import { statementToValues, noteToModel } from './extract.js';
 const STATEMENTS = ['BS', 'IS', 'CF'];
 
 /**
- * @param job { name, types: [...per page], notes: {group: [pages]} }
+ * @param job { name, types: [...per page], notes: {group: [pages]}, shared?: [pages] }
+ *   shared: trang chưa rõ loại → gửi kèm cho cả ba bảng, AI tự tìm bảng cần đọc trong đó.
  * @param opts { noteGroups: [...], onStep(step) }
  */
 export async function extractJob(job, io, opts = {}) {
   const warnings = [];
   const step = (s) => opts.onStep?.(s);
   const pagesOf = (t) => job.types.map((x, i) => (x === t ? i + 1 : 0)).filter(Boolean);
+  const shared = job.shared || [];
+  const pagesFor = (t) => [...new Set([...pagesOf(t), ...shared])].sort((a, b) => a - b);
 
   // 1. Ba báo cáo chính, song song. CĐKT xong trước để biết mẫu TT200/TT99 cho KQKD.
   const results = {};
   const runSt = async (st) => {
-    const pages = pagesOf(st);
+    const pages = pagesFor(st);
     if (!pages.length) { warnings.push(`Không tìm thấy trang ${NAME[st]} — chỉnh lại ở bước chọn trang nếu file có bảng này.`); return; }
-    step({ key: st, state: 'run', label: `${NAME[st]} (trang ${range(pages)})` });
+    step({ key: st, state: 'run', label: `${NAME[st]} (trang ${list(pages)})` });
     try {
-      results[st] = await statementWithSplit(st, pages, io, step);
+      const res = await statementWithSplit(st, pages, io, step);
+      if (!(res?.items || []).length) {
+        warnings.push(`${NAME[st]}: không thấy bảng này trong các trang đã chọn (trang ${list(pages)}).`);
+        step({ key: st, state: 'fail', error: 'không thấy bảng trong các trang đã chọn' });
+        return;
+      }
+      results[st] = res;
       step({ key: st, state: 'done' });
     } catch (e) {
       if (io.isFatal(e)) throw e;
@@ -116,6 +125,7 @@ const list = (pages) => {
   }
   return out.join(', ');
 };
+const MAX_TRANG = 200;                 // chặn trên số trang một file gửi cho AI (giao diện còn giới hạn chặt hơn theo form)
 const MAX_NOTE_PAGES = 8;              // một nhóm thuyết minh đọc tối đa bấy nhiêu trang trong một lượt
 
 /**
@@ -155,9 +165,9 @@ const KNOWN = ['BS', 'IS', 'CF', 'NOTES'];
  * @param io { images(pages), ai }
  * @returns { types, notes, aiCalls, warnings }
  */
-export async function planPicked(job, picked, io, { batch = 12, onStep } = {}) {
-  const n = job.numPages || job.types.length;
-  const sel = [...new Set(picked)].filter((p) => p >= 1 && p <= n).sort((a, b) => a - b);
+export async function planPicked(job, picked, io, { batch = 12, onStep, notes: wantNotes = true } = {}) {
+  const n = Math.min(job.numPages || job.types.length, MAX_TRANG);
+  const sel = [...new Set(picked)].filter((p) => p >= 1 && p <= n).sort((a, b) => a - b).slice(0, MAX_TRANG);
   const types = Array(n).fill('OTHER');
   const notes = Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []]));
   const grouped = new Set();
@@ -172,6 +182,8 @@ export async function planPicked(job, picked, io, { batch = 12, onStep } = {}) {
     for (const p of pages || []) if (types[p - 1] === 'NOTES') notes[g].push(p);
   }
   const warnings = [];
+  // Không lấy thuyết minh và ít trang chưa rõ: khỏi tốn lượt nhận trang — gửi thẳng các trang đó vào lượt đọc từng bảng.
+  if (!wantNotes && unknown.length <= batch) return { types, notes, aiCalls: 0, warnings, shared: unknown };
   let aiCalls = 0;
   if (unknown.length) {
     const { pageMapTask } = await import('./prompts.js');
@@ -196,7 +208,7 @@ export async function planPicked(job, picked, io, { batch = 12, onStep } = {}) {
     if (loose.length) warnings.push(`Trang ${list(loose)}: thuyết minh nhưng không thuộc nhóm dữ liệu nào (TSCĐ, vay, vốn chủ…) — bỏ qua.`);
   }
   for (const g of Object.keys(notes)) notes[g].sort((a, b) => a - b);
-  return { types, notes, aiCalls, warnings };
+  return { types, notes, aiCalls, warnings, shared: [] };
 }
 
 /** Trang đã tick cần AI nhận diện: máy chưa rõ loại, hoặc là thuyết minh nhưng chưa rõ thuộc nhóm nào. */
@@ -209,12 +221,12 @@ export function needsMap(job, p, grouped) {
 }
 
 /** Trang tick sẵn khi vừa mở file (người dùng xem lại và sửa). */
-export function suggestPicks(job) {
+export function suggestPicks(job, { notes = true, max = Infinity } = {}) {
   const n = job.types?.length || 0;
-  if (job.kind === 'img') return Array.from({ length: n }, (_, i) => i + 1);
+  if (job.kind === 'img') return Array.from({ length: Math.min(n, max) }, (_, i) => i + 1);
   if (job.scanned) return [];
   const set = new Set();
   job.types.forEach((t, i) => { if (['BS', 'IS', 'CF'].includes(t)) set.add(i + 1); });
-  for (const pages of Object.values(job.notes || {})) for (const p of pages || []) if (job.types[p - 1] === 'NOTES') set.add(p);
-  return [...set].sort((a, b) => a - b);
+  if (notes) for (const pages of Object.values(job.notes || {})) for (const p of pages || []) if (job.types[p - 1] === 'NOTES') set.add(p);
+  return [...set].sort((x, y) => x - y).slice(0, max);
 }
