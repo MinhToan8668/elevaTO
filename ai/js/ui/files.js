@@ -1,4 +1,4 @@
-// Bước 2 + 3: mở file (PDF / ảnh / Excel), tự nhận diện trang, cho người dùng chỉnh lại trang nào là bảng nào.
+// Bước 1 + 2: mở file (PDF / ảnh / Excel), tự nhận diện trang, cho người dùng chỉnh lại trang nào là bảng nào.
 // File gốc (PDF, ảnh) giữ trong ctx.media — không đưa vào state vì không lưu JSON được.
 
 import { h, mount, $, toast, parsePages, pagesText, keepFocus } from './dom.js';

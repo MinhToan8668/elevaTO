@@ -1,4 +1,4 @@
-// Bước 5, tab "Thuyết minh" và "Xem trước model": số AI đọc từ thuyết minh, ghép mảng kinh doanh vào
+// Bước 4, tab "Thuyết minh" và "Xem trước model": số AI đọc từ thuyết minh, ghép mảng kinh doanh vào
 // 5 ô của model, và bảng xem trước đúng các ô sẽ điền vào sheet 03.Input_FS.
 
 import { h, fmt } from './dom.js';

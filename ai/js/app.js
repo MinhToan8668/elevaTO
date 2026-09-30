@@ -26,7 +26,7 @@ initExporter(store);
 railSpy();
 initAuth(store, ctx, { onLogin: (me) => { offerRestore(me); autosave(me); } });
 
-window.addEventListener('beforeunload', (e) => { if (store.get().running) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if (store.get().running && !ctx.leaving) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('unhandledrejection', (e) => { toast(`Lỗi: ${e.reason?.message || e.reason}`); });
 
 // Phiên trước (chỉ số liệu đã trích, không có file gốc) — hỏi trước khi mở lại.
@@ -75,9 +75,8 @@ function initTheme() {
   const btn = $('#themeBtn');
   const cur = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const paint = () => {
-    const dark = cur() === 'dark';
-    btn.setAttribute('aria-label', dark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối');
-    btn.setAttribute('aria-pressed', String(dark));
+    btn.setAttribute('aria-label', 'Giao diện tối');
+    btn.setAttribute('aria-pressed', String(cur() === 'dark'));
   };
   btn.addEventListener('click', () => {
     const next = cur() === 'dark' ? 'light' : 'dark';

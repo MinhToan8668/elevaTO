@@ -1,4 +1,4 @@
-// Bước 4: chọn gói dữ liệu / nhóm thuyết minh, chạy trích xuất từng file, hiện tiến độ.
+// Bước 3: chọn gói dữ liệu / nhóm thuyết minh, chạy trích xuất từng file, hiện tiến độ.
 
 import { h, mount, $, toast, keepFocus } from './dom.js';
 import { PRESETS, NOTE_KEYS, uid, watch } from './store.js';
@@ -42,6 +42,7 @@ function renderRun(s, store, ctx) {
   const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || !s.user || noTable.length === todo.length, onclick: () => run(store, ctx) },
     s.running ? 'Đang trích xuất…' : 'Trích xuất bằng AI');
   const stopBtn = s.running ? h('button', { class: 'btn ghost', id: 'stopBtn', onclick: () => { ctx.stop = true; toast('Sẽ dừng sau file đang làm.'); } }, 'Dừng') : null;
+  document.querySelector('.rail a[data-step="4"]').classList.toggle('done', s.jobs.some((j) => j.status === 'done'));
   const row = $('#runRow');
   keepFocus(row, () => mount(row,
     h('div', { style: { flex: '0 0 auto', display: 'flex', gap: '10px' } }, runBtn, stopBtn),

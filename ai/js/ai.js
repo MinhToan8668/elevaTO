@@ -15,12 +15,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MAX_BUSY_WAITS = 4;
 
 /** Gửi một yêu cầu tới máy chủ. Trả data khi ok, ném AIError khi lỗi. */
-export async function callApi(api, body) {
+export async function callApi(api, body, { keepalive = false } = {}) {
   if (!api) throw new AIError('setup', 'Công cụ đang được cài đặt — quay lại sau ít phút nhé');
   let r;
   try {
     // text/plain để trình duyệt không gửi preflight CORS (Apps Script không trả lời preflight).
-    r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+    r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), keepalive });
   } catch (e) {
     throw new AIError('network', 'Mất kết nối mạng — kiểm tra internet rồi thử lại');
   }

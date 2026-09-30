@@ -1,4 +1,4 @@
-// Bước 5 (phần xuất): điền model elevaTO (mẫu DGW), điền Form nội bộ 2026, bảng chuẩn hoá các dòng đã tick,
+// Bước 4 (phần xuất): điền model elevaTO (mẫu DGW), điền Form nội bộ 2026, bảng chuẩn hoá các dòng đã tick,
 // lưu / mở phiên làm việc. File model / form do người dùng chọn từ máy — trang không giữ bản nào.
 
 import { h, mount, $, toast, download, safeName } from './dom.js';

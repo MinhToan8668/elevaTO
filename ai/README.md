@@ -23,7 +23,7 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.
 - **Chọn dữ liệu**: gói "Cho model elevaTO" (3 báo cáo + thuyết minh doanh thu/LN gộp theo mảng, TSCĐ
   theo nhóm, biến động vốn chủ, vay/trả nợ, lợi thế thương mại, số cổ phiếu, thuế suất), gói "Chỉ 3 báo cáo
-  chính", hoặc tự tick. Ở bước 5 tick dòng nào thì bảng chuẩn hoá xuất dòng đó.
+  chính", hoặc tự tick. Ở bước 4 tick dòng nào thì bảng chuẩn hoá xuất dòng đó.
 - **Xuất**:
   - Điền **model DGW**: sheet `03.Input_FS` (triệu đồng, chi phí mang dấu âm), đúng cột năm. Không đụng ô
     công thức, giữ nguyên biểu đồ; Excel tự tính lại khi mở. Tab "Xem trước model" cho thấy từng ô sẽ

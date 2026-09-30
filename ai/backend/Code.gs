@@ -26,8 +26,9 @@ var GEMINI_KEY_MOI = 'DAN_KEY_GEMINI';
 // ═════════════════════════════════════════════════════════════
 
 var AI_LUOT_MAC_DINH = 20;                 // lượt AI mỗi ngày cho tài khoản mới (Script Property AI_LUOT_MAC_DINH đè lên)
-var AI_RPM          = 12;                  // tối đa lượt gọi Gemini mỗi phút cho CẢ hệ thống
-var AI_RPM_MA       = 8;                   // tối đa lượt mỗi phút cho MỘT tài khoản
+var AI_RPM          = 12;                  // tối đa lượt gọi Gemini mỗi phút cho CẢ hệ thống, tính cho MỖI key
+var AI_RPM_MA       = 6;                   // tối đa lượt mỗi phút cho MỘT tài khoản
+var AI_MAX_SCHEMA   = 20000;               // độ dài tối đa của responseSchema (JSON)
 var AI_MAX_BODY     = 45 * 1024 * 1024;    // yêu cầu lớn hơn thì từ chối (Apps Script nhận tối đa ~50MB)
 var AI_MAX_OUT      = 32768;               // trần maxOutputTokens
 var AI_MAX_TEXT     = 200000;              // tổng số ký tự chữ trong một yêu cầu
@@ -128,7 +129,7 @@ function ghiTK(tk, sua) {
 // Ô bắt đầu bằng = + - @ bị Google Sheets hiểu là công thức → thêm dấu ' để luôn là chữ.
 function oChu(s) { s = String(s == null ? '' : s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
 
-function tkTheoEmail(email) { var r = null; docTK().forEach(function (x) { if (!r && chuanEmail(x.email) === email) r = x; }); return r; }
+function tkTheoEmail(email) { var k = khoaEmail(email), r = null; docTK().forEach(function (x) { if (!r && khoaEmail(x.email) === k) r = x; }); return r; }
 function tkTheoMa(ma) { var r = null; docTK().forEach(function (x) { if (!r && String(x.ma).toUpperCase() === ma) r = x; }); return r; }
 
 function maMoi(ds) {
@@ -168,11 +169,22 @@ function bangNhau(a, b) {
 function dsPhien(tk) {
   try { var p = JSON.parse(tk.phien || '[]'); return Array.isArray(p) ? p : []; } catch (e) { return []; }
 }
+// Đọc lại dòng rồi mới ghi, trong khoá: hai máy đăng nhập cùng lúc không làm mất phiên của nhau.
+function suaPhien(tk, bien) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var moi = tkTheoMa(String(tk.ma).toUpperCase()) || tk;
+    var sua = bien(dsPhien(moi).filter(function (p) { return p && p.han > Date.now(); }));
+    ghiTK(moi, sua);
+  } finally { lock.releaseLock(); }
+}
 function capPhien(tk) {
   var token = tk.ma + '.' + ngauNhien() + ngauNhien();
-  var con = dsPhien(tk).filter(function (p) { return p && p.han > Date.now(); });
-  con.push({ h: bamNhanh(token), han: Date.now() + PHIEN_NGAY * 86400000 });
-  ghiTK(tk, { phien: JSON.stringify(con.slice(-PHIEN_TOI_DA)), dangnhap_cuoi: new Date().toISOString() });
+  suaPhien(tk, function (con) {
+    con.push({ h: bamNhanh(token), han: Date.now() + PHIEN_NGAY * 86400000 });
+    return { phien: JSON.stringify(con.slice(-PHIEN_TOI_DA)), dangnhap_cuoi: new Date().toISOString() };
+  });
   return token;
 }
 function tkTuToken(token) {
@@ -186,7 +198,7 @@ function tkTuToken(token) {
 }
 function boPhien(tk, token) {
   var h = bamNhanh(token);
-  ghiTK(tk, { phien: JSON.stringify(dsPhien(tk).filter(function (p) { return p && !bangNhau(p.h, h); })) });
+  suaPhien(tk, function (con) { return { phien: JSON.stringify(con.filter(function (p) { return !bangNhau(p.h, h); })) }; });
 }
 
 function hoSo(tk) {
@@ -197,7 +209,16 @@ function hoSo(tk) {
 // ─── Đăng ký / đăng nhập ────────────────────────────────────
 
 function chuanEmail(e) { return String(e || '').trim().toLowerCase(); }
-function emailHopLe(e) { return e.length <= 120 && /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(e); }
+// Chỉ nhận email "thường": bắt đầu bằng chữ/số — chặn luôn chuỗi kiểu =importdata(...) thành công thức trên Sheet.
+function emailHopLe(e) { return e.length <= 120 && /^[a-z0-9][a-z0-9._%+-]*@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e); }
+/** Khoá so trùng: Gmail bỏ dấu chấm và +nhãn (an.nguyen+2@gmail.com = annguyen@gmail.com). */
+function khoaEmail(e) {
+  e = chuanEmail(e);
+  var at = e.lastIndexOf('@'); if (at < 1) return e;
+  var ten = e.slice(0, at), mien = e.slice(at + 1);
+  if (mien === 'gmail.com' || mien === 'googlemail.com') return ten.split('+')[0].replace(/\./g, '') + '@gmail.com';
+  return e;
+}
 function chuanTen(s) {
   return String(s || '').trim().replace(/\s+/g, ' ').slice(0, 60).split(' ')
     .map(function (w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : w; }).join(' ');
@@ -212,20 +233,21 @@ function dangKy(b) {
   if (sdt.length < 9 || sdt.length > 12) return loi('sdt_sai', 'Số điện thoại chưa đúng');
   if (mk.length < MK_TOI_THIEU || mk.length > 200) return loi('mk_ngan', 'Mật khẩu cần ít nhất ' + MK_TOI_THIEU + ' ký tự');
 
+  var salt = ngauNhien(), hash = bamMK(mk, salt);                        // băm (chậm) làm ngoài khoá
   var cache = CacheService.getScriptCache(), kGio = 'dk_' + Math.floor(Date.now() / 3600000);
-  var soDK = Number(cache.get(kGio) || 0);
-  if (soDK >= DK_MOI_GIO) return loi('busy', 'Đang có quá nhiều đăng ký, thử lại sau ít phút', { retryAfter: 300 });
-
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   var tk;
   try {
-    var sh = bangTK(), ds = docTK(sh);
-    if (ds.some(function (x) { return chuanEmail(x.email) === email; })) return loi('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
-    var salt = ngauNhien(), duyet = /^(1|true|co)$/i.test(String(props().getProperty('AI_CAN_DUYET') || ''));
-    sh.appendRow([maMoi(ds), email, oChu(ten), "'" + sdt, salt, bamMK(mk, salt), 'hv', duyet ? 'cho' : 'active', '', '[]',
-      new Date().toISOString(), '', '']);
+    // Đếm cả lần dò email đã có → không dò danh sách email được thoải mái.
+    var soDK = Number(cache.get(kGio) || 0);
+    if (soDK >= DK_MOI_GIO) return loi('busy', 'Đang có quá nhiều đăng ký, thử lại sau ít phút', { retryAfter: 300 });
     cache.put(kGio, String(soDK + 1), 3700);
+    var sh = bangTK(), ds = docTK(sh), k = khoaEmail(email);
+    if (ds.some(function (x) { return khoaEmail(x.email) === k; })) return loi('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
+    var duyet = /^(1|true|co)$/i.test(String(props().getProperty('AI_CAN_DUYET') || ''));
+    sh.appendRow([maMoi(ds), oChu(email), oChu(ten), "'" + sdt, salt, hash, 'hv', duyet ? 'cho' : 'active', '', '[]',
+      new Date().toISOString(), '', '']);
     tk = tkTheoEmail(email);
   } finally { lock.releaseLock(); }
   if (tk.trangthai !== 'active') return ok({ cho: true });
@@ -236,14 +258,19 @@ function dangNhap(b) {
   var email = chuanEmail(b.email), mk = String(b.mk || '');
   if (!email || !mk) return loi('thieu', 'Nhập email và mật khẩu');
   var cache = CacheService.getScriptCache();
-  var khoa = 'dn_' + hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, email, Utilities.Charset.UTF_8));
-  var sai = Number(cache.get(khoa) || 0);
-  if (sai >= DN_SAI_TOI_DA) return loi('khoa_tam', 'Sai mật khẩu nhiều lần — thử lại sau 10 phút');
-  var tk = tkTheoEmail(email);
-  if (!tk || !bangNhau(bamMK(mk, String(tk.salt)), String(tk.hash))) {
+  var khoa = 'dn_' + hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, khoaEmail(email), Utilities.Charset.UTF_8));
+  // Giữ trước một lượt thử (trong khoá) rồi mới kiểm mật khẩu → gửi song song cũng không vượt số lần cho phép.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sai = Number(cache.get(khoa) || 0);
+    if (sai >= DN_SAI_TOI_DA) return loi('khoa_tam', 'Sai mật khẩu nhiều lần — thử lại sau 10 phút');
     cache.put(khoa, String(sai + 1), 600);
-    return loi('sai', 'Email hoặc mật khẩu chưa đúng');
-  }
+  } finally { lock.releaseLock(); }
+  var tk = tkTheoEmail(email);
+  // Không có tài khoản vẫn băm như thường để thời gian trả lời không lộ email nào đã đăng ký.
+  var dung = bangNhau(bamMK(mk, tk ? String(tk.salt) : 'khong-co'), tk ? String(tk.hash) : '-');
+  if (!tk || !dung) return loi('sai', 'Email hoặc mật khẩu chưa đúng');
   cache.remove(khoa);
   if (tk.trangthai === 'cho') return loi('cho_duyet', 'Tài khoản đang chờ elevaTO duyệt');
   if (tk.trangthai !== 'active') return loi('bi_khoa', 'Tài khoản đã bị khoá — liên hệ elevaTO');
@@ -296,7 +323,7 @@ function giuNhip(tk) {
     var kMa = 'rpm_' + tk.ma + '_' + phut, nMa = Number(cache.get(kMa) || 0);
     if (!laAdmin(tk) && nMa >= AI_RPM_MA) return cho;
     var k = 'rpm_' + phut, n = Number(cache.get(k) || 0);
-    if (n >= AI_RPM) return cho;
+    if (n >= AI_RPM * Math.max(1, dsKey().length)) return cho;
     cache.put(k, String(n + 1), 120);
     cache.put(kMa, String(nMa + 1), 120);
     return 0;
@@ -358,23 +385,23 @@ function goiGemini(tk, b) {
   if (cho) return loi('busy', 'Hệ thống đang đông, chờ ' + cho + ' giây', { retryAfter: cho });
   if (!giuLuot(tk)) return hetLuot(tk);
   var r = goiLanLuot(model, body);
-  if (!r.ok) traLuot(tk);
-  return r;
+  if (r.traLai) traLuot(tk);                           // chỉ trả lượt khi Gemini chưa làm gì
+  return r.kq;
 }
 
 /** Thử lần lượt các key đang rảnh: key bị 429 / hỏng thì cho nghỉ và thử key kế tiếp ngay. */
 function goiLanLuot(model, body) {
   var keys = keyRanh(), cuoi = null;
-  if (!keys.length) return loi('busy', 'Gemini đang hết hạn mức phút này, thử lại sau ít giây', { retryAfter: 30 });
+  if (!keys.length) return { kq: loi('busy', 'Gemini đang hết hạn mức phút này, thử lại sau ít giây', { retryAfter: 30 }), traLai: true };
   for (var i = 0; i < keys.length; i++) {
     var r = goiMotKey(model, body, keys[i]);
     if (r.nghi) { keyNghi(keys[i], r.nghi); cuoi = r; continue; }
-    return r.kq;
+    return r;
   }
-  return loi('busy', 'Gemini đang quá tải hoặc hết hạn mức phút này', { retryAfter: (cuoi && cuoi.cho) || 30 });
+  return { kq: loi('busy', 'Gemini đang quá tải hoặc hết hạn mức phút này', { retryAfter: (cuoi && cuoi.cho) || 30 }), traLai: true };
 }
 
-/** { kq } = kết quả trả trang; { nghi: giây, cho } = key này tạm không dùng được. */
+/** { kq, traLai } = kết quả trả trang (traLai: Gemini chưa làm gì → trả lượt); { nghi: giây, cho } = key này tạm không dùng được. */
 function goiMotKey(model, body, key) {
   var res;
   try {
@@ -384,7 +411,7 @@ function goiMotKey(model, body, key) {
     });
   } catch (err) {
     if (/timeout|timed out/i.test(String(err))) return { kq: loi('timeout', 'Gemini chạy quá 60 giây — cần chia nhỏ phần này') };
-    return { kq: loi('upstream', 'Không kết nối được Gemini, thử lại sau ít phút') };
+    return { kq: loi('upstream', 'Không kết nối được Gemini, thử lại sau ít phút'), traLai: true };
   }
   var code = res.getResponseCode(), data = {};
   try { data = JSON.parse(res.getContentText()); } catch (e) {}
@@ -393,7 +420,7 @@ function goiMotKey(model, body, key) {
     console.error('Key Gemini hỏng / bị chặn (HTTP ' + code + ')');
     return { nghi: 3600, cho: 30 };
   }
-  if (code === 503 || code === 500) return { kq: loi('busy', 'Gemini đang quá tải', { retryAfter: hoiLai(data) || 10 }) };
+  if (code === 503 || code === 500) return { kq: loi('busy', 'Gemini đang quá tải', { retryAfter: hoiLai(data) || 10 }), traLai: true };
   if (code !== 200) {
     var st = data.error && data.error.status ? ' (' + String(data.error.status).replace(/[^A-Z_]/g, '') + ')' : '';
     return { kq: loi('upstream', 'Gemini báo lỗi ' + code + st) };
@@ -439,6 +466,7 @@ function sachYeuCau(b) {
   var gc = b.generationConfig || {}, cfg = {};
   for (var k = 0; k < GEN_KEYS.length; k++) if (gc[GEN_KEYS[k]] !== undefined) cfg[GEN_KEYS[k]] = gc[GEN_KEYS[k]];
   cfg.maxOutputTokens = Math.min(Number(cfg.maxOutputTokens) || AI_MAX_OUT, AI_MAX_OUT);
+  if (JSON.stringify([cfg.responseSchema || null, cfg.responseJsonSchema || null]).length > AI_MAX_SCHEMA) return null;
   if (cfg.thinkingConfig !== undefined) {
     var tc = cfg.thinkingConfig || {}, t = {};
     if (tc.thinkingBudget !== undefined) t.thinkingBudget = Math.max(0, Math.min(Number(tc.thinkingBudget) || 0, AI_MAX_THINK));

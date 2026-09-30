@@ -1,4 +1,4 @@
-// Bước 5 (phần rà soát): nguồn dữ liệu, kết quả kiểm tra từng kỳ, bảng số sửa được, tick dòng cần xuất.
+// Bước 4 (phần rà soát): nguồn dữ liệu, kết quả kiểm tra từng kỳ, bảng số sửa được, tick dòng cần xuất.
 
 import { h, mount, $, fmt, toast, keepFocus } from './dom.js';
 import { watch } from './store.js';
