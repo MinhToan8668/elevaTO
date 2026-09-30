@@ -23,8 +23,10 @@ export function splitRef(ref) {
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
-  .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d)).replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, d) => cp(+d)).replace(/&#x([0-9a-f]+);/gi, (_, h) => cp(parseInt(h, 16)))
   .replace(/&amp;/g, '&');
+
+const cp = (n) => (n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : '\ufffd');
 
 export function parseSharedStrings(xml) {
   if (!xml) return [];
@@ -34,7 +36,8 @@ export function parseSharedStrings(xml) {
 const textOf = (inner) => [...inner.replace(/<rPh[\s\S]*?<\/rPh>/g, '').matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)]
   .map((t) => unesc(t[1])).join('');
 
-const CELL_RE = /<c\s([^>]*?)(\/>|>([\s\S]*?)<\/c>)/g;
+// Thân ô không được vượt qua thẻ <c> kế tiếp → file hỏng (thiếu </c>) không làm regex chạy bình phương.
+const CELL_RE = /<c\s([^>]*?)(\/>|>((?:(?!<c[\s>])[\s\S])*?)<\/c>)/g;
 const attr = (attrs, name) => { const m = new RegExp(`\\b${name}="([^"]*)"`).exec(attrs); return m ? m[1] : null; };
 
 /** { "B8": "Net revenue", "I4": 2025, … } — giá trị đã lưu (với ô công thức là kết quả lần tính gần nhất). */

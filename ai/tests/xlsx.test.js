@@ -85,3 +85,11 @@ test('ô có tham chiếu lạ (không phải A1…) bị bỏ qua khi đọc', 
   assert.deepEqual(Object.keys(cells), ['A1']);
   assert.equal(Object.getPrototypeOf(cells), Object.prototype);
 });
+
+test('file XML hỏng: thực thể ký tự ngoài Unicode không làm lỗi, thiếu </c> không làm treo', () => {
+  assert.equal(parseSharedStrings('<si><t>a&#99999999;b</t></si>')[0], 'a�b');
+  const bad = '<sheetData><row r="1">' + '<c r="A1"><v>1</v>'.repeat(40000) + '</row></sheetData>';
+  const t = Date.now();
+  readCells(bad, []);
+  assert.ok(Date.now() - t < 1000, `mất ${Date.now() - t} ms`);
+});

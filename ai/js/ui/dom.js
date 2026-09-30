@@ -95,3 +95,28 @@ export function pagesText(pages) {
   }
   return out.join(', ');
 }
+
+/**
+ * Vẽ lại một vùng mà không làm mất chỗ đang thao tác: giữ ô đang được focus (theo id / aria-label / data-k+p)
+ * và vị trí cuộn của các vùng cuộn (.gridwrap, .thumbs).
+ */
+export function keepFocus(root, render) {
+  const a = document.activeElement;
+  const key = a && root.contains(a) ? focusKey(a) : null;
+  const scrolls = [...root.querySelectorAll('.gridwrap, .thumbs')].map((el) => [el.className, el.scrollTop, el.scrollLeft]);
+  render();
+  scrolls.forEach(([cls, top, left], i) => {
+    const el = root.querySelectorAll('.gridwrap, .thumbs')[i];
+    if (el && el.className === cls) { el.scrollTop = top; el.scrollLeft = left; }
+  });
+  if (!key) return;
+  const el = root.querySelector(key);
+  if (el && !el.disabled) el.focus({ preventScroll: true });
+}
+function focusKey(el) {
+  if (el.classList.contains('ed') && el.parentElement?.dataset.k) el = el.parentElement;   // ô đang sửa → ô bảng
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  if (el.dataset.k && el.dataset.p) return `[data-k="${CSS.escape(el.dataset.k)}"][data-p="${CSS.escape(el.dataset.p)}"]`;
+  const label = el.getAttribute('aria-label');
+  return label ? `${el.tagName.toLowerCase()}[aria-label="${CSS.escape(label)}"]` : null;
+}

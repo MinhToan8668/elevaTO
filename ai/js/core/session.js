@@ -27,7 +27,7 @@ export function parseSession(text) {
   if (!o || o.app !== APP || typeof o.data !== 'object' || !o.data) throw new Error('Đây không phải file phiên làm việc elevaTO AI');
   const d = o.data;
   return {
-    sources: arr(d.sources, 200).map(source).filter(Boolean),
+    sources: uniqueIds(arr(d.sources, 200).map(source).filter(Boolean)),
     edits: arr(d.edits, 5000).map(edit).filter(Boolean),
     ticks: Array.isArray(d.ticks) ? d.ticks.filter((k) => typeof k === 'string' && KEY_RE.test(k)).slice(0, 2000) : null,
     unit: UNITS.includes(d.unit) ? d.unit : 1e6,
@@ -54,7 +54,7 @@ function values(x) {
 
 function period(p) {
   p = obj(p);
-  if (!PERIOD_RE.test(p.id) || !Number.isInteger(p.year) || ![3, 6, 9, 12].includes(p.months) || !(p.endMonth >= 1 && p.endMonth <= 12)) return null;
+  if (!PERIOD_RE.test(p.id) || !Number.isInteger(p.year) || !(Number.isInteger(p.months) && p.months >= 1 && p.months <= 12) || !(p.endMonth >= 1 && p.endMonth <= 12)) return null;
   return { id: p.id, year: p.year, months: p.months, endMonth: p.endMonth };
 }
 
@@ -90,6 +90,17 @@ function source(s) {
   if (s.meta) out.meta = meta(s.meta);
   if (base.jobId === undefined) delete out.jobId;
   return out;
+}
+
+// Mỗi nguồn cần id riêng: giao diện sửa ngày / bỏ nguồn theo id.
+function uniqueIds(list) {
+  const seen = new Set();
+  return list.map((s, i) => {
+    let v = s.id;
+    if (!v || seen.has(v)) v = `r${i}-${Math.random().toString(36).slice(2, 8)}`;
+    seen.add(v);
+    return { ...s, id: v };
+  });
 }
 
 function edit(e) {

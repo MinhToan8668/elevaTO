@@ -67,14 +67,57 @@ test('model lạ / không có trong danh sách → từ chối, không gọi Gem
   assert.equal(g.calls.filter((c) => c.url.includes(':generateContent')).length, 0);
 });
 
-test('sai mã → code key; sai 20 lần → khoá 10 phút cả mã đúng', () => {
+test('mã trùng tên thuộc tính có sẵn của object (constructor, __proto__…) KHÔNG được coi là mã đúng', () => {
+  const g = setup();
+  for (const code of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'isPrototypeOf', ' constructor ']) {
+    assert.equal(g.post({ action: 'ping', code }).code, 'key', code);
+    assert.equal(g.post(gen({ code })).code, 'key', code);
+  }
+  assert.equal(g.calls.filter((c) => c.url.includes(':generateContent')).length, 0);
+  const g2 = setup(undefined, { AI_CODES: '["hv-abc123"]' });
+  assert.equal(g2.post({ action: 'ping', code: '0' }).code, 'key', 'AI_CODES hỏng dạng mảng');
+});
+
+test('sai mã → code key; sai nhiều lần → khoá mã lạ 10 phút, mã đúng vẫn dùng được (người lạ không khoá được cả lớp)', () => {
   const g = setup();
   assert.equal(g.post(gen({ code: 'sai' })).code, 'key');
-  for (let i = 0; i < 20; i++) g.post({ action: 'ping', code: 'x' + i });
-  const r = g.post(gen());
+  for (let i = 0; i < 20; i++) g.post({ action: 'ping', code: 'hv-x' + i });
+  const r = g.post({ action: 'ping', code: 'hv-doan-tiep' });
   assert.equal(r.code, 'key'); assert.match(r.error, /quá nhiều lần/);
+  assert.equal(g.post(gen()).ok, true, 'học viên có mã đúng không bị chặn');
   g.tick(11 * 60 * 1000);
+  assert.doesNotMatch(g.post({ action: 'ping', code: 'hv-doan-tiep' }).error, /quá nhiều lần/);
+});
+
+test('giữ lượt TRƯỚC khi gọi Gemini (gọi song song không vượt hạn mức), lỗi thì trả lại lượt', () => {
+  let usedDuringCall;
+  const g = setup((url, o, resp) => {
+    if (url.includes('/models?')) return resp(200, MODELS);
+    usedDuringCall = g.post({ action: 'ping', code: 'hv-abc123' }).data.quota.used;
+    return resp(200, OK_BODY);
+  });
   assert.equal(g.post(gen()).ok, true);
+  assert.equal(usedDuringCall, 1);
+  assert.equal(g.post({ action: 'ping', code: 'hv-abc123' }).data.quota.used, 1);
+});
+
+test('mỗi mã có trần lượt/phút riêng: một người không chiếm hết nhịp của cả hệ thống', () => {
+  const g = setup(undefined, { AI_CODES: JSON.stringify({ 'hv-aaa111': { name: 'A', perDay: 0 }, 'hv-bbb222': { name: 'B', perDay: 0 } }) });
+  g.run('AI_RPM_MA = 2');
+  assert.equal(g.post(gen({ code: 'hv-aaa111' })).ok, true);
+  assert.equal(g.post(gen({ code: 'hv-aaa111' })).ok, true);
+  const r = g.post(gen({ code: 'hv-aaa111' }));
+  assert.equal(r.code, 'busy'); assert.ok(r.retryAfter > 0);
+  assert.equal(g.post(gen({ code: 'hv-bbb222' })).ok, true);
+});
+
+test('không dùng máy chủ làm chat Gemini tự do: giới hạn độ dài chữ, chỉ dẫn hệ thống và mức "suy nghĩ"', () => {
+  const g = setup();
+  assert.equal(g.post(gen({ contents: [{ role: 'user', parts: [{ text: 'x'.repeat(300000) }] }] })).code, 'bad');
+  assert.equal(g.post(gen({ systemInstruction: { parts: [{ text: 'y'.repeat(30000) }] } })).code, 'bad');
+  g.post(gen({ generationConfig: { thinkingConfig: { thinkingBudget: 100000, includeThoughts: true, foo: 1 } } }));
+  const sent = JSON.parse(g.calls.filter((c) => c.url.includes(':generateContent')).pop().o.payload);
+  assert.deepEqual(sent.generationConfig.thinkingConfig, { thinkingBudget: 8192 });
 });
 
 test('hạn mức theo ngày: hết lượt → code quota; sang ngày mới được dùng tiếp', () => {

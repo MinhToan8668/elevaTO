@@ -1,6 +1,6 @@
 // Bước 5 (phần rà soát): nguồn dữ liệu, kết quả kiểm tra từng kỳ, bảng số sửa được, tick dòng cần xuất.
 
-import { h, mount, $, fmt, toast } from './dom.js';
+import { h, mount, $, fmt, toast, keepFocus } from './dom.js';
 import { watch } from './store.js';
 import { statementRows, periodLabel } from '../core/table.js';
 import { parseVN } from '../core/numbers.js';
@@ -9,7 +9,7 @@ import { renderNotes, renderModel } from './notes.js';
 
 export const UNITS = [[1, 'đồng'], [1e3, 'nghìn đồng'], [1e6, 'triệu đồng'], [1e9, 'tỷ đồng']];
 const TABS = [['BS', 'Tình hình tài chính'], ['IS', 'Kết quả KD'], ['CF', 'Lưu chuyển tiền'], ['TM', 'Thuyết minh'], ['MODEL', 'Xem trước model']];
-const ui = { tab: 'BS', showEmpty: false, focus: null };
+const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
 
 export function initReview(store, ctx) {
   watch(store, ['sources', 'edits'], () => renderSources(store));
@@ -41,18 +41,25 @@ function renderSources(store) {
       h('td', {}, dateIn, ' ', monIn),
       h('td', {}, h('button', { class: 'btn ghost sm', onclick: () => {
         if (!confirm(`Bỏ dữ liệu của ${file}?`)) return;
-        store.set((st) => ({ sources: st.sources.filter((x) => x.id !== src.id) }));
+        store.set((st) => {
+          const sources = st.sources.filter((x) => x.id !== src.id);
+          const stillHas = (jobId) => sources.some((x) => x.jobId === jobId);
+          // File PDF/ảnh quay về "chưa trích xuất" để trích lại được; file Excel không còn số nào thì bỏ khỏi danh sách.
+          const jobs = st.jobs.filter((j) => !(j.id === src.jobId && j.kind === 'xls' && !stillHas(j.id)))
+            .map((j) => (j.id === src.jobId && j.status === 'done' && !stillHas(j.id) ? { ...j, status: 'ready' } : j));
+          return { sources, jobs };
+        });
       } }, 'Bỏ')));
   });
   const warn = ds.warnings.length ? h('details', { class: 'msg warn' }, h('summary', {}, `${ds.warnings.length} lưu ý khi đọc`), h('ul', {}, ds.warnings.map((w) => h('li', {}, w)))) : null;
   const conf = ds.conflicts.length ? h('details', { class: 'msg warn' }, h('summary', {}, `${ds.conflicts.length} số khác nhau giữa các báo cáo (đã dùng số của báo cáo mới hơn)`),
     h('ul', {}, ds.conflicts.slice(0, 200).map((c) => h('li', {}, `${c.period} · ${labelOf(c.key)}: giữ ${fmt(c.kept, 1e6)} tr (${c.keptFile}), bỏ ${fmt(c.other, 1e6)} tr (${c.otherFile})`)))) : null;
-  mount(box,
-    h('details', { class: 'pmap', open: errors.length > 0 },
+  keepFocus(box, () => mount(box,
+    h('details', { class: 'pmap', open: errors.length > 0 || box.querySelector('details.pmap')?.open },
       h('summary', {}, h('h3', {}, `Nguồn dữ liệu (${s.sources.length}) · ${ds.periods.length} kỳ: ${ds.periods.map((p) => p.id).join(', ') || '—'}`)),
       h('table', { class: 'k' }, h('thead', {}, h('tr', {}, h('th', {}, 'File'), h('th', {}, 'Kỳ'), h('th', {}, 'Ngày kết thúc / số tháng (sửa nếu sai)'), h('th', {}, ''))), h('tbody', {}, rows)),
       s.edits.length ? h('p', { class: 'priv' }, `${s.edits.length} ô đã sửa tay. `, h('button', { class: 'btn ghost sm', onclick: () => { if (confirm('Bỏ mọi số sửa tay?')) store.set({ edits: [] }); } }, 'Bỏ hết số sửa tay')) : null),
-    warn, conf);
+    warn, conf));
 }
 const isoDate = (d) => { const s = String(d || ''); const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s) || /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
   if (!m) return ''; return m[1].length === 4 ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; };
@@ -64,8 +71,8 @@ function renderReview(store, ctx) {
   const s = store.get();
   const { ds, checks } = store.data();
   const box = $('#review');
+  document.querySelector('.rail a[data-step="5"]').classList.toggle('done', ds.periods.length > 0);
   if (!ds.periods.length) { mount(box); return; }
-  document.querySelector('.rail a[data-step="5"]').classList.add('done');
   // Đang ở tab báo cáo không có số (ví dụ file Excel chỉ có KQKD) → chuyển sang báo cáo đầu tiên có số.
   const hasSt = (st) => ds.periods.some((p) => Object.keys(ds.values[p.id] || {}).some((k) => k.startsWith(`${st}:`)));
   if (['BS', 'IS', 'CF'].includes(ui.tab) && !hasSt(ui.tab)) ui.tab = ['BS', 'IS', 'CF'].find(hasSt) || ui.tab;
@@ -76,8 +83,13 @@ function renderReview(store, ctx) {
       onclick: () => { if (!iss.length) return; ui.tab = iss[0].key.split(':')[0]; ui.focus = { period: p.id, key: iss[0].key }; renderReview(store, ctx); } },
     `${periodLabel(p)}: ${iss.length ? `${iss.length} chỗ lệch` : '✓ khớp'}`);
   });
-  const tabs = h('div', { class: 'tabs', role: 'tablist' }, TABS.map(([k, label]) =>
-    h('button', { role: 'tab', 'aria-selected': String(ui.tab === k), onclick: () => { ui.tab = k; renderReview(store, ctx); } }, label)));
+  const go = (k) => { ui.tab = k; renderReview(store, ctx); $(`#tab-${k}`)?.focus(); };
+  const tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Báo cáo', onkeydown: (e) => {
+    const i = TABS.findIndex(([k]) => k === ui.tab);
+    if (e.key === 'ArrowRight') go(TABS[(i + 1) % TABS.length][0]);
+    if (e.key === 'ArrowLeft') go(TABS[(i + TABS.length - 1) % TABS.length][0]);
+  } }, TABS.map(([k, label]) =>
+    h('button', { role: 'tab', id: `tab-${k}`, 'aria-controls': 'tabpanel', 'aria-selected': String(ui.tab === k), tabindex: ui.tab === k ? '0' : '-1', onclick: () => go(k) }, label)));
   const unitSel = h('select', { class: 'inp', style: { width: 'auto' }, 'aria-label': 'Đơn vị hiển thị', onchange: (e) => store.set({ unit: Number(e.target.value) }) },
     UNITS.map(([v, l]) => h('option', { value: String(v), selected: s.unit === v }, l)));
   const bar = h('div', { class: 'bar' }, tabs, h('span', { class: 'sp' }),
@@ -88,7 +100,13 @@ function renderReview(store, ctx) {
   if (ui.tab === 'TM') body = renderNotes(store);
   else if (ui.tab === 'MODEL') body = renderModel(store);
   else body = [crossIssues(ds, checks, ui.tab), grid(store, ui.tab), legend()];
-  mount(box, h('div', { class: 'sum' }, pills), bar, body);
+  keepFocus(box, () => mount(box, h('div', { class: 'sum' }, pills), bar,
+    h('div', { id: 'tabpanel', role: 'tabpanel', 'aria-labelledby': `tab-${ui.tab}` }, body)));
+  // Đang sửa ô A mà bấm sang ô B: ô A lưu → bảng vẽ lại → mở tiếp ô B (không mất cú bấm).
+  if (ui.nextEdit) {
+    const n = ui.nextEdit; ui.nextEdit = null;
+    box.querySelector(`td[data-k="${CSS.escape(n.key)}"][data-p="${CSS.escape(n.period)}"]`)?._edit?.();
+  }
 
   if (ui.focus) {
     const f = ui.focus; ui.focus = null;
@@ -163,6 +181,7 @@ function cell(store, p, r, issue) {
     : src?.manual ? 'Số sửa tay' : src ? `Từ ${src.file} (cột ${src.col === 'cur' ? 'kỳ này' : 'kỳ trước'})` : Number.isFinite(v) ? 'Máy tự cộng từ các dòng con' : '';
   const td = h('td', { class: cls, tabindex: '0', title, dataset: { k: r.key, p: p.id } }, fmt(v, s.unit));
   const edit = () => {
+    ui.nextEdit = null;
     if (td.querySelector('input')) return;
     const initial = reported ? fmt(ds.values[p.id][r.key], s.unit) : '';
     const inp = h('input', { class: 'ed', value: initial, 'aria-label': `Sửa ${r.code} ${periodLabel(p)}` });
@@ -182,6 +201,8 @@ function cell(store, p, r, issue) {
     td.replaceChildren(inp);
     inp.focus(); inp.select();
   };
+  td._edit = edit;
+  td.addEventListener('mousedown', () => { if (!td.querySelector('input') && document.activeElement?.classList.contains('ed')) ui.nextEdit = { key: r.key, period: p.id }; });
   td.addEventListener('click', edit);
   td.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); edit(); } });
   return td;

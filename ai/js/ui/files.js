@@ -1,7 +1,7 @@
 // Bước 2 + 3: mở file (PDF / ảnh / Excel), tự nhận diện trang, cho người dùng chỉnh lại trang nào là bảng nào.
 // File gốc (PDF, ảnh) giữ trong ctx.media — không đưa vào state vì không lưu JSON được.
 
-import { h, mount, $, toast, parsePages, pagesText } from './dom.js';
+import { h, mount, $, toast, parsePages, pagesText, keepFocus } from './dom.js';
 import { uid, watch } from './store.js';
 import { classifyPages } from '../core/extract.js';
 import { readGrid, gridToSources } from '../core/grid.js';
@@ -9,6 +9,7 @@ import { readCells, parseSharedStrings, sheetPathByName, sheetNames, cellsToRows
 import { NOTE_TASKS } from '../core/prompts.js';
 import { mapPagesWithAI } from '../core/pipeline.js';
 import { isFatal } from '../ai.js';
+import { openZip, loadXLSX } from '../libs.js';
 
 const MAX_FILE = 200 * 1024 * 1024;
 const TYPE_OPTS = [['BS', 'Tình hình tài chính (CĐKT)'], ['IS', 'Kết quả kinh doanh'], ['CF', 'Lưu chuyển tiền tệ'], ['NOTES', 'Thuyết minh'], ['OTHER', 'Khác / bỏ qua'], ['UNKNOWN', '— chưa rõ —']];
@@ -24,6 +25,7 @@ export function initFiles(store, ctx) {
 
   const patchJob = (id, patch) => store.set((s) => ({ jobs: s.jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)) }));
   ctx.patchJob = patchJob;
+  const alive = (id) => store.get().jobs.some((j) => j.id === id);     // người dùng có thể bấm "Bỏ" khi file đang đọc
 
   async function addFiles(files) {
     const imgs = files.filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type));
@@ -44,8 +46,10 @@ export function initFiles(store, ctx) {
     try {
       const { openPdf, pageTexts } = await import('../pdf.js');
       const pdf = await openPdf(file);
+      if (!alive(id)) { pdf.doc.destroy(); return; }
       ctx.media.set(id, { file, pdf });
       const texts = await pageTexts(pdf.doc, (i, n) => { if (i % 5 === 0 || i === n) patchJob(id, { progress: `Đọc chữ trang ${i}/${n}` }); });
+      if (!alive(id)) return;
       const c = classifyPages(texts);
       patchJob(id, { status: 'ready', progress: '', numPages: pdf.numPages, types: c.types, notes: c.notes, scanned: c.scanned });
     } catch (e) {
@@ -71,6 +75,8 @@ export function initFiles(store, ctx) {
     store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'xls', status: 'reading', progress: 'Đang đọc…' }] }));
     try {
       const grid = readGrid(await readSheets(file));
+      if (!alive(id)) return;
+      if (grid.kind === 'storage' && !grid.periods.length) throw new Error('Sheet "Lưu trữ" không có cột kỳ hợp lệ (dòng "Mã kỳ" dạng FY-2025, Q2-2026)');
       const srcs = gridToSources(file.name, grid).map((x) => ({ ...x, id: uid('s'), jobId: id }));
       const summary = grid.kind === 'storage'
         ? `File FinLens "Lưu trữ": ${grid.periods.length} kỳ — ${grid.periods.map((p) => p.period.id).join(', ')}`
@@ -87,19 +93,19 @@ export function initFiles(store, ctx) {
     m?.urls?.forEach((u) => URL.revokeObjectURL(u));
     m?.pdf?.doc?.destroy?.();
     ctx.media.delete(id);
+    for (const k of thumbCache.keys()) if (k.startsWith(`${id}:`)) thumbCache.delete(k);
     store.set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id), sources: s.sources.filter((x) => x.jobId !== id) }));
   };
 
-  watch(store, ['jobs'], (s) => renderList(s, ctx));
-  watch(store, ['jobs', 'conn'], (s) => renderMaps(s, store, ctx));
+  watch(store, ['jobs', 'running'], (s) => renderList(s, ctx));
+  watch(store, ['jobs', 'conn', 'running'], (s) => renderMaps(s, store, ctx));
 }
 
 /** .xlsx/.xlsm đọc bằng JSZip + bộ đọc XML riêng; .xls/.csv (định dạng cũ) mới cần SheetJS. */
 async function readSheets(file) {
   const buf = await file.arrayBuffer();
   if (/\.(xlsx|xlsm)$/i.test(file.name)) {
-    if (!window.JSZip) throw new Error('Chưa tải được thư viện JSZip — kiểm tra mạng rồi tải lại trang');
-    const zip = await window.JSZip.loadAsync(buf);
+    const zip = await openZip(buf);
     const wb = await zip.file('xl/workbook.xml')?.async('string');
     const rels = await zip.file('xl/_rels/workbook.xml.rels')?.async('string');
     if (!wb || !rels) throw new Error('File Excel hỏng hoặc không đúng định dạng .xlsx');
@@ -113,21 +119,22 @@ async function readSheets(file) {
     }
     return out;
   }
-  if (!window.XLSX) throw new Error('Chưa tải được thư viện đọc Excel — kiểm tra mạng rồi tải lại trang');
-  const wb = window.XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false, cellHTML: false, cellStyles: false });
-  return wb.SheetNames.map((name) => ({ name, rows: window.XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null }) }));
+  const XLSX = await loadXLSX();
+  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false, cellHTML: false, cellStyles: false, dense: true });
+  return wb.SheetNames.map((name) => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null }) }));
 }
 
 // ─── Danh sách file (bước 2) ───────────────────────────────
 
 function renderList(s, ctx) {
   const IC = { pdf: 'PDF', img: 'ẢNH', xls: 'XLS' };
-  mount($('#fileList'), s.jobs.map((j) => h('li', { class: 'file' },
+  const list = $('#fileList');
+  keepFocus(list, () => mount(list, s.jobs.map((j) => h('li', { class: 'file' },
     h('span', { class: `ic ${j.kind === 'img' ? 'img' : j.kind}` }, IC[j.kind]),
     h('div', { style: { minWidth: 0 } },
       h('div', { class: 'nm', title: j.name }, j.name),
       h('div', { class: 'st' }, statusLine(j))),
-    h('button', { class: 'btn ghost sm', 'aria-label': `Bỏ file ${j.name}`, onclick: () => ctx.removeJob(j.id), disabled: s.running }, 'Bỏ'))));
+    h('button', { class: 'btn ghost sm', 'aria-label': `Bỏ file ${j.name}`, onclick: () => ctx.removeJob(j.id), disabled: s.running }, 'Bỏ')))));
   document.querySelector('.rail a[data-step="2"]').classList.toggle('done', s.jobs.some((j) => j.status !== 'error'));
 }
 
@@ -197,7 +204,7 @@ function mapPanel(j0, store, ctx, isOpen) {
   for (let n = 1; n <= j.numPages; n++) {
     const img = h('div', { class: 'img', dataset: { job: j.id, page: String(n) } }, h('span', {}, String(n)));
     const th = h('div', { class: 'th', dataset: { t: j.types[n - 1] } }, img);
-    const sel = h('select', { 'aria-label': `Loại trang ${n}`, onchange: (e) => {
+    const sel = h('select', { 'aria-label': `Loại trang ${n}`, disabled: store.get().running, onchange: (e) => {
       const types = [...j.types]; types[n - 1] = e.target.value;
       th.dataset.t = e.target.value;
       update({ types });
@@ -208,7 +215,7 @@ function mapPanel(j0, store, ctx, isOpen) {
   lazyThumbs(grid, ctx);
 
   const groups = h('div', { class: 'groups' }, Object.entries(NOTE_TASKS).map(([k, t]) => {
-    const inp = h('input', { value: pagesText(j.notes?.[k] || []), placeholder: 'số trang', 'aria-label': `Trang thuyết minh ${t.label}` });
+    const inp = h('input', { value: pagesText(j.notes?.[k] || []), placeholder: 'số trang', 'aria-label': `Trang thuyết minh ${t.label}`, disabled: store.get().running });
     inp.addEventListener('change', () => {
       const pages = parsePages(inp.value, j.numPages);
       inp.value = pagesText(pages);
@@ -264,7 +271,7 @@ async function aiMap(j, ctx, btn) {
   try {
     const io = { ai: client, images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6) };
     const r = await mapPagesWithAI(j.numPages, io, { onStep: (st) => { if (st.label) btn.textContent = st.label; } });
-    ctx.patchJob(j.id, { types: r.types, notes: r.notes });
+    ctx.patchJob(j.id, { types: r.types, notes: r.notes, status: 'ready' });
     toast('AI đã nhận diện xong — kiểm tra lại nhanh các trang CĐKT / KQKD / LCTT.');
   } catch (e) {
     toast(`Nhận diện trang lỗi: ${e.message}`);

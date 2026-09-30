@@ -1,7 +1,8 @@
 // E2E: chạy trang thật trong Chromium, máy chủ AI được giả lập (không tốn lượt, không cần key).
 //   cd ai && npm run e2e
 // Tuỳ chọn: DGW_MODEL=/đường/dẫn/model.xlsx FORM_2026=/đường/dẫn/form.xlsx để thử điền file thật.
-// Cần playwright (npm i -D playwright, hoặc bản cài toàn cục) và mạng tới cdnjs (pdf-lib, jszip, xlsx).
+// Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
+// máy chủ AI và Google Fonts được giả lập.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +10,7 @@ import http from 'node:http';
 import { readFile, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, extname, normalize } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync } from 'node:child_process';   // tìm playwright cài toàn cục
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { CHART } from '../../js/chart2026.js';
 import { computeTotals } from '../../js/core/statements.js';
@@ -68,15 +69,6 @@ function fakeAI(body) {
   return { ok: true, data: { text: JSON.stringify(out), finishReason: 'STOP', tokens: 100 } };
 }
 
-// ─── Thư viện CDN ─────────────────────────────────────────
-// Trình duyệt thử nghiệm không ra mạng: tải thư viện bằng curl (dùng CA hệ thống / proxy của máy)
-// rồi trả cho trang. Trang vẫn kiểm tra integrity (SRI) như thật → sai mã băm là test đỏ.
-const cdnCache = new Map();
-function cdn(url) {
-  if (!cdnCache.has(url)) cdnCache.set(url, execSync(`curl -sSfL --max-time 60 ${JSON.stringify(url)}`, { maxBuffer: 20e6 }));
-  return cdnCache.get(url);
-}
-
 // ─── Máy chủ tĩnh ─────────────────────────────────────────
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.ico': 'image/x-icon', '.png': 'image/png' };
 let server, base, browser, pw, tmp;
@@ -110,9 +102,6 @@ async function newPage() {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
-  await page.route('https://cdnjs.cloudflare.com/**', (r) => r.fulfill({
-    status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: cdn(r.request().url()),
-  }));
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   return { page, errors, context };
 }
@@ -139,11 +128,17 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
   await maker.close();
 
   const { page, errors } = await newPage();
+  let pings = 0;
+  page.on('request', (r) => { if (r.url().startsWith('https://script.google.com/') && /"ping"/.test(r.postData() || '')) pings++; });
   await page.goto(`${base}/ai/#api=${encodeURIComponent(API)}&code=HV-E2E`);
+  // Máy chủ lạ (chưa từng kết nối, không phải máy chủ chính thức): điền sẵn, cảnh báo, chờ người dùng bấm.
+  await page.waitForSelector('#connectBox .msg.warn:has-text("chưa từng kết nối")');
+  assert.equal(pings, 0, 'không tự gửi mã tới máy chủ lạ');
+  await page.click('#connectBtn');
   await page.waitForFunction(() => document.querySelector('#connText').textContent.includes('Học viên E2E'));
   assert.equal(new URL(page.url()).hash, '', 'mã truy cập không nằm lại trên thanh địa chỉ');
   assert.equal(await page.locator('#modelSel').inputValue(), 'gemini-3.0-flash', 'model mặc định: flash mới nhất, không lite');
-  await page.waitForFunction(() => window.PDFLib && window.JSZip && window.XLSX, null, { timeout: 30_000 });
+  assert.equal(await page.evaluate(() => typeof window.XLSX), 'undefined', 'thư viện Excel chỉ nạp khi cần');
 
   await page.setInputFiles('#fileInput', pdfPath);
   await page.waitForSelector('#fileList .file:has-text("tìm thấy CĐKT, KQKD, LCTT")', { timeout: 30_000 });
@@ -174,9 +169,26 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
   await page.keyboard.press('Enter');
   await page.waitForSelector('td.v.man[data-k="BS:111"][data-p="FY2025"]');
   assert.match(await page.locator('#review .sum .pc').nth(1).innerText(), /lệch/);
+  // Đang sửa ô này mà bấm sang ô khác: ô cũ lưu, ô mới mở luôn (không mất cú bấm), bảng không nhảy về đầu.
   await page.locator('td.v[data-k="BS:111"][data-p="FY2025"]').click();
   await page.locator('td.v[data-k="BS:111"] input.ed').fill('60.000');
+  await page.locator('td.v[data-k="BS:112"][data-p="FY2025"]').click();
+  await page.waitForSelector('td.v[data-k="BS:112"][data-p="FY2025"] input.ed');
+  await page.keyboard.press('Escape');
+  // Sửa ô cuối bảng rồi Enter: bảng vẽ lại nhưng giữ chỗ cuộn và focus ở đúng ô (dùng bàn phím được tiếp).
+  await page.setViewportSize({ width: 1360, height: 500 });
+  await page.locator('td.v[data-k="BS:420"][data-p="FY2025"]').click();
+  const top = await page.locator('#review .gridwrap').evaluate((el) => el.scrollTop);
+  assert.ok(top > 0, 'bảng dài hơn khung, ô cuối nằm dưới');
+  await page.locator('td.v[data-k="BS:420"] input.ed').fill('68.000,5');
   await page.keyboard.press('Enter');
+  await page.waitForSelector('td.v.man[data-k="BS:420"][data-p="FY2025"]');
+  assert.equal(await page.locator('#review .gridwrap').evaluate((el) => el.scrollTop), top, 'giữ vị trí cuộn');
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset.k), 'BS:420', 'focus ở lại ô vừa sửa');
+  await page.keyboard.press('Enter');
+  await page.locator('td.v[data-k="BS:420"] input.ed').fill('68.000');
+  await page.keyboard.press('Enter');
+  await page.setViewportSize({ width: 1360, height: 900 });
   await page.waitForFunction(() => document.querySelectorAll('#review .sum .pc.ok').length === 2);
 
   // Thuyết minh: 2 mảng → ô 1, 2 của model
@@ -226,6 +238,9 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
   await page.waitForTimeout(1000);                                   // autosave (0,8 giây)
   const before = aiCalls.length;
   await page.reload();
+  await page.click('#pickBox .preset:has-text("Chỉ 3 báo cáo")');       // thao tác khác trước khi chọn "Mở lại"
+  await page.waitForTimeout(1000);
+  assert.ok(await page.evaluate(() => localStorage.getItem('elevato-ai-session')), 'phiên cũ không bị xoá khi chưa chọn');
   await page.click('#restore button:has-text("Mở lại")');
   await page.waitForSelector('td.v[data-k="BS:111"][data-p="FY2025"]');
   assert.equal(aiCalls.length, before);
@@ -235,7 +250,7 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
 test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì người dùng nhập ở bước 5', { timeout: 60_000 }, async () => {
   const { page, errors } = await newPage();
   await page.goto(`${base}/ai/`);
-  await page.waitForFunction(() => window.XLSX && window.JSZip, null, { timeout: 30_000 });
+  await page.addScriptTag({ url: '/ai/vendor/sheetjs/xlsx.full.min.js' });
   const b64 = await page.evaluate((items) => {
     const aoa = [['CÔNG TY ABC'], ['BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH'], ['Đơn vị tính: triệu đồng'], ['Chỉ tiêu', 'Mã số', 'Thuyết minh', 'Năm nay', 'Năm trước'],
       ...items.map((i) => [i.n, i.c, '', i.v, i.p])];

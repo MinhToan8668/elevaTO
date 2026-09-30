@@ -43,26 +43,44 @@ Key Gemini nằm trên máy chủ Apps Script của bạn, **không bao giờ ra
 3. Dán toàn bộ `ai/backend/Code.gs` vào `Code.gs`.
 4. ⚙ **Cài đặt dự án** → tick *Hiển thị tệp kê khai "appsscript.json"* → mở `appsscript.json`,
    dán nội dung `ai/backend/appsscript.json`.
-5. Ở dòng `var GEMINI_KEY_MOI = 'DAN_KEY_GEMINI';` thay bằng key của bạn → **Lưu** → chọn hàm
-   **`caiDat`** → **Chạy** → cấp quyền. Nhật ký in ra danh sách model và **mã quản trị** (không giới hạn
-   lượt — chỉ bạn dùng). Chạy xong đổi dòng key về `'DAN_KEY_GEMINI'` rồi Lưu (key đã cất trong
-   Script Properties).
+5. Cất key (chọn một cách):
+   - **Khuyên dùng**: ⚙ Cài đặt dự án → *Thuộc tính tập lệnh* → Thêm: tên `GEMINI_KEY`, giá trị = key → Lưu.
+     Key không bao giờ nằm trong mã nguồn.
+   - Hoặc dán key vào dòng `var GEMINI_KEY_MOI = 'DAN_KEY_GEMINI';`, chạy xong bước dưới thì đổi lại
+     `'DAN_KEY_GEMINI'` và Lưu.
+
+   Rồi chọn hàm **`caiDat`** → **Chạy** → cấp quyền. Nhật ký in ra danh sách model và **mã quản trị**
+   (không giới hạn lượt — chỉ bạn dùng, đừng chia sẻ).
 6. **Triển khai → Triển khai mới → Ứng dụng web**: *Thực thi với tư cách*: **Tôi**; *Ai có quyền truy cập*:
    **Bất kỳ ai** → Triển khai → chép link `…/exec`.
 7. Tạo mã cho học viên: sửa tên + số lượt trong hàm `taoMaHocVien` → Chạy → mã hiện trong nhật ký
    (dạng `hv-…`). Xem mã và số lượt đã dùng: chạy `xemMa`. Thu hồi: dán mã vào `xoaMaHocVien` → Chạy.
-8. Gửi học viên link có sẵn máy chủ + mã (mở là kết nối luôn, mã tự xoá khỏi thanh địa chỉ):
+8. Dán link `/exec` vào `ai/js/config.js` (`OFFICIAL_API = '…'`) rồi đẩy lên GitHub. Sau đó gửi học viên link có sẵn
+   máy chủ + mã — mở là kết nối luôn, mã tự xoá khỏi thanh địa chỉ:
 
    ```
    https://minhtoan8668.github.io/elevaTO/ai/#api=<link /exec>&code=<mã>
    ```
 
+   Link trỏ tới máy chủ **khác** máy chủ chính thức thì trang không tự kết nối: hiện cảnh báo, người dùng phải
+   bấm "Kết nối" (chống link giả lấy mã / BCTC của học viên). Mã chỉ được nhớ trên máy khi người dùng tick
+   *Ghi nhớ mã trên máy này*.
+
 Sửa `Code.gs` sau này: **Triển khai → Quản lý triển khai → ✎ → Phiên bản mới** để giữ nguyên link.
+
+### Bảo vệ
+
+- Mỗi mã có hạn mức lượt/ngày (giữ lượt trước khi gọi Gemini, lỗi thì trả lại) và tối đa `AI_RPM_MA` (8) lượt/phút;
+  cả hệ thống tối đa `AI_RPM` (12) lượt/phút. Dò mã sai nhiều lần → mã lạ bị chặn 10 phút, mã đúng vẫn dùng được.
+- Máy chủ chỉ chuyển tiếp nội dung trích xuất (PDF / ảnh / chữ có giới hạn độ dài), không cho dùng công cụ,
+  không cho đổi model ngoài danh sách, giới hạn mức "suy nghĩ" của model.
+- Trang chỉ chạy script của chính nó (CSP `script-src 'self'`, thư viện để trong `vendor/`), không dùng `innerHTML`
+  với dữ liệu; file phiên / Excel được đọc theo khuôn cố định.
 
 ### Giới hạn
 
 - Gemini miễn phí giới hạn số lượt mỗi phút / mỗi ngày theo key. Máy chủ giữ tối đa `AI_RPM` (12) lượt/phút
-  cho cả hệ thống; quá thì trang tự chờ rồi thử lại. Một BCTC thường tốn 3 lượt (3 bảng) + 1 lượt mỗi
+  cho cả hệ thống, `AI_RPM_MA` (8) lượt/phút mỗi mã; quá thì trang tự chờ rồi thử lại. Một BCTC thường tốn 3 lượt (3 bảng) + 1 lượt mỗi
   nhóm thuyết minh.
 - Apps Script chỉ chờ một lượt gọi tối đa ~60 giây: bảng dài quá thì trang tự chia đôi rồi gọi lại.
 - Gemini bản miễn phí có thể dùng dữ liệu gửi lên để cải thiện dịch vụ — chỉ dùng cho BCTC đã công bố.
@@ -76,11 +94,13 @@ ai/
 ├── index.html, css/app.css      giao diện (5 bước)
 ├── js/app.js, js/ui/*           các bước giao diện, trạng thái, lưu phiên
 ├── js/ai.js                     gọi máy chủ AI (chờ khi bận, chia nhỏ khi quá giờ)
-├── js/pdf.js                    đọc chữ, ảnh thu nhỏ, cắt trang PDF (pdf.js bản legacy trong vendor/)
+├── js/pdf.js, js/libs.js        đọc chữ, ảnh thu nhỏ, cắt trang PDF; nạp thư viện trong vendor/ khi cần
+├── js/config.js                 link máy chủ AI chính thức
 ├── js/chart2026.js              danh mục chỉ tiêu mẫu TT99 + cây cộng dồn + mã TT200 tương ứng
 ├── js/core/                     logic thuần (đọc số VN, kiểm tra, quy đổi, nhận trang, prompt, dữ liệu nhiều kỳ, Excel)
 ├── js/targets/                  điền model DGW / Form 2026 (sửa thẳng XML trong file .xlsx)
 ├── backend/                     máy chủ Apps Script
+├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS (xem vendor/README.md)
 └── tests/                       kiểm thử
 ```
 

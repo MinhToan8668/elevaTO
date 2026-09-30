@@ -121,7 +121,7 @@ export async function mapPagesWithAI(total, io, { batch = 12, onStep } = {}) {
       const i = Number(r.trang) - 1;
       if (!(i >= start - 1 && i < start - 1 + pages.length)) continue;          // AI đánh số sai → bỏ
       if (['BS', 'IS', 'CF', 'NOTES', 'OTHER'].includes(r.loai)) types[i] = r.loai;
-      for (const g of r.nhom || []) if (notes[g] && types[i] === 'NOTES') notes[g].push(i + 1);
+      for (const g of Array.isArray(r.nhom) ? r.nhom : []) if (Object.hasOwn(notes, g) && types[i] === 'NOTES') notes[g].push(i + 1);
     }
   }
   onStep?.({ key: 'map', state: 'done' });

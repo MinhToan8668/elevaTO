@@ -45,3 +45,17 @@ test('không phải file phiên elevaTO → báo lỗi rõ', () => {
   assert.throws(() => parseSession('{"a":1}'), /không phải file phiên/);
   assert.throws(() => parseSession('not json'), /không phải file phiên/);
 });
+
+test('nguồn thiếu / trùng id được cấp id mới (sửa ngày, bỏ nguồn không đụng nhầm nguồn khác)', () => {
+  const file = JSON.parse(serializeSession(state));
+  file.data.sources = [file.data.sources[0], { ...file.data.sources[0], id: undefined }, { ...file.data.sources[1], id: 's1' }];
+  const ids = parseSession(JSON.stringify(file)).sources.map((s) => s.id);
+  assert.equal(new Set(ids).size, 3);
+  assert.ok(ids.every((x) => typeof x === 'string' && x));
+});
+
+test('kỳ lưu trữ 1–12 tháng hợp lệ (quý / tháng lẻ) vẫn được giữ', () => {
+  const file = JSON.parse(serializeSession(state));
+  file.data.sources[1].period = { id: 'Q1-2026', year: 2026, months: 2, endMonth: 3 };
+  assert.equal(parseSession(JSON.stringify(file)).sources.length, 2);
+});

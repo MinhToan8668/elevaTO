@@ -38,20 +38,20 @@ function offerRestore() {
   const when = data.savedAt ? new Date(data.savedAt).toLocaleString('vi-VN') : '';
   mount(box, h('div', { class: 'banner' },
     h('span', {}, `Có phiên làm việc chưa xong${when ? ` (lưu lúc ${when})` : ''}: ${data.sources.length} nguồn dữ liệu.`),
-    h('button', { class: 'btn sm', onclick: () => { applySession(store, data); mount(box); toast('Đã mở lại — xem ở bước 5.'); $('#s5').scrollIntoView({ behavior: 'smooth' }); } }, 'Mở lại'),
+    h('button', { class: 'btn sm', onclick: () => { if (!applySession(store, data)) return; mount(box); toast('Đã mở lại — xem ở bước 5.'); $('#s5').scrollIntoView({ behavior: 'smooth' }); } }, 'Mở lại'),
     h('button', { class: 'btn ghost sm', onclick: () => { try { localStorage.removeItem(LS_SESSION); } catch (e) { /* bỏ qua */ } mount(box); } }, 'Bỏ')));
 }
 
 function autosave() {
   let t, first = true;
   watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'noteGroups', 'preset'], (s) => {
-    if (first) { first = false; return; }          // lúc mở trang: chưa ghi đè phiên cũ khi người dùng chưa chọn
+    if (first) { first = false; return; }
+    // Chỉ ghi khi đã có dữ liệu; không bao giờ tự xoá — phiên cũ chỉ mất khi người dùng bấm "Bỏ" ở banner
+    // hoặc có dữ liệu mới thay thế.
+    if (!s.sources.length) return;
     clearTimeout(t);
     t = setTimeout(() => {
-      try {
-        if (s.sources.length) localStorage.setItem(LS_SESSION, serializeSession(s));
-        else localStorage.removeItem(LS_SESSION);
-      } catch (e) { /* hết chỗ / bị chặn: vẫn còn nút "Lưu phiên" */ }
+      try { localStorage.setItem(LS_SESSION, serializeSession(store.get())); } catch (e) { /* hết chỗ / bị chặn: vẫn còn nút "Lưu phiên" */ }
     }, 800);
   });
 }

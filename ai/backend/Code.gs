@@ -22,7 +22,11 @@ var GEMINI_KEY_MOI = 'DAN_KEY_GEMINI';
 var AI_RPM          = 12;                  // tối đa số lượt gọi Gemini mỗi phút cho CẢ hệ thống (bản miễn phí rất chặt)
 var AI_MAX_BODY     = 45 * 1024 * 1024;    // yêu cầu lớn hơn thì từ chối (Apps Script nhận tối đa ~50MB)
 var AI_MAX_OUT      = 32768;               // trần maxOutputTokens
-var AI_SAI_MAX      = 20;                  // sai mã quá số này thì khoá tạm
+var AI_RPM_MA       = 8;                   // tối đa số lượt mỗi phút cho MỘT mã (một người không chiếm hết nhịp chung)
+var AI_MAX_TEXT     = 200000;              // tổng số ký tự chữ trong một yêu cầu (prompt của trang chỉ vài nghìn)
+var AI_MAX_SYS      = 20000;               // độ dài chỉ dẫn hệ thống
+var AI_MAX_THINK    = 8192;                // trần thinkingBudget
+var AI_SAI_MAX      = 20;                  // sai mã quá số này thì khoá tạm (chỉ khoá mã lạ, mã đúng vẫn dùng được)
 var AI_KHOA_GIAY    = 600;
 var AI_MODEL_TTL    = 6 * 3600;            // nhớ danh sách model 6 giờ
 var GEMINI_API      = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -62,22 +66,28 @@ function doPost(e) {
 // ─── Mã truy cập & hạn mức ──────────────────────────────────
 
 function dsMa() {
-  try { return JSON.parse(props().getProperty('AI_CODES') || '{}'); } catch (e) { return {}; }
+  try {
+    var o = JSON.parse(props().getProperty('AI_CODES') || '{}');
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+  } catch (e) { return {}; }
 }
 
+// Mã hợp lệ: chữ thường + gạch ngang + chữ/số (hv-…, qt-…). Chặn luôn "constructor", "__proto__"…
+var MA_RE = /^[a-z]{2,5}-[a-z0-9-]{6,40}$/;
+
 function kiemMa(code) {
+  code = String(code || '').trim();
+  var admin = props().getProperty('ADMIN_CODE');
+  if (code && admin && code === admin) return { ok: true, code: code, name: 'Quản trị', perDay: 0, admin: true };
+  var codes = dsMa();
+  var m = MA_RE.test(code) && Object.prototype.hasOwnProperty.call(codes, code) ? codes[code] : null;
+  if (m && typeof m === 'object') return { ok: true, code: code, name: String(m.name || 'Học viên'), perDay: Number(m.perDay) || 0 };
+  // Mã sai: đếm để làm chậm việc dò mã. Chỉ chặn mã lạ — học viên có mã đúng không bị người khác khoá.
   var cache = CacheService.getScriptCache();
   var sai = Number(cache.get('aisai') || 0);
   if (sai >= AI_SAI_MAX) return loi('key', 'Nhập sai mã quá nhiều lần, thử lại sau 10 phút');
-  code = String(code || '').trim();
-  var admin = props().getProperty('ADMIN_CODE');
-  if (code && admin && code === admin) return { ok: true, code: code, name: 'Quản trị', perDay: 0 };
-  var m = code ? dsMa()[code] : null;
-  if (!m) {
-    cache.put('aisai', String(sai + 1), AI_KHOA_GIAY);
-    return loi('key', 'Mã truy cập không đúng');
-  }
-  return { ok: true, code: code, name: m.name, perDay: Number(m.perDay) || 0 };
+  cache.put('aisai', String(sai + 1), AI_KHOA_GIAY);
+  return loi('key', 'Mã truy cập không đúng');
 }
 
 function homNay() { return Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd'); }
@@ -87,26 +97,49 @@ function hanMuc(who) {
   return { used: Number(props().getProperty(khoaLuot(who.code)) || 0), limit: who.perDay };
 }
 
-function tinhLuot(who) {
+/** Giữ 1 lượt TRƯỚC khi gọi Gemini (trong khoá, nên gọi song song không vượt hạn mức). false = hết lượt. */
+function giuLuot(who) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var k = khoaLuot(who.code);
-    props().setProperty(k, String(Number(props().getProperty(k) || 0) + 1));
+    var used = Number(props().getProperty(k) || 0);
+    if (who.perDay && used >= who.perDay) return false;
+    props().setProperty(k, String(used + 1));
     // dọn bộ đếm của các ngày trước
     var all = props().getProperties();
     for (var p in all) if (p.indexOf('Q_' + who.code + '_') === 0 && p !== k) props().deleteProperty(p);
+    return true;
   } finally { lock.releaseLock(); }
 }
 
-/** Đếm lượt gọi Gemini trong phút hiện tại cho cả hệ thống. Trả số giây phải chờ (0 = được gọi). */
-function giuNhip() {
+/** Gọi Gemini không thành → trả lại lượt đã giữ. */
+function traLuot(who) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var k = khoaLuot(who.code);
+    var used = Number(props().getProperty(k) || 0);
+    if (used > 0) props().setProperty(k, String(used - 1));
+  } finally { lock.releaseLock(); }
+}
+
+/** Đếm lượt gọi trong phút hiện tại (cho cả hệ thống và cho từng mã). Trả số giây phải chờ (0 = được gọi). */
+function giuNhip(who) {
   var cache = CacheService.getScriptCache();
-  var now = Date.now(), phut = Math.floor(now / 60000);
-  var k = 'rpm_' + phut, n = Number(cache.get(k) || 0);
-  if (n >= AI_RPM) return Math.max(1, 60 - Math.floor((now % 60000) / 1000));
-  cache.put(k, String(n + 1), 120);
-  return 0;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var now = Date.now(), phut = Math.floor(now / 60000);
+    var cho = Math.max(1, 60 - Math.floor((now % 60000) / 1000));
+    var kMa = 'rpm_' + who.code + '_' + phut, nMa = Number(cache.get(kMa) || 0);
+    if (!who.admin && nMa >= AI_RPM_MA) return cho;
+    var k = 'rpm_' + phut, n = Number(cache.get(k) || 0);
+    if (n >= AI_RPM) return cho;
+    cache.put(k, String(n + 1), 120);
+    cache.put(kMa, String(nMa + 1), 120);
+    return 0;
+  } finally { lock.releaseLock(); }
 }
 
 // ─── Gemini ─────────────────────────────────────────────────
@@ -134,18 +167,26 @@ function danhSachModel() {
 function goiGemini(who, b) {
   var key = keyGemini();
   if (!key) return loi('setup', 'Máy chủ chưa cài key Gemini (chạy hàm caiDat)');
-  if (who.perDay && hanMuc(who).used >= who.perDay) {
-    return loi('quota', 'Hôm nay đã dùng hết ' + who.perDay + ' lượt — mai dùng tiếp, hoặc xin thêm lượt');
-  }
   var model = String(b.model || '');
   var ok = danhSachModel().some(function (m) { return m.id === model; });
   if (!ok) return loi('bad', 'Model không có trong danh sách được phép');
   var body = sachYeuCau(b);
-  if (!body) return loi('bad', 'Yêu cầu sai dạng');
+  if (!body) return loi('bad', 'Yêu cầu sai dạng hoặc quá dài');
+  if (who.perDay && hanMuc(who).used >= who.perDay) return hetLuot(who);
 
-  var cho = giuNhip();
+  var cho = giuNhip(who);
   if (cho) return loi('busy', 'Hệ thống đang đông, chờ ' + cho + ' giây', { retryAfter: cho });
+  if (!giuLuot(who)) return hetLuot(who);
+  var r = goiThat(model, body, key);
+  if (!r.ok) traLuot(who);
+  return r;
+}
 
+function hetLuot(who) {
+  return loi('quota', 'Hôm nay đã dùng hết ' + who.perDay + ' lượt — mai dùng tiếp, hoặc xin thêm lượt');
+}
+
+function goiThat(model, body, key) {
   var res;
   try {
     res = UrlFetchApp.fetch(GEMINI_API + '/' + model + ':generateContent', {
@@ -172,7 +213,6 @@ function goiGemini(who, b) {
   if (/SAFETY|RECITATION|PROHIBITED|BLOCKLIST|SPII/.test(fr)) return loi('blocked', 'Gemini dừng vì ' + fr);
   var text = ((cand.content && cand.content.parts) || []).filter(function (p) { return p.text && !p.thought; })
     .map(function (p) { return p.text; }).join('');
-  tinhLuot(who);
   return { ok: true, data: { text: text, finishReason: fr, tokens: (data.usageMetadata || {}).totalTokenCount || 0 } };
 }
 
@@ -188,28 +228,37 @@ function hoiLai(data) {
 /** Chỉ giữ đúng những gì cần để trích xuất: nội dung, cấu hình sinh, chỉ dẫn hệ thống. */
 function sachYeuCau(b) {
   if (!Array.isArray(b.contents) || !b.contents.length || b.contents.length > 20) return null;
-  var contents = [];
+  var contents = [], chu = 0;
   for (var i = 0; i < b.contents.length; i++) {
     var c = b.contents[i];
     if (!c || !Array.isArray(c.parts) || !c.parts.length || c.parts.length > 300) return null;
     var parts = [];
     for (var j = 0; j < c.parts.length; j++) {
       var p = c.parts[j] || {};
-      if (typeof p.text === 'string') parts.push({ text: p.text });
+      if (typeof p.text === 'string') { chu += p.text.length; parts.push({ text: p.text }); }
       else if (p.inlineData && MIME_OK.indexOf(p.inlineData.mimeType) >= 0 && typeof p.inlineData.data === 'string') {
         parts.push({ inlineData: { mimeType: p.inlineData.mimeType, data: p.inlineData.data } });
       } else return null;
     }
     contents.push({ role: c.role === 'model' ? 'model' : 'user', parts: parts });
   }
+  if (chu > AI_MAX_TEXT) return null;
   var out = { contents: contents };
   var gc = b.generationConfig || {}, cfg = {};
   for (var k = 0; k < GEN_KEYS.length; k++) if (gc[GEN_KEYS[k]] !== undefined) cfg[GEN_KEYS[k]] = gc[GEN_KEYS[k]];
   cfg.maxOutputTokens = Math.min(Number(cfg.maxOutputTokens) || AI_MAX_OUT, AI_MAX_OUT);
+  if (cfg.thinkingConfig !== undefined) {
+    var tc = cfg.thinkingConfig || {}, t = {};
+    if (tc.thinkingBudget !== undefined) t.thinkingBudget = Math.max(0, Math.min(Number(tc.thinkingBudget) || 0, AI_MAX_THINK));
+    if (/^(minimal|low|medium)$/i.test(String(tc.thinkingLevel || ''))) t.thinkingLevel = String(tc.thinkingLevel).toLowerCase();
+    cfg.thinkingConfig = t;
+  }
   out.generationConfig = cfg;
   if (b.systemInstruction && Array.isArray(b.systemInstruction.parts)) {
-    out.systemInstruction = { parts: b.systemInstruction.parts.filter(function (p) { return typeof p.text === 'string'; })
-      .map(function (p) { return { text: p.text }; }) };
+    var sys = b.systemInstruction.parts.filter(function (p) { return p && typeof p.text === 'string'; })
+      .map(function (p) { return { text: p.text }; });
+    if (sys.reduce(function (n, p) { return n + p.text.length; }, 0) > AI_MAX_SYS) return null;
+    out.systemInstruction = { parts: sys };
   }
   return out;
 }

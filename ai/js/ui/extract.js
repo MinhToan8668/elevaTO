@@ -1,6 +1,6 @@
 // Bước 4: chọn gói dữ liệu / nhóm thuyết minh, chạy trích xuất từng file, hiện tiến độ.
 
-import { h, mount, $, toast } from './dom.js';
+import { h, mount, $, toast, keepFocus } from './dom.js';
 import { PRESETS, NOTE_KEYS, uid, watch } from './store.js';
 import { NOTE_TASKS } from '../core/prompts.js';
 import { extractJob } from '../core/pipeline.js';
@@ -42,12 +42,13 @@ function renderRun(s, store, ctx) {
   else hint = `${todo.length} file · khoảng ${calls} lượt AI${left !== null ? ` (còn ${left} lượt hôm nay)` : ''}. Mỗi file mất 1–3 phút.`;
   const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || s.conn.status !== 'on' || noTable.length === todo.length, onclick: () => run(store, ctx) },
     s.running ? 'Đang trích xuất…' : 'Trích xuất bằng AI');
-  const stopBtn = s.running ? h('button', { class: 'btn ghost', onclick: () => { ctx.stop = true; toast('Sẽ dừng sau file đang làm.'); } }, 'Dừng') : null;
-  mount($('#runRow'),
+  const stopBtn = s.running ? h('button', { class: 'btn ghost', id: 'stopBtn', onclick: () => { ctx.stop = true; toast('Sẽ dừng sau file đang làm.'); } }, 'Dừng') : null;
+  const row = $('#runRow');
+  keepFocus(row, () => mount(row,
     h('div', { style: { flex: '0 0 auto', display: 'flex', gap: '10px' } }, runBtn, stopBtn),
     h('p', { class: 'priv', style: { flex: '1 1 300px', margin: 0 } }, hint,
       noTable.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, `${noTable.length} file chưa chọn trang bảng nào`) : null,
-      left !== null && calls > left ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, 'không đủ lượt hôm nay') : null));
+      left !== null && calls > left ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, 'không đủ lượt hôm nay') : null)));
 }
 
 async function run(store, ctx) {
@@ -81,6 +82,7 @@ async function run(store, ctx) {
       try {
         const ext = await extractJob({ name: j.name, types: j.types, notes: j.notes }, io, { noteGroups: store.get().noteGroups, onStep });
         if (!Object.keys(ext.statements).length) throw new Error('Không đọc được bảng nào');
+        if (!store.get().jobs.some((x) => x.id === j.id)) continue;          // file đã bị bỏ trong lúc chạy
         store.set((st) => {
           const old = st.sources.find((x) => x.jobId === j.id);
           return { sources: [...st.sources.filter((x) => x.jobId !== j.id), { id: uid('s'), jobId: j.id, kind: 'ext', ext, meta: old?.meta }] };

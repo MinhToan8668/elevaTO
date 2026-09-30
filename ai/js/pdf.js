@@ -1,7 +1,8 @@
 // Đọc PDF trong trình duyệt: chữ từng trang (để nhận diện trang), ảnh thu nhỏ, cắt trang gửi AI.
-// pdf.js (bản legacy, chạy được cả trình duyệt chưa cập nhật) để sẵn trong repo (vendor/) — pdf-lib nạp từ CDN (biến toàn cục PDFLib).
+// pdf.js (bản legacy, chạy được cả trình duyệt chưa cập nhật) và pdf-lib để sẵn trong vendor/.
 
 import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
+import { loadPdfLib } from './libs.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -48,9 +49,9 @@ export async function pageJpeg(doc, n, width = 1500, quality = 0.75) {
 
 /** PDF mới chỉ gồm các trang đã chọn (đánh số từ 1). */
 export async function subsetPdf(bytes, pages) {
-  if (!window.PDFLib) throw new Error('Chưa tải được thư viện pdf-lib — kiểm tra mạng rồi tải lại trang');
-  const src = await window.PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
-  const out = await window.PDFLib.PDFDocument.create();
+  const PDFLib = await loadPdfLib();
+  const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+  const out = await PDFLib.PDFDocument.create();
   const copied = await out.copyPages(src, pages.map((p) => p - 1));
   copied.forEach((p) => out.addPage(p));
   return out.save();

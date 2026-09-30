@@ -99,3 +99,10 @@ test('bản scan: AI phân loại theo từng nhóm trang; số trang AI trả s
   assert.deepEqual(r.types, ['BS', 'BS', 'IS', 'NOTES', 'NOTES']);
   assert.deepEqual(r.notes.debt, [5]);
 });
+
+test('AI trả nhóm thuyết minh lạ ("constructor", "__proto__") khi nhận diện trang → bỏ qua, không lỗi', async () => {
+  const { mapPagesWithAI } = await import('../js/core/pipeline.js');
+  const io = { images: async (p) => p.map(() => ({ inlineData: {} })), ai: { json: async () => [{ trang: 1, loai: 'NOTES', nhom: ['constructor', '__proto__', 'debt'] }] } };
+  const r = await mapPagesWithAI(1, io);
+  assert.deepEqual(r.notes.debt, [1]);
+});
