@@ -67,7 +67,7 @@ export function initFiles(store, ctx) {
       id, name, kind: 'img', status: 'ready', numPages: sorted.length, scanned: true,
       types: sorted.map(() => 'UNKNOWN'), notes: Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []])),
     }] }));
-    toast('Ảnh chụp: bấm "Nhờ AI nhận diện trang" ở bước 3, hoặc tự chọn loại cho từng ảnh.');
+    toast('Ảnh chụp: bấm "Nhờ AI nhận diện trang" ở bước 2, hoặc tự chọn loại cho từng ảnh.');
   }
 
   async function addExcel(file) {
@@ -80,7 +80,7 @@ export function initFiles(store, ctx) {
       const srcs = gridToSources(file.name, grid).map((x) => ({ ...x, id: uid('s'), jobId: id }));
       const summary = grid.kind === 'storage'
         ? `File FinLens "Lưu trữ": ${grid.periods.length} kỳ — ${grid.periods.map((p) => p.period.id).join(', ')}`
-        : `Bảng ${Object.keys(grid.statements).map((k) => SHORT[k]).join(', ')}${srcs[0].ext.meta.ngay_ket_thuc ? ` · kỳ kết thúc ${srcs[0].ext.meta.ngay_ket_thuc}` : ' · chưa rõ ngày — nhập ở bước 5'}`;
+        : `Bảng ${Object.keys(grid.statements).map((k) => SHORT[k]).join(', ')}${srcs[0].ext.meta.ngay_ket_thuc ? ` · kỳ kết thúc ${srcs[0].ext.meta.ngay_ket_thuc}` : ' · chưa rõ ngày — nhập ở bước 4'}`;
       patchJob(id, { status: 'done', progress: '', summary });
       store.set((s) => ({ sources: [...s.sources, ...srcs] }));
     } catch (e) {
@@ -98,7 +98,7 @@ export function initFiles(store, ctx) {
   };
 
   watch(store, ['jobs', 'running'], (s) => renderList(s, ctx));
-  watch(store, ['jobs', 'conn', 'running'], (s) => renderMaps(s, store, ctx));
+  watch(store, ['jobs', 'user', 'running'], (s) => renderMaps(s, store, ctx));
 }
 
 /** .xlsx/.xlsm đọc bằng JSZip + bộ đọc XML riêng; .xls/.csv (định dạng cũ) mới cần SheetJS. */
@@ -124,7 +124,7 @@ async function readSheets(file) {
   return wb.SheetNames.map((name) => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null }) }));
 }
 
-// ─── Danh sách file (bước 2) ───────────────────────────────
+// ─── Danh sách file (bước 1) ───────────────────────────────
 
 function renderList(s, ctx) {
   const IC = { pdf: 'PDF', img: 'ẢNH', xls: 'XLS' };
@@ -151,18 +151,18 @@ function statusLine(j) {
   ];
 }
 
-// ─── Bản đồ trang (bước 3) ─────────────────────────────────
+// ─── Bản đồ trang (bước 2) ─────────────────────────────────
 
 const thumbCache = new Map();          // `${jobId}:${page}` → dataURL
 const panels = new Map();              // jobId → { el, sig } — tránh vẽ lại (mất chỗ cuộn) khi chỉ đổi loại 1 trang
 
-const sigOf = (j, s) => JSON.stringify([j.types, j.notes, j.numPages, j.scanned, j.status === 'done', s.conn.status, s.running]);
+const sigOf = (j, s) => JSON.stringify([j.types, j.notes, j.numPages, j.scanned, j.status === 'done', !!s.user, s.running]);
 
 function renderMaps(s, store, ctx) {
   const box = $('#pageMaps');
   const jobs = s.jobs.filter((j) => j.kind !== 'xls' && j.status !== 'error' && j.status !== 'reading');
   for (const id of panels.keys()) if (!jobs.some((j) => j.id === id)) panels.delete(id);
-  if (!jobs.length) { mount(box, h('p', { class: 'msg warn' }, 'Chưa có file PDF / ảnh nào. File Excel không cần bước này.')); return; }
+  if (!jobs.length) { mount(box, h('p', { class: 'empty' }, 'Chưa có file PDF / ảnh nào. File Excel không cần bước này.')); return; }
   const els = jobs.map((j, i) => {
     const sig = sigOf(j, s), had = panels.get(j.id);
     if (had && had.sig === sig) return had.el;
@@ -193,10 +193,8 @@ function mapPanel(j0, store, ctx, isOpen) {
     panels.set(j.id, { el: panel, sig: sigOf(j, s) });
     ctx.patchJob(j.id, { ...patch, status: j.status });
   };
-  const conn = store.get().conn;
   const aiBtn = j.scanned ? h('button', {
-    class: 'btn sm', disabled: conn.status !== 'on' || store.get().running,
-    title: conn.status !== 'on' ? 'Cần kết nối AI ở bước 1' : '',
+    class: 'btn sm', disabled: !store.get().user || store.get().running,
     onclick: (e) => aiMap(j, ctx, e.currentTarget),
   }, `Nhờ AI nhận diện trang (~${Math.ceil(j.numPages / 12)} lượt)`) : null;
 
@@ -265,7 +263,7 @@ async function paintThumb(el, ctx) {
 
 async function aiMap(j, ctx, btn) {
   const client = ctx.client();
-  if (!client) return toast('Cần kết nối AI ở bước 1');
+  if (!client) return toast('Đăng nhập để dùng AI');
   btn.disabled = true;
   const old = btn.textContent;
   try {

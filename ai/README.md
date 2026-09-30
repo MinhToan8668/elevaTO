@@ -30,62 +30,67 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
     ghi và nguồn số (BCTC / thuyết minh / ước tính).
   - Điền **Form nội bộ 2026**: sheet `Lưu trữ`, mỗi kỳ một cột (đồng), F1 chuyển sang 4 kỳ gần nhất.
   - **Bảng chuẩn hoá** .xlsx các dòng đã tick, đơn vị tuỳ chọn.
-  - **Lưu phiên** .json: làm tiếp lần sau / gửi người khác, không tốn lượt AI, không chứa mã truy cập.
+  - **Lưu phiên** .json: làm tiếp lần sau / gửi người khác, không tốn lượt AI, không chứa thông tin đăng nhập.
+
+## Tài khoản học viên
+
+Giống Viral Studio bên TMXK: người dùng tự **tạo tài khoản** (họ tên, email, số điện thoại, mật khẩu) rồi
+**đăng nhập** ngay trên trang — không có ô link máy chủ hay mã truy cập nào. Phiên đăng nhập giữ 30 ngày,
+tối đa 3 máy cùng lúc. Mỗi tài khoản có số **lượt AI mỗi ngày** (mặc định 20).
+
+Quản lý trong Google Sheet **"elevaTO AI — Tài khoản"** (tab `TaiKhoan`, do hàm `caiDat` tạo):
+
+| Cột | Ý nghĩa |
+|---|---|
+| `trangthai` | `active` dùng được · `cho` chờ duyệt · `off` khoá (đăng xuất khỏi mọi máy) |
+| `luot_ngay` | số lượt AI mỗi ngày của riêng người này; để trống = mặc định |
+| `vaitro` | `hv` học viên · `admin` quản trị, không giới hạn lượt |
+
+Muốn duyệt tay từng người trước khi cho dùng: thêm Script Property `AI_CAN_DUYET` = `1` (người mới sẽ ở
+trạng thái `cho` cho tới khi bạn sửa thành `active`). Đổi lượt mặc định: Script Property `AI_LUOT_MAC_DINH`.
+Học viên quên mật khẩu: sửa email + mật khẩu mới trong hàm `datLaiMatKhauHocVien` rồi Chạy, nhắn lại cho họ.
 
 ## Cài máy chủ AI (một lần, khoảng 10 phút)
 
-Key Gemini nằm trên máy chủ Apps Script của bạn, **không bao giờ ra tới trình duyệt**. Học viên dùng
-**mã truy cập** riêng, mỗi mã có giới hạn lượt/ngày; thu hồi được bất cứ lúc nào.
-
-1. Lấy key miễn phí tại **Google AI Studio** → *Get API key*.
-2. Vào <https://script.google.com> → **Dự án mới**, đặt tên `elevaTO AI`
+1. Vào <https://script.google.com> → **Dự án mới**, đặt tên `elevaTO AI`
    (dự án riêng — không dùng chung dự án landing page hay upload).
-3. Dán toàn bộ `ai/backend/Code.gs` vào `Code.gs`.
-4. ⚙ **Cài đặt dự án** → tick *Hiển thị tệp kê khai "appsscript.json"* → mở `appsscript.json`,
-   dán nội dung `ai/backend/appsscript.json`.
-5. Cất key (chọn một cách):
-   - **Khuyên dùng**: ⚙ Cài đặt dự án → *Thuộc tính tập lệnh* → Thêm: tên `GEMINI_KEY`, giá trị = key → Lưu.
-     Key không bao giờ nằm trong mã nguồn.
-   - Hoặc dán key vào dòng `var GEMINI_KEY_MOI = 'DAN_KEY_GEMINI';`, chạy xong bước dưới thì đổi lại
-     `'DAN_KEY_GEMINI'` và Lưu.
-
-   Rồi chọn hàm **`caiDat`** → **Chạy** → cấp quyền. Nhật ký in ra danh sách model và **mã quản trị**
-   (không giới hạn lượt — chỉ bạn dùng, đừng chia sẻ).
-6. **Triển khai → Triển khai mới → Ứng dụng web**: *Thực thi với tư cách*: **Tôi**; *Ai có quyền truy cập*:
+2. Dán toàn bộ `Code.gs` (bản elevaTO gửi riêng, đã có sẵn key) vào `Code.gs`.
+   Dùng bản trong repo thì dán key Gemini vào dòng `GEMINI_KEY_MOI` (nhiều key cách nhau dấu phẩy).
+3. ⚙ **Cài đặt dự án** → tick *Hiển thị tệp kê khai "appsscript.json"* → mở `appsscript.json`, dán nội dung
+   `ai/backend/appsscript.json`.
+4. Chọn hàm **`caiDat`** → **Chạy** → cấp quyền (Google hỏi quyền gọi ra ngoài + tạo bảng tính). Nhật ký in ra
+   link bảng tài khoản và model sẽ dùng. Chạy xong có thể đổi dòng key về `'DAN_KEY_GEMINI'` rồi Lưu
+   (key đã cất trong Script Properties).
+5. **Triển khai → Triển khai mới → Ứng dụng web**: *Thực thi với tư cách*: **Tôi**; *Ai có quyền truy cập*:
    **Bất kỳ ai** → Triển khai → chép link `…/exec`.
-7. Tạo mã cho học viên: sửa tên + số lượt trong hàm `taoMaHocVien` → Chạy → mã hiện trong nhật ký
-   (dạng `hv-…`). Xem mã và số lượt đã dùng: chạy `xemMa`. Thu hồi: dán mã vào `xoaMaHocVien` → Chạy.
-8. Dán link `/exec` vào `ai/js/config.js` (`OFFICIAL_API = '…'`) rồi đẩy lên GitHub. Sau đó gửi học viên link có sẵn
-   máy chủ + mã — mở là kết nối luôn, mã tự xoá khỏi thanh địa chỉ:
-
-   ```
-   https://minhtoan8668.github.io/elevaTO/ai/#api=<link /exec>&code=<mã>
-   ```
-
-   Link trỏ tới máy chủ **khác** máy chủ chính thức thì trang không tự kết nối: hiện cảnh báo, người dùng phải
-   bấm "Kết nối" (chống link giả lấy mã / BCTC của học viên). Mã chỉ được nhớ trên máy khi người dùng tick
-   *Ghi nhớ mã trên máy này*.
+6. Dán link `/exec` vào `ai/js/config.js` (`API = '…'`) và đẩy lên GitHub (hoặc gửi link cho Claude làm hộ).
+   Trước bước này trang hiện "đang được cài đặt" và chưa cho đăng nhập.
+7. Tự đăng ký một tài khoản trên trang, rồi sửa email trong hàm `taoQuanTri` → Chạy để có quyền quản trị.
 
 Sửa `Code.gs` sau này: **Triển khai → Quản lý triển khai → ✎ → Phiên bản mới** để giữ nguyên link.
+Thêm key: sửa Script Property `GEMINI_KEYS` (mỗi dòng một key) hoặc dán vào `GEMINI_KEY_MOI` rồi chạy lại `caiDat`.
 
 ### Bảo vệ
 
-- Mỗi mã có hạn mức lượt/ngày (giữ lượt trước khi gọi Gemini, lỗi thì trả lại) và tối đa `AI_RPM_MA` (8) lượt/phút;
-  cả hệ thống tối đa `AI_RPM` (12) lượt/phút. Dò mã sai nhiều lần → mã lạ bị chặn 10 phút, mã đúng vẫn dùng được.
-- Máy chủ chỉ chuyển tiếp nội dung trích xuất (PDF / ảnh / chữ có giới hạn độ dài), không cho dùng công cụ,
-  không cho đổi model ngoài danh sách, giới hạn mức "suy nghĩ" của model.
-- Trang chỉ chạy script của chính nó (CSP `script-src 'self'`, thư viện để trong `vendor/`), không dùng `innerHTML`
-  với dữ liệu; file phiên / Excel được đọc theo khuôn cố định.
+- Mật khẩu băm 1500 vòng có muối + "tiêu" riêng trong Script Properties; bảng chỉ giữ bản băm của mật khẩu
+  và của phiên. Sai mật khẩu 5 lần → khoá tạm 10 phút; có ô bẫy bot và trần số đăng ký mỗi giờ.
+- Mỗi tài khoản có hạn mức lượt/ngày (giữ lượt trước khi gọi Gemini, lỗi thì trả lại) và tối đa `AI_RPM_MA` (8)
+  lượt/phút; cả hệ thống tối đa `AI_RPM` (12) lượt/phút.
+- Nhiều key Gemini: key nào hết hạn mức phút (429) thì nghỉ, máy chủ chuyển ngay sang key khác.
+- Model do máy chủ chọn (bản flash chính thức mới nhất; đổi bằng Script Property `AI_MODEL`); trang không đổi được.
+- Máy chủ chỉ chuyển tiếp nội dung trích xuất (PDF / ảnh / chữ có giới hạn độ dài), không cho dùng công cụ.
+- Trang chỉ chạy script của chính nó (CSP `script-src 'self'`, thư viện trong `vendor/`), không dùng `innerHTML`
+  với dữ liệu; phiên làm việc tự lưu theo từng tài khoản (máy dùng chung không lộ số của người khác).
 
 ### Giới hạn
 
 - Gemini miễn phí giới hạn số lượt mỗi phút / mỗi ngày theo key. Máy chủ giữ tối đa `AI_RPM` (12) lượt/phút
-  cho cả hệ thống, `AI_RPM_MA` (8) lượt/phút mỗi mã; quá thì trang tự chờ rồi thử lại. Một BCTC thường tốn 3 lượt (3 bảng) + 1 lượt mỗi
+  cho cả hệ thống, `AI_RPM_MA` (8) lượt/phút mỗi tài khoản; quá thì trang tự chờ rồi thử lại. Một BCTC thường tốn 3 lượt (3 bảng) + 1 lượt mỗi
   nhóm thuyết minh.
 - Apps Script chỉ chờ một lượt gọi tối đa ~60 giây: bảng dài quá thì trang tự chia đôi rồi gọi lại.
 - Gemini bản miễn phí có thể dùng dữ liệu gửi lên để cải thiện dịch vụ — chỉ dùng cho BCTC đã công bố.
-- Model: trang lấy danh sách model Gemini hiện có từ máy chủ (tự cập nhật khi Google ra model mới),
-  mặc định bản *flash* mới nhất; đổi được ở góc phải trên.
+- Model: máy chủ lấy danh sách model Gemini hiện có (tự cập nhật khi Google ra model mới) và dùng bản *flash*
+  chính thức mới nhất.
 
 ## Mã nguồn
 
@@ -95,7 +100,8 @@ ai/
 ├── js/app.js, js/ui/*           các bước giao diện, trạng thái, lưu phiên
 ├── js/ai.js                     gọi máy chủ AI (chờ khi bận, chia nhỏ khi quá giờ)
 ├── js/pdf.js, js/libs.js        đọc chữ, ảnh thu nhỏ, cắt trang PDF; nạp thư viện trong vendor/ khi cần
-├── js/config.js                 link máy chủ AI chính thức
+├── js/config.js                 link /exec của máy chủ AI
+├── js/ui/auth.js                đăng nhập / đăng ký, menu tài khoản
 ├── js/chart2026.js              danh mục chỉ tiêu mẫu TT99 + cây cộng dồn + mã TT200 tương ứng
 ├── js/core/                     logic thuần (đọc số VN, kiểm tra, quy đổi, nhận trang, prompt, dữ liệu nhiều kỳ, Excel)
 ├── js/targets/                  điền model DGW / Form 2026 (sửa thẳng XML trong file .xlsx)

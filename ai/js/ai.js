@@ -1,4 +1,4 @@
-// Gọi Gemini qua máy chủ trung gian elevaTO AI (Apps Script). Trình duyệt không bao giờ cầm key.
+// Gọi máy chủ elevaTO AI (Apps Script): tài khoản + Gemini. Trình duyệt không bao giờ cầm key.
 
 import { parseAIJson } from './core/extract.js';
 import { SYSTEM } from './core/prompts.js';
@@ -9,32 +9,41 @@ export class AIError extends Error {
 /** Lỗi nên chia nhỏ việc rồi làm lại (quá 60 giây / trả thiếu vì quá dài). */
 export const isSplittable = (e) => e instanceof AIError && (e.code === 'timeout' || e.code === 'truncated');
 /** Lỗi không thể tự khắc phục — dừng cả lượt, báo người dùng. */
-export const isFatal = (e) => e instanceof AIError && ['key', 'quota', 'setup'].includes(e.code);
+export const isFatal = (e) => e instanceof AIError && ['auth', 'quota', 'setup'].includes(e.code);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MAX_BUSY_WAITS = 4;
 
-export function createClient({ api, code, model, onWait } = {}) {
-  async function post(body) {
-    let r;
-    try {
-      // text/plain để trình duyệt không gửi preflight CORS (Apps Script không trả lời preflight).
-      r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
-    } catch (e) {
-      throw new AIError('network', 'Mất kết nối tới máy chủ AI — kiểm tra mạng rồi thử lại');
-    }
-    if (!r.ok) throw new AIError('network', `Máy chủ AI trả lỗi ${r.status}`);
-    let j;
-    try { j = await r.json(); } catch (e) { throw new AIError('network', 'Máy chủ AI trả về dữ liệu lạ — bản triển khai đã đúng chưa?'); }
-    return j;
+/** Gửi một yêu cầu tới máy chủ. Trả data khi ok, ném AIError khi lỗi. */
+export async function callApi(api, body) {
+  if (!api) throw new AIError('setup', 'Công cụ đang được cài đặt — quay lại sau ít phút nhé');
+  let r;
+  try {
+    // text/plain để trình duyệt không gửi preflight CORS (Apps Script không trả lời preflight).
+    r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  } catch (e) {
+    throw new AIError('network', 'Mất kết nối mạng — kiểm tra internet rồi thử lại');
   }
+  if (!r.ok) throw new AIError('network', `Máy chủ đang bận (lỗi ${r.status}) — thử lại sau ít phút`);
+  let j;
+  try { j = await r.json(); } catch (e) { throw new AIError('network', 'Máy chủ trả lời lạ — thử lại sau ít phút'); }
+  if (!j || !j.ok) throw new AIError(j?.code || 'upstream', j?.error || 'Lỗi không rõ', { retryAfter: j?.retryAfter });
+  return j.data;
+}
 
+/**
+ * @param api     link /exec của máy chủ (js/config.js)
+ * @param token   phiên đăng nhập
+ * @param onWait  (giây, lời nhắn) khi máy chủ báo bận và trang tự chờ
+ * @param onAuth  gọi khi phiên hết hạn (để trang đưa về màn đăng nhập)
+ */
+export function createClient({ api, token, onWait, onAuth } = {}) {
+  const call = async (body) => {
+    try { return await callApi(api, { ...body, token }); }
+    catch (e) { if (e.code === 'auth') onAuth?.(e); throw e; }
+  };
   return {
-    async ping() {
-      const j = await post({ action: 'ping', code });
-      if (!j.ok) throw new AIError(j.code, j.error);
-      return j.data;
-    },
+    me: async () => (await call({ action: 'toi' })).me,
 
     /**
      * @param parts   [{ text } | { inlineData: { mimeType, data } }]
@@ -46,27 +55,29 @@ export function createClient({ api, code, model, onWait } = {}) {
       for (;;) {
         const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens };
         if (useSchema && schema) generationConfig.responseSchema = schema;
-        const j = await post({
-          action: 'generate', code, model,
-          contents: [{ role: 'user', parts }],
-          systemInstruction: { parts: [{ text: SYSTEM }] },
-          generationConfig,
-        });
-        if (j.ok) {
-          if (j.data.finishReason === 'MAX_TOKENS') throw new AIError('truncated', 'Kết quả quá dài, bị cắt ngang');
-          try { return parseAIJson(j.data.text); }
-          catch (e) { throw new AIError('parse', e.message); }
+        let d;
+        try {
+          d = await call({
+            action: 'generate',
+            contents: [{ role: 'user', parts }],
+            systemInstruction: { parts: [{ text: SYSTEM }] },
+            generationConfig,
+          });
+        } catch (e) {
+          if (e.code === 'busy' && busy < MAX_BUSY_WAITS) {
+            busy++;
+            const s = Math.min(Math.max(Number(e.retryAfter) || 10, 2), 90);
+            onWait?.(s, e.message);
+            await sleep(s * 1000);
+            continue;
+          }
+          // Model không nhận responseSchema → thử lại một lần chỉ với JSON thường.
+          if (e.code === 'upstream' && /400/.test(e.message) && useSchema && schema) { useSchema = false; continue; }
+          throw e;
         }
-        if (j.code === 'busy' && busy < MAX_BUSY_WAITS) {
-          busy++;
-          const s = Math.min(Math.max(Number(j.retryAfter) || 10, 2), 90);
-          onWait?.(s, j.error);
-          await sleep(s * 1000);
-          continue;
-        }
-        // Model cũ không nhận responseSchema → thử lại một lần chỉ với JSON thường.
-        if (j.code === 'upstream' && /400/.test(j.error) && useSchema && schema) { useSchema = false; continue; }
-        throw new AIError(j.code || 'upstream', j.error || 'Lỗi không rõ', { retryAfter: j.retryAfter });
+        if (d.finishReason === 'MAX_TOKENS') throw new AIError('truncated', 'Kết quả quá dài, bị cắt ngang');
+        try { return parseAIJson(d.text); }
+        catch (e) { throw new AIError('parse', e.message); }
       }
     },
   };

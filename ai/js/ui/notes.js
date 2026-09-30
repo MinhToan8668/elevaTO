@@ -28,7 +28,7 @@ export function renderNotes(store) {
   const s = store.get();
   const { ds } = store.data();
   const withNotes = ds.periods.filter((p) => ds.notes[p.id] && Object.keys(ds.notes[p.id]).length);
-  if (!withNotes.length) return h('p', { class: 'msg warn' }, 'Chưa có số thuyết minh. Chọn gói "Cho model elevaTO" ở bước 4 rồi trích xuất; nếu không, model sẽ dùng số ước tính từ 3 báo cáo chính.');
+  if (!withNotes.length) return h('p', { class: 'msg warn' }, 'Chưa có số thuyết minh. Chọn gói "Cho model elevaTO" ở bước 3 rồi trích xuất; nếu không, model sẽ dùng số ước tính từ 3 báo cáo chính.');
   return [segmentsCard(store, s, ds), h('div', { class: 'cards', style: { marginTop: '14px' } }, withNotes.map((p) => periodCard(p, ds.notes[p.id])))];
 }
 

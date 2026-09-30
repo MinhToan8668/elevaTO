@@ -22,7 +22,7 @@ function renderSources(store) {
   const s = store.get();
   const { ds, errors } = store.data();
   const box = $('#sources');
-  if (!s.sources.length) { mount(box, h('p', { class: 'msg warn' }, 'Chưa có dữ liệu. Trích xuất ở bước 4, tải file Excel ở bước 2, hoặc mở lại phiên đã lưu.')); return; }
+  if (!s.sources.length) { mount(box, h('p', { class: 'empty' }, 'Chưa có dữ liệu. Trích xuất ở bước 3, tải file Excel ở bước 1, hoặc mở lại phiên đã lưu.')); return; }
   const setMeta = (id, patch) => store.set((st) => ({ sources: st.sources.map((x) => (x.id === id ? { ...x, meta: { ...x.meta, ...patch } } : x)) }));
   const rows = s.sources.map((src) => {
     const err = errors.find((e) => e.id === src.id);
