@@ -253,6 +253,19 @@ test('nhiều nhóm thuyết minh: chạy 2 nhóm song song cho nhanh, không b�
   assert.ok(dinh >= 2 && dinh <= 2, `chạy nhiều nhất ${dinh} nhóm cùng lúc`);
 });
 
+test('Gemini từ chối khuôn JSON → thử lại ngay bằng câu lệnh có tả cấu trúc, không báo "không thấy bảng"', async () => {
+  const io = makeIO();
+  let lan = 0;
+  const truoc = io.ai.json;
+  io.ai.json = async (req) => {
+    if (/TÌNH HÌNH/.test(req.parts.at(-1).text) && ++lan === 1) { const e = new E('schema'); e.message = 'Gemini từ chối khuôn JSON'; throw e; }
+    return truoc(req);
+  };
+  const r = await extractJob({ name: 'x.pdf', ...job }, io, { noteGroups: [] });
+  assert.ok(r.statements.BS, 'lần thử lại đọc được');
+  assert.doesNotMatch(r.warnings.join('\n'), /không thấy bảng/);
+});
+
 test('không bảng nào đọc được → tốn thêm 1 lượt hỏi AI xem các trang đó là gì, nói rõ cho người dùng tick lại', async () => {
   const goi = [];
   const io = makeIO({ 'TÌNH HÌNH': () => ({ meta: {}, items: [] }), 'KẾT QUẢ': () => ({ meta: {}, items: [] }), 'LƯU CHUYỂN': () => ({ meta: {}, items: [] }) });

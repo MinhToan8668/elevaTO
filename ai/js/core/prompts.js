@@ -21,7 +21,9 @@ const META = obj({
   don_vi: { type: 'STRING', description: 'Chép nguyên văn dòng đơn vị tính, ví dụ "Đơn vị tính: VND"' },
   ngay_ket_thuc: { type: 'STRING', description: 'Ngày của cột kỳ này, dạng YYYY-MM-DD' },
   so_thang: { type: 'INTEGER', description: 'Số tháng của kỳ lấy số (năm = 12, bán niên lũy kế = 6)' },
-  thong_tu: { type: 'STRING', enum: ['200', '99', ''], description: 'Thông tư ghi ở góc mẫu biểu: 200/2014 → "200", 99/2025 → "99"' },
+  // KHÔNG thêm '' vào enum: Gemini trả 400 "enum: cannot be empty" và bỏ cả yêu cầu.
+  // Trường không bắt buộc, không rõ thì để AI bỏ hẳn trường này.
+  thong_tu: { type: 'STRING', enum: ['200', '99'], description: 'Thông tư ghi ở góc mẫu biểu: 200/2014 → "200", 99/2025 → "99"; không thấy ghi thì bỏ trường này' },
   hop_nhat: B,
   cot_v: { type: 'STRING', description: 'Tiêu đề cột đã lấy làm kỳ này' },
   cot_p: { type: 'STRING', description: 'Tiêu đề cột đã lấy làm kỳ trước' },
@@ -35,7 +37,8 @@ const ITEM = obj({
 }, ['c', 'n', 'v', 'p']);
 
 export const STATEMENT_SCHEMA = obj({
-  meta: { ...META, properties: { ...META.properties, phuong_phap: { type: 'STRING', enum: ['gian_tiep', 'truc_tiep', ''] } } },
+  meta: { ...META, properties: { ...META.properties,
+    phuong_phap: { type: 'STRING', enum: ['gian_tiep', 'truc_tiep'], description: 'Chỉ cho Lưu chuyển tiền tệ; không rõ thì bỏ trường này' } } },
   items: arr(ITEM),
 }, ['meta', 'items']);
 
