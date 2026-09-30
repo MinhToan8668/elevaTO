@@ -1,4 +1,4 @@
-// Bước 5 (phần xuất): điền model elevaTO (mẫu DGW), điền Form nội bộ 2026, bảng chuẩn hoá các dòng đã tick,
+// Bước 4 (phần xuất): điền model elevaTO (mẫu DGW), điền Form nội bộ 2026, bảng chuẩn hoá các dòng đã tick,
 // lưu / mở phiên làm việc. File model / form do người dùng chọn từ máy — trang không giữ bản nào.
 
 import { h, mount, $, toast, download, safeName } from './dom.js';
@@ -132,7 +132,7 @@ function sessionCard(store) {
   });
   return h('div', { class: 'cardx' },
     h('h3', {}, 'Phiên làm việc'),
-    h('p', {}, 'Lưu toàn bộ số đã trích + số sửa tay ra file .json để làm tiếp lần sau hoặc gửi cho người khác, không tốn thêm lượt AI. File không chứa mã truy cập.'),
+    h('p', {}, 'Lưu toàn bộ số đã trích + số sửa tay ra file .json để làm tiếp lần sau hoặc gửi cho người khác, không tốn thêm lượt AI. File không chứa thông tin đăng nhập.'),
     h('div', { class: 'row' },
       h('button', { class: 'btn ghost', style: { flex: '0 0 auto' }, disabled: !store.get().sources.length, onclick: () => {
         const { ds } = store.data();

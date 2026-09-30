@@ -1,5 +1,5 @@
 // Lưu / mở lại phiên làm việc (file .json hoặc bộ nhớ trình duyệt).
-// Chỉ lưu dữ liệu đã trích + lựa chọn của người dùng — không lưu mã truy cập, không lưu file gốc.
+// Chỉ lưu dữ liệu đã trích + lựa chọn của người dùng — không lưu phiên đăng nhập, không lưu file gốc.
 // File phiên có thể đến từ người khác gửi → đọc lại theo khuôn cố định, bỏ mọi khoá / giá trị lạ.
 
 const APP = 'elevato-ai-bctc';

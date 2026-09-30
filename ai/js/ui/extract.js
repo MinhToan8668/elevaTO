@@ -1,4 +1,4 @@
-// Bước 4: chọn gói dữ liệu / nhóm thuyết minh, chạy trích xuất từng file, hiện tiến độ.
+// Bước 3: chọn gói dữ liệu / nhóm thuyết minh, chạy trích xuất từng file, hiện tiến độ.
 
 import { h, mount, $, toast, keepFocus } from './dom.js';
 import { PRESETS, NOTE_KEYS, uid, watch } from './store.js';
@@ -10,7 +10,7 @@ const HAS_TABLE = (j) => ['BS', 'IS', 'CF'].some((t) => j.types?.includes(t));
 
 export function initExtract(store, ctx) {
   watch(store, ['preset', 'noteGroups', 'running'], (s) => renderPick(s, store));
-  watch(store, ['jobs', 'noteGroups', 'conn', 'running'], (s) => renderRun(s, store, ctx));
+  watch(store, ['jobs', 'noteGroups', 'user', 'running'], (s) => renderRun(s, store, ctx));
 }
 
 function renderPick(s, store) {
@@ -33,16 +33,16 @@ function renderPick(s, store) {
 function renderRun(s, store, ctx) {
   const todo = s.jobs.filter((j) => j.kind !== 'xls' && j.status === 'ready');
   const calls = todo.reduce((n, j) => n + 3 + s.noteGroups.filter((g) => j.notes?.[g]?.length).length, 0);
-  const q = s.conn.quota;
-  const left = q && q.limit ? q.limit - q.used : null;
+  const q = s.user?.luot;
+  const left = q && q.han ? Math.max(0, q.han - q.dung) : null;
   const noTable = todo.filter((j) => !HAS_TABLE(j));
   let hint;
-  if (!todo.length) hint = s.jobs.some((j) => j.status === 'done') ? 'Mọi file đã trích xuất. Đổi loại trang ở bước 3 để làm lại một file.' : 'Tải file PDF / ảnh ở bước 2.';
-  else if (s.conn.status !== 'on') hint = 'Cần kết nối AI ở bước 1 để trích xuất PDF / ảnh.';
+  if (!todo.length) hint = s.jobs.some((j) => j.status === 'done') ? 'Mọi file đã trích xuất. Đổi loại trang ở bước 2 để làm lại một file.' : 'Tải file PDF / ảnh ở bước 1.';
   else hint = `${todo.length} file · khoảng ${calls} lượt AI${left !== null ? ` (còn ${left} lượt hôm nay)` : ''}. Mỗi file mất 1–3 phút.`;
-  const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || s.conn.status !== 'on' || noTable.length === todo.length, onclick: () => run(store, ctx) },
+  const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || !s.user || noTable.length === todo.length, onclick: () => run(store, ctx) },
     s.running ? 'Đang trích xuất…' : 'Trích xuất bằng AI');
   const stopBtn = s.running ? h('button', { class: 'btn ghost', id: 'stopBtn', onclick: () => { ctx.stop = true; toast('Sẽ dừng sau file đang làm.'); } }, 'Dừng') : null;
+  document.querySelector('.rail a[data-step="4"]').classList.toggle('done', s.jobs.some((j) => j.status === 'done'));
   const row = $('#runRow');
   keepFocus(row, () => mount(row,
     h('div', { style: { flex: '0 0 auto', display: 'flex', gap: '10px' } }, runBtn, stopBtn),
@@ -59,7 +59,7 @@ async function run(store, ctx) {
     waitLine.lastChild.textContent = `${msg || 'Máy chủ đang bận'} — tự thử lại sau ${sec} giây`;
     setTimeout(() => { waitLine.hidden = true; }, sec * 1000);
   });
-  if (!client) return toast('Cần kết nối AI ở bước 1');
+  if (!client) return toast('Đăng nhập để trích xuất bằng AI');
   const s = store.get();
   const todo = s.jobs.filter((j) => j.kind !== 'xls' && j.status === 'ready' && HAS_TABLE(j));
   ctx.stop = false;
@@ -99,7 +99,7 @@ async function run(store, ctx) {
     ctx.refreshQuota?.();
   }
   if (ok) {
-    toast(`Xong ${ok} file — rà soát số ở bước 5.`);
+    toast(`Xong ${ok} file — rà soát số ở bước 4.`);
     $('#s5').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

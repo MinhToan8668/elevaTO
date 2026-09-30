@@ -12,7 +12,7 @@ export const PRESETS = {
 
 export function initialState() {
   return {
-    conn: { api: '', code: '', status: 'off', name: '', quota: null, models: [], model: '', error: '' },
+    user: null,          // tài khoản đang đăng nhập: { ten, email, vaitro, luot: { dung, han } }
     jobs: [],            // file đang mở: { id, name, kind: 'pdf'|'img'|'xls', status, error, numPages, types, notes, scanned }
     sources: [],         // dữ liệu đã trích: { id, jobId, kind: 'ext'|'period', ext | period+values, meta? }
     edits: [],           // số sửa tay: { period, key, v }

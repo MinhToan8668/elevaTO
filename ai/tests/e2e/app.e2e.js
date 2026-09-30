@@ -16,7 +16,7 @@ import { CHART } from '../../js/chart2026.js';
 import { computeTotals } from '../../js/core/statements.js';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));   // gốc repo (trang nằm ở /ai/)
-const API = 'https://script.google.com/macros/s/AKfycbE2E_TEST_DEPLOYMENT_ID_0123456789/exec';
+const API = 'https://script.google.com/macros/s/AKfycbE2E_TEST_DEPLOYMENT_ID_0123456789/exec';   // máy chủ giả
 
 async function loadPlaywright() {
   try { return await import('playwright'); } catch (e) {
@@ -52,25 +52,43 @@ function reportHtml() {
   </body></html>`;
 }
 
-// ─── Máy chủ AI giả ────────────────────────────────────────
+// ─── Máy chủ elevaTO AI giả (tài khoản + Gemini) ─────────
 const aiCalls = [];
+const accounts = new Map();                 // email → { ten, mk, token }
+const ME = (a) => ({ ten: a.ten, email: a.email, vaitro: 'hv', luot: { dung: aiCalls.length, han: 50 } });
+const TOKEN = (email) => `EABCDE.${Buffer.from(email).toString('hex').padEnd(64, '0').slice(0, 64)}`;
 function fakeAI(body) {
-  if (body.action === 'ping') return { ok: true, data: { name: 'Học viên E2E', quota: { used: 0, limit: 50 }, models: [{ id: 'gemini-2.5-flash' }, { id: 'gemini-3.0-flash' }, { id: 'gemini-3.0-flash-lite' }] } };
+  const fail = (code, error) => ({ ok: false, code, error });
+  if (body.action === 'dangky') {
+    if (accounts.has(body.email)) return fail('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
+    const a = { ten: body.ten, email: body.email, mk: body.mk, token: TOKEN(body.email) };
+    accounts.set(body.email, a);
+    return { ok: true, data: { token: a.token, me: ME(a) } };
+  }
+  if (body.action === 'dangnhap') {
+    const a = accounts.get(body.email);
+    if (!a || a.mk !== body.mk) return fail('sai', 'Email hoặc mật khẩu chưa đúng');
+    return { ok: true, data: { token: a.token, me: ME(a) } };
+  }
+  const a = [...accounts.values()].find((x) => x.token === body.token);
+  if (!a) return fail('auth', 'Phiên đăng nhập đã hết — đăng nhập lại');
+  if (body.action === 'toi') return { ok: true, data: { me: ME(a) } };
+  if (body.action === 'dangxuat') { a.token = TOKEN(a.email + 'x'); return { ok: true, data: {} }; }
   const parts = body.contents[0].parts;
   const prompt = parts.find((p) => p.text).text;
-  aiCalls.push({ model: body.model, mimes: parts.filter((p) => p.inlineData).map((p) => p.inlineData.mimeType), prompt: prompt.slice(0, 40) });
+  aiCalls.push({ model: body.model, token: body.token, mimes: parts.filter((p) => p.inlineData).map((p) => p.inlineData.mimeType), prompt: prompt.slice(0, 40) });
   const meta = { don_vi: 'VND', ngay_ket_thuc: '31/12/2025', so_thang: '12', thong_tu: '99/2025/TT-BTC', ten_cong_ty: 'CTCP Thử Nghiệm', phuong_phap: 'gian_tiep' };
   let out;
   if (/TÌNH HÌNH TÀI CHÍNH/.test(prompt)) out = { meta, items: itemsOf('BS') };
   else if (/KẾT QUẢ HOẠT ĐỘNG/.test(prompt)) out = { meta, items: itemsOf('IS') };
   else if (/LƯU CHUYỂN TIỀN TỆ/.test(prompt)) out = { meta, items: itemsOf('CF') };
   else if (/BỘ PHẬN/.test(prompt)) out = { meta: { don_vi: 'VND' }, segments: [{ ten: 'Bán lẻ', doanh_thu: '400.000.000.000', loi_nhuan_gop: '150.000.000.000' }, { ten: 'Bán buôn', doanh_thu: '100.000.000.000', loi_nhuan_gop: '50.000.000.000' }] };
-  else return { ok: false, code: 'bad', error: 'prompt lạ' };
+  else return fail('bad', 'prompt lạ');
   return { ok: true, data: { text: JSON.stringify(out), finishReason: 'STOP', tokens: 100 } };
 }
 
 // ─── Máy chủ tĩnh ─────────────────────────────────────────
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.ico': 'image/x-icon', '.png': 'image/png' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.ico': 'image/x-icon', '.png': 'image/png', '.svg': 'image/svg+xml' };
 let server, base, browser, pw, tmp;
 
 before(async () => {
@@ -92,7 +110,7 @@ before(async () => {
 });
 after(async () => { await browser?.close(); server?.close(); });
 
-async function newPage() {
+async function newPage({ configured = true } = {}) {
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1360, height: 900 } });
   const page = await context.newPage();
   const errors = [];
@@ -102,6 +120,8 @@ async function newPage() {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
+  // Trang thật để trống link máy chủ (js/config.js) → test gắn link giả.
+  if (configured) await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${API}';` }));
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   return { page, errors, context };
 }
@@ -119,7 +139,7 @@ async function download(page, click) {
   return { name: d.suggestedFilename(), path };
 }
 
-test('luồng chính: kết nối qua link → tải PDF → nhận trang → trích xuất → sửa ô → xuất file → mở lại phiên', { timeout: 180_000 }, async () => {
+test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuất → sửa ô → xuất file → mở lại phiên', { timeout: 180_000 }, async () => {
   // PDF BCTC giả dựng bằng chính Chromium
   const maker = await browser.newPage();
   await maker.setContent(reportHtml());
@@ -128,16 +148,33 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
   await maker.close();
 
   const { page, errors } = await newPage();
-  let pings = 0;
-  page.on('request', (r) => { if (r.url().startsWith('https://script.google.com/') && /"ping"/.test(r.postData() || '')) pings++; });
-  await page.goto(`${base}/ai/#api=${encodeURIComponent(API)}&code=HV-E2E`);
-  // Máy chủ lạ (chưa từng kết nối, không phải máy chủ chính thức): điền sẵn, cảnh báo, chờ người dùng bấm.
-  await page.waitForSelector('#connectBox .msg.warn:has-text("chưa từng kết nối")');
-  assert.equal(pings, 0, 'không tự gửi mã tới máy chủ lạ');
-  await page.click('#connectBtn');
-  await page.waitForFunction(() => document.querySelector('#connText').textContent.includes('Học viên E2E'));
-  assert.equal(new URL(page.url()).hash, '', 'mã truy cập không nằm lại trên thanh địa chỉ');
-  assert.equal(await page.locator('#modelSel').inputValue(), 'gemini-3.0-flash', 'model mặc định: flash mới nhất, không lite');
+  await page.goto(`${base}/ai/`);
+  // Chưa đăng nhập: chỉ thấy màn chào + đăng nhập, không có ô link máy chủ / mã truy cập nào.
+  await page.waitForSelector('#gate .auth-card');
+  assert.equal(await page.locator('#app').isVisible(), false);
+  assert.equal(await page.locator('input[type=url], #apiIn, #codeIn').count(), 0);
+  assert.ok(await page.locator('.logo-light').evaluate((img) => img.naturalWidth > 0), 'logo elevaTO hiện được');
+  await shot(page, '0-dang-nhap');
+  if (process.env.E2E_SHOTS) {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await shot(page, '0-dang-nhap-toi', { fullPage: false });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await shot(page, '0-dang-nhap-mobile', { fullPage: false });
+    await page.setViewportSize({ width: 1360, height: 900 });
+    await page.emulateMedia({ colorScheme: 'light' });
+  }
+  await page.fill('#liEmail', 'hv@elevato.vn');
+  await page.fill('#liPass', 'sai-mat-khau');
+  await page.click('#loginForm button[type=submit]');
+  await page.waitForSelector('#gate .msg.err:has-text("chưa đúng")');
+  await page.click('#tab-signup');
+  await page.fill('#suTen', 'Học viên E2E');
+  await page.fill('#suEmail', 'hv@elevato.vn');
+  await page.fill('#suSdt', '0901234567');
+  await page.fill('#suPass', 'mat-khau-123');
+  await page.click('#signupForm button[type=submit]');
+  await page.waitForSelector('#app:not([hidden])');
+  assert.equal(await page.locator('#acct .acct-name').innerText(), 'Học viên E2E');
   assert.equal(await page.evaluate(() => typeof window.XLSX), 'undefined', 'thư viện Excel chỉ nạp khi cần');
 
   await page.setInputFiles('#fileInput', pdfPath);
@@ -155,7 +192,7 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
   await page.click('#runBtn');
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
   assert.ok(aiCalls.length >= 4, `gọi AI ${aiCalls.length} lần`);
-  assert.ok(aiCalls.every((c) => c.model === 'gemini-3.0-flash' && c.mimes.every((m) => m === 'application/pdf')), JSON.stringify(aiCalls));
+  assert.ok(aiCalls.every((c) => c.token === TOKEN('hv@elevato.vn') && c.model === undefined && c.mimes.every((m) => m === 'application/pdf')), JSON.stringify(aiCalls));
 
   const pills = await page.locator('#review .sum .pc').allInnerTexts();
   assert.deepEqual(pills, ['Năm 2024: ✓ khớp', 'Năm 2025: ✓ khớp'], 'số AI chép khớp mọi dòng tổng');
@@ -197,6 +234,7 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
   await page.click('#review .tabs button:has-text("Xem trước model")');
   assert.match(await page.locator('#review table.g').innerText(), /Doanh thu mảng 1[^\n]*400\.000 T/);
   await shot(page, '3-model');
+  if (process.env.E2E_SHOTS) { await page.click('#themeBtn'); await shot(page, '3-model-toi', { fullPage: false }); await page.click('#themeBtn'); }
   await page.setViewportSize({ width: 390, height: 844 });
   await shot(page, '4-mobile', { fullPage: false });
   await page.setViewportSize({ width: 1360, height: 900 });
@@ -234,22 +272,56 @@ test('luồng chính: kết nối qua link → tải PDF → nhận trang → tr
 
   // Lưu phiên → tải lại trang → mở lại, không gọi thêm AI
   const sess = await download(page, () => page.click('#exportBox button:has-text("Lưu phiên")'));
-  assert.ok(!(await readFile(sess.path, 'utf8')).includes('HV-E2E'), 'file phiên không chứa mã truy cập');
+  assert.ok(!(await readFile(sess.path, 'utf8')).includes(TOKEN('hv@elevato.vn')), 'file phiên không chứa phiên đăng nhập');
   await page.waitForTimeout(1000);                                   // autosave (0,8 giây)
   const before = aiCalls.length;
   await page.reload();
   await page.click('#pickBox .preset:has-text("Chỉ 3 báo cáo")');       // thao tác khác trước khi chọn "Mở lại"
   await page.waitForTimeout(1000);
-  assert.ok(await page.evaluate(() => localStorage.getItem('elevato-ai-session')), 'phiên cũ không bị xoá khi chưa chọn');
+  assert.ok(await page.evaluate(() => localStorage.getItem('elevato-ai-session:hv@elevato.vn')), 'phiên cũ không bị xoá khi chưa chọn');
   await page.click('#restore button:has-text("Mở lại")');
   await page.waitForSelector('td.v[data-k="BS:111"][data-p="FY2025"]');
   assert.equal(aiCalls.length, before);
+
+  // Đăng xuất → về màn đăng nhập; đăng nhập lại người khác không thấy phiên làm việc của người trước.
+  await page.click('#acct summary');
+  await page.click('#acct button:has-text("Đăng xuất")');
+  await page.waitForSelector('#gate .auth-card');
+  assert.equal(await page.evaluate(() => localStorage.getItem('elevato-ai-phien')), null);
+  await page.click('#tab-signup');
+  await page.fill('#suTen', 'Người Khác'); await page.fill('#suEmail', 'khac@elevato.vn');
+  await page.fill('#suSdt', '0912345678'); await page.fill('#suPass', 'mat-khau-456');
+  await page.click('#signupForm button[type=submit]');
+  await page.waitForSelector('#app:not([hidden])');
+  assert.equal(await page.locator('#restore .banner').count(), 0, 'không mời mở phiên của tài khoản khác');
   assert.deepEqual(errors, [], 'không có lỗi JavaScript trên trang');
 });
 
-test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì người dùng nhập ở bước 5', { timeout: 60_000 }, async () => {
-  const { page, errors } = await newPage();
+test('chưa cài máy chủ: màn chào báo đang cài đặt, không cho đăng nhập', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage({ configured: false });
   await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#gate .msg.warn:has-text("đang được cài đặt")');
+  assert.equal(await page.locator('#loginForm button[type=submit]').isDisabled(), true);
+  assert.deepEqual(errors, []);
+});
+
+test('phiên hết hạn khi đang dùng → tự về màn đăng nhập kèm lời nhắn', { timeout: 60_000 }, async () => {
+  const { page } = await newPage();
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('seeded')) return;                       // chỉ gieo phiên cũ ở lần mở đầu
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: 'EZZZZZ.' + '0'.repeat(64), me: { ten: 'Cũ', email: 'cu@x.vn', luot: { dung: 0, han: 5 } } }));
+  });
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#gate .msg.warn:has-text("Phiên đăng nhập đã hết")');
+});
+
+test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì người dùng nhập ở bước 4', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  accounts.set('xls@elevato.vn', { ten: 'Excel', email: 'xls@elevato.vn', mk: 'x', token: TOKEN('xls@elevato.vn') });
+  await page.addInitScript((t) => localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Excel', email: 'xls@elevato.vn', luot: { dung: 0, han: 5 } } })), TOKEN('xls@elevato.vn'));
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#app:not([hidden])');
   await page.addScriptTag({ url: '/ai/vendor/sheetjs/xlsx.full.min.js' });
   const b64 = await page.evaluate((items) => {
     const aoa = [['CÔNG TY ABC'], ['BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH'], ['Đơn vị tính: triệu đồng'], ['Chỉ tiêu', 'Mã số', 'Thuyết minh', 'Năm nay', 'Năm trước'],

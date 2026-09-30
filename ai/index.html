@@ -1,77 +1,83 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-view="gate">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
-<title>AI BCTC mẫu 2026 · elevaTO</title>
-<link rel="icon" href="../favicon.ico">
+<meta name="color-scheme" content="light dark">
+<title>AI BCTC · elevaTO</title>
+<meta name="description" content="Công cụ AI của elevaTO: trích xuất báo cáo tài chính theo mẫu Thông tư 99/2025 và điền vào model forecast.">
+<link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/app.css">
+<script src="js/theme.js"></script>
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Bỏ qua, tới nội dung</a>
 <header class="top">
-  <div class="brand">eleva<b>TO</b> · AI BCTC<small>Trích xuất theo mẫu Thông tư 99/2025 → model forecast</small></div>
-  <div class="conn" id="conn">
-    <span class="dot" id="connDot"></span>
-    <span id="connText">Chưa kết nối</span>
-    <select id="modelSel" class="mdl" aria-label="Model AI" hidden></select>
+  <a class="brand" href="./" aria-label="elevaTO AI BCTC — trang đầu">
+    <img class="logo logo-light" src="../assets/logo-on-light.svg" alt="elevaTO" width="118" height="44">
+    <img class="logo logo-dark" src="../assets/logo-on-dark.svg" alt="elevaTO" width="118" height="44">
+    <span class="product"><b>AI BCTC</b><small>Mẫu Thông tư 99/2025</small></span>
+  </a>
+  <div class="top-r">
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Đổi giao diện sáng / tối">
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8Z"/></svg>
+    </button>
+    <div id="acct" hidden></div>
   </div>
 </header>
 
-<div class="shell">
+<div id="gate" class="gate" tabindex="-1"></div>
+
+<div id="app" class="shell" hidden>
   <nav class="rail" aria-label="Các bước">
-    <a href="#s1" data-step="1"><span class="n">1</span><span class="t">Kết nối AI</span></a>
-    <a href="#s2" data-step="2"><span class="n">2</span><span class="t">Tải BCTC</span></a>
-    <a href="#s3" data-step="3"><span class="n">3</span><span class="t">Kiểm trang</span></a>
-    <a href="#s4" data-step="4"><span class="n">4</span><span class="t">Chọn dữ liệu &amp; trích xuất</span></a>
-    <a href="#s5" data-step="5"><span class="n">5</span><span class="t">Rà soát &amp; xuất</span></a>
-    <div class="hint">AI chỉ <b>chép</b> số trên BCTC. Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy tính làm — ô lệch sẽ tô đỏ để bạn sửa.</div>
+    <a href="#s2" data-step="2"><span class="n">1</span><span class="t">Tải BCTC</span></a>
+    <a href="#s3" data-step="3"><span class="n">2</span><span class="t">Kiểm trang</span></a>
+    <a href="#s4" data-step="4"><span class="n">3</span><span class="t">Chọn dữ liệu</span></a>
+    <a href="#s5" data-step="5"><span class="n">4</span><span class="t">Rà soát &amp; xuất</span></a>
+    <div class="hint"><b>AI chỉ chép số.</b> Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</div>
   </nav>
 
-  <main>
+  <main id="main" tabindex="-1">
     <div id="restore"></div>
 
-    <section class="step" id="s1" aria-labelledby="h1">
-      <div class="step-h"><span class="k">01</span><h2 id="h1">Kết nối máy chủ AI</h2></div>
-      <p class="lead">Dán đường link máy chủ elevaTO AI và mã truy cập được cấp. Chỉ đọc file Excel thì không cần bước này.</p>
-      <div id="connectBox"></div>
-    </section>
-
     <section class="step" id="s2" aria-labelledby="h2">
-      <div class="step-h"><span class="k">02</span><h2 id="h2">Tải báo cáo tài chính</h2></div>
-      <p class="lead">PDF bản điện tử, PDF scan, ảnh chụp từng trang, hoặc file Excel BCTC (kể cả file FinLens có sheet "Lưu trữ"). Nên tải báo cáo năm gần nhất và các năm trước, thêm báo cáo quý mới nhất nếu có — mỗi báo cáo đã có sẵn cột kỳ trước.</p>
+      <div class="step-h"><span class="k">1</span><div><h2 id="h2">Tải báo cáo tài chính</h2>
+        <p class="lead">PDF bản điện tử, PDF scan, ảnh chụp từng trang, hoặc file Excel BCTC. Nên tải BCTC năm gần nhất và các năm trước (model cần 4 năm), thêm báo cáo quý mới nhất nếu có.</p></div></div>
       <label class="drop" id="drop" tabindex="0">
-        <b>Kéo thả file vào đây hoặc bấm để chọn</b>
-        <small>.pdf · .xlsx · .xls · .jpg · .png — chọn được nhiều file một lượt</small>
+        <svg class="drop-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5V4m0 0L7.5 8.5M12 4l4.5 4.5M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
+        <b>Kéo thả file vào đây, hoặc bấm để chọn</b>
+        <small>PDF · Excel (.xlsx, .xls) · Ảnh JPG / PNG — chọn được nhiều file một lượt</small>
         <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xlsm,.xls,.csv,image/jpeg,image/png,image/webp" hidden>
       </label>
       <ul class="files" id="fileList"></ul>
-      <p class="priv">File được đọc ngay trên máy bạn. Chỉ các trang BCTC cần trích xuất mới được gửi qua máy chủ elevaTO tới Google Gemini. Gemini bản miễn phí có thể dùng dữ liệu gửi lên để cải thiện dịch vụ — đừng tải báo cáo nội bộ chưa công bố.</p>
+      <p class="priv">File được đọc ngay trên máy bạn; chỉ các trang BCTC cần trích xuất mới được gửi tới AI. Gemini bản miễn phí có thể dùng dữ liệu gửi lên để cải thiện dịch vụ — chỉ dùng cho BCTC đã công bố.</p>
     </section>
 
     <section class="step" id="s3" aria-labelledby="h3">
-      <div class="step-h"><span class="k">03</span><h2 id="h3">Kiểm tra trang</h2></div>
-      <p class="lead">Máy đã tự đoán trang nào là bảng nào. Kiểm tra nhanh, chỉnh lại nếu sai — gửi đúng trang giúp AI đọc nhanh và chính xác hơn.</p>
-      <div id="pageMaps"><p class="msg warn">Chưa có file PDF / ảnh nào.</p></div>
+      <div class="step-h"><span class="k">2</span><div><h2 id="h3">Kiểm tra trang</h2>
+        <p class="lead">Máy đã tự đoán trang nào là bảng nào. Xem nhanh và chỉnh nếu sai — gửi đúng trang giúp AI đọc nhanh và chính xác hơn.</p></div></div>
+      <div id="pageMaps"><p class="empty">Chưa có file PDF / ảnh nào.</p></div>
     </section>
 
     <section class="step" id="s4" aria-labelledby="h4">
-      <div class="step-h"><span class="k">04</span><h2 id="h4">Chọn dữ liệu cần lấy</h2></div>
-      <p class="lead">Chọn gói có sẵn, hoặc tick từng nhóm thuyết minh. Ba báo cáo chính luôn được lấy đủ mọi dòng theo mẫu 2026 — bạn chọn dòng nào đưa ra file ở bước 5.</p>
+      <div class="step-h"><span class="k">3</span><div><h2 id="h4">Chọn dữ liệu cần lấy</h2>
+        <p class="lead">Ba báo cáo chính luôn được lấy đủ theo mẫu 2026. Chọn thêm các thuyết minh model cần — bạn chọn dòng nào đưa ra file ở bước 4.</p></div></div>
       <div id="pickBox"></div>
-      <div class="row" id="runRow"></div>
+      <div class="row run-row" id="runRow"></div>
       <div id="progress"></div>
     </section>
 
     <section class="step" id="s5" aria-labelledby="h5">
-      <div class="step-h"><span class="k">05</span><h2 id="h5">Rà soát &amp; xuất file</h2></div>
-      <p class="lead">Bấm vào ô số để sửa. Ô đỏ = không khớp tổng / đối chiếu. Tick các dòng muốn đưa vào bảng chuẩn hoá.</p>
+      <div class="step-h"><span class="k">4</span><div><h2 id="h5">Rà soát &amp; xuất file</h2>
+        <p class="lead">Bấm vào ô số để sửa. Ô đỏ = không khớp tổng / đối chiếu. Tick các dòng muốn đưa vào bảng chuẩn hoá.</p></div></div>
       <div id="sources"></div>
       <div id="review"></div>
       <h3 class="sub-h">Xuất dữ liệu</h3>
@@ -79,5 +85,7 @@
     </section>
   </main>
 </div>
+
+<footer class="foot">© elevaTO · Công cụ dành cho học viên</footer>
 </body>
 </html>

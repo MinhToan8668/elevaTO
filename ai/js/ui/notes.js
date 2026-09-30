@@ -1,4 +1,4 @@
-// Bước 5, tab "Thuyết minh" và "Xem trước model": số AI đọc từ thuyết minh, ghép mảng kinh doanh vào
+// Bước 4, tab "Thuyết minh" và "Xem trước model": số AI đọc từ thuyết minh, ghép mảng kinh doanh vào
 // 5 ô của model, và bảng xem trước đúng các ô sẽ điền vào sheet 03.Input_FS.
 
 import { h, fmt } from './dom.js';
@@ -28,7 +28,7 @@ export function renderNotes(store) {
   const s = store.get();
   const { ds } = store.data();
   const withNotes = ds.periods.filter((p) => ds.notes[p.id] && Object.keys(ds.notes[p.id]).length);
-  if (!withNotes.length) return h('p', { class: 'msg warn' }, 'Chưa có số thuyết minh. Chọn gói "Cho model elevaTO" ở bước 4 rồi trích xuất; nếu không, model sẽ dùng số ước tính từ 3 báo cáo chính.');
+  if (!withNotes.length) return h('p', { class: 'msg warn' }, 'Chưa có số thuyết minh. Chọn gói "Cho model elevaTO" ở bước 3 rồi trích xuất; nếu không, model sẽ dùng số ước tính từ 3 báo cáo chính.');
   return [segmentsCard(store, s, ds), h('div', { class: 'cards', style: { marginTop: '14px' } }, withNotes.map((p) => periodCard(p, ds.notes[p.id])))];
 }
 
