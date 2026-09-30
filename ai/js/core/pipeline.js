@@ -32,7 +32,18 @@ export async function extractJob(job, io, opts = {}) {
     if (!pages.length) { warnings.push(`Không tìm thấy trang ${NAME[st]} — chỉnh lại ở bước chọn trang nếu file có bảng này.`); return; }
     step({ key: st, state: 'run', label: `${NAME[st]} (trang ${list(pages)})` });
     try {
-      const res = await statementWithSplit(st, pages, io, step);
+      let res = await statementWithSplit(st, pages, io, step);
+      // Đọc ra rỗng: có thể do dạng file gửi đi (PDF scan, hoặc PDF có lớp chữ rác) chứ không phải
+      // trang sai. Gửi lại đúng trang đó dưới dạng ảnh — tốn thêm 1 lượt, chỉ khi đã hỏng sẵn.
+      if (!(res?.items || []).length) {
+        step({ key: st, state: 'run', label: `${NAME[st]} — gửi lại bằng ảnh trang ${list(pages)}` });
+        const ioAnh = { ...io, parts: (p) => io.parts(p, { anh: true }) };
+        const lai = await statementWithSplit(st, pages, ioAnh, step).catch(() => null);
+        if ((lai?.items || []).length) {
+          warnings.push(`${NAME[st]}: đọc thẳng file không ra số nên đã gửi lại bằng ảnh trang.`);
+          res = lai;
+        }
+      }
       if (!(res?.items || []).length) {
         trong.push(st);
         warnings.push(`${NAME[st]}: không thấy bảng này trong các trang đã chọn (trang ${list(pages)}).`);

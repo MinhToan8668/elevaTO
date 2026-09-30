@@ -87,7 +87,9 @@ async function run(store, ctx) {
         if (label) li.children[1].textContent = label;
         li.children[2].textContent = state === 'split' ? 'dài quá, chia nhỏ' : error ? error.slice(0, 120) : '';
       };
-      const io = { parts: (pages) => ctx.io.pageParts(j.id, pages), images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6), ai: client, isSplittable, isFatal };
+      // Bản scan: gửi ảnh cả lúc đọc bảng lẫn lúc nhận diện trang (gửi PDF scan hay ra kết quả rỗng).
+      const io = { parts: (pages, o) => ctx.io.pageParts(j.id, pages, { scanned: j.scanned || !!o?.anh }),
+        images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6), ai: client, isSplittable, isFatal };
       try {
         // Trang đã tick: trang máy biết loại giữ nguyên, trang chưa rõ nhờ AI nhận bảng; chỉ gửi đúng các trang này.
         const plan = await planPicked(j, j.picked, io, { onStep, notes: groups.length > 0 });

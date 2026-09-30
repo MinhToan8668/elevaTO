@@ -199,6 +199,24 @@ test('gợi ý trang theo form: phổ thông chỉ 3 bảng chính, tối đa 10
   assert.deepEqual(suggestPicks(text), [2, 3, 4, 5, 6, 7], 'form elevaTO: kèm thuyết minh');
 });
 
+test('PDF gửi đi đọc ra rỗng → thử lại một lần bằng ảnh trang (PDF scan / lớp chữ rác hay bị vậy)', async () => {
+  const dung = [];
+  const io = makeIO();
+  const goc = io.parts;
+  io.parts = async (pages, o) => { dung.push(o?.anh ? 'anh' : 'pdf'); return goc(pages); };
+  let lanBS = 0;
+  const truoc = io.ai.json;
+  io.ai.json = async (req) => {
+    const p = req.parts.at(-1).text;
+    if (/TÌNH HÌNH/.test(p) && ++lanBS === 1) return { meta: {}, items: [] };   // lần gửi PDF: rỗng
+    return truoc(req);
+  };
+  const r = await extractJob({ name: 'x.pdf', ...job }, io, { noteGroups: [] });
+  assert.ok(r.statements.BS, 'lần gửi ảnh đọc được');
+  assert.deepEqual(dung.filter((x) => x === 'anh').length, 1, 'chỉ thử lại bằng ảnh đúng 1 lần');
+  assert.match(r.warnings.join('\n'), /gửi lại bằng ảnh/i);
+});
+
 test('không bảng nào đọc được → tốn thêm 1 lượt hỏi AI xem các trang đó là gì, nói rõ cho người dùng tick lại', async () => {
   const goi = [];
   const io = makeIO({ 'TÌNH HÌNH': () => ({ meta: {}, items: [] }), 'KẾT QUẢ': () => ({ meta: {}, items: [] }), 'LƯU CHUYỂN': () => ({ meta: {}, items: [] }) });
