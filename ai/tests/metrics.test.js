@@ -62,6 +62,22 @@ test('bảng chỉ số: thanh toán, đòn bẩy, sinh lời; dùng số bình 
   assert.equal(thieu.charts.find((c) => c.id === 'assets'), undefined, 'không có số thì không vẽ biểu đồ');
 });
 
+test('kỳ giữa niên độ: ROA / ROE / vòng quay quy về một năm để so được với kỳ năm', () => {
+  const y = { id: 'FY2025', year: 2025, months: 12, endMonth: 12 };
+  const q = { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 };
+  const m = buildMetrics({ periods: [y, q], values: {
+    FY2025: { 'BS:400': 1000, 'BS:280': 2000, 'IS:60': 200, 'IS:10': 3000 },
+    'Q2-2026': { 'BS:400': 1100, 'BS:280': 2200, 'IS:60': 120, 'IS:10': 1600 },
+  } });
+  const val = (key, i) => m.ratios.find((r) => r.key === key).values[i];
+  assert.equal(val('roe', 1).toFixed(2), ((120 * 2) / ((1000 + 1100) / 2) * 100).toFixed(2), 'LNST 6 tháng × 2');
+  assert.equal(val('roa', 1).toFixed(2), ((120 * 2) / ((2000 + 2200) / 2) * 100).toFixed(2));
+  assert.equal(val('assetTurn', 1).toFixed(3), ((1600 * 2) / ((2000 + 2200) / 2)).toFixed(3));
+  assert.match(m.ratios.find((r) => r.key === 'roe').hint, /quy về một năm|năm hoá/i);
+  // biên lợi nhuận là tỷ lệ giữa hai dòng cùng kỳ → không quy đổi
+  assert.equal(val('ros', 1), (120 / 1600) * 100);
+});
+
 test('kỳ quý: nhãn theo số tháng; không có kỳ nào thì không có biểu đồ', () => {
   const q = buildMetrics({ periods: [{ id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 }], values: { 'Q2-2026': { 'IS:10': 50, 'IS:20': 10, 'IS:60': 5 } } });
   assert.deepEqual(q.periods.map((p) => p.label), ['6T/2026']);

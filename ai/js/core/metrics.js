@@ -19,9 +19,9 @@ export const RATIO_ROWS = [
   { key: 'debtAsset', label: 'Nợ / Tổng tài sản', fmt: '%', hint: 'Nợ phải trả / Tổng tài sản' },
   { key: 'gross', label: 'Biên lợi nhuận gộp', fmt: '%', hint: 'Lợi nhuận gộp / Doanh thu thuần' },
   { key: 'ros', label: 'Biên lợi nhuận ròng (ROS)', fmt: '%', hint: 'Lợi nhuận sau thuế / Doanh thu thuần' },
-  { key: 'roa', label: 'ROA', fmt: '%', hint: 'Lợi nhuận sau thuế / Tổng tài sản bình quân' },
-  { key: 'roe', label: 'ROE', fmt: '%', hint: 'Lợi nhuận sau thuế / Vốn chủ sở hữu bình quân' },
-  { key: 'assetTurn', label: 'Vòng quay tài sản', fmt: 'x', hint: 'Doanh thu thuần / Tổng tài sản bình quân' },
+  { key: 'roa', label: 'ROA', fmt: '%', hint: 'Lợi nhuận sau thuế / Tổng tài sản bình quân (kỳ giữa niên độ quy về một năm)' },
+  { key: 'roe', label: 'ROE', fmt: '%', hint: 'Lợi nhuận sau thuế / Vốn chủ sở hữu bình quân (kỳ giữa niên độ quy về một năm)' },
+  { key: 'assetTurn', label: 'Vòng quay tài sản', fmt: 'x', hint: 'Doanh thu thuần / Tổng tài sản bình quân (kỳ giữa niên độ quy về một năm)' },
   { key: 'cfoRevenue', label: 'Dòng tiền kinh doanh / Doanh thu', fmt: '%', hint: 'LC thuần từ HĐKD / Doanh thu thuần' },
 ];
 
@@ -31,6 +31,8 @@ export const RATIO_ROWS = [
  */
 export function buildMetrics(ds) {
   const periods = (ds.periods || []).map((p) => ({ id: p.id, label: periodLabel(p) }));
+  // Kỳ 6 tháng: số luỹ kế nhân 2 mới so được với kỳ năm (chỉ áp cho chỉ số lấy dòng tiền / lãi chia cho số dư).
+  const nam = (ds.periods || []).map((p) => 12 / (p.months || 12));
   const V = periods.map((p) => computeTotals(ds.values?.[p.id] || {}));
   const g = (i, key) => num(V[i][key]);
   const col = (key, f = (v) => v) => V.map((_, i) => { const v = g(i, key); return v === null ? null : f(v); });
@@ -80,6 +82,7 @@ export function buildMetrics(ds) {
     const prev = i > 0 ? g(i - 1, key) : null;
     return prev === null ? null : (cur + prev) / 2;      // kỳ đầu chưa đủ số bình quân → để trống
   };
+  const nhanNam = (v, i) => (v === null ? null : v * nam[i]);
   const R = {
     current: (i) => div(g(i, 'BS:100'), abs(g(i, 'BS:310'))),
     quick: (i) => { const ts = g(i, 'BS:100'); return ts === null ? null : div(ts - (abs(g(i, 'BS:140')) || 0), abs(g(i, 'BS:310'))); },
@@ -87,9 +90,9 @@ export function buildMetrics(ds) {
     debtAsset: (i) => pct(abs(g(i, 'BS:300')), g(i, 'BS:280')),
     gross: (i) => pct(g(i, 'IS:20'), g(i, 'IS:10')),
     ros: (i) => pct(g(i, 'IS:60'), g(i, 'IS:10')),
-    roa: (i) => pct(g(i, 'IS:60'), avg(i, 'BS:280')),
-    roe: (i) => pct(g(i, 'IS:60'), avg(i, 'BS:400')),
-    assetTurn: (i) => div(g(i, 'IS:10'), avg(i, 'BS:280')),
+    roa: (i) => pct(nhanNam(g(i, 'IS:60'), i), avg(i, 'BS:280')),
+    roe: (i) => pct(nhanNam(g(i, 'IS:60'), i), avg(i, 'BS:400')),
+    assetTurn: (i) => div(nhanNam(g(i, 'IS:10'), i), avg(i, 'BS:280')),
     cfoRevenue: (i) => pct(g(i, 'CF:20'), g(i, 'IS:10')),
   };
   const ratios = RATIO_ROWS.map((r) => ({ ...r, values: V.map((_, i) => { const v = R[r.key](i); return Number.isFinite(v) ? v : null; }) }));
