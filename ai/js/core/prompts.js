@@ -56,17 +56,31 @@ const PART = {
   sources: '\nCHỈ lấy phần NGUỒN VỐN: từ dòng mã 300 (Nợ phải trả) tới hết dòng TỔNG CỘNG NGUỒN VỐN.',
 };
 
-/** @param st 'BS'|'IS'|'CF'  @param part 'all'|'assets'|'sources' (chỉ BS) */
-export function statementTask(st, part = 'all') {
+// Khi gửi kèm responseSchema mà AI vẫn trả rỗng, thử lại KHÔNG kèm khuôn —
+// lúc đó phải tả cấu trúc ngay trong câu lệnh, nếu không AI không biết đặt tên trường thế nào.
+const MO_TA_KHUON = [
+  'Trả về đúng một đối tượng JSON, không kèm lời nào khác, theo dạng:',
+  '{"meta":{"ten_cong_ty":"","don_vi":"","ngay_ket_thuc":"YYYY-MM-DD","so_thang":12,"thong_tu":"200"|"99"|"","hop_nhat":true,"cot_v":"","cot_p":""},',
+  ' "items":[{"c":"mã số","n":"tên chỉ tiêu","v":"số kỳ này","p":"số kỳ trước"}]}',
+  'Mọi số để ở dạng chuỗi, chép nguyên văn như in.',
+].join('\n');
+
+/**
+ * @param st 'BS'|'IS'|'CF'
+ * @param part 'all'|'assets'|'sources' (chỉ BS)
+ * @param opts { moTaKhuon } — true: không gửi responseSchema, tả cấu trúc bằng lời trong câu lệnh
+ */
+export function statementTask(st, part = 'all', { moTaKhuon = false } = {}) {
   return {
-    schema: STATEMENT_SCHEMA,
+    schema: moTaKhuon ? null : STATEMENT_SCHEMA,
     prompt: [
       `Đọc ${TITLE[st]} trong các trang BCTC đính kèm (bảng có thể kéo dài nhiều trang — đọc hết).`,
       'Chép MỌI dòng có số theo đúng thứ tự in, gồm cả dòng tổng (A, B, I, II…, Tổng cộng) và dòng chi tiết a), b), - Nguyên giá, - Hao mòn…',
       'c = mã số (ví dụ "131", "421a", "01"). KHÔNG lấy số ở cột "Thuyết minh" (dạng V.01, 5, 6.2) làm mã số.',
       `Cột số: ${COLS[st]}`,
       'meta: chép đơn vị tính, ngày kết thúc kỳ, số tháng, thông tư của mẫu biểu, hợp nhất hay riêng.',
-    ].join('\n') + PART[part],
+      moTaKhuon ? MO_TA_KHUON : '',
+    ].filter(Boolean).join('\n') + PART[part],
   };
 }
 

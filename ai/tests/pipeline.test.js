@@ -199,22 +199,58 @@ test('gợi ý trang theo form: phổ thông chỉ 3 bảng chính, tối đa 10
   assert.deepEqual(suggestPicks(text), [2, 3, 4, 5, 6, 7], 'form elevaTO: kèm thuyết minh');
 });
 
-test('PDF gửi đi đọc ra rỗng → thử lại một lần bằng ảnh trang (PDF scan / lớp chữ rác hay bị vậy)', async () => {
-  const dung = [];
+test('đọc ra rỗng → thử lại đúng 1 lần: gửi bằng ảnh VÀ bỏ khuôn JSON (đổi cả hai thứ nghi ngờ)', async () => {
+  const lan = [];
   const io = makeIO();
   const goc = io.parts;
-  io.parts = async (pages, o) => { dung.push(o?.anh ? 'anh' : 'pdf'); return goc(pages); };
+  io.parts = async (pages, o) => { lan.push({ anh: !!o?.anh }); return goc(pages); };
   let lanBS = 0;
   const truoc = io.ai.json;
   io.ai.json = async (req) => {
     const p = req.parts.at(-1).text;
-    if (/TÌNH HÌNH/.test(p) && ++lanBS === 1) return { meta: {}, items: [] };   // lần gửi PDF: rỗng
+    if (/TÌNH HÌNH/.test(p)) {
+      lan[lan.length - 1].khuon = !!req.schema;
+      if (++lanBS === 1) return { meta: {}, items: [] };
+    }
     return truoc(req);
   };
   const r = await extractJob({ name: 'x.pdf', ...job }, io, { noteGroups: [] });
-  assert.ok(r.statements.BS, 'lần gửi ảnh đọc được');
-  assert.deepEqual(dung.filter((x) => x === 'anh').length, 1, 'chỉ thử lại bằng ảnh đúng 1 lần');
+  assert.ok(r.statements.BS, 'lần thử lại đọc được');
+  const bs = lan.filter((x) => x.khuon !== undefined);
+  assert.equal(bs.length, 2, 'chỉ thử lại 1 lần');
+  assert.deepEqual(bs[0], { anh: false, khuon: true }, 'lần đầu: gửi PDF, có khuôn');
+  assert.deepEqual(bs[1], { anh: true, khuon: false }, 'lần sau: gửi ảnh, bỏ khuôn');
   assert.match(r.warnings.join('\n'), /gửi lại bằng ảnh/i);
+});
+
+test('file scan (vốn đã gửi ảnh) → lần thử lại chỉ bỏ khuôn JSON, không gửi trùng ảnh lần nữa', async () => {
+  const io = makeIO();
+  let khuon = [];
+  const truoc = io.ai.json;
+  io.ai.json = async (req) => {
+    if (/TÌNH HÌNH/.test(req.parts.at(-1).text)) { khuon.push(!!req.schema); if (khuon.length === 1) return { meta: {}, items: [] }; }
+    return truoc(req);
+  };
+  const r = await extractJob({ name: 's.pdf', scanned: true, ...job }, io, { noteGroups: [] });
+  assert.deepEqual(khuon, [true, false], 'gọi 2 lần: có khuôn rồi bỏ khuôn');
+  assert.ok(r.statements.BS);
+});
+
+test('nhiều nhóm thuyết minh: chạy 2 nhóm song song cho nhanh, không bắn hết cùng lúc', async () => {
+  let dangChay = 0, dinh = 0;
+  const io = makeIO();
+  const truoc = io.ai.json;
+  io.ai.json = async (req) => {
+    if (/^Đọc thuyết minh/m.test(req.parts.at(-1).text)) {        // chỉ đếm lượt đọc thuyết minh
+      dangChay++; dinh = Math.max(dinh, dangChay);
+      await new Promise((r) => setTimeout(r, 5));
+      dangChay--;
+    }
+    return truoc(req);
+  };
+  const j = { ...job, notes: { debt: [7], segments: [6], fixedAssets: [8] } };
+  await extractJob({ name: 'x.pdf', ...j }, io, { noteGroups: ['debt', 'segments', 'fixedAssets'] });
+  assert.ok(dinh >= 2 && dinh <= 2, `chạy nhiều nhất ${dinh} nhóm cùng lúc`);
 });
 
 test('không bảng nào đọc được → tốn thêm 1 lượt hỏi AI xem các trang đó là gì, nói rõ cho người dùng tick lại', async () => {

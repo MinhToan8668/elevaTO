@@ -36,11 +36,13 @@ export async function extractJob(job, io, opts = {}) {
       // Đọc ra rỗng: có thể do dạng file gửi đi (PDF scan, hoặc PDF có lớp chữ rác) chứ không phải
       // trang sai. Gửi lại đúng trang đó dưới dạng ảnh — tốn thêm 1 lượt, chỉ khi đã hỏng sẵn.
       if (!(res?.items || []).length) {
-        step({ key: st, state: 'run', label: `${NAME[st]} — gửi lại bằng ảnh trang ${list(pages)}` });
-        const ioAnh = { ...io, parts: (p) => io.parts(p, { anh: true }) };
-        const lai = await statementWithSplit(st, pages, ioAnh, step).catch(() => null);
+        // Đổi CẢ HAI thứ đáng nghi trong đúng một lượt thử lại: cách gửi (ảnh) và khuôn JSON (bỏ).
+        // File scan vốn đã gửi ảnh nên lượt này thực chất chỉ bỏ khuôn — không gửi trùng.
+        const cach = job.scanned ? 'bỏ khuôn JSON' : 'ảnh trang, bỏ khuôn JSON';
+        step({ key: st, state: 'run', label: `${NAME[st]} — thử lại bằng ${cach} (trang ${list(pages)})` });
+        const lai = await statementWithSplit(st, pages, io, step, { anh: true, moTaKhuon: true }).catch(() => null);
         if ((lai?.items || []).length) {
-          warnings.push(`${NAME[st]}: đọc thẳng file không ra số nên đã gửi lại bằng ảnh trang.`);
+          warnings.push(`${NAME[st]}: lần đầu đọc không ra số nên đã gửi lại bằng ảnh và bỏ khuôn JSON.`);
           res = lai;
         }
       }
@@ -94,16 +96,17 @@ export async function extractJob(job, io, opts = {}) {
   const flowMeta = (results.IS || results.CF || {}).meta || {};
   const meta = { ngay_ket_thuc: meta0.ngay_ket_thuc || flowMeta.ngay_ket_thuc, so_thang: flowMeta.so_thang || meta0.so_thang };
 
-  // 2. Thuyết minh được chọn (tuần tự từng nhóm, mỗi nhóm một lượt gọi).
+  // 2. Thuyết minh được chọn, mỗi nhóm một lượt gọi. Chạy 2 nhóm một lúc: nhanh gần gấp đôi
+  //    mà vẫn dưới trần lượt/phút của một tài khoản (máy chủ giữ nhịp 6 lượt/phút).
   const notes = {};
-  for (const g of opts.noteGroups || []) {
+  const chayNhom = async (g) => {
     const task = NOTE_TASKS[g];
     // exact: người dùng đã tick đúng trang → không tự gửi kèm trang kế tiếp.
     const all = opts.exact ? [...(job.notes?.[g] || [])].sort((a, b) => a - b) : null;
     const pages = opts.exact ? all.slice(0, MAX_NOTE_PAGES) : withNext(job.notes?.[g] || [], job.types.length);
-    if (!task) continue;
+    if (!task) return;
     if (all && all.length > MAX_NOTE_PAGES) warnings.push(`${task.label}: chỉ đọc ${MAX_NOTE_PAGES} trang đầu, bỏ trang ${list(all.slice(MAX_NOTE_PAGES))} — bỏ tick bớt trang không cần.`);
-    if (!pages.length) { warnings.push(`Không tìm thấy trang thuyết minh "${task.label}".`); continue; }
+    if (!pages.length) { warnings.push(`Không tìm thấy trang thuyết minh "${task.label}".`); return; }
     step({ key: g, state: 'run', label: `${task.label} (trang ${range(pages)})` });
     try {
       const res = await io.ai.json({ parts: [...await io.parts(pages), { text: task.prompt }], schema: task.schema });
@@ -115,7 +118,8 @@ export async function extractJob(job, io, opts = {}) {
       warnings.push(`${task.label}: ${e.message}`);
       step({ key: g, state: 'fail', error: e.message });
     }
-  }
+  };
+  await theoLo(opts.noteGroups || [], 2, chayNhom);
   return { file: job.name, company: meta0.ten_cong_ty || '', meta, statements, units, notes, warnings, goiY,
     pages: Object.fromEntries(STATEMENTS.map((s) => [s, pagesOf(s)])) };
 }
@@ -136,8 +140,11 @@ function moTaTrang(ds, xem) {
 }
 
 /** Gọi AI một bảng; quá 60 giây / bị cắt → CĐKT chia tài sản / nguồn vốn, bảng khác chia đôi số trang. */
-async function statementWithSplit(st, pages, io, step) {
-  const once = async (pg, part) => io.ai.json({ parts: [...await io.parts(pg), { text: statementTask(st, part).prompt }], schema: statementTask(st, part).schema });
+async function statementWithSplit(st, pages, io, step, opt = {}) {
+  const once = async (pg, part) => {
+    const t = statementTask(st, part, { moTaKhuon: !!opt.moTaKhuon });
+    return io.ai.json({ parts: [...await io.parts(pg, opt), { text: t.prompt }], schema: t.schema });
+  };
   try {
     return await once(pages, 'all');
   } catch (e) {
@@ -172,6 +179,15 @@ const list = (pages) => {
   }
   return out.join(', ');
 };
+/** Chạy f cho từng phần tử, tối đa `n` việc cùng lúc. */
+async function theoLo(ds, n, f) {
+  const cho = [...ds];
+  const chay = Array.from({ length: Math.min(n, cho.length) }, async () => {
+    while (cho.length) await f(cho.shift());
+  });
+  await Promise.all(chay);
+}
+
 const MAX_TRANG = 200;                 // chặn trên số trang một file gửi cho AI (giao diện còn giới hạn chặt hơn theo form)
 const MAX_NOTE_PAGES = 8;              // một nhóm thuyết minh đọc tối đa bấy nhiêu trang trong một lượt
 
