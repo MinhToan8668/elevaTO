@@ -33,3 +33,14 @@ test('chia đôi CĐKT: phần tài sản / nguồn vốn có chỉ dẫn riêng
   assert.match(statementTask('IS').prompt, /LẤY CỘT LŨY KẾ/);
   assert.match(statementTask('CF').prompt, /truc_tiep/);
 });
+
+test('bỏ khuôn JSON: câu lệnh phải tự mô tả đúng các trường, nếu không AI không biết trả dạng nào', async () => {
+  const { statementTask } = await import('../js/core/prompts.js');
+  const co = statementTask('BS', 'all');
+  const khong = statementTask('BS', 'all', { moTaKhuon: true });
+  assert.ok(co.schema && !khong.schema, 'bản mô tả bằng lời thì không gửi kèm responseSchema');
+  for (const k of ['"c"', '"n"', '"v"', '"p"', '"meta"', '"items"', 'don_vi', 'ngay_ket_thuc']) {
+    assert.ok(khong.prompt.includes(k), `thiếu mô tả ${k}`);
+  }
+  assert.ok(!co.prompt.includes('"items"'), 'bản có khuôn thì không cần mô tả dài dòng');
+});

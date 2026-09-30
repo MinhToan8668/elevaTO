@@ -93,7 +93,7 @@ async function run(store, ctx) {
       try {
         // Trang đã tick: trang máy biết loại giữ nguyên, trang chưa rõ nhờ AI nhận bảng; chỉ gửi đúng các trang này.
         const plan = await planPicked(j, j.picked, io, { onStep, notes: groups.length > 0 });
-        const got = await extractJob({ name: j.name, types: plan.types, notes: plan.notes, shared: plan.shared }, io, { noteGroups: groups, onStep, exact: true });
+        const got = await extractJob({ name: j.name, scanned: j.scanned, types: plan.types, notes: plan.notes, shared: plan.shared }, io, { noteGroups: groups, onStep, exact: true });
         const ext = { ...got, warnings: [...plan.warnings, ...got.warnings] };
         // Không đọc nổi bảng nào: hiện lời chỉ dẫn (AI vừa xem các trang đó là trang gì) thay vì câu cụt.
         if (!Object.keys(ext.statements).length) {
