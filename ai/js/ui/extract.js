@@ -93,7 +93,10 @@ async function run(store, ctx) {
         const plan = await planPicked(j, j.picked, io, { onStep, notes: groups.length > 0 });
         const got = await extractJob({ name: j.name, types: plan.types, notes: plan.notes, shared: plan.shared }, io, { noteGroups: groups, onStep, exact: true });
         const ext = { ...got, warnings: [...plan.warnings, ...got.warnings] };
-        if (!Object.keys(ext.statements).length) throw new Error('Không đọc được bảng nào');
+        // Không đọc nổi bảng nào: hiện lời chỉ dẫn (AI vừa xem các trang đó là trang gì) thay vì câu cụt.
+        if (!Object.keys(ext.statements).length) {
+          throw new Error(got.goiY || 'Không đọc được bảng nào — mở xem trang lớn ở bước 2, tick đúng trang có bảng số rồi làm lại.');
+        }
         if (!store.get().jobs.some((x) => x.id === j.id)) continue;          // file đã bị bỏ trong lúc chạy
         store.set((st) => {
           const old = st.sources.find((x) => x.jobId === j.id);
