@@ -1,8 +1,8 @@
 # elevaTO AI BCTC — trích xuất BCTC mẫu 2026 cho model forecast
 
 Công cụ **riêng** (không dính landing page, không dính công cụ upload): tải BCTC lên → xem từng trang, tick
-trang cần lấy → AI tự nhận trang thuộc báo cáo nào và đọc số → rà soát → xuất **Form chuẩn hóa 2026** (.xlsx)
-hoặc điền thẳng vào **model elevaTO** (chỉ tài khoản học viên / giảng viên).
+trang cần lấy → AI tự nhận trang thuộc báo cáo nào và đọc số → rà soát, xem biểu đồ & chỉ số → xuất
+**Form chuẩn hóa 2026** (.xlsx) hoặc điền thẳng vào **model elevaTO** (chỉ học viên / giảng viên).
 
 Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
 
@@ -11,7 +11,7 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
 | Đầu vào | Cách đọc |
 |---|---|
 | PDF bản điện tử (có chữ) | Máy tự gợi ý trang CĐKT / KQKD / LCTT / thuyết minh; bạn tick lại tuỳ ý |
-| PDF scan, ảnh chụp | Xem ảnh từng trang, tick trang cần lấy; AI nhận diện trang đã tick (1 lượt / 12 trang) rồi đọc |
+| PDF scan, ảnh chụp | Xem ảnh từng trang, tick trang cần lấy; AI tự nhận trang đã tick là bảng nào rồi đọc |
 | Excel BCTC (có cột "Mã số"), file FinLens (sheet "Lưu trữ") | Đọc thẳng, **không tốn lượt AI** |
 
 - **Chọn trang như FinLens**: mỗi file hiện lưới ảnh thu nhỏ các trang. Bấm ảnh để xem trang lớn (phóng to,
@@ -27,11 +27,24 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
 - **Nhiều file, nhiều kỳ**: mỗi BCTC có sẵn cột kỳ trước. Nên tải BCTC năm gần nhất + các năm trước
   (model cần ≥ 4 năm), thêm báo cáo quý mới nhất nếu có. Hai báo cáo cùng kỳ khác số → dùng số của báo cáo
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.
-- **Chọn dữ liệu**: gói "Cho model elevaTO" (3 báo cáo + thuyết minh doanh thu/LN gộp theo mảng, TSCĐ
-  theo nhóm, biến động vốn chủ, vay/trả nợ, lợi thế thương mại, số cổ phiếu, thuế suất), gói "Chỉ 3 báo cáo
-  chính", hoặc tự tick. Ở bước rà soát tick dòng nào thì Form chuẩn hóa xuất dòng đó.
+- **Hai form** (chọn ở bước 3):
+
+  | | Form phổ thông | Form riêng elevaTO |
+  |---|---|---|
+  | Ai dùng được | mọi tài khoản | học viên · giảng viên |
+  | Lấy gì | 3 báo cáo chính | 3 báo cáo + thuyết minh doanh thu/LN gộp theo mảng, TSCĐ theo nhóm, biến động vốn chủ, vay/trả nợ, lợi thế thương mại, số cổ phiếu, thuế suất |
+  | Số trang mỗi file | tối đa 10 | cả file |
+  | Lượt AI mỗi file | 3 | 3 + 1 mỗi nhóm thuyết minh (+ 1 mỗi 12 trang phải nhận diện) |
+  | Xuất | Form chuẩn hóa 2026 (.xlsx) | thêm: điền thẳng vào model elevaTO |
+
+  Form phổ thông **không tốn lượt nhận diện trang**: trang đã tick mà máy chưa rõ loại được gửi kèm luôn
+  trong 3 lượt đọc bảng, AI tự tìm bảng cần đọc trong đó.
+- **Biểu đồ & chỉ số**: một tab ở bước rà soát vẽ doanh thu / lợi nhuận, cơ cấu tài sản, cơ cấu nguồn vốn,
+  lưu chuyển tiền tệ, biên lợi nhuận, kèm bảng chỉ số (thanh toán hiện hành / nhanh, nợ trên vốn chủ, ROA,
+  ROE, vòng quay tài sản…). Máy tự tính từ số đã trích, AI không tham gia. Ở bước rà soát tick dòng nào thì
+  Form chuẩn hóa xuất dòng đó.
 - **Xuất** — hai tùy chọn, cộng lưu phiên:
-  - **Form chuẩn hóa 2026** (.xlsx, ai cũng dùng được): trang *Tổng quan* + *Tình hình tài chính*,
+  - **Form chuẩn hóa 2026** (.xlsx, mọi tài khoản): trang *Tổng quan* + *Tình hình tài chính*,
     *Kết quả kinh doanh*, *Lưu chuyển tiền tệ* theo mẫu TT99, mỗi kỳ một cột, đơn vị tuỳ chọn, dòng tổng in đậm.
   - **Điền vào model elevaTO** (chỉ **học viên / giảng viên**): chọn file model của khoá học, số điền vào sheet
     `03.Input_FS` (triệu đồng, chi phí mang dấu âm), đúng cột năm. Không đụng ô công thức, giữ nguyên biểu đồ;
@@ -77,6 +90,7 @@ Lệnh (gõ trong tin nhắn riêng với bot):
 | `/khoa <email>` · `/mo <email>` | khoá (đăng xuất mọi máy) / mở hoặc duyệt |
 | `/matkhau <email> <mật khẩu mới>` | đặt lại mật khẩu; bot tự xoá tin chứa mật khẩu |
 
+- `/thongke` cho biết chuỗi model đang dùng và model nào đang quá tải.
 - Bot **hỏi tin mới mỗi phút** (lịch `hoiTelegram`, tạo tự động khi chạy `caiDat`) thay vì webhook, vì Apps
   Script trả 302 cho webhook. Có lệnh thì bot bám thêm ~40 giây để trả lời gần như tức thì.
 - Chỉ **tin riêng do chính chat ID quản trị gõ** mới được xử lý (không nhận nhóm, không nhận tin chuyển tiếp);
@@ -115,7 +129,10 @@ Thêm key: sửa Script Property `GEMINI_KEYS` (mỗi dòng một key) hoặc d�
 - Mỗi tài khoản có hạn mức lượt/ngày theo vai trò (giữ lượt trước khi gọi Gemini, lỗi thì trả lại) và tối đa
   `AI_RPM_MA` (6) lượt/phút; mỗi key tối đa `AI_RPM` (12) lượt/phút.
 - Nhiều key Gemini: key nào hết hạn mức phút (429) thì nghỉ, máy chủ chuyển ngay sang key khác.
-- Model do máy chủ chọn (bản flash chính thức mới nhất; đổi bằng Script Property `AI_MODEL`); trang không đổi được.
+- Model do máy chủ chọn, trang không đổi được. Máy chủ giữ **chuỗi model dự phòng** (bản flash chính thức mới
+  → cũ, cuối cùng flash-lite): model nào quá tải (HTTP 503) thì nghỉ 5 phút và máy chủ chuyển ngay sang model
+  sau **trong cùng một lượt** — mỗi model có hạn mức miễn phí riêng nên ít khi báo "quá tải". Muốn cố định một
+  model: Script Property `AI_MODEL`.
 - Máy chủ chỉ chuyển tiếp nội dung trích xuất (PDF / ảnh / chữ có giới hạn độ dài), không cho dùng công cụ.
 - Trang chỉ chạy script của chính nó (CSP `script-src 'self'` + `'wasm-unsafe-eval'` cho bộ giải ảnh scan của pdf.js,
   thư viện trong `vendor/`), không dùng `innerHTML`
@@ -123,9 +140,11 @@ Thêm key: sửa Script Property `GEMINI_KEYS` (mỗi dòng một key) hoặc d�
 
 ### Giới hạn
 
-- Gemini miễn phí giới hạn số lượt mỗi phút / mỗi ngày theo key. Máy chủ giữ tối đa `AI_RPM` (12) lượt/phút
-  mỗi key, `AI_RPM_MA` (6) lượt/phút mỗi tài khoản; quá thì trang tự chờ rồi thử lại. Một BCTC thường tốn 3 lượt
-  (3 bảng) + 1 lượt mỗi nhóm thuyết minh, thêm 1 lượt mỗi 12 trang AI phải tự nhận diện.
+- Gemini miễn phí giới hạn số lượt mỗi phút / mỗi ngày theo **từng model**. Máy chủ giữ tối đa `AI_RPM` (12)
+  lượt/phút mỗi key, `AI_RPM_MA` (6) lượt/phút mỗi tài khoản; hết hạn mức ở model này thì đổi key rồi đổi
+  model (tối đa `AI_THU_TOI_DA` = 5 lần gọi cho một lượt), quá nữa thì trang tự chờ rồi thử lại.
+  Một BCTC tốn 3 lượt ở Form phổ thông; Form riêng elevaTO thêm 1 lượt mỗi nhóm thuyết minh và 1 lượt mỗi
+  12 trang AI phải tự nhận diện.
 - Apps Script chỉ chờ một lượt gọi tối đa ~60 giây: bảng dài quá thì trang tự chia đôi rồi gọi lại.
 - Gemini bản miễn phí có thể dùng dữ liệu gửi lên để cải thiện dịch vụ — chỉ dùng cho BCTC đã công bố.
 - Nhật ký lỗi của máy chủ che token bot.
@@ -146,6 +165,8 @@ ai/
 ├── js/chart2026.js              danh mục chỉ tiêu mẫu TT99 + cây cộng dồn + mã TT200 tương ứng
 ├── js/core/                     logic thuần (đọc số VN, kiểm tra, quy đổi, nhận trang, prompt, dữ liệu nhiều kỳ, Excel)
 ├── js/core/formxlsx.js          tạo file Form chuẩn hóa 2026 (.xlsx có định dạng)
+├── js/core/metrics.js           chỉ số tài chính + số liệu biểu đồ (máy tính, không qua AI)
+├── js/ui/charts.js              vẽ biểu đồ SVG (không dùng thư viện ngoài)
 ├── js/targets/                  điền model elevaTO (sửa thẳng XML trong file .xlsx)
 ├── backend/                     máy chủ Apps Script
 ├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS (xem vendor/README.md)
