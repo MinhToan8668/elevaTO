@@ -1,19 +1,21 @@
 // Bước 4 (phần rà soát): nguồn dữ liệu, kết quả kiểm tra từng kỳ, bảng số sửa được, tick dòng cần xuất.
 
 import { h, mount, $, fmt, toast, keepFocus } from './dom.js';
-import { watch } from './store.js';
+import { watch, canUseModel } from './store.js';
 import { statementRows, periodLabel } from '../core/table.js';
 import { parseVN } from '../core/numbers.js';
 import { item } from '../core/statements.js';
 import { renderNotes, renderModel } from './notes.js';
 
 export const UNITS = [[1, 'đồng'], [1e3, 'nghìn đồng'], [1e6, 'triệu đồng'], [1e9, 'tỷ đồng']];
-const TABS = [['BS', 'Tình hình tài chính'], ['IS', 'Kết quả KD'], ['CF', 'Lưu chuyển tiền'], ['TM', 'Thuyết minh'], ['MODEL', 'Xem trước model']];
+const ALL_TABS = [['BS', 'Tình hình tài chính'], ['IS', 'Kết quả KD'], ['CF', 'Lưu chuyển tiền'], ['TM', 'Thuyết minh'], ['MODEL', 'Xem trước model elevaTO']];
+// Tab xem trước model chỉ dành cho học viên / giảng viên.
+let TABS = ALL_TABS;
 const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
 
 export function initReview(store, ctx) {
   watch(store, ['sources', 'edits'], () => renderSources(store));
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames'], () => renderReview(store, ctx));
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user'], () => renderReview(store, ctx));
 }
 
 // ─── Nguồn dữ liệu ─────────────────────────────────────────
@@ -68,6 +70,8 @@ const labelOf = (key) => { const [st, code] = key.split(':'); const it = item(st
 // ─── Bảng rà soát ──────────────────────────────────────────
 
 function renderReview(store, ctx) {
+  TABS = canUseModel(store.get().user) ? ALL_TABS : ALL_TABS.filter(([k]) => k !== 'MODEL');
+  if (!TABS.some(([k]) => k === ui.tab)) ui.tab = 'BS';
   const s = store.get();
   const { ds, checks } = store.data();
   const box = $('#review');

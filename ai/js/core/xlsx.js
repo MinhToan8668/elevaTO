@@ -1,7 +1,7 @@
 // Sửa trực tiếp XML của một sheet trong file .xlsx — chỉ đụng tới đúng các ô cần ghi.
 //
 // Vì sao không dùng thư viện Excel (SheetJS / ExcelJS / openpyxl) để ghi: chúng dựng lại cả file và
-// làm mất biểu đồ, định dạng có điều kiện… (model DGW mất 5 biểu đồ Dashboard). Ở đây chỉ thay
+// làm mất biểu đồ, định dạng có điều kiện… (model elevaTO mất 5 biểu đồ Dashboard). Ở đây chỉ thay
 // chuỗi <c> của từng ô, mọi phần khác của file giữ nguyên từng byte.
 // Không bao giờ ghi đè ô có công thức.
 

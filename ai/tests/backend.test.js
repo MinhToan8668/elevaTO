@@ -60,7 +60,7 @@ test('đăng ký: chuẩn hoá email / tên, không lưu mật khẩu thô, tr�
   const r = signup(g);
   assert.equal(r.ok, true);
   assert.match(r.data.token, /^E[A-Z0-9]{5}\.[A-Za-z0-9]{40,}$/);
-  assert.deepEqual(r.data.me, { ten: 'Nguyễn Văn A', email: 'a@mail.com', vaitro: 'hv', luot: { dung: 0, han: 20 } });
+  assert.deepEqual(r.data.me, { ten: 'Nguyễn Văn A', email: 'a@mail.com', vaitro: 'free', luot: { dung: 0, han: 10 } });
   const [, row] = rows(g);
   assert.equal(row[1], 'a@mail.com');
   assert.ok(!row.join('|').includes(USER.mk), 'mật khẩu không nằm trong bảng');
@@ -169,21 +169,28 @@ test('nhiều key: key đầu hết hạn mức (429) → dùng ngay key sau tro
   assert.equal(g2.post({ action: 'toi', token: t2 }).data.me.luot.dung, 0, 'không thành công thì không trừ lượt');
 });
 
-test('hạn mức theo ngày của từng tài khoản; quản trị sửa số lượt trên bảng; vai trò admin không giới hạn', () => {
-  const g = setup(undefined, { props: { AI_LUOT_MAC_DINH: '2' } });
+test('hạn mức theo vai trò: tài khoản thường ít lượt, học viên nhiều hơn, giảng viên không giới hạn; cột luot_ngay đè lên', () => {
+  const g = setup(undefined, { props: { AI_LUOT_FREE: '2', AI_LUOT_HV: '3' } });
   const tk = signup(g).data.token;
   assert.equal(g.post(gen(tk)).ok, true);
   assert.equal(g.post(gen(tk)).ok, true);
   const r = g.post(gen(tk));
   assert.equal(r.code, 'quota'); assert.match(r.error, /2 lượt/);
-  const head = rows(g)[0];
-  rows(g)[1][head.indexOf('luot_ngay')] = 5;
+  const head = rows(g)[0], row = rows(g)[1];
+  row[head.indexOf('vaitro')] = 'hv';
+  assert.deepEqual(g.post({ action: 'toi', token: tk }).data.me.luot, { dung: 2, han: 3 });
   assert.equal(g.post(gen(tk)).ok, true);
-  assert.deepEqual(g.post({ action: 'toi', token: tk }).data.me.luot, { dung: 3, han: 5 });
-  rows(g)[1][head.indexOf('vaitro')] = 'admin';
-  for (let i = 0; i < 8; i++) assert.equal(g.post(gen(tk)).ok, true);
+  assert.equal(g.post(gen(tk)).code, 'quota');
+  row[head.indexOf('luot_ngay')] = 5;
+  assert.equal(g.post(gen(tk)).ok, true);
+  assert.deepEqual(g.post({ action: 'toi', token: tk }).data.me.luot, { dung: 4, han: 5 });
+  row[head.indexOf('vaitro')] = 'gv';
+  for (let i = 0; i < 5; i++) assert.equal(g.post(gen(tk)).ok, true);
+  assert.equal(g.post({ action: 'toi', token: tk }).data.me.vaitro, 'gv');
+  row[head.indexOf('vaitro')] = 'admin';
+  assert.equal(g.post({ action: 'toi', token: tk }).data.me.vaitro, 'gv', 'vai trò admin cũ = giảng viên');
   g.tick(24 * 3600 * 1000);
-  rows(g)[1][head.indexOf('vaitro')] = 'hv';
+  row[head.indexOf('vaitro')] = 'free'; row[head.indexOf('luot_ngay')] = '';
   assert.equal(g.post({ action: 'toi', token: tk }).data.me.luot.dung, 0, 'sang ngày mới tính lại');
 });
 
@@ -202,7 +209,7 @@ test('giữ lượt trước khi gọi Gemini, lỗi thì trả lại; 429 báo 
 });
 
 test('mỗi tài khoản có trần lượt/phút riêng; cả hệ thống có trần chung', () => {
-  const g = setup(undefined, { props: { AI_LUOT_MAC_DINH: '999' } });
+  const g = setup(undefined, { props: { AI_LUOT_FREE: '999' } });
   g.run('AI_RPM_MA = 2; AI_RPM = 3');
   const a = signup(g).data.token;
   const b = signup(g, { email: 'b@mail.com' }).data.token;
@@ -249,14 +256,14 @@ test('quá 60 giây → timeout; Gemini chặn / trả rỗng → báo rõ; yêu
 
 // ─── Quản trị chạy tay ────────────────────────────────────
 
-test('quản trị: đặt lại mật khẩu, cấp quyền admin bằng hàm chạy tay', () => {
+test('quản trị: đặt lại mật khẩu, cấp quyền giảng viên bằng hàm chạy tay', () => {
   const g = setup();
   signup(g);
   g.run("datLaiMatKhau('a@mail.com', 'mat-khau-moi-1')");
   assert.equal(login(g).code, 'sai');
   assert.equal(login(g, { mk: 'mat-khau-moi-1' }).ok, true);
   g.run("datQuanTri('A@mail.com')");
-  assert.equal(login(g, { mk: 'mat-khau-moi-1' }).data.me.vaitro, 'admin');
+  assert.equal(login(g, { mk: 'mat-khau-moi-1' }).data.me.vaitro, 'gv');
 });
 
 // ─── Sau review bảo mật ───────────────────────────────────
@@ -309,4 +316,146 @@ test('responseSchema quá lớn → bad', () => {
   const tk = signup(g).data.token;
   const big = { type: 'OBJECT', properties: Object.fromEntries(Array.from({ length: 3000 }, (_, i) => [`f${i}`, { type: 'STRING' }])) };
   assert.equal(g.post(gen(tk, { generationConfig: { responseSchema: big } })).code, 'bad');
+});
+
+// ─── Bot Telegram ─────────────────────────────────────────
+
+const TG = '123456:TEST-token';
+const ADMIN = '700100200';
+/** Máy chủ có bot: updates = hàng chờ getUpdates; sent = tin bot đã gửi. */
+function setupTg(extra = {}) {
+  const updates = [], sent = [];
+  const g = loadGas(PATH, { props: { ...(extra.props || {}) }, fetch: (url, o, resp) => {
+    if (url.startsWith('https://api.telegram.org/')) {
+      const method = url.split('/').pop(), body = o.payload ? JSON.parse(o.payload) : {};
+      if (method === 'getUpdates') return resp(200, { ok: true, result: updates.splice(0).filter((u) => u.update_id >= (body.offset || 0)) });
+      sent.push({ method, body });
+      return resp(200, { ok: true, result: {} });
+    }
+    return extra.gem ? extra.gem(url, o, resp) : gemOK(url, o, resp);
+  } });
+  g.run(`GEMINI_KEY_MOI = ${JSON.stringify(KEY)}; TG_TOKEN_MOI = ${JSON.stringify(TG)}; TG_CHAT_MOI = ${JSON.stringify(ADMIN)}; caiDat();`);
+  return { g, updates, sent };
+}
+let uid = 1;
+const msg = (text, chat = ADMIN, extra = {}) => ({ update_id: uid++, message: { message_id: 1, chat: { id: Number(chat), type: 'private' }, from: { id: Number(chat) }, text, ...extra } });
+const cb = (data, chat = ADMIN) => ({ update_id: uid++, callback_query: { id: 'cb' + uid, data, from: { id: Number(chat) }, message: { message_id: 9, chat: { id: Number(chat) } } } });
+const col = (g, name) => rows(g)[1][rows(g)[0].indexOf(name)];
+const texts = (sent) => sent.filter((x) => x.method === 'sendMessage' || x.method === 'editMessageText').map((x) => x.body.text).join('\n---\n');
+
+test('caiDat có token bot: cất token + chat quản trị, bỏ webhook, bật lịch hỏi tin mỗi phút (không tạo trùng), nhắn thử', () => {
+  const { g, sent } = setupTg();
+  assert.equal(g.props.TG_TOKEN, TG);
+  assert.equal(g.props.TG_ADMIN, ADMIN);
+  assert.ok(sent.some((x) => x.method === 'deleteWebhook'));
+  assert.deepEqual(g.triggers.map((t) => [t.fn, t.n]), [['hoiTelegram', 1]]);
+  assert.ok(sent.some((x) => x.method === 'sendMessage' && x.body.chat_id === ADMIN));
+  g.run('caiDat()');
+  assert.equal(g.triggers.length, 1);
+});
+
+test('có tài khoản mới → bot báo quản trị kèm nút xếp vai trò; Telegram lỗi thì đăng ký vẫn thành công', () => {
+  const { g, sent } = setupTg();
+  sent.length = 0;
+  assert.equal(signup(g).ok, true);
+  const m = sent.find((x) => x.method === 'sendMessage');
+  assert.ok(m && m.body.chat_id === ADMIN);
+  assert.match(m.body.text, /Nguyễn Văn A/); assert.match(m.body.text, /a@mail\.com/); assert.match(m.body.text, /0901234567/);
+  const buttons = m.body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+  const ma = col(g, 'ma');
+  assert.ok(buttons.includes(`vt|hv|${ma}`) && buttons.includes(`vt|gv|${ma}`) && buttons.includes(`tt|off|${ma}`), buttons.join());
+  const g2 = setupTg().g;
+  g2.ctx.UrlFetchApp.fetch = (url) => { if (url.includes('telegram')) throw new Error('mất mạng'); return { getResponseCode: () => 200, getContentText: () => '{}' }; };
+  assert.equal(signup(g2, { email: 'b@mail.com' }).ok, true);
+});
+
+test('bấm nút trên Telegram (chỉ chat quản trị): xếp học viên / giảng viên / khoá; cùng một tin không xử lý hai lần', () => {
+  const { g, updates, sent } = setupTg();
+  signup(g);
+  const ma = col(g, 'ma');
+  updates.push(cb(`vt|hv|${ma}`));
+  g.run('hoiTelegram()');
+  assert.equal(col(g, 'vaitro'), 'hv');
+  assert.ok(sent.some((x) => x.method === 'answerCallbackQuery'));
+  updates.push(cb(`vt|gv|${ma}`, '999'));                          // người lạ bấm
+  g.run('hoiTelegram()');
+  assert.equal(col(g, 'vaitro'), 'hv', 'chat khác không ra lệnh được');
+  const again = cb(`tt|off|${ma}`);
+  updates.push(again, { ...again });
+  g.run('hoiTelegram()');
+  assert.equal(col(g, 'trangthai'), 'off');
+  assert.equal(sent.filter((x) => x.method === 'answerCallbackQuery' && x.body.text.startsWith('✔')).length, 2, 'tin trùng chỉ xử lý 1 lần');
+  assert.ok(Number(g.props.TG_OFFSET) > 0);
+});
+
+test('lệnh quản trị: /hocvien /giangvien /free /luot /khoa /mo /matkhau /tim /thongke /cho', () => {
+  const { g, updates, sent } = setupTg();
+  signup(g);
+  const run = (text, chat) => { sent.length = 0; updates.push(msg(text, chat)); g.run('hoiTelegram()'); return texts(sent); };
+  run('/hocvien a@mail.com'); assert.equal(col(g, 'vaitro'), 'hv');
+  run('/giangvien A@MAIL.com'); assert.equal(col(g, 'vaitro'), 'gv');
+  run('/free a@mail.com'); assert.equal(col(g, 'vaitro'), 'free');
+  run('/luot a@mail.com 50'); assert.equal(Number(col(g, 'luot_ngay')), 50);
+  run('/khoa a@mail.com'); assert.equal(col(g, 'trangthai'), 'off');
+  run('/mo a@mail.com'); assert.equal(col(g, 'trangthai'), 'active');
+  run('/matkhau a@mail.com mat-khau-moi-9'); assert.equal(login(g, { mk: 'mat-khau-moi-9' }).ok, true);
+  assert.match(run('/tim nguyễn'), /a@mail\.com/);
+  assert.match(run('/thongke'), /Tài khoản: 1/);
+  assert.match(run('/hocvien khong-co@mail.com'), /Không tìm thấy/);
+  assert.match(run('/help'), /\/hocvien/);
+  assert.equal(run('/thongke', '999'), '', 'người lạ nhắn: bot im lặng, không tốn lượt gọi');
+  assert.equal(col(g, 'vaitro'), 'free');
+});
+
+test('bot chỉ nghe tin riêng do chính quản trị gõ: bỏ qua nhóm, người khác trong nhóm, tin chuyển tiếp', () => {
+  const { g, updates, sent } = setupTg();
+  signup(g);
+  const run = (m) => { sent.length = 0; updates.push(m); g.run('hoiTelegram()'); return sent; };
+  run(msg('/giangvien a@mail.com', ADMIN, { chat: { id: Number(ADMIN), type: 'group' } }));
+  run(msg('/giangvien a@mail.com', ADMIN, { from: { id: 999 } }));
+  run(msg('/giangvien a@mail.com', ADMIN, { forward_origin: { type: 'user' } }));
+  run(msg('/giangvien a@mail.com', ADMIN, { forward_date: 1 }));
+  assert.equal(col(g, 'vaitro'), 'free');
+  assert.equal(sent.length, 0);
+});
+
+test('người lạ nhắn liên tục không giữ lịch hỏi tin chạy dài (chỉ tin của quản trị mới kéo dài long-poll)', () => {
+  const { g, updates } = setupTg();
+  let polls = 0;
+  const f = g.ctx.UrlFetchApp.fetch;
+  g.ctx.UrlFetchApp.fetch = (url, o) => {
+    if (url.endsWith('/getUpdates')) { polls++; if (polls < 50) updates.push(msg('xin chào', '999')); }
+    return f(url, o);
+  };
+  g.run('hoiTelegram()');
+  assert.equal(polls, 1, 'tin người lạ không làm bot bám long-poll');
+});
+
+test('/matkhau: xoá tin chứa mật khẩu khỏi Telegram, giữ nguyên khoảng trắng trong mật khẩu', () => {
+  const { g, updates, sent } = setupTg();
+  signup(g);
+  sent.length = 0;
+  updates.push(msg('/matkhau a@mail.com  hai  cach-nhau 9', ADMIN, { message_id: 77 }));
+  g.run('hoiTelegram()');
+  assert.equal(login(g, { mk: ' hai  cach-nhau 9' }).ok, false);
+  assert.equal(login(g, { mk: 'hai  cach-nhau 9' }).ok, true);
+  const del = sent.find((x) => x.method === 'deleteMessage');
+  assert.ok(del && del.body.message_id === 77 && del.body.chat_id === ADMIN);
+});
+
+test('lỗi mạng khi gọi Telegram: log không lộ token bot', () => {
+  const { g } = setupTg();
+  g.ctx.UrlFetchApp.fetch = (url) => { throw new Error('Address unavailable: ' + url); };
+  g.run('tgApi("sendMessage", {})');
+  const all = g.logs.join('\n');
+  assert.ok(all.includes('sendMessage'), all);
+  assert.ok(!all.includes(TG), 'token bị lộ trong log');
+});
+
+test('key Gemini hỏng → báo quản trị qua Telegram, tối đa 1 lần mỗi giờ', () => {
+  const { g, sent } = setupTg({ gem: (url, o, resp) => (url.includes('/models?') ? resp(200, MODELS) : resp(403, { error: { code: 403, message: 'API key not valid' } })) });
+  const tk = signup(g).data.token;
+  sent.length = 0;
+  g.post(gen(tk)); g.post(gen(tk));
+  assert.equal(sent.filter((x) => /key/i.test(x.body.text || '')).length, 1);
 });

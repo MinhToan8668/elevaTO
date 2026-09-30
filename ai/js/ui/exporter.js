@@ -1,14 +1,14 @@
-// Bước 4 (phần xuất): điền model elevaTO (mẫu DGW), điền Form nội bộ 2026, bảng chuẩn hoá các dòng đã tick,
-// lưu / mở phiên làm việc. File model / form do người dùng chọn từ máy — trang không giữ bản nào.
+// Bước 4 (phần xuất): hai tùy chọn — điền vào model elevaTO (chỉ học viên / giảng viên) hoặc tải Form chuẩn hóa 2026
+// (.xlsx trang tự tạo) — và lưu / mở phiên làm việc (.json). File model do người dùng chọn từ máy, trang không giữ bản nào.
 
 import { h, mount, $, toast, download, safeName } from './dom.js';
-import { watch } from './store.js';
+import { watch, canUseModel } from './store.js';
 import { UNITS, allValueKeys } from './review.js';
 import { effectiveSegmentMap, effectiveSegmentNames } from './notes.js';
-import { tableAOA } from '../core/table.js';
 import { serializeSession, parseSession } from '../core/session.js';
-import { fillDGWWorkbook, fillForm2026Workbook } from '../targets/writer.js';
-import { openZip, loadXLSX } from '../libs.js';
+import { buildFormXlsx } from '../core/formxlsx.js';
+import { fillModelWorkbook } from '../targets/writer.js';
+import { openZip, loadJSZip } from '../libs.js';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const MAX_TEMPLATE = 60 * 1024 * 1024;
@@ -19,21 +19,21 @@ const cards = {};
 const cardState = (key, options) => (cards[key] ||= { opts: Object.fromEntries(options.map(([k, , def]) => [k, def])), out: h('div'), busy: false });
 
 export function initExporter(store) {
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'running'], () => render(store));
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'running', 'user'], () => render(store));
 }
 
 function render(store) {
   const { ds } = store.data();
   const empty = !ds.periods.length;
   mount($('#exportBox'), h('div', { class: 'cards' },
-    templateCard(store, empty, {
-      key: 'dgw',
-      title: 'Điền vào model elevaTO (mẫu DGW)',
-      desc: 'Chọn file model .xlsx của bạn. Số điền vào sheet 03.Input_FS theo từng năm (triệu đồng), ô công thức và biểu đồ giữ nguyên. Excel tự tính lại khi mở.',
-      options: [['clear', 'Xoá số năm cũ không có trong dữ liệu mới (khi đổ công ty khác vào model mẫu)', true], ['lastAct', 'Cập nhật năm thực tế cuối (02.Control!C4)', true]],
+    canUseModel(store.get().user) ? templateCard(store, empty, {
+      key: 'model',
+      title: 'Điền vào model elevaTO',
+      desc: 'Chọn file model elevaTO (.xlsx) của khoá học. Số điền vào sheet 03.Input_FS theo từng năm (triệu đồng); ô công thức và biểu đồ giữ nguyên, Excel tự tính lại khi mở.',
+      options: [['clear', 'Xoá số năm cũ không có trong dữ liệu mới (khi đổ công ty khác vào model)', true], ['lastAct', 'Cập nhật năm thực tế cuối (02.Control!C4)', true]],
       fill: async (zip, opts) => {
         const ds = store.data().ds;
-        const r = await fillDGWWorkbook(zip, ds, {
+        const r = await fillModelWorkbook(zip, ds, {
           segmentMap: effectiveSegmentMap(ds, store.get().segmentMap).map,
           segmentNames: effectiveSegmentNames(ds, store.get().segmentMap, store.get().segmentNames),
           clearOtherYears: opts.clear, updateLastAct: opts.lastAct,
@@ -45,24 +45,18 @@ function render(store) {
         return { ok: r.written.length > 0, lines, warnings: r.warnings };
       },
       suffix: 'model',
-    }),
-    templateCard(store, empty, {
-      key: 'form',
-      title: 'Điền Form nội bộ 2026',
-      desc: 'Chọn file Form_noi_bo_2026 .xlsx. Mỗi kỳ ghi vào một cột của sheet "Lưu trữ" (đồng), trang F1 chuyển sang 4 kỳ gần nhất.',
-      options: [],
-      fill: async (zip) => {
-        const ds = store.data().ds;
-        const r = await fillForm2026Workbook(zip, ds);
-        const lines = [`Đã ghi ${ds.periods.length} kỳ × ${r.rows} dòng chỉ tiêu`];
-        if (r.unplaced.length) lines.push(`Hết cột trống, chưa ghi: ${r.unplaced.join(', ')}`);
-        if (r.skipped.length) lines.push(`${r.skipped.length} ô là công thức nên giữ nguyên`);
-        return { ok: true, lines, warnings: [] };
-      },
-      suffix: 'form 2026',
-    }),
-    tableCard(store, empty),
+    }) : lockedModelCard(),
+    formCard(store, empty),
     sessionCard(store)));
+}
+
+function lockedModelCard() {
+  return h('div', { class: 'cardx locked' },
+    h('span', { class: 'lock-ic', 'aria-hidden': 'true' }, '🔒'),
+    h('h3', {}, 'Điền vào model elevaTO'),
+    h('p', {}, 'Dành cho học viên và giảng viên elevaTO: đổ số thẳng vào model forecast của khoá học, giữ nguyên công thức và biểu đồ.'),
+    h('p', { class: 'fine-l' }, 'Bạn đã học elevaTO? Nhắn elevaTO email đăng ký để được mở quyền.'),
+    h('button', { class: 'btn', disabled: true }, 'Chỉ dành cho học viên'));
 }
 
 function templateCard(store, empty, cfg) {
@@ -95,26 +89,27 @@ function templateCard(store, empty, cfg) {
     input, btn, st.out);
 }
 
-function tableCard(store, empty) {
+function formCard(store, empty) {
   const s = store.get();
   const n = s.ticks ? s.ticks.length : allValueKeys(store).length;
+  const unitLabel = (UNITS.find(([v]) => v === s.unit) || [])[1] || 'đồng';
   const btn = h('button', { class: 'btn', disabled: empty || !n, onclick: async () => {
-    let XLSX;
-    try { XLSX = await loadXLSX(); } catch (e) { return toast(e.message); }
-    const s = store.get();
-    const { ds } = store.data();
-    const unitLabel = (UNITS.find(([v]) => v === s.unit) || [])[1] || 'đồng';
-    const aoa = tableAOA(ds, { keys: s.ticks ? new Set(s.ticks) : null, unit: s.unit, unitLabel });
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{ wch: 8 }, { wch: 54 }, ...ds.periods.map(() => ({ wch: 18 }))];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'BCTC mau 2026');
-    const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-    download(new Blob([bytes], { type: XLSX_MIME }), `${safeName(ds.company || 'BCTC')} - mau 2026.xlsx`);
-  } }, 'Tải bảng .xlsx');
+    btn.disabled = true;
+    try {
+      const JSZip = await loadJSZip();
+      const st = store.get();
+      const { ds } = store.data();
+      const files = buildFormXlsx(ds, { keys: st.ticks ? new Set(st.ticks) : null, unit: st.unit, unitLabel });
+      const zip = new JSZip();
+      for (const [path, xml] of Object.entries(files)) zip.file(path, xml);
+      const blob = await zip.generateAsync({ type: 'blob', mimeType: XLSX_MIME, compression: 'DEFLATE' });
+      download(blob, `${safeName(ds.company || 'BCTC')} - Form chuan hoa 2026.xlsx`);
+    } catch (e) { toast(e.message); }
+    finally { btn.disabled = false; }
+  } }, 'Tải Form chuẩn hóa 2026 (.xlsx)');
   return h('div', { class: 'cardx' },
-    h('h3', {}, 'Bảng chuẩn hoá mẫu 2026'),
-    h('p', {}, `${n} dòng đang được tick, mỗi kỳ một cột, đơn vị theo ô chọn ở trên. Dùng để dán vào model riêng của bạn.`),
+    h('h3', {}, 'Form chuẩn hóa 2026'),
+    h('p', {}, `File Excel theo mẫu Thông tư 99/2025: trang Tổng quan + ba báo cáo, mỗi kỳ một cột, đơn vị ${unitLabel}. Gồm ${n} dòng đang tick ở bảng trên. BCTC mẫu cũ (năm 2025 trở về trước) đã được quy đổi sang mẫu mới.`),
     btn);
 }
 
@@ -131,7 +126,7 @@ function sessionCard(store) {
     } catch (e) { toast(e.message); }
   });
   return h('div', { class: 'cardx' },
-    h('h3', {}, 'Phiên làm việc'),
+    h('h3', {}, 'Phiên làm việc (.json)'),
     h('p', {}, 'Lưu toàn bộ số đã trích + số sửa tay ra file .json để làm tiếp lần sau hoặc gửi cho người khác, không tốn thêm lượt AI. File không chứa thông tin đăng nhập.'),
     h('div', { class: 'row' },
       h('button', { class: 'btn ghost', style: { flex: '0 0 auto' }, disabled: !store.get().sources.length, onclick: () => {

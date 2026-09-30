@@ -5,11 +5,17 @@ import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
 import { loadPdfLib } from './libs.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
+const V = (p) => new URL(`../vendor/pdfjs/${p}`, import.meta.url).href;
 
 export async function openPdf(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   // pdf.js giữ quyền sở hữu buffer truyền vào → đưa bản sao, giữ bản gốc để cắt trang.
-  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+  // wasm: giải mã ảnh JPEG 2000 / JBIG2 của bản scan (thiếu thì trang scan hiện trắng);
+  // cmaps + standard_fonts: đọc đúng chữ của PDF dùng font CID / font chuẩn không nhúng.
+  const doc = await pdfjs.getDocument({
+    data: bytes.slice(), isEvalSupported: false,
+    wasmUrl: V('wasm/'), cMapUrl: V('cmaps/'), cMapPacked: true, standardFontDataUrl: V('standard_fonts/'), iccUrl: V('iccs/'),
+  }).promise;
   return { doc, bytes, numPages: doc.numPages };
 }
 
@@ -25,7 +31,10 @@ export async function pageTexts(doc, onProgress) {
   return out;
 }
 
-async function render(doc, n, width) {
+/** Vẽ một trang ra canvas. `hold` (tuỳ chọn) nhận `hold.task` để người gọi huỷ lần vẽ đã lỗi thời. */
+export async function renderPage(doc, n, width, hold) { return render(doc, n, width, hold); }
+
+async function render(doc, n, width, hold) {
   const page = await doc.getPage(n);
   const vp1 = page.getViewport({ scale: 1 });
   const vp = page.getViewport({ scale: width / vp1.width });
@@ -33,8 +42,9 @@ async function render(doc, n, width) {
   canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  await page.render({ canvasContext: ctx, viewport: vp }).promise;
-  page.cleanup();
+  const task = page.render({ canvasContext: ctx, viewport: vp });
+  if (hold) hold.task = task;
+  try { await task.promise; } catch (e) { canvas.width = 0; canvas.height = 0; throw e; } finally { page.cleanup(); }
   return canvas;
 }
 
