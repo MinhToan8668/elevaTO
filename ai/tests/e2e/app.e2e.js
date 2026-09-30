@@ -120,8 +120,8 @@ async function newPage({ configured = true } = {}) {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
-  // Trang thật để trống link máy chủ (js/config.js) → test gắn link giả.
-  if (configured) await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${API}';` }));
+  // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
+  await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   return { page, errors, context };
 }
