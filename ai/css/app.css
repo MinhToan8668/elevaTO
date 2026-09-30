@@ -217,6 +217,21 @@ details.pmap[open] > summary{margin-bottom:12px}
 .form-card.locked b{color:var(--muted)}
 .notes-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px 18px;padding:16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2)}
 
+/* ── Biểu đồ & chỉ số ─────────────────── */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin:14px 0}
+.chart{margin:0;padding:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.chart figcaption{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.chart figcaption b{color:var(--strong);font-size:14px}
+.chart .cv{display:block;width:100%;height:auto}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .ax0{stroke:var(--line-3);stroke-width:1.5}
+.chart .lbl{fill:var(--muted);font-size:11px}
+.legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend li{display:flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+table.ratios td small{display:block;font-size:11.5px;margin-top:2px}
+table.ratios td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
 /* ── Tiến độ ──────────────────────────── */
 .prog{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
 .prog li{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:9px;background:var(--surface-2)}

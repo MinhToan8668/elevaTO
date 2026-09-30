@@ -237,6 +237,16 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   const pills = await page.locator('#review .sum .pc').allInnerTexts();
   assert.deepEqual(pills, ['Năm 2024: ✓ khớp', 'Năm 2025: ✓ khớp'], 'số AI chép khớp mọi dòng tổng');
   await shot(page, '2-ra-soat');
+  // Tab Biểu đồ & chỉ số: vẽ SVG từ số đã trích, có bảng chỉ số
+  await page.click('#review [role=tab]:has-text("Biểu đồ")');
+  await page.waitForSelector('#tabpanel .chart svg.cv rect');
+  const titles = await page.locator('#tabpanel .chart figcaption b').allInnerTexts();
+  assert.ok(titles.includes('Doanh thu & lợi nhuận') && titles.includes('Cơ cấu tài sản'), titles.join());
+  assert.ok((await page.locator('#tabpanel table.ratios tbody tr').count()) >= 8);
+  assert.match(await page.locator('#tabpanel table.ratios tbody tr:has-text("Nợ / Vốn chủ") td.num').last().innerText(), /lần$/);
+  await shot(page, '2b-bieu-do');
+  await page.click('#review [role=tab]:has-text("Tình hình tài chính")');
+
   const cell = page.locator('td.v[data-k="BS:111"][data-p="FY2025"]');
   assert.equal(await cell.innerText(), '60.000');                         // triệu đồng
 
