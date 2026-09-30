@@ -25,6 +25,8 @@ export async function extractJob(job, io, opts = {}) {
 
   // 1. Ba báo cáo chính, song song. CĐKT xong trước để biết mẫu TT200/TT99 cho KQKD.
   const results = {};
+  const trong = [];                       // bảng AI xem mà không thấy — để đoán xem các trang đó thật ra là gì
+  let goiY = '';                          // lời chỉ dẫn khi không đọc nổi bảng nào (giao diện hiện thay lỗi khô khan)
   const runSt = async (st) => {
     const pages = pagesFor(st);
     if (!pages.length) { warnings.push(`Không tìm thấy trang ${NAME[st]} — chỉnh lại ở bước chọn trang nếu file có bảng này.`); return; }
@@ -32,6 +34,7 @@ export async function extractJob(job, io, opts = {}) {
     try {
       const res = await statementWithSplit(st, pages, io, step);
       if (!(res?.items || []).length) {
+        trong.push(st);
         warnings.push(`${NAME[st]}: không thấy bảng này trong các trang đã chọn (trang ${list(pages)}).`);
         step({ key: st, state: 'fail', error: 'không thấy bảng trong các trang đã chọn' });
         return;
@@ -45,6 +48,25 @@ export async function extractJob(job, io, opts = {}) {
     }
   };
   await Promise.all(STATEMENTS.map(runSt));
+
+  // Không đọc được bảng nào: thường là tick nhầm trang. Tốn thêm 1 lượt hỏi AI các trang đó là gì,
+  // rồi chỉ luôn trang nào có bảng — đỡ hơn nhiều so với bắt người dùng tự dò trong file mấy chục trang.
+  if (trong.length === STATEMENTS.length && io.images) {
+    const xem = [...new Set([...shared, ...STATEMENTS.flatMap(pagesOf)])].sort((a, b) => a - b).slice(0, 12);
+    if (xem.length) {
+      step({ key: 'doan', state: 'run', label: `Xem lại trang ${list(xem)} là trang gì` });
+      try {
+        const { pageMapTask } = await import('./prompts.js');
+        const task = pageMapTask(xem);
+        const res = await io.ai.json({ parts: [...await io.images(xem), { text: task.prompt }], schema: task.schema });
+        goiY = moTaTrang(Array.isArray(res) ? res : [], xem);
+        warnings.push(goiY);
+        step({ key: 'doan', state: 'done' });
+      } catch (e) {
+        step({ key: 'doan', state: 'fail', error: e.message });
+      }
+    }
+  }
 
   const statements = {}, units = {};
   let bsRegime;
@@ -83,10 +105,24 @@ export async function extractJob(job, io, opts = {}) {
       step({ key: g, state: 'fail', error: e.message });
     }
   }
-  return { file: job.name, company: meta0.ten_cong_ty || '', meta, statements, units, notes, warnings, pages: Object.fromEntries(STATEMENTS.map((s) => [s, pagesOf(s)])) };
+  return { file: job.name, company: meta0.ten_cong_ty || '', meta, statements, units, notes, warnings, goiY,
+    pages: Object.fromEntries(STATEMENTS.map((s) => [s, pagesOf(s)])) };
 }
 
 const NAME = { BS: 'Tình hình tài chính', IS: 'Kết quả kinh doanh', CF: 'Lưu chuyển tiền tệ' };
+const TEN_TRANG = { ...NAME, NOTES: 'Thuyết minh', OTHER: 'bìa / mục lục / báo cáo kiểm toán' };
+
+/** Lời nhắn: các trang đã tick thật ra là trang gì, và nên tick lại trang nào. */
+function moTaTrang(ds, xem) {
+  const co = new Map();
+  for (const r of ds) { const p = Number(r.trang); if (xem.includes(p) && TEN_TRANG[r.loai]) co.set(p, r.loai); }
+  if (!co.size) return `AI xem trang ${list(xem)} nhưng không nhận ra trang nào là báo cáo tài chính. Mở xem trang lớn ở bước 2 để tick đúng trang có bảng số, hoặc kiểm tra xem bản scan có bị mờ quá không.`;
+  const gom = (loai) => [...co.entries()].filter(([, t]) => t === loai).map(([p]) => p).sort((a, b) => a - b);
+  const dong = Object.keys(TEN_TRANG).map((t) => { const p = gom(t); return p.length ? `trang ${list(p)}: ${TEN_TRANG[t]}` : ''; }).filter(Boolean);
+  const bang = STATEMENTS.flatMap(gom);
+  return `Các trang đã tick thật ra là — ${dong.join('; ')}.` +
+    (bang.length ? ` Tick lại đúng trang có bảng rồi trích xuất lại.` : ` Ba báo cáo chính nằm ở trang khác — mở xem trang lớn ở bước 2 để tìm và tick lại.`);
+}
 
 /** Gọi AI một bảng; quá 60 giây / bị cắt → CĐKT chia tài sản / nguồn vốn, bảng khác chia đôi số trang. */
 async function statementWithSplit(st, pages, io, step) {

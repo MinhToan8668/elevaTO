@@ -199,6 +199,31 @@ test('gợi ý trang theo form: phổ thông chỉ 3 bảng chính, tối đa 10
   assert.deepEqual(suggestPicks(text), [2, 3, 4, 5, 6, 7], 'form elevaTO: kèm thuyết minh');
 });
 
+test('không bảng nào đọc được → tốn thêm 1 lượt hỏi AI xem các trang đó là gì, nói rõ cho người dùng tick lại', async () => {
+  const goi = [];
+  const io = makeIO({ 'TÌNH HÌNH': () => ({ meta: {}, items: [] }), 'KẾT QUẢ': () => ({ meta: {}, items: [] }), 'LƯU CHUYỂN': () => ({ meta: {}, items: [] }) });
+  io.images = async (pages) => { goi.push(pages); return pages.map(() => ({ inlineData: {} })); };
+  const truoc = io.ai.json;
+  io.ai.json = async (req) => (/lần lượt là các trang số/.test(req.parts.at(-1).text)
+    ? [{ trang: 7, loai: 'OTHER' }, { trang: 8, loai: 'NOTES', nhom: ['debt'] }, { trang: 9, loai: 'NOTES' }, { trang: 10, loai: 'BS' }]
+    : truoc(req));
+  const r = await extractJob({ name: 'scan.pdf', types: Array(12).fill('UNKNOWN'), notes: {}, shared: [7, 8, 9, 10, 11] }, io, { noteGroups: [] });
+  assert.deepEqual(goi, [[7, 8, 9, 10, 11]], 'chỉ hỏi 1 lần cho cả file');
+  const w = r.warnings.join('\n');
+  assert.match(w, /trang 10.*Tình hình tài chính|Tình hình tài chính.*trang 10/i, w);
+  assert.match(w, /thuyết minh.*8|8.*thuyết minh/i, w);
+  assert.match(w, /tick lại|chọn lại/i, w);
+  assert.equal(r.goiY, r.warnings.at(-1), 'lời chỉ dẫn trả riêng để giao diện hiện được khi không đọc nổi bảng nào');
+});
+
+test('đọc được ít nhất một bảng → không tốn thêm lượt hỏi trang', async () => {
+  const io = makeIO({ 'LƯU CHUYỂN': () => ({ meta: {}, items: [] }) });
+  io.images = async () => { throw new Error('không được gọi'); };
+  const r = await extractJob({ name: 'x.pdf', ...job }, io, { noteGroups: [] });
+  assert.ok(r.statements.BS);
+  assert.match(r.warnings.join('\n'), /Lưu chuyển tiền tệ: không thấy/);
+});
+
 test('gợi ý trang để tick sẵn: PDF có chữ → các trang bảng + thuyết minh máy nhận ra; bản scan → không tick; ảnh chụp → tick hết', async () => {
   const { suggestPicks } = await import('../js/core/pipeline.js');
   assert.deepEqual(suggestPicks({ kind: 'pdf', scanned: false, types: ['OTHER', 'BS', 'BS', 'IS', 'CF', 'NOTES', 'NOTES', 'NOTES'], notes: { debt: [7], segments: [6] } }), [2, 3, 4, 5, 6, 7]);
