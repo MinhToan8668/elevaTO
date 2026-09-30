@@ -54,7 +54,8 @@ function renderRun(s, store, ctx) {
     h('div', { style: { flex: '0 0 auto', display: 'flex', gap: '10px' } }, runBtn, stopBtn),
     h('p', { class: 'priv', style: { flex: '1 1 300px', margin: 0 } }, hint,
       noTable.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, `${noTable.length} file chưa tick trang nào`) : null,
-      tooMany.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, `${FORMS[form].label}: tối đa ${FORMS[form].maxPages} trang mỗi file — bỏ bớt trang ở bước 2`) : null,
+      tooMany.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } },
+        `${FORMS[form].label} đọc tối đa ${FORMS[form].maxPages} trang mỗi file — bỏ bớt trang ở bước 2 cho: ${tooMany.map((j) => j.name).join(', ')}`) : null,
       left !== null && calls > left ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, 'không đủ lượt hôm nay') : null)));
 }
 

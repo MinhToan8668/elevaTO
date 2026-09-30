@@ -44,6 +44,7 @@ var AI_MODEL_TTL    = 6 * 3600;            // nhớ danh sách model 6 giờ
 var AI_SO_MODEL     = 5;                   // chuỗi dự phòng: tối đa bấy nhiêu model (mỗi model có hạn mức miễn phí riêng)
 var AI_THU_TOI_DA   = 5;                   // mỗi lượt của người dùng thử Gemini tối đa bấy nhiêu lần (đổi key / đổi model)
 var AI_NGHI_QUA_TAI = 300;                 // model báo quá tải (503) thì nghỉ bấy nhiêu giây
+var AI_QUA_TAI_LAN  = 2;                   // phải lỗi bấy nhiêu lần mới cho model nghỉ (một người dùng không làm cả hệ thống ngừng)
 var PHIEN_NGAY      = 30;                  // phiên đăng nhập sống bao nhiêu ngày
 var PHIEN_TOI_DA    = 3;                   // mỗi tài khoản đăng nhập tối đa mấy máy cùng lúc
 var DN_SAI_TOI_DA   = 5;                   // đăng nhập sai bấy nhiêu lần trong 10 phút thì khoá tạm
@@ -307,24 +308,25 @@ function hanNgay(tk) {
 function laGV(tk) { return vaiTro(tk) === 'gv'; }
 function hetLuot(tk) { return loi('quota', 'Hôm nay đã dùng hết ' + hanNgay(tk) + ' lượt AI — mai dùng tiếp, hoặc liên hệ elevaTO xin thêm'); }
 
-/** Giữ 1 lượt TRƯỚC khi gọi Gemini (trong khoá, nên gọi song song không vượt hạn mức). */
+/** Giữ 1 lượt TRƯỚC khi gọi Gemini (trong khoá, nên gọi song song không vượt hạn mức). Trả khoá bộ đếm để trả lại đúng ngày đó. */
 function giuLuot(tk) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var k = khoaLuot(tk), used = Number(props().getProperty(k) || 0);
-    if (!laGV(tk) && used >= hanNgay(tk)) return false;
+    if (!laGV(tk) && used >= hanNgay(tk)) return '';
     props().setProperty(k, String(used + 1));
     var all = props().getProperties();                                       // dọn bộ đếm các ngày trước
     for (var p in all) if (p.indexOf('Q_' + tk.ma + '_') === 0 && p !== k) props().deleteProperty(p);
-    return true;
+    return k;
   } finally { lock.releaseLock(); }
 }
-function traLuot(tk) {
+/** Trả lại lượt vừa giữ. `k` là khoá lúc giữ: lượt gọi vắt qua nửa đêm vẫn trả đúng bộ đếm của hôm qua. */
+function traLuot(k) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var k = khoaLuot(tk), used = Number(props().getProperty(k) || 0);
+    var used = Number(props().getProperty(k) || 0);
     if (used > 0) props().setProperty(k, String(used - 1));
   } finally { lock.releaseLock(); }
 }
@@ -360,6 +362,12 @@ function giayNghi(giay) { return Math.max(5, Math.min(giay, 21600)); }
 function keyNghi(k, giay, model) { CacheService.getScriptCache().put(khoaNghi(k, model), '1', giayNghi(giay)); }
 function keyDangNghi(k, model) { var c = CacheService.getScriptCache(); return !!c.get(khoaNghi(k)) || (!!model && !!c.get(khoaNghi(k, model))); }
 function keyRanh(model) { return dsKey().filter(function (k) { return !keyDangNghi(k, model); }); }
+/** Đếm lỗi quá tải; đủ AI_QUA_TAI_LAN lần trong 2 phút mới cho model nghỉ. */
+function modelLoi(model) {
+  var c = CacheService.getScriptCache(), k = 'qtn_' + model, n = Number(c.get(k) || 0) + 1;
+  if (n >= AI_QUA_TAI_LAN) { c.remove(k); modelNghi(model, AI_NGHI_QUA_TAI); return; }
+  c.put(k, String(n), 120);
+}
 function modelNghi(model, giay) { CacheService.getScriptCache().put('qt_' + model, '1', giayNghi(giay)); }
 function modelDangNghi(model) { return !!CacheService.getScriptCache().get('qt_' + model); }
 
@@ -370,7 +378,7 @@ function danhSachModel() {
   var key = keyRanh()[0];
   if (!key) return [];
   var res = UrlFetchApp.fetch(GEMINI_API + '?pageSize=200', { headers: { 'x-goog-api-key': key }, muteHttpExceptions: true });
-  if (res.getResponseCode() !== 200) return [];
+  if (res.getResponseCode() !== 200) { cache.put('ai_models', '[]', 30); return []; }   // hỏng thì nhớ 30 giây, đỡ hỏi dồn
   var list = (JSON.parse(res.getContentText()).models || []).filter(function (m) {
     var id = String(m.name || '').replace(/^models\//, '');
     return /^gemini-[\w.-]+$/.test(id) && !/(tts|embed|image|audio|live|veo|imagen|robotics|computer-use|transcribe|omni|customtools)/.test(id) &&
@@ -412,9 +420,10 @@ function goiGemini(tk, b) {
 
   var cho = giuNhip(tk);
   if (cho) return loi('busy', 'Hệ thống đang đông, chờ ' + cho + ' giây', { retryAfter: cho });
-  if (!giuLuot(tk)) return hetLuot(tk);
+  var khoa = giuLuot(tk);
+  if (!khoa) return hetLuot(tk);
   var r = goiLanLuot(models, body);
-  if (r.traLai) traLuot(tk);                           // chỉ trả lượt khi Gemini chưa làm gì
+  if (r.traLai) traLuot(khoa);                         // chỉ trả lượt khi Gemini chưa làm gì
   return r.kq;
 }
 
@@ -433,7 +442,7 @@ function goiLanLuot(models, body) {
       if (dem++ >= AI_THU_TOI_DA) return hetCach(cuoi);
       var r = goiMotKey(ranh[i], body, keys[j]);
       if (r.nghi) { keyNghi(keys[j], r.nghi, r.moiModel ? null : ranh[i]); cuoi = r; continue; }
-      if (r.quaTai) { modelNghi(ranh[i], AI_NGHI_QUA_TAI); cuoi = r; break; }
+      if (r.boModel) { if (r.quaTai) modelLoi(ranh[i]); cuoi = r; break; }   // model này không xong: sang model sau
       return r;
     }
   }
@@ -458,12 +467,15 @@ function goiMotKey(model, body, key) {
   var code = res.getResponseCode(), data = {};
   try { data = JSON.parse(res.getContentText()); } catch (e) {}
   if (code === 429) { var s = hoiLai(data) || 60; return { nghi: s, cho: s }; }
-  if (code === 401 || code === 403 || (code === 400 && /API_KEY|API key/i.test(JSON.stringify(data.error || {})))) {
+  var err = data.error || {};
+  // Model này không dùng được (tên model sai / chưa mở) → bỏ model, giữ key.
+  if ((code === 404 || code === 403) && String(err.message || '').indexOf(model) >= 0) return { boModel: true, cho: 10 };
+  if (code === 401 || code === 403 || (code === 400 && keyHong(err))) {
     console.error('Key Gemini hỏng / bị chặn (HTTP ' + code + ')');
     baoMotLan('key_hong', 3600, '⚠️ <b>Key Gemini bị từ chối</b> (HTTP ' + code + ') — kiểm tra lại key trong Google AI Studio. Máy chủ đang dùng tạm key khác nếu có.');
     return { nghi: 3600, cho: 30, moiModel: true };
   }
-  if (code === 503 || code === 500 || code === 504) return { quaTai: true, cho: hoiLai(data) || 10 };
+  if (code === 503 || code === 500 || code === 504) return { boModel: true, quaTai: true, cho: hoiLai(data) || 10 };
   if (code !== 200) {
     var st = data.error && data.error.status ? ' (' + String(data.error.status).replace(/[^A-Z_]/g, '') + ')' : '';
     return { kq: loi('upstream', 'Gemini báo lỗi ' + code + st) };
@@ -476,6 +488,13 @@ function goiMotKey(model, body, key) {
   var text = ((cand.content && cand.content.parts) || []).filter(function (p) { return p.text && !p.thought; })
     .map(function (p) { return p.text; }).join('');
   return { kq: ok({ text: text, finishReason: fr, tokens: (data.usageMetadata || {}).totalTokenCount || 0 }) };
+}
+
+/** Key thật sự hỏng: Gemini nói rõ API_KEY_INVALID / API_KEY_SERVICE_BLOCKED, không đoán theo chữ trong yêu cầu. */
+function keyHong(err) {
+  var d = err.details || [];
+  for (var i = 0; i < d.length; i++) if (/^API_KEY_/.test(String(d[i].reason || ''))) return true;
+  return /^(api key not valid|api_key_invalid)/i.test(String(err.message || ''));
 }
 
 function hoiLai(data) {

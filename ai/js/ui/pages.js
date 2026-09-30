@@ -12,13 +12,30 @@ const lastClick = new Map();           // jobId → trang tick gần nhất (Shi
 
 export function initPages(store, ctx) {
   ctx.forgetThumbs = (id) => { for (const k of thumbCache.keys()) if (k.startsWith(`${id}:`)) thumbCache.delete(k); panels.delete(id); };
-  ctx.setPicked = (id, picked) => {
+  ctx.setPicked = (id, picked, goiY) => {
     const j = store.get().jobs.find((x) => x.id === id);
     if (!j) return;
     const sorted = [...new Set(picked)].filter((p) => p >= 1 && p <= j.numPages).sort((a, b) => a - b);
-    ctx.patchJob(id, { picked: sorted, status: j.status === 'done' ? 'ready' : j.status });
+    ctx.patchJob(id, { picked: sorted, goiY: goiY ? sorted : j.goiY, status: j.status === 'done' ? 'ready' : j.status });
   };
-  watch(store, ['jobs', 'running', 'preset', 'user'], (s) => render(s, store, ctx));
+  // theoForm sửa trang đã chọn → store đổi → watch chạy lại và vẽ với state mới; lần này bỏ qua để không vẽ bằng state cũ.
+  watch(store, ['jobs', 'running', 'preset', 'user'], (s) => { if (!theoForm(s, ctx)) render(s, store, ctx); });
+}
+
+/** Đổi form (hoặc được xếp lên học viên): file nào còn nguyên trang gợi ý thì gợi ý lại theo form mới. Trả true nếu có sửa. */
+function theoForm(s, ctx) {
+  if (s.running) return false;
+  const f = FORMS[formOf(s)], opts = { notes: f.notes.length > 0, max: f.maxPages };
+  let doi = false;
+  for (const j of s.jobs) {
+    if (j.kind === 'xls' || !j.types || j.status === 'reading') continue;
+    if (!j.goiY || String(j.goiY) !== String(j.picked || [])) continue;              // người dùng đã tự tick → giữ nguyên
+    const moi = suggestPicks(j, opts);
+    if (String(moi) === String(j.picked || [])) continue;
+    ctx.setPicked(j.id, moi, true);
+    doi = true;
+  }
+  return doi;
 }
 
 const sigOf = (j, s) => JSON.stringify([j.numPages, j.scanned, j.status === 'reading', s.running, j.types?.length, formOf(s)]);
@@ -82,11 +99,14 @@ function panel(j0, store, ctx, isOpen) {
       chk.setAttribute('aria-label', t ? `Chọn trang ${n} (${t})` : `Chọn trang ${n}`);
     });
     count.textContent = `Đã chọn ${set.size}/${j.numPages} trang`;
+    const cut = (j.types?.length || 0) > 0 && suggestPicks(j, { notes: opts.notes, max: Infinity }).length > cap;
     const over = set.size > cap;
     count.classList.toggle('red', over);
     count.classList.toggle('em', !over);
-    warn.hidden = !over;
-    warn.textContent = over ? `${FORMS[form].label} đọc tối đa ${cap} trang mỗi file — bỏ bớt ${set.size - cap} trang.` : '';
+    warn.textContent = over ? `${FORMS[form].label} đọc tối đa ${cap} trang mỗi file — bỏ bớt ${set.size - cap} trang.`
+      : cut ? `Máy nhận ra nhiều hơn ${cap} trang cần lấy nhưng ${FORMS[form].label} chỉ đọc ${cap} trang — tick lại cho đúng trang cần, hoặc tách file.` : '';
+    warn.hidden = !over && !cut;
+    warn.className = over ? 'msg err' : 'msg warn';
     const auto = ['BS', 'IS', 'CF'].map((t) => { const p = j.types.map((x, i) => (x === t ? i + 1 : 0)).filter(Boolean); return p.length ? `${SHORT[t]} ${pagesText(p)}` : ''; }).filter(Boolean);
     found.textContent = j.scanned ? (j.kind === 'img' ? 'Ảnh chụp — AI sẽ tự nhận bảng' : 'Bản scan — tick trang, AI sẽ tự nhận bảng') : auto.length ? `Máy nhận ra: ${auto.join(' · ')}` : '';
   };

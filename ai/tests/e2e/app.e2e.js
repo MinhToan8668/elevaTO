@@ -217,7 +217,7 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   assert.equal(await page.locator('#pickBox .form-card[data-form="model"]').isDisabled(), true, 'form elevaTO khoá với tài khoản thường');
   assert.equal(await page.locator('#pickBox .form-card[data-form="basic"]').getAttribute('aria-pressed'), 'true');
 
-  // Nâng lên học viên → chọn được form riêng elevaTO, trang thuyết minh được tick thêm
+  // Nâng lên học viên → chọn được form riêng elevaTO; file chưa tự tick thì gợi ý lại theo form mới
   accounts.get('hv@elevato.vn').vaitro = 'hv';
   await page.reload();
   await page.waitForSelector('#pickBox .form-card[data-form="model"]:not([disabled])');
@@ -226,6 +226,18 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   assert.equal(await page.locator('#pickBox .form-card[data-form="model"]').getAttribute('aria-pressed'), 'true', 'học viên mặc định form elevaTO');
   assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true],
     'form elevaTO: tick thêm trang thuyết minh');
+  await page.click('#pickBox .form-card[data-form="basic"]');
+  await page.waitForFunction(() => !document.querySelectorAll('#pageMaps .tile')[4].classList.contains('on'));
+  await page.click('#pickBox .form-card[data-form="model"]');
+  await page.waitForFunction(() => document.querySelectorAll('#pageMaps .tile')[4].classList.contains('on'));
+  await page.locator('#pageMaps .tile').first().locator('input[type=checkbox]').check();    // tự tick → giữ nguyên lựa chọn
+  await page.click('#pickBox .form-card[data-form="basic"]');
+  await page.waitForTimeout(150);
+  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [true, true, true, true, true],
+    'đã tự tick thì đổi form không ghi đè');
+  await page.click('#pickBox .form-card[data-form="model"]');
+  await page.locator('#pageMaps .tile').first().locator('input[type=checkbox]').uncheck();   // bỏ tick trang bìa, về đúng gợi ý
+  await page.waitForFunction(() => !document.querySelectorAll('#pageMaps .tile')[0].classList.contains('on'));
 
   await page.click('#runBtn');
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });

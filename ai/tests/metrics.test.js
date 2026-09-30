@@ -78,6 +78,43 @@ test('kỳ giữa niên độ: ROA / ROE / vòng quay quy về một năm để 
   assert.equal(val('ros', 1), (120 / 1600) * 100);
 });
 
+test('LCTT lập theo phương pháp trực tiếp (mã CF:T20…) vẫn vẽ được biểu đồ dòng tiền', () => {
+  const m = buildMetrics({ periods: [P('FY2025', 2025)], values: { FY2025: { 'CF:T20': 70, 'CF:T30': -20, 'CF:T40': 10, 'IS:10': 700 } } });
+  const cf = m.charts.find((c) => c.id === 'cashflow');
+  assert.deepEqual(cf.series.map((x) => x.values), [[70], [-20], [10]]);
+  assert.equal(m.ratios.find((r) => r.key === 'cfoRevenue').values[0], 10);
+});
+
+test('số dư bình quân: kỳ giữa niên độ lấy số đầu năm (cột FY năm trước), kỳ năm chỉ ghép với đúng năm liền trước', () => {
+  const vals = { 'BS:400': 1000, 'BS:280': 2000, 'IS:60': 200, 'IS:10': 3000 };
+  // Q3 sau Q2: số đầu kỳ phải là 31/12 năm trước, không phải Q2
+  const q = buildMetrics({ periods: [P('FY2025', 2025), { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 }, { id: 'Q3-2026', year: 2026, months: 9, endMonth: 9 }],
+    values: { FY2025: vals, 'Q2-2026': { ...vals, 'BS:400': 1100, 'IS:60': 120 }, 'Q3-2026': { ...vals, 'BS:400': 1200, 'IS:60': 180 } } });
+  const roe = q.ratios.find((r) => r.key === 'roe').values;
+  assert.equal(roe[2].toFixed(2), ((180 * (12 / 9)) / ((1000 + 1200) / 2) * 100).toFixed(2), 'Q3 ghép với FY2025');
+  // Thiếu năm ở giữa: không bịa số bình quân
+  const gap = buildMetrics({ periods: [P('FY2022', 2022), P('FY2024', 2024)], values: { FY2022: vals, FY2024: vals } });
+  assert.equal(gap.ratios.find((r) => r.key === 'roe').values[1], null);
+});
+
+test('vốn chủ sở hữu âm → không tính ROE / nợ trên vốn chủ; biểu đồ cột chồng báo có phần âm', () => {
+  const m = buildMetrics({ periods: [P('FY2025', 2025)], values: { FY2025: { 'BS:400': -50, 'BS:300': 300, 'BS:310': 300, 'BS:280': 250, 'IS:60': -80, 'IS:10': 500 } } });
+  assert.equal(m.ratios.find((r) => r.key === 'roe').values[0], null);
+  assert.equal(m.ratios.find((r) => r.key === 'de').values[0], null);
+  const cap = m.charts.find((c) => c.id === 'capital');
+  assert.equal(cap.note, 'Có khoản âm (vốn chủ sở hữu âm) nên không vẽ được thành cột — xem bảng số.');
+});
+
+test('nhiều kỳ bất thường (file phiên bị sửa) → chỉ vẽ 12 kỳ gần nhất', () => {
+  const periods = Array.from({ length: 30 }, (_, i) => ({ id: `FY${2000 + i}`, year: 2000 + i, months: 12, endMonth: 12 }));
+  const values = Object.fromEntries(periods.map((p, i) => [p.id, { 'IS:10': 100 + i, 'BS:280': 1000 }]));
+  const m = buildMetrics({ periods, values });
+  assert.equal(m.periods.length, 12);
+  assert.equal(m.periods.at(-1).label, 'Năm 2029');
+  assert.equal(m.charts[0].series[0].values.length, 12);
+  assert.equal(m.ratios[0].values.length, 12);
+});
+
 test('kỳ quý: nhãn theo số tháng; không có kỳ nào thì không có biểu đồ', () => {
   const q = buildMetrics({ periods: [{ id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 }], values: { 'Q2-2026': { 'IS:10': 50, 'IS:20': 10, 'IS:60': 5 } } });
   assert.deepEqual(q.periods.map((p) => p.label), ['6T/2026']);

@@ -125,6 +125,7 @@ const list = (pages) => {
   }
   return out.join(', ');
 };
+const MAX_TRANG = 200;                 // chặn trên số trang một file gửi cho AI (giao diện còn giới hạn chặt hơn theo form)
 const MAX_NOTE_PAGES = 8;              // một nhóm thuyết minh đọc tối đa bấy nhiêu trang trong một lượt
 
 /**
@@ -165,8 +166,8 @@ const KNOWN = ['BS', 'IS', 'CF', 'NOTES'];
  * @returns { types, notes, aiCalls, warnings }
  */
 export async function planPicked(job, picked, io, { batch = 12, onStep, notes: wantNotes = true } = {}) {
-  const n = job.numPages || job.types.length;
-  const sel = [...new Set(picked)].filter((p) => p >= 1 && p <= n).sort((a, b) => a - b);
+  const n = Math.min(job.numPages || job.types.length, MAX_TRANG);
+  const sel = [...new Set(picked)].filter((p) => p >= 1 && p <= n).sort((a, b) => a - b).slice(0, MAX_TRANG);
   const types = Array(n).fill('OTHER');
   const notes = Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []]));
   const grouped = new Set();

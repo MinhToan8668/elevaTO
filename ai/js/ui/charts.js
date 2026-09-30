@@ -33,7 +33,9 @@ function card(c, periods, unit, unitLabel) {
   return h('figure', { class: 'chart' },
     h('figcaption', {}, h('b', {}, c.title), h('span', { class: 'priv' }, money ? unitLabel : '%')),
     draw(c, periods, money ? unit : 1, money),
-    h('ul', { class: 'legend' }, c.series.map((ser, i) => h('li', {}, h('i', { style: { background: COLORS[i % COLORS.length] } }), ser.name))));
+    c.note ? h('p', { class: 'msg warn' }, c.note) : null,
+    h('ul', { class: 'legend' }, c.series.map((ser, i) => h('li', {}, h('i', { style: { background: COLORS[i % COLORS.length] } }), ser.name))),
+    dataTable(c, periods, money ? unit : 1, money ? unitLabel : '%'));
 }
 
 // ─── Khung, trục ───────────────────────────────────────────
@@ -51,22 +53,36 @@ function scale(values) {
   const step = niceStep(hi - lo);
   hi = Math.ceil(hi / step) * step; lo = Math.floor(lo / step) * step;
   const ticks = [];
-  for (let v = lo; v <= hi + step / 1e6; v += step) ticks.push(v);
-  return { lo, hi, ticks, y: (v) => PAD.t + PLOT.h - ((v - lo) / (hi - lo)) * PLOT.h };
+  for (let i = 0; lo + i * step <= hi + step / 1e6; i++) ticks.push(lo + i * step);   // cộng dồn sẽ lệch, mốc 0 mất nét đậm
+  return { lo, hi, step, ticks, y: (v) => PAD.t + PLOT.h - ((v - lo) / (hi - lo)) * PLOT.h };
 }
 
 function frame(sc, periods, unit) {
+  // Thang chia nhỏ hơn 1 đơn vị (ví dụ biên lợi nhuận 0–2%) thì ghi thêm số lẻ, không làm tròn thành 1, 1, 2, 2.
+  const le = sc.step / unit < 1 ? 1 : 0;
+  const nhan = (v) => (v === 0 ? '0' : le ? (v / unit).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : fmt(v, unit));
   const grid = sc.ticks.map((v) => s('g', {},
-    s('line', { x1: PAD.l, x2: W - PAD.r, y1: sc.y(v), y2: sc.y(v), class: v === 0 ? 'ax0' : 'grid' }),
-    s('text', { x: PAD.l - 8, y: sc.y(v) + 4, class: 'lbl', 'text-anchor': 'end' }, fmt(v, unit) || '0')));
+    s('line', { x1: PAD.l, x2: W - PAD.r, y1: sc.y(v), y2: sc.y(v), class: Math.abs(v) < sc.step / 1e6 ? 'ax0' : 'grid' }),
+    s('text', { x: PAD.l - 8, y: sc.y(v) + 4, class: 'lbl', 'text-anchor': 'end' }, nhan(v))));
   const xs = periods.map((p, i) => s('text', { x: PAD.l + PLOT.w * ((i + 0.5) / periods.length), y: H - 10, class: 'lbl', 'text-anchor': 'middle' }, p.label));
   return [grid, xs];
 }
 
-const svg = (...kids) => s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'cv', role: 'img', preserveAspectRatio: 'xMidYMid meet' }, kids);
+const svg = (title, ...kids) => s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'cv', role: 'img', preserveAspectRatio: 'xMidYMid meet' },
+  s('title', {}, title), kids);
 const band = (i, n) => ({ x: PAD.l + (PLOT.w * i) / n, w: PLOT.w / n });
 
 // ─── Các kiểu biểu đồ ──────────────────────────────────────
+
+/** Bảng số kèm biểu đồ: đọc được bằng trình đọc màn hình, và xem nhanh khi không phân biệt được màu. */
+function dataTable(c, periods, unit, unitLabel) {
+  const val = (v) => (v === null ? '—' : unitLabel === '%' ? `${v.toFixed(1)}%` : fmt(v, unit));
+  return h('details', { class: 'chart-data' },
+    h('summary', {}, `Số của biểu đồ (${unitLabel})`),
+    h('div', { class: 'gridwrap' }, h('table', { class: 'k' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Chỉ tiêu'), periods.map((p) => h('th', { class: 'num' }, p.label)))),
+      h('tbody', {}, c.series.map((ser) => h('tr', {}, h('td', {}, ser.name), ser.values.map((v) => h('td', { class: 'num' }, val(v)))))))));
+}
 
 function barsChart(c, periods, unit, money) {
   const sc = scale(c.series.flatMap((x) => x.values));
@@ -81,7 +97,7 @@ function barsChart(c, periods, unit, money) {
         s('title', {}, `${ser.name} · ${p.label}: ${fmt(v, unit)}${money ? '' : '%'}`));
     });
   });
-  return svg(frame(sc, periods, unit), bars);
+  return svg(`${c.title} theo từng kỳ`, frame(sc, periods, unit), bars);
 }
 
 function stackChart(c, periods, unit, money) {
@@ -100,7 +116,7 @@ function stackChart(c, periods, unit, money) {
         s('title', {}, `${ser.name} · ${p.label}: ${fmt(v, unit)} (${Math.round((v / (totals[i] || 1)) * 100)}%)`));
     });
   });
-  return svg(frame(sc, periods, unit), cols);
+  return svg(`${c.title} theo từng kỳ`, frame(sc, periods, unit), cols);
 }
 
 function linesChart(c, periods, unit, money) {
@@ -116,7 +132,7 @@ function linesChart(c, periods, unit, money) {
         ? s('circle', { cx: cx(i), cy: sc.y(v), r: 4, fill: COLORS[j % COLORS.length] }, s('title', {}, `${ser.name} · ${periods[i].label}: ${fmt(v, unit)}${money ? '' : '%'}`))
         : null)));
   });
-  return svg(frame(sc, periods, unit), lines);
+  return svg(`${c.title} theo từng kỳ`, frame(sc, periods, unit), lines);
 }
 
 // ─── Bảng chỉ số ───────────────────────────────────────────
