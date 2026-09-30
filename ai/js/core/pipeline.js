@@ -32,7 +32,13 @@ export async function extractJob(job, io, opts = {}) {
     if (!pages.length) { warnings.push(`Không tìm thấy trang ${NAME[st]} — chỉnh lại ở bước chọn trang nếu file có bảng này.`); return; }
     step({ key: st, state: 'run', label: `${NAME[st]} (trang ${list(pages)})` });
     try {
-      let res = await statementWithSplit(st, pages, io, step);
+      // Gemini từ chối khuôn JSON (400) → coi như chưa đọc được, để lượt thử lại bên dưới
+      // gọi lại bằng câu lệnh có tả cấu trúc thay cho khuôn.
+      let res = await statementWithSplit(st, pages, io, step).catch((e) => {
+        if (e?.code !== 'schema') throw e;
+        warnings.push(`${NAME[st]}: máy chủ AI từ chối khuôn JSON — đang thử lại bằng cách tả cấu trúc trong câu lệnh.`);
+        return null;
+      });
       // Đọc ra rỗng: có thể do dạng file gửi đi (PDF scan, hoặc PDF có lớp chữ rác) chứ không phải
       // trang sai. Gửi lại đúng trang đó dưới dạng ảnh — tốn thêm 1 lượt, chỉ khi đã hỏng sẵn.
       if (!(res?.items || []).length) {

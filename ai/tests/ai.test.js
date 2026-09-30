@@ -62,10 +62,12 @@ test('máy chủ trả chữ không phải JSON (trang lỗi của Google) → b
   assert.doesNotMatch(e.message, /not json/);
 });
 
-test('model không nhận responseSchema (lỗi 400) → thử lại một lần không kèm schema', async () => {
-  const calls = fakeFetch(LOI('upstream', 'Gemini báo lỗi 400 (INVALIDARGUMENT)'), AI_OK);
-  const r = await gen(createClient({ api: API, token: 't' }));
-  assert.deepEqual(r, { items: [{ c: '100' }] });
-  assert.ok(calls[0].generationConfig.responseSchema, 'lần đầu có schema');
-  assert.equal(calls[1].generationConfig.responseSchema, undefined, 'lần sau bỏ schema');
+test('Gemini từ chối khuôn JSON (400) → báo mã lỗi riêng, KHÔNG âm thầm bỏ khuôn rồi trả về rác', async () => {
+  // Bỏ khuôn mà giữ nguyên câu lệnh thì AI không biết đặt tên trường, trả JSON lạ →
+  // tool tưởng "không thấy bảng". Phải ném mã 'schema' để bên gọi thử lại bằng câu lệnh có tả cấu trúc.
+  const calls = fakeFetch(LOI('upstream', 'Gemini báo lỗi 400 (INVALIDARGUMENT)'));
+  const e = await gen(createClient({ api: API, token: 't' })).then(() => null, (x) => x);
+  assert.equal(e.code, 'schema');
+  assert.match(e.message, /khuôn/i);
+  assert.equal(calls.length, 1, 'không tự gọi lại lần hai');
 });

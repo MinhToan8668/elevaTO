@@ -51,10 +51,10 @@ export function createClient({ api, token, onWait, onAuth } = {}) {
      * @returns       đối tượng JSON AI trả
      */
     async json({ parts, schema, maxOutputTokens = 32768 }) {
-      let busy = 0, useSchema = true;
+      let busy = 0;
       for (;;) {
         const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens };
-        if (useSchema && schema) generationConfig.responseSchema = schema;
+        if (schema) generationConfig.responseSchema = schema;
         let d;
         try {
           d = await call({
@@ -71,8 +71,12 @@ export function createClient({ api, token, onWait, onAuth } = {}) {
             await sleep(s * 1000);
             continue;
           }
-          // Model không nhận responseSchema → thử lại một lần chỉ với JSON thường.
-          if (e.code === 'upstream' && /400/.test(e.message) && useSchema && schema) { useSchema = false; continue; }
+          // Gemini từ chối khuôn JSON (400). KHÔNG âm thầm bỏ khuôn rồi gọi lại: câu lệnh không tả
+          // tên trường nên AI sẽ trả JSON lạ, và tool tưởng "không thấy bảng". Báo mã riêng để bên gọi
+          // thử lại bằng câu lệnh CÓ tả cấu trúc (xem prompts.js → moTaKhuon).
+          if (e.code === 'upstream' && /400/.test(e.message) && schema) {
+            throw new AIError('schema', 'Gemini từ chối khuôn JSON của yêu cầu này');
+          }
           throw e;
         }
         // Máy chủ đáng lẽ luôn trả { text, finishReason }. Thiếu thì báo bằng lời người đọc hiểu,

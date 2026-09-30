@@ -11,7 +11,13 @@ function check(schema, path = '$') {
     for (const [k, v] of Object.entries(schema.properties)) check(v, `${path}.${k}`);
   }
   if (schema.type === 'ARRAY') check(schema.items, `${path}[]`);
-  if (schema.enum) assert.ok(schema.type === 'STRING' && schema.enum.every((x) => typeof x === 'string'), `${path}: enum phải là chuỗi`);
+  if (schema.enum) {
+    assert.ok(schema.type === 'STRING' && schema.enum.every((x) => typeof x === 'string'), `${path}: enum phải là chuỗi`);
+    // Gemini trả HTTP 400 và BỎ CẢ YÊU CẦU nếu enum có giá trị rỗng ("enum[i]: cannot be empty").
+    // Trường không bắt buộc thì để AI bỏ trống hẳn, đừng thêm "" vào danh sách.
+    assert.ok(schema.enum.every((x) => x.length > 0), `${path}: enum có giá trị rỗng — Gemini sẽ từ chối cả yêu cầu`);
+    assert.equal(new Set(schema.enum).size, schema.enum.length, `${path}: enum trùng giá trị`);
+  }
 }
 
 test('khuôn JSON hợp lệ cho mọi việc (Gemini từ chối cả yêu cầu nếu khuôn sai)', () => {
