@@ -75,6 +75,9 @@ export function createClient({ api, token, onWait, onAuth } = {}) {
           if (e.code === 'upstream' && /400/.test(e.message) && useSchema && schema) { useSchema = false; continue; }
           throw e;
         }
+        // Máy chủ đáng lẽ luôn trả { text, finishReason }. Thiếu thì báo bằng lời người đọc hiểu,
+        // đừng để lọt TypeError ("Cannot read properties of undefined") ra tận giao diện.
+        if (!d || typeof d.text !== 'string') throw new AIError('upstream', 'Máy chủ trả lời thiếu dữ liệu — thử lại sau ít phút');
         if (d.finishReason === 'MAX_TOKENS') throw new AIError('truncated', 'Kết quả quá dài, bị cắt ngang');
         try { return parseAIJson(d.text); }
         catch (e) { throw new AIError('parse', e.message); }
