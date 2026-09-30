@@ -162,6 +162,43 @@ test('chế độ exact: nhóm thuyết minh tick quá 8 trang → cảnh báo t
   assert.match(r.warnings.join('\n'), /chỉ đọc 8 trang đầu, bỏ trang 11–12/);
 });
 
+test('form phổ thông (không lấy thuyết minh), ≤ 12 trang chưa rõ loại → không tốn lượt nhận trang: gửi thẳng các trang đó vào 3 lượt đọc bảng', async () => {
+  const { planPicked } = await import('../js/core/pipeline.js');
+  const io0 = { images: async () => { throw new Error('không được gọi'); }, ai: { json: async () => { throw new Error('không được gọi'); } } };
+  const scan = { name: 's.pdf', numPages: 30, types: Array(30).fill('UNKNOWN'), notes: {} };
+  const plan = await planPicked(scan, [7, 8, 9, 10, 11], io0, { notes: false });
+  assert.equal(plan.aiCalls, 0);
+  assert.deepEqual(plan.shared, [7, 8, 9, 10, 11]);
+  const io = makeIO();
+  const r = await extractJob({ name: 's.pdf', types: plan.types, notes: plan.notes, shared: plan.shared }, io, { noteGroups: [] });
+  const bs = io.calls.filter((c) => /TÌNH HÌNH|KẾT QUẢ|LƯU CHUYỂN/.test(c.prompt));
+  assert.equal(bs.length, 3);
+  assert.ok(bs.every((c) => c.pages === 'p7,8,9,10,11'), JSON.stringify(bs));
+  assert.ok(r.statements.BS && r.statements.IS && r.statements.CF);
+  // PDF có chữ: trang máy đã nhận ra giữ cho đúng bảng, trang chưa rõ gửi kèm
+  const mixed = await planPicked({ ...job, numPages: 8, types: ['UNKNOWN', 'BS', 'BS', 'IS', 'CF', 'NOTES', 'NOTES', 'NOTES'] }, [1, 2, 3, 4], io0, { notes: false });
+  assert.deepEqual(mixed.shared, [1]);
+  const io2 = makeIO();
+  await extractJob({ name: 'x.pdf', ...mixed }, io2, { noteGroups: [] });
+  assert.equal(io2.calls.find((c) => c.prompt.includes('TÌNH HÌNH')).pages, 'p1,2,3');
+  assert.equal(io2.calls.find((c) => c.prompt.includes('LƯU CHUYỂN')).pages, 'p1');
+});
+
+test('trang gửi kèm không có bảng nào → cảnh báo, không lỗi', async () => {
+  const io = makeIO({ 'LƯU CHUYỂN': () => ({ meta: { don_vi: 'VND' }, items: [] }) });
+  const r = await extractJob({ name: 's.pdf', types: ['UNKNOWN', 'UNKNOWN'], notes: {}, shared: [1, 2] }, io, { noteGroups: [] });
+  assert.equal(r.statements.CF, undefined);
+  assert.match(r.warnings.join('\n'), /Lưu chuyển tiền tệ.*không thấy/i);
+});
+
+test('gợi ý trang theo form: phổ thông chỉ 3 bảng chính, tối đa 10 trang', async () => {
+  const { suggestPicks } = await import('../js/core/pipeline.js');
+  const text = { kind: 'pdf', scanned: false, types: ['OTHER', 'BS', 'BS', 'IS', 'CF', 'NOTES', 'NOTES', 'NOTES'], notes: { debt: [7], segments: [6] } };
+  assert.deepEqual(suggestPicks(text, { notes: false, max: 10 }), [2, 3, 4, 5]);
+  assert.deepEqual(suggestPicks({ kind: 'img', scanned: true, types: Array(14).fill('UNKNOWN'), notes: {} }, { notes: false, max: 10 }), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.deepEqual(suggestPicks(text), [2, 3, 4, 5, 6, 7], 'form elevaTO: kèm thuyết minh');
+});
+
 test('gợi ý trang để tick sẵn: PDF có chữ → các trang bảng + thuyết minh máy nhận ra; bản scan → không tick; ảnh chụp → tick hết', async () => {
   const { suggestPicks } = await import('../js/core/pipeline.js');
   assert.deepEqual(suggestPicks({ kind: 'pdf', scanned: false, types: ['OTHER', 'BS', 'BS', 'IS', 'CF', 'NOTES', 'NOTES', 'NOTES'], notes: { debt: [7], segments: [6] } }), [2, 3, 4, 5, 6, 7]);

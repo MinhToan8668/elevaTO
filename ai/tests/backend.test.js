@@ -169,6 +169,73 @@ test('nhiều key: key đầu hết hạn mức (429) → dùng ngay key sau tro
   assert.equal(g2.post({ action: 'toi', token: t2 }).data.me.luot.dung, 0, 'không thành công thì không trừ lượt');
 });
 
+const modelOf = (url) => /models\/([^:]+):generateContent/.exec(url)[1];
+const CHAIN_MODELS = { models: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.9-flash-preview', 'gemini-flash-latest']
+  .map((id) => ({ name: `models/${id}`, supportedGenerationMethods: ['generateContent'] })) };
+
+test('chuỗi model dự phòng: AI_MODEL trước, rồi các bản flash mới → cũ, bản lite mới nhất sau cùng; bỏ preview / latest', () => {
+  const g = setup((url, o, resp) => (url.includes('/models?') ? resp(200, CHAIN_MODELS) : resp(200, OK_BODY)));
+  assert.deepEqual([...g.run('dsModelDung()')], ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash-lite']);
+  g.props.AI_MODEL = 'gemini-3.6-flash';
+  assert.deepEqual([...g.run('dsModelDung()')].slice(0, 2), ['gemini-3.6-flash', 'gemini-3.8-flash']);
+});
+
+test('model quá tải (503) → chuyển ngay model khác trong cùng lượt, model đó nghỉ vài phút rồi dùng lại', () => {
+  const tried = [];
+  const g = setup((url, o, resp) => {
+    if (url.includes('/models?')) return resp(200, CHAIN_MODELS);
+    const m = modelOf(url); tried.push(m);
+    return m === 'gemini-3.8-flash' ? resp(503, { error: { code: 503, status: 'UNAVAILABLE' } }) : resp(200, OK_BODY);
+  });
+  const tk = signup(g).data.token;
+  assert.equal(g.post(gen(tk)).ok, true);
+  assert.deepEqual(tried, ['gemini-3.8-flash', 'gemini-3.7-flash']);
+  assert.equal(g.post({ action: 'toi', token: tk }).data.me.luot.dung, 1, 'chỉ tính 1 lượt');
+  tried.length = 0;
+  assert.equal(g.post(gen(tk)).ok, true);
+  assert.deepEqual(tried, ['gemini-3.7-flash'], 'model đang nghỉ thì bỏ qua');
+  g.tick(6 * 60 * 1000);
+  tried.length = 0;
+  g.post(gen(tk));
+  assert.equal(tried[0], 'gemini-3.8-flash', 'hết giờ nghỉ thì dùng lại');
+});
+
+test('hết hạn mức (429) là theo từng model: mọi key hết ở model này → thử model khác', () => {
+  const tried = [];
+  const g = setup((url, o, resp) => {
+    if (url.includes('/models?')) return resp(200, CHAIN_MODELS);
+    const m = modelOf(url); tried.push(`${m}|${o.headers['x-goog-api-key']}`);
+    return m === 'gemini-3.8-flash' ? resp(429, { error: { code: 429 } }) : resp(200, OK_BODY);
+  }, { keys: `${KEY},${KEY2}` });
+  const tk = signup(g).data.token;
+  assert.equal(g.post(gen(tk)).ok, true);
+  assert.deepEqual(tried, [`gemini-3.8-flash|${KEY}`, `gemini-3.8-flash|${KEY2}`, `gemini-3.7-flash|${KEY}`]);
+});
+
+test('mọi model đều quá tải → báo busy, trả lại lượt; không thử quá số lần cho phép', () => {
+  let n = 0;
+  const g = setup((url, o, resp) => {
+    if (url.includes('/models?')) return resp(200, CHAIN_MODELS);
+    n++; return resp(503, { error: { code: 503 } });
+  });
+  const tk = signup(g).data.token;
+  const r = g.post(gen(tk));
+  assert.equal(r.code, 'busy');
+  assert.ok(n >= 2 && n <= 5, `đã thử ${n} lần`);
+  assert.equal(g.post({ action: 'toi', token: tk }).data.me.luot.dung, 0);
+});
+
+test('Gemini chạy quá giờ (timeout) → báo ngay để trang chia nhỏ, không thử model khác', () => {
+  let n = 0;
+  const g = setup((url, o, resp) => {
+    if (url.includes('/models?')) return resp(200, CHAIN_MODELS);
+    n++; throw new Error('Timeout: request timed out');
+  });
+  const tk = signup(g).data.token;
+  assert.equal(g.post(gen(tk)).code, 'timeout');
+  assert.equal(n, 1);
+});
+
 test('hạn mức theo vai trò: tài khoản thường ít lượt, học viên nhiều hơn, giảng viên không giới hạn; cột luot_ngay đè lên', () => {
   const g = setup(undefined, { props: { AI_LUOT_FREE: '2', AI_LUOT_HV: '3' } });
   const tk = signup(g).data.token;

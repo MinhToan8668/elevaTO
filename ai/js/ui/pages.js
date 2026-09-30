@@ -2,7 +2,7 @@
 // AI tự nhận trang đã tick thuộc bảng nào (pipeline.planPicked); người dùng không phải chọn loại trang.
 
 import { h, mount, $, pagesText } from './dom.js';
-import { watch } from './store.js';
+import { watch, FORMS, formOf } from './store.js';
 import { suggestPicks } from '../core/pipeline.js';
 
 const SHORT = { BS: 'CĐKT', IS: 'KQKD', CF: 'LCTT', NOTES: 'Thuyết minh' };
@@ -18,10 +18,10 @@ export function initPages(store, ctx) {
     const sorted = [...new Set(picked)].filter((p) => p >= 1 && p <= j.numPages).sort((a, b) => a - b);
     ctx.patchJob(id, { picked: sorted, status: j.status === 'done' ? 'ready' : j.status });
   };
-  watch(store, ['jobs', 'running'], (s) => render(s, store, ctx));
+  watch(store, ['jobs', 'running', 'preset', 'user'], (s) => render(s, store, ctx));
 }
 
-const sigOf = (j, s) => JSON.stringify([j.numPages, j.scanned, j.status === 'reading', s.running, j.types?.length]);
+const sigOf = (j, s) => JSON.stringify([j.numPages, j.scanned, j.status === 'reading', s.running, j.types?.length, formOf(s)]);
 
 function render(s, store, ctx) {
   const box = $('#pageMaps');
@@ -42,6 +42,8 @@ function render(s, store, ctx) {
 
 function panel(j0, store, ctx, isOpen) {
   let j = j0;
+  const form = formOf(store.get()), cap = FORMS[form].maxPages;
+  const opts = { notes: FORMS[form].notes.length > 0, max: cap };
   const count = h('span', { class: 'tag em' });
   const found = h('span', { class: 'found' });
   const grid = h('div', { class: 'thumbs', role: 'group', 'aria-label': `Các trang của ${j.name}` });
@@ -80,20 +82,28 @@ function panel(j0, store, ctx, isOpen) {
       chk.setAttribute('aria-label', t ? `Chọn trang ${n} (${t})` : `Chọn trang ${n}`);
     });
     count.textContent = `Đã chọn ${set.size}/${j.numPages} trang`;
+    const over = set.size > cap;
+    count.classList.toggle('red', over);
+    count.classList.toggle('em', !over);
+    warn.hidden = !over;
+    warn.textContent = over ? `${FORMS[form].label} đọc tối đa ${cap} trang mỗi file — bỏ bớt ${set.size - cap} trang.` : '';
     const auto = ['BS', 'IS', 'CF'].map((t) => { const p = j.types.map((x, i) => (x === t ? i + 1 : 0)).filter(Boolean); return p.length ? `${SHORT[t]} ${pagesText(p)}` : ''; }).filter(Boolean);
     found.textContent = j.scanned ? (j.kind === 'img' ? 'Ảnh chụp — AI sẽ tự nhận bảng' : 'Bản scan — tick trang, AI sẽ tự nhận bảng') : auto.length ? `Máy nhận ra: ${auto.join(' · ')}` : '';
   };
 
+  const warn = h('p', { class: 'msg warn', role: 'status', hidden: true });
   const bar = h('div', { class: 'pick-bar' },
-    h('button', { type: 'button', class: 'btn ghost sm', hidden: j.scanned && j.kind !== 'img', disabled: store.get().running, onclick: () => ctx.setPicked(j.id, suggestPicks(j)) }, 'Chọn gợi ý'),
-    h('button', { type: 'button', class: 'btn ghost sm', disabled: store.get().running, onclick: () => ctx.setPicked(j.id, Array.from({ length: j.numPages }, (_, i) => i + 1)) }, 'Chọn tất cả'),
+    h('button', { type: 'button', class: 'btn ghost sm', hidden: j.scanned && j.kind !== 'img', disabled: store.get().running, onclick: () => ctx.setPicked(j.id, suggestPicks(j, opts)) }, 'Chọn gợi ý'),
+    h('button', { type: 'button', class: 'btn ghost sm', hidden: j.numPages > cap, disabled: store.get().running, onclick: () => ctx.setPicked(j.id, Array.from({ length: j.numPages }, (_, i) => i + 1)) }, 'Chọn tất cả'),
     h('button', { type: 'button', class: 'btn ghost sm', disabled: store.get().running, onclick: () => ctx.setPicked(j.id, []) }, 'Bỏ chọn'),
     h('span', { class: 'priv' }, 'Bấm vào ảnh để xem trang lớn · Shift + tick để chọn một dải trang'));
 
   const el = h('details', { class: 'pmap', dataset: { id: j.id }, open: isOpen },
     h('summary', {}, h('h3', {}, j.name, ' ', count), found),
-    bar, grid,
-    h('p', { class: 'priv' }, 'Tick các trang Báo cáo tình hình tài chính, Kết quả kinh doanh, Lưu chuyển tiền tệ và các trang thuyết minh cần lấy (TSCĐ, vay, vốn chủ, doanh thu theo mảng…). Chọn càng đúng, AI đọc càng nhanh và ít tốn lượt.'));
+    bar, warn, grid,
+    h('p', { class: 'priv' }, opts.notes
+      ? 'Tick các trang Báo cáo tình hình tài chính, Kết quả kinh doanh, Lưu chuyển tiền tệ và các trang thuyết minh cần lấy (TSCĐ, vay, vốn chủ, doanh thu theo mảng…). Chọn càng đúng, AI đọc càng nhanh và ít tốn lượt.'
+      : `Tick trang Báo cáo tình hình tài chính, Kết quả kinh doanh, Lưu chuyển tiền tệ — tối đa ${cap} trang mỗi file. Cần thêm thuyết minh thì đổi sang Form riêng elevaTO ở bước 3.`));
   sync(j);
   return { el, sync };
 }

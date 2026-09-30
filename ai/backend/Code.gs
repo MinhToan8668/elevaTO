@@ -41,6 +41,9 @@ var AI_MAX_TEXT     = 200000;              // tổng số ký tự chữ trong m
 var AI_MAX_SYS      = 20000;               // độ dài chỉ dẫn hệ thống
 var AI_MAX_THINK    = 8192;                // trần thinkingBudget
 var AI_MODEL_TTL    = 6 * 3600;            // nhớ danh sách model 6 giờ
+var AI_SO_MODEL     = 5;                   // chuỗi dự phòng: tối đa bấy nhiêu model (mỗi model có hạn mức miễn phí riêng)
+var AI_THU_TOI_DA   = 5;                   // mỗi lượt của người dùng thử Gemini tối đa bấy nhiêu lần (đổi key / đổi model)
+var AI_NGHI_QUA_TAI = 300;                 // model báo quá tải (503) thì nghỉ bấy nhiêu giây
 var PHIEN_NGAY      = 30;                  // phiên đăng nhập sống bao nhiêu ngày
 var PHIEN_TOI_DA    = 3;                   // mỗi tài khoản đăng nhập tối đa mấy máy cùng lúc
 var DN_SAI_TOI_DA   = 5;                   // đăng nhập sai bấy nhiêu lần trong 10 phút thì khoá tạm
@@ -351,10 +354,14 @@ function dsKey() {
   s.split(/[\s,;]+/).forEach(function (k) { if (k && out.indexOf(k) < 0) out.push(k); });
   return out;
 }
-function khoaNghi(k) { return 'nghi_' + hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, k, Utilities.Charset.UTF_8)); }
-function keyNghi(k, giay) { CacheService.getScriptCache().put(khoaNghi(k), '1', Math.max(5, Math.min(giay, 21600))); }
-function keyDangNghi(k) { return !!CacheService.getScriptCache().get(khoaNghi(k)); }
-function keyRanh() { return dsKey().filter(function (k) { return !keyDangNghi(k); }); }
+// Nghỉ: key hỏng thì nghỉ hẳn (mọi model); hết hạn mức (429) thì chỉ nghỉ ở model đó — mỗi model có hạn mức riêng.
+function khoaNghi(k, model) { return 'nghi_' + hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, k, Utilities.Charset.UTF_8)) + (model ? '|' + model : ''); }
+function giayNghi(giay) { return Math.max(5, Math.min(giay, 21600)); }
+function keyNghi(k, giay, model) { CacheService.getScriptCache().put(khoaNghi(k, model), '1', giayNghi(giay)); }
+function keyDangNghi(k, model) { var c = CacheService.getScriptCache(); return !!c.get(khoaNghi(k)) || (!!model && !!c.get(khoaNghi(k, model))); }
+function keyRanh(model) { return dsKey().filter(function (k) { return !keyDangNghi(k, model); }); }
+function modelNghi(model, giay) { CacheService.getScriptCache().put('qt_' + model, '1', giayNghi(giay)); }
+function modelDangNghi(model) { return !!CacheService.getScriptCache().get('qt_' + model); }
 
 /** Model sinh văn bản dùng được (bỏ TTS, ảnh, âm thanh, embedding…). */
 function danhSachModel() {
@@ -373,16 +380,25 @@ function danhSachModel() {
   return list;
 }
 
-/** Model dùng: AI_MODEL (nếu có trong danh sách), không thì bản flash chính thức mới nhất. */
-function chonModel() {
+/**
+ * Chuỗi model dùng lần lượt: AI_MODEL (nếu có), các bản flash chính thức mới → cũ, cuối cùng bản flash-lite mới nhất.
+ * Model này quá tải / hết hạn mức thì máy chủ chuyển ngay model sau — Gemini miễn phí tính hạn mức riêng cho từng model.
+ */
+function dsModelDung() {
   var list = danhSachModel(), rieng = String(props().getProperty('AI_MODEL') || '');
-  if (rieng && list.indexOf(rieng) >= 0) return rieng;
   var ver = function (id) { var m = /^gemini-(\d+(?:\.\d+)?)/.exec(id); return m ? Number(m[1]) : 0; };
-  var chinhThuc = list.filter(function (id) { return /^gemini-\d+(\.\d+)?-flash$/.test(id); }).sort(function (a, b) { return ver(b) - ver(a); });
-  if (chinhThuc.length) return chinhThuc[0];
-  var flash = list.filter(function (id) { return /flash/.test(id) && !/lite/.test(id); }).sort(function (a, b) { return ver(b) - ver(a); });
-  return flash[0] || list[0] || '';
+  var moiTruoc = function (a, b) { return ver(b) - ver(a); };
+  var flash = list.filter(function (id) { return /^gemini-\d+(\.\d+)?-flash$/.test(id); }).sort(moiTruoc);
+  var lite = list.filter(function (id) { return /^gemini-\d+(\.\d+)?-flash-lite$/.test(id); }).sort(moiTruoc);
+  var chuoi = [];
+  if (rieng && list.indexOf(rieng) >= 0) chuoi.push(rieng);
+  flash.forEach(function (id) { if (chuoi.indexOf(id) < 0) chuoi.push(id); });
+  chuoi = chuoi.slice(0, AI_SO_MODEL - (lite.length ? 1 : 0));
+  if (lite.length && chuoi.indexOf(lite[0]) < 0) chuoi.push(lite[0]);
+  if (!chuoi.length) chuoi = list.filter(function (id) { return /flash/.test(id); }).slice(0, AI_SO_MODEL);
+  return chuoi;
 }
+function chonModel() { return dsModelDung()[0] || ''; }
 
 // ─── Gọi Gemini ─────────────────────────────────────────────
 
@@ -391,26 +407,39 @@ function goiGemini(tk, b) {
   var body = sachYeuCau(b);
   if (!body) return loi('bad', 'Yêu cầu sai dạng hoặc quá dài');
   if (!laGV(tk) && daDung(tk) >= hanNgay(tk)) return hetLuot(tk);
-  var model = chonModel();
-  if (!model) return loi('busy', 'Chưa lấy được danh sách model Gemini — thử lại sau ít phút', { retryAfter: 30 });
+  var models = dsModelDung();
+  if (!models.length) return loi('busy', 'Chưa lấy được danh sách model Gemini — thử lại sau ít phút', { retryAfter: 30 });
 
   var cho = giuNhip(tk);
   if (cho) return loi('busy', 'Hệ thống đang đông, chờ ' + cho + ' giây', { retryAfter: cho });
   if (!giuLuot(tk)) return hetLuot(tk);
-  var r = goiLanLuot(model, body);
+  var r = goiLanLuot(models, body);
   if (r.traLai) traLuot(tk);                           // chỉ trả lượt khi Gemini chưa làm gì
   return r.kq;
 }
 
-/** Thử lần lượt các key đang rảnh: key bị 429 / hỏng thì cho nghỉ và thử key kế tiếp ngay. */
-function goiLanLuot(model, body) {
-  var keys = keyRanh(), cuoi = null;
-  if (!keys.length) return { kq: loi('busy', 'Gemini đang hết hạn mức phút này, thử lại sau ít giây', { retryAfter: 30 }), traLai: true };
-  for (var i = 0; i < keys.length; i++) {
-    var r = goiMotKey(model, body, keys[i]);
-    if (r.nghi) { keyNghi(keys[i], r.nghi); cuoi = r; continue; }
-    return r;
+/**
+ * Thử lần lượt từng model trong chuỗi, mỗi model thử các key đang rảnh:
+ * 429 → cặp key + model đó nghỉ, thử key kế; 401/403 → key nghỉ hẳn; 503/500 → model nghỉ vài phút, sang model sau.
+ * Tối đa AI_THU_TOI_DA lần gọi cho một lượt của người dùng.
+ */
+function goiLanLuot(models, body) {
+  var cuoi = null, dem = 0;
+  var ranh = models.filter(function (m) { return !modelDangNghi(m); });
+  if (!ranh.length) ranh = models.slice(0, 1);                   // mọi model đang nghỉ: vẫn thử model đầu một lần
+  for (var i = 0; i < ranh.length; i++) {
+    var keys = keyRanh(ranh[i]);
+    for (var j = 0; j < keys.length; j++) {
+      if (dem++ >= AI_THU_TOI_DA) return hetCach(cuoi);
+      var r = goiMotKey(ranh[i], body, keys[j]);
+      if (r.nghi) { keyNghi(keys[j], r.nghi, r.moiModel ? null : ranh[i]); cuoi = r; continue; }
+      if (r.quaTai) { modelNghi(ranh[i], AI_NGHI_QUA_TAI); cuoi = r; break; }
+      return r;
+    }
   }
+  return hetCach(cuoi);
+}
+function hetCach(cuoi) {
   return { kq: loi('busy', 'Gemini đang quá tải hoặc hết hạn mức phút này', { retryAfter: (cuoi && cuoi.cho) || 30 }), traLai: true };
 }
 
@@ -432,9 +461,9 @@ function goiMotKey(model, body, key) {
   if (code === 401 || code === 403 || (code === 400 && /API_KEY|API key/i.test(JSON.stringify(data.error || {})))) {
     console.error('Key Gemini hỏng / bị chặn (HTTP ' + code + ')');
     baoMotLan('key_hong', 3600, '⚠️ <b>Key Gemini bị từ chối</b> (HTTP ' + code + ') — kiểm tra lại key trong Google AI Studio. Máy chủ đang dùng tạm key khác nếu có.');
-    return { nghi: 3600, cho: 30 };
+    return { nghi: 3600, cho: 30, moiModel: true };
   }
-  if (code === 503 || code === 500) return { kq: loi('busy', 'Gemini đang quá tải', { retryAfter: hoiLai(data) || 10 }), traLai: true };
+  if (code === 503 || code === 500 || code === 504) return { quaTai: true, cho: hoiLai(data) || 10 };
   if (code !== 200) {
     var st = data.error && data.error.status ? ' (' + String(data.error.status).replace(/[^A-Z_]/g, '') + ')' : '';
     return { kq: loi('upstream', 'Gemini báo lỗi ' + code + st) };
@@ -511,9 +540,9 @@ function caiDat() {
   ketNoiTelegram();
   if (!dsKey().length) throw new Error('Chưa có key: dán key Gemini vào GEMINI_KEY_MOI ở đầu file rồi chạy lại.');
   CacheService.getScriptCache().remove('ai_models');
-  var model = chonModel();
-  Logger.log(model ? '✔ Key dùng được (' + dsKey().length + ' key). Model sẽ dùng: ' + model
-                   : '✘ Key không dùng được hoặc không có model nào — kiểm tra lại key trong Google AI Studio');
+  var chuoi = dsModelDung();
+  Logger.log(chuoi.length ? '✔ Key dùng được (' + dsKey().length + ' key). Model dùng lần lượt (quá tải thì chuyển): ' + chuoi.join(' → ')
+                          : '✘ Key không dùng được hoặc không có model nào — kiểm tra lại key trong Google AI Studio');
   Logger.log('  Lượt AI mỗi ngày: tài khoản thường ' + luotMacDinh('free') + ', học viên ' + luotMacDinh('hv') + ', giảng viên không giới hạn.');
   Logger.log('  Đăng ký tài khoản của bạn trên trang, rồi gõ /giangvien <email> cho bot (hoặc sửa email trong taoQuanTri và bấm Chạy).');
 }
@@ -703,10 +732,12 @@ function chayLenh(lenh, arg) {
     var ds = docTK(), dem = { free: 0, hv: 0, gv: 0, cho: 0, off: 0 }, hom = homNay(), luot = 0, all = props().getProperties();
     ds.forEach(function (x) { dem[vaiTro(x)]++; if (x.trangthai === 'cho') dem.cho++; if (x.trangthai === 'off') dem.off++; });
     for (var k in all) if (k.indexOf('Q_') === 0 && k.slice(-hom.length) === hom) luot += Number(all[k]) || 0;
-    var nghi = dsKey().filter(keyDangNghi).length;
+    var nghi = dsKey().filter(function (x) { return keyDangNghi(x); }).length;
+    var chuoi = dsModelDung(), qt = chuoi.filter(modelDangNghi);
     return { text: '📊 <b>AI BCTC</b>\nTài khoản: ' + ds.length + ' (học viên ' + dem.hv + ' · giảng viên ' + dem.gv + ' · thường ' + dem.free +
       ' · chờ duyệt ' + dem.cho + ' · khoá ' + dem.off + ')\nLượt AI hôm nay: ' + luot + '\nKey Gemini: ' + dsKey().length +
-      (nghi ? ' (đang nghỉ ' + nghi + ')' : '') + '\nModel: ' + esc(chonModel() || '—') };
+      (nghi ? ' (đang nghỉ ' + nghi + ')' : '') + '\nModel: ' + esc(chuoi.join(' → ') || '—') +
+      (qt.length ? '\nĐang quá tải: ' + esc(qt.join(', ')) : '') };
   }
   if (lenh === '/cho') {
     var cho = docTK().filter(function (x) { return x.trangthai === 'cho'; });

@@ -8,7 +8,7 @@ const state = {
     { id: 's2', kind: 'period', file: 'b.xlsx', period: { id: 'FY2024', year: 2024, months: 12, endMonth: 12 }, values: { 'BS:111': 3 } },
   ],
   edits: [{ period: 'FY2025', key: 'IS:10', v: 6 }],
-  ticks: ['IS:10'], unit: 1e6, segmentMap: { A: 1 }, segmentNames: ['Bán lẻ', '', '', '', ''], noteGroups: ['segments'], preset: 'custom',
+  ticks: ['IS:10'], unit: 1e6, segmentMap: { A: 1 }, segmentNames: ['Bán lẻ', '', '', '', ''], preset: 'basic',
   jobs: [{ id: 'j1' }], conn: { code: 'BÍ MẬT' },
 };
 
@@ -22,6 +22,12 @@ test('lưu phiên → mở lại: giữ nguồn, số sửa tay, lựa chọn; K
   assert.deepEqual(s.segmentMap, { A: 1 });
   assert.equal(s.unit, 1e6);
   assert.equal(s.jobs, undefined);
+  assert.equal(s.preset, 'basic');
+});
+
+test('phiên cũ: gói "DGW" / "Tự chọn" → form riêng elevaTO; "Chỉ 3 báo cáo" / lạ → form phổ thông', () => {
+  const withPreset = (p) => { const f = JSON.parse(serializeSession(state)); f.data.preset = p; return parseSession(JSON.stringify(f)).preset; };
+  assert.deepEqual(['dgw', 'model', 'custom', 'main', 'basic', 'xyz', undefined].map(withPreset), ['model', 'model', 'model', 'basic', 'basic', 'basic', 'basic']);
 });
 
 test('file phiên lạ / bị sửa: bỏ khoá độc hại và số không hợp lệ, không làm hỏng Object.prototype', () => {

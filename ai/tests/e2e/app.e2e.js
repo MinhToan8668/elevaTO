@@ -181,8 +181,8 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.setInputFiles('#fileInput', pdfPath);
   await page.waitForSelector('#fileList .file:has-text("máy nhận ra CĐKT, KQKD, LCTT")', { timeout: 30_000 });
   assert.equal(await page.locator('#pageMaps .tile').count(), 5);
-  // PDF có chữ: máy tick sẵn các trang bảng + thuyết minh nhận ra được (trang 2–5), trang bìa không tick
-  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true]);
+  // Tài khoản thường (form phổ thông): máy chỉ tick sẵn 3 bảng chính (trang 2–4), trang bìa và thuyết minh không tick
+  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, false]);
   assert.match(await page.locator('#pageMaps .found').innerText(), /CĐKT 2 · KQKD 3 · LCTT 4/);
   await page.waitForFunction(() => [...document.querySelectorAll('#pageMaps .tile-img')].every((el) => el.style.backgroundImage || el.classList.contains('noimg')));
   const noimg = await page.locator('#pageMaps .tile-img.noimg').evaluateAll((els) => els.map((e) => e.title));
@@ -212,9 +212,20 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.waitForSelector('dialog.viewer:not([open])', { state: 'attached' });
   assert.ok(await page.evaluate(() => document.activeElement === document.querySelector('#pageMaps .tile-img')), 'đóng xem trang → quay về ảnh trang đã bấm');
 
-  // Tài khoản thường: không có tab / thẻ điền model; giảng viên xếp lên học viên thì mở
+  // Tài khoản thường: form riêng elevaTO và thẻ điền model đều khoá
   assert.equal(await page.locator('#exportBox .cardx.locked').count(), 1, 'model khoá với tài khoản thường');
+  assert.equal(await page.locator('#pickBox .form-card[data-form="model"]').isDisabled(), true, 'form elevaTO khoá với tài khoản thường');
+  assert.equal(await page.locator('#pickBox .form-card[data-form="basic"]').getAttribute('aria-pressed'), 'true');
+
+  // Nâng lên học viên → chọn được form riêng elevaTO, trang thuyết minh được tick thêm
   accounts.get('hv@elevato.vn').vaitro = 'hv';
+  await page.reload();
+  await page.waitForSelector('#pickBox .form-card[data-form="model"]:not([disabled])');
+  await page.setInputFiles('#fileInput', pdfPath);
+  await page.waitForSelector('#pageMaps .tile');
+  assert.equal(await page.locator('#pickBox .form-card[data-form="model"]').getAttribute('aria-pressed'), 'true', 'học viên mặc định form elevaTO');
+  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true],
+    'form elevaTO: tick thêm trang thuyết minh');
 
   await page.click('#runBtn');
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
@@ -298,7 +309,7 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.waitForTimeout(1000);                                   // autosave (0,8 giây)
   const before = aiCalls.length;
   await page.reload();
-  await page.click('#pickBox .preset:has-text("Chỉ 3 báo cáo")');       // thao tác khác trước khi chọn "Mở lại"
+  await page.click('#pickBox .form-card[data-form="basic"]');           // thao tác khác trước khi chọn "Mở lại"
   await page.waitForTimeout(1000);
   assert.ok(await page.evaluate(() => localStorage.getItem('elevato-ai-session:hv@elevato.vn')), 'phiên cũ không bị xoá khi chưa chọn');
   await page.click('#restore button:has-text("Mở lại")');
