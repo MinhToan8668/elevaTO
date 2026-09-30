@@ -27,7 +27,7 @@ var GEMINI_KEY_MOI = 'DAN_KEY_GEMINI';
 
 //  BOT TELEGRAM (báo tài khoản mới, duyệt học viên / giảng viên, tra cứu). Chạy caiDat là bot tự kết nối.
 var TG_TOKEN_MOI = 'DAN_TOKEN_BOT';        // token của @BotFather
-var TG_CHAT_MOI  = 'DAN_CHAT_ID';          // chat ID của bạn (chỉ chat này được ra lệnh); nhiều chat: cách nhau dấu phẩy
+var TG_CHAT_MOI  = 'DAN_CHAT_ID';          // chat ID của bạn (chỉ tin riêng của người này được ra lệnh); nhiều người: cách nhau dấu phẩy
 // ═════════════════════════════════════════════════════════════
 
 var AI_LUOT_FREE    = 10;                  // lượt AI mỗi ngày: tài khoản thường (Script Property AI_LUOT_FREE đè lên)
@@ -566,7 +566,7 @@ function tgApi(method, payload) {
       method: 'post', contentType: 'application/json', payload: JSON.stringify(payload || {}), muteHttpExceptions: true
     });
     return JSON.parse(r.getContentText());
-  } catch (e) { console.error('Telegram ' + method + ': ' + e); return null; }
+  } catch (e) { console.error('Telegram ' + method + ': ' + String(e).split(t).join('***')); return null; }   // lỗi mạng hay kèm URL có token
 }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function tgGui(chatId, text, nut) {
@@ -650,7 +650,7 @@ function hoiTelegram() {
   } finally { c.remove('tg_dang_hoi'); }
 }
 
-/** Số tin đã xử lý, 0 nếu không có, -1 nếu gọi Telegram lỗi. */
+/** Số tin của quản trị đã xử lý (tin người lạ bị bỏ qua, không tính), 0 nếu không có, -1 nếu gọi Telegram lỗi. */
 function motLuotHoi(cho) {
   var off = Number(props().getProperty('TG_OFFSET') || 0);
   var r = tgApi('getUpdates', { offset: off, timeout: cho, limit: 20, allowed_updates: ['message', 'callback_query'] });
@@ -659,21 +659,30 @@ function motLuotHoi(cho) {
   var max = off;
   r.result.forEach(function (u) { if (u.update_id >= max) max = u.update_id + 1; });
   props().setProperty('TG_OFFSET', String(max));                 // dời mốc trước: tin lỗi không làm kẹt hàng chờ
+  var dem = 0;
   r.result.forEach(function (u) {
     if (daXuLy(u.update_id)) return;
-    try { xuLyTin(u); } catch (e) { console.error('xuLyTin: ' + e); }
+    try { if (xuLyTin(u)) dem++; } catch (e) { console.error('xuLyTin: ' + e); }
   });
-  return r.result.length;
+  return dem;
 }
 
+/** Chỉ nhận tin riêng do chính quản trị gõ (không nhóm, không tin chuyển tiếp). Người lạ: im lặng, không tốn lượt gọi.
+ *  Trả true nếu là việc của quản trị. */
 function xuLyTin(u) {
   if (u.callback_query) return xuLyNut(u.callback_query);
   var m = u.message;
-  if (!m || !m.chat || typeof m.text !== 'string') return;
-  if (!laChatQuanTri(m.chat.id)) { tgGui(m.chat.id, 'Bot này chỉ dành cho quản trị elevaTO.'); return; }
-  var parts = m.text.trim().split(/\s+/), lenh = parts[0].replace(/@.*$/, '').toLowerCase(), arg = parts.slice(1);
+  if (!m || !m.chat || !m.from || typeof m.text !== 'string') return false;
+  if (m.chat.type !== 'private' || !laChatQuanTri(m.chat.id) || !laChatQuanTri(m.from.id) || m.forward_origin || m.forward_date) return false;
+  var text = m.text.trim(), parts = text.split(/\s+/), lenh = parts[0].replace(/@.*$/, '').toLowerCase(), arg = parts.slice(1);
+  if (lenh === '/matkhau') {
+    // Tin chứa mật khẩu: xoá khỏi lịch sử Telegram ngay; mật khẩu lấy nguyên văn (giữ khoảng trắng bên trong).
+    tgApi('deleteMessage', { chat_id: String(m.chat.id), message_id: m.message_id });
+    arg = [arg[0], text.replace(/^\S+\s+\S+\s+/, '')];
+  }
   var kq = chayLenh(lenh, arg);
   tgGui(m.chat.id, kq.text, kq.nut);
+  return true;
 }
 
 function timTK(email) { return email ? tkTheoEmail(chuanEmail(email)) : null; }
@@ -688,7 +697,7 @@ function chayLenh(lenh, arg) {
     '/free &lt;email&gt; — về tài khoản thường',
     '/luot &lt;email&gt; &lt;số&gt; — số lượt AI mỗi ngày (0 = theo vai trò)',
     '/khoa &lt;email&gt; · /mo &lt;email&gt; — khoá / mở (duyệt) tài khoản',
-    '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt lại mật khẩu'].join('\n');
+    '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt lại mật khẩu (bot tự xoá tin có mật khẩu)'].join('\n');
   if (lenh === '/start' || lenh === '/help') return { text: HELP };
   if (lenh === '/thongke') {
     var ds = docTK(), dem = { free: 0, hv: 0, gv: 0, cho: 0, off: 0 }, hom = homNay(), luot = 0, all = props().getProperties();
@@ -733,13 +742,14 @@ function chayLenh(lenh, arg) {
 
 function xuLyNut(q) {
   var chat = q.message && q.message.chat && q.message.chat.id;
-  if (!laChatQuanTri(chat) || !laChatQuanTri(q.from && q.from.id)) { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Không có quyền' }); return; }
+  if (!laChatQuanTri(chat) || !laChatQuanTri(q.from && q.from.id)) { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Không có quyền' }); return false; }
   var p = String(q.data || '').split('|'), tk = /^E[A-Z0-9]{5}$/.test(p[2] || '') ? tkTheoMa(p[2]) : null;
-  if (!tk) { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Không tìm thấy tài khoản' }); return; }
+  if (!tk) { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Không tìm thấy tài khoản' }); return true; }
   var bao;
   if (p[0] === 'vt' && TEN_VT[p[1]]) { ghiTK(tk, { vaitro: p[1] }); bao = TEN_VT[p[1]]; }
   else if (p[0] === 'tt' && TEN_TT[p[1]] && p[1] !== 'cho') { ghiTK(tk, p[1] === 'off' ? { trangthai: 'off', phien: '[]' } : { trangthai: 'active' }); bao = TEN_TT[p[1]]; }
-  else { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Nút không hợp lệ' }); return; }
+  else { tgApi('answerCallbackQuery', { callback_query_id: q.id, text: 'Nút không hợp lệ' }); return true; }
   tgApi('answerCallbackQuery', { callback_query_id: q.id, text: '✔ ' + bao });
   tgApi('editMessageText', { chat_id: String(chat), message_id: q.message.message_id, parse_mode: 'HTML', text: moTaTaiKhoan(tk), reply_markup: { inline_keyboard: nutTaiKhoan(tk) } });
+  return true;
 }

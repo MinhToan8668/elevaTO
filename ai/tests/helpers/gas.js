@@ -83,7 +83,7 @@ export function loadGas(path, opts = {}) {
     },
     Session: { getScriptTimeZone: () => 'Asia/Ho_Chi_Minh' },
     Logger: { log: (m) => logs.push(String(m)) },
-    console: { error: () => {}, log: () => {} },
+    console: { error: (m) => logs.push(String(m)), log: () => {} },
     Date: class extends Date { constructor(...a) { super(...(a.length ? a : [now])); } static now() { return now; } },
   };
   vm.createContext(ctx);

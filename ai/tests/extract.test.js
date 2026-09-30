@@ -152,6 +152,18 @@ test('thuyết minh mảng, vay, vốn chủ, tham số → dạng model', () =>
   assert.deepEqual(par, { shares: 221320100, taxRate: 0.2 });
 });
 
+test('ngày kết thúc ≤ 2025 nhưng AI ghi Thông tư 99 / mã giống mẫu mới → vẫn theo TT200 nhưng cảnh báo kiểm tra lại ngày kỳ', () => {
+  const bs = { meta: { don_vi: 'VND', ngay_ket_thuc: '2025-12-31', thong_tu: '99/2025/TT-BTC' },
+    items: [{ c: '280', n: 'TỔNG CỘNG TÀI SẢN', v: '10', p: '8' }] };
+  const r = statementToValues('BS', bs);
+  assert.equal(r.regime, 'TT200');
+  assert.match(r.warnings.join('\n'), /kiểm tra lại ngày kết thúc kỳ/);
+  const plain = statementToValues('BS', { meta: { don_vi: 'VND', ngay_ket_thuc: '2025-12-31' }, items: [{ c: '270', n: 'TỔNG CỘNG TÀI SẢN', v: '10', p: '8' }, { c: '421', n: 'LNST', v: '1', p: '1' }] });
+  assert.doesNotMatch(plain.warnings.join('\n'), /ngày kết thúc kỳ/, 'BCTC 2025 bình thường không cảnh báo');
+  const span = statementToValues('BS', { meta: { don_vi: 'VND', ngay_ket_thuc: '01/01/2025 - 31/03/2026' }, items: [{ c: '280', n: 'TỔNG', v: '1', p: '1' }] });
+  assert.equal(span.regime, 'TT99', 'khoảng ngày: lấy năm của ngày cuối');
+});
+
 test('BCTC kỳ kết thúc năm 2025 trở về trước luôn đọc theo mẫu cũ TT200 (kể cả AI ghi nhầm thông tư) rồi quy đổi sang mẫu 2026', () => {
   const bs = { meta: { don_vi: 'VND', ngay_ket_thuc: '31/12/2025', thong_tu: '99/2025/TT-BTC' },
     items: [{ c: '110', n: 'Tiền', v: '10', p: '8' }, { c: '270', n: 'TỔNG CỘNG TÀI SẢN', v: '10', p: '8' }, { c: '421', n: 'LNST chưa phân phối', v: '3', p: '1' }] };

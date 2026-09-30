@@ -46,6 +46,8 @@ test('chỉ các dòng được tick; dòng tổng in đậm; cố định dòng
   assert.match(xml, /state="frozen"/);
   const bold = /<cellXfs[\s\S]*<\/cellXfs>/.exec(files['xl/styles.xml'])[0];
   assert.ok(bold.includes('fontId="1"'));
+  assert.match(bold, /horizontal="left"[^>]*indent="2"/, 'Excel chỉ thụt lề khi căn trái');
+  assert.match(xml, /^<\?xml[^>]*\?><worksheet[^>]*><sheetPr><pageSetUpPr fitToPage="1"\/><\/sheetPr><sheetViews>/, 'in vừa một trang ngang: sheetPr đứng trước sheetViews');
 });
 
 // ─── zip tối giản (store, không nén) để SheetJS đọc trong test ───

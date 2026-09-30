@@ -338,7 +338,7 @@ function setupTg(extra = {}) {
   return { g, updates, sent };
 }
 let uid = 1;
-const msg = (text, chat = ADMIN) => ({ update_id: uid++, message: { message_id: 1, chat: { id: Number(chat) }, from: { id: Number(chat) }, text } });
+const msg = (text, chat = ADMIN, extra = {}) => ({ update_id: uid++, message: { message_id: 1, chat: { id: Number(chat), type: 'private' }, from: { id: Number(chat) }, text, ...extra } });
 const cb = (data, chat = ADMIN) => ({ update_id: uid++, callback_query: { id: 'cb' + uid, data, from: { id: Number(chat) }, message: { message_id: 9, chat: { id: Number(chat) } } } });
 const col = (g, name) => rows(g)[1][rows(g)[0].indexOf(name)];
 const texts = (sent) => sent.filter((x) => x.method === 'sendMessage' || x.method === 'editMessageText').map((x) => x.body.text).join('\n---\n');
@@ -403,8 +403,53 @@ test('lệnh quản trị: /hocvien /giangvien /free /luot /khoa /mo /matkhau /t
   assert.match(run('/thongke'), /Tài khoản: 1/);
   assert.match(run('/hocvien khong-co@mail.com'), /Không tìm thấy/);
   assert.match(run('/help'), /\/hocvien/);
-  assert.match(run('/thongke', '999'), /quản trị/, 'người lạ chỉ nhận lời từ chối');
+  assert.equal(run('/thongke', '999'), '', 'người lạ nhắn: bot im lặng, không tốn lượt gọi');
   assert.equal(col(g, 'vaitro'), 'free');
+});
+
+test('bot chỉ nghe tin riêng do chính quản trị gõ: bỏ qua nhóm, người khác trong nhóm, tin chuyển tiếp', () => {
+  const { g, updates, sent } = setupTg();
+  signup(g);
+  const run = (m) => { sent.length = 0; updates.push(m); g.run('hoiTelegram()'); return sent; };
+  run(msg('/giangvien a@mail.com', ADMIN, { chat: { id: Number(ADMIN), type: 'group' } }));
+  run(msg('/giangvien a@mail.com', ADMIN, { from: { id: 999 } }));
+  run(msg('/giangvien a@mail.com', ADMIN, { forward_origin: { type: 'user' } }));
+  run(msg('/giangvien a@mail.com', ADMIN, { forward_date: 1 }));
+  assert.equal(col(g, 'vaitro'), 'free');
+  assert.equal(sent.length, 0);
+});
+
+test('người lạ nhắn liên tục không giữ lịch hỏi tin chạy dài (chỉ tin của quản trị mới kéo dài long-poll)', () => {
+  const { g, updates } = setupTg();
+  let polls = 0;
+  const f = g.ctx.UrlFetchApp.fetch;
+  g.ctx.UrlFetchApp.fetch = (url, o) => {
+    if (url.endsWith('/getUpdates')) { polls++; if (polls < 50) updates.push(msg('xin chào', '999')); }
+    return f(url, o);
+  };
+  g.run('hoiTelegram()');
+  assert.equal(polls, 1, 'tin người lạ không làm bot bám long-poll');
+});
+
+test('/matkhau: xoá tin chứa mật khẩu khỏi Telegram, giữ nguyên khoảng trắng trong mật khẩu', () => {
+  const { g, updates, sent } = setupTg();
+  signup(g);
+  sent.length = 0;
+  updates.push(msg('/matkhau a@mail.com  hai  cach-nhau 9', ADMIN, { message_id: 77 }));
+  g.run('hoiTelegram()');
+  assert.equal(login(g, { mk: ' hai  cach-nhau 9' }).ok, false);
+  assert.equal(login(g, { mk: 'hai  cach-nhau 9' }).ok, true);
+  const del = sent.find((x) => x.method === 'deleteMessage');
+  assert.ok(del && del.body.message_id === 77 && del.body.chat_id === ADMIN);
+});
+
+test('lỗi mạng khi gọi Telegram: log không lộ token bot', () => {
+  const { g } = setupTg();
+  g.ctx.UrlFetchApp.fetch = (url) => { throw new Error('Address unavailable: ' + url); };
+  g.run('tgApi("sendMessage", {})');
+  const all = g.logs.join('\n');
+  assert.ok(all.includes('sendMessage'), all);
+  assert.ok(!all.includes(TG), 'token bị lộ trong log');
 });
 
 test('key Gemini hỏng → báo quản trị qua Telegram, tối đa 1 lần mỗi giờ', () => {

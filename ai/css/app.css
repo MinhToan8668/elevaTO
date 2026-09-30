@@ -348,12 +348,16 @@ body{background:var(--base);background-image:none}
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 @keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
 @media (prefers-reduced-motion:reduce){.bg i{animation:none}}
+/* Máy yếu / màn nhỏ: nền đứng yên, bỏ lớp hạt (đỡ tốn pin, cuộn mượt) */
+@media (max-width:900px){.bg i{animation:none;will-change:auto;filter:blur(56px)} .bg::after{display:none}}
 
 /* Khung kính: nền trong mờ + viền sáng + ánh phản chiếu phía trên */
 .glass,.step,.auth-card,.top,.rail a.active,.rail .hint,.acct-pop,.viewer,.toast,.cardx,.pmap,.preset,.notes-pick,.banner,.feats .fn,.seg,.tabs,.sum .pc,.icon-btn,.acct summary{
   background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
   border:1px solid var(--glass-line);box-shadow:var(--glass-hi),var(--glass-shadow)}
 .step,.auth-card,.cardx,.pmap{position:relative;isolation:isolate}
+/* Kính lồng trong kính: lớp trong chỉ cần nền trong mờ — làm mờ lần hai không thấy khác mà tốn GPU */
+.step .pmap,.step .cardx,.step .preset,.step .notes-pick,.step .seg,.step .tabs,.step .sum .pc,.step .btn.ghost,.step .icon-btn{-webkit-backdrop-filter:none;backdrop-filter:none}
 .step::before,.auth-card::before,.cardx::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
   background:linear-gradient(135deg,rgba(255,255,255,.38),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 70%,rgba(255,255,255,.12))}
 :root[data-theme="dark"] .step::before,:root[data-theme="dark"] .auth-card::before,:root[data-theme="dark"] .cardx::before{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,0) 40%)}
@@ -409,7 +413,7 @@ table.g thead th{background:var(--glass-strong);-webkit-backdrop-filter:var(--bl
 .tile-img:focus-visible{outline:3px solid var(--em);outline-offset:-3px}
 .pno{position:absolute;right:7px;bottom:7px;font:700 11px/1 var(--mono);background:rgba(10,15,13,.72);color:#fff;padding:4px 7px;border-radius:7px}
 .tile-chk{position:absolute;left:7px;top:7px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;
-  background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  background:rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .tile-chk input{width:19px;height:19px;accent-color:var(--em);cursor:pointer;margin:0}
 .tile.on .tile-chk{background:var(--em)}
 .tile-t{position:absolute;left:7px;bottom:7px;font-size:10.5px;font-weight:800;letter-spacing:.02em;padding:3px 7px;border-radius:7px;background:var(--em);color:#03261a}
@@ -437,6 +441,9 @@ dialog.viewer::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur
   .thumbs{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}
   .pick-bar .priv{flex-basis:100%;margin:2px 0 0}
   dialog.viewer{width:100vw;height:100dvh;border-radius:0}
+  .vw-head{padding-top:max(12px,env(safe-area-inset-top));padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+  .vw-foot{padding-bottom:max(12px,env(safe-area-inset-bottom));padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+  .thumbs{max-height:none;overflow:visible}
   .vw-foot .btn{padding:10px 12px;font-size:13px}
   #vwPick{min-width:0;flex:1}
 }

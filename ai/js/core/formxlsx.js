@@ -38,7 +38,7 @@ export function buildFormXlsx(ds, { keys = null, unit = 1e6, unitLabel = 'triệ
     '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
     'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
       sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets></workbook>',
-    'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
       sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('') +
       `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
     'xl/styles.xml': stylesXml(unit),
@@ -85,7 +85,7 @@ function stylesXml(unit) {
       xf(5, 0, 1, al('horizontal="center"')) +                         // 4 code
       xf(0, 0, 1, al('wrapText="1" vertical="top"')) +                 // 5 label
       xf(1, 0, 1, al('wrapText="1" vertical="top"')) +                 // 6 label đậm
-      xf(0, 0, 1, al('wrapText="1" vertical="top" indent="2"')) +      // 7 label thụt
+      xf(0, 0, 1, al('horizontal="left" wrapText="1" vertical="top" indent="2"')) +      // 7 label thụt
       xf(0, 0, 1, '', 164) +                                           // 8 số
       xf(1, 0, 1, '', 164) +                                           // 9 số đậm
       xf(1, 2, 1, al('wrapText="1" vertical="top"')) +                 // 10 label tổng (nền xanh nhạt)
@@ -102,7 +102,7 @@ const row = (r, cells, ht) => `<row r="${r}"${ht ? ` ht="${ht}" customHeight="1"
 
 function sheetXml({ cols, rowsXml, freeze, merges = [] }) {
   const pane = freeze ? `<pane xSplit="${freeze.x}" ySplit="${freeze.y}" topLeftCell="${numToCol(freeze.x + 1)}${freeze.y + 1}" activePane="bottomRight" state="frozen"/>` : '';
-  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
     `<sheetViews><sheetView workbookViewId="0" showGridLines="0">${pane}</sheetView></sheetViews>` +
     `<cols>${cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` +
     `<sheetData>${rowsXml.join('')}</sheetData>` +

@@ -90,6 +90,9 @@ export function statementToValues(st, ai, hint = {}) {
   if (dup.size) warnings.push(`Mã xuất hiện nhiều lần, giữ lần đầu: ${[...dup].map((k) => k.split(':')[1]).join(', ')}`);
 
   const regime = hint.regime || regimeFrom(st, meta, raw.cur, ai.items || []);
+  if (!hint.regime && regime === 'TT200' && oldYear(meta) && (/99/.test(String(meta.thong_tu || '')) || detectRegime(raw.cur) === 'TT99')) {
+    warnings.push(`Kỳ kết thúc ${meta.ngay_ket_thuc} (năm 2025 trở về trước) nên đọc theo mẫu cũ TT200, nhưng báo cáo trông như mẫu mới TT99 — kiểm tra lại ngày kết thúc kỳ (có thể AI lấy nhầm ngày đầu kỳ).`);
+  }
   const unmapped = new Set();
   const conv = (vals) => {
     let v = vals;
@@ -107,11 +110,12 @@ export function statementToValues(st, ai, hint = {}) {
 
 // Thông tư 99/2025 áp dụng từ năm tài chính 2026: báo cáo kỳ kết thúc từ 2025 trở về trước chắc chắn theo mẫu TT200
 // (kể cả khi AI ghi nhầm thông tư) → đọc mã theo TT200 rồi quy đổi sang mẫu 2026.
-const yearOf = (d) => { const m = /(\d{4})/.exec(String(d || '')); return m ? Number(m[1]) : 0; };
+// Năm của ngày cuối cùng trong chuỗi (AI đôi khi ghi cả khoảng "01/01/2025 - 31/03/2026").
+const yearOf = (d) => { const all = String(d || '').match(/\d{4}/g); return all ? Number(all[all.length - 1]) : 0; };
+const oldYear = (meta) => { const y = yearOf(meta.ngay_ket_thuc); return y > 0 && y <= 2025; };
 
 function regimeFrom(st, meta, cur, items) {
-  const y = yearOf(meta.ngay_ket_thuc);
-  if (y && y <= 2025) return 'TT200';
+  if (oldYear(meta)) return 'TT200';
   const t = String(meta.thong_tu || '');
   if (/200/.test(t)) return 'TT200';
   if (/99/.test(t)) return 'TT99';

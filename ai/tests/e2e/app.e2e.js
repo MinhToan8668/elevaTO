@@ -198,12 +198,19 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await shot(page, '1c-xem-trang', { fullPage: false });
   await page.keyboard.press('ArrowRight');
   await page.waitForFunction(() => document.querySelector('.vw-pos').textContent === 'Trang 2 / 5');
+  await page.waitForSelector('dialog.viewer[open] .vw-stage canvas');
+  await page.evaluate(() => { window.__cv = document.querySelector('.vw-stage canvas'); });
   await page.click('#vwPick');
   await page.waitForFunction(() => !document.querySelectorAll('#pageMaps .tile')[1].classList.contains('on'));
   await page.click('#vwPick');
   await page.waitForFunction(() => document.querySelectorAll('#pageMaps .tile')[1].classList.contains('on'));
+  assert.ok(await page.evaluate(() => document.querySelector('.vw-stage canvas') === window.__cv), 'tick không vẽ lại trang (giữ chỗ đang cuộn)');
+  await page.click('[aria-label="Phóng to"]');
+  assert.equal(await page.locator('.vw-zoom').innerText(), '125%');
+  assert.equal(await page.evaluate(() => document.querySelector('.vw-stage canvas').style.width), '125%');
   await page.keyboard.press('Escape');
   await page.waitForSelector('dialog.viewer:not([open])', { state: 'attached' });
+  assert.ok(await page.evaluate(() => document.activeElement === document.querySelector('#pageMaps .tile-img')), 'đóng xem trang → quay về ảnh trang đã bấm');
 
   // Tài khoản thường: không có tab / thẻ điền model; giảng viên xếp lên học viên thì mở
   assert.equal(await page.locator('#exportBox .cardx.locked').count(), 1, 'model khoá với tài khoản thường');

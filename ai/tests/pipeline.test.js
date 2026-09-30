@@ -138,6 +138,30 @@ test('PDF có chữ, tick toàn trang đã biết loại → không tốn lượ
   assert.equal(io.calls.find((c) => c.prompt.startsWith('Đọc thuyết minh VAY')).pages, 'p7');
 });
 
+test('trang thuyết minh đã tick mà máy không rõ nhóm → nhờ AI xếp nhóm; trang tick nhưng AI không dùng được → cảnh báo, không bỏ im lặng', async () => {
+  const { planPicked } = await import('../js/core/pipeline.js');
+  const seen = [];
+  const io = {
+    images: async (pages) => { seen.push(pages); return pages.map(() => ({ inlineData: {} })); },
+    ai: { json: async () => [{ trang: 8, loai: 'NOTES', nhom: ['fixedAssets'] }, { trang: 1, loai: 'OTHER' }] },
+  };
+  const j = { ...job, numPages: 9, types: [...job.types, 'NOTES'] };
+  const r = await planPicked(j, [1, 2, 7, 8, 9], io);
+  assert.deepEqual(seen, [[1, 8, 9]], 'trang 7 đã có nhóm (vay) → không cần AI');
+  assert.deepEqual(r.notes.fixedAssets, [8]);
+  assert.deepEqual(r.notes.debt, [7]);
+  const w = r.warnings.join('\n');
+  assert.match(w, /Trang 1, 9: AI thấy không phải/, 'trang 1 AI bảo không phải bảng; trang 9 AI không trả lời');
+  assert.doesNotMatch(w, /\b(2|7|8)\b/);
+});
+
+test('chế độ exact: nhóm thuyết minh tick quá 8 trang → cảnh báo trang bị bỏ', async () => {
+  const io = makeIO();
+  const many = { ...job, types: Array(20).fill('NOTES'), notes: { debt: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } };
+  const r = await extractJob(many, io, { noteGroups: ['debt'], exact: true });
+  assert.match(r.warnings.join('\n'), /chỉ đọc 8 trang đầu, bỏ trang 11–12/);
+});
+
 test('gợi ý trang để tick sẵn: PDF có chữ → các trang bảng + thuyết minh máy nhận ra; bản scan → không tick; ảnh chụp → tick hết', async () => {
   const { suggestPicks } = await import('../js/core/pipeline.js');
   assert.deepEqual(suggestPicks({ kind: 'pdf', scanned: false, types: ['OTHER', 'BS', 'BS', 'IS', 'CF', 'NOTES', 'NOTES', 'NOTES'], notes: { debt: [7], segments: [6] } }), [2, 3, 4, 5, 6, 7]);

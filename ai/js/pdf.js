@@ -31,9 +31,10 @@ export async function pageTexts(doc, onProgress) {
   return out;
 }
 
-export async function renderPage(doc, n, width) { return render(doc, n, width); }
+/** Vẽ một trang ra canvas. `hold` (tuỳ chọn) nhận `hold.task` để người gọi huỷ lần vẽ đã lỗi thời. */
+export async function renderPage(doc, n, width, hold) { return render(doc, n, width, hold); }
 
-async function render(doc, n, width) {
+async function render(doc, n, width, hold) {
   const page = await doc.getPage(n);
   const vp1 = page.getViewport({ scale: 1 });
   const vp = page.getViewport({ scale: width / vp1.width });
@@ -41,8 +42,9 @@ async function render(doc, n, width) {
   canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  await page.render({ canvasContext: ctx, viewport: vp }).promise;
-  page.cleanup();
+  const task = page.render({ canvasContext: ctx, viewport: vp });
+  if (hold) hold.task = task;
+  try { await task.promise; } catch (e) { canvas.width = 0; canvas.height = 0; throw e; } finally { page.cleanup(); }
   return canvas;
 }
 

@@ -3,12 +3,12 @@
 import { h, mount, $, toast, keepFocus } from './dom.js';
 import { PRESETS, NOTE_KEYS, uid, watch } from './store.js';
 import { NOTE_TASKS } from '../core/prompts.js';
-import { extractJob, planPicked } from '../core/pipeline.js';
+import { extractJob, planPicked, needsMap } from '../core/pipeline.js';
 import { isSplittable, isFatal } from '../ai.js';
 
 const HAS_PICK = (j) => (j.picked?.length || 0) > 0;
-// Trang đã tick mà máy chưa biết loại → AI phải nhận trang trước (12 trang / lượt).
-const unknownPicked = (j) => (j.picked || []).filter((p) => !['BS', 'IS', 'CF', 'NOTES'].includes(j.types?.[p - 1])).length;
+// Trang đã tick mà máy chưa biết loại (hay nhóm thuyết minh) → AI phải nhận trang trước (12 trang / lượt).
+const unknownPicked = (j) => (j.picked || []).filter((p) => needsMap(j, p)).length;
 
 export function initExtract(store, ctx) {
   watch(store, ['preset', 'noteGroups', 'running'], (s) => renderPick(s, store));
@@ -84,7 +84,8 @@ async function run(store, ctx) {
       try {
         // Trang đã tick: trang máy biết loại giữ nguyên, trang chưa rõ nhờ AI nhận bảng; chỉ gửi đúng các trang này.
         const plan = await planPicked(j, j.picked, io, { onStep });
-        const ext = await extractJob({ name: j.name, types: plan.types, notes: plan.notes }, io, { noteGroups: store.get().noteGroups, onStep, exact: true });
+        const got = await extractJob({ name: j.name, types: plan.types, notes: plan.notes }, io, { noteGroups: store.get().noteGroups, onStep, exact: true });
+        const ext = { ...got, warnings: [...plan.warnings, ...got.warnings] };
         if (!Object.keys(ext.statements).length) throw new Error('Không đọc được bảng nào');
         if (!store.get().jobs.some((x) => x.id === j.id)) continue;          // file đã bị bỏ trong lúc chạy
         store.set((st) => {
