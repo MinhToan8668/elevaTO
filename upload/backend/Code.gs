@@ -15,6 +15,10 @@
  * được file tối đa 50MB — file lớn hơn được cắt thành các phần .001, .002…
  * (ghép lại bằng upload/ghep.html). Gửi xong thì bỏ bản trên Drive vào thùng rác.
  *
+ * Kho: file đã vào Telegram được ghi lại (mã file_id từng phần). Trên trang bấm
+ * "Lấy về" → bot kéo các phần từ Telegram, ghép thành file gốc đặt tạm trên Drive
+ * để tải về, 24 giờ sau tự bỏ vào thùng rác.
+ *
  * Vì sao trang KHÔNG phục vụ bằng HtmlService: mọi trang HtmlService đều cho
  * người mở nó gọi BẤT KỲ hàm nào trong script qua google.script.run. Trang
  * tĩnh + doPost chỉ mở đúng ba action upload_start / upload_chunk / upload_status.
@@ -44,10 +48,20 @@ var DRIVE_UPLOAD   = 'https://www.googleapis.com/upload/drive/v3/files';
 var PAGE_URL       = 'https://minhtoan8668.github.io/elevaTO/upload/';
 var GHEP_URL       = PAGE_URL + 'ghep.html';
 
-// Chuyển file vào Telegram. Bot gửi được tối đa 50MB mỗi file (tính cả phần
-// bọc multipart), UrlFetchApp cũng nhận/gửi tối đa 50MB mỗi lần — 45MB chừa đủ dư.
-var TG_PART        = 45 * 1024 * 1024;
+// Chuyển file vào Telegram. Bot GỬI được file tối đa 50MB nhưng chỉ TẢI VỀ được
+// file tối đa 20MB — nên mỗi phần 19MB để sau này lấy ngược từ Telegram được.
+// 19MB = 76 × 256KB: khi ghép lại lên Drive (resumable, mảnh phải là bội số
+// 256KB) mỗi phần là một mảnh trọn vẹn.
+var TG_PART        = 19 * 1024 * 1024;
+var TG_PART_CU     = 45 * 1024 * 1024;      // cỡ phần của bản cũ — việc xếp hàng từ trước vẫn chạy đúng
+var TG_TAI_MAX     = 20 * 1000 * 1000;      // Telegram: bot tải về tối đa 20MB mỗi file
 var JOB_PREFIX     = 'TGJOB_';              // mỗi file chờ chuyển là một Script Property
+var LIB_PREFIX     = 'TGLIB_';              // kho: mỗi file đã vào Telegram (lấy về được)
+var FID_PREFIX     = 'TGFID_';              // mã file_id các phần, 40 mã một ô (mỗi ô tối đa 9KB)
+var FID_MOI_O      = 40;
+var RES_PREFIX     = 'TGRES_';              // việc lấy về đang chạy
+var TAM_PREFIX     = 'TGTAM_';              // bản lấy về đang nằm tạm trên Drive
+var GIU_BAN_TAM_GIO = 24;                   // bản tạm tự vào thùng rác sau 24 giờ
 var WORKER_GIAY    = 240;                   // mỗi lượt chạy dừng sau ~4 phút (giới hạn 6 phút)
 var JOB_MAX_LOI    = 5;                     // lỗi liên tiếp quá số này thì bỏ, giữ file trên Drive
 
@@ -80,6 +94,9 @@ function doPost(e) {
     if (b.action === 'upload_start') data = uploadBatDau(b.key, b.info);
     else if (b.action === 'upload_chunk') data = uploadManh(b.key, b.session, b.start, b.total, b.data, b.share, b.tele);
     else if (b.action === 'upload_status') data = uploadTrangThai(b.key, b.session, b.total, b.share, b.tele);
+    else if (b.action === 'lib_list') data = khoDanhSach(b.key);
+    else if (b.action === 'lib_restore') data = khoLayVe(b.key, b.id);
+    else if (b.action === 'lib_forget') data = khoBo(b.key, b.id);
     else return json({ ok: false, error: 'unknown action', code: 'session' });
     return json({ ok: true, data: data });
   } catch (err) {
@@ -92,7 +109,7 @@ function doPost(e) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Ba việc trang làm được. Việc nào cũng kiểm key trước.
+// Tải lên: ba việc trang làm được. Việc nào cũng kiểm key trước.
 // ─────────────────────────────────────────────────────────────
 
 /** Mở phiên tải lên Drive. Trả về URL phiên để trang gửi từng mảnh. */
@@ -209,7 +226,7 @@ function hoanTat(fileId, share, tele) {
   if (tele) {
     props().setProperty(JOB_PREFIX + fileId, JSON.stringify({
       id: fileId, name: kq.name, size: kq.size,
-      parts: Math.max(1, Math.ceil(kq.size / TG_PART)), part: 0, loi: 0
+      parts: Math.max(1, Math.ceil(kq.size / TG_PART)), ps: TG_PART, part: 0, loi: 0
     }));
     return kq;
   }
@@ -241,11 +258,17 @@ function chuyenTelegram() {
   try {
     var batDau = Date.now();
     var all = props().getProperties();
-    var keys = Object.keys(all).filter(function (k) { return k.indexOf(JOB_PREFIX) === 0; });
-    for (var i = 0; i < keys.length; i++) {
-      var job;
-      try { job = JSON.parse(all[keys[i]]); } catch (e) { props().deleteProperty(keys[i]); continue; }
-      if (!chuyenMotFile(job, batDau)) return; // hết giờ, lượt sau làm tiếp
+    donBanTam(all);
+    // Lấy về trước (người dùng đang chờ trên trang), gửi đi sau.
+    var viec = [[RES_PREFIX, layVeMotFile], [JOB_PREFIX, chuyenMotFile]];
+    for (var v = 0; v < viec.length; v++) {
+      var keys = Object.keys(all).filter(function (k) { return k.indexOf(viec[v][0]) === 0; });
+      for (var i = 0; i < keys.length; i++) {
+        var job;
+        try { job = JSON.parse(all[keys[i]]); } catch (e) { props().deleteProperty(keys[i]); continue; }
+        if (job.fail) continue;                // lấy về đã hỏng, chờ người dùng bấm lại
+        if (!viec[v][1](job, batDau)) return;  // hết giờ, lượt sau làm tiếp
+      }
     }
   } finally {
     lock.releaseLock();
@@ -268,6 +291,7 @@ function chuyenMotFile(job, batDau) {
     job.loi = (job.loi || 0) + 1;
     if (ok === 'mat' || job.loi >= JOB_MAX_LOI) {
       props().deleteProperty(key);
+      xoaFid(job.id, job.parts);
       guiTelegram('⚠️ Không chuyển được ' + job.name + ' vào Telegram' +
         (ok === 'mat' ? ' — file đã không còn trên Drive.' :
          ' (lỗi: ' + ok + ').\nFile vẫn nằm trên Google Drive: https://drive.google.com/file/d/' + job.id + '/view'));
@@ -283,8 +307,9 @@ function chuyenMotFile(job, batDau) {
 
 /** Gửi phần job.part. Trả true, 'mat' (file không còn) hoặc chuỗi lỗi. */
 function guiMotPhan(job) {
-  var start = job.part * TG_PART;
-  var end = Math.min(start + TG_PART, job.size) - 1;
+  var ps = job.ps || TG_PART_CU;
+  var start = job.part * ps;
+  var end = Math.min(start + ps, job.size) - 1;
   var res = UrlFetchApp.fetch(DRIVE_FILES + '/' + job.id + '?alt=media', {
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), Range: 'bytes=' + start + '-' + end },
     muteHttpExceptions: true
@@ -298,7 +323,11 @@ function guiMotPhan(job) {
   var caption = motFile ? job.name + ' (' + mbText(job.size) + ')'
                         : job.name + ' — phần ' + (job.part + 1) + '/' + job.parts;
   var r = guiFileTelegram(res.getBlob().setName(ten), caption);
-  if (r && r.ok) return true;
+  if (r && r.ok) {
+    var doc = r.result && r.result.document;
+    if (vaoKhoDuoc(job) && doc && doc.file_id) luuFid(job.id, job.part, doc.file_id);
+    return true;
+  }
   return 'Telegram ' + (r ? (r.error_code || '') + ' ' + (r.description || '') : 'không phản hồi');
 }
 
@@ -316,6 +345,12 @@ function guiFileTelegram(blob, caption) {
 /** Gửi đủ phần: bỏ bản trên Drive vào thùng rác, nhắn cách ghép nếu có nhiều phần. */
 function xongMotFile(job) {
   var xoa = driveApi('patch', DRIVE_FILES + '/' + job.id, { trashed: true });
+  var kho = vaoKhoDuoc(job);
+  if (kho) {
+    props().setProperty(LIB_PREFIX + job.id, JSON.stringify({
+      id: job.id, name: job.name, size: job.size, parts: job.parts, ps: job.ps, date: new Date().toISOString()
+    }));
+  }
   var dong = [];
   if (job.parts > 1) {
     dong.push('✅ ' + job.name + ' (' + mbText(job.size) + ') đã vào Telegram thành ' + job.parts + ' phần.');
@@ -327,7 +362,190 @@ function xongMotFile(job) {
   }
   dong.push(xoa.code === 200 ? '🗑 Đã bỏ ' + job.name + ' khỏi Google Drive (còn trong Thùng rác 30 ngày).'
                              : '⚠️ Chưa xoá được ' + job.name + ' khỏi Drive (lỗi ' + xoa.code + '), xoá tay giúp nhé.');
+  if (kho) dong.push('📦 Cần lấy lại trên máy không vào được Telegram: mục "Kho file trên Telegram" ở trang tải lên.');
   guiTelegram(dong.join('\n'));
+}
+
+/** Chỉ ghi vào kho khi từng phần đủ nhỏ để bot tải ngược về được (việc cũ 45MB thì không). */
+function vaoKhoDuoc(job) { return (job.ps || TG_PART_CU) <= TG_TAI_MAX; }
+
+// ─── Mã file_id các phần, 40 mã một ô Script Property ───
+function oFid(id, part) { return FID_PREFIX + id + '_' + Math.floor(part / FID_MOI_O); }
+function luuFid(id, part, fid) {
+  var o = oFid(id, part), arr = [];
+  try { arr = JSON.parse(props().getProperty(o) || '[]'); } catch (e) {}
+  arr[part % FID_MOI_O] = fid;
+  props().setProperty(o, JSON.stringify(arr));
+}
+function docFid(id, part) {
+  try { return (JSON.parse(props().getProperty(oFid(id, part)) || '[]'))[part % FID_MOI_O] || ''; }
+  catch (e) { return ''; }
+}
+function xoaFid(id, parts) {
+  for (var c = 0; c * FID_MOI_O < Math.max(1, parts); c++) props().deleteProperty(FID_PREFIX + id + '_' + c);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Kho: lấy file từ Telegram về Drive để tải trên máy không vào được Telegram
+// ─────────────────────────────────────────────────────────────
+
+/** Danh sách file trong kho, mới nhất trước, kèm trạng thái lấy về. */
+function khoDanhSach(key) {
+  kiemKey(key);
+  var all = props().getProperties(), now = Date.now(), out = [];
+  Object.keys(all).forEach(function (k) {
+    if (k.indexOf(LIB_PREFIX) !== 0) return;
+    var m;
+    try { m = JSON.parse(all[k]); } catch (e) { return; }
+    var it = { id: m.id, name: m.name, size: m.size, parts: m.parts, date: m.date, st: 'none' };
+    var tam = docJson(all[TAM_PREFIX + m.id]), res = docJson(all[RES_PREFIX + m.id]);
+    if (tam && tam.until > now) {
+      it.st = 'san'; it.until = tam.until;
+      it.url = 'https://drive.google.com/uc?export=download&id=' + tam.fileId;
+      it.viewUrl = 'https://drive.google.com/file/d/' + tam.fileId + '/view';
+    } else if (res && res.fail) {
+      it.st = 'loi'; it.err = res.fail;
+    } else if (res) {
+      it.st = 'dang'; it.done = res.part;
+    }
+    out.push(it);
+  });
+  return out.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+}
+
+/** Xếp việc lấy về. Đã có bản tạm còn hạn thì thôi; đang lấy thì để yên. */
+function khoLayVe(key, id) {
+  kiemKey(key);
+  var m = docKho(id);
+  var tam = docJson(props().getProperty(TAM_PREFIX + id));
+  if (tam && tam.until > Date.now()) return { st: 'san' };
+  var res = docJson(props().getProperty(RES_PREFIX + id));
+  if (res && !res.fail) return { st: 'dang', done: res.part };
+  props().setProperty(RES_PREFIX + id, JSON.stringify({
+    id: id, name: m.name, size: m.size, parts: m.parts, ps: m.ps, part: 0, session: '', loi: 0
+  }));
+  return { st: 'dang', done: 0 };
+}
+
+/** Bỏ file khỏi kho (tin nhắn trong Telegram vẫn còn). Có bản tạm thì bỏ luôn. */
+function khoBo(key, id) {
+  kiemKey(key);
+  var m = docKho(id);
+  var tam = docJson(props().getProperty(TAM_PREFIX + id));
+  if (tam) driveApi('patch', DRIVE_FILES + '/' + tam.fileId, { trashed: true });
+  [LIB_PREFIX, RES_PREFIX, TAM_PREFIX].forEach(function (p) { props().deleteProperty(p + id); });
+  xoaFid(id, m.parts);
+  return { ok: true };
+}
+
+function docKho(id) {
+  if (!/^[\w-]{1,100}$/.test(String(id || ''))) throw new Error('PHIEN: Mã file không hợp lệ');
+  var m = docJson(props().getProperty(LIB_PREFIX + id));
+  if (!m) throw new Error('PHIEN: Không có file này trong kho');
+  return m;
+}
+
+function docJson(v) { try { return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+
+/** Trả false khi hết giờ giữa chừng. */
+function layVeMotFile(job, batDau) {
+  var key = RES_PREFIX + job.id;
+  while (job.part < job.parts) {
+    if ((Date.now() - batDau) / 1000 > WORKER_GIAY) return false;
+    var ok;
+    try { ok = layMotPhan(job); }
+    catch (err) { ghiLoi('layVe ' + job.name, err); ok = String(err && err.message || err); }
+    if (ok === true) {
+      job.part++; job.loi = 0;
+      props().setProperty(key, JSON.stringify(job));
+      continue;
+    }
+    if (ok === 'phien') { job.part = 0; job.session = ''; }  // phiên Drive hết hạn → ghép lại từ đầu
+    job.loi = (job.loi || 0) + 1;
+    if (job.loi >= JOB_MAX_LOI) {
+      job.fail = ok === 'phien' ? 'Phiên Google Drive hết hạn liên tục' : ok;
+      props().setProperty(key, JSON.stringify(job));
+      guiTelegram('⚠️ Không lấy được ' + job.name + ' về Drive (lỗi: ' + job.fail + '). Bấm "Lấy về" trên trang để thử lại.');
+      return true;
+    }
+    props().setProperty(key, JSON.stringify(job));
+    return false;
+  }
+  var fileId = job.driveId;
+  driveApi('post', DRIVE_FILES + '/' + fileId + '/permissions', { role: 'reader', type: 'anyone' });
+  props().setProperty(TAM_PREFIX + job.id, JSON.stringify({ fileId: fileId, until: Date.now() + GIU_BAN_TAM_GIO * 3600000 }));
+  props().deleteProperty(key);
+  guiTelegram('📦 Đã lấy ' + job.name + ' (' + mbText(job.size) + ') về Google Drive:\n' +
+    'https://drive.google.com/uc?export=download&id=' + fileId +
+    '\n\nBản tạm này tự bỏ vào thùng rác sau ' + GIU_BAN_TAM_GIO + ' giờ.');
+  return true;
+}
+
+/**
+ * Kéo phần job.part từ Telegram, đẩy tiếp vào phiên resumable upload của Drive.
+ * Trả true, 'phien' (phiên Drive hết hạn) hoặc chuỗi lỗi.
+ */
+function layMotPhan(job) {
+  var token = props().getProperty(PROP_TOKEN);
+  if (!token) return 'chưa chạy caiDat';
+  if (!job.session) {
+    var s = UrlFetchApp.fetch(DRIVE_UPLOAD + '?uploadType=resumable', {
+      method: 'post',
+      contentType: 'application/json; charset=UTF-8',
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), 'X-Upload-Content-Length': String(job.size) },
+      payload: JSON.stringify({ name: job.name, parents: [thuMucUpload()] }),
+      muteHttpExceptions: true
+    });
+    job.session = s.getResponseCode() === 200 ? layHeader(s, 'location') : '';
+    if (!job.session) return 'Drive ' + s.getResponseCode();
+  }
+
+  var fid = docFid(job.id, job.part);
+  if (!fid) return 'thiếu mã phần ' + (job.part + 1);
+  var f = tgApi('getFile', { file_id: fid });
+  if (!f || !f.ok) return 'Telegram ' + (f ? (f.error_code || '') + ' ' + (f.description || '') : 'không phản hồi');
+  var dl = UrlFetchApp.fetch('https://api.telegram.org/file/bot' + token + '/' + f.result.file_path, { muteHttpExceptions: true });
+  if (dl.getResponseCode() !== 200) return 'Telegram tải phần ' + (job.part + 1) + ' lỗi ' + dl.getResponseCode();
+
+  var bytes = dl.getContent();
+  var start = job.part * job.ps, end = Math.min(start + job.ps, job.size) - 1;
+  if (bytes.length !== end - start + 1) return 'phần ' + (job.part + 1) + ' sai dung lượng';
+  var put = UrlFetchApp.fetch(job.session, {
+    method: 'put',
+    contentType: 'application/octet-stream',
+    headers: { 'Content-Range': 'bytes ' + start + '-' + end + '/' + job.size },
+    payload: bytes,
+    muteHttpExceptions: true,
+    followRedirects: false
+  });
+  var code = put.getResponseCode();
+  if (code === 308) return true;
+  if (code === 200 || code === 201) { job.driveId = JSON.parse(put.getContentText()).id; return true; }
+  if (code === 404 || code === 410) return 'phien';
+  return 'Drive ' + code;
+}
+
+/** Bản tạm quá hạn → bỏ vào thùng rác. */
+function donBanTam(all) {
+  var now = Date.now();
+  Object.keys(all).forEach(function (k) {
+    if (k.indexOf(TAM_PREFIX) !== 0) return;
+    var t = docJson(all[k]);
+    if (t && t.until > now) return;
+    if (t) driveApi('patch', DRIVE_FILES + '/' + t.fileId, { trashed: true });
+    props().deleteProperty(k);
+  });
+}
+
+function tgApi(method, payload) {
+  var token = props().getProperty(PROP_TOKEN);
+  if (!token) return null;
+  try {
+    var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/' + method, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true
+    });
+    return JSON.parse(res.getContentText());
+  } catch (err) { return null; }
 }
 
 /** Đặt lịch chạy chuyenTelegram mỗi phút — gọi lại bao nhiêu lần cũng chỉ còn một lịch. */
