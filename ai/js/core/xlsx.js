@@ -5,6 +5,8 @@
 // chuỗi <c> của từng ô, mọi phần khác của file giữ nguyên từng byte.
 // Không bao giờ ghi đè ô có công thức.
 
+import { t } from '../i18n.js';
+
 export function colToNum(col) {
   let n = 0;
   for (const ch of col.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
@@ -75,8 +77,8 @@ export function patchSheetXml(sheetXml, cells) {
   const byRow = new Map();
   for (const c of cells) {
     const p = splitRef(c.ref);
-    if (!p) throw new Error(`Ô không hợp lệ: ${c.ref}`);
-    if (typeof c.v === 'number' && !Number.isFinite(c.v)) throw new Error(`Giá trị không hợp lệ ở ${c.ref}`);
+    if (!p) throw new Error(t('e.badCell', { ref: c.ref }));
+    if (typeof c.v === 'number' && !Number.isFinite(c.v)) throw new Error(t('e.badValue', { ref: c.ref }));
     if (!byRow.has(p.row)) byRow.set(p.row, new Map());
     byRow.get(p.row).set(p.col, c);
   }
@@ -85,7 +87,7 @@ export function patchSheetXml(sheetXml, cells) {
   const openEnd = sheetXml.indexOf('>', open);
   const selfClosed = sheetXml[openEnd - 1] === '/';
   const close = selfClosed ? openEnd + 1 : sheetXml.indexOf('</sheetData>');
-  if (open < 0 || close < 0) throw new Error('Không thấy <sheetData> trong sheet');
+  if (open < 0 || close < 0) throw new Error(t('e.badSheet'));
   const body = selfClosed ? '' : sheetXml.slice(openEnd + 1, close);
 
   // Tách từng <row>: [số dòng, chuỗi XML]

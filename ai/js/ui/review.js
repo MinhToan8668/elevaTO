@@ -7,16 +7,19 @@ import { parseVN } from '../core/numbers.js';
 import { item } from '../core/statements.js';
 import { renderNotes, renderModel } from './notes.js';
 import { renderCharts } from './charts.js';
+import { t, unitLabel, chartLabel } from '../i18n.js';
 
-export const UNITS = [[1, 'đồng'], [1e3, 'nghìn đồng'], [1e6, 'triệu đồng'], [1e9, 'tỷ đồng']];
-const ALL_TABS = [['BS', 'Tình hình tài chính'], ['IS', 'Kết quả KD'], ['CF', 'Lưu chuyển tiền'], ['CHART', 'Biểu đồ & chỉ số'], ['TM', 'Thuyết minh'], ['MODEL', 'Xem trước model elevaTO']];
+export const UNITS = [1, 1e3, 1e6, 1e9];
+/** [bội số, nhãn] theo ngôn ngữ đang chọn — gọi lúc vẽ, không giữ sẵn. */
+export const unitOptions = () => UNITS.map((v) => [v, unitLabel(v)]);
+const ALL_TABS = ['BS', 'IS', 'CF', 'CHART', 'TM', 'MODEL'];
 // Tab xem trước model chỉ dành cho học viên / giảng viên.
 let TABS = ALL_TABS;
 const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
 
 export function initReview(store, ctx) {
-  watch(store, ['sources', 'edits'], () => renderSources(store));
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user'], () => renderReview(store, ctx));
+  watch(store, ['sources', 'edits', 'lang'], () => renderSources(store));
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user', 'lang'], () => renderReview(store, ctx));
 }
 
 // ─── Nguồn dữ liệu ─────────────────────────────────────────
@@ -25,7 +28,7 @@ function renderSources(store) {
   const s = store.get();
   const { ds, errors } = store.data();
   const box = $('#sources');
-  if (!s.sources.length) { mount(box, h('p', { class: 'empty' }, 'Chưa có dữ liệu. Trích xuất ở bước 3, tải file Excel ở bước 1, hoặc mở lại phiên đã lưu.')); return; }
+  if (!s.sources.length) { mount(box, h('p', { class: 'empty' }, t('src.empty'))); return; }
   const setMeta = (id, patch) => store.set((st) => ({ sources: st.sources.map((x) => (x.id === id ? { ...x, meta: { ...x.meta, ...patch } } : x)) }));
   const rows = s.sources.map((src) => {
     const err = errors.find((e) => e.id === src.id);
@@ -33,17 +36,17 @@ function renderSources(store) {
     const f = ds.files.find((x) => x.file === file);
     const periodTxt = src.kind === 'period' ? src.period.id : f ? f.period : '—';
     const cur = { ...(src.ext?.meta || {}), ...(src.meta || {}) };
-    const dateIn = src.kind === 'ext' ? h('input', { type: 'date', value: isoDate(cur.ngay_ket_thuc), 'aria-label': `Ngày kết thúc kỳ của ${file}`,
+    const dateIn = src.kind === 'ext' ? h('input', { type: 'date', value: isoDate(cur.ngay_ket_thuc), 'aria-label': t('src.date.aria', { file }),
       onchange: (e) => setMeta(src.id, { ngay_ket_thuc: e.target.value }) }) : null;
-    const monIn = src.kind === 'ext' ? h('select', { 'aria-label': `Số tháng của ${file}`, onchange: (e) => setMeta(src.id, { so_thang: Number(e.target.value) || undefined }) },
-      h('option', { value: '' }, 'tự đoán'),
-      [3, 6, 9, 12].map((m) => h('option', { value: String(m), selected: Number(cur.so_thang) === m }, `${m} tháng`))) : null;
+    const monIn = src.kind === 'ext' ? h('select', { 'aria-label': t('src.months.aria', { file }), onchange: (e) => setMeta(src.id, { so_thang: Number(e.target.value) || undefined }) },
+      h('option', { value: '' }, t('src.months.auto')),
+      [3, 6, 9, 12].map((m) => h('option', { value: String(m), selected: Number(cur.so_thang) === m }, t('src.months', { n: m })))) : null;
     return h('tr', {},
       h('td', {}, file, err ? h('div', { class: 'tag red' }, err.message) : null),
       h('td', {}, periodTxt),
       h('td', {}, dateIn, ' ', monIn),
       h('td', {}, h('button', { class: 'btn ghost sm', onclick: () => {
-        if (!confirm(`Bỏ dữ liệu của ${file}?`)) return;
+        if (!confirm(t('src.dropAsk', { file }))) return;
         store.set((st) => {
           const sources = st.sources.filter((x) => x.id !== src.id);
           const stillHas = (jobId) => sources.some((x) => x.jobId === jobId);
@@ -52,27 +55,28 @@ function renderSources(store) {
             .map((j) => (j.id === src.jobId && j.status === 'done' && !stillHas(j.id) ? { ...j, status: 'ready' } : j));
           return { sources, jobs };
         });
-      } }, 'Bỏ')));
+      } }, t('src.drop'))));
   });
-  const warn = ds.warnings.length ? h('details', { class: 'msg warn' }, h('summary', {}, `${ds.warnings.length} lưu ý khi đọc`), h('ul', {}, ds.warnings.map((w) => h('li', {}, w)))) : null;
-  const conf = ds.conflicts.length ? h('details', { class: 'msg warn' }, h('summary', {}, `${ds.conflicts.length} số khác nhau giữa các báo cáo (đã dùng số của báo cáo mới hơn)`),
-    h('ul', {}, ds.conflicts.slice(0, 200).map((c) => h('li', {}, `${c.period} · ${labelOf(c.key)}: giữ ${fmt(c.kept, 1e6)} tr (${c.keptFile}), bỏ ${fmt(c.other, 1e6)} tr (${c.otherFile})`)))) : null;
+  const warn = ds.warnings.length ? h('details', { class: 'msg warn' }, h('summary', {}, t('src.warn', { n: ds.warnings.length })), h('ul', {}, ds.warnings.map((w) => h('li', {}, w)))) : null;
+  const conf = ds.conflicts.length ? h('details', { class: 'msg warn' }, h('summary', {}, t('src.conflict', { n: ds.conflicts.length })),
+    h('ul', {}, ds.conflicts.slice(0, 200).map((c) => h('li', {}, t('src.conflictRow', {
+      period: c.period, label: labelOf(c.key), kept: fmt(c.kept, 1e6), keptFile: c.keptFile, other: fmt(c.other, 1e6), otherFile: c.otherFile }))))) : null;
   keepFocus(box, () => mount(box,
     h('details', { class: 'pmap', open: errors.length > 0 || box.querySelector('details.pmap')?.open },
-      h('summary', {}, h('h3', {}, `Nguồn dữ liệu (${s.sources.length}) · ${ds.periods.length} kỳ: ${ds.periods.map((p) => p.id).join(', ') || '—'}`)),
-      h('table', { class: 'k' }, h('thead', {}, h('tr', {}, h('th', {}, 'File'), h('th', {}, 'Kỳ'), h('th', {}, 'Ngày kết thúc / số tháng (sửa nếu sai)'), h('th', {}, ''))), h('tbody', {}, rows)),
-      s.edits.length ? h('p', { class: 'priv' }, `${s.edits.length} ô đã sửa tay. `, h('button', { class: 'btn ghost sm', onclick: () => { if (confirm('Bỏ mọi số sửa tay?')) store.set({ edits: [] }); } }, 'Bỏ hết số sửa tay')) : null),
+      h('summary', {}, h('h3', {}, t('src.h', { n: s.sources.length, k: ds.periods.length, ids: ds.periods.map((p) => p.id).join(', ') || '—' }))),
+      h('table', { class: 'k' }, h('thead', {}, h('tr', {}, h('th', {}, t('src.file')), h('th', {}, t('src.period')), h('th', {}, t('src.date')), h('th', {}, ''))), h('tbody', {}, rows)),
+      s.edits.length ? h('p', { class: 'priv' }, t('src.edits', { n: s.edits.length }), h('button', { class: 'btn ghost sm', onclick: () => { if (confirm(t('src.editsAsk'))) store.set({ edits: [] }); } }, t('src.editsDrop'))) : null),
     warn, conf));
 }
 const isoDate = (d) => { const s = String(d || ''); const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s) || /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
   if (!m) return ''; return m[1].length === 4 ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; };
-const labelOf = (key) => { const [st, code] = key.split(':'); const it = item(st, code); return it ? `${code} ${it.label}` : key; };
+const labelOf = (key) => { const [st, code] = key.split(':'); const it = item(st, code); return it ? `${code} ${chartLabel(key, it.label)}` : key; };
 
 // ─── Bảng rà soát ──────────────────────────────────────────
 
 function renderReview(store, ctx) {
-  TABS = canUseModel(store.get().user) ? ALL_TABS : ALL_TABS.filter(([k]) => k !== 'MODEL');
-  if (!TABS.some(([k]) => k === ui.tab)) ui.tab = 'BS';
+  TABS = canUseModel(store.get().user) ? ALL_TABS : ALL_TABS.filter((k) => k !== 'MODEL');
+  if (!TABS.includes(ui.tab)) ui.tab = 'BS';
   const s = store.get();
   const { ds, checks } = store.data();
   const box = $('#review');
@@ -84,25 +88,25 @@ function renderReview(store, ctx) {
 
   const pills = ds.periods.map((p) => {
     const iss = checks[p.id] || [];
-    return h('button', { class: `pc ${iss.length ? 'bad' : 'ok'}`, title: iss.map((i) => `${i.label}: lệch ${fmt(i.diff, 1)} đ`).join('\n'),
+    return h('button', { class: `pc ${iss.length ? 'bad' : 'ok'}`, title: iss.map((i) => t('rv.badTip', { label: i.label, d: fmt(i.diff, 1) })).join('\n'),
       onclick: () => { if (!iss.length) return; ui.tab = iss[0].key.split(':')[0]; ui.focus = { period: p.id, key: iss[0].key }; renderReview(store, ctx); } },
-    `${periodLabel(p)}: ${iss.length ? `${iss.length} chỗ lệch` : '✓ khớp'}`);
+    iss.length ? t('rv.bad', { p: periodLabel(p), n: iss.length }) : t('rv.ok', { p: periodLabel(p) }));
   });
   const go = (k) => { ui.tab = k; renderReview(store, ctx); $(`#tab-${k}`)?.focus(); };
-  const tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Báo cáo', onkeydown: (e) => {
-    const i = TABS.findIndex(([k]) => k === ui.tab);
-    if (e.key === 'ArrowRight') go(TABS[(i + 1) % TABS.length][0]);
-    if (e.key === 'ArrowLeft') go(TABS[(i + TABS.length - 1) % TABS.length][0]);
-  } }, TABS.map(([k, label]) =>
-    h('button', { role: 'tab', id: `tab-${k}`, 'aria-controls': 'tabpanel', 'aria-selected': String(ui.tab === k), tabindex: ui.tab === k ? '0' : '-1', onclick: () => go(k) }, label)));
-  const unitSel = h('select', { class: 'inp', style: { width: 'auto' }, 'aria-label': 'Đơn vị hiển thị', onchange: (e) => store.set({ unit: Number(e.target.value) }) },
-    UNITS.map(([v, l]) => h('option', { value: String(v), selected: s.unit === v }, l)));
+  const tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': t('tab.aria'), onkeydown: (e) => {
+    const i = TABS.indexOf(ui.tab);
+    if (e.key === 'ArrowRight') go(TABS[(i + 1) % TABS.length]);
+    if (e.key === 'ArrowLeft') go(TABS[(i + TABS.length - 1) % TABS.length]);
+  } }, TABS.map((k) =>
+    h('button', { role: 'tab', id: `tab-${k}`, 'aria-controls': 'tabpanel', 'aria-selected': String(ui.tab === k), tabindex: ui.tab === k ? '0' : '-1', onclick: () => go(k) }, t(`tab.${k}`))));
+  const unitSel = h('select', { class: 'inp', style: { width: 'auto' }, 'aria-label': t('rv.unit.aria'), onchange: (e) => store.set({ unit: Number(e.target.value) }) },
+    unitOptions().map(([v, l]) => h('option', { value: String(v), selected: s.unit === v }, l)));
   const bar = h('div', { class: 'bar' }, tabs, h('span', { class: 'sp' }),
-    ['BS', 'IS', 'CF'].includes(ui.tab) ? h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: ui.showEmpty, onchange: (e) => { ui.showEmpty = e.target.checked; renderReview(store, ctx); } }), 'Hiện cả dòng trống') : null,
+    ['BS', 'IS', 'CF'].includes(ui.tab) ? h('label', { class: 'chk' }, h('input', { type: 'checkbox', checked: ui.showEmpty, onchange: (e) => { ui.showEmpty = e.target.checked; renderReview(store, ctx); } }), t('rv.showEmpty')) : null,
     unitSel);
 
   let body;
-  if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, (UNITS.find(([v]) => v === s.unit) || [])[1] || 'đồng');
+  if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, unitLabel(s.unit));
   else if (ui.tab === 'TM') body = renderNotes(store);
   else if (ui.tab === 'MODEL') body = renderModel(store);
   else body = [crossIssues(ds, checks, ui.tab), grid(store, ui.tab), legend()];
@@ -125,17 +129,17 @@ function renderReview(store, ctx) {
 function crossIssues(ds, checks, st) {
   const list = ds.periods.flatMap((p) => (checks[p.id] || []).filter((i) => i.kind === 'cross' && i.key.includes(`${st}:`)).map((i) => ({ p, i })));
   if (!list.length) return null;
-  return h('div', { class: 'msg err' }, h('b', {}, 'Đối chiếu chưa khớp:'),
-    h('ul', {}, list.map(({ p, i }) => h('li', {}, `${periodLabel(p)} — ${i.label}: ${fmt(i.reported, 1e6)} so với ${fmt(i.computed, 1e6)} triệu (lệch ${fmt(i.diff, 1)} đ)`))));
+  return h('div', { class: 'msg err' }, h('b', {}, t('rv.cross')),
+    h('ul', {}, list.map(({ p, i }) => h('li', {}, t('rv.crossRow', { p: periodLabel(p), label: i.label, reported: fmt(i.reported, 1e6), computed: fmt(i.computed, 1e6), d: fmt(i.diff, 1) })))));
 }
 
 function legend() {
   return h('div', { class: 'legend' },
-    h('span', {}, h('i', { style: { background: 'var(--text)' } }), 'số AI đọc / file'),
-    h('span', {}, h('i', { style: { background: 'var(--muted2)' } }), 'máy tự cộng (BCTC không in)'),
-    h('span', {}, h('i', { style: { background: 'var(--blue)' } }), 'số sửa tay'),
-    h('span', {}, h('i', { style: { background: 'var(--red)' } }), 'không khớp tổng các dòng con'),
-    h('span', {}, 'Nhập số: 1.234,5 hoặc (1.234) cho số âm · để trống rồi Enter để xoá ô'));
+    h('span', {}, h('i', { style: { background: 'var(--text)' } }), t('rv.lg.ai')),
+    h('span', {}, h('i', { style: { background: 'var(--muted2)' } }), t('rv.lg.calc')),
+    h('span', {}, h('i', { style: { background: 'var(--blue)' } }), t('rv.lg.man')),
+    h('span', {}, h('i', { style: { background: 'var(--red)' } }), t('rv.lg.bad')),
+    h('span', {}, t('rv.lg.tip')));
 }
 
 function grid(store, st) {
@@ -145,7 +149,7 @@ function grid(store, st) {
   // Mã không có trong mẫu 2026 (ví dụ LCTT trực tiếp T01…) vẫn hiện để người dùng thấy và dùng.
   const extra = new Set();
   for (const p of ds.periods) for (const k of Object.keys(ds.values[p.id] || {})) if (k.startsWith(`${st}:`) && !item(st, k.slice(3))) extra.add(k);
-  for (const k of [...extra].sort()) rows.push({ key: k, code: k.slice(3), label: 'Chỉ tiêu ngoài mẫu (LCTT trực tiếp…)', lvl: 2, kind: 'input', values: Object.fromEntries(ds.periods.map((p) => [p.id, ds.values[p.id]?.[k]])) });
+  for (const k of [...extra].sort()) rows.push({ key: k, code: k.slice(3), label: t('rv.outside'), lvl: 2, kind: 'input', values: Object.fromEntries(ds.periods.map((p) => [p.id, ds.values[p.id]?.[k]])) });
 
   const allKeys = allValueKeys(store);
   const ticked = s.ticks ? new Set(s.ticks) : new Set(allKeys);
@@ -156,12 +160,12 @@ function grid(store, st) {
   const stKeys = rows.map((r) => r.key);
   const allHere = stKeys.every((k) => ticked.has(k));
   const head = h('tr', {},
-    h('th', {}, h('input', { type: 'checkbox', checked: allHere, 'aria-label': 'Tick cả bảng', onchange: (e) => {
+    h('th', {}, h('input', { type: 'checkbox', checked: allHere, 'aria-label': t('rv.tickAll'), onchange: (e) => {
       const next = new Set(ticked); stKeys.forEach((k) => (e.target.checked ? next.add(k) : next.delete(k))); setTicks(next);
     } })),
-    h('th', {}, 'Mã'), h('th', {}, 'Chỉ tiêu'), ds.periods.map((p) => h('th', {}, periodLabel(p))));
+    h('th', {}, t('rv.code')), h('th', {}, t('rv.label')), ds.periods.map((p) => h('th', {}, periodLabel(p))));
   const body = rows.map((r) => h('tr', { class: `lv${Math.min(r.lvl, 4)}${r.kind === 'memo' ? ' memo' : ''}` },
-    h('td', { class: 't' }, h('input', { type: 'checkbox', checked: ticked.has(r.key), 'aria-label': `Chọn ${r.code}`, onchange: (e) => {
+    h('td', { class: 't' }, h('input', { type: 'checkbox', checked: ticked.has(r.key), 'aria-label': t('rv.tick', { code: r.code }), onchange: (e) => {
       const next = new Set(ticked); if (e.target.checked) next.add(r.key); else next.delete(r.key); setTicks(next);
     } })),
     h('td', { class: 'c' }, r.code), h('td', { class: 'l' }, r.label),
@@ -183,14 +187,14 @@ function cell(store, p, r, issue) {
   const reported = Number.isFinite(ds.values[p.id]?.[r.key]);
   const src = ds.src[p.id]?.[r.key];
   const cls = ['v', src?.manual ? 'man' : '', !reported && Number.isFinite(v) ? 'calc' : '', issue ? 'bad' : ''].filter(Boolean).join(' ');
-  const title = issue ? `In trên BCTC: ${fmt(issue.reported, 1)} · cộng dòng con: ${fmt(issue.computed, 1)} · lệch ${fmt(issue.diff, 1)} đ`
-    : src?.manual ? 'Số sửa tay' : src ? `Từ ${src.file} (cột ${src.col === 'cur' ? 'kỳ này' : 'kỳ trước'})` : Number.isFinite(v) ? 'Máy tự cộng từ các dòng con' : '';
+  const title = issue ? t('rv.cellBad', { reported: fmt(issue.reported, 1), computed: fmt(issue.computed, 1), d: fmt(issue.diff, 1) })
+    : src?.manual ? t('rv.cellMan') : src ? t('rv.cellFrom', { file: src.file, col: t(src.col === 'cur' ? 'rv.colCur' : 'rv.colPrev') }) : Number.isFinite(v) ? t('rv.cellCalc') : '';
   const td = h('td', { class: cls, tabindex: '0', title, dataset: { k: r.key, p: p.id } }, fmt(v, s.unit));
   const edit = () => {
     ui.nextEdit = null;
     if (td.querySelector('input')) return;
     const initial = reported ? fmt(ds.values[p.id][r.key], s.unit) : '';
-    const inp = h('input', { class: 'ed', value: initial, 'aria-label': `Sửa ${r.code} ${periodLabel(p)}` });
+    const inp = h('input', { class: 'ed', value: initial, 'aria-label': t('rv.edit.aria', { code: r.code, p: periodLabel(p) }) });
     let done = false;
     const commit = (save) => {
       if (done) return; done = true;
@@ -198,7 +202,7 @@ function cell(store, p, r, issue) {
       // Không đổi gì thì không ghi: số hiển thị đã làm tròn theo đơn vị, ghi lại sẽ mất phần lẻ.
       if (!save || txt === initial) { td.textContent = fmt(v, s.unit); return; }
       const n = txt === '' ? null : parseVN(txt);
-      if (txt !== '' && n === null) { toast(`"${txt}" không phải số`); td.textContent = fmt(v, s.unit); return; }
+      if (txt !== '' && n === null) { toast(t('rv.notNumber', { txt })); td.textContent = fmt(v, s.unit); return; }
       const nv = n === null ? null : Math.round(n * s.unit);
       store.set((st) => ({ edits: [...st.edits.filter((e) => !(e.period === p.id && e.key === r.key)), { period: p.id, key: r.key, v: nv }] }));
     };

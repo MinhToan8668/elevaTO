@@ -2,6 +2,7 @@
 // Mọi số ở đây đã quy về ĐỒNG. Khoá dạng "BS:131", "IS:10", "CF:20".
 
 import { CHART } from '../chart2026.js';
+import { t } from '../i18n.js';
 
 const BY_KEY = new Map(CHART.map((i) => [`${i.st}:${i.code}`, i]));
 const TT200 = new Map();                 // "BS:270" (mã cũ) → "BS:280" (mã mới)
@@ -88,15 +89,15 @@ export function validate(vals, opts = {}) {
     const diff = a - b;
     if (Math.abs(diff) > tolFor(unit, 4)) issues.push({ key, kind: 'cross', reported: a, computed: b, diff, label });
   };
-  cross('BS:280=440', best('BS:280'), best('BS:440'), 'Tổng tài sản ≠ tổng nguồn vốn');
+  cross('BS:280=440', best('BS:280'), best('BS:440'), t('ck.bsBalance'));
   if (opts.cashMatchesBS !== false) {
-    cross('CF:70=BS:110', best('CF:70'), best('BS:110'), 'Tiền cuối kỳ trên LCTT ≠ tiền trên CĐKT');
+    cross('CF:70=BS:110', best('CF:70'), best('BS:110'), t('ck.cfCash'));
   }
   if (has(vals, 'CF:01') && best('IS:50') !== null) {
-    cross('CF:01=IS:50', vals['CF:01'], best('IS:50'), 'LNTT trên LCTT ≠ LNTT trên KQKD');
+    cross('CF:01=IS:50', vals['CF:01'], best('IS:50'), t('ck.cfPbt'));
   }
   if (has(vals, 'IS:61') || has(vals, 'IS:62')) {
-    cross('IS:60=61+62', best('IS:60'), (vals['IS:61'] || 0) + (vals['IS:62'] || 0), 'LNST ≠ phần công ty mẹ + cổ đông không kiểm soát');
+    cross('IS:60=61+62', best('IS:60'), (vals['IS:61'] || 0) + (vals['IS:62'] || 0), t('ck.isSplit'));
   }
   // Lỗi ở dòng sâu nhất lên trước: thường đó là chỗ AI đọc sai, các dòng cha chỉ lệch theo.
   return issues.sort((a, b) => (b.depth ?? -1) - (a.depth ?? -1));

@@ -4,7 +4,7 @@ Công cụ **riêng** (không dính landing page, không dính công cụ upload
 trang cần lấy → AI tự nhận trang thuộc báo cáo nào và đọc số → rà soát, xem biểu đồ & chỉ số → xuất
 **Form chuẩn hóa 2026** (.xlsx) hoặc điền thẳng vào **model elevaTO** (chỉ học viên / giảng viên).
 
-Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
+Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Việt / English**.
 
 ## Làm được gì
 
@@ -156,12 +156,46 @@ Thêm key: sửa Script Property `GEMINI_KEYS` (mỗi dòng một key) hoặc d�
 - Model: máy chủ lấy danh sách model Gemini hiện có (tự cập nhật khi Google ra model mới) và dùng bản *flash*
   chính thức mới nhất.
 
+## Ngôn ngữ Anh / Việt
+
+Nút chọn ngôn ngữ nằm cạnh nút sáng/tối trên đầu trang. Chưa chọn thì trang tự lấy ngôn ngữ của trình duyệt
+(tiếng Việt nếu trình duyệt là tiếng Việt, còn lại tiếng Anh); đã chọn thì nhớ trên máy.
+
+Đổi ngôn ngữ **không nạp lại trang và không mất số đang làm**: `lang` nằm trong state, mọi phần giao diện
+đang theo dõi nó nên tự vẽ lại.
+
+Dịch luôn cả phần số liệu, không chỉ nút bấm:
+
+| Nội dung | Nguồn |
+|---|---|
+| Chữ trên giao diện | `js/i18n.vi.js` / `js/i18n.en.js` (cùng một bộ khoá) |
+| Chữ nằm sẵn trong HTML | thuộc tính `data-t` / `data-t-attr` trong `index.html` |
+| Tên 237 chỉ tiêu BCTC | `js/chart2026.js` (tiếng Việt) + `js/chart2026.en.js` |
+| Tên 141 dòng model forecast | `js/targets/model.js` + `js/targets/model.en.js` |
+| Nhãn trong file .xlsx xuất ra | cùng bộ khoá trên — xuất bằng ngôn ngữ đang chọn, kể cả tên file và tên sheet |
+
+Câu lệnh gửi cho Gemini (`js/core/prompts.js`) **luôn giữ tiếng Việt** vì nó đọc BCTC Việt Nam — đổi ngôn ngữ
+giao diện không đụng tới chất lượng trích xuất.
+
+Tiếng Anh cần phân biệt số ít / số nhiều, nên `t()` nhận thêm dạng `{n|page|pages}` (tiếng Việt viết hai vế
+giống nhau). Số **luôn** hiển thị theo cách viết Việt Nam (`1.234,5`) ở cả hai ngôn ngữ, vì ô sửa tay đọc số
+bằng `parseVN`; chỉ ngày giờ mới theo ngôn ngữ.
+
+Một chỗ **cố ý giữ nguyên**: các lưu ý sinh ra lúc trích xuất (`sources[].ext.warnings`) được lưu dưới dạng
+câu đã dịch vào phiên làm việc, nên mở lại phiên cũ sẽ thấy chúng bằng ngôn ngữ lúc trích xuất. Đó là biên bản
+của lần chạy đó, không phải chữ của giao diện.
+
+`tests/i18n.test.js` canh: hai từ điển đủ khoá như nhau và cùng bộ biến `{…}`, mọi chỉ tiêu / dòng model đều
+có tên tiếng Anh, mọi khoá `data-t` trong HTML đều có thật, chữ trên nhãn nguồn số của bảng model khớp phần
+chú thích, và **không còn chuỗi tiếng Việt viết cứng** trong `js/` (trừ prompts và hai tệp dữ liệu gốc).
+
 ## Mã nguồn
 
 ```
 ai/
-├── index.html, css/app.css      giao diện (5 bước, nền kính mờ sáng/tối)
+├── index.html, css/app.css      giao diện (3 bước, nền kính mờ sáng/tối, phông Be Vietnam Pro)
 ├── js/app.js, js/ui/*           các bước giao diện, trạng thái, lưu phiên
+├── js/i18n.js + i18n.{vi,en}.js chọn ngôn ngữ Anh / Việt (xem mục dưới)
 ├── js/ai.js                     gọi máy chủ AI (chờ khi bận, chia nhỏ khi quá giờ)
 ├── js/pdf.js, js/libs.js        đọc chữ, ảnh thu nhỏ, cắt trang PDF; nạp thư viện trong vendor/ khi cần
 ├── js/ui/pages.js               lưới trang để tick + xem trang lớn
@@ -172,9 +206,10 @@ ai/
 ├── js/core/formxlsx.js          tạo file Form chuẩn hóa 2026 (.xlsx có định dạng)
 ├── js/core/metrics.js           chỉ số tài chính + số liệu biểu đồ (máy tính, không qua AI)
 ├── js/ui/charts.js              vẽ biểu đồ SVG (không dùng thư viện ngoài)
-├── js/targets/                  điền model elevaTO (sửa thẳng XML trong file .xlsx)
+├── js/core/modelxlsx.js         tạo file Form chi tiết elevaTO (.xlsx)
+├── js/targets/model.js          quy ba báo cáo + thuyết minh về đúng dòng sheet 03.Input_FS
 ├── backend/                     máy chủ Apps Script
-├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS (xem vendor/README.md)
+├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS, phông Be Vietnam Pro (xem vendor/README.md)
 └── tests/                       kiểm thử
 ```
 
@@ -184,5 +219,5 @@ Kiểm thử (Node 20+):
 cd ai
 npm test                 # kiểm thử đơn vị: đọc số, cây cộng dồn, quy đổi TT200, trích xuất, Excel, máy chủ, bot…
 npm install && npm run e2e   # chạy trang thật trong Chromium, máy chủ AI giả lập
-# thử điền model thật: MODEL_XLSX=model.xlsx npm run e2e
+# xem giao diện từng bước: E2E_SHOTS=/thư/mục npm run e2e
 ```

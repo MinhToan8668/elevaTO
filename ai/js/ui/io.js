@@ -6,6 +6,7 @@
 //   Ảnh chụp    → vốn đã là ảnh.
 
 import { toBase64 } from '../ai.js';
+import { t } from '../i18n.js';
 
 // Gemini nhận tối đa ~20MB mỗi yêu cầu (sau base64 tăng 1/3) → giữ phần file dưới 13MB.
 const MAX_INLINE = 13 * 1024 * 1024;
@@ -21,7 +22,7 @@ export function cachGui({ coPdf, cỡPdf, anh = false }) {
 export function createIO(ctx) {
   async function pageImages(jobId, pages, width = 1600, quality = 0.8) {
     const m = ctx.media.get(jobId);
-    if (!m) throw new Error('File gốc không còn trong trình duyệt — tải lại file');
+    if (!m) throw new Error(t('io.gone'));
     const { pageJpeg, imageJpeg } = await import('../pdf.js');
     const out = [];
     for (const n of pages) {
@@ -33,7 +34,7 @@ export function createIO(ctx) {
 
   async function pageParts(jobId, pages, { anh = false } = {}) {
     const m = ctx.media.get(jobId);
-    if (!m) throw new Error('File gốc không còn trong trình duyệt — tải lại file');
+    if (!m) throw new Error(t('io.gone'));
     if (m.pdf && !anh) {
       const { subsetPdf } = await import('../pdf.js');
       const bytes = await subsetPdf(m.pdf.bytes, pages);

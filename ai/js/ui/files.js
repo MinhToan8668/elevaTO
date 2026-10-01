@@ -9,9 +9,10 @@ import { readCells, parseSharedStrings, sheetPathByName, sheetNames, cellsToRows
 import { NOTE_TASKS } from '../core/prompts.js';
 import { suggestPicks } from '../core/pipeline.js';
 import { openZip, loadXLSX } from '../libs.js';
+import { t } from '../i18n.js';
 
 const MAX_FILE = 200 * 1024 * 1024;
-const SHORT = { BS: 'CĐKT', IS: 'KQKD', CF: 'LCTT', NOTES: 'TM', OTHER: '·', UNKNOWN: '?' };
+const SHORT = (k) => (['BS', 'IS', 'CF', 'NOTES'].includes(k) ? t(`st.${k}`) : k === 'OTHER' ? '·' : '?');
 
 export function initFiles(store, ctx) {
   const input = $('#fileInput'), drop = $('#drop');
@@ -29,10 +30,10 @@ export function initFiles(store, ctx) {
     const imgs = files.filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type));
     for (const f of files) {
       if (imgs.includes(f)) continue;
-      if (f.size > MAX_FILE) { toast(`${f.name}: file quá lớn (tối đa 200MB)`); continue; }
+      if (f.size > MAX_FILE) { toast(t('file.tooBig', { name: f.name })); continue; }
       if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') await addPdf(f);
       else if (/\.(xlsx|xlsm|xls|csv)$/i.test(f.name)) await addExcel(f);
-      else toast(`Bỏ qua ${f.name}: chỉ nhận PDF, Excel, ảnh JPG/PNG`);
+      else toast(t('file.skip', { name: f.name }));
     }
     if (imgs.length) addImages(imgs);
   }
@@ -40,20 +41,20 @@ export function initFiles(store, ctx) {
   async function addPdf(file) {
     const id = uid('j');
     ctx.media.set(id, { file });
-    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'pdf', status: 'reading', progress: 'Đang mở…' }] }));
+    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'pdf', status: 'reading', progress: { k: 'file.opening' } }] }));
     try {
       const { openPdf, pageTexts } = await import('../pdf.js');
       const pdf = await openPdf(file);
       if (!alive(id)) { pdf.doc.destroy(); return; }
       ctx.media.set(id, { file, pdf });
-      const texts = await pageTexts(pdf.doc, (i, n) => { if (i % 5 === 0 || i === n) patchJob(id, { progress: `Đọc chữ trang ${i}/${n}` }); });
+      const texts = await pageTexts(pdf.doc, (i, n) => { if (i % 5 === 0 || i === n) patchJob(id, { progress: { k: 'file.readingText', v: { i, n } } }); });
       if (!alive(id)) return;
       const c = classifyPages(texts);
       const job = { kind: 'pdf', numPages: pdf.numPages, types: c.types, notes: c.notes, scanned: c.scanned };
       const goiY = suggestPicks(job);
       patchJob(id, { status: 'ready', progress: '', ...job, picked: goiY, goiY });    // goiY: người dùng chưa sửa tay thì đổi form sẽ gợi ý lại
     } catch (e) {
-      const msg = /password/i.test(e.name + e.message) ? 'File có mật khẩu — mở khoá rồi tải lại' : `Không mở được PDF: ${e.message}`;
+      const msg = /password/i.test(e.name + e.message) ? { k: 'file.locked' } : { k: 'file.badPdf', v: { msg: e.message } };
       patchJob(id, { status: 'error', error: msg, progress: '' });
     }
   }
@@ -62,7 +63,7 @@ export function initFiles(store, ctx) {
     const id = uid('j');
     const sorted = [...files].sort((a, b) => a.name.localeCompare(b.name, 'vi', { numeric: true }));
     ctx.media.set(id, { images: sorted, urls: sorted.map((f) => URL.createObjectURL(f)) });
-    const name = sorted.length > 1 ? `${sorted.length} ảnh chụp (${sorted[0].name} …)` : sorted[0].name;
+    const name = sorted.length > 1 ? t('file.images', { n: sorted.length, first: sorted[0].name }) : sorted[0].name;   // tên file, không dịch lại
     store.set((s) => ({ jobs: [...s.jobs, {
       id, name, kind: 'img', status: 'ready', numPages: sorted.length, scanned: true,
       types: sorted.map(() => 'UNKNOWN'), notes: Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []])),
@@ -72,15 +73,17 @@ export function initFiles(store, ctx) {
 
   async function addExcel(file) {
     const id = uid('j');
-    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'xls', status: 'reading', progress: 'Đang đọc…' }] }));
+    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'xls', status: 'reading', progress: { k: 'file.reading' } }] }));
     try {
       const grid = readGrid(await readSheets(file));
       if (!alive(id)) return;
-      if (grid.kind === 'storage' && !grid.periods.length) throw new Error('Sheet "Lưu trữ" không có cột kỳ hợp lệ (dòng "Mã kỳ" dạng FY-2025, Q2-2026)');
+      if (grid.kind === 'storage' && !grid.periods.length) throw new Error(t('file.noPeriods'));
       const srcs = gridToSources(file.name, grid).map((x) => ({ ...x, id: uid('s'), jobId: id }));
+      // Lưu khoá + biến, không lưu câu đã dịch: đổi ngôn ngữ thì dòng này đổi theo.
       const summary = grid.kind === 'storage'
-        ? `File FinLens "Lưu trữ": ${grid.periods.length} kỳ — ${grid.periods.map((p) => p.period.id).join(', ')}`
-        : `Bảng ${Object.keys(grid.statements).map((k) => SHORT[k]).join(', ')}${srcs[0].ext.meta.ngay_ket_thuc ? ` · kỳ kết thúc ${srcs[0].ext.meta.ngay_ket_thuc}` : ' · chưa rõ ngày — nhập ở bước 4'}`;
+        ? { k: 'file.storage', v: { n: grid.periods.length, ids: grid.periods.map((p) => p.period.id).join(', ') } }
+        : { k: 'file.tables', v: { names: Object.keys(grid.statements).map(SHORT).join(', ') },
+            sau: srcs[0].ext.meta.ngay_ket_thuc ? { k: 'file.endDate', v: { d: srcs[0].ext.meta.ngay_ket_thuc } } : { k: 'file.noDate' } };
       patchJob(id, { status: 'done', progress: '', summary });
       store.set((s) => ({ sources: [...s.sources, ...srcs] }));
     } catch (e) {
@@ -97,7 +100,7 @@ export function initFiles(store, ctx) {
     store.set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id), sources: s.sources.filter((x) => x.jobId !== id) }));
   };
 
-  watch(store, ['jobs', 'running'], (s) => renderList(s, ctx));
+  watch(store, ['jobs', 'running', 'lang'], (s) => renderList(s, ctx));
 }
 
 /** .xlsx/.xlsm đọc bằng JSZip + bộ đọc XML riêng; .xls/.csv (định dạng cũ) mới cần SheetJS. */
@@ -107,7 +110,7 @@ async function readSheets(file) {
     const zip = await openZip(buf);
     const wb = await zip.file('xl/workbook.xml')?.async('string');
     const rels = await zip.file('xl/_rels/workbook.xml.rels')?.async('string');
-    if (!wb || !rels) throw new Error('File Excel hỏng hoặc không đúng định dạng .xlsx');
+    if (!wb || !rels) throw new Error(t('file.badXlsx'));
     const ss = zip.file('xl/sharedStrings.xml');
     const shared = ss ? parseSharedStrings(await ss.async('string')) : [];
     const out = [];
@@ -126,27 +129,30 @@ async function readSheets(file) {
 // ─── Danh sách file (bước 1) ───────────────────────────────
 
 function renderList(s, ctx) {
-  const IC = { pdf: 'PDF', img: 'ẢNH', xls: 'XLS' };
+  const IC = { pdf: 'PDF', img: 'IMG', xls: 'XLS' };
   const list = $('#fileList');
   keepFocus(list, () => mount(list, s.jobs.map((j) => h('li', { class: 'file' },
     h('span', { class: `ic ${j.kind === 'img' ? 'img' : j.kind}` }, IC[j.kind]),
     h('div', { style: { minWidth: 0 } },
       h('div', { class: 'nm', title: j.name }, j.name),
       h('div', { class: 'st' }, statusLine(j))),
-    h('button', { class: 'btn ghost sm', 'aria-label': `Bỏ file ${j.name}`, onclick: () => ctx.removeJob(j.id), disabled: s.running }, 'Bỏ')))));
+    h('button', { class: 'btn ghost sm', 'aria-label': t('file.drop.aria', { name: j.name }), onclick: () => ctx.removeJob(j.id), disabled: s.running }, t('file.drop'))))));
   document.querySelector('.rail a[data-step="2"]').classList.toggle('done', s.jobs.some((j) => j.status !== 'error'));
 }
 
+/** Chuỗi đã dịch, hoặc { k, v, sau } do files.js lưu lại để dịch muộn. */
+const chu = (x) => (typeof x === 'string' || !x ? x || '' : t(x.k, x.v) + (x.sau ? chu(x.sau) : ''));
+
 function statusLine(j) {
-  if (j.status === 'error') return h('span', { class: 'tag red' }, j.error);
-  if (j.status === 'reading') return j.progress || 'Đang đọc…';
-  if (j.kind === 'xls') return [h('span', { class: 'tag em' }, 'Không cần AI'), j.summary];
-  const found = ['BS', 'IS', 'CF'].filter((t) => j.types.includes(t)).map((t) => SHORT[t]);
+  if (j.status === 'error') return h('span', { class: 'tag red' }, chu(j.error));
+  if (j.status === 'reading') return chu(j.progress) || t('file.reading');
+  if (j.kind === 'xls') return [h('span', { class: 'tag em' }, t('file.noAI')), chu(j.summary)];
+  const found = ['BS', 'IS', 'CF'].filter((x) => j.types.includes(x)).map(SHORT);
   return [
-    `${j.numPages} trang · `,
-    j.scanned ? h('span', { class: 'tag gold' }, j.kind === 'img' ? 'ảnh chụp' : 'bản scan') : h('span', { class: 'tag em' }, 'có chữ'),
-    `đã chọn ${j.picked?.length || 0} trang`,
-    !j.scanned && found.length ? ` · máy nhận ra ${found.join(', ')}` : '',
-    j.status === 'done' ? h('span', { class: 'tag em', style: { marginLeft: '6px' } }, 'đã trích xuất') : null,
+    t('file.pages', { n: j.numPages }),
+    j.scanned ? h('span', { class: 'tag gold' }, t(j.kind === 'img' ? 'file.photo' : 'file.scan')) : h('span', { class: 'tag em' }, t('file.text')),
+    t('file.picked', { n: j.picked?.length || 0 }),
+    !j.scanned && found.length ? t('file.found', { names: found.join(', ') }) : '',
+    j.status === 'done' ? h('span', { class: 'tag em', style: { marginLeft: '6px' } }, t('file.done')) : null,
   ];
 }

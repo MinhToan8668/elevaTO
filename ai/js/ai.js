@@ -2,6 +2,7 @@
 
 import { parseAIJson } from './core/extract.js';
 import { SYSTEM } from './core/prompts.js';
+import { t } from './i18n.js';
 
 export class AIError extends Error {
   constructor(code, message, extra = {}) { super(message); this.code = code; Object.assign(this, extra); }
@@ -16,18 +17,18 @@ const MAX_BUSY_WAITS = 4;
 
 /** Gửi một yêu cầu tới máy chủ. Trả data khi ok, ném AIError khi lỗi. */
 export async function callApi(api, body, { keepalive = false } = {}) {
-  if (!api) throw new AIError('setup', 'Công cụ đang được cài đặt — quay lại sau ít phút nhé');
+  if (!api) throw new AIError('setup', t('e.setup'));
   let r;
   try {
     // text/plain để trình duyệt không gửi preflight CORS (Apps Script không trả lời preflight).
     r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), keepalive });
   } catch (e) {
-    throw new AIError('network', 'Mất kết nối mạng — kiểm tra internet rồi thử lại');
+    throw new AIError('network', t('e.network'));
   }
-  if (!r.ok) throw new AIError('network', `Máy chủ đang bận (lỗi ${r.status}) — thử lại sau ít phút`);
+  if (!r.ok) throw new AIError('network', t('e.busy', { code: r.status }));
   let j;
-  try { j = await r.json(); } catch (e) { throw new AIError('network', 'Máy chủ trả lời lạ — thử lại sau ít phút'); }
-  if (!j || !j.ok) throw new AIError(j?.code || 'upstream', j?.error || 'Lỗi không rõ', { retryAfter: j?.retryAfter });
+  try { j = await r.json(); } catch (e) { throw new AIError('network', t('e.odd')); }
+  if (!j || !j.ok) throw new AIError(j?.code || 'upstream', j?.error || t('e.unknown'), { retryAfter: j?.retryAfter });
   return j.data;
 }
 
@@ -75,14 +76,14 @@ export function createClient({ api, token, onWait, onAuth } = {}) {
           // tên trường nên AI sẽ trả JSON lạ, và tool tưởng "không thấy bảng". Báo mã riêng để bên gọi
           // thử lại bằng câu lệnh CÓ tả cấu trúc (xem prompts.js → moTaKhuon).
           if (e.code === 'upstream' && /400/.test(e.message) && schema) {
-            throw new AIError('schema', 'Gemini từ chối khuôn JSON của yêu cầu này');
+            throw new AIError('schema', t('e.schema'));
           }
           throw e;
         }
         // Máy chủ đáng lẽ luôn trả { text, finishReason }. Thiếu thì báo bằng lời người đọc hiểu,
         // đừng để lọt TypeError ("Cannot read properties of undefined") ra tận giao diện.
-        if (!d || typeof d.text !== 'string') throw new AIError('upstream', 'Máy chủ trả lời thiếu dữ liệu — thử lại sau ít phút');
-        if (d.finishReason === 'MAX_TOKENS') throw new AIError('truncated', 'Kết quả quá dài, bị cắt ngang');
+        if (!d || typeof d.text !== 'string') throw new AIError('upstream', t('e.thin'));
+        if (d.finishReason === 'MAX_TOKENS') throw new AIError('truncated', t('e.truncated'));
         try { return parseAIJson(d.text); }
         catch (e) { throw new AIError('parse', e.message); }
       }
@@ -96,7 +97,7 @@ export function toBase64(blobOrBytes) {
   return new Promise((ok, fail) => {
     const fr = new FileReader();
     fr.onload = () => ok(String(fr.result).split(',')[1] || '');
-    fr.onerror = () => fail(fr.error || new Error('Không đọc được file'));
+    fr.onerror = () => fail(fr.error || new Error(t('e.readFile')));
     fr.readAsDataURL(blob);
   });
 }

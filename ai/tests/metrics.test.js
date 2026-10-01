@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildMetrics, RATIO_ROWS } from '../js/core/metrics.js';
+import { VI } from '../js/i18n.vi.js';
 
 const P = (id, year, months = 12) => ({ id, year, months, endMonth: months });
 const ds = {
@@ -26,17 +27,18 @@ test('biểu đồ: doanh thu & lợi nhuận, cơ cấu tài sản / nguồn v�
   assert.deepEqual(m.periods.map((p) => p.label), ['Năm 2024', 'Năm 2025']);
   const rev = m.charts.find((c) => c.id === 'revenue');
   assert.equal(rev.kind, 'bars');
-  assert.deepEqual(rev.series.map((s) => [s.name, s.values]), [
-    ['Doanh thu thuần', [2000, 2500]],
-    ['Lợi nhuận gộp', [500, 600]],
-    ['Lợi nhuận sau thuế', [100, 130]],
+  // metrics.js chỉ phát ra khoá; tên hiển thị do i18n lo (xem tests/i18n.test.js).
+  assert.deepEqual(rev.series.map((s) => [s.key, s.values]), [
+    ['netRevenue', [2000, 2500]],
+    ['grossProfit', [500, 600]],
+    ['profitAfterTax', [100, 130]],
   ]);
   const asset = m.charts.find((c) => c.id === 'assets');
   assert.equal(asset.kind, 'stack');
-  assert.deepEqual(asset.series.map((s) => s.name), ['Tiền', 'Phải thu ngắn hạn', 'Hàng tồn kho', 'Tài sản cố định', 'Tài sản khác']);
+  assert.deepEqual(asset.series.map((s) => s.key), ['cash', 'receivables', 'inventories', 'fixedAssets', 'otherAssets']);
   assert.deepEqual(asset.series.at(-1).values, [1000 - 100 - 200 - 150 - 300, 1200 - 150 - 260 - 190 - 320]);
   const cap = m.charts.find((c) => c.id === 'capital');
-  assert.deepEqual(cap.series.map((s) => [s.name, s.values]), [['Nợ ngắn hạn', [400, 500]], ['Nợ dài hạn', [200, 200]], ['Vốn chủ sở hữu', [400, 500]]]);
+  assert.deepEqual(cap.series.map((s) => [s.key, s.values]), [['currentLiab', [400, 500]], ['nonCurrentLiab', [200, 200]], ['equity', [400, 500]]]);
   const cf = m.charts.find((c) => c.id === 'cashflow');
   assert.deepEqual(cf.series.map((s) => s.values), [[90, 140], [-50, -60], [-20, -30]]);
   const mg = m.charts.find((c) => c.id === 'margins');
@@ -73,7 +75,7 @@ test('kỳ giữa niên độ: ROA / ROE / vòng quay quy về một năm để 
   assert.equal(val('roe', 1).toFixed(2), ((120 * 2) / ((1000 + 1100) / 2) * 100).toFixed(2), 'LNST 6 tháng × 2');
   assert.equal(val('roa', 1).toFixed(2), ((120 * 2) / ((2000 + 2200) / 2) * 100).toFixed(2));
   assert.equal(val('assetTurn', 1).toFixed(3), ((1600 * 2) / ((2000 + 2200) / 2)).toFixed(3));
-  assert.match(m.ratios.find((r) => r.key === 'roe').hint, /quy về một năm|năm hoá/i);
+  assert.match(VI['ratio.roe.hint'], /quy về một năm|năm hoá/i, 'cách tính ghi dưới tên chỉ số phải nói rõ việc quy về một năm');
   // biên lợi nhuận là tỷ lệ giữa hai dòng cùng kỳ → không quy đổi
   assert.equal(val('ros', 1), (120 / 1600) * 100);
 });
@@ -102,7 +104,7 @@ test('vốn chủ sở hữu âm → không tính ROE / nợ trên vốn chủ; 
   assert.equal(m.ratios.find((r) => r.key === 'roe').values[0], null);
   assert.equal(m.ratios.find((r) => r.key === 'de').values[0], null);
   const cap = m.charts.find((c) => c.id === 'capital');
-  assert.equal(cap.note, 'Có khoản âm (vốn chủ sở hữu âm) nên không vẽ được thành cột — xem bảng số.');
+  assert.deepEqual(cap.negative, ['equity'], 'cột chồng chỉ vẽ phần dương → báo rõ khoản nào âm');
 });
 
 test('nhiều kỳ bất thường (file phiên bị sửa) → chỉ vẽ 12 kỳ gần nhất', () => {

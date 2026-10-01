@@ -5,6 +5,7 @@
 import { CHART } from '../chart2026.js';
 import { parseVN, unitScale } from './numbers.js';
 import { fromTT200, normalizeSigns, detectRegime } from './statements.js';
+import { t } from '../i18n.js';
 
 // ─── JSON từ AI ────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ export function parseAIJson(text) {
     const end = matchEnd(s, start);
     if (end > 0) { try { return JSON.parse(s.slice(start, end + 1)); } catch (e) { /* rơi xuống lỗi chung */ } }
   }
-  throw new Error('AI trả về dữ liệu không đọc được (JSON hỏng hoặc bị cắt ngang)');
+  throw new Error(t('err.badJson'));
 }
 
 // Tìm dấu đóng khớp với { hoặc [ ở vị trí start, bỏ qua ký tự nằm trong chuỗi.
@@ -70,7 +71,7 @@ export function statementToValues(st, ai, hint = {}) {
   const meta = ai.meta || {};
   const warnings = [];
   let unit = unitScale(meta.don_vi);
-  if (!unit) { unit = 1; warnings.push(`Không đọc được đơn vị tính ("${meta.don_vi || ''}") — tạm hiểu là đồng, cần xác nhận.`); }
+  if (!unit) { unit = 1; warnings.push(t('w.noUnit', { raw: meta.don_vi || '' })); }
   const direct = st === 'CF' && /truc/.test(fold(meta.phuong_phap || '').toLowerCase());
 
   const raw = { cur: {}, prev: {} }, byLabel = { cur: {}, prev: {} };
@@ -79,7 +80,7 @@ export function statementToValues(st, ai, hint = {}) {
     const code = normCode(st, it.c);
     const target = code ? raw : byLabel;
     const key = code ? `${st}:${code}` : matchLabel(st, it.n) && `${st}:${matchLabel(st, it.n)}`;
-    if (!key) { if (it.n && (parseVN(it.v) !== null || parseVN(it.p) !== null)) warnings.push(`Bỏ qua dòng không có mã và không khớp tên: "${String(it.n).slice(0, 60)}"`); continue; }
+    if (!key) { if (it.n && (parseVN(it.v) !== null || parseVN(it.p) !== null)) warnings.push(t('w.noCode', { name: String(it.n).slice(0, 60) })); continue; }
     for (const [side, rawV] of [['cur', it.v], ['prev', it.p]]) {
       const v = parseVN(rawV);
       if (v === null) continue;
@@ -87,11 +88,11 @@ export function statementToValues(st, ai, hint = {}) {
       target[side][key] = v * unit;
     }
   }
-  if (dup.size) warnings.push(`Mã xuất hiện nhiều lần, giữ lần đầu: ${[...dup].map((k) => k.split(':')[1]).join(', ')}`);
+  if (dup.size) warnings.push(t('w.dup', { codes: [...dup].map((k) => k.split(':')[1]).join(', ') }));
 
   const regime = hint.regime || regimeFrom(st, meta, raw.cur, ai.items || []);
   if (!hint.regime && regime === 'TT200' && oldYear(meta) && (/99/.test(String(meta.thong_tu || '')) || detectRegime(raw.cur) === 'TT99')) {
-    warnings.push(`Kỳ kết thúc ${meta.ngay_ket_thuc} (năm 2025 trở về trước) nên đọc theo mẫu cũ TT200, nhưng báo cáo trông như mẫu mới TT99 — kiểm tra lại ngày kết thúc kỳ (có thể AI lấy nhầm ngày đầu kỳ).`);
+    warnings.push(t('w.oldForm', { d: meta.ngay_ket_thuc }));
   }
   const unmapped = new Set();
   const conv = (vals) => {
@@ -272,5 +273,5 @@ export function noteToModel(kind, ai) {
     if (tr !== null) out.taxRate = tr > 1 ? tr / 100 : tr;
     return out;
   }
-  throw new Error('Không rõ nhóm thuyết minh: ' + kind);
+  throw new Error(t('err.noteKind', { kind }));
 }

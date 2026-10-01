@@ -4,6 +4,7 @@
 
 import { normCode, fold, statementToValues } from './extract.js';
 import { parseVN } from './numbers.js';
+import { t } from '../i18n.js';
 
 const GROUP = { 'CĐKT': 'BS', 'KQKD': 'IS', 'LCTT': 'CF' };
 
@@ -16,7 +17,7 @@ export function readGrid(sheets) {
     const t = readStatement(s);
     if (t && !statements[t.st]) statements[t.st] = t.data;
   }
-  if (!Object.keys(statements).length) throw new Error('Không nhận ra bảng BCTC nào (cần có cột "Mã số" hoặc sheet "Lưu trữ" của FinLens)');
+  if (!Object.keys(statements).length) throw new Error(t('err.noTable'));
   return { kind: 'statements', statements };
 }
 

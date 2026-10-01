@@ -2,6 +2,8 @@
 // Chỉ lưu dữ liệu đã trích + lựa chọn của người dùng — không lưu phiên đăng nhập, không lưu file gốc.
 // File phiên có thể đến từ người khác gửi → đọc lại theo khuôn cố định, bỏ mọi khoá / giá trị lạ.
 
+import { t } from '../i18n.js';
+
 const APP = 'elevato-ai-bctc';
 const VERSION = 1;
 const KEY_RE = /^(BS|IS|CF):(T?\d{1,3}[a-z]?|KP[Q12])$/;
@@ -22,7 +24,7 @@ export function serializeSession(s) {
 export function parseSession(text) {
   let o;
   try { o = JSON.parse(text); } catch (e) { o = null; }
-  if (!o || o.app !== APP || typeof o.data !== 'object' || !o.data) throw new Error('Đây không phải file phiên làm việc elevaTO AI');
+  if (!o || o.app !== APP || typeof o.data !== 'object' || !o.data) throw new Error(t('e.badSession'));
   const d = o.data;
   return {
     sources: uniqueIds(arr(d.sources, 200).map(source).filter(Boolean)),

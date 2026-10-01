@@ -1,6 +1,6 @@
 // E2E: chạy trang thật trong Chromium, máy chủ AI được giả lập (không tốn lượt, không cần key).
 //   cd ai && npm run e2e
-// Tuỳ chọn: MODEL_XLSX=/đường/dẫn/model.xlsx để thử điền model elevaTO thật.
+// Tuỳ chọn: E2E_SHOTS=/thư/mục để chụp màn hình từng bước.
 // Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
 // máy chủ AI được giả lập, phông chữ nằm sẵn trong vendor/fonts.
 
@@ -111,8 +111,10 @@ before(async () => {
 });
 after(async () => { await browser?.close(); server?.close(); });
 
-async function newPage({ configured = true } = {}) {
-  const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1360, height: 900 } });
+// locale: trang tự chọn ngôn ngữ theo trình duyệt khi người dùng chưa chọn — đặt rõ để bài kiểm tra không
+// phụ thuộc ngôn ngữ mặc định của Chromium (en-US).
+async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
+  const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1360, height: 900 }, locale });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -139,14 +141,22 @@ async function download(page, click) {
   return { name: d.suggestedFilename(), path };
 }
 
-test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuất → sửa ô → xuất file → mở lại phiên', { timeout: 180_000 }, async () => {
-  // PDF BCTC giả dựng bằng chính Chromium
-  const maker = await browser.newPage();
-  await maker.setContent(reportHtml());
-  const pdfPath = join(tmp, 'BCTC-2025.pdf');
-  await writeFile(pdfPath, await maker.pdf({ format: 'A4' }));
-  await maker.close();
+/** PDF BCTC giả, dựng bằng chính Chromium — chỉ dựng một lần cho cả bộ kiểm tra. */
+let pdfCho = null;
+function bctcPdf() {
+  pdfCho ||= (async () => {
+    const maker = await browser.newPage();
+    await maker.setContent(reportHtml());
+    const path = join(tmp, 'BCTC-2025.pdf');
+    await writeFile(path, await maker.pdf({ format: 'A4' }));
+    await maker.close();
+    return path;
+  })();
+  return pdfCho;
+}
 
+test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuất → sửa ô → xuất file → mở lại phiên', { timeout: 180_000 }, async () => {
+  const pdfPath = await bctcPdf();
   const { page, errors } = await newPage();
   await page.goto(`${base}/ai/`);
   // Chưa đăng nhập: chỉ thấy màn chào + đăng nhập, không có ô link máy chủ / mã truy cập nào.
@@ -424,6 +434,90 @@ test('thương hiệu: phông Be Vietnam Pro nằm trong repo, dải logo lớn 
   await page.emulateMedia({ colorScheme: 'light' });
   assert.deepEqual(errors, []);
 });
+
+test('chọn ngôn ngữ Anh / Việt: đổi tại chỗ, nhớ lựa chọn, tên chỉ tiêu và file Excel đổi theo', { timeout: 120_000 }, async () => {
+  // Trình duyệt tiếng Anh: chưa chọn gì thì trang tự mở bằng tiếng Anh.
+  const en = await newPage({ locale: 'en-US' });
+  await en.page.goto(`${base}/ai/`);
+  await en.page.waitForSelector('#gate .auth-card');
+  assert.equal(await en.page.locator('#langSel').inputValue(), 'en', 'tự nhận ngôn ngữ trình duyệt');
+  await en.context.close();
+
+  const { page, errors, context } = await newPage();
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#gate .auth-card');
+  assert.equal(await page.locator('#langSel').inputValue(), 'vi', 'trình duyệt tiếng Việt → tiếng Việt');
+  assert.equal(await page.locator('#gate .auth-card h2').innerText(), 'Chào mừng bạn');
+
+  await page.selectOption('#langSel', 'en');
+  assert.equal(await page.locator('#gate .auth-card h2').innerText(), 'Welcome', 'đổi ngay, không nạp lại trang');
+  assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+  assert.equal(await page.locator('.skip').innerText(), 'Skip to content', 'chữ trong HTML tĩnh cũng đổi');
+  assert.equal(await page.locator('.rail a[data-step="2"] .t').innerText(), 'Upload statements');
+
+  // Nhớ lựa chọn sang lần mở sau.
+  await page.reload();
+  await page.waitForSelector('#gate .auth-card');
+  assert.equal(await page.locator('#langSel').inputValue(), 'en', 'lựa chọn đã lưu thắng ngôn ngữ trình duyệt');
+  assert.equal(await page.locator('#gate .auth-card h2').innerText(), 'Welcome');
+  await shot(page, '5-dang-nhap-en');
+
+  await page.click('#tab-signup');
+  await page.fill('#suTen', 'Nguyen Van An'); await page.fill('#suEmail', 'en@elevato.vn');
+  await page.fill('#suSdt', '0900000111'); await page.fill('#suPass', 'matkhau123');
+  await page.click('#signupForm button[type=submit]');
+  await page.waitForSelector('#app:not([hidden])');
+  assert.equal(await page.locator('#h5').innerText(), 'Review & export');
+
+  // Nạp số từ file Excel (không tốn lượt AI): bảng rà soát và file xuất ra đều bằng tiếng Anh.
+  await page.setInputFiles('#fileInput', await bsXlsx(page));
+  await page.waitForSelector('#sources input[type=date]');
+  await page.locator('#sources input[type=date]').fill('2025-12-31');
+  await page.locator('#sources input[type=date]').dispatchEvent('change');
+  await page.waitForSelector('td.v[data-k="BS:280"][data-p="FY2025"]');
+  assert.equal(await page.locator('#tab-BS').innerText(), 'Financial position',
+    'TT99 đổi tên "Bảng cân đối kế toán" thành "Báo cáo tình hình tài chính" — bản Anh không lùi về "Balance sheet"');
+  assert.equal(await page.locator('tr:has(td.c:text-is("280")) td.l').first().innerText(), 'TOTAL ASSETS',
+    'tên chỉ tiêu BCTC cũng theo ngôn ngữ đã chọn');
+
+  await shot(page, '5-ra-soat-en');
+  const f = await download(page, () => page.click('#exportBox .cardx button.btn'));
+  assert.match(f.name, /Standard 2026 form\.xlsx$/, 'tên file theo ngôn ngữ');
+  const o = await readXlsxCell(page, f.path, 'Financial position', /^A[23]$/);
+  assert.equal(o.A2, 'STATEMENT OF FINANCIAL POSITION');
+  assert.match(o.A3, /^Unit: million VND/);
+
+  // Trang PDF: nút trong bảng chọn trang nằm trong bộ nhớ đệm riêng — phải đổi chữ theo.
+  await page.setInputFiles('#fileInput', await bctcPdf());
+  await page.waitForSelector('#pageMaps details.pmap');
+  assert.equal(await page.locator('#pageMaps .pick-bar button').first().innerText(), 'Suggested pages');
+
+  // Quay lại tiếng Việt: bảng đang mở đổi ngay, không mất số.
+  await page.selectOption('#langSel', 'vi');
+  assert.equal(await page.locator('#tab-BS').innerText(), 'Tình hình tài chính');
+  assert.equal(await page.locator('#pageMaps .pick-bar button').first().innerText(), 'Chọn gợi ý');
+  assert.equal(await page.locator('tr:has(td.c:text-is("280")) td.l').first().innerText(), 'TỔNG CỘNG TÀI SẢN');
+  assert.ok(await page.locator('td.v[data-k="BS:280"][data-p="FY2025"]').isVisible());
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+/** File .xlsx có bảng cân đối kế toán, dựng ngay trong trang bằng SheetJS đã nhúng sẵn. */
+async function bsXlsx(page) {
+  await page.addScriptTag({ url: '/ai/vendor/sheetjs/xlsx.full.min.js' });
+  const b64 = await page.evaluate((items) => {
+    const aoa = [['CÔNG TY ABC'], ['BÁO CÁO TÌNH HÌNH TÀI CHÍNH'], ['Đơn vị tính: triệu đồng'],
+      ['Chỉ tiêu', 'Mã số', 'Thuyết minh', 'Năm nay', 'Năm trước'],
+      ...items.map((i) => [i.n, i.c, '', i.v, i.p])];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet(aoa), 'CDKT');
+    const u8 = new Uint8Array(window.XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+    let s = ''; u8.forEach((b) => { s += String.fromCharCode(b); }); return btoa(s);
+  }, itemsOf('BS').map((i) => ({ ...i, v: i.v.replace(/\.000\.000$/, ''), p: i.p.replace(/\.000\.000$/, '') })));
+  const path = join(tmp, 'cdkt-en.xlsx');
+  await writeFile(path, Buffer.from(b64, 'base64'));
+  return path;
+}
 
 async function readXlsxCell(page, path, sheet, refRe) {
   const b64 = (await readFile(path)).toString('base64');

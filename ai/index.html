@@ -7,8 +7,8 @@
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="light dark">
-<title>AI BCTC · elevaTO</title>
-<meta name="description" content="Công cụ AI của elevaTO: trích xuất báo cáo tài chính theo mẫu Thông tư 99/2025 và điền vào model forecast.">
+<title data-t="app.title">AI BCTC · elevaTO</title>
+<meta name="description" data-t-attr="content:app.desc" content="Công cụ AI của elevaTO: trích xuất báo cáo tài chính theo mẫu Thông tư 99/2025 và điền vào model forecast.">
 <link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
 <link rel="preload" as="font" type="font/woff2" href="vendor/fonts/bvp-400-vietnamese.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="vendor/fonts/bvp-400-latin.woff2" crossorigin>
@@ -19,18 +19,19 @@
 </head>
 <body>
 <div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
-<a class="skip" href="#main">Bỏ qua, tới nội dung</a>
+<a class="skip" href="#main" data-t="app.skip">Bỏ qua, tới nội dung</a>
 <header class="top">
-  <a class="brand" href="./" aria-label="elevaTO AI BCTC — trang đầu">
+  <a class="brand" href="./" data-t-attr="aria-label:app.brand.aria" aria-label="elevaTO AI BCTC — trang đầu">
     <img class="logo logo-light" src="../assets/logo-on-light.svg" alt="elevaTO" width="118" height="44">
     <img class="logo logo-dark" src="../assets/logo-on-dark.svg" alt="elevaTO" width="118" height="44">
-    <span class="product"><b>AI BCTC</b><small>Mẫu Thông tư 99/2025</small></span>
+    <span class="product"><b data-t="app.product">AI BCTC</b><small data-t="app.product.sub">Mẫu Thông tư 99/2025</small></span>
   </a>
   <div class="top-r">
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Đổi giao diện sáng / tối">
+    <button class="icon-btn" id="themeBtn" type="button" data-t-attr="aria-label:app.theme.aria" aria-label="Đổi giao diện sáng / tối">
       <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
       <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8Z"/></svg>
     </button>
+    <select class="lang-sel" id="langSel" data-t-attr="aria-label:app.lang.aria" aria-label="Ngôn ngữ"></select>
     <div id="acct" hidden></div>
   </div>
 </header>
@@ -38,11 +39,11 @@
 <div id="gate" class="gate" tabindex="-1"></div>
 
 <div id="app" class="shell" hidden>
-  <nav class="rail" aria-label="Các bước">
-    <a href="#s2" data-step="2"><span class="n">1</span><span class="t">Tải BCTC</span></a>
-    <a href="#s3" data-step="3"><span class="n">2</span><span class="t">Chọn trang &amp; trích xuất</span></a>
-    <a href="#s5" data-step="5"><span class="n">3</span><span class="t">Rà soát &amp; xuất</span></a>
-    <div class="hint"><b>AI chỉ chép số.</b> Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</div>
+  <nav class="rail" data-t-attr="aria-label:rail.aria" aria-label="Các bước">
+    <a href="#s2" data-step="2"><span class="n">1</span><span class="t" data-t="rail.1">Tải BCTC</span></a>
+    <a href="#s3" data-step="3"><span class="n">2</span><span class="t" data-t="rail.2">Chọn trang &amp; trích xuất</span></a>
+    <a href="#s5" data-step="5"><span class="n">3</span><span class="t" data-t="rail.3">Rà soát &amp; xuất</span></a>
+    <div class="hint"><b data-t="rail.hint.b">AI chỉ chép số.</b> <span data-t="rail.hint">Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</span></div>
   </nav>
 
   <main id="main" tabindex="-1">
@@ -53,36 +54,36 @@
     <div id="restore"></div>
 
     <section class="step" id="s2" aria-labelledby="h2">
-      <div class="step-h"><span class="k">1</span><div><h2 id="h2">Tải báo cáo tài chính</h2>
-        <p class="lead">PDF bản điện tử, PDF scan, ảnh chụp từng trang, hoặc file Excel BCTC. Nên tải BCTC năm gần nhất và các năm trước (model cần 4 năm), thêm báo cáo quý mới nhất nếu có.</p></div></div>
+      <div class="step-h"><span class="k">1</span><div><h2 id="h2" data-t="s1.h">Tải báo cáo tài chính</h2>
+        <p class="lead" data-t="s1.lead">PDF bản điện tử, PDF scan, ảnh chụp từng trang, hoặc file Excel BCTC. Nên tải BCTC năm gần nhất và các năm trước (model cần 4 năm), thêm báo cáo quý mới nhất nếu có.</p></div></div>
       <label class="drop" id="drop" tabindex="0">
         <svg class="drop-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5V4m0 0L7.5 8.5M12 4l4.5 4.5M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
-        <b>Kéo thả file vào đây, hoặc bấm để chọn</b>
-        <small>PDF · Excel (.xlsx, .xls) · Ảnh JPG / PNG — chọn được nhiều file một lượt</small>
+        <b data-t="s1.drop">Kéo thả file vào đây, hoặc bấm để chọn</b>
+        <small data-t="s1.drop.sub">PDF · Excel (.xlsx, .xls) · Ảnh JPG / PNG — chọn được nhiều file một lượt</small>
         <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xlsm,.xls,.csv,image/jpeg,image/png,image/webp" hidden>
       </label>
       <ul class="files" id="fileList"></ul>
     </section>
 
     <section class="step" id="s3" aria-labelledby="h3">
-      <div class="step-h"><span class="k">2</span><div><h2 id="h3">Chọn trang &amp; trích xuất</h2>
-        <p class="lead">Bấm ảnh để xem trang lớn, tick trang cần lấy. AI tự nhận trang là báo cáo nào hay thuyết minh gì — tick cả trang thuyết minh (TSCĐ, vay, vốn chủ, doanh thu theo mảng) để lấy đủ dữ liệu cho model.</p></div></div>
-      <div id="pageMaps"><p class="empty">Chưa có file PDF / ảnh nào.</p></div>
+      <div class="step-h"><span class="k">2</span><div><h2 id="h3" data-t="s2.h">Chọn trang &amp; trích xuất</h2>
+        <p class="lead" data-t="s2.lead">Bấm ảnh để xem trang lớn, tick trang cần lấy. AI tự nhận trang là báo cáo nào hay thuyết minh gì — tick cả trang thuyết minh (TSCĐ, vay, vốn chủ, doanh thu theo mảng) để lấy đủ dữ liệu cho model.</p></div></div>
+      <div id="pageMaps"><p class="empty" data-t="pages.empty">Chưa có file PDF / ảnh nào.</p></div>
       <div class="row run-row" id="runRow"></div>
       <div id="progress"></div>
     </section>
 
     <section class="step" id="s5" aria-labelledby="h5">
-      <div class="step-h"><span class="k">3</span><div><h2 id="h5">Rà soát &amp; xuất file</h2>
-        <p class="lead">Bấm vào ô số để sửa. Ô đỏ = không khớp tổng / đối chiếu. Tick các dòng muốn đưa vào bảng chuẩn hoá.</p></div></div>
+      <div class="step-h"><span class="k">3</span><div><h2 id="h5" data-t="s3.h">Rà soát &amp; xuất file</h2>
+        <p class="lead" data-t="s3.lead">Bấm vào ô số để sửa. Ô đỏ = không khớp tổng / đối chiếu. Tick các dòng muốn đưa vào bảng chuẩn hoá.</p></div></div>
       <div id="sources"></div>
       <div id="review"></div>
-      <h3 class="sub-h">Xuất dữ liệu</h3>
+      <h3 class="sub-h" data-t="s3.export">Xuất dữ liệu</h3>
       <div id="exportBox"></div>
     </section>
   </main>
 </div>
 
-<footer class="foot">© elevaTO · Công cụ dành cho học viên</footer>
+<footer class="foot" data-t="app.foot">© elevaTO · Công cụ dành cho học viên</footer>
 </body>
 </html>

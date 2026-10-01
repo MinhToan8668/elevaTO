@@ -1,5 +1,7 @@
 // Nạp thư viện trong vendor/ khi cần (không nạp sẵn lúc mở trang, không dùng CDN).
 
+import { t } from './i18n.js';
+
 const pending = new Map();
 
 function loadScript(file, globalName) {
@@ -10,8 +12,8 @@ function loadScript(file, globalName) {
       const s = document.createElement('script');
       s.src = src;
       s.async = true;
-      s.onload = () => (window[globalName] ? ok(window[globalName]) : fail(new Error(`Thư viện ${globalName} nạp lỗi`)));
-      s.onerror = () => { pending.delete(src); s.remove(); fail(new Error(`Không tải được thư viện ${globalName} — kiểm tra mạng rồi thử lại`)); };
+      s.onload = () => (window[globalName] ? ok(window[globalName]) : fail(new Error(t('e.libLoad', { name: globalName }))));
+      s.onerror = () => { pending.delete(src); s.remove(); fail(new Error(t('e.libNet', { name: globalName }))); };
       document.head.append(s);
     }));
   }
@@ -33,7 +35,7 @@ export async function openZip(buf, { maxTotal = 400e6, maxEntry = 150e6 } = {}) 
   for (const f of Object.values(zip.files)) {
     const n = Number(f._data?.uncompressedSize) || 0;
     total += n;
-    if (n > maxEntry || total > maxTotal) throw new Error('File Excel khi giải nén quá lớn — file hỏng hoặc không phải file Excel thật');
+    if (n > maxEntry || total > maxTotal) throw new Error(t('e.zipBomb'));
   }
   return zip;
 }
