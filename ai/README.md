@@ -177,9 +177,17 @@ Dịch luôn cả phần số liệu, không chỉ nút bấm:
 Câu lệnh gửi cho Gemini (`js/core/prompts.js`) **luôn giữ tiếng Việt** vì nó đọc BCTC Việt Nam — đổi ngôn ngữ
 giao diện không đụng tới chất lượng trích xuất.
 
+Tiếng Anh cần phân biệt số ít / số nhiều, nên `t()` nhận thêm dạng `{n|page|pages}` (tiếng Việt viết hai vế
+giống nhau). Số **luôn** hiển thị theo cách viết Việt Nam (`1.234,5`) ở cả hai ngôn ngữ, vì ô sửa tay đọc số
+bằng `parseVN`; chỉ ngày giờ mới theo ngôn ngữ.
+
+Một chỗ **cố ý giữ nguyên**: các lưu ý sinh ra lúc trích xuất (`sources[].ext.warnings`) được lưu dưới dạng
+câu đã dịch vào phiên làm việc, nên mở lại phiên cũ sẽ thấy chúng bằng ngôn ngữ lúc trích xuất. Đó là biên bản
+của lần chạy đó, không phải chữ của giao diện.
+
 `tests/i18n.test.js` canh: hai từ điển đủ khoá như nhau và cùng bộ biến `{…}`, mọi chỉ tiêu / dòng model đều
-có tên tiếng Anh, mọi khoá `data-t` trong HTML đều có thật, và **không còn chuỗi tiếng Việt viết cứng** trong
-`js/` (trừ prompts và hai tệp dữ liệu gốc).
+có tên tiếng Anh, mọi khoá `data-t` trong HTML đều có thật, chữ trên nhãn nguồn số của bảng model khớp phần
+chú thích, và **không còn chuỗi tiếng Việt viết cứng** trong `js/` (trừ prompts và hai tệp dữ liệu gốc).
 
 ## Mã nguồn
 
@@ -211,5 +219,5 @@ Kiểm thử (Node 20+):
 cd ai
 npm test                 # kiểm thử đơn vị: đọc số, cây cộng dồn, quy đổi TT200, trích xuất, Excel, máy chủ, bot…
 npm install && npm run e2e   # chạy trang thật trong Chromium, máy chủ AI giả lập
-# thử điền model thật: MODEL_XLSX=model.xlsx npm run e2e
+# xem giao diện từng bước: E2E_SHOTS=/thư/mục npm run e2e
 ```

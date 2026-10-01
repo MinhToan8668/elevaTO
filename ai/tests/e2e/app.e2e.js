@@ -1,6 +1,6 @@
 // E2E: chạy trang thật trong Chromium, máy chủ AI được giả lập (không tốn lượt, không cần key).
 //   cd ai && npm run e2e
-// Tuỳ chọn: MODEL_XLSX=/đường/dẫn/model.xlsx để thử điền model elevaTO thật.
+// Tuỳ chọn: E2E_SHOTS=/thư/mục để chụp màn hình từng bước.
 // Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
 // máy chủ AI được giả lập, phông chữ nằm sẵn trong vendor/fonts.
 
@@ -475,14 +475,15 @@ test('chọn ngôn ngữ Anh / Việt: đổi tại chỗ, nhớ lựa chọn, t
   await page.locator('#sources input[type=date]').fill('2025-12-31');
   await page.locator('#sources input[type=date]').dispatchEvent('change');
   await page.waitForSelector('td.v[data-k="BS:280"][data-p="FY2025"]');
-  assert.equal(await page.locator('#tab-BS').innerText(), 'Balance sheet');
+  assert.equal(await page.locator('#tab-BS').innerText(), 'Financial position',
+    'TT99 đổi tên "Bảng cân đối kế toán" thành "Báo cáo tình hình tài chính" — bản Anh không lùi về "Balance sheet"');
   assert.equal(await page.locator('tr:has(td.c:text-is("280")) td.l').first().innerText(), 'TOTAL ASSETS',
     'tên chỉ tiêu BCTC cũng theo ngôn ngữ đã chọn');
 
   await shot(page, '5-ra-soat-en');
   const f = await download(page, () => page.click('#exportBox .cardx button.btn'));
-  assert.match(f.name, /Standard form 2026\.xlsx$/, 'tên file theo ngôn ngữ');
-  const o = await readXlsxCell(page, f.path, 'Balance sheet', /^A[23]$/);
+  assert.match(f.name, /Standard 2026 form\.xlsx$/, 'tên file theo ngôn ngữ');
+  const o = await readXlsxCell(page, f.path, 'Financial position', /^A[23]$/);
   assert.equal(o.A2, 'STATEMENT OF FINANCIAL POSITION');
   assert.match(o.A3, /^Unit: million VND/);
 

@@ -21,7 +21,7 @@ const order = (p) => p.year * 100 + p.endMonth + (p.months === 12 ? 0.5 : 0);
  */
 export function addExtraction(ds, ext) {
   const per = periodsFromMeta(ext.meta || {});
-  if (!per) throw new Error(`${ext.file}: không xác định được ngày kết thúc kỳ báo cáo — cần nhập tay`);
+  if (!per) throw new Error(t('e.noEndDate', { file: ext.file }));
   const out = structuredClone(ds);
   if (!out.company && ext.company) out.company = ext.company;
   const end = per.cur.year * 100 + per.cur.endMonth;

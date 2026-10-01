@@ -23,16 +23,30 @@ export function initialLang() {
 
 export const getLang = () => lang;
 
-/** Đặt ngôn ngữ cho các lần gọi t() sau đó; nhớ vào máy và cập nhật <html lang>. */
-export function setLang(l) {
+/**
+ * Đặt ngôn ngữ cho các lần gọi t() sau đó.
+ * @param nho  true = người dùng tự chọn, ghi nhớ trên máy. false = chỉ đoán theo trình duyệt,
+ *             KHÔNG ghi — để lần sau máy vẫn đoán lại chứ không khoá cứng.
+ */
+export function setLang(l, { nho = true } = {}) {
   lang = BANG[l] ? l : 'vi';
+  if (nho) { try { localStorage.setItem(LS, lang); } catch (e) { /* bỏ qua */ } }
+  // Gọi được cả trong bài kiểm tra Node (không có DOM) để kiểm phần chữ của lõi.
+  if (typeof document === 'undefined') return lang;
   document.documentElement.lang = lang;
-  try { localStorage.setItem(LS, lang); } catch (e) { /* bỏ qua */ }
   applyStatic();
   return lang;
 }
 
-const dien = (s, v) => (v ? String(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : String(s));
+// {n} điền biến. {n|trang|trang} chọn dạng số ít / số nhiều theo biến n (tiếng Anh cần, tiếng Việt thì
+// hai vế viết giống nhau). Chỉ thay một lượt, nên biến chứa "{x}" không bị điền tiếp.
+const DIEN = /\{(\w+)(?:\|([^|{}]*)\|([^{}]*))?\}/g;
+const dien = (s, v) => (v
+  ? String(s).replace(DIEN, (m, k, mot, nhieu) => {
+    if (!(k in v)) return m;
+    return mot === undefined ? String(v[k]) : (Number(v[k]) === 1 ? mot : nhieu);
+  })
+  : String(s));
 
 /** Chuỗi theo ngôn ngữ đang chọn. Thiếu bản dịch → tiếng Việt; thiếu cả hai → trả lại chính khoá. */
 export function t(key, vars) {

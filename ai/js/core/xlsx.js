@@ -77,8 +77,8 @@ export function patchSheetXml(sheetXml, cells) {
   const byRow = new Map();
   for (const c of cells) {
     const p = splitRef(c.ref);
-    if (!p) throw new Error(`Ô không hợp lệ: ${c.ref}`);
-    if (typeof c.v === 'number' && !Number.isFinite(c.v)) throw new Error(`Giá trị không hợp lệ ở ${c.ref}`);
+    if (!p) throw new Error(t('e.badCell', { ref: c.ref }));
+    if (typeof c.v === 'number' && !Number.isFinite(c.v)) throw new Error(t('e.badValue', { ref: c.ref }));
     if (!byRow.has(p.row)) byRow.set(p.row, new Map());
     byRow.get(p.row).set(p.col, c);
   }

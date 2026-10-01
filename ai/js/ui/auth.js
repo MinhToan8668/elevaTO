@@ -69,13 +69,21 @@ export function initAuth(store, ctx, { onLogin }) {
   renderGate(enter);
   store.on(renderAccount(ctx));
   // Đổi ngôn ngữ: vẽ lại màn đăng nhập và menu tài khoản (hai phần này không nằm trong vòng vẽ của bước).
+  // Giữ nguyên những gì người dùng đang gõ dở và các ô đã tick — vẽ lại chỉ để đổi chữ.
   let langCu = store.get().lang;
   watch(store, ['lang'], (st) => {
     if (st.lang === langCu) return;
     langCu = st.lang;
-    if (!session) renderGate(enter);
+    if (!session) {
+      const giu = chupMan();
+      renderGate(enter);
+      datLaiMan(giu);
+    }
+    const chung = $('#sharedPc')?.checked;
     $('#acct').replaceChildren();                      // buộc renderAccount dựng lại với chữ mới
     renderAccount(ctx)(store.get());
+    const o = $('#sharedPc');
+    if (o && chung) o.checked = true;
   });
   closeMenuOutside();
   let flash = '';
@@ -190,6 +198,24 @@ function renderGate(enter) {
         h('p', { class: 'auth-sub' }, t('au.welcome.sub')),
         off ? h('p', { class: 'msg warn' }, t('au.off')) : null,
         tabs, loginForm, signupForm, msg)));
+}
+
+const O_MAN = ['liEmail', 'liPass', 'suTen', 'suEmail', 'suSdt', 'suPass'];
+
+/** Chụp lại những gì người dùng đang gõ dở trên màn đăng nhập (trước khi vẽ lại vì đổi ngôn ngữ). */
+function chupMan() {
+  const msg = $('#gate .auth-msg .msg');
+  return {
+    o: Object.fromEntries(O_MAN.map((id) => [id, $(`#${id}`)?.value || ''])),
+    tab: $('#signupForm')?.hidden === false ? 'signup' : 'login',
+    msg: msg ? { kind: [...msg.classList].find((c) => c !== 'msg') || 'err', text: msg.textContent } : null,
+  };
+}
+
+function datLaiMan(giu) {
+  for (const [id, v] of Object.entries(giu.o)) { const el = $(`#${id}`); if (el && v) el.value = v; }
+  if (giu.tab === 'signup') $('#tab-signup')?.click();
+  if (giu.msg) setGateMsg(giu.msg.kind, giu.msg.text);
 }
 
 /** Dải thương hiệu: logo elevaTO cỡ lớn, giống dải trong ứng dụng. */

@@ -449,4 +449,32 @@ export const VI = {
   'mw.noDebtNote': 'Chưa có thuyết minh vay: tiền vay / trả nợ lấy từ LCTT và tính hết là vay ngắn hạn.',
   'mw.equityGap': 'Thuyết minh vốn chủ không khớp thay đổi vốn góp — phần chênh dồn vào "phát hành thường".',
   'mw.noEquityNote': 'Chưa có thuyết minh biến động vốn chủ: suy từ chênh lệch CĐKT và cổ tức đã trả trên LCTT.',
+
+  // ── Dòng tiến độ khi chạy AI ──
+  'step.run': '{st} (trang {pages})',
+  'step.recheck': 'Xem lại trang {pages} là trang gì',
+  'step.mapping': 'Nhận diện trang {from}–{to} / {total}',
+  'step.mapChunk': 'AI nhận diện {n} trang ({pages})',
+  // Tên nhóm thuyết minh (khoá của NOTE_TASKS trong core/prompts.js)
+  'note.fixedAssets': 'Tài sản cố định theo nhóm (hữu hình, vô hình)',
+  'note.segments': 'Doanh thu & lợi nhuận gộp theo mảng / bộ phận',
+  'note.debt': 'Vay: tiền vay / trả nợ trong năm',
+  'note.equity': 'Biến động vốn chủ sở hữu',
+  'note.goodwill': 'Lợi thế thương mại',
+  'note.params': 'Số cổ phiếu lưu hành, thuế suất TNDN',
+  // Lời nhắn còn lại
+  'e.noEndDate': '{file}: không xác định được ngày kết thúc kỳ báo cáo — cần nhập tay',
+  'e.libLoad': 'Thư viện {name} nạp lỗi',
+  'e.libNet': 'Không tải được thư viện {name} — kiểm tra mạng rồi thử lại',
+  'e.badCell': 'Ô không hợp lệ: {ref}',
+  'e.badValue': 'Giá trị không hợp lệ ở {ref}',
+  'mw.noSegNote': 'Chưa có thuyết minh doanh thu theo mảng: tạm để toàn bộ doanh thu vào mảng 1.',
+  'mw.segGap': '{year}: tổng doanh thu các mảng lệch doanh thu thuần {gap} triệu — đã dồn vào mảng {slot}.',
+  'mw.faGap': '{year}: thuyết minh TSCĐ không khớp CĐKT — phần chênh đã dồn vào nhóm "khác", nên kiểm tra lại.',
+  'mw.noShares': '{year}: chưa có số cổ phiếu lưu hành — nhập tay dòng 214 (triệu cổ phiếu).',
+  'md.tag.bctc': 'B',
+  'md.tag.tm': 'T',
+  'md.tag.lctt': 'L',
+  'md.tag.uoc': 'Ư',
+  'md.tag.md': 'M',
 };

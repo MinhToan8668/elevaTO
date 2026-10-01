@@ -3,7 +3,7 @@
 
 import { h, fmt } from './dom.js';
 import { buildMetrics } from '../core/metrics.js';
-import { t, locale } from '../i18n.js';
+import { t } from '../i18n.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const COLORS = ['var(--em)', 'var(--blue)', 'var(--gold)', 'var(--red)', 'var(--line-3)'];
@@ -65,7 +65,7 @@ function scale(values) {
 function frame(sc, periods, unit) {
   // Thang chia nhỏ hơn 1 đơn vị (ví dụ biên lợi nhuận 0–2%) thì ghi thêm số lẻ, không làm tròn thành 1, 1, 2, 2.
   const le = sc.step / unit < 1 ? 1 : 0;
-  const nhan = (v) => (v === 0 ? '0' : le ? (v / unit).toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : fmt(v, unit));
+  const nhan = (v) => (v === 0 ? '0' : le ? (v / unit).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : fmt(v, unit));
   const grid = sc.ticks.map((v) => s('g', {},
     s('line', { x1: PAD.l, x2: W - PAD.r, y1: sc.y(v), y2: sc.y(v), class: Math.abs(v) < sc.step / 1e6 ? 'ax0' : 'grid' }),
     s('text', { x: PAD.l - 8, y: sc.y(v) + 4, class: 'lbl', 'text-anchor': 'end' }, nhan(v))));

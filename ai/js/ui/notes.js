@@ -4,7 +4,7 @@
 import { h, fmt } from './dom.js';
 import { periodLabel } from '../core/table.js';
 import { buildModel, MODEL_ROWS, SEGMENT_SLOTS } from '../targets/model.js';
-import { t, locale, unitLabel, modelLabel, modelGroup } from '../i18n.js';
+import { t, unitLabel, modelLabel, modelGroup } from '../i18n.js';
 
 const M = 1e6;
 const FA_KEYS = ['buildings', 'machinery', 'transport', 'office', 'other', 'land', 'software'];
@@ -74,7 +74,7 @@ function periodCard(p, n) {
   if (n.debt) kv(t('tm.debt', { unit: u }), ['stProceeds', 'stRepay', 'ltProceeds', 'ltRepay'].map((k) => [t(`tm.debt.${k}`), n.debt[k]]));
   if (n.equity) kv(t('tm.equity', { unit: u }), Object.entries(n.equity));
   if (n.goodwill) kv(t('tm.gw', { unit: u }), ['cost', 'accAmort', 'additions', 'amortization'].map((k) => [t(`tm.gw.${k}`), n.goodwill[k]]));
-  kv(t('tm.params'), [[t('tm.shares'), n.shares !== undefined ? n.shares.toLocaleString(locale()) : undefined], [t('tm.taxRate'), n.taxRate !== undefined ? `${Math.round(n.taxRate * 1000) / 10}%` : undefined]]);
+  kv(t('tm.params'), [[t('tm.shares'), n.shares !== undefined ? n.shares.toLocaleString('vi-VN') : undefined], [t('tm.taxRate'), n.taxRate !== undefined ? `${Math.round(n.taxRate * 1000) / 10}%` : undefined]]);
   return h('div', { class: 'cardx' }, parts);
 }
 
@@ -95,8 +95,9 @@ export function renderModel(store) {
         const c = built.byYear[y][d.row];
         if (!c) return h('td', { class: 'v' });
         const lbl = t(`md.src.${c.src}`), tone = SRC_TONE[c.src] ?? '';
+        // Chữ trên nhãn lấy từ từ điển, KHÔNG cắt lbl[0] — tiếng Anh sẽ ra chữ khác với phần chú thích.
         const txt = d.row === 216 ? `${Math.round(c.v * 1000) / 10}%` : d.row >= 214 ? String(c.v) : fmt(c.v, 1);
-        return h('td', { class: `v${tone === 'gold' ? ' est' : ''}`, title: lbl }, txt, ' ', h('span', { class: `tag ${tone}` }, lbl[0]));
+        return h('td', { class: `v${tone === 'gold' ? ' est' : ''}`, title: lbl }, txt, ' ', h('span', { class: `tag ${tone}` }, t(`md.tag.${c.src}`)));
       })));
   }
   return [

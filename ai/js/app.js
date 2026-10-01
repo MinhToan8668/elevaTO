@@ -20,7 +20,7 @@ const ctx = { media: new Map(), stop: false };
 ctx.io = createIO(ctx);
 ctx.pageImages = (jobId, pages, width, quality) => ctx.io.pageImages(jobId, pages, width, quality);
 
-setLang(store.get().lang);
+setLang(store.get().lang, { nho: false });   // mới mở trang: chưa phải lựa chọn của người dùng
 initTheme();
 initLangPicker();
 initFiles(store, ctx);
@@ -41,11 +41,22 @@ function offerRestore(user) {
   try { const txt = localStorage.getItem(LS_SESSION); if (txt) data = parseSession(txt); } catch (e) { data = null; }
   if (!data || !data.sources.length) return;
   const box = $('#restore');
-  const when = data.savedAt ? t('ss.when', { d: new Date(data.savedAt).toLocaleString(locale()) }) : '';
-  mount(box, h('div', { class: 'banner' },
-    h('span', {}, t('ss.banner', { when, n: data.sources.length })),
-    h('button', { class: 'btn sm', onclick: () => { if (!applySession(store, data)) return; mount(box); toast(t('ss.opened')); $('#s5').scrollIntoView({ behavior: 'smooth' }); } }, t('ss.open')),
-    h('button', { class: 'btn ghost sm', onclick: () => { try { localStorage.removeItem(LS_SESSION); } catch (e) { /* bỏ qua */ } mount(box); } }, t('ss.drop'))));
+  // Đổi ngôn ngữ khi dải còn hiện → vẽ lại bằng chữ mới (dải nằm ngoài vòng vẽ của các bước).
+  let langCu = store.get().lang;
+  watch(store, ['lang'], (st) => {
+    if (st.lang === langCu) return;
+    langCu = st.lang;
+    if (box.firstChild) veDai();
+  });
+  veDai();
+
+  function veDai() {
+    const when = data.savedAt ? t('ss.when', { d: new Date(data.savedAt).toLocaleString(locale()) }) : '';
+    mount(box, h('div', { class: 'banner' },
+      h('span', {}, t('ss.banner', { when, n: data.sources.length })),
+      h('button', { class: 'btn sm', onclick: () => { if (!applySession(store, data)) return; mount(box); toast(t('ss.opened')); $('#s5').scrollIntoView({ behavior: 'smooth' }); } }, t('ss.open')),
+      h('button', { class: 'btn ghost sm', onclick: () => { try { localStorage.removeItem(LS_SESSION); } catch (e) { /* bỏ qua */ } mount(box); } }, t('ss.drop'))));
+  }
 }
 
 function autosave(user) {

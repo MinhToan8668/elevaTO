@@ -13,7 +13,7 @@ import { CHART } from '../js/chart2026.js';
 import { MODEL_ROWS } from '../js/targets/model.js';
 import { RATIO_ROWS } from '../js/core/metrics.js';
 
-const bien = (s) => [...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+const bien = (s) => [...new Set([...String(s).matchAll(/\{(\w+)(?:\|[^|{}]*\|[^{}]*)?\}/g)].map((m) => m[1]))].sort().join(',');
 
 test('hai từ điển có đúng cùng bộ khoá, không chuỗi rỗng', () => {
   const v = Object.keys(VI).sort(), e = Object.keys(EN).sort();
@@ -36,6 +36,8 @@ test('t() điền biến, thiếu bản dịch thì rơi về tiếng Việt, kh
   assert.equal(t('file.tooBig', { name: 'a.pdf' }), 'a.pdf: file quá lớn (tối đa 200MB)');
   assert.equal(t('khoa.khong.co'), 'khoa.khong.co');
   assert.equal(t('period.year'), 'Năm {y}', 'thiếu biến thì giữ nguyên chỗ điền, không in "undefined"');
+  assert.equal(t('file.pages', { n: 1 }), '1 trang · ', 'dạng số ít / số nhiều: tiếng Việt hai vế như nhau');
+  assert.equal(t('file.pages', { n: 5 }), '5 trang · ');
   assert.equal(locale(), 'vi-VN');
   assert.deepEqual(LANGS.map(([v]) => v), ['vi', 'en']);
 });
@@ -88,9 +90,15 @@ test('không còn chuỗi tiếng Việt viết cứng — mọi chữ người 
       for (const line of src.split('\n')) {
         const tr = line.trim();
         if (tr.startsWith('//') || tr.startsWith('*') || tr.startsWith('/*')) continue;   // chú thích vẫn viết tiếng Việt
-        // Bỏ biểu thức chính quy trước khi dò: /đ/g trong .replace() không phải chuỗi hiển thị.
-        for (const m of line.replace(/\/(?:\[[^\]]*\]|\\.|[^/\\\n])+\/[gimsuy]*/g, 'RE').matchAll(/'([^'\\]{2,})'/g)) {
-          if (VN.test(m[1]) && !KHONG_PHAI_CHU.test(m[1])) xau.push(`${tien}${f.name}: ${m[1]}`);
+        const sach = line
+          .replace(/\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g, ' ')          // chú thích /* … */ giữa dòng
+          .replace(/(^|[^:])\/\/.*$/, '$1')                          // chú thích // cuối dòng (chừa https://)
+          .replace(/\/(?:\[[^\]]*\]|\\.|[^/\\\n])+\/[gimsuy]*/g, 'RE');   // /đ/g trong .replace() không phải chữ hiển thị
+        // Cả ba kiểu nháy — chuỗi mẫu `…` từng lọt lưới và để sót một nhãn hiện ra "undefined".
+        for (const re of [/'([^'\\]{2,})'/g, /"([^"\\]{2,})"/g, /`([^`\\]{2,})`/g]) {
+          for (const m of sach.matchAll(re)) {
+            if (VN.test(m[1]) && !KHONG_PHAI_CHU.test(m[1])) xau.push(`${tien}${f.name}: ${m[1]}`);
+          }
         }
       }
     }
@@ -104,4 +112,17 @@ test('HTML tĩnh: mọi khoá data-t / data-t-attr đều có trong từ điển
     .concat([...html.matchAll(/data-t-attr="([^"]+)"/g)].flatMap((m) => m[1].split(';').map((x) => x.split(':')[1]?.trim())));
   assert.ok(keys.length > 15, `đánh dấu quá ít chỗ: ${keys.length}`);
   assert.deepEqual(keys.filter((k) => !k || !(k in VI)), [], 'khoá trong HTML không có trong từ điển');
+});
+
+test('bảng model: chữ trên nhãn nguồn số đúng với chú thích ở câu dẫn', () => {
+  // notes.js in t(`md.tag.<src>`) lên nhãn; câu md.lead liệt kê đúng những chữ đó.
+  // Trước đây nhãn cắt chữ cái đầu của md.src.* nên bản tiếng Anh ra S/N/C/E/D mà chú thích vẫn ghi B/T/L/Ư/M.
+  for (const [ten, bang] of [['vi', VI], ['en', EN]]) {
+    const chu = ['bctc', 'tm', 'lctt', 'uoc', 'md'].map((k) => bang[`md.tag.${k}`]);
+    assert.equal(new Set(chu).size, chu.length, `${ten}: chữ trên nhãn bị trùng (${chu.join(', ')})`);
+    for (const c of chu) {
+      assert.equal(c.length, 1, `${ten}: nhãn "${c}" phải đúng một chữ cái`);
+      assert.ok(bang['md.lead'].includes(`${c} =`), `${ten}: câu dẫn không giải thích nhãn "${c}"`);
+    }
+  }
 });

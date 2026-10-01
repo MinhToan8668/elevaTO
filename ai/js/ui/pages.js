@@ -151,15 +151,24 @@ function buildViewer(store, ctx) {
   const stage = h('div', { class: 'vw-stage', tabindex: '0' });
   const pick = h('button', { type: 'button', class: 'btn', id: 'vwPick', 'aria-pressed': 'false' });
   const zoomTxt = h('span', { class: 'vw-zoom' });
-  const prev = h('button', { type: 'button', class: 'btn ghost', id: 'vwPrev', onclick: () => go(-1) }, t('vw.prev'));
-  const next = h('button', { type: 'button', class: 'btn ghost', id: 'vwNext', onclick: () => go(1) }, t('vw.next'));
+  const prev = h('button', { type: 'button', class: 'btn ghost', id: 'vwPrev', onclick: () => go(-1) });
+  const next = h('button', { type: 'button', class: 'btn ghost', id: 'vwNext', onclick: () => go(1) });
+  const zOut = h('button', { type: 'button', class: 'icon-btn sm', onclick: () => zoom(-0.25) }, '−');
+  const zIn = h('button', { type: 'button', class: 'icon-btn sm', onclick: () => zoom(0.25) }, '+');
+  const close = h('button', { type: 'button', class: 'icon-btn sm', onclick: () => dlg.close() }, '✕');
   const dlg = h('dialog', { class: 'viewer', 'aria-labelledby': 'vwTitle' },
-    h('div', { class: 'vw-head' }, title, pos, h('span', { class: 'sp' }),
-      h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': t('vw.zoomOut'), onclick: () => zoom(-0.25) }, '−'), zoomTxt,
-      h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': t('vw.zoomIn'), onclick: () => zoom(0.25) }, '+'),
-      h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': t('vw.close'), onclick: () => dlg.close() }, '✕')),
+    h('div', { class: 'vw-head' }, title, pos, h('span', { class: 'sp' }), zOut, zoomTxt, zIn, close),
     stage,
     h('div', { class: 'vw-foot' }, prev, pick, next));
+  /** Chữ cố định của hộp — gọi lại mỗi lần mở để đổi ngôn ngữ giữa hai lần mở là ăn ngay. */
+  const datChu = () => {
+    prev.textContent = t('vw.prev');
+    next.textContent = t('vw.next');
+    zOut.setAttribute('aria-label', t('vw.zoomOut'));
+    zIn.setAttribute('aria-label', t('vw.zoomIn'));
+    close.setAttribute('aria-label', t('vw.close'));
+  };
+  datChu();
   document.body.append(dlg);
 
   let jobId = '', page = 1, scale = 1, token = 0, back = null, timer = 0, hold = null, shown = null, drawnPx = 0;
@@ -290,6 +299,7 @@ function buildViewer(store, ctx) {
     show(id, p, from) {
       back = from || null;
       jobId = id; page = p; scale = 1;
+      datChu();
       if (!dlg.open) dlg.showModal();
       stage.focus();
       clearTimeout(timer);

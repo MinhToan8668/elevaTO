@@ -175,7 +175,7 @@ function fillSegments(cells, vals, notes, segmentMap, warn, year) {
   if (!segs.length) {
     put(cells, 132, g('IS:10') / M, 'uoc'); put(cells, 140, g('IS:20') / M, 'uoc');
     for (let i = 1; i < SEGMENT_SLOTS; i++) { put(cells, 132 + i, 0, 'uoc'); put(cells, 140 + i, 0, 'uoc'); }
-    warn.add(`Chưa có thuyết minh doanh thu theo mảng: tạm để toàn bộ doanh thu vào mảng 1.`);
+    warn.add(t('mw.noSegNote'));
     return;
   }
   const rev = Array(SEGMENT_SLOTS).fill(0), gp = Array(SEGMENT_SLOTS).fill(0);
@@ -189,7 +189,7 @@ function fillSegments(cells, vals, notes, segmentMap, warn, year) {
   const gap = g('IS:10') - rev.reduce((a, b) => a + b, 0);
   if (Math.abs(gap) > Math.abs(g('IS:10')) * 1e-6 + 1) {
     rev[SEGMENT_SLOTS - 1] += gap;
-    warn.add(`${year}: tổng doanh thu các mảng lệch doanh thu thuần ${(gap / M).toLocaleString('vi-VN')} triệu — đã dồn vào mảng ${SEGMENT_SLOTS}.`);
+    warn.add(t('mw.segGap', { year, gap: (gap / M).toLocaleString('vi-VN'), slot: SEGMENT_SLOTS }));
   }
   rev.forEach((v, i) => put(cells, 132 + i, v / M, 'tm'));
   gp.forEach((v, i) => put(cells, 140 + i, v / M, 'tm'));
@@ -215,7 +215,7 @@ function fillFixedAssets(cells, vals, notes, warn, year) {
     rows.software.cost += cost57 - intCost; rows.software.accDep += acc58 - intAcc;
     const lease = g('BS:225');
     if (Math.abs(cost54 - tangCost - lease) > Math.max(1e9, Math.abs(cost54) * 0.001) || Math.abs(cost57 - intCost) > Math.max(1e9, Math.abs(cost57) * 0.001)) {
-      warn.add(`${year}: thuyết minh TSCĐ không khớp CĐKT — phần chênh đã dồn vào nhóm "khác", nên kiểm tra lại.`);
+      warn.add(t('mw.faGap', { year }));
     }
   } else {
     src = 'uoc';
@@ -304,7 +304,7 @@ function fillEquity(cells, prevCells, vals, notes, warn) {
 
 function fillParams(cells, notes, warn, year) {
   if (Number.isFinite(notes.shares) && notes.shares > 0) put(cells, 214, notes.shares / M, 'tm');
-  else warn.add(`${year}: chưa có số cổ phiếu lưu hành — nhập tay dòng 214 (triệu cổ phiếu).`);
+  else warn.add(t('mw.noShares', { year }));
   if (Number.isFinite(notes.taxRate)) put(cells, 216, notes.taxRate, 'tm');
   else put(cells, 216, 0.2, 'md');
   put(cells, 217, 10, 'md');

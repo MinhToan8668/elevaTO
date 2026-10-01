@@ -31,7 +31,7 @@ export async function extractJob(job, io, opts = {}) {
   const runSt = async (st) => {
     const pages = pagesFor(st);
     if (!pages.length) { warnings.push(t('w.noPage', { st: NAME(st) })); return; }
-    step({ key: st, state: 'run', label: `${NAME[st]} (trang ${list(pages)})` });
+    step({ key: st, state: 'run', label: t('step.run', { st: NAME(st), pages: list(pages) }) });
     try {
       // Gemini từ chối khuôn JSON (400) → coi như chưa đọc được, để lượt thử lại bên dưới
       // gọi lại bằng câu lệnh có tả cấu trúc thay cho khuôn.
@@ -74,7 +74,7 @@ export async function extractJob(job, io, opts = {}) {
   if (trong.length === STATEMENTS.length && io.images) {
     const xem = [...new Set([...shared, ...STATEMENTS.flatMap(pagesOf)])].sort((a, b) => a - b).slice(0, 12);
     if (xem.length) {
-      step({ key: 'doan', state: 'run', label: `Xem lại trang ${list(xem)} là trang gì` });
+      step({ key: 'doan', state: 'run', label: t('step.recheck', { pages: list(xem) }) });
       try {
         const { pageMapTask } = await import('./prompts.js');
         const task = pageMapTask(xem);
@@ -108,12 +108,13 @@ export async function extractJob(job, io, opts = {}) {
   const notes = {};
   const chayNhom = async (g) => {
     const task = NOTE_TASKS[g];
+    const tenNhom = t(`note.${g}`);
     // exact: người dùng đã tick đúng trang → không tự gửi kèm trang kế tiếp.
     const all = opts.exact ? [...(job.notes?.[g] || [])].sort((a, b) => a - b) : null;
     const pages = opts.exact ? all.slice(0, MAX_NOTE_PAGES) : withNext(job.notes?.[g] || [], job.types.length);
     if (!task) return;
-    if (all && all.length > MAX_NOTE_PAGES) warnings.push(t('w.noteCap', { task: task.label, max: MAX_NOTE_PAGES, pages: list(all.slice(MAX_NOTE_PAGES)) }));
-    if (!pages.length) { warnings.push(t('w.noNotePage', { task: task.label })); return; }
+    if (all && all.length > MAX_NOTE_PAGES) warnings.push(t('w.noteCap', { task: tenNhom, max: MAX_NOTE_PAGES, pages: list(all.slice(MAX_NOTE_PAGES)) }));
+    if (!pages.length) { warnings.push(t('w.noNotePage', { task: tenNhom })); return; }
     step({ key: g, state: 'run', label: `${task.label} (trang ${range(pages)})` });
     try {
       const res = await io.ai.json({ parts: [...await io.parts(pages), { text: task.prompt }], schema: task.schema });
@@ -122,7 +123,7 @@ export async function extractJob(job, io, opts = {}) {
       step({ key: g, state: 'done' });
     } catch (e) {
       if (io.isFatal(e)) throw e;
-      warnings.push(`${task.label}: ${e.message}`);
+      warnings.push(`${tenNhom}: ${e.message}`);
       step({ key: g, state: 'fail', error: e.message });
     }
   };
@@ -210,7 +211,7 @@ export async function mapPagesWithAI(total, io, { batch = 12, onStep } = {}) {
   const notes = Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []]));
   for (let start = 1; start <= total; start += batch) {
     const pages = Array.from({ length: Math.min(batch, total - start + 1) }, (_, i) => start + i);
-    onStep?.({ key: 'map', state: 'run', label: `Nhận diện trang ${start}–${pages[pages.length - 1]} / ${total}` });
+    onStep?.({ key: 'map', state: 'run', label: t('step.mapping', { from: start, to: pages[pages.length - 1], total }) });
     const task = pageMapTask(start);
     const res = await io.ai.json({ parts: [...await io.images(pages), { text: task.prompt }], schema: task.schema });
     for (const r of Array.isArray(res) ? res : []) {
@@ -260,7 +261,7 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
     const { pageMapTask } = await import('./prompts.js');
     for (let i = 0; i < unknown.length; i += batch) {
       const chunk = unknown.slice(i, i + batch);
-      onStep?.({ key: 'map', state: 'run', label: `AI nhận diện ${chunk.length} trang (${range(chunk)})` });
+      onStep?.({ key: 'map', state: 'run', label: t('step.mapChunk', { n: chunk.length, pages: range(chunk) }) });
       const task = pageMapTask(chunk);
       const res = await io.ai.json({ parts: [...await io.images(chunk), { text: task.prompt }], schema: task.schema });
       aiCalls++;

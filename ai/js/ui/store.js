@@ -35,11 +35,14 @@ export function createStore(init) {
       subs.forEach((f) => f(state));
     },
     on(f) { subs.add(f); return () => subs.delete(f); },
-    /** Bộ dữ liệu dựng từ sources + edits, chỉ tính lại khi hai mảng này đổi. */
+    /**
+     * Bộ dữ liệu dựng từ sources + edits, chỉ tính lại khi hai mảng này đổi.
+     * Có cả lang vì nhãn chỗ lệch (checkDataset) và lời báo lỗi nguồn đều theo ngôn ngữ.
+     */
     data() {
-      if (!derived || derived.sources !== state.sources || derived.edits !== state.edits) {
+      if (!derived || derived.sources !== state.sources || derived.edits !== state.edits || derived.lang !== state.lang) {
         const { ds, errors, unit } = buildDataset(state.sources, state.edits);
-        derived = { sources: state.sources, edits: state.edits, ds, errors, checks: checkDataset(ds, { unit }) };
+        derived = { sources: state.sources, edits: state.edits, lang: state.lang, ds, errors, checks: checkDataset(ds, { unit }) };
       }
       return derived;
     },

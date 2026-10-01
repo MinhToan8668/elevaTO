@@ -12,8 +12,8 @@ function loadScript(file, globalName) {
       const s = document.createElement('script');
       s.src = src;
       s.async = true;
-      s.onload = () => (window[globalName] ? ok(window[globalName]) : fail(new Error(`Thư viện ${globalName} nạp lỗi`)));
-      s.onerror = () => { pending.delete(src); s.remove(); fail(new Error(`Không tải được thư viện ${globalName} — kiểm tra mạng rồi thử lại`)); };
+      s.onload = () => (window[globalName] ? ok(window[globalName]) : fail(new Error(t('e.libLoad', { name: globalName }))));
+      s.onerror = () => { pending.delete(src); s.remove(); fail(new Error(t('e.libNet', { name: globalName }))); };
       document.head.append(s);
     }));
   }

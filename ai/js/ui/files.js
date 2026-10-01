@@ -41,20 +41,20 @@ export function initFiles(store, ctx) {
   async function addPdf(file) {
     const id = uid('j');
     ctx.media.set(id, { file });
-    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'pdf', status: 'reading', progress: t('file.opening') }] }));
+    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'pdf', status: 'reading', progress: { k: 'file.opening' } }] }));
     try {
       const { openPdf, pageTexts } = await import('../pdf.js');
       const pdf = await openPdf(file);
       if (!alive(id)) { pdf.doc.destroy(); return; }
       ctx.media.set(id, { file, pdf });
-      const texts = await pageTexts(pdf.doc, (i, n) => { if (i % 5 === 0 || i === n) patchJob(id, { progress: t('file.readingText', { i, n }) }); });
+      const texts = await pageTexts(pdf.doc, (i, n) => { if (i % 5 === 0 || i === n) patchJob(id, { progress: { k: 'file.readingText', v: { i, n } } }); });
       if (!alive(id)) return;
       const c = classifyPages(texts);
       const job = { kind: 'pdf', numPages: pdf.numPages, types: c.types, notes: c.notes, scanned: c.scanned };
       const goiY = suggestPicks(job);
       patchJob(id, { status: 'ready', progress: '', ...job, picked: goiY, goiY });    // goiY: người dùng chưa sửa tay thì đổi form sẽ gợi ý lại
     } catch (e) {
-      const msg = /password/i.test(e.name + e.message) ? t('file.locked') : t('file.badPdf', { msg: e.message });
+      const msg = /password/i.test(e.name + e.message) ? { k: 'file.locked' } : { k: 'file.badPdf', v: { msg: e.message } };
       patchJob(id, { status: 'error', error: msg, progress: '' });
     }
   }
@@ -63,7 +63,7 @@ export function initFiles(store, ctx) {
     const id = uid('j');
     const sorted = [...files].sort((a, b) => a.name.localeCompare(b.name, 'vi', { numeric: true }));
     ctx.media.set(id, { images: sorted, urls: sorted.map((f) => URL.createObjectURL(f)) });
-    const name = sorted.length > 1 ? t('file.images', { n: sorted.length, first: sorted[0].name }) : sorted[0].name;
+    const name = sorted.length > 1 ? t('file.images', { n: sorted.length, first: sorted[0].name }) : sorted[0].name;   // tên file, không dịch lại
     store.set((s) => ({ jobs: [...s.jobs, {
       id, name, kind: 'img', status: 'ready', numPages: sorted.length, scanned: true,
       types: sorted.map(() => 'UNKNOWN'), notes: Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []])),
@@ -73,16 +73,17 @@ export function initFiles(store, ctx) {
 
   async function addExcel(file) {
     const id = uid('j');
-    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'xls', status: 'reading', progress: t('file.reading') }] }));
+    store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'xls', status: 'reading', progress: { k: 'file.reading' } }] }));
     try {
       const grid = readGrid(await readSheets(file));
       if (!alive(id)) return;
       if (grid.kind === 'storage' && !grid.periods.length) throw new Error(t('file.noPeriods'));
       const srcs = gridToSources(file.name, grid).map((x) => ({ ...x, id: uid('s'), jobId: id }));
+      // Lưu khoá + biến, không lưu câu đã dịch: đổi ngôn ngữ thì dòng này đổi theo.
       const summary = grid.kind === 'storage'
-        ? t('file.storage', { n: grid.periods.length, ids: grid.periods.map((p) => p.period.id).join(', ') })
-        : t('file.tables', { names: Object.keys(grid.statements).map(SHORT).join(', ') })
-          + (srcs[0].ext.meta.ngay_ket_thuc ? t('file.endDate', { d: srcs[0].ext.meta.ngay_ket_thuc }) : t('file.noDate'));
+        ? { k: 'file.storage', v: { n: grid.periods.length, ids: grid.periods.map((p) => p.period.id).join(', ') } }
+        : { k: 'file.tables', v: { names: Object.keys(grid.statements).map(SHORT).join(', ') },
+            sau: srcs[0].ext.meta.ngay_ket_thuc ? { k: 'file.endDate', v: { d: srcs[0].ext.meta.ngay_ket_thuc } } : { k: 'file.noDate' } };
       patchJob(id, { status: 'done', progress: '', summary });
       store.set((s) => ({ sources: [...s.sources, ...srcs] }));
     } catch (e) {
@@ -139,10 +140,13 @@ function renderList(s, ctx) {
   document.querySelector('.rail a[data-step="2"]').classList.toggle('done', s.jobs.some((j) => j.status !== 'error'));
 }
 
+/** Chuỗi đã dịch, hoặc { k, v, sau } do files.js lưu lại để dịch muộn. */
+const chu = (x) => (typeof x === 'string' || !x ? x || '' : t(x.k, x.v) + (x.sau ? chu(x.sau) : ''));
+
 function statusLine(j) {
-  if (j.status === 'error') return h('span', { class: 'tag red' }, j.error);
-  if (j.status === 'reading') return j.progress || t('file.reading');
-  if (j.kind === 'xls') return [h('span', { class: 'tag em' }, t('file.noAI')), j.summary];
+  if (j.status === 'error') return h('span', { class: 'tag red' }, chu(j.error));
+  if (j.status === 'reading') return chu(j.progress) || t('file.reading');
+  if (j.kind === 'xls') return [h('span', { class: 'tag em' }, t('file.noAI')), chu(j.summary)];
   const found = ['BS', 'IS', 'CF'].filter((x) => j.types.includes(x)).map(SHORT);
   return [
     t('file.pages', { n: j.numPages }),
