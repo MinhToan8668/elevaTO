@@ -85,9 +85,10 @@ function initials(name) {
 /* ── các ô link ───────────────────────────────── */
 function chip(l) {
   const img = safeImg(l.image);
-  return img
-    ? h('span', { class: 'chip img' }, h('img', { src: img, alt: '', loading: 'lazy', decoding: 'async' }))
-    : h('span', { class: 'chip', html: svg(l.icon) });
+  if (!img) return h('span', { class: 'chip', html: svg(l.icon) });
+  // "icon": hình trong suốt đặt giữa ô màu nhấn; "photo": ảnh lấp kín ô.
+  return h('span', { class: l.imageStyle === 'icon' ? 'chip ico' : 'chip img' },
+    h('img', { src: img, alt: '', loading: 'lazy', decoding: 'async' }));
 }
 const badge = (l) => (l.badge ? h('span', { class: 'badge' }, l.badge) : null);
 

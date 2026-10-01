@@ -109,32 +109,75 @@ export function slider(label, value, min, max, unit, onInput, hint) {
 }
 
 /**
- * Ô chọn ảnh: xem trước + "Chọn ảnh từ máy" + "Ảnh có sẵn" + dán link.
- * opts: { presets: {src: label}, base: tiền tố để hiện ảnh có sẵn, onPick: async () => dataUrl, hint, round }
+ * Ô chọn ảnh: xem trước + các cách lấy ảnh. onChange(value, rerender, style) — style 'icon' (hình trong suốt
+ * đặt trên ô màu) hoặc 'photo' (ảnh lấp kín ô).
+ * opts: { presets: ảnh "photo" có sẵn, icons3d: icon 3D có sẵn, iconify: hàm tìm icon, onPick: tải từ máy,
+ *         style: kiểu hiện tại, round, hint, tools: [[tên, link], …] }
  */
 export function imageField(label, value, onChange, opts = {}) {
   const isData = /^data:/.test(value || '');
-  const thumb = h('span', { class: 'im-thumb' + (opts.round ? ' round' : '') });
-  const setThumb = (v) => {
-    thumb.replaceChildren(v ? h('img', { src: (opts.resolve ? opts.resolve(v) : v), alt: '' }) : h('span', { html: svg('plus') }));
-  };
+  const thumb = h('span', { class: 'im-thumb' + (opts.round ? ' round' : '') + (opts.style === 'icon' && value ? ' ico' : '') });
+  const setThumb = (v) => thumb.replaceChildren(v ? h('img', { src: v, alt: '' }) : h('span', { html: svg('plus') }));
   setThumb(value);
-  const url = field('', isData ? '' : value, (v) => { setThumb(v); onChange(v, false); },
-    { type: 'url', placeholder: isData ? 'Đang dùng ảnh tải lên từ máy' : 'hoặc dán link ảnh https://…', aria: label + ' — link ảnh' });
-  const gallery = opts.presets
-    ? h('div', { class: 'im-gallery', hidden: true }, ...Object.entries(opts.presets).map(([src, name]) =>
-      h('button', { type: 'button', title: name, 'aria-label': name, onclick: () => onChange(src, true) },
-        h('img', { src: opts.resolve ? opts.resolve(src) : src, alt: '' }))))
-    : null;
+  const url = field('', isData ? '' : value, (v) => { setThumb(v); onChange(v, false, 'photo'); },
+    { type: 'url', placeholder: isData ? 'Đang dùng ảnh tải lên / icon đã chọn' : 'hoặc dán link ảnh https://…', aria: label + ' — link ảnh' });
+
+  const panes = [];
+  const pane = (node) => { node.hidden = true; panes.push(node); return node; };
+  const toggleBtn = (text, node) => h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => {
+    const show = node.hidden;
+    panes.forEach((p) => { p.hidden = true; });
+    node.hidden = !show;
+    if (show) { const q = node.querySelector('input'); if (q) q.focus(); }
+  } }, text);
+  const grid = (entries, style) => h('div', { class: 'im-gallery' }, ...entries.map(([src, name]) =>
+    h('button', { type: 'button', title: name, 'aria-label': name, class: style === 'icon' ? 'ico' : '', onclick: () => onChange(src, true, style) },
+      h('img', { src, alt: '', loading: 'lazy' }))));
+
+  const icons = opts.icons3d ? pane(grid(Object.entries(opts.icons3d), 'icon')) : null;
+  const photos = opts.presets ? pane(grid(Object.entries(opts.presets), 'photo')) : null;
+  let search = null;
+  if (opts.iconify) {
+    const results = h('div', { class: 'im-gallery' });
+    const status = h('small', { class: 'hint' }, 'Gõ tiếng Anh: chart, money, robot, book, phone, coffee…');
+    const q = h('input', { class: 'inp', type: 'search', placeholder: 'Tìm trong 200.000+ icon (Iconify)', 'aria-label': 'Tìm icon' });
+    const run = async () => {
+      const term = q.value.trim();
+      if (!term) return;
+      status.textContent = 'Đang tìm…';
+      try {
+        const list = await opts.iconify.search(term);
+        results.replaceChildren(...list.map((id) => h('button', { type: 'button', title: id, 'aria-label': id, class: 'ico', onclick: async () => {
+          status.textContent = 'Đang lấy icon…';
+          try { onChange(await opts.iconify.get(id), true, 'icon'); } catch (e) { status.textContent = e.message; }
+        } }, h('img', { src: opts.iconify.preview(id), alt: '', loading: 'lazy' }))));
+        status.textContent = list.length ? `${list.length} icon — bấm để chọn.` : 'Không thấy icon nào. Thử từ khác (tiếng Anh).';
+      } catch (e) { status.textContent = e.message; }
+    };
+    q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
+    search = pane(h('div', { class: 'im-search' },
+      h('div', { class: 'row' }, q, h('button', { type: 'button', class: 'btn btn-em sm', onclick: run }, 'Tìm')), status, results));
+  }
+
   const tools = h('div', { class: 'im-tools' },
-    h('button', { type: 'button', class: 'btn btn-ghost sm', html: svg('download') + '<span>Chọn ảnh từ máy</span>', onclick: async (e) => {
+    icons ? toggleBtn('Icon 3D', icons) : null,
+    search ? toggleBtn('Tìm icon', search) : null,
+    h('button', { type: 'button', class: 'btn btn-ghost sm', html: svg('download') + '<span>Ảnh từ máy</span>', onclick: async (e) => {
       const b = e.currentTarget;
       b.disabled = true;
-      try { const v = await opts.onPick(); if (v) onChange(v, true); } finally { b.disabled = false; }
+      try { const v = await opts.onPick(); if (v) onChange(v, true, 'photo'); } finally { b.disabled = false; }
     } }),
-    gallery ? h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => { gallery.hidden = !gallery.hidden; } }, 'Ảnh có sẵn') : null,
-    value ? h('button', { type: 'button', class: 'btn btn-ghost sm danger', onclick: () => onChange('', true) }, 'Bỏ ảnh') : null);
+    photos ? toggleBtn('Ảnh có sẵn', photos) : null,
+    value ? h('button', { type: 'button', class: 'btn btn-ghost sm danger', onclick: () => onChange('', true, opts.style) }, 'Bỏ ảnh') : null);
+
+  const styleSel = value && opts.onStyle
+    ? segmented('Kiểu hiển thị', opts.style, [['icon', 'Icon trên nền màu'], ['photo', 'Ảnh lấp kín ô']], opts.onStyle)
+    : null;
+  const toolLinks = opts.tools
+    ? h('small', { class: 'hint' }, 'Tự thiết kế icon rồi tải lên: ',
+      ...opts.tools.flatMap(([name, href], i) => [i ? ' · ' : '', h('a', { href, target: '_blank', rel: 'noopener' }, name)]))
+    : null;
   return h('div', { class: 'fld wide' }, h('span', { class: 'lbl' }, label),
     h('div', { class: 'im' }, thumb, h('div', { class: 'im-r' }, tools, url)),
-    gallery, opts.hint ? h('small', { class: 'hint' }, opts.hint) : null);
+    ...panes, styleSel, opts.hint ? h('small', { class: 'hint' }, opts.hint) : null, toolLinks);
 }

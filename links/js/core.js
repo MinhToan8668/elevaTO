@@ -16,16 +16,31 @@ export const THEME_DEFAULT = { blur: 22, tint: 46, background: 'aurora', bgImage
 const IMG_MAX = 300000;
 const BG_MAX = 900000;
 
-/** Ảnh có sẵn cho ô link (thư mục links/art/). */
-export const ART = {
-  'art/course.svg': 'Khoá học',
-  'art/ai.svg': 'AI',
-  'art/slides.svg': 'Slide',
-  'art/trial.svg': 'Video',
-  'art/model.svg': 'Model',
-  'art/zalo.svg': 'Zalo',
-  'art/cv.svg': 'CV',
-  'art/coffee.svg': 'Coffee',
+// Icon 3D có sẵn (Fluent Emoji của Microsoft, giấy phép MIT — xem art/3d/LICENSE). Hiện kiểu "icon":
+// đặt giữa một ô vuông bo góc tô màu nhấn của ô.
+const I3 = (slug) => 'art/3d/' + slug + '.webp';
+export const ICON3D = {
+  [I3('chart-increasing')]: 'Biểu đồ tăng', [I3('bar-chart')]: 'Biểu đồ cột', [I3('robot')]: 'Robot AI', [I3('sparkles')]: 'Lấp lánh',
+  [I3('books')]: 'Sách', [I3('open-book')]: 'Sách mở', [I3('graduation-cap')]: 'Mũ tốt nghiệp', [I3('memo')]: 'Ghi chú',
+  [I3('page-facing-up')]: 'Tài liệu', [I3('clipboard')]: 'Bảng kẹp', [I3('bookmark-tabs')]: 'Trang đánh dấu', [I3('card-index-dividers')]: 'Hồ sơ',
+  [I3('money-bag')]: 'Túi tiền', [I3('money-with-wings')]: 'Tiền bay', [I3('coin')]: 'Đồng xu', [I3('classical-building')]: 'Ngân hàng',
+  [I3('briefcase')]: 'Cặp công sở', [I3('abacus')]: 'Bàn tính', [I3('laptop')]: 'Laptop', [I3('desktop-computer')]: 'Máy tính',
+  [I3('mobile-phone')]: 'Điện thoại', [I3('telephone-receiver')]: 'Gọi điện', [I3('speech-balloon')]: 'Tin nhắn', [I3('envelope')]: 'Email',
+  [I3('clapper-board')]: 'Video', [I3('video-camera')]: 'Máy quay', [I3('studio-microphone')]: 'Micro', [I3('megaphone')]: 'Loa',
+  [I3('rocket')]: 'Tên lửa', [I3('light-bulb')]: 'Ý tưởng', [I3('brain')]: 'Tư duy', [I3('bullseye')]: 'Mục tiêu',
+  [I3('trophy')]: 'Cúp', [I3('glowing-star')]: 'Ngôi sao', [I3('gem-stone')]: 'Kim cương', [I3('fire')]: 'Hot',
+  [I3('spiral-calendar')]: 'Lịch', [I3('calendar')]: 'Lịch ngày', [I3('hot-beverage')]: 'Cà phê', [I3('wrapped-gift')]: 'Quà',
+  [I3('party-popper')]: 'Ăn mừng', [I3('link')]: 'Liên kết', [I3('pushpin')]: 'Ghim', [I3('magnifying-glass-tilted-right')]: 'Tìm kiếm',
+  [I3('gear')]: 'Cài đặt', [I3('key')]: 'Chìa khoá', [I3('locked')]: 'Khoá', [I3('compass')]: 'La bàn',
+};
+/** Ảnh có sẵn dạng "ảnh" (lấp kín ô): logo thương hiệu. */
+export const ART = { 'art/zalo.svg': 'Zalo' };
+export const IMAGE_STYLES = ['icon', 'photo'];
+// Ảnh minh hoạ đời trước (đã bỏ) → icon 3D tương ứng, để nháp / data.json cũ không bị ảnh vỡ.
+const LEGACY_ART = {
+  'art/course.svg': I3('chart-increasing'), 'art/ai.svg': I3('robot'), 'art/slides.svg': I3('bar-chart'),
+  'art/trial.svg': I3('clapper-board'), 'art/model.svg': I3('laptop'), 'art/cv.svg': I3('page-facing-up'),
+  'art/coffee.svg': I3('hot-beverage'),
 };
 export const ACCENTS = {
   emerald: '#18cb96',
@@ -83,10 +98,11 @@ export function safeUrl(raw) {
   return ['http', 'https', 'mailto', 'tel', 'sms'].includes(m[1].toLowerCase()) ? u : '';
 }
 
-/** Như safeUrl, nhưng cho thêm ảnh nhúng data:image/(png|jpeg|webp|gif) — dạng ảnh tải lên từ máy. SVG nhúng không nhận. */
+/** Như safeUrl, nhưng cho thêm ảnh nhúng data:image/… (ảnh tải lên từ máy, icon lấy từ Iconify). */
 export function safeImg(raw) {
   const u = String(raw == null ? '' : raw).trim();
-  if (/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(u)) return u;
+  // SVG nhúng chỉ được vẽ qua <img> / url() — ở đó trình duyệt không chạy script bên trong.
+  if (/^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,[a-z0-9+/=\s]+$/i.test(u)) return u;
   return safeUrl(u);
 }
 
@@ -151,6 +167,8 @@ export function normalize(raw) {
 function normalizeLink(l) {
   const x = l && typeof l === 'object' ? l : {};
   const det = x.details || {};
+  const rawImg = str(x.image, IMG_MAX);
+  const image = has(LEGACY_ART, rawImg) ? LEGACY_ART[rawImg] : rawImg;
   return {
     id: str(x.id, 40) || newId(),
     title: str(x.title, 80),
@@ -159,7 +177,8 @@ function normalizeLink(l) {
     size: SIZES.includes(x.size) ? x.size : 'half',
     icon: str(x.icon, 30) || 'link',
     accent: has(ACCENTS, x.accent) ? x.accent : 'emerald',
-    image: str(x.image, IMG_MAX),
+    image,
+    imageStyle: IMAGE_STYLES.includes(x.imageStyle) && !has(LEGACY_ART, rawImg) ? x.imageStyle : (image.startsWith('art/3d/') ? 'icon' : 'photo'),
     badge: str(x.badge, 12),
     hidden: bool(x.hidden, false),
     live: bool(x.live, false),

@@ -171,3 +171,14 @@ select.inp{appearance:none;cursor:pointer;padding-right:28px;
 .im-gallery img{width:100%;height:100%;object-fit:cover}
 .chip.sm.img{background:none;box-shadow:0 3px 8px -2px rgb(0 0 0 / .25);overflow:hidden;border-radius:23%}
 .chip.sm.img img{width:100%;height:100%;object-fit:cover}
+
+/* icon trên ô màu (xem trước trong trình chỉnh sửa) */
+.im-thumb.ico,.im-gallery button.ico,.chip.sm.ico{background:linear-gradient(165deg,#f4fbf8,#cfeee2);border:0;box-shadow:inset 0 1px 0 #fff}
+.im-thumb.ico img,.im-gallery button.ico img,.chip.sm.ico img{width:74%;height:74%;object-fit:contain;margin:auto}
+.im-gallery button.ico{display:grid;place-items:center}
+.chip.sm.ico{display:grid;place-items:center;border-radius:26%;overflow:hidden}
+.im-search{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:14px;background:var(--glass-soft);border:1px solid var(--glass-line)}
+.im-search .row{align-items:center}
+.im-search .im-gallery{padding:0;background:none;border:0;max-height:260px;overflow:auto}
+.im-gallery{max-height:300px;overflow:auto}
+.hint a{color:var(--em-text);font-weight:700}
