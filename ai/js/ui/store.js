@@ -41,8 +41,9 @@ export function createStore(init) {
      */
     data() {
       if (!derived || derived.sources !== state.sources || derived.edits !== state.edits || derived.lang !== state.lang) {
+        // unit = đơn vị in trên BCTC (bội số lớn nhất trong các nguồn) — file xuất ra dùng đúng đơn vị này.
         const { ds, errors, unit } = buildDataset(state.sources, state.edits);
-        derived = { sources: state.sources, edits: state.edits, lang: state.lang, ds, errors, checks: checkDataset(ds, { unit }) };
+        derived = { sources: state.sources, edits: state.edits, lang: state.lang, ds, errors, unit, checks: checkDataset(ds, { unit }) };
       }
       return derived;
     },

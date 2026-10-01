@@ -4,8 +4,24 @@
 
 import { numToCol } from './xlsx.js';
 
+// Ký tự XML 1.0 không cho phép (kể cả nửa cặp thay thế lạc lõng do OCR/AI trả về) phải bỏ hẳn,
+// không thì Excel coi file hỏng và đòi sửa.
+const XAU_XML = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u0084\u0086-\u009f\ufffe\uffff]|[\ud800-\udbff](?![\udc00-\udfff])|(?:[^\ud800-\udbff]|^)[\udc00-\udfff]/g;
 export const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-  .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+  .replace(XAU_XML, (m) => (m.length > 1 ? m[0] : ''));
+
+/**
+ * Số ghi vào <v>: Excel không đọc được dạng mũ ("1e-7", "5e+21") nên luôn viết dạng thập phân.
+ * Quá lớn / không hữu hạn thì coi như ô trống còn hơn làm hỏng cả file.
+ */
+export function soXml(v) {
+  if (!Number.isFinite(v)) return null;
+  if (Math.abs(v) >= 1e15) return null;                   // ngoài khoảng Excel giữ đúng 15 chữ số
+  const s = String(v);
+  if (!/e/i.test(s)) return s;
+  const r = v.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
+  return r === '-0' ? '0' : r;
+}
 
 /** Chỉ số kiểu ô trong styles.xml (cellXfs) — xem stylesXml(). */
 export const S = {
@@ -15,9 +31,9 @@ export const S = {
 };
 
 export const cellStr = (ref, v, s) => `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
-export const cellNum = (ref, v, s) => (Number.isFinite(v) ? `<c r="${ref}" s="${s}"><v>${v}</v></c>` : `<c r="${ref}" s="${s}"/>`);
+export const cellNum = (ref, v, s) => { const x = soXml(v); return x === null ? `<c r="${ref}" s="${s}"/>` : `<c r="${ref}" s="${s}"><v>${x}</v></c>`; };
 /** Ô công thức: Excel tự tính lại khi mở, nhưng vẫn ghi sẵn giá trị để xem được ngay. */
-export const cellFormula = (ref, f, v, s) => `<c r="${ref}" s="${s}"><f>${esc(f)}</f>${Number.isFinite(v) ? `<v>${v}</v>` : ''}</c>`;
+export const cellFormula = (ref, f, v, s) => { const x = soXml(v); return `<c r="${ref}" s="${s}"><f>${esc(f)}</f>${x === null ? '' : `<v>${x}</v>`}</c>`; };
 export const row = (r, cells, ht) => `<row r="${r}"${ht ? ` ht="${ht}" customHeight="1"` : ''}>${cells.join('')}</row>`;
 
 export function sheetXml({ cols, rowsXml, freeze, merges = [] }) {
@@ -35,8 +51,11 @@ export function bookFiles(sheets, unit) {
   const files = {
     '[Content_Types].xml': contentTypes(sheets.length),
     '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
-    'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><calcPr fullCalcOnLoad="1"/><sheets>' +
-      sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets></workbook>',
+    // Thứ tự thẻ trong workbook.xml phải đúng theo lược đồ OOXML: <sheets> rồi mới tới <calcPr>.
+    // Đặt ngược lại thì Excel báo "We found a problem with some content" và đòi sửa file.
+    'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+      sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') +
+      '</sheets><calcPr fullCalcOnLoad="1"/></workbook>',
     'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('') +
       `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,

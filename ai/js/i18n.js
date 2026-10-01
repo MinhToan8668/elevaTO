@@ -60,8 +60,12 @@ export const chartLabel = (key, vi) => (lang === 'en' && CHART_EN[key]) || vi;
 export const modelLabel = (row, vi) => (lang === 'en' && MODEL_EN[row]) || vi;
 /** Tên đầy đủ của nhóm dòng model (KQKD → "Kết quả kinh doanh" / "Income statement"). */
 export const modelGroup = (g) => t(`mgroup.${g}`);
-/** Nhãn đơn vị tiền theo bội số. */
-export const unitLabel = (unit) => t(`unit.${unit === 1 ? '1' : `1e${Math.round(Math.log10(unit))}`}`);
+const BOI_SO = [1, 1e3, 1e6, 1e9];
+/** Nhãn đơn vị tiền theo bội số; bội số lạ thì lùi về bội số hợp lệ gần nhất (không bao giờ ra "unit.1eNaN"). */
+export const unitLabel = (unit) => {
+  const u = BOI_SO.includes(unit) ? unit : BOI_SO.filter((x) => x <= (Number(unit) || 1)).pop() || 1;
+  return t(`unit.${u === 1 ? '1' : `1e${Math.round(Math.log10(u))}`}`);
+};
 
 /** Mã vùng cho toLocaleString (ngày giờ, số). */
 export const locale = () => (lang === 'en' ? 'en-GB' : 'vi-VN');
