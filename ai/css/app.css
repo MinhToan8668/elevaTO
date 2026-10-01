@@ -144,6 +144,10 @@ main{display:flex;flex-direction:column;gap:20px;min-width:0;outline:none}
 .sub-h{font-size:17px;font-weight:800;color:var(--strong);margin:28px 0 12px}
 .empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line-2);border-radius:var(--r-sm);font-size:14px}
 .foot{text-align:center;color:var(--muted2);font-size:12.5px;padding:20px}
+.foot p{margin:0}
+.foot-ct{margin-top:6px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px}
+.foot-ct a{color:var(--em-text);text-decoration:none;border-bottom:1px solid transparent}
+.foot-ct a:hover{border-bottom-color:currentColor}
 
 /* ── Nút, ô nhập ──────────────────────── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:var(--r-sm);padding:10px 18px;

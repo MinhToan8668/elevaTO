@@ -64,11 +64,11 @@ function fakeAI(body) {
     if (accounts.has(body.email)) return fail('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
     // Máy chủ thật đòi đủ các ô khai báo — bắt chước ở đây để E2E chứng minh trang có gửi đi.
     if (!(Number(body.tuoi) >= 12 && Number(body.tuoi) <= 100)) return fail('tuoi_sai', 'Tuổi chưa đúng');
-    if (!['hv', 'gv', 'free'].includes(body.nguyen_vong)) return fail('nv_sai', 'Chọn bạn là ai');
+    if (!String(body.nghe_nghiep || '').trim()) return fail('thieu', 'Cho biết nghề nghiệp');
     if (!String(body.muc_dich || '').trim()) return fail('thieu', 'Cho biết mục đích dùng');
     // Ai đăng ký cũng ở mức thường; học viên / giảng viên do quản trị xếp bằng bot Telegram.
     const a = { ten: body.ten, email: body.email, mk: body.mk, token: TOKEN(body.email), vaitro: 'free',
-      khai: { tuoi: Number(body.tuoi), nguyen_vong: body.nguyen_vong, muc_dich: body.muc_dich } };
+      khai: { tuoi: Number(body.tuoi), nghe_nghiep: body.nghe_nghiep, muc_dich: body.muc_dich } };
     accounts.set(body.email, a);
     return { ok: true, data: { token: a.token, me: ME(a) } };
   }
@@ -230,12 +230,15 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.fill('#liPass', 'sai-mat-khau');
   await page.click('#loginForm button[type=submit]');
   await page.waitForSelector('#authDlg .msg.err:has-text("chưa đúng")');
-  await dangKy(page, { ten: 'Học viên E2E', email: 'hv@elevato.vn', vt: 'gv' });
+  await dangKy(page, { ten: 'Học viên E2E', email: 'hv@elevato.vn' });
   await page.waitForSelector('#authDlg:not([open])', { state: 'attached' });
   assert.equal(await page.locator('#acct .acct-name').innerText(), 'Học viên E2E');
-  assert.deepEqual(accounts.get('hv@elevato.vn').khai, { tuoi: 24, nguyen_vong: 'gv', muc_dich: 'Dựng model forecast' },
-    'trang gửi đủ tuổi / vai trò tự khai / mục đích');
-  assert.equal(accounts.get('hv@elevato.vn').vaitro, 'free', 'tự khai giảng viên vẫn chỉ ở mức thường');
+  assert.deepEqual(accounts.get('hv@elevato.vn').khai,
+    { tuoi: 24, nghe_nghiep: 'Chuyên viên phân tích', muc_dich: 'Dựng model forecast' },
+    'trang gửi đủ tuổi / nghề nghiệp / mục đích');
+  assert.equal(accounts.get('hv@elevato.vn').vaitro, 'free', 'ai đăng ký cũng ở mức thường');
+  // Liên hệ hỗ trợ luôn hiện ở chân trang.
+  assert.match(await page.locator('.foot-ct').innerText(), /Zalo 0376 292 148[\s\S]*minhtoantowork@gmail\.com/);
   // Đăng ký xong tự chạy tiếp việc đang dở, không bắt bấm lại.
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
 
@@ -489,7 +492,7 @@ test('chọn ngôn ngữ Anh / Việt: đổi tại chỗ, nhớ lựa chọn, t
   assert.equal(await page.locator('#authDlg .auth-card h2').innerText(), 'Welcome');
   await shot(page, '5-dang-nhap-en');
 
-  await dangKy(page, { ten: 'Nguyen Van An', email: 'en@elevato.vn', md: 'Building a forecast model' });
+  await dangKy(page, { ten: 'Nguyen Van An', email: 'en@elevato.vn', nn: 'Equity analyst', md: 'Building a forecast model' });
   await page.waitForSelector('#app .step');
   assert.equal(await page.locator('#h5').innerText(), 'Review & export');
 
@@ -544,13 +547,14 @@ async function bsXlsx(page) {
 }
 
 /** Điền và gửi form đăng ký trong hộp thoại. */
-async function dangKy(page, { ten, email, sdt = '0901234567', mk = 'mat-khau-123', tuoi = '24', vt = 'hv', md = 'Dựng model forecast' }) {
+async function dangKy(page, { ten, email, sdt = '0901234567', mk = 'mat-khau-123', tuoi = '24',
+  nn = 'Chuyên viên phân tích', md = 'Dựng model forecast' }) {
   await page.click('#tab-signup');
   await page.fill('#suTen', ten);
   await page.fill('#suTuoi', tuoi);
   await page.fill('#suEmail', email);
   await page.fill('#suSdt', sdt);
-  await page.selectOption('#suVT', vt);
+  await page.fill('#suNN', nn);
   await page.fill('#suMD', md);
   await page.fill('#suPass', mk);
   await page.click('#signupForm button[type=submit]');

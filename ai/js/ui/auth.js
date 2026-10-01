@@ -151,12 +151,7 @@ function renderGate(enter) {
     field('suTuoi', t('au.age'), { type: 'number', min: '12', max: '100', inputmode: 'numeric', placeholder: '25' }),
     field('suEmail', t('au.email'), { type: 'email', autocomplete: 'email', inputmode: 'email', placeholder: 'ban@email.com' }),
     field('suSdt', t('au.phone'), { type: 'tel', autocomplete: 'tel', inputmode: 'tel', placeholder: t('au.phone.ph') }),
-    // Người dùng tự khai; vai trò thật do elevaTO xếp qua bot Telegram.
-    h('div', { class: 'fld' }, h('label', { htmlFor: 'suVT' }, t('au.who')),
-      h('select', { id: 'suVT', class: 'inp', required: true, disabled: off },
-        h('option', { value: '' }, t('au.who.ph')),
-        ['hv', 'gv', 'free'].map((k) => h('option', { value: k }, t(`au.who.${k}`)))),
-      h('small', { class: 'fine-l' }, t('au.whoNote'))),
+    field('suNN', t('au.job'), { placeholder: t('au.job.ph'), maxlength: '120' }),
     field('suMD', t('au.purpose'), { placeholder: t('au.purpose.ph'), maxlength: '300' }),
     pw('suPass', t('au.pass.new'), 'new-password'),
     // Ô bẫy bot: người thật không thấy, không điền.
@@ -191,9 +186,9 @@ function renderGate(enter) {
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = { action: 'dangky', ten: $('#suTen').value.trim(), email: $('#suEmail').value.trim(), sdt: $('#suSdt').value.trim(),
-      mk: $('#suPass').value, tuoi: Number($('#suTuoi').value), nguyen_vong: $('#suVT').value, muc_dich: $('#suMD').value.trim(),
+      mk: $('#suPass').value, tuoi: Number($('#suTuoi').value), nghe_nghiep: $('#suNN').value.trim(), muc_dich: $('#suMD').value.trim(),
       website: $('#suWeb').value };
-    if (!body.ten || !body.email || !body.sdt || !body.mk || !body.nguyen_vong || !body.muc_dich) return setGateMsg('err', t('au.needAll'));
+    if (!body.ten || !body.email || !body.sdt || !body.mk || !body.nghe_nghiep || !body.muc_dich) return setGateMsg('err', t('au.needAll'));
     if (!(body.tuoi >= 12 && body.tuoi <= 100)) return setGateMsg('err', t('au.badAge'));
     if (body.mk.length < 8) return setGateMsg('err', t('au.shortPass'));
     busy(signupForm, true, t('au.signup'));
@@ -228,7 +223,7 @@ function renderGate(enter) {
   return dlg;
 }
 
-const O_MAN = ['liEmail', 'liPass', 'suTen', 'suTuoi', 'suEmail', 'suSdt', 'suVT', 'suMD', 'suPass'];
+const O_MAN = ['liEmail', 'liPass', 'suTen', 'suTuoi', 'suEmail', 'suSdt', 'suNN', 'suMD', 'suPass'];
 
 /** Chụp lại những gì người dùng đang gõ dở trên màn đăng nhập (trước khi vẽ lại vì đổi ngôn ngữ). */
 function chupMan() {
