@@ -1,6 +1,7 @@
 // Trình chỉnh sửa trang link-in-bio: sửa bản nháp (lưu trên máy), xem trước trực tiếp, đăng lên GitHub.
 
-import { normalize, serialize, newId, hiddenReason, safeImg, ACCENTS, SOCIALS, ART, BACKGROUNDS } from './core.js';
+import { normalize, serialize, newId, hiddenReason, safeImg, ACCENTS, SOCIALS, ART, ICON3D, BACKGROUNDS } from './core.js';
+import * as iconify from './iconify.js';
 import { svg, TILE_ICONS } from './icons.js';
 import { h, field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
 import { fileToDataUrl, pickFile, dataUrlKb } from './image.js';
@@ -138,7 +139,7 @@ function linkCard(l, i) {
     h('button', { type: 'button', class: 'lc-toggle', 'aria-expanded': String(open),
       onclick: () => { openLink = open ? '' : l.id; renderForm(); } },
       safeImg(l.image)
-        ? h('span', { class: 'chip sm img' }, h('img', { src: safeImg(l.image), alt: '' }))
+        ? h('span', { class: 'chip sm ' + (l.imageStyle === 'icon' ? 'ico' : 'img') }, h('img', { src: safeImg(l.image), alt: '' }))
         : h('span', { class: 'chip sm', html: svg(l.icon) }),
       h('span', { class: 'lc-name' }, h('b', {}, l.title || 'Ô chưa đặt tên'),
         h('small', {}, { feature: 'Nổi bật', wide: 'Ngang', half: 'Nửa ô' }[l.size] + (l.url ? ' · ' + l.url : ''))),
@@ -163,8 +164,14 @@ function linkCard(l, i) {
     field('Link khi bấm', l.url, set('url'), { type: 'url', placeholder: 'https://…', wide: true,
       hint: 'Link bất kỳ: Google Drive, Zalo (https://zalo.me/09…), form, trang khác… Để trống thì ô tự ẩn.' }),
     segmented('Kiểu ô', l.size, [['feature', 'Nổi bật (to nhất)'], ['wide', 'Ngang cả hàng'], ['half', 'Nửa hàng']], setRe('size')),
-    imageField('Ảnh của ô', l.image, (v, re) => update((d) => { d.links[i].image = v; }, { rerender: re }),
-      { presets: ART, onPick: () => pick({ maxSide: 256, square: true }), hint: 'Chọn ảnh có sẵn, tải ảnh từ máy (tự cắt vuông, thu nhỏ), hoặc dán link. Bỏ ảnh thì ô dùng icon.' }),
+    imageField('Icon / ảnh của ô', l.image,
+      (v, re, style) => update((d) => { d.links[i].image = v; if (style) d.links[i].imageStyle = style; }, { rerender: re }),
+      { icons3d: ICON3D, presets: ART, iconify, style: l.imageStyle,
+        onStyle: setRe('imageStyle'),
+        onPick: () => pick({ maxSide: 256, square: true }),
+        hint: 'Icon 3D: bộ Fluent Emoji của Microsoft. Tìm icon: thư viện Iconify. Ảnh từ máy được tự cắt vuông, thu nhỏ. Bỏ ảnh thì ô dùng icon nét.',
+        tools: [['Iconify', 'https://icon-sets.iconify.design/'], ['Canva', 'https://www.canva.com/'], ['Flaticon', 'https://www.flaticon.com/'],
+          ['Icons8', 'https://icons8.com/icons'], ['Fluent Emoji 3D', 'https://github.com/microsoft/fluentui-emoji']] }),
     l.image ? null : iconPicker(l.icon, TILE_ICONS, setRe('icon')),
     swatches(l.accent, ACCENTS, setRe('accent')),
     isFeature ? h('div', { class: 'cols' },

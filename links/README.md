@@ -18,9 +18,15 @@ Trang gom mọi thứ của elevaTO vào một màn hình, để gắn vào bio 
 - **Liquid Glass** kiểu iPhone: kính trong có viền bắt sáng, phản chiếu mép trên; sáng / tối dùng chung nút
   với công cụ AI (`ai/`). **Độ mờ (blur)**, **độ đục của kính** và **hình nền** (4 dải màu có sẵn hoặc ảnh tự
   chọn) chỉnh bằng thanh kéo trong trình chỉnh sửa.
-- **Ảnh cho từng ô**: chọn trong bộ ảnh có sẵn (`art/` — khoá học, AI, slide, video, model, Zalo, CV, coffee),
-  **tải ảnh từ máy** (tự cắt vuông, thu nhỏ, nén WebP rồi lưu luôn trong `data.json`), hoặc dán link.
-  Ảnh đại diện cũng tải từ máy được.
+- **Icon cho từng ô** (trình chỉnh sửa → mở một ô → *Icon / ảnh của ô*):
+  - **Icon 3D**: 48 icon Fluent Emoji 3D của Microsoft có sẵn trong `art/3d/` (giấy phép MIT), hiện trên ô
+    vuông bo góc tô theo màu nhấn của ô — giống icon app iPhone.
+  - **Tìm icon**: tìm thẳng trong thư viện [Iconify](https://icon-sets.iconify.design/) (200.000+ icon, chỉ
+    lấy các bộ nhiều màu). Icon chọn xong được nhúng vào `data.json`, trang không phụ thuộc Iconify.
+  - **Ảnh từ máy**: tự cắt vuông, thu nhỏ, nén WebP rồi lưu luôn trong `data.json`. Ảnh đại diện, ảnh nền cũng vậy.
+  - Muốn tự thiết kế: [Canva](https://www.canva.com/), [Flaticon](https://www.flaticon.com/),
+    [Icons8](https://icons8.com/icons) → tải PNG về → *Ảnh từ máy*.
+  - *Kiểu hiển thị*: "Icon trên nền màu" (hình trong suốt) hoặc "Ảnh lấp kín ô" (ảnh chụp, logo).
 - Ô nào **chưa có link thì tự ẩn** — không bao giờ hiện link hỏng.
 
 ## Sửa trang
@@ -51,11 +57,12 @@ links/
 ├── index.html        trang công khai
 ├── edit.html         trình chỉnh sửa
 ├── data.json         toàn bộ nội dung trang (trình chỉnh sửa ghi vào đây)
-├── art/              ảnh minh hoạ các ô + logo chữ cho chân trang
+├── art/              icon 3D (art/3d), logo Zalo, logo chữ cho chân trang
 ├── css/links.css     giao diện trang (edit.css: thêm cho trình chỉnh sửa)
 ├── js/core.js        logic thuần: lọc link an toàn, chuẩn hoá dữ liệu, số chỗ cohort
 ├── js/page.js        vẽ trang
-├── js/editor.js      trình chỉnh sửa (edit-ui.js: ô nhập, thanh kéo, chọn ảnh; image.js: nén ảnh từ máy)
+├── js/editor.js      trình chỉnh sửa (edit-ui.js: ô nhập, thanh kéo, chọn ảnh; image.js: nén ảnh từ máy;
+│                     iconify.js: tìm icon)
 ├── js/github.js      đăng data.json qua GitHub API
 └── tests/            node --test (+ e2e Playwright)
 ```

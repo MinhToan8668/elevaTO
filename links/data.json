@@ -53,7 +53,7 @@
       "size": "feature",
       "icon": "book",
       "accent": "emerald",
-      "image": "art/course.svg",
+      "image": "art/3d/chart-increasing.webp",
       "badge": "",
       "hidden": false,
       "live": true,
@@ -64,7 +64,8 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "imageStyle": "icon"
     },
     {
       "id": "ai",
@@ -74,7 +75,7 @@
       "size": "half",
       "icon": "sparkles",
       "accent": "violet",
-      "image": "art/ai.svg",
+      "image": "art/3d/robot.webp",
       "badge": "Mới",
       "hidden": false,
       "live": false,
@@ -85,7 +86,8 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "imageStyle": "icon"
     },
     {
       "id": "slides",
@@ -95,7 +97,7 @@
       "size": "half",
       "icon": "slides",
       "accent": "amber",
-      "image": "art/slides.svg",
+      "image": "art/3d/bar-chart.webp",
       "badge": "Free",
       "hidden": false,
       "live": false,
@@ -111,7 +113,8 @@
           "Bài tập thực hành có đáp án"
         ],
         "button": "Xem slide"
-      }
+      },
+      "imageStyle": "icon"
     },
     {
       "id": "trial",
@@ -121,7 +124,7 @@
       "size": "half",
       "icon": "play",
       "accent": "cyan",
-      "image": "art/trial.svg",
+      "image": "art/3d/clapper-board.webp",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -132,7 +135,8 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "imageStyle": "icon"
     },
     {
       "id": "model",
@@ -142,7 +146,7 @@
       "size": "half",
       "icon": "chart",
       "accent": "blue",
-      "image": "art/model.svg",
+      "image": "art/3d/laptop.webp",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -153,7 +157,8 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "imageStyle": "icon"
     },
     {
       "id": "zalo",
@@ -174,7 +179,8 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "imageStyle": "photo"
     },
     {
       "id": "cv",
@@ -184,7 +190,7 @@
       "size": "wide",
       "icon": "file",
       "accent": "slate",
-      "image": "art/cv.svg",
+      "image": "art/3d/briefcase.webp",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -195,7 +201,8 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "imageStyle": "icon"
     }
   ],
   "live": {

@@ -128,8 +128,8 @@ test('trình chỉnh sửa: sửa → xem trước đổi theo → Đăng lên w
 test('ảnh minh hoạ của các ô và logo chân trang tải được', async () => {
   const p = await page();
   await p.goto(base + '/links/');
-  await p.waitForSelector('#grid .chip.img img');
-  await p.waitForFunction(() => [...document.querySelectorAll('#grid .chip.img img, .foot img.wm-light')].every((i) => i.complete && i.naturalWidth > 0));
+  await p.waitForSelector('#grid .chip.ico img');
+  await p.waitForFunction(() => [...document.querySelectorAll('#grid .chip.ico img, #grid .chip.img img, .foot img.wm-light')].every((i) => i.complete && i.naturalWidth > 0));
   assert.equal(await p.textContent('.foot-tag'), 'Fuel Your Financial Journey');
   await p.context().close();
 });
@@ -151,11 +151,35 @@ test('trình chỉnh sửa: kéo độ mờ / độ đục, đổi nền → khu
   // Ảnh PNG thật trong repo → cắt vuông, nén thành data URL và hiện trong xem trước.
   const png = await readFile(join(ROOT, 'apple-touch-icon.png'));
   const chooser = p.waitForEvent('filechooser');
-  await p.click('.fld:has(> .lbl:text("Ảnh đại diện")) button:has-text("Chọn ảnh từ máy")');
+  await p.click('.fld:has(> .lbl:text("Ảnh đại diện")) button:has-text("Ảnh từ máy")');
   await (await chooser).setFiles({ name: 'ava.png', mimeType: 'image/png', buffer: png });
   await frame.waitForFunction(() => document.querySelector('#ava').src.startsWith('data:image/'));
   const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
   assert.match(draft.profile.avatar, /^data:image\/(webp|jpeg);base64,/);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('trình chỉnh sửa: chọn icon 3D có sẵn và tìm icon Iconify cho một ô', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  const svgIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="#f59e0b"/></svg>';
+  await p.route('https://api.iconify.design/**', (r) => (r.request().url().includes('/search')
+    ? r.fulfill({ contentType: 'application/json', body: JSON.stringify({ icons: ['noto:coin', 'fluent-color:money-16'] }) })
+    : r.fulfill({ contentType: 'image/svg+xml', body: svgIcon })));
+  await p.goto(base + '/links/edit.html');
+  await p.click('.lc-toggle:has-text("AI đọc BCTC")');
+  await p.click('.lc.open button:has-text("Icon 3D")');
+  await p.click('.lc.open .im-gallery button[title="Tên lửa"]');
+  const frame = p.frames().find((f) => f.url().includes('preview'));
+  await frame.waitForSelector('.tile .chip.ico img[src="art/3d/rocket.webp"]');
+
+  await p.click('.lc.open button:has-text("Tìm icon")');
+  await p.fill('.lc.open input[type=search]', 'coin');
+  await p.keyboard.press('Enter');
+  await p.click('.lc.open .im-search button[title="noto:coin"]');
+  await frame.waitForSelector('.tile .chip.ico img[src^="data:image/svg+xml;base64,"]');
+  const ai = (await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')))).links.find((l) => l.id === 'ai');
+  assert.equal(ai.imageStyle, 'icon');
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });
@@ -175,8 +199,8 @@ test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới
   await p.waitForSelector('.lc');
   const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
   assert.equal(draft.profile.status, 'Minhtoantowork@gmail.com');
-  assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/course.svg');
-  assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/ai.svg');
+  assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/3d/chart-increasing.webp');
+  assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/3d/robot.webp');
   assert.equal(draft.theme.blur, 22);
   await p.context().close();
 });

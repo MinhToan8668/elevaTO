@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, safeImg, socialUrl, normalize, THEME_DEFAULT, ART, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, THEME_DEFAULT, ART, ICON3D, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
@@ -165,13 +165,14 @@ test('theme: độ mờ, độ đục bị kẹp trong khoảng cho phép; nền
   assert.equal(normalize({ theme: { blur: '12.6' } }).theme.blur, 13);
 });
 
-test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụt; SVG nhúng và script bị chặn', () => {
+test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụt; HTML nhúng và script bị chặn', () => {
   const big = 'data:image/webp;base64,' + 'A'.repeat(120000);
   const d = normalize({ profile: { avatar: big }, links: [{ title: 'x', url: 'https://a.vn', image: big }] });
   assert.equal(d.profile.avatar, big);
   assert.equal(d.links[0].image, big);
   assert.equal(safeImg(big), big);
-  assert.equal(safeImg('data:image/svg+xml;base64,PHN2Zz4='), '');
+  assert.equal(safeImg('data:image/svg+xml;base64,PHN2Zz4='), 'data:image/svg+xml;base64,PHN2Zz4=');
+  assert.equal(safeImg('data:image/svg+xml,<svg onload=alert(1)>'), '');
   assert.equal(safeImg('data:text/html;base64,PHNjcmlwdD4='), '');
   assert.equal(safeImg('javascript:alert(1)'), '');
   assert.equal(safeImg('art/course.svg'), 'art/course.svg');
@@ -183,4 +184,25 @@ test('ảnh có sẵn: mọi file trong ART đều tồn tại và là SVG hợp
     assert.match(svgText, /^<svg [^>]*viewBox="0 0 120 120"/, src);
     assert.doesNotMatch(svgText, /<script|on\w+=/i, src);
   }
+});
+
+test('icon 3D có sẵn: đủ file WebP thật, có ghi giấy phép', async () => {
+  assert.ok(Object.keys(ICON3D).length >= 40);
+  for (const src of Object.keys(ICON3D)) {
+    const buf = await readFile(new URL('../' + src, import.meta.url));
+    assert.equal(buf.subarray(0, 4).toString(), 'RIFF', src);
+    assert.equal(buf.subarray(8, 12).toString(), 'WEBP', src);
+  }
+  assert.match(await readFile(new URL('../art/3d/LICENSE', import.meta.url), 'utf8'), /MIT License[\s\S]*Microsoft/);
+});
+
+test('ảnh minh hoạ đời trước tự đổi sang icon 3D; kiểu hiển thị suy ra từ ảnh', () => {
+  const [a, b, c, d] = normalize({ links: [
+    { image: 'art/course.svg', imageStyle: 'photo' }, { image: 'art/zalo.svg' },
+    { image: 'art/3d/robot.webp' }, { image: 'data:image/webp;base64,AAAA', imageStyle: 'icon' },
+  ] }).links;
+  assert.deepEqual([a.image, a.imageStyle], ['art/3d/chart-increasing.webp', 'icon']);
+  assert.deepEqual([b.image, b.imageStyle], ['art/zalo.svg', 'photo']);
+  assert.equal(c.imageStyle, 'icon');
+  assert.equal(d.imageStyle, 'icon');
 });
