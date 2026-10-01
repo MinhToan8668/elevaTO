@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "Minh Toàn · elevaTO",
+    "description": "Khóa Financial Modeling thực chiến, công cụ AI đọc BCTC, slide miễn phí và cách liên hệ Minh Toàn — tất cả ở một chỗ."
+  },
+  "profile": {
+    "name": "Minh Toàn",
+    "handle": "@toanelevato",
+    "tagline": "1 anh bạn làm Corporate Banking & M&A · Founder elevaTO",
+    "avatar": "../assets/instructor-sm.webp",
+    "verified": true,
+    "status": ""
+  },
+  "stats": [
+    {
+      "value": "2.5+",
+      "label": "năm M&A"
+    },
+    {
+      "value": "50+",
+      "label": "học viên"
+    },
+    {
+      "value": "Top 10%",
+      "label": "CFA Level 1"
+    }
+  ],
+  "socials": [
+    {
+      "type": "tiktok",
+      "url": "https://www.tiktok.com/@financewithto"
+    },
+    {
+      "type": "facebook",
+      "url": ""
+    },
+    {
+      "type": "linkedin",
+      "url": ""
+    },
+    {
+      "type": "zalo",
+      "url": ""
+    }
+  ],
+  "links": [
+    {
+      "id": "course",
+      "title": "Financial Modeling thực chiến",
+      "subtitle": "8 buổi live — tự build 3-Statement, DCF, Comps trên BCTC công ty niêm yết",
+      "url": "../",
+      "size": "feature",
+      "icon": "book",
+      "accent": "emerald",
+      "image": "../assets/model/dashboard-thumb.webp",
+      "badge": "",
+      "hidden": false,
+      "live": true,
+      "cta": "Giữ chỗ",
+      "ctaUrl": "../#dang-ky",
+      "details": {
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
+    },
+    {
+      "id": "ai",
+      "title": "AI đọc BCTC",
+      "subtitle": "Thả PDF báo cáo tài chính, nhận về file Excel model",
+      "url": "../ai/",
+      "size": "half",
+      "icon": "sparkles",
+      "accent": "violet",
+      "image": "",
+      "badge": "Mới",
+      "hidden": false,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
+    },
+    {
+      "id": "slides",
+      "title": "Modeling Slides",
+      "subtitle": "Slide DCF, WACC, dòng tiền tự do — xem miễn phí",
+      "url": "../#slides",
+      "size": "half",
+      "icon": "slides",
+      "accent": "amber",
+      "image": "",
+      "badge": "Free",
+      "hidden": false,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": true,
+        "text": "Bộ slide mình dùng để dạy, dành cho các bạn muốn hiểu hơn về Modeling.",
+        "bullets": [
+          "Vì sao doanh nghiệp đáng giá ngần đó tiền",
+          "NOPAT, dòng tiền tự do (UFCF), vốn lưu động",
+          "WACC, chiết khấu, cầu nối EV → giá cổ phiếu",
+          "Bài tập thực hành có đáp án"
+        ],
+        "button": "Xem slide"
+      }
+    },
+    {
+      "id": "trial",
+      "title": "Học thử buổi 1",
+      "subtitle": "Video buổi Phân tích Bảng cân đối kế toán",
+      "url": "../#demo",
+      "size": "half",
+      "icon": "play",
+      "accent": "cyan",
+      "image": "",
+      "badge": "",
+      "hidden": false,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
+    },
+    {
+      "id": "model",
+      "title": "Model mẫu DGW",
+      "subtitle": "Dashboard, driver, DCF & bảng độ nhạy",
+      "url": "../#model",
+      "size": "half",
+      "icon": "chart",
+      "accent": "blue",
+      "image": "",
+      "badge": "",
+      "hidden": false,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
+    },
+    {
+      "id": "zalo",
+      "title": "Zalo Minh nhé",
+      "subtitle": "Liên hệ hoặc hẹn Coffee Connect ☕",
+      "url": "",
+      "size": "wide",
+      "icon": "zalo",
+      "accent": "blue",
+      "image": "",
+      "badge": "",
+      "hidden": false,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
+    },
+    {
+      "id": "cv",
+      "title": "My CV",
+      "subtitle": "Kinh nghiệm Corporate Banking, M&A",
+      "url": "",
+      "size": "wide",
+      "icon": "file",
+      "accent": "slate",
+      "image": "",
+      "badge": "",
+      "hidden": false,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
+    }
+  ],
+  "live": {
+    "enabled": true,
+    "api": "https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec"
+  }
+}
