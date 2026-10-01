@@ -2,6 +2,31 @@
 // Trang công khai và trình chỉnh sửa dùng chung file này, nên quy tắc "link nào được hiện" chỉ có một chỗ.
 
 export const SIZES = ['feature', 'wide', 'half'];
+
+// Nền trang: dải màu dựng sẵn (định nghĩa trong links.css) hoặc ảnh tự chọn.
+export const BACKGROUNDS = {
+  aurora: 'Ngọc lục bảo',
+  ocean: 'Đại dương',
+  sunset: 'Hoàng hôn',
+  midnight: 'Đêm',
+  image: 'Ảnh tự chọn',
+};
+export const THEME_DEFAULT = { blur: 22, tint: 46, background: 'aurora', bgImage: '', pattern: true };
+// Ảnh tải lên được lưu thẳng trong data.json dưới dạng data URL (đã thu nhỏ) → cần giới hạn dài hơn link thường.
+const IMG_MAX = 300000;
+const BG_MAX = 900000;
+
+/** Ảnh có sẵn cho ô link (thư mục links/art/). */
+export const ART = {
+  'art/course.svg': 'Khoá học',
+  'art/ai.svg': 'AI',
+  'art/slides.svg': 'Slide',
+  'art/trial.svg': 'Video',
+  'art/model.svg': 'Model',
+  'art/zalo.svg': 'Zalo',
+  'art/cv.svg': 'CV',
+  'art/coffee.svg': 'Coffee',
+};
 export const ACCENTS = {
   emerald: '#18cb96',
   cyan: '#06b6d4',
@@ -58,6 +83,18 @@ export function safeUrl(raw) {
   return ['http', 'https', 'mailto', 'tel', 'sms'].includes(m[1].toLowerCase()) ? u : '';
 }
 
+/** Như safeUrl, nhưng cho thêm ảnh nhúng data:image/(png|jpeg|webp|gif) — dạng ảnh tải lên từ máy. SVG nhúng không nhận. */
+export function safeImg(raw) {
+  const u = String(raw == null ? '' : raw).trim();
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(u)) return u;
+  return safeUrl(u);
+}
+
+const clamp = (v, lo, hi, dflt) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : dflt;
+};
+
 export function socialUrl(type, value) {
   const v = String(value == null ? '' : value).trim();
   if (!v) return '';
@@ -81,6 +118,7 @@ export function normalize(raw) {
   const p = d.profile || {};
   const live = d.live || {};
   const meta = d.meta || {};
+  const th = d.theme || {};
   return {
     version: 1,
     meta: { title: str(meta.title, 120), description: str(meta.description, 300) },
@@ -88,7 +126,7 @@ export function normalize(raw) {
       name: str(p.name, 80),
       handle: str(p.handle, 60),
       tagline: str(p.tagline, 200),
-      avatar: str(p.avatar, 500),
+      avatar: str(p.avatar, IMG_MAX),
       verified: bool(p.verified, true),
       status: str(p.status, 80),
     },
@@ -101,6 +139,13 @@ export function normalize(raw) {
       .slice(0, 10),
     links: (Array.isArray(d.links) ? d.links : []).map(normalizeLink).slice(0, 40),
     live: { enabled: bool(live.enabled, false), api: str(live.api, 500) },
+    theme: {
+      blur: clamp(th.blur, 0, 48, THEME_DEFAULT.blur),
+      tint: clamp(th.tint, 5, 95, THEME_DEFAULT.tint),
+      background: has(BACKGROUNDS, th.background) ? th.background : THEME_DEFAULT.background,
+      bgImage: str(th.bgImage, BG_MAX),
+      pattern: bool(th.pattern, THEME_DEFAULT.pattern),
+    },
   };
 }
 
@@ -115,7 +160,7 @@ function normalizeLink(l) {
     size: SIZES.includes(x.size) ? x.size : 'half',
     icon: str(x.icon, 30) || 'link',
     accent: has(ACCENTS, x.accent) ? x.accent : 'emerald',
-    image: str(x.image, 1000),
+    image: str(x.image, IMG_MAX),
     badge: str(x.badge, 12),
     hidden: bool(x.hidden, false),
     live: bool(x.live, false),

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: data:; connect-src 'self' https://api.github.com; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: data: blob:; connect-src 'self' https://api.github.com; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Sửa trang link · elevaTO</title>
@@ -42,7 +42,6 @@
   <main class="ed-form" id="form" aria-label="Nội dung trang"></main>
   <aside class="ed-prev" id="preview" aria-label="Xem trước">
     <div class="phone">
-      <div class="phone-notch" aria-hidden="true"></div>
       <iframe id="frame" title="Xem trước trang link" src="index.html?preview"></iframe>
     </div>
     <p class="prev-note">Xem trước dùng bản nháp. Bấm link trong khung chỉ hiện đích đến.</p>

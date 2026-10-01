@@ -1,8 +1,9 @@
 // Trình chỉnh sửa trang link-in-bio: sửa bản nháp (lưu trên máy), xem trước trực tiếp, đăng lên GitHub.
 
-import { normalize, serialize, newId, hiddenReason, ACCENTS, SOCIALS } from './core.js';
+import { normalize, serialize, newId, hiddenReason, safeImg, ACCENTS, SOCIALS, ART, BACKGROUNDS } from './core.js';
 import { svg, TILE_ICONS } from './icons.js';
-import { h, field, toggle, segmented, iconPicker, swatches, iconBtn, panel } from './edit-ui.js';
+import { h, field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
+import { fileToDataUrl, pickFile, dataUrlKb } from './image.js';
 import { DEFAULT_REPO, publish, checkAccess } from './github.js';
 
 const $ = (s) => document.querySelector(s);
@@ -53,6 +54,22 @@ function sendPreview() {
   if (w && draft) w.postMessage({ type: 'elevato-links:data', data: draft }, location.origin);
 }
 
+/* ── ảnh từ máy ───────────────────────────────── */
+const BIG_IMAGE_KB = 250;
+async function pick(opts) {
+  const file = await pickFile();
+  if (!file) return '';
+  try {
+    const url = await fileToDataUrl(file, opts);
+    const kb = dataUrlKb(url);
+    toast(kb > BIG_IMAGE_KB ? `Ảnh hơi nặng (${kb} KB) — trang sẽ tải chậm hơn chút.` : `Đã thêm ảnh (${kb} KB).`);
+    return url;
+  } catch (e) {
+    toast(e.message);
+    return '';
+  }
+}
+
 /* ── các phần của form ────────────────────────── */
 function profilePanel() {
   const p = draft.profile;
@@ -62,7 +79,8 @@ function profilePanel() {
       field('Tên hiển thị', p.name, set('name'), { max: 80 }),
       field('Handle', p.handle, set('handle'), { placeholder: '@toanelevato', max: 60 })),
     field('Giới thiệu ngắn', p.tagline, set('tagline'), { multiline: true, rows: 2, max: 200, wide: true }),
-    field('Ảnh đại diện (link ảnh)', p.avatar, set('avatar'), { type: 'url', hint: 'Link ảnh https://… hoặc ảnh có sẵn trong repo, ví dụ ../assets/instructor-sm.webp', wide: true }),
+    imageField('Ảnh đại diện', p.avatar, (v, re) => update((d) => { d.profile.avatar = v; }, { rerender: re }),
+      { round: true, onPick: () => pick({ maxSide: 420, square: true }), presets: { '../assets/instructor-sm.webp': 'Ảnh hiện tại' } }),
     field('Dòng trạng thái', p.status, set('status'), { max: 80, placeholder: 'Ví dụ: Đang mở lịch Coffee Connect',
       hint: 'Để trống: tự hiện trạng thái cohort (nếu không có ô nổi bật nào đang hiện số chỗ).', wide: true }),
     toggle('Hiện dấu tích xanh cạnh tên', p.verified, set('verified')));
@@ -119,7 +137,9 @@ function linkCard(l, i) {
   const head = h('div', { class: 'lc-head' },
     h('button', { type: 'button', class: 'lc-toggle', 'aria-expanded': String(open),
       onclick: () => { openLink = open ? '' : l.id; renderForm(); } },
-      h('span', { class: 'chip sm', html: svg(l.icon) }),
+      safeImg(l.image)
+        ? h('span', { class: 'chip sm img' }, h('img', { src: safeImg(l.image), alt: '' }))
+        : h('span', { class: 'chip sm', html: svg(l.icon) }),
       h('span', { class: 'lc-name' }, h('b', {}, l.title || 'Ô chưa đặt tên'),
         h('small', {}, { feature: 'Nổi bật', wide: 'Ngang', half: 'Nửa ô' }[l.size] + (l.url ? ' · ' + l.url : ''))),
       reason ? h('span', { class: 'warn' }, reason) : null),
@@ -143,9 +163,10 @@ function linkCard(l, i) {
     field('Link khi bấm', l.url, set('url'), { type: 'url', placeholder: 'https://…', wide: true,
       hint: 'Link bất kỳ: Google Drive, Zalo (https://zalo.me/09…), form, trang khác… Để trống thì ô tự ẩn.' }),
     segmented('Kiểu ô', l.size, [['feature', 'Nổi bật (to nhất)'], ['wide', 'Ngang cả hàng'], ['half', 'Nửa hàng']], setRe('size')),
-    iconPicker(l.icon, TILE_ICONS, setRe('icon')),
+    imageField('Ảnh của ô', l.image, (v, re) => update((d) => { d.links[i].image = v; }, { rerender: re }),
+      { presets: ART, onPick: () => pick({ maxSide: 256, square: true }), hint: 'Chọn ảnh có sẵn, tải ảnh từ máy (tự cắt vuông, thu nhỏ), hoặc dán link. Bỏ ảnh thì ô dùng icon.' }),
+    l.image ? null : iconPicker(l.icon, TILE_ICONS, setRe('icon')),
     swatches(l.accent, ACCENTS, setRe('accent')),
-    field('Ảnh thay cho icon (tuỳ chọn)', l.image, set('image'), { type: 'url', wide: true, placeholder: 'https://… hoặc ../assets/…' }),
     isFeature ? h('div', { class: 'cols' },
       field('Chữ trên nút', l.cta, set('cta'), { max: 30, placeholder: 'Giữ chỗ' }),
       field('Link của nút', l.ctaUrl, set('ctaUrl'), { type: 'url', placeholder: 'Để trống = giống link ô', hint: '../#dang-ky mở thẳng form đăng ký' })) : null,
@@ -169,6 +190,19 @@ function linksPanel() {
     update((d) => { d.links.push({ ...normalize({ links: [{}] }).links[0], id, title: 'Ô mới', size: 'half', icon: 'link' }); }, { rerender: true });
   } });
   return panel('Các ô link', 'Thứ tự trong danh sách = thứ tự trên trang', true, list, add);
+}
+
+function themePanel() {
+  const t = draft.theme;
+  const setT = (k, re = false) => (v) => update((d) => { d.theme[k] = v; }, { rerender: re });
+  return panel('Giao diện kính', 'Độ mờ, độ trong, hình nền', true,
+    slider('Độ mờ của kính (blur)', t.blur, 0, 48, 'px', setT('blur'), '0 = kính trong suốt hẳn, càng lớn càng mờ như kính mờ iPhone.'),
+    slider('Độ đục của kính', t.tint, 5, 95, '%', setT('tint'), 'Thấp = trong, nhìn rõ nền phía sau. Cao = trắng/đen đặc hơn, chữ dễ đọc hơn.'),
+    segmented('Hình nền', t.background, Object.entries(BACKGROUNDS), setT('background', true)),
+    t.background === 'image'
+      ? imageField('Ảnh nền', t.bgImage, (v, re) => update((d) => { d.theme.bgImage = v; }, { rerender: re }),
+        { onPick: () => pick({ maxSide: 1600, quality: 0.78 }), hint: 'Ảnh phong cảnh, ảnh thành phố… kính trông đẹp nhất trên ảnh nhiều chi tiết.' })
+      : toggle('Hiện họa tiết lưới + biểu đồ trên nền', t.pattern, setT('pattern')));
 }
 
 function livePanel() {
@@ -237,7 +271,7 @@ function renderForm() {
   const form = $('#form');
   const y = form.scrollTop;
   const openState = [...form.querySelectorAll('details.panel')].map((d) => d.open);
-  form.replaceChildren(profilePanel(), linksPanel(), socialsPanel(), statsPanel(), livePanel(), metaPanel(), githubPanel(), backupPanel());
+  form.replaceChildren(profilePanel(), themePanel(), linksPanel(), socialsPanel(), statsPanel(), livePanel(), metaPanel(), githubPanel(), backupPanel());
   // Giữ nguyên phần nào đang mở / đang đóng sau khi vẽ lại.
   if (openState.length) form.querySelectorAll('details.panel').forEach((d, i) => { d.open = openState[i]; });
   form.scrollTop = y;

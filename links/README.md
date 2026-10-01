@@ -15,7 +15,12 @@ Trang gom mọi thứ của elevaTO vào một màn hình, để gắn vào bio 
   form đăng ký (`../#dang-ky`).
 - **Lưới ô (bento)**: 3 kiểu — *Nổi bật*, *Ngang cả hàng*, *Nửa hàng*. Mỗi ô có icon, màu nhấn, nhãn góc
   (Mới / Free / Hot…). Bấm vào là mở link; hoặc bật **thẻ chi tiết** để hiện vài gạch đầu dòng trước khi đi tới link.
-- Giao diện kính mờ sáng / tối, dùng chung nút đổi giao diện với công cụ AI (`ai/`).
+- **Liquid Glass** kiểu iPhone: kính trong có viền bắt sáng, phản chiếu mép trên; sáng / tối dùng chung nút
+  với công cụ AI (`ai/`). **Độ mờ (blur)**, **độ đục của kính** và **hình nền** (4 dải màu có sẵn hoặc ảnh tự
+  chọn) chỉnh bằng thanh kéo trong trình chỉnh sửa.
+- **Ảnh cho từng ô**: chọn trong bộ ảnh có sẵn (`art/` — khoá học, AI, slide, video, model, Zalo, CV, coffee),
+  **tải ảnh từ máy** (tự cắt vuông, thu nhỏ, nén WebP rồi lưu luôn trong `data.json`), hoặc dán link.
+  Ảnh đại diện cũng tải từ máy được.
 - Ô nào **chưa có link thì tự ẩn** — không bao giờ hiện link hỏng.
 
 ## Sửa trang
@@ -46,10 +51,11 @@ links/
 ├── index.html        trang công khai
 ├── edit.html         trình chỉnh sửa
 ├── data.json         toàn bộ nội dung trang (trình chỉnh sửa ghi vào đây)
+├── art/              ảnh minh hoạ các ô + logo chữ cho chân trang
 ├── css/links.css     giao diện trang (edit.css: thêm cho trình chỉnh sửa)
 ├── js/core.js        logic thuần: lọc link an toàn, chuẩn hoá dữ liệu, số chỗ cohort
 ├── js/page.js        vẽ trang
-├── js/editor.js      trình chỉnh sửa (edit-ui.js: ô nhập, công tắc…)
+├── js/editor.js      trình chỉnh sửa (edit-ui.js: ô nhập, thanh kéo, chọn ảnh; image.js: nén ảnh từ máy)
 ├── js/github.js      đăng data.json qua GitHub API
 └── tests/            node --test (+ e2e Playwright)
 ```

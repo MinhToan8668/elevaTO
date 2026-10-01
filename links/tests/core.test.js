@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, socialUrl, normalize, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, THEME_DEFAULT, ART, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
@@ -154,4 +154,34 @@ test('tên kiểu prototype trong data.json không làm sập trang', () => {
 test('nút CTA có link độc hại thì trình chỉnh sửa báo', () => {
   const [l] = normalize({ links: [{ title: 'A', url: 'https://a.vn', size: 'feature', ctaUrl: 'javascript:alert(1)' }] }).links;
   assert.equal(hiddenReason(l), 'Link của nút không hợp lệ');
+});
+
+test('theme: độ mờ, độ đục bị kẹp trong khoảng cho phép; nền lạ quay về mặc định', () => {
+  assert.deepEqual(normalize({}).theme, THEME_DEFAULT);
+  const t = normalize({ theme: { blur: 999, tint: -5, background: 'neon', pattern: false } }).theme;
+  assert.equal(t.blur, 48);
+  assert.equal(t.tint, 5);
+  assert.equal(t.background, 'aurora');
+  assert.equal(t.pattern, false);
+  assert.equal(normalize({ theme: { blur: '12.6' } }).theme.blur, 13);
+});
+
+test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụt; SVG nhúng và script bị chặn', () => {
+  const big = 'data:image/webp;base64,' + 'A'.repeat(120000);
+  const d = normalize({ profile: { avatar: big }, links: [{ title: 'x', url: 'https://a.vn', image: big }] });
+  assert.equal(d.profile.avatar, big);
+  assert.equal(d.links[0].image, big);
+  assert.equal(safeImg(big), big);
+  assert.equal(safeImg('data:image/svg+xml;base64,PHN2Zz4='), '');
+  assert.equal(safeImg('data:text/html;base64,PHNjcmlwdD4='), '');
+  assert.equal(safeImg('javascript:alert(1)'), '');
+  assert.equal(safeImg('art/course.svg'), 'art/course.svg');
+});
+
+test('ảnh có sẵn: mọi file trong ART đều tồn tại và là SVG hợp lệ', async () => {
+  for (const src of Object.keys(ART)) {
+    const svgText = await readFile(new URL('../' + src, import.meta.url), 'utf8');
+    assert.match(svgText, /^<svg [^>]*viewBox="0 0 120 120"/, src);
+    assert.doesNotMatch(svgText, /<script|on\w+=/i, src);
+  }
 });

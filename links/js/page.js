@@ -1,7 +1,7 @@
 // Trang link-in-bio công khai: đọc data.json → vẽ danh thiếp + lưới ô link.
 // ?preview: chạy trong khung xem trước của trình chỉnh sửa, nhận bản nháp qua postMessage và không mở link thật.
 
-import { normalize, visibleLinks, visibleSocials, safeUrl, opensSheet, cohortInfo, ACCENTS } from './core.js';
+import { normalize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo, ACCENTS } from './core.js';
 import { svg } from './icons.js';
 
 const $ = (s) => document.querySelector(s);
@@ -40,7 +40,7 @@ function linkAttrs(url) {
 function renderCard(d) {
   const p = d.profile;
   const ava = $('#ava');
-  const src = safeUrl(p.avatar);
+  const src = safeImg(p.avatar);
   ava.alt = p.name ? 'Ảnh ' + p.name : '';
   if (src) ava.src = src; else ava.removeAttribute('src');
   ava.closest('.ava-wrap').dataset.initials = initials(p.name);
@@ -74,7 +74,7 @@ function renderCard(d) {
 
   const socials = $('#socials');
   socials.replaceChildren(...visibleSocials(d).map((s) =>
-    h('a', { class: 'soc', ...linkAttrs(s.href), 'aria-label': s.def.label, title: s.def.label, html: svg(s.def.icon) })));
+    h('a', { class: 'soc lg', ...linkAttrs(s.href), 'aria-label': s.def.label, title: s.def.label, html: svg(s.def.icon) })));
   socials.hidden = !socials.children.length;
 }
 
@@ -84,7 +84,7 @@ function initials(name) {
 
 /* ── các ô link ───────────────────────────────── */
 function chip(l) {
-  const img = safeUrl(l.image);
+  const img = safeImg(l.image);
   return img
     ? h('span', { class: 'chip img' }, h('img', { src: img, alt: '', loading: 'lazy', decoding: 'async' }))
     : h('span', { class: 'chip', html: svg(l.icon) });
@@ -111,7 +111,7 @@ function tile(l, i) {
 
   if (l.size === 'feature') {
     // Ô nổi bật có 2 đích (cả ô + nút CTA) → không lồng <a> trong <a>: một lớp link phủ cả ô, nút CTA nằm trên nó.
-    el = h('article', { class: 'tile feature' },
+    el = h('article', { class: 'tile lg feature' },
       sheet
         ? h('button', { class: 'cover', type: 'button', 'aria-label': l.title })
         : h('a', { class: 'cover', ...linkAttrs(l.url), 'aria-label': l.title }),
@@ -119,7 +119,7 @@ function tile(l, i) {
       liveBlock(l),
       l.cta ? h('a', { class: 'cta', ...linkAttrs(safeUrl(l.ctaUrl) || l.url) }, l.cta, h('span', { html: svg('arrow') })) : null);
   } else {
-    const attrs = { class: `tile ${l.size}` };
+    const attrs = { class: `tile lg ${l.size}` };
     el = sheet
       ? h('button', { ...attrs, type: 'button', 'aria-haspopup': 'dialog' }, chip(l), text, arrow, badge(l))
       : h('a', { ...attrs, ...linkAttrs(l.url) }, chip(l), text, arrow, badge(l));
@@ -149,8 +149,22 @@ function renderGrid(d) {
   if (!links.length) $('#err').textContent = 'Chưa có link nào được bật.';
 }
 
+/** Độ mờ, độ trong của kính và nền trang — lấy từ data.theme. */
+function applyTheme(t) {
+  const root = document.documentElement;
+  root.style.setProperty('--blur', t.blur + 'px');
+  root.style.setProperty('--tint', String(t.tint / 100));
+  root.dataset.bg = t.background;
+  const img = t.background === 'image' ? safeImg(t.bgImage) : '';
+  document.body.classList.toggle('has-bgimg', Boolean(img));
+  document.body.classList.toggle('no-pattern', !t.pattern);
+  // url("…") trong CSS: chặn dấu nháy / xuống dòng để chuỗi không thoát khỏi url().
+  $('#bgImg').style.setProperty('background-image', img ? 'url("' + img.replace(/["\\\n\r]/g, encodeURIComponent) + '")' : 'none');
+}
+
 function render() {
   if (!data) return;
+  applyTheme(data.theme);
   if (data.meta.title) document.title = data.meta.title;
   const desc = document.querySelector('meta[name="description"]');
   if (desc && data.meta.description) desc.setAttribute('content', data.meta.description);
@@ -170,7 +184,7 @@ function openSheet(l) {
   dlg.style.setProperty('--ac', ACCENTS[l.accent]);
   $('#sheetTitle').textContent = l.title;
   $('#sheetSub').textContent = l.subtitle;
-  const img = safeUrl(l.image);
+  const img = safeImg(l.image);
   $('#sheetImg').hidden = !img || l.size !== 'feature';
   if (img) $('#sheetImg').src = img;
   $('#sheetText').textContent = l.details.text;

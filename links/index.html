@@ -26,23 +26,23 @@
 <script type="module" src="js/page.js"></script>
 </head>
 <body>
-<div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+<div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i><span class="bg-pattern"></span><span class="bg-img" id="bgImg"></span></div>
 
 <div class="page">
   <header class="bar">
     <a class="brand" href="../" aria-label="elevaTO — trang chủ">
-      <img class="logo logo-light" src="../assets/logo-on-light.svg" alt="elevaTO" width="218" height="81">
+      <img class="logo logo-light" src="../assets/logo-on-light.svg" alt="elevaTO" width="218" height="81" fetchpriority="high">
       <img class="logo logo-dark" src="../assets/logo-on-dark.svg" alt="" width="218" height="81">
     </a>
     <div class="bar-r">
-      <button class="ibtn" id="themeBtn" type="button" aria-label="Đổi giao diện sáng / tối"><span class="i-sun"></span><span class="i-moon"></span></button>
-      <button class="ibtn" id="shareBtn" type="button" aria-label="Chia sẻ trang này"></button>
+      <button class="ibtn lg" id="themeBtn" type="button" aria-label="Đổi giao diện sáng / tối"><span class="i-sun"></span><span class="i-moon"></span></button>
+      <button class="ibtn lg" id="shareBtn" type="button" aria-label="Chia sẻ trang này"></button>
     </div>
   </header>
 
   <main class="main" id="main" aria-busy="true">
     <!-- Danh thiếp: ảnh, tên, số liệu, mạng xã hội -->
-    <section class="card glass" id="card" aria-label="Giới thiệu">
+    <section class="card lg" id="card" aria-label="Giới thiệu">
       <div class="who">
         <div class="ava-wrap">
           <img class="ava" id="ava" alt="" width="84" height="84" decoding="async">
@@ -62,22 +62,27 @@
     </section>
 
     <section class="grid" id="grid" aria-label="Liên kết">
-      <div class="tile sk-tile feature"></div><div class="tile sk-tile"></div><div class="tile sk-tile"></div>
+      <div class="tile lg sk-tile feature"></div><div class="tile lg sk-tile"></div><div class="tile lg sk-tile"></div>
     </section>
 
     <p class="err" id="err" role="alert" hidden></p>
   </main>
 
   <footer class="foot">
-    <a href="../">elevaTO</a><span aria-hidden="true">·</span><span>Build models. Get hired.</span>
+    <a class="foot-brand" href="../" aria-label="elevaTO — trang chủ">
+      <img class="wm wm-light" src="art/wordmark-light.svg" alt="elevaTO" width="218" height="60" loading="lazy">
+      <img class="wm wm-dark" src="art/wordmark-dark.svg" alt="" width="218" height="60" loading="lazy">
+    </a>
+    <span class="foot-sep" aria-hidden="true"></span>
+    <span class="foot-tag">Fuel Your Financial Journey</span>
   </footer>
 </div>
 
 <!-- Thẻ chi tiết: mở ra khi bấm vào ô có bật "hiện thẻ chi tiết trước" -->
 <dialog class="sheet" id="sheet" aria-labelledby="sheetTitle">
-  <div class="sheet-in glass">
+  <div class="sheet-in lg">
     <span class="sheet-grab" aria-hidden="true"></span>
-    <button class="ibtn sheet-x" id="sheetX" type="button" aria-label="Đóng"></button>
+    <button class="ibtn lg sheet-x" id="sheetX" type="button" aria-label="Đóng"></button>
     <div class="sheet-head">
       <span class="chip" id="sheetIc"></span>
       <div>
