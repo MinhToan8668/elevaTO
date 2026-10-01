@@ -48,7 +48,7 @@ function offerRestore(user) {
 function autosave(user) {
   const LS_SESSION = sessionKey(user);
   let t, first = true;
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'preset'], (s) => {
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames'], (s) => {
     if (first) { first = false; return; }
     // Chỉ ghi khi đã có dữ liệu; không bao giờ tự xoá — phiên cũ chỉ mất khi người dùng bấm "Bỏ" ở banner
     // hoặc có dữ liệu mới thay thế.

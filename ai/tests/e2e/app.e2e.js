@@ -181,8 +181,8 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.setInputFiles('#fileInput', pdfPath);
   await page.waitForSelector('#fileList .file:has-text("máy nhận ra CĐKT, KQKD, LCTT")', { timeout: 30_000 });
   assert.equal(await page.locator('#pageMaps .tile').count(), 5);
-  // Tài khoản thường (form phổ thông): máy chỉ tick sẵn 3 bảng chính (trang 2–4), trang bìa và thuyết minh không tick
-  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, false]);
+  // Máy tick sẵn 3 bảng chính + trang thuyết minh nhận ra được (2–5), trang bìa không tick
+  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true]);
   assert.match(await page.locator('#pageMaps .found').innerText(), /CĐKT 2 · KQKD 3 · LCTT 4/);
   await page.waitForFunction(() => [...document.querySelectorAll('#pageMaps .tile-img')].every((el) => el.style.backgroundImage || el.classList.contains('noimg')));
   const noimg = await page.locator('#pageMaps .tile-img.noimg').evaluateAll((els) => els.map((e) => e.title));
@@ -212,37 +212,18 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.waitForSelector('dialog.viewer:not([open])', { state: 'attached' });
   assert.ok(await page.evaluate(() => document.activeElement === document.querySelector('#pageMaps .tile-img')), 'đóng xem trang → quay về ảnh trang đã bấm');
 
-  // Tài khoản thường: form riêng elevaTO và thẻ điền model đều khoá
-  assert.equal(await page.locator('#exportBox .cardx.locked').count(), 1, 'model khoá với tài khoản thường');
-  assert.equal(await page.locator('#pickBox .form-card[data-form="model"]').isDisabled(), true, 'form elevaTO khoá với tài khoản thường');
-  assert.equal(await page.locator('#pickBox .form-card[data-form="basic"]').getAttribute('aria-pressed'), 'true');
+  // Tài khoản thường: thẻ Form chi tiết elevaTO bị khoá
+  assert.equal(await page.locator('#exportBox .cardx.locked').count(), 1, 'form elevaTO khoá với tài khoản thường');
 
-  // Nâng lên học viên → chọn được form riêng elevaTO; file chưa tự tick thì gợi ý lại theo form mới
+  // Nâng lên học viên → mở khoá
   accounts.get('hv@elevato.vn').vaitro = 'hv';
   await page.reload();
-  await page.waitForSelector('#pickBox .form-card[data-form="model"]:not([disabled])');
   await page.setInputFiles('#fileInput', pdfPath);
   await page.waitForSelector('#pageMaps .tile');
-  assert.equal(await page.locator('#pickBox .form-card[data-form="model"]').getAttribute('aria-pressed'), 'true', 'học viên mặc định form elevaTO');
-  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true],
-    'form elevaTO: tick thêm trang thuyết minh');
-  await page.click('#pickBox .form-card[data-form="basic"]');
-  await page.waitForFunction(() => !document.querySelectorAll('#pageMaps .tile')[4].classList.contains('on'));
-  await page.click('#pickBox .form-card[data-form="model"]');
-  await page.waitForFunction(() => document.querySelectorAll('#pageMaps .tile')[4].classList.contains('on'));
-  await page.locator('#pageMaps .tile').first().locator('input[type=checkbox]').check();    // tự tick → giữ nguyên lựa chọn
-  await page.click('#pickBox .form-card[data-form="basic"]');
-  await page.waitForTimeout(150);
-  assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [true, true, true, true, true],
-    'đã tự tick thì đổi form không ghi đè');
-  await page.click('#pickBox .form-card[data-form="model"]');
-  await page.locator('#pageMaps .tile').first().locator('input[type=checkbox]').uncheck();   // bỏ tick trang bìa, về đúng gợi ý
-  await page.waitForFunction(() => !document.querySelectorAll('#pageMaps .tile')[0].classList.contains('on'));
 
   await page.click('#runBtn');
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
-  await page.waitForSelector('#exportBox input[type=file]', { state: 'attached' });
-  assert.equal(await page.locator('#exportBox .cardx.locked').count(), 0, 'học viên điền được model');
+  assert.equal(await page.locator('#exportBox .cardx.locked').count(), 0, 'học viên xuất được form elevaTO');
   assert.ok(aiCalls.length >= 4, `gọi AI ${aiCalls.length} lần`);
   assert.ok(aiCalls.every((c) => c.token === TOKEN('hv@elevato.vn') && c.model === undefined && c.mimes.every((m) => m === 'application/pdf')), JSON.stringify(aiCalls));
 
@@ -317,21 +298,33 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   assert.deepEqual(codes('Kết quả kinh doanh'), ['60'], 'KQKD chỉ còn dòng được tick');
   assert.ok(codes('Tình hình tài chính').includes('111'), 'bảng khác không bị bỏ tick');
 
-  if (process.env.MODEL_XLSX) {
-    const inputs = page.locator('#exportBox input[type=file]');
-    const [d] = await Promise.all([page.waitForEvent('download'), inputs.nth(0).setInputFiles(process.env.MODEL_XLSX)]);
-    const out = join(tmp, d.suggestedFilename()); await d.saveAs(out);
-    await page.waitForSelector('#exportBox .msg.ok');
-    const v = await readXlsxCell(page, out, '03.Input_FS', /^[A-Z]+8$/);
-    assert.ok(Object.values(v).includes(500000), `doanh thu 500.000 triệu ghi vào dòng 8: ${JSON.stringify(v)}`);
-  }
-  // Lưu phiên → tải lại trang → mở lại, không gọi thêm AI
-  const sess = await download(page, () => page.click('#exportBox button:has-text("Lưu phiên")'));
-  assert.ok(!(await readFile(sess.path, 'utf8')).includes(TOKEN('hv@elevato.vn')), 'file phiên không chứa phiên đăng nhập');
+  // Form chi tiết elevaTO: tải thẳng, không cần đưa file model vào
+  const mdl = await download(page, () => page.click('#exportBox button:has-text("Tải Form chi tiết elevaTO")'));
+  assert.match(mdl.name, /Form chi tiet elevaTO\.xlsx$/);
+  const mBook = await page.evaluate(async (b64) => {
+    const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
+    return Object.fromEntries(wb.SheetNames.map((n) => [n, window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })]));
+  }, (await readFile(mdl.path)).toString('base64'));
+  assert.ok(Object.keys(mBook).includes('Kết quả kinh doanh'), Object.keys(mBook).join(' | '));
+  const kq = mBook['Kết quả kinh doanh'].slice(4);
+  const dt = kq.find((r) => r[1] === 'Doanh thu thuần');
+  assert.ok(dt && dt.slice(2).some((v) => Number(v) === 500000), `doanh thu 500.000 triệu: ${JSON.stringify(dt)}`);
+
+  // Đổi đơn vị trong file: số đổi theo, số gốc trên trang giữ nguyên
+  await page.selectOption('#exportBox .unit-pick select', '1000000000');
+  const ty = await download(page, () => page.click('#exportBox button:has-text("Tải Form chi tiết elevaTO")'));
+  const tyBook = await page.evaluate(async (b64) => {
+    const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
+    return window.XLSX.utils.sheet_to_json(wb.Sheets['Kết quả kinh doanh'], { header: 1 });
+  }, (await readFile(ty.path)).toString('base64'));
+  const dtTy = tyBook.slice(4).find((r) => r[1] === 'Doanh thu thuần');
+  assert.ok(dtTy.slice(2).some((v) => Number(v) === 500), `đơn vị tỷ đồng: ${JSON.stringify(dtTy)}`);
+
+  // Tải lại trang → mở lại phiên tự lưu, không gọi thêm AI
   await page.waitForTimeout(1000);                                   // autosave (0,8 giây)
   const before = aiCalls.length;
   await page.reload();
-  await page.click('#pickBox .form-card[data-form="basic"]');           // thao tác khác trước khi chọn "Mở lại"
+  await page.click('h2#h3');                                           // thao tác khác trước khi chọn "Mở lại"
   await page.waitForTimeout(1000);
   assert.ok(await page.evaluate(() => localStorage.getItem('elevato-ai-session:hv@elevato.vn')), 'phiên cũ không bị xoá khi chưa chọn');
   await page.click('#restore button:has-text("Mở lại")');

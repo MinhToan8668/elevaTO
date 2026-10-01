@@ -209,6 +209,12 @@ details.pmap[open] > summary{margin-bottom:12px}
 .preset b{display:block;color:var(--strong);margin-bottom:4px}
 .preset small{color:var(--muted);font-size:12.5px;line-height:1.45;display:block}
 .preset[aria-pressed="true"]{border-color:var(--em);background:var(--em-soft);box-shadow:0 0 0 3px var(--em-soft)}
+/* Thẻ xuất file */
+.cardx .unit-pick{display:flex;align-items:center;gap:8px;margin:10px 0 12px}
+.cardx .unit-pick select{width:auto;padding:5px 8px;font-size:13px}
+.cardx.em-card{border-color:var(--em-line);background:var(--em-soft)}
+.cardx h3 .tag{margin-left:8px;vertical-align:2px}
+
 /* Hai thẻ form ở bước 3 */
 .presets.forms{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
 .form-card b{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px}
