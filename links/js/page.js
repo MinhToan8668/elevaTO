@@ -157,7 +157,6 @@ function applyTheme(t) {
   root.dataset.bg = t.background;
   const img = t.background === 'image' ? safeImg(t.bgImage) : '';
   document.body.classList.toggle('has-bgimg', Boolean(img));
-  document.body.classList.toggle('no-pattern', !t.pattern);
   // url("…") trong CSS: chặn dấu nháy / xuống dòng để chuỗi không thoát khỏi url().
   $('#bgImg').style.setProperty('background-image', img ? 'url("' + img.replace(/["\\\n\r]/g, encodeURIComponent) + '")' : 'none');
 }
