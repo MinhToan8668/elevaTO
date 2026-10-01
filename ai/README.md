@@ -11,7 +11,8 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
 | Đầu vào | Cách đọc |
 |---|---|
 | PDF bản điện tử (có chữ) | Máy tự gợi ý trang CĐKT / KQKD / LCTT / thuyết minh; bạn tick lại tuỳ ý |
-| PDF scan, ảnh chụp | Xem ảnh từng trang, tick trang cần lấy; AI tự nhận trang đã tick là bảng nào rồi đọc |
+| PDF scan (kể cả fax CCITT đen trắng) | Gửi thẳng trang PDF cho AI đọc; đọc không ra số thì tự gửi lại bằng ảnh |
+| Ảnh chụp từng trang | Gửi ảnh JPEG 1800px |
 | Excel BCTC (có cột "Mã số"), file FinLens (sheet "Lưu trữ") | Đọc thẳng, **không tốn lượt AI** |
 
 - **Chọn trang như FinLens**: mỗi file hiện lưới ảnh thu nhỏ các trang. Bấm ảnh để xem trang lớn (phóng to,
@@ -21,6 +22,10 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/`
 - **Theo mẫu Thông tư 99/2025/TT-BTC** (áp dụng từ 01/01/2026). BCTC có **ngày kết thúc kỳ từ năm 2025 trở về
   trước** luôn được hiểu là mẫu cũ TT200 và tự quy đổi mã sang mẫu mới (tổng tài sản 270 → 280, doanh thu tài
   chính 21 → 22, …), nên nhập chung một mẫu với BCTC 2026.
+- **Đo trên BCTC thật** (hợp nhất đã kiểm toán, bản scan CCITT, 64 trang): ba báo cáo chính xong trong
+  **12 giây / 3 lượt AI**, ra 68 + 23 + 31 chỉ tiêu, bộ kiểm tra cộng dồn **khớp hết** (tổng tài sản = nợ + vốn chủ;
+  60 = 50 − 51 − 52). Ba trang CĐKT gửi đi chỉ nặng 112 KB vì gửi PDF chứ không gửi ảnh.
+  Mọi thay đổi về cách gọi AI đều đo lại trên chính file này trước khi chốt.
 - **AI chỉ chép số**, không tự tính. Đổi đơn vị (đồng / nghìn / triệu), dấu âm, quy đổi mã và
   **kiểm tra cộng dồn** do máy làm: tổng tài sản = nguồn vốn, tiền cuối kỳ LCTT = tiền trên CĐKT, LNTT
   trên LCTT = trên KQKD, từng dòng tổng = cộng các dòng con. Ô lệch tô đỏ, bấm vào ô để sửa.

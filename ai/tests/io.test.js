@@ -7,8 +7,13 @@ test('PDF có chữ: gửi PDF con — AI đọc chữ gốc, chính xác nhất
   assert.equal(cachGui({ coPdf: true, scanned: false, cỡPdf: 2e6 }), 'pdf');
 });
 
-test('PDF scan: gửi ẢNH, không gửi PDF — Gemini đọc ảnh trang scan đáng tin hơn hẳn', () => {
-  assert.equal(cachGui({ coPdf: true, scanned: true, cỡPdf: 2e6 }), 'anh');
+test('PDF scan: VẪN gửi PDF con — đo trên BCTC scan thật (CCITT G4) thì Gemini đọc tốt, mà nhẹ hơn ảnh ~10 lần', () => {
+  assert.equal(cachGui({ coPdf: true, scanned: true, cỡPdf: 2e6 }), 'pdf');
+});
+
+test('gửi lại bằng ảnh khi lượt đọc đầu không ra số', () => {
+  assert.equal(cachGui({ coPdf: true, scanned: true, cỡPdf: 2e6, anh: true }), 'anh');
+  assert.equal(cachGui({ coPdf: true, scanned: false, cỡPdf: 2e6, anh: true }), 'anh');
 });
 
 test('PDF con quá nặng (scan độ phân giải cao) → vẫn phải chuyển sang ảnh', () => {

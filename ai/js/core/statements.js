@@ -51,7 +51,14 @@ export function computeTotals(vals) {
 
 // Sai số cho phép: mỗi số in trên BCTC làm tròn tới 1 đơn vị (đồng / nghìn / triệu),
 // cộng n số thì lệch tối đa n/2 đơn vị.
-const tolFor = (unit, leaves) => Math.max(1, unit) * Math.max(2, Math.ceil(leaves / 2));
+// Ngưỡng bỏ qua chênh lệch — chỉ hai nguồn nhiễu chính đáng, không phải AI đọc sai:
+//   - làm tròn theo đơn vị báo cáo (nghìn / triệu đồng),
+//   - BCTC in bằng đồng vẫn hay lệch vài trăm đồng giữa dòng tổng và các dòng con
+//     (gặp thật ở BCTC hợp nhất VHC 2024: LCTT từ HĐTC lệch đúng 1.000 đồng).
+// Không dùng ngưỡng theo tỷ lệ: trên một dòng 500 tỷ, một phần triệu đã là 500 nghìn —
+// đủ để giấu một lỗi đọc số thật.
+const TOL_DONG = 1000;
+const tolFor = (unit, leaves) => Math.max(Math.max(1, unit) * Math.max(2, Math.ceil(leaves / 2)), TOL_DONG);
 
 /**
  * Kiểm tra một kỳ. Trả danh sách lệch (rỗng = sạch), mỗi mục:
@@ -95,17 +102,29 @@ export function validate(vals, opts = {}) {
   return issues.sort((a, b) => (b.depth ?? -1) - (a.depth ?? -1));
 }
 
-// Chi phí trên KQKD luôn trình bày số dương rồi trừ trong công thức; AI hay trả số âm theo ngoặc.
-const IS_EXPENSES = new Set(['02', '11', '23', '24', '25', '26', '32', '51']);
+// Trong tool, chi phí KQKD luôn lưu số DƯƠNG rồi trừ trong công thức (60 = 50 − 51 − 52).
+// Mã 52 (thuế hoãn lại) nằm trong danh sách này vì nó có thể là khoản ĐƯỢC HOÀN — xem dưới.
+const IS_EXPENSES = new Set(['02', '11', '23', '24', '25', '26', '32', '51', '52']);
+// Dòng chắc chắn là chi phí, không bao giờ là khoản hoàn — dùng để đoán cách trình bày của báo cáo.
+const CHAC_CHI_PHI = ['11', '25', '26'];
 
-/** Chi phí KQKD → dương; dòng có (*) trên CĐKT (dự phòng, hao mòn, cổ phiếu quỹ) → âm; LCTT giữ nguyên. */
+/**
+ * Chi phí KQKD → dương; dòng có (*) trên CĐKT (dự phòng, hao mòn, cổ phiếu quỹ) → âm; LCTT giữ nguyên.
+ *
+ * BCTC Việt Nam có hai lối trình bày chi phí, phải phân biệt mới ra đúng số:
+ *   a) In trong ngoặc, ví dụ "(9.980.708.521.338)" — dấu in chính là phần đóng góp vào dòng tổng.
+ *      Khi đó dòng chi phí in KHÔNG ngoặc là khoản ĐƯỢC HOÀN (hay gặp ở thuế hoãn lại, mã 52)
+ *      và phải giữ dấu âm, nếu lấy trị tuyệt đối sẽ trừ nhầm hai lần.
+ *   b) In số dương trơn — lấy trị tuyệt đối cho chắc, vì AI đôi khi tự thêm dấu âm.
+ */
 export function normalizeSigns(vals) {
+  const trongNgoac = CHAC_CHI_PHI.some((c) => typeof vals[`IS:${c}`] === 'number' && vals[`IS:${c}`] < 0);
   const out = {};
   for (const [k, v] of Object.entries(vals)) {
     const [st, code] = k.split(':');
     const it = BY_KEY.get(k);
     if (typeof v !== 'number') { out[k] = v; continue; }
-    if (st === 'IS' && IS_EXPENSES.has(code)) out[k] = Math.abs(v);
+    if (st === 'IS' && IS_EXPENSES.has(code)) out[k] = trongNgoac ? -v : Math.abs(v);
     else if (st === 'BS' && it && it.label.includes('(*)')) out[k] = -Math.abs(v);
     else out[k] = v;
   }
