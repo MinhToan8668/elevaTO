@@ -106,10 +106,14 @@ Chưa đặt thì hộp vẫn mở nhưng chỉ hiện lời cảm ơn và cách
 Ở hộp đăng nhập bấm **Quên mật khẩu?** → nhập email đã đăng ký → máy chủ gửi **mã 6 số** qua email → nhập mã
 và mật khẩu mới là vào luôn, mọi máy đang đăng nhập bị đăng xuất.
 
-- Mã sống **15 phút**, chỉ dùng **một lần**, nhập sai **5 lần** thì hết hiệu lực.
-- Mỗi email xin tối đa **3 mã mỗi giờ**, cả hệ thống có trần riêng — không ai mượn tay máy chủ gửi thư rác.
+- Mã **8 chữ số**, sống **15 phút**, chỉ dùng **một lần**.
+- Nhập sai **5 lần** thì **nghỉ 60 giây** chứ không huỷ mã — huỷ mã nghĩa là người lạ đoán bừa vài lần
+  đã chặn được chủ tài khoản. Mã 8 số nên trong 15 phút chỉ đoán được vài chục lần, không đáng kể.
+- Mỗi email xin tối đa **3 mã mỗi giờ**. Trần gửi thư của cả hệ thống chỉ đếm **thư thật sự gửi**: email
+  không có tài khoản thì không tốn gì, nên không ai gửi vài chục email bịa để chặn người khác đặt lại mật khẩu.
 - Email chưa đăng ký vẫn nhận câu trả lời "đã gửi" (không để ai dò danh sách email đã đăng ký).
-- Gmail hết hạn mức gửi thư thì bot Telegram báo bạn để đặt lại tay bằng `/mkmoi`.
+- Gần hết hạn mức gửi thư trong ngày của Gmail thì ngừng gửi và bot Telegram báo bạn, để đặt lại tay bằng `/mkmoi`.
+- Đổi được mật khẩu thì mọi máy đang đăng nhập bị đăng xuất, và bỏ luôn khoá tạm do đăng nhập sai nhiều lần.
 
 ## Bot Telegram quản trị
 
@@ -138,7 +142,8 @@ Lệnh (gõ trong tin nhắn riêng với bot):
   người lạ nhắn bot thì bot im lặng. Nút bấm kiểm tra cả chat lẫn người bấm.
 - Key Gemini hỏng (401/403) → bot báo, tối đa 1 lần mỗi giờ. Ai xin mã đặt lại mật khẩu bot cũng báo.
 - `/ungho` đáp lại **tên ngân hàng bot nhận ra** để bạn đối chiếu trước khi nó hiện lên trang — sai BIN là
-  người ủng hộ quét QR không được.
+  người ủng hộ quét QR không được. Bảng mã ngân hàng **sinh tự động** bằng `tools/banks.py` từ danh sách
+  chính thức của NAPAS, đừng sửa tay (bot đáp lại tên lấy từ chính dòng đó nên gõ tay sai là không ai nhận ra).
 - Tắt bot: chạy hàm `dungBot`. Bật lại: chạy `caiDat`.
 
 ## Cài máy chủ AI (một lần, khoảng 10 phút)
@@ -251,6 +256,7 @@ ai/
 ├── js/targets/model.js          quy ba báo cáo + thuyết minh về đúng dòng sheet 03.Input_FS
 ├── js/targets/sheets.js         bố cục 03.Input_FS, SINH TỰ ĐỘNG từ template (đừng sửa tay)
 ├── tools/doc-template.py        đọc file model elevaTO (.xlsx) → sinh js/targets/sheets.js
+├── tools/banks.py               lấy bảng mã ngân hàng NAPAS → khối var BANK trong backend/Code.gs
 ├── backend/                     máy chủ Apps Script
 ├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS, qrcode, phông Be Vietnam Pro (xem vendor/README.md)
 └── tests/                       kiểm thử

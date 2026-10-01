@@ -82,7 +82,10 @@ export function loadGas(path, opts = {}) {
       computeDigest: (alg, s) => toSigned(crypto.createHash(alg).update(String(s), 'utf8').digest()),
       base64EncodeWebSafe: (bytes) => Buffer.from(bytes.map((b) => b & 255)).toString('base64url'),
     },
-    MailApp: { sendEmail: (o) => { if (opts.mailThrow) throw new Error(opts.mailThrow); mails.push(o); } },
+    MailApp: {
+      sendEmail: (o) => { if (opts.mailThrow) throw new Error(opts.mailThrow); mails.push(o); },
+      getRemainingDailyQuota: () => (opts.mailQuota === undefined ? 100 : opts.mailQuota),
+    },
     Session: { getScriptTimeZone: () => 'Asia/Ho_Chi_Minh' },
     Logger: { log: (m) => logs.push(String(m)) },
     console: { error: (m) => logs.push(String(m)), log: () => {} },

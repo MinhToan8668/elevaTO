@@ -11,8 +11,11 @@ import { loadQR } from '../libs.js';
 import { vietQrPayload, khongDau } from '../core/vietqr.js';
 import { t, locale } from '../i18n.js';
 
-const MUC = [50000, 100000, 200000, 500000];        // mức gợi ý; 0 = để người ủng hộ tự nhập
-let daLay = null;                                    // nhớ kết quả trong phiên, khỏi gọi lại máy chủ
+const MUC = [50000, 100000, 200000, 500000];        // mức gợi ý; bấm lại mức đang chọn là bỏ số tiền
+const QR_CANH = 240;                                 // cạnh canvas (px) — KHÔNG lấy từ cv.width, không thì
+                                                     // mỗi lần vẽ lại ô QR nhỏ dần đi và mờ
+const NHO_GIAY = 60;                                 // nhớ thông tin ủng hộ bấy nhiêu giây
+let nho = null;                                      // { luc, cho: Promise }
 
 export function initDonate() {
   const btn = $('#donateBtn');
@@ -20,10 +23,18 @@ export function initDonate() {
   btn.addEventListener('click', () => moHop());
 }
 
-async function layThongTin() {
-  if (daLay) return daLay;
-  try { daLay = (await callApi(API, { action: 'ungho' })).ungho || null; } catch (e) { daLay = null; }
-  return daLay;
+/**
+ * Lấy thông tin ủng hộ. Nhớ trong một phút để mở ra mở vào không gọi lại máy chủ, nhưng không nhớ
+ * cả phiên: chủ trang đổi số tài khoản bằng bot thì tab đang mở cũng cập nhật theo.
+ * Nhớ cả lời hứa đang chờ nên mở nhanh hai lần cũng chỉ gọi một lượt.
+ */
+function layThongTin() {
+  if (nho && Date.now() - nho.luc < NHO_GIAY * 1000) return nho.cho;
+  const cho = callApi(API, { action: 'ungho' })
+    .then((d) => d.ungho || null)
+    .catch(() => { nho = null; return null; });       // lỗi mạng thì lần mở sau hỏi lại
+  nho = { luc: Date.now(), cho };
+  return cho;
 }
 
 async function moHop() {
@@ -63,10 +74,14 @@ async function veHop(tt) {
   const loiNhan = khongDau(tt.loi_nhan || 'Ung ho elevaTO');
   let soTien = 0;
 
+  const loi = h('p', { class: 'msg warn', hidden: true });
   const ve = async () => {
     const payload = vietQrPayload({ bin: tt.bin, stk: tt.stk, soTien, loiNhan });
-    if (!payload) { cv.hidden = true; return; }
-    try { veQR(cv, await loadQR(), payload); } catch (e) { cv.hidden = true; }
+    if (!payload) { cv.hidden = true; loi.hidden = false; loi.textContent = t('ug.qr.bad'); return; }
+    try {
+      veQR(cv, await loadQR(), payload);
+      cv.hidden = false; loi.hidden = true;           // vẽ lại được thì bỏ lời báo lỗi của lần trước
+    } catch (e) { cv.hidden = true; loi.hidden = false; loi.textContent = t('ug.qr.fail'); }
   };
 
   const nutMuc = (v) => h('button', { type: 'button', class: 'btn ghost sm', 'aria-pressed': 'false', onclick: (e) => {
@@ -74,7 +89,7 @@ async function veHop(tt) {
     for (const b of e.currentTarget.parentElement.querySelectorAll('button')) b.setAttribute('aria-pressed', 'false');
     e.currentTarget.setAttribute('aria-pressed', String(soTien === v));
     ve();
-  } }, v ? new Intl.NumberFormat(locale()).format(v / 1000) + 'k' : t('ug.any'));
+  } }, `${new Intl.NumberFormat(locale()).format(v / 1000)}k`);
 
   await ve();
   return h('div', {},
@@ -84,7 +99,7 @@ async function veHop(tt) {
         dongChep(t('ug.stk'), tt.stk),
         dongChep(t('ug.owner'), tt.chu_tk),
         dongChep(t('ug.msg'), loiNhan)),
-      h('div', { class: 'ug-qrbox' }, cv, h('p', { class: 'fine' }, t('ug.qr.hint')))),
+      h('div', { class: 'ug-qrbox' }, cv, loi, h('p', { class: 'fine' }, t('ug.qr.hint', { bin: tt.bin })))),
     h('div', { class: 'ug-amt' }, h('span', { class: 'ug-lb' }, t('ug.amount')), ...MUC.map(nutMuc)),
     h('p', { class: 'fine ug-free' }, t('ug.free')));
 }
@@ -95,7 +110,7 @@ function veQR(cv, qrcode, payload) {
   q.addData(payload);
   q.make();
   const n = q.getModuleCount(), le = 4;              // viền trắng 4 ô theo chuẩn QR
-  const o = Math.max(2, Math.floor(cv.width / (n + le * 2)));
+  const o = Math.max(2, Math.floor(QR_CANH / (n + le * 2)));
   const canh = o * (n + le * 2);
   cv.width = canh; cv.height = canh;
   const g = cv.getContext('2d');

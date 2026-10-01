@@ -52,13 +52,16 @@ var PHIEN_TOI_DA    = 3;                   // mỗi tài khoản đăng nhập t
 var DN_SAI_TOI_DA   = 5;                   // đăng nhập sai bấy nhiêu lần trong 10 phút thì khoá tạm
 var DK_MOI_GIO      = 30;                  // chặn bot: tối đa số tài khoản mới mỗi giờ cho cả hệ thống
 var MK_TOI_THIEU    = 8;
-var MA_DL_PHUT      = 15;                  // mã đặt lại mật khẩu sống bao nhiêu phút
-var MA_DL_SAI       = 5;                   // nhập sai mã bấy nhiêu lần thì mã hết hiệu lực
+var MA_DL_SO        = 8;                   // mã đặt lại mật khẩu dài bao nhiêu chữ số
+var MA_DL_PHUT      = 15;                  // mã sống bao nhiêu phút
+var MA_DL_SAI       = 5;                   // nhập sai bấy nhiêu lần thì nghỉ MA_DL_NGHI giây (KHÔNG huỷ mã:
+var MA_DL_NGHI      = 60;                  //   huỷ mã là người lạ đoán bừa vài lần đã chặn được chủ tài khoản)
 var MA_DL_MOI_GIO   = 3;                   // mỗi email xin tối đa bấy nhiêu mã mỗi giờ
-var MA_DL_HE_THONG  = 40;                  // cả hệ thống tối đa bấy nhiêu mã mỗi giờ (chặn spam mail)
+var MA_DL_HE_THONG  = 40;                  // cả hệ thống gửi tối đa bấy nhiêu THƯ mỗi giờ (giữ hạn mức Gmail)
+var MA_DL_CHUA      = 20;                  // còn dưới bấy nhiêu thư trong hạn mức ngày thì ngừng gửi
 var BAM_VONG        = 1500;                // số vòng băm mật khẩu
 var GEMINI_API      = 'https://generativelanguage.googleapis.com/v1beta/models';
-var PHIEN_BAN       = '2026-10-04';       // đổi mỗi lần sửa file này, để biết bản nào đang chạy
+var PHIEN_BAN       = '2026-10-05';       // đổi mỗi lần sửa file này, để biết bản nào đang chạy
 var MIME_OK         = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'text/csv'];
 var GEN_KEYS        = ['temperature', 'topP', 'topK', 'maxOutputTokens', 'responseMimeType', 'responseSchema',
                        'responseJsonSchema', 'thinkingConfig', 'seed'];
@@ -68,6 +71,9 @@ var TK_COT          = ['ma', 'email', 'ten', 'sdt', 'salt', 'hash', 'vaitro', 't
                        // Khai báo lúc đăng ký — chỉ để tham khảo. Vai trò thật do quản trị đặt bằng bot.
                        'tuoi', 'nghe_nghiep', 'muc_dich'];
 
+// Cả máy chủ nằm trong MỘT file: Apps Script triển khai theo file, tách ra thì phải nhớ thứ tự
+// nạp và dễ quên một file khi dán sang trình soạn thảo trên web — nên file này vượt ngưỡng 800 dòng
+// là cố ý. Các phần được ngăn bằng dải tiêu đề.
 function props() { return PropertiesService.getScriptProperties(); }
 function json(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function loi(code, error, extra) { var o = { ok: false, code: code, error: error }; for (var k in extra || {}) o[k] = extra[k]; return o; }
@@ -629,20 +635,35 @@ function datLaiMatKhauHocVien() { datLaiMatKhau('email-hoc-vien@gmail.com', 'mat
 
 // ─── Ủng hộ (số tài khoản do quản trị đặt bằng bot Telegram) ──
 
-// Mã ngân hàng theo NAPAS để dựng VietQR. Quản trị gõ mã ngắn hoặc 6 chữ số BIN; bot trả lại
-// tên ngân hàng đã nhận ra để đối chiếu trước khi hiện lên trang.
+// Mã ngân hàng theo NAPAS để dựng VietQR — SINH TỪ https://api.vietqr.io/v2/banks ngày 2026-10-01 (xem tools/banks.py).
+// Khoá là mã ngắn chính thức (viết thường) cộng vài tên gọi quen thuộc. Quản trị gõ mã ngắn hoặc
+// 6 chữ số BIN; bot đáp lại tên ngân hàng nhận ra được để đối chiếu. Sai BIN là người ủng hộ quét
+// QR không được, nên đừng sửa tay bảng này — chạy lại tools/banks.py.
 var BANK = {
-  vcb: ['970436', 'Vietcombank'], ctg: ['970415', 'VietinBank'], icb: ['970415', 'VietinBank'],
-  bidv: ['970418', 'BIDV'], agri: ['970405', 'Agribank'], vba: ['970405', 'Agribank'],
-  tcb: ['970407', 'Techcombank'], mb: ['970422', 'MB Bank'], acb: ['970416', 'ACB'],
-  vpb: ['970432', 'VPBank'], tpb: ['970423', 'TPBank'], stb: ['970403', 'Sacombank'],
-  hdb: ['970437', 'HDBank'], vib: ['970441', 'VIB'], shb: ['970443', 'SHB'],
-  ocb: ['970448', 'OCB'], msb: ['970426', 'MSB'], seab: ['970468', 'SeABank'],
-  eib: ['970431', 'Eximbank'], bab: ['970409', 'BacABank'], pvcb: ['970412', 'PVcomBank'],
-  nab: ['970428', 'Nam A Bank'], bvb: ['970454', 'BVBank'], vab: ['970427', 'VietABank'],
-  abb: ['970425', 'ABBANK'], sgicb: ['970400', 'SaigonBank'], klb: ['970452', 'KienlongBank'],
-  lpb: ['970449', 'LPBank'], pgb: ['970430', 'PGBank'], ncb: ['970419', 'NCB'],
-  vietbank: ['970433', 'VietBank'], bvbank: ['970438', 'BaoVietBank'], scb: ['970429', 'SCB']
+  abb:['970425','ABBANK'], acb:['970416','ACB'], agri:['970405','Agribank'], agribank:['970405','Agribank'],
+  bab:['970409','BacABank'], banviet:['970454','VietCapitalBank'], baovietbank:['970438','BaoVietBank'],
+  bidv:['970418','BIDV'], bvb:['970438','BaoVietBank'], bvbank:['970454','VietCapitalBank'],
+  cake:['546034','CAKE'], cbb:['970444','CBBank'], cimb:['422589','CIMB'], citibank:['533948','Citibank'],
+  coopbank:['970446','COOPBANK'], ctg:['970415','VietinBank'], dbs:['796500','DBSBank'],
+  eib:['970431','Eximbank'], eximbank:['970431','Eximbank'], gpb:['970408','GPBank'], hdb:['970437','HDBank'],
+  hdbank:['970437','HDBank'], hlbvn:['970442','HongLeong'], hsbc:['458761','HSBC'], ibkhcm:['970456','IBKHCM'],
+  ibkhn:['970455','IBKHN'], icb:['970415','VietinBank'], ivb:['970434','IndovinaBank'], kbank:['668888','KBank'],
+  kbhcm:['970463','KookminHCM'], kbhn:['970462','KookminHN'], kebhanahcm:['970466','KEBHanaHCM'],
+  kebhanahn:['970467','KEBHANAHN'], kienlongbank:['970452','KienLongBank'], klb:['970452','KienLongBank'],
+  lienvietpostbank:['970449','LPBank'], lpb:['970449','LPBank'], mafc:['977777','MAFC'], mb:['970422','MBBank'],
+  mbbank:['970422','MBBank'], mbv:['970414','MBV'], momo:['971025','MoMo'], msb:['970426','MSB'],
+  nab:['970428','NamABank'], namabank:['970428','NamABank'], ncb:['970419','NCB'], nhbhn:['801011','Nonghyup'],
+  ocb:['970448','OCB'], pbvn:['970439','PublicBank'], pgb:['970430','PGBank'], pvcb:['970412','PVcomBank'],
+  pvdb:['971133','PVcomBank Pay'], sacombank:['970403','Sacombank'], scb:['970429','SCB'],
+  scvn:['970410','StandardChartered'], seab:['970440','SeABank'], seabank:['970440','SeABank'],
+  sgicb:['970400','SaigonBank'], shb:['970443','SHB'], shbvn:['970424','ShinhanBank'], stb:['970403','Sacombank'],
+  tcb:['970407','Techcombank'], techcombank:['970407','Techcombank'], timo:['963388','Timo'],
+  tpb:['970423','TPBank'], tpbank:['970423','TPBank'], ubank:['546035','Ubank'], uob:['970458','UnitedOverseas'],
+  vab:['970427','VietABank'], vba:['970405','Agribank'], vbsp:['999888','VBSP'], vcb:['970436','Vietcombank'],
+  vccb:['970454','VietCapitalBank'], vib:['970441','VIB'], vietbank:['970433','VietBank'],
+  vietcombank:['970436','Vietcombank'], vietinbank:['970415','VietinBank'], vikki:['970406','Vikki'],
+  vnptmoney:['971011','VNPTMoney'], vpb:['970432','VPBank'], vpbank:['970432','VPBank'], vrb:['970421','VRB'],
+  vtlmoney:['971005','ViettelMoney'], wvn:['970457','Woori']
 };
 
 /** { bin, bank, stk, chu_tk, loi_nhan, loi_moi } hoặc null nếu quản trị chưa đặt. */
@@ -673,44 +694,68 @@ function datUngHo(nganHang, stk, chuTK, loiNhan) {
 // ─── Quên mật khẩu: máy chủ gửi mã 6 số qua email ───────────
 
 function khoaMa(email) { return 'dl_' + bamNhanh('ma|' + khoaEmail(email)); }
-function khoaSoLan(email) { return 'dls_' + bamNhanh('ma|' + khoaEmail(email)); }
+
+/** Mã 8 số lấy từ nguồn ngẫu nhiên của Apps Script (Math.random không dùng cho thứ đóng vai mật khẩu). */
+function maSoNgauNhien(soChuSo) {
+  var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid());
+  var n = 0;
+  for (var i = 0; i < 6; i++) n = n * 256 + (b[i] & 255);
+  var mod = Math.pow(10, soChuSo);
+  return String(n % mod + mod).slice(1);                 // giữ cả số 0 ở đầu
+}
+
+/** Mã + số lần nhập sai nằm CHUNG một khoá cache: hai bên không ghi đè nhau. */
+function docMa(email) {
+  var raw = CacheService.getScriptCache().get(khoaMa(email));
+  if (!raw) return null;
+  try { var o = JSON.parse(raw); return o && o.h ? o : null; } catch (e) { return null; }
+}
+function ghiMa(email, o) { CacheService.getScriptCache().put(khoaMa(email), JSON.stringify(o), MA_DL_PHUT * 60); }
 
 /**
  * Xin mã đặt lại mật khẩu. Luôn trả ok dù email có tài khoản hay không — không để ai dò
- * danh sách email đã đăng ký.
+ * danh sách email đã đăng ký. Trần cả hệ thống chỉ đếm THƯ THẬT SỰ GỬI: nếu đếm cả email
+ * không có tài khoản thì một người gửi 40 email bịa là chặn được mọi người khác cả tiếng.
  */
 function quenMK(b) {
   var email = chuanEmail(b.email);
   if (!emailHopLe(email)) return loi('email_sai', 'Email chưa đúng');
   var cache = CacheService.getScriptCache();
-  var kGio = 'dlg_' + Math.floor(Date.now() / 3600000), kEmail = 'dle_' + bamNhanh(kGio + '|' + khoaEmail(email));
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    if (Number(cache.get(kGio) || 0) >= MA_DL_HE_THONG) return loi('busy', 'Đang có quá nhiều yêu cầu, thử lại sau ít phút', { retryAfter: 300 });
-    if (Number(cache.get(kEmail) || 0) >= MA_DL_MOI_GIO) return loi('cho', 'Đã gửi mã cho email này — kiểm tra hộp thư (cả thư rác), hoặc thử lại sau một giờ');
-    cache.put(kGio, String(Number(cache.get(kGio) || 0) + 1), 3700);
-    cache.put(kEmail, String(Number(cache.get(kEmail) || 0) + 1), 3700);
-  } finally { lock.releaseLock(); }
+  var kEmail = 'dle_' + bamNhanh(Math.floor(Date.now() / 3600000) + '|' + khoaEmail(email));
+  if (Number(cache.get(kEmail) || 0) >= MA_DL_MOI_GIO) {
+    return loi('cho', 'Đã gửi mã cho email này — kiểm tra hộp thư (cả thư rác), hoặc thử lại sau một giờ');
+  }
+  cache.put(kEmail, String(Number(cache.get(kEmail) || 0) + 1), 3700);
 
   var tk = tkTheoEmail(email);
-  if (tk && tk.trangthai === 'active') {
-    var ma = String(Math.floor(Math.random() * 900000) + 100000);
-    cache.put(khoaMa(email), bamNhanh('dl|' + ma), MA_DL_PHUT * 60);
-    cache.put(khoaSoLan(email), '0', MA_DL_PHUT * 60);
-    guiMaDatLai(tk, ma);
-  }
+  if (!tk || tk.trangthai !== 'active') return ok({ daGui: true, phut: MA_DL_PHUT });
+
+  var kGio = 'dlg_' + Math.floor(Date.now() / 3600000);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var ma;
+  try {
+    if (Number(cache.get(kGio) || 0) >= MA_DL_HE_THONG) return loi('busy', 'Đang có quá nhiều yêu cầu, thử lại sau ít phút', { retryAfter: 300 });
+    cache.put(kGio, String(Number(cache.get(kGio) || 0) + 1), 3700);
+    ma = maSoNgauNhien(MA_DL_SO);
+    ghiMa(email, { h: bamNhanh('dl|' + ma), n: 0 });
+  } finally { lock.releaseLock(); }
+  guiMaDatLai(tk, ma);
   return ok({ daGui: true, phut: MA_DL_PHUT });
 }
 
 function guiMaDatLai(tk, ma) {
-  var than = 'Xin chào ' + tk.ten + ',\n\n'
-    + 'Mã đặt lại mật khẩu elevaTO AI BCTC của bạn là: ' + ma + '\n'
+  // Không nhắc tên người nhận: ai cũng đăng ký được nên tên trong hồ sơ chưa chắc là tên thật,
+  // đưa vào thư là biến máy chủ thành chỗ gửi lời nhắn cho người lạ.
+  var than = 'Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản elevaTO AI BCTC.\n\n'
+    + 'Mã đặt lại: ' + ma + '\n'
     + 'Mã có hiệu lực ' + MA_DL_PHUT + ' phút và chỉ dùng một lần.\n\n'
     + 'Nếu không phải bạn yêu cầu thì bỏ qua email này — mật khẩu cũ vẫn dùng bình thường.\n\n'
     + 'elevaTO · Zalo 0376 292 148 · minhtoantowork@gmail.com';
   try {
-    MailApp.sendEmail({ to: String(tk.email), subject: 'Mã đặt lại mật khẩu elevaTO AI BCTC: ' + ma, body: than, name: 'elevaTO AI BCTC' });
+    // Hết hạn mức gửi thư thì người dùng không nhận được gì mà vẫn tưởng đã gửi → báo quản trị.
+    if (MailApp.getRemainingDailyQuota() < MA_DL_CHUA) throw new Error('Gần hết hạn mức gửi thư trong ngày');
+    MailApp.sendEmail({ to: String(tk.email), subject: 'Đặt lại mật khẩu elevaTO AI BCTC', body: than, name: 'elevaTO AI BCTC' });
   } catch (e) {
     console.error('guiMaDatLai: ' + e);
     baoMotLan('mail_loi', 1800, '⚠️ Không gửi được email đặt lại mật khẩu (' + esc(String(e).slice(0, 200)) + '). Người dùng cần đặt lại bằng /mkmoi.');
@@ -718,28 +763,36 @@ function guiMaDatLai(tk, ma) {
   baoMotLan('dl_' + tk.ma, 300, '🔑 ' + esc(tk.email) + ' xin mã đặt lại mật khẩu.');
 }
 
-/** Đổi mật khẩu bằng mã đã gửi qua email. Sai mã quá số lần cho phép thì mã hết hiệu lực. */
+/**
+ * Đổi mật khẩu bằng mã đã gửi qua email. Nhập sai quá số lần cho phép thì NGHỈ một lúc chứ
+ * không huỷ mã — huỷ mã nghĩa là người lạ đoán bừa vài lần đã chặn được chủ tài khoản.
+ * Mã 8 chữ số nên trong 15 phút chỉ đoán được vài chục lần, không đáng kể.
+ */
 function datLaiMKBangMa(b) {
   var email = chuanEmail(b.email), ma = String(b.ma || '').replace(/\D/g, ''), mk = String(b.mk || '');
   if (!email || !ma) return loi('thieu', 'Nhập email và mã trong email');
   if (mk.length < MK_TOI_THIEU || mk.length > 200) return loi('mk_ngan', 'Mật khẩu cần ít nhất ' + MK_TOI_THIEU + ' ký tự');
-  var cache = CacheService.getScriptCache(), kMa = khoaMa(email), kSo = khoaSoLan(email);
+  var MA_SAI = loi('ma_sai', 'Mã chưa đúng hoặc đã hết hiệu lực — xin mã mới nếu cần');
+  if (!docMa(email)) return MA_SAI;                       // kiểm rẻ trước, khỏi giành khoá với đăng nhập
+  var cache = CacheService.getScriptCache(), kNghi = 'dln_' + bamNhanh('nghi|' + khoaEmail(email));
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   var dung;
   try {
-    var luu = cache.get(kMa);
-    if (!luu) return loi('ma_het', 'Mã đã hết hiệu lực — xin mã mới');
-    var sai = Number(cache.get(kSo) || 0);
-    if (sai >= MA_DL_SAI) { cache.remove(kMa); return loi('ma_het', 'Nhập sai mã nhiều lần — xin mã mới'); }
-    dung = bangNhau(bamNhanh('dl|' + ma), luu);
-    if (!dung) cache.put(kSo, String(sai + 1), MA_DL_PHUT * 60);
-    else { cache.remove(kMa); cache.remove(kSo); }
+    if (cache.get(kNghi)) return loi('cho', 'Nhập sai nhiều lần — thử lại sau ' + MA_DL_NGHI + ' giây');
+    var o = docMa(email);
+    if (!o) return MA_SAI;
+    dung = bangNhau(bamNhanh('dl|' + ma), o.h);
+    if (dung) { CacheService.getScriptCache().remove(khoaMa(email)); cache.remove(kNghi); }
+    else if (o.n + 1 >= MA_DL_SAI) { ghiMa(email, { h: o.h, n: 0 }); cache.put(kNghi, '1', MA_DL_NGHI); }
+    else ghiMa(email, { h: o.h, n: o.n + 1 });
   } finally { lock.releaseLock(); }
-  if (!dung) return loi('ma_sai', 'Mã chưa đúng — xem lại email');
+  if (!dung) return MA_SAI;
   var tk = tkTheoEmail(email);
   if (!tk || tk.trangthai !== 'active') return loi('bi_khoa', 'Tài khoản không dùng được — liên hệ elevaTO');
   doiMatKhau(tk, mk);
+  // Đổi được mật khẩu rồi thì bỏ luôn khoá tạm do đăng nhập sai nhiều lần trước đó.
+  cache.remove('dn_' + hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, khoaEmail(email), Utilities.Charset.UTF_8)));
   tgBaoQuanTri('🔑 ' + esc(tk.email) + ' đã tự đặt lại mật khẩu bằng mã gửi qua email.');
   tk = tkTheoEmail(email);
   return ok({ token: capPhien(tk), me: hoSo(tk) });
@@ -910,39 +963,12 @@ function chayLenh(lenh, arg) {
     '/ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt; — đặt số tài khoản nhận ủng hộ (vcb, tcb, mb… hoặc 6 số BIN)',
     '/ungho off — tạm ẩn phần ủng hộ trên trang'].join('\n');
   if (lenh === '/start' || lenh === '/help') return { text: HELP };
-  if (lenh === '/thongke') {
-    var ds = docTK(), dem = { free: 0, hv: 0, gv: 0, cho: 0, off: 0 }, hom = homNay(), luot = 0, all = props().getProperties();
-    ds.forEach(function (x) { dem[vaiTro(x)]++; if (x.trangthai === 'cho') dem.cho++; if (x.trangthai === 'off') dem.off++; });
-    for (var k in all) if (k.indexOf('Q_') === 0 && k.slice(-hom.length) === hom) luot += Number(all[k]) || 0;
-    var nghi = dsKey().filter(function (x) { return keyDangNghi(x); }).length;
-    var chuoi = dsModelDung(), qt = chuoi.filter(modelDangNghi);
-    return { text: '📊 <b>AI BCTC</b>\nTài khoản: ' + ds.length + ' (học viên ' + dem.hv + ' · giảng viên ' + dem.gv + ' · thường ' + dem.free +
-      ' · chờ duyệt ' + dem.cho + ' · khoá ' + dem.off + ')\nLượt AI hôm nay: ' + luot + '\nKey Gemini: ' + dsKey().length +
-      (nghi ? ' (đang nghỉ ' + nghi + ')' : '') + '\nModel: ' + esc(chuoi.join(' → ') || '—') +
-      (qt.length ? '\nĐang quá tải: ' + esc(qt.join(', ')) : '') };
-  }
-  if (lenh === '/moi') {
-    var ds = docTK().slice(-15).reverse();
-    if (!ds.length) return { text: 'Chưa có tài khoản nào.' };
-    return { text: '<b>' + ds.length + ' tài khoản mới nhất</b>\n' + ds.map(function (x) {
-      return '• ' + esc(x.ten) + ' — <code>' + esc(x.email) + '</code> (' + TEN_VT[vaiTro(x)] + ' · ' + (TEN_TT[x.trangthai] || esc(x.trangthai)) + ')';
-    }).join('\n') + '\n\nGõ /tim &lt;email&gt; để mở nút xếp vai trò.' };
-  }
+  if (lenh === '/thongke') return lenhThongKe();
+  if (lenh === '/moi') return lenhMoi();
+  if (lenh === '/mkmoi') return lenhMkMoi(arg[0]);
   if (lenh === '/ungho') return lenhUngHo(arg);
-  if (lenh === '/cho') {
-    var cho = docTK().filter(function (x) { return x.trangthai === 'cho'; });
-    if (!cho.length) return { text: 'Không có tài khoản nào chờ duyệt.' };
-    cho.slice(0, 10).forEach(function (x) { tgBaoQuanTri(moTaTaiKhoan(x), nutTaiKhoan(x)); });
-    return { text: 'Có ' + cho.length + ' tài khoản chờ duyệt' + (cho.length > 10 ? ' (hiện 10 người đầu)' : '') + '.' };
-  }
-  if (lenh === '/tim') {
-    var q = arg.join(' ').toLowerCase();
-    if (!q) return { text: 'Gõ /tim &lt;email hoặc tên&gt;' };
-    var kq = docTK().filter(function (x) { return (String(x.email) + ' ' + String(x.ten)).toLowerCase().indexOf(q) >= 0; });
-    if (!kq.length) return { text: 'Không tìm thấy tài khoản nào khớp "' + esc(q) + '".' };
-    if (kq.length === 1) return { text: moTaTaiKhoan(kq[0]), nut: nutTaiKhoan(kq[0]) };
-    return { text: 'Tìm thấy ' + kq.length + ':\n' + kq.slice(0, 15).map(function (x) { return '• ' + esc(x.ten) + ' — ' + esc(x.email) + ' (' + TEN_VT[vaiTro(x)] + ')'; }).join('\n') };
-  }
+  if (lenh === '/cho') return lenhCho();
+  if (lenh === '/tim') return lenhTim(arg);
   var VT = { '/hocvien': 'hv', '/giangvien': 'gv', '/free': 'free' }, TT = { '/khoa': 'off', '/mo': 'active', '/duyet': 'active' };
   if (VT[lenh] || TT[lenh] || lenh === '/luot' || lenh === '/matkhau') {
     var tk = timTK(arg[0]);
@@ -958,23 +984,71 @@ function chayLenh(lenh, arg) {
     try { doiMatKhau(tk, arg.slice(1).join(' ')); } catch (e) { return { text: '✘ ' + esc(e.message) }; }
     return { text: '✔ Đã đặt mật khẩu mới cho ' + esc(tk.email) + ' (các máy đang đăng nhập bị đăng xuất).' };
   }
-  if (lenh === '/mkmoi') {
-    var tkm = timTK(arg[0]);
-    if (!tkm) return { text: 'Không tìm thấy tài khoản ' + esc(arg[0] || '') + '. Gõ đúng email đã đăng ký.' };
-    var mk = mkNgauNhien();
-    doiMatKhau(tkm, mk);
-    return { text: '✔ Mật khẩu mới của ' + esc(tkm.email) + ': <code>' + esc(mk) + '</code>\n' +
-      'Gửi cho họ rồi XOÁ tin này. Các máy đang đăng nhập đã bị đăng xuất.' };
-  }
   return { text: 'Không rõ lệnh. Gõ /help.' };
 }
 
-/** Mật khẩu tạm: dễ đọc qua Telegram, bỏ các ký tự dễ nhìn lẫn (0/O, 1/l/I). */
+/**
+ * Mật khẩu tạm: dễ đọc qua Telegram, bỏ các ký tự dễ nhìn lẫn (0/O, 1/l/I).
+ * Lấy byte từ bản băm của hai UUID (UUID có 6 bit cố định cho phiên bản/biến thể) và bỏ byte
+ * rơi vào phần dư để không lệch về mấy ký tự đầu bảng.
+ */
 function mkNgauNhien() {
   var bang = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789', out = '';
-  var b = Utilities.getUuid().replace(/-/g, '');
-  for (var i = 0; i < 14; i++) out += bang.charAt(parseInt(b.substr(i * 2, 2), 16) % bang.length);
+  var tran = 256 - (256 % bang.length);
+  while (out.length < 14) {
+    var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid());
+    for (var i = 0; i < b.length && out.length < 14; i++) {
+      var v = b[i] & 255;
+      if (v < tran) out += bang.charAt(v % bang.length);
+    }
+  }
   return out;
+}
+
+function lenhThongKe() {
+  var ds = docTK(), dem = { free: 0, hv: 0, gv: 0, cho: 0, off: 0 }, hom = homNay(), luot = 0, all = props().getProperties();
+  ds.forEach(function (x) { dem[vaiTro(x)]++; if (x.trangthai === 'cho') dem.cho++; if (x.trangthai === 'off') dem.off++; });
+  for (var k in all) if (k.indexOf('Q_') === 0 && k.slice(-hom.length) === hom) luot += Number(all[k]) || 0;
+  var nghi = dsKey().filter(function (x) { return keyDangNghi(x); }).length;
+  var chuoi = dsModelDung(), qt = chuoi.filter(modelDangNghi);
+  return { text: '📊 <b>AI BCTC</b>\nTài khoản: ' + ds.length + ' (học viên ' + dem.hv + ' · giảng viên ' + dem.gv + ' · thường ' + dem.free +
+    ' · chờ duyệt ' + dem.cho + ' · khoá ' + dem.off + ')\nLượt AI hôm nay: ' + luot + '\nKey Gemini: ' + dsKey().length +
+    (nghi ? ' (đang nghỉ ' + nghi + ')' : '') + '\nModel: ' + esc(chuoi.join(' → ') || '—') +
+    (qt.length ? '\nĐang quá tải: ' + esc(qt.join(', ')) : '') };
+}
+
+function lenhCho() {
+  var cho = docTK().filter(function (x) { return x.trangthai === 'cho'; });
+  if (!cho.length) return { text: 'Không có tài khoản nào chờ duyệt.' };
+  cho.slice(0, 10).forEach(function (x) { tgBaoQuanTri(moTaTaiKhoan(x), nutTaiKhoan(x)); });
+  return { text: 'Có ' + cho.length + ' tài khoản chờ duyệt' + (cho.length > 10 ? ' (hiện 10 người đầu)' : '') + '.' };
+}
+
+function lenhTim(arg) {
+  var q = arg.join(' ').toLowerCase();
+  if (!q) return { text: 'Gõ /tim &lt;email hoặc tên&gt;' };
+  var kq = docTK().filter(function (x) { return (String(x.email) + ' ' + String(x.ten)).toLowerCase().indexOf(q) >= 0; });
+  if (!kq.length) return { text: 'Không tìm thấy tài khoản nào khớp "' + esc(q) + '".' };
+  if (kq.length === 1) return { text: moTaTaiKhoan(kq[0]), nut: nutTaiKhoan(kq[0]) };
+  return { text: 'Tìm thấy ' + kq.length + ':\n' + kq.slice(0, 15).map(function (x) { return '• ' + esc(x.ten) + ' — ' + esc(x.email) + ' (' + TEN_VT[vaiTro(x)] + ')'; }).join('\n') };
+}
+
+function lenhMoi() {
+  var ds = docTK().slice(-15).reverse();
+  if (!ds.length) return { text: 'Chưa có tài khoản nào.' };
+  return { text: '<b>' + ds.length + ' tài khoản mới nhất</b>\n' + ds.map(function (x) {
+    return '• ' + esc(x.ten) + ' — <code>' + esc(x.email) + '</code> (' + TEN_VT[vaiTro(x)] + ' · ' + (TEN_TT[x.trangthai] || esc(x.trangthai)) + ')';
+  }).join('\n') + '\n\nGõ /tim &lt;email&gt; để mở nút xếp vai trò.' };
+}
+
+function lenhMkMoi(email) {
+  var tk = timTK(email);
+  if (!tk) return { text: 'Không tìm thấy tài khoản ' + esc(email || '') + '. Gõ đúng email đã đăng ký.' };
+  if (tk.trangthai !== 'active') return { text: 'Tài khoản ' + esc(tk.email) + ' đang ' + (TEN_TT[tk.trangthai] || esc(tk.trangthai)) + ' — /mo trước đã.' };
+  var mk = mkNgauNhien();
+  doiMatKhau(tk, mk);
+  return { text: '✔ Mật khẩu mới của ' + esc(tk.email) + ': <code>' + esc(mk) + '</code>\n' +
+    'Gửi cho họ rồi XOÁ tin này (Telegram lưu lịch sử chat). Các máy đang đăng nhập đã bị đăng xuất.' };
 }
 
 function lenhUngHo(arg) {

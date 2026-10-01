@@ -120,9 +120,25 @@ export function initAuth(store, ctx, { onLogin }) {
 
 let setGateMsg = () => {};
 let moHop = () => {};
+let khoiPhucQuen = () => {};
 
 /** Bật hộp đăng nhập kèm lời giải thích vì sao cần tài khoản. */
 export function openAuth(nhan) { moHop(nhan); }
+
+/** Form quên mật khẩu: bước 1 xin mã qua email, bước 2 nhập mã + mật khẩu mới. */
+function quenForm({ field, pw, off, lai }) {
+  return h('form', { class: 'auth-form', id: 'resetForm', novalidate: true, hidden: true },
+    field('qmEmail', t('au.email'), { type: 'email', autocomplete: 'username', inputmode: 'email', placeholder: 'ban@email.com' }),
+    h('div', { class: 'fld', id: 'qmStep2', hidden: true },
+      h('label', { htmlFor: 'qmMa' }, t('au.code')),
+      h('input', { id: 'qmMa', class: 'inp', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '8', placeholder: '12345678' })),
+    h('div', { id: 'qmStep2b', hidden: true }, pw('qmPass', t('au.pass.new'), 'new-password')),
+    h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.sendCode')),
+    h('p', { class: 'fine auth-back' },
+      h('button', { type: 'button', class: 'auth-link', id: 'qmLai', onclick: lai }, t('au.resend')),
+      ' · ',
+      h('button', { type: 'button', class: 'auth-link', onclick: () => $('#tab-login').click() }, t('au.backLogin'))));
+}
 
 function renderGate(enter) {
   const msg = h('div', { class: 'auth-msg', 'aria-live': 'polite' });
@@ -159,38 +175,52 @@ function renderGate(enter) {
     h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.signup')),
     h('p', { class: 'fine' }, t('au.free')));
 
-  // Quên mật khẩu: máy chủ gửi mã 6 số qua email, nhập mã là đổi được mật khẩu và vào luôn.
-  const resetForm = h('form', { class: 'auth-form', id: 'resetForm', novalidate: true, hidden: true },
-    field('qmEmail', t('au.email'), { type: 'email', autocomplete: 'username', inputmode: 'email', placeholder: 'ban@email.com' }),
-    h('div', { class: 'fld', id: 'qmStep2', hidden: true },
-      h('label', { htmlFor: 'qmMa' }, t('au.code')),
-      h('input', { id: 'qmMa', class: 'inp', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6', placeholder: '123456' })),
-    h('div', { id: 'qmStep2b', hidden: true }, pw('qmPass', t('au.pass.new'), 'new-password')),
-    h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.sendCode')),
-    h('p', { class: 'fine auth-back' }, h('button', { type: 'button', class: 'auth-link', onclick: () => $('#tab-login').click() }, t('au.backLogin'))));
+  const resetForm = quenForm({ field, pw, off, lai: () => datBuoc(1) });
 
   const tabs = h('div', { class: 'seg', role: 'group', 'aria-label': t('au.tabs.aria') });
   const tab = (key, label, form) => h('button', { type: 'button', id: `tab-${key}`, 'aria-controls': form.id, 'aria-pressed': String(key === 'login'), onclick: () => {
     tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.id === `tab-${key}`)));
     loginForm.hidden = key !== 'login'; signupForm.hidden = key !== 'signup'; resetForm.hidden = true;
     tabs.hidden = false;
+    datBuoc(1);
     phu.textContent = t('au.welcome.sub');
     setGateMsg();
   } }, label);
   tabs.append(tab('login', t('au.login'), loginForm), tab('signup', t('au.signup'), signupForm));
 
-  /** Mở form đặt lại mật khẩu (ẩn hai tab để không rối). */
-  const moQuen = () => {
+  /**
+   * Đưa form đặt lại về bước 1 (xin mã) hay bước 2 (nhập mã + mật khẩu mới).
+   * Không có đường về bước 1 thì mã hết hạn là người dùng kẹt luôn, phải tải lại trang.
+   */
+  const datBuoc = (n) => {
+    const b2 = n === 2;
+    $('#qmStep2').hidden = !b2;
+    $('#qmStep2b').hidden = !b2;
+    $('#qmEmail').readOnly = b2;                       // bước 2 phải đúng email đã nhận mã
+    if (!b2) { $('#qmMa').value = ''; $('#qmPass').value = ''; }
+    $('#resetForm button[type=submit]').textContent = b2 ? t('au.setPass') : t('au.sendCode');
+  };
+
+  /** Hiện form đặt lại mật khẩu (ẩn hai tab để không rối), chưa đụng tới nội dung đã gõ. */
+  const hienQuen = () => {
     loginForm.hidden = true; signupForm.hidden = true; resetForm.hidden = false; tabs.hidden = true;
     phu.textContent = t('au.forgot.sub');
     setGateMsg();
+  };
+
+  const moQuen = () => {
+    hienQuen();
+    datBuoc(1);
     $('#qmEmail').value = $('#liEmail').value.trim();
     $('#qmEmail').focus();
   };
+  khoiPhucQuen = (buoc2) => { hienQuen(); datBuoc(buoc2 ? 2 : 1); };
 
   const busy = (form, on, label) => {
     const b = form.querySelector('button[type=submit]');
-    b.disabled = on; b.textContent = on ? t('au.working') : label;
+    if (on) b.dataset.nhan = b.textContent;            // nhớ nhãn đang có để trả lại đúng chữ đó
+    b.disabled = on;
+    b.textContent = on ? t('au.working') : (label || b.dataset.nhan || '');
     b.setAttribute('aria-busy', String(on));
   };
   loginForm.addEventListener('submit', async (e) => {
@@ -226,13 +256,11 @@ function renderGate(enter) {
     const email = $('#qmEmail').value.trim();
     if (!email) return setGateMsg('err', t('au.needEmail'));
     const buoc2 = !$('#qmStep2').hidden;
-    const nhan = buoc2 ? t('au.setPass') : t('au.sendCode');
-    busy(resetForm, true, nhan);
+    busy(resetForm, true);
     try {
       if (!buoc2) {
         const d = await callApi(API, { action: 'quenmk', email });
-        $('#qmStep2').hidden = false; $('#qmStep2b').hidden = false;
-        resetForm.querySelector('button[type=submit]').textContent = t('au.setPass');
+        datBuoc(2);
         setGateMsg('ok', t('au.codeSent', { phut: d.phut || 15 }));
         $('#qmMa').focus();
         return;
@@ -242,8 +270,11 @@ function renderGate(enter) {
       if (mk.length < 8) return setGateMsg('err', t('au.shortPass'));
       const d = await callApi(API, { action: 'datlaimk', email, ma, mk });
       enter(d.token, d.me);
-    } catch (err) { setGateMsg(err.code === 'cho' ? 'warn' : 'err', err.message); }
-    finally { busy(resetForm, false, !$('#qmStep2').hidden ? t('au.setPass') : t('au.sendCode')); }
+    } catch (err) {
+      // Mã chết (hết hạn / sai quá nhiều) thì đưa về bước 1 để xin mã mới ngay, khỏi tải lại trang.
+      if (err.code === 'ma_sai') datBuoc(1);
+      setGateMsg(err.code === 'cho' ? 'warn' : 'err', err.message);
+    } finally { busy(resetForm, false); }
   });
 
   // Lý do phải có tài khoản — đặt ngay đầu hộp để người dùng hiểu vì sao bị chặn giữa chừng.
@@ -286,13 +317,7 @@ function chupMan() {
 function datLaiMan(giu) {
   for (const [id, v] of Object.entries(giu.o)) { const el = $(`#${id}`); if (el && v) el.value = v; }
   if (giu.tab === 'signup') $('#tab-signup')?.click();
-  if (giu.tab === 'reset') {
-    $('#loginForm .auth-link')?.click();
-    if (giu.buoc2) {
-      $('#qmStep2').hidden = false; $('#qmStep2b').hidden = false;
-      $('#resetForm button[type=submit]').textContent = t('au.setPass');
-    }
-  }
+  if (giu.tab === 'reset') khoiPhucQuen(giu.buoc2);
   if (giu.msg) setGateMsg(giu.msg.kind, giu.msg.text);
 }
 

@@ -65,12 +65,12 @@ function fakeAI(body) {
   const fail = (code, error) => ({ ok: false, code, error });
   if (body.action === 'ungho') return { ok: true, data: { ungho: UNG_HO } };
   if (body.action === 'quenmk') {
-    if (accounts.has(body.email)) maDatLai.set(body.email, '246813');
+    if (accounts.has(body.email)) maDatLai.set(body.email, '24681357');
     return { ok: true, data: { daGui: true, phut: 15 } };
   }
   if (body.action === 'datlaimk') {
     const a = accounts.get(body.email);
-    if (!a || maDatLai.get(body.email) !== body.ma) return fail('ma_sai', 'Mã chưa đúng — xem lại email');
+    if (!a || maDatLai.get(body.email) !== body.ma) return fail('ma_sai', 'Mã chưa đúng hoặc đã hết hiệu lực — xin mã mới nếu cần');
     maDatLai.delete(body.email);
     a.mk = body.mk;
     a.token = TOKEN(`${a.email}-moi`);
@@ -595,11 +595,35 @@ test('ủng hộ: nút ở góc mở hộp có số tài khoản và mã QR dự
   });
   assert.ok(co.w >= 100 && co.den > 500, JSON.stringify(co));
 
-  // Chọn mức tiền → QR vẽ lại (chuỗi QR dài hơn vì thêm trường số tiền).
-  const truoc = await qr.evaluate((cv) => cv.width);
-  await page.click('#ugDlg .ug-amt button:nth-of-type(1)');
-  await page.waitForFunction((cu) => document.querySelector('#ugDlg .ug-qr').width !== cu || true, truoc);
+  // Chọn mức tiền → QR phải vẽ lại (nội dung khác vì thêm trường số tiền) và KHÔNG nhỏ đi.
+  const anh = () => qr.evaluate((cv) => {
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let h = 0;
+    for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i]) >>> 0;
+    return { w: cv.width, h };
+  });
+  const truoc = await anh();
+  await page.click('#ugDlg .ug-amt button >> nth=0');
+  await page.waitForFunction((cu) => {
+    const cv = document.querySelector('#ugDlg .ug-qr');
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let h = 0;
+    for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i]) >>> 0;
+    return h !== cu;
+  }, truoc.h);
+  const sau = await anh();
+  assert.ok(sau.w >= truoc.w - 1, `ô QR nhỏ dần qua mỗi lần vẽ: ${truoc.w} → ${sau.w}`);
   assert.equal(await page.locator('#ugDlg .ug-amt button').first().getAttribute('aria-pressed'), 'true');
+
+  // Bấm lại mức đang chọn là bỏ số tiền, QR trở về như cũ.
+  await page.click('#ugDlg .ug-amt button >> nth=0');
+  await page.waitForFunction((cu) => {
+    const cv = document.querySelector('#ugDlg .ug-qr');
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let h = 0;
+    for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i]) >>> 0;
+    return h === cu;
+  }, truoc.h);
 
   // Không phải đăng nhập mới xem được, và không có yêu cầu nào ra miền lạ.
   assert.equal(await page.locator('#acct button').count(), 1);
@@ -630,13 +654,21 @@ test('quên mật khẩu: xin mã qua email, nhập mã là đổi được mậ
   await page.waitForSelector('#authDlg .msg.ok:has-text("15 phút")');
   await page.waitForSelector('#qmStep2:not([hidden])');
 
-  // Nhập sai mã → báo lỗi, không đổi gì.
-  await page.fill('#qmMa', '111111');
+  // Nhập sai mã → báo lỗi và đưa về bước 1 để xin mã mới, không bắt tải lại trang.
+  await page.fill('#qmMa', '11111111');
   await page.fill('#qmPass', 'mat-khau-moi-1');
   await page.click('#resetForm button[type=submit]');
   await page.waitForSelector('#authDlg .msg.err');
+  await page.locator('#qmStep2').waitFor({ state: 'hidden' });
+  assert.equal(await page.locator('#resetForm button[type=submit]').innerText(), 'Gửi mã về email');
+  assert.equal(await page.locator('#qmEmail').isEditable(), true, 'về bước 1 thì sửa lại email được');
 
-  await page.fill('#qmMa', '246813');
+  // Xin mã mới rồi nhập đúng.
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#qmStep2:not([hidden])');
+  assert.equal(await page.locator('#qmEmail').isEditable(), false, 'bước 2 khoá email đã nhận mã');
+  await page.fill('#qmMa', '24681357');
+  await page.fill('#qmPass', 'mat-khau-moi-1');
   await page.click('#resetForm button[type=submit]');
   await page.waitForSelector('#acct .acct-name');
   assert.equal(accounts.get('quen@elevato.vn').mk, 'mat-khau-moi-1');

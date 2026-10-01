@@ -29,10 +29,19 @@ export function crc16(s) {
   return crc.toString(16).toUpperCase().padStart(4, '0');
 }
 
-/** Một trường EMVCo. Nội dung dài quá 99 ký tự thì không ghi được độ dài 2 chữ số → cắt. */
+const TRUONG_TOI_DA = 99;                            // độ dài ghi bằng 2 chữ số
+const BOC = 4;                                       // 2 chữ số mã + 2 chữ số độ dài của trường bên trong
+
+/**
+ * Một trường EMVCo. Nội dung dài hơn 99 ký tự thì KHÔNG cắt mà ném lỗi: cắt là độ dài ghi ra
+ * không còn khớp nội dung, mã QR vẫn có CRC hợp lệ nhưng app ngân hàng đọc ra sai — với dữ liệu
+ * chuyển tiền thì thà không dựng mã còn hơn dựng mã sai.
+ */
 const truong = (ma, noiDung) => {
-  const v = String(noiDung ?? '').slice(0, 99);
-  return v ? ma + String(v.length).padStart(2, '0') + v : '';
+  const v = String(noiDung ?? '');
+  if (!v) return '';
+  if (v.length > TRUONG_TOI_DA) throw new RangeError(`field ${ma}: ${v.length} chars`);
+  return ma + String(v.length).padStart(2, '0') + v;
 };
 
 /**
@@ -45,16 +54,22 @@ const truong = (ma, noiDung) => {
 export function vietQrPayload({ bin, stk, soTien, loiNhan } = {}) {
   const b = String(bin ?? '').replace(/\D/g, '');
   const tk = String(stk ?? '').replace(/[^0-9A-Za-z]/g, '');
-  if (b.length !== 6 || !tk) return '';
+  // Số tài khoản ngân hàng Việt Nam dài 6–19 ký tự; dài hơn là dữ liệu hỏng, đừng dựng mã.
+  if (b.length !== 6 || tk.length < 6 || tk.length > 19) return '';
   const tien = Number(soTien);
-  const coTien = Number.isFinite(tien) && tien > 0;
+  try {
+    return than(b, tk, Number.isFinite(tien) && tien > 0, tien, loiNhan);
+  } catch (e) { return ''; }                          // trường nào quá dài → không dựng mã còn hơn dựng sai
+}
+
+function than(b, tk, coTien, tien, loiNhan) {
   const dv = truong('00', 'A000000727') + truong('01', truong('00', b) + truong('01', tk)) + truong('02', 'QRIBFTTA');
-  const than = truong('00', '01')
+  const than_ = truong('00', '01')
     + truong('01', coTien ? '12' : '11')            // 11 = QR dùng nhiều lần, 12 = có sẵn số tiền
     + truong('38', dv)
     + truong('53', '704')                            // VND
     + (coTien ? truong('54', String(Math.round(tien))) : '')
     + truong('58', 'VN')
-    + (loiNhan ? truong('62', truong('08', khongDau(loiNhan).slice(0, 99))) : '');
-  return than + '6304' + crc16(`${than}6304`);
+    + (loiNhan ? truong('62', truong('08', khongDau(loiNhan).slice(0, TRUONG_TOI_DA - BOC))) : '');
+  return than_ + '6304' + crc16(`${than_}6304`);
 }

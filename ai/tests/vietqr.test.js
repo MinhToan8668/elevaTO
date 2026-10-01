@@ -61,11 +61,27 @@ test('CRC nằm ở cuối, tính trên cả "6304" phía trước', () => {
   assert.match(s.slice(-4), /^[0-9A-F]{4}$/);
 });
 
-test('thiếu BIN hoặc số tài khoản thì trả rỗng, không dựng QR sai', () => {
-  assert.equal(vietQrPayload({ bin: '97043', stk: '123' }), '', 'BIN phải đủ 6 chữ số');
+test('thiếu / sai BIN hoặc số tài khoản thì trả rỗng, không dựng QR sai', () => {
+  assert.equal(vietQrPayload({ bin: '97043', stk: '1012345678' }), '', 'BIN phải đủ 6 chữ số');
+  assert.equal(vietQrPayload({ bin: '970436', stk: '123' }), '', 'số tài khoản ngắn hơn 6');
+  assert.equal(vietQrPayload({ bin: '970436', stk: '1'.repeat(20) }), '', 'số tài khoản dài hơn 19');
   assert.equal(vietQrPayload({ bin: '970436' }), '');
   assert.equal(vietQrPayload({}), '');
   assert.equal(vietQrPayload(), '');
+});
+
+test('độ dài ghi trong mã luôn khớp nội dung, kể cả lời nhắn dài', () => {
+  // Lời nhắn nằm trong trường 62 bọc trường 08: cắt sai chỗ là độ dài khai báo lệch nội dung,
+  // CRC vẫn hợp lệ nên app ngân hàng đọc ra sai mà không báo gì.
+  for (const n of [1, 60, 94, 95, 96, 120, 300]) {
+    const s = vietQrPayload({ bin: '970436', stk: '1012345678', loiNhan: 'y'.repeat(n) });
+    assert.ok(s, `lời nhắn ${n} ký tự`);
+    const f = tach(s);
+    assert.equal(f['62'].length, Number(/^..(\d\d)/.exec(s.slice(s.indexOf('62', 0)))?.[1] ?? f['62'].length), 'độ dài trường 62');
+    const g = tach(f['62']);
+    assert.equal(g['08'].length, Number(f['62'].slice(2, 4)), `trường 08 khai ${f['62'].slice(2, 4)} nhưng dài ${g['08'].length}`);
+    assert.ok(g['08'].length <= 95);
+  }
 });
 
 test('số tiền vô lý bị bỏ qua chứ không ghi vào QR', () => {
