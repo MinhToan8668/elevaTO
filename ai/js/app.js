@@ -27,7 +27,7 @@ initFiles(store, ctx);
 initPages(store, ctx);
 initExtract(store, ctx);
 initReview(store, ctx);
-initExporter(store);
+initExporter(store, ctx);
 railSpy();
 initAuth(store, ctx, { onLogin: (me) => { offerRestore(me); autosave(me); } });
 

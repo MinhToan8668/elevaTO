@@ -97,17 +97,15 @@ a{color:var(--em-text)}
 .acct-shared{font-size:12.5px;color:var(--muted);margin:2px 0 10px}
 
 /* ── Màn đăng nhập ────────────────────── */
-.gate{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:36px 20px 64px}
-.gate-in{width:100%;max-width:1120px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,440px);gap:56px;align-items:center}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--em-text);background:var(--em-soft);padding:6px 12px;border-radius:999px}
-.hero h1{margin:18px 0 14px;font-size:clamp(32px,4.4vw,52px);line-height:1.08;font-weight:800;letter-spacing:-.03em;color:var(--strong)}
-.hero h1 em{font-style:normal;color:var(--em-text)}
-.hero-sub{font-size:17px;color:var(--muted);max-width:560px}
-.feats{list-style:none;margin-top:32px;display:grid;gap:18px;max-width:560px}
-.feats li{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+/* Hộp đăng nhập / đăng ký: chỉ bật khi người dùng bấm vào việc cần tài khoản. */
+.authdlg{border:0;padding:0;margin:auto;background:transparent;max-width:440px;width:calc(100% - 32px);max-height:92vh;overflow:visible;color:var(--text)}
+.authdlg::backdrop{background:rgba(10,15,13,.52);backdrop-filter:blur(3px)}
+.authdlg .auth-card{max-height:88vh;overflow:auto}
+.authdlg .auth-x{position:absolute;top:10px;right:10px;z-index:2;width:32px;height:32px;font-size:15px;line-height:1}
+.auth-why{margin:0 0 16px;padding:11px 13px;border-radius:12px;background:var(--em-soft);border:1px solid var(--em-line,var(--line));
+  color:var(--em-text);font-size:13.5px;line-height:1.5}
+.auth-why[hidden]{display:none}
 .fn{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:13px;font-weight:800;color:var(--em-text);background:var(--surface);border:1px solid var(--line-2);box-shadow:var(--shadow)}
-.feats b{display:block;color:var(--strong);font-size:15.5px}
-.feats p{color:var(--muted);font-size:14px}
 .auth-card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:32px;box-shadow:var(--shadow-lg)}
 .auth-card h2{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--strong)}
 .auth-sub{color:var(--muted);font-size:14px;margin:4px 0 20px}
@@ -325,9 +323,6 @@ table.k td .tag{white-space:normal}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 @media (max-width:960px){
-  .gate{padding:28px 16px 48px}
-  .gate-in{grid-template-columns:1fr;gap:28px}
-  .feats{margin-top:22px}
   .auth-card{padding:24px 20px}
 }
 @media (max-width:900px){
@@ -401,7 +396,7 @@ body{background:var(--base);background-image:none}
 @media (max-width:900px){.bg i{animation:none;will-change:auto;filter:blur(56px)} .bg::after{display:none}}
 
 /* Khung kính: nền trong mờ + viền sáng + ánh phản chiếu phía trên */
-.glass,.step,.auth-card,.top,.rail a.active,.rail .hint,.acct-pop,.viewer,.toast,.cardx,.pmap,.preset,.notes-pick,.banner,.feats .fn,.seg,.tabs,.sum .pc,.icon-btn,.acct summary{
+.glass,.step,.auth-card,.top,.rail a.active,.rail .hint,.acct-pop,.viewer,.toast,.cardx,.pmap,.preset,.notes-pick,.banner,.seg,.tabs,.sum .pc,.icon-btn,.acct summary{
   background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
   border:1px solid var(--glass-line);box-shadow:var(--glass-hi),var(--glass-shadow)}
 .step,.auth-card,.cardx,.pmap{position:relative;isolation:isolate}

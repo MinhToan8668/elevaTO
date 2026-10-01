@@ -13,7 +13,10 @@ import { t, unitLabel } from '../i18n.js';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-export function initExporter(store) {
+let ctx = {};
+
+export function initExporter(store, _ctx) {
+  ctx = _ctx;
   watch(store, ['sources', 'edits', 'ticks', 'unit', 'running', 'user', 'lang'], () => render(store));
 }
 
@@ -27,7 +30,8 @@ function render(store) {
 
 /** Nút tải: dựng file trong trình duyệt rồi tải về. */
 function taiBtn(label, empty, lam) {
-  const btn = h('button', { class: 'btn', disabled: empty, onclick: async () => {
+  const btn = h('button', { class: 'btn', disabled: empty, onclick: async function tai() {
+    if (!ctx.canDo(t('au.why.export'), () => btn.click())) return;
     btn.disabled = true;
     const cu = btn.textContent;
     btn.textContent = t('ex.making');

@@ -59,26 +59,29 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 
 ## Tài khoản và vai trò
 
-Người dùng tự **tạo tài khoản** (họ tên, email, số điện thoại, mật khẩu) rồi **đăng nhập** ngay trên trang —
-không có ô link máy chủ hay mã truy cập nào. Phiên đăng nhập giữ 30 ngày, tối đa 3 máy cùng lúc.
+**Không có tường đăng nhập ở cửa.** Ai mở trang cũng vào thẳng màn hình chính, tải BCTC lên, xem và tick trang
+thoải mái. Chỉ hai việc cần tài khoản, và lúc đó mới hiện hộp đăng ký ngay tại chỗ:
 
-| Vai trò (`vaitro`) | Lượt AI mỗi ngày | Điền model elevaTO |
-|---|---|---|
-| `free` — tài khoản thường (mặc định khi đăng ký) | 10 (`AI_LUOT_FREE`) | ✘ |
-| `hv` — học viên | 40 (`AI_LUOT_HV`) | ✔ |
-| `gv` — giảng viên | không giới hạn | ✔ |
-
-Quản lý bằng **bot Telegram** (bên dưới) hoặc sửa tay trong Google Sheet **"elevaTO AI — Tài khoản"**
-(tab `TaiKhoan`, do hàm `caiDat` tạo):
-
-| Cột | Ý nghĩa |
+| Việc | Vì sao cần tài khoản |
 |---|---|
-| `vaitro` | `free` · `hv` · `gv` |
-| `trangthai` | `active` dùng được · `cho` chờ duyệt · `off` khoá (đăng xuất khỏi mọi máy) |
-| `luot_ngay` | số lượt AI mỗi ngày của riêng người này; để trống = theo vai trò |
+| **Trích xuất bằng AI** | Mỗi tài khoản có lượt AI riêng mỗi ngày. Mở cho khách vãng lai thì ai cũng rút cạn hạn mức Gemini. |
+| **Tải file .xlsx** | Để biết ai đang dùng công cụ. |
 
-Muốn duyệt từng người trước khi cho dùng: thêm Script Property `AI_CAN_DUYET` = `1` (người mới ở trạng thái
-`cho` cho tới khi bạn bấm "Mở / duyệt" trên bot). Đổi lượt mặc định: Script Property `AI_LUOT_FREE`, `AI_LUOT_HV`.
+Đăng ký xong thì **chạy tiếp đúng việc đang dở**, không bắt bấm lại. Nút “Đăng nhập / Đăng ký” luôn nằm ở góc
+trên bên phải.
+
+Lúc đăng ký hỏi: họ tên, **tuổi**, email, số điện thoại, **bạn là học viên / giảng viên / người dùng**, và
+**định dùng công cụ để làm gì**. Mọi thông tin này lưu vào Google Sheet và hiện luôn trong tin báo Telegram.
+
+> Ô “bạn là ai” chỉ là **tự khai**. Ai đăng ký cũng ở mức tài khoản thường — chọn “giảng viên” không tự mở
+> được Form chi tiết elevaTO. Vai trò thật do bạn xếp bằng bot Telegram (xem mục dưới). Nếu tin người dùng tự
+> khai thì Form chi tiết coi như mở cho tất cả mọi người.
+
+| Vai trò | Lượt AI mỗi ngày | Form chi tiết elevaTO |
+|---|---|---|
+| Tài khoản thường (`free`) | có hạn | ✗ |
+| Học viên (`hv`) | nhiều hơn | ✓ |
+| Giảng viên (`gv`) | không giới hạn | ✓ |
 
 ## Bot Telegram quản trị
 
