@@ -2,7 +2,7 @@
 //   cd ai && npm run e2e
 // Tuỳ chọn: MODEL_XLSX=/đường/dẫn/model.xlsx để thử điền model elevaTO thật.
 // Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
-// máy chủ AI và Google Fonts được giả lập.
+// máy chủ AI được giả lập, phông chữ nằm sẵn trong vendor/fonts.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -116,14 +116,13 @@ async function newPage({ configured = true } = {}) {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g/.test(m.text())) errors.push(m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.route('https://script.google.com/**', async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
   // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
   await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
-  await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   return { page, errors, context };
 }
 
@@ -154,7 +153,7 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.waitForSelector('#gate .auth-card');
   assert.equal(await page.locator('#app').isVisible(), false);
   assert.equal(await page.locator('input[type=url], #apiIn, #codeIn').count(), 0);
-  assert.ok(await page.locator('.logo-light').evaluate((img) => img.naturalWidth > 0), 'logo elevaTO hiện được');
+  assert.ok(await page.locator('.top .logo-light').evaluate((img) => img.naturalWidth > 0), 'logo elevaTO hiện được');
   await shot(page, '0-dang-nhap');
   if (process.env.E2E_SHOTS) {
     await page.emulateMedia({ colorScheme: 'dark' });
@@ -389,6 +388,40 @@ test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì 
   await page.waitForSelector('td.v[data-k="IS:10"][data-p="FY2025"]');
   assert.equal(await page.locator('td.v[data-k="IS:10"][data-p="FY2025"]').innerText(), '500.000');
   assert.equal(await page.locator('td.v[data-k="IS:11"][data-p="FY2024"]').innerText(), '270.000', 'giá vốn: số dương, cột năm trước');
+  assert.deepEqual(errors, []);
+});
+
+test('thương hiệu: phông Be Vietnam Pro nằm trong repo, dải logo lớn căn giữa, logo đổi theo giao diện sáng/tối', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  // Chặn mọi lời gọi ra ngoài: trang phải tự đủ phông chữ.
+  await page.route((u) => !u.href.startsWith(base) && !u.href.startsWith('https://script.google.com'), (r) => r.abort());
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#gate .bband');
+  await page.evaluate(() => document.fonts.ready);
+  // Kiểm cả nét thường lẫn nét đậm, với chữ có dấu tiếng Việt (bộ ký tự 'vietnamese') và chữ latin.
+  const nap = await page.evaluate(() => ['400 15px "Be Vietnam Pro"', '800 15px "Be Vietnam Pro"']
+    .flatMap((f) => [document.fonts.check(f, 'Tải báo cáo'), document.fonts.check(f, 'elevaTO')]));
+  assert.deepEqual(nap, [true, true, true, true], 'phông Be Vietnam Pro phải nạp được từ vendor/fonts');
+  assert.match(await page.evaluate(() => getComputedStyle(document.body).fontFamily), /Be Vietnam Pro/);
+
+  const band = page.locator('#gate .bband');
+  const lon = band.locator('.logo-xl.logo-light');
+  assert.ok(await lon.evaluate((img) => img.naturalWidth > 0), 'logo lớn tải được');
+  assert.ok(await lon.evaluate((img) => img.getBoundingClientRect().height >= 80), 'logo phải to');
+  // Khẩu hiệu nằm sẵn trong logo nên không viết thêm dòng chữ trùng lặp.
+  assert.equal(await band.locator('.tagline').count(), 0);
+  assert.match(await lon.getAttribute('alt'), /Fuel Your Financial Journey/);
+  // Dải nằm giữa trang
+  const [bw, pw] = await band.evaluate((el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, document.documentElement.clientWidth / 2]; });
+  assert.ok(Math.abs(bw - pw) < 2, `dải thương hiệu phải căn giữa (${bw} vs ${pw})`);
+  // Màn đăng nhập vẫn là hai cột, không bị dải thương hiệu đè layout.
+  assert.ok(await page.locator('#gate .gate-in .hero h1').isVisible(), 'phần giới thiệu bên trái vẫn còn');
+  assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector('.gate-in')).gridTemplateColumns.split(' ').length === 2));
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  assert.equal(await page.locator('#gate .bband .logo-light').isVisible(), false, 'giao diện tối: ẩn logo bản sáng');
+  assert.ok(await page.locator('#gate .bband .logo-dark').isVisible(), 'giao diện tối: hiện logo bản tối');
+  await page.emulateMedia({ colorScheme: 'light' });
   assert.deepEqual(errors, []);
 });
 
