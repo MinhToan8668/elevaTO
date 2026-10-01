@@ -165,6 +165,7 @@ function renderGate(enter) {
   });
 
   mount($('#gate'),
+    brandBand(),
     h('div', { class: 'gate-in' },
       h('section', { class: 'hero' },
         h('span', { class: 'eyebrow' }, 'Công cụ AI cho học viên elevaTO'),
@@ -179,6 +180,12 @@ function renderGate(enter) {
         h('p', { class: 'auth-sub' }, 'Đăng nhập hoặc tạo tài khoản miễn phí để bắt đầu.'),
         off ? h('p', { class: 'msg warn' }, 'Công cụ đang được cài đặt — quay lại sau ít phút nhé.') : null,
         tabs, loginForm, signupForm, msg)));
+}
+
+/** Dải thương hiệu: logo elevaTO cỡ lớn, giống dải trong ứng dụng. */
+function brandBand() {
+  const logo = (k) => h('img', { class: `logo-xl logo-${k}`, src: `../assets/logo-on-${k}.svg`, alt: 'elevaTO — Fuel Your Financial Journey', width: 260, height: 97 });
+  return h('div', { class: 'bband' }, logo('light'), logo('dark'));
 }
 
 function feat(n, title, text) {

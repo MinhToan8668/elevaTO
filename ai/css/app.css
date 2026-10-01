@@ -52,7 +52,9 @@ a{color:var(--em-text)}
 .top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:12px max(20px,env(safe-area-inset-right)) 12px max(20px,env(safe-area-inset-left));
   background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;min-width:0}
+/* Thứ tự quan trọng: .logo-dark phải đứng SAU .logo/.logo-xl (cùng độ ưu tiên) thì bản tối mới ẩn ở giao diện sáng. */
 .logo{height:36px;width:auto;display:block}
+.logo-xl{height:92px;width:auto;display:block}
 .logo-dark{display:none}
 :root[data-theme="dark"] .logo-light{display:none} :root[data-theme="dark"] .logo-dark{display:block}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-light{display:none} :root:not([data-theme="light"]) .logo-dark{display:block}}
@@ -84,7 +86,7 @@ a{color:var(--em-text)}
 .acct-shared{font-size:12.5px;color:var(--muted);margin:2px 0 10px}
 
 /* ── Màn đăng nhập ────────────────────── */
-.gate{flex:1;display:grid;place-items:center;padding:48px 20px 64px}
+.gate{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:36px 20px 64px}
 .gate-in{width:100%;max-width:1120px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,440px);gap:56px;align-items:center}
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--em-text);background:var(--em-soft);padding:6px 12px;border-radius:999px}
 .hero h1{margin:18px 0 14px;font-size:clamp(32px,4.4vw,52px);line-height:1.08;font-weight:800;letter-spacing:-.03em;color:var(--strong)}
@@ -209,6 +211,10 @@ details.pmap[open] > summary{margin-bottom:12px}
 .preset b{display:block;color:var(--strong);margin-bottom:4px}
 .preset small{color:var(--muted);font-size:12.5px;line-height:1.45;display:block}
 .preset[aria-pressed="true"]{border-color:var(--em);background:var(--em-soft);box-shadow:0 0 0 3px var(--em-soft)}
+/* Dải thương hiệu: logo elevaTO cỡ lớn (đã có sẵn dòng "Fuel Your Financial Journey") căn giữa đầu trang. */
+.bband{display:flex;justify-content:center;padding:4px 16px 30px}
+@media (max-width:700px){.bband{padding:0 16px 20px}.logo-xl{height:64px}}
+
 /* Thẻ xuất file */
 .cardx .unit-pick{display:flex;align-items:center;gap:8px;margin:10px 0 12px}
 .cardx .unit-pick select{width:auto;padding:5px 8px;font-size:13px}
