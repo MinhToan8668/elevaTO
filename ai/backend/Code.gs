@@ -54,7 +54,7 @@ var DK_MOI_GIO      = 30;                  // chặn bot: tối đa số tài kh
 var MK_TOI_THIEU    = 8;
 var BAM_VONG        = 1500;                // số vòng băm mật khẩu
 var GEMINI_API      = 'https://generativelanguage.googleapis.com/v1beta/models';
-var PHIEN_BAN       = '2026-09-30c';       // đổi mỗi lần sửa file này, để biết bản nào đang chạy
+var PHIEN_BAN       = '2026-10-01';       // đổi mỗi lần sửa file này, để biết bản nào đang chạy
 var MIME_OK         = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'text/csv'];
 var GEN_KEYS        = ['temperature', 'topP', 'topK', 'maxOutputTokens', 'responseMimeType', 'responseSchema',
                        'responseJsonSchema', 'thinkingConfig', 'seed'];
