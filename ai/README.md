@@ -37,7 +37,7 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   | | Form phổ thông | Form riêng elevaTO |
   |---|---|---|
   | Ai dùng được | mọi tài khoản | học viên · giảng viên |
-  | Lấy gì | 3 báo cáo chính | 3 báo cáo + thuyết minh doanh thu/LN gộp theo mảng, TSCĐ theo nhóm, biến động vốn chủ, vay/trả nợ, lợi thế thương mại, số cổ phiếu, thuế suất |
+  | Lấy gì | 3 báo cáo chính (học viên / giảng viên có thêm sheet thuyết minh) | 3 báo cáo + thuyết minh doanh thu/LN gộp theo mảng, TSCĐ theo nhóm, biến động vốn chủ, vay/trả nợ, lợi thế thương mại, số cổ phiếu, thuế suất |
   | Số trang mỗi file | tối đa 10 | cả file |
   | Lượt AI mỗi file | 3 | 3 + 1 mỗi nhóm thuyết minh (+ 1 mỗi 12 trang phải nhận diện) |
   | Xuất | Form chuẩn hóa 2026 (.xlsx) | thêm: điền thẳng vào model elevaTO |
@@ -48,14 +48,22 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   lưu chuyển tiền tệ, biên lợi nhuận, kèm bảng chỉ số (thanh toán hiện hành / nhanh, nợ trên vốn chủ, ROA,
   ROE, vòng quay tài sản…). Máy tự tính từ số đã trích, AI không tham gia. Ở bước rà soát tick dòng nào thì
   Form chuẩn hóa xuất dòng đó.
-- **Xuất** — hai tùy chọn, cộng lưu phiên:
-  - **Form chuẩn hóa 2026** (.xlsx, mọi tài khoản): trang *Tổng quan* + *Tình hình tài chính*,
-    *Kết quả kinh doanh*, *Lưu chuyển tiền tệ* theo mẫu TT99, mỗi kỳ một cột, đơn vị tuỳ chọn, dòng tổng in đậm.
-  - **Điền vào model elevaTO** (chỉ **học viên / giảng viên**): chọn file model của khoá học, số điền vào sheet
-    `03.Input_FS` (triệu đồng, chi phí mang dấu âm), đúng cột năm. Không đụng ô công thức, giữ nguyên biểu đồ;
-    Excel tự tính lại khi mở. Tab "Xem trước model elevaTO" cho thấy từng ô sẽ ghi và nguồn số.
-    Tài khoản thường thấy thẻ khoá "Chỉ dành cho học viên".
-  - **Phiên làm việc** .json: làm tiếp lần sau / gửi người khác, không tốn lượt AI, không chứa thông tin đăng nhập.
+- **Xuất** — hai file .xlsx, dựng thẳng trong trình duyệt, không cần đưa file mẫu nào vào:
+  - **Form chuẩn hóa 2026** (mọi tài khoản): trang *Tổng quan* + *Tình hình tài chính*, *Kết quả kinh doanh*,
+    *Lưu chuyển tiền tệ* theo mẫu TT99. Bố cục bám các sheet trình bày của model elevaTO: dòng *Năm*, dòng
+    *Actual / Forecast*, dải mục lớn, dòng tổng in đậm, kèm dòng tỷ lệ suy ra (tăng trưởng doanh thu, biên LN
+    gộp / LN thuần HĐKD / LNST). Cuối mỗi báo cáo có dòng KIỂM TRA phải bằng 0.
+    **Đơn vị chọn ngay trong file**: sheet *Tổng quan* có ô dropdown đồng / nghìn / triệu / tỷ, mọi ô số là công
+    thức chia cho tên đã định nghĩa `DonVi` nên đổi một ô là cả file tự tính lại.
+    Học viên / giảng viên có thêm các sheet thuyết minh: *Mảng kinh doanh*, *TSCĐ & LTTM*, *Vốn chủ sở hữu*,
+    *Vay & tham số*.
+  - **Form chi tiết elevaTO** (chỉ **học viên / giảng viên**): **sao y sheet `03.Input_FS` của model**, giữ
+    nguyên số dòng — chọn vùng số liệu dán thẳng vào ô cùng dòng, cùng cột của model là khớp, không lệch dòng
+    nào. Đơn vị cố định triệu đồng (đúng đơn vị model dùng), chi phí mang dấu âm, ô nhập tay nền vàng, số máy
+    ước tính in nghiêng, dòng tổng và dòng CHECK là công thức như trong model.
+    Bố cục lấy từ chính file template qua `tools/doc-template.py` → `js/targets/sheets.js`, không chép tay;
+    template đổi thì chạy lại là file xuất ra đổi theo. Tài khoản thường thấy thẻ khoá "Chỉ dành cho học viên".
+  - **Phiên làm việc** tự lưu trên máy theo tài khoản — mở lại trang là hỏi có muốn làm tiếp không.
 
 ## Tài khoản và vai trò
 
@@ -83,6 +91,26 @@ Lúc đăng ký hỏi: họ tên, **tuổi**, email, số điện thoại, **b�
 | Học viên (`hv`) | nhiều hơn | ✓ |
 | Giảng viên (`gv`) | không giới hạn | ✓ |
 
+## Ủng hộ
+
+Nút **Ủng hộ** ở góc trên (cạnh nút đăng nhập) mở hộp có số tài khoản và **mã QR chuyển khoản theo chuẩn
+VietQR của NAPAS**. Mã QR dựng ngay trên máy người dùng bằng thư viện trong `vendor/qrcode/`, **không gọi
+dịch vụ sinh QR bên ngoài** — số tài khoản không đi qua bên thứ ba và trang vẫn giữ CSP `script-src 'self'`.
+Có mức gợi ý 50k / 100k / 200k / 500k; chọn mức thì QR dựng lại kèm sẵn số tiền.
+
+Số tài khoản **không viết cứng trong trang**: đặt bằng bot Telegram (`/ungho`), máy chủ trả về cho trang.
+Chưa đặt thì hộp vẫn mở nhưng chỉ hiện lời cảm ơn và cách liên hệ. Không ủng hộ thì vẫn dùng đủ tính năng.
+
+## Quên mật khẩu
+
+Ở hộp đăng nhập bấm **Quên mật khẩu?** → nhập email đã đăng ký → máy chủ gửi **mã 6 số** qua email → nhập mã
+và mật khẩu mới là vào luôn, mọi máy đang đăng nhập bị đăng xuất.
+
+- Mã sống **15 phút**, chỉ dùng **một lần**, nhập sai **5 lần** thì hết hiệu lực.
+- Mỗi email xin tối đa **3 mã mỗi giờ**, cả hệ thống có trần riêng — không ai mượn tay máy chủ gửi thư rác.
+- Email chưa đăng ký vẫn nhận câu trả lời "đã gửi" (không để ai dò danh sách email đã đăng ký).
+- Gmail hết hạn mức gửi thư thì bot Telegram báo bạn để đặt lại tay bằng `/mkmoi`.
+
 ## Bot Telegram quản trị
 
 Có tài khoản mới → bot nhắn bạn kèm nút **🎓 Học viên · 👨‍🏫 Giảng viên · 👤 Thường · 🔒 Khoá / ✅ Mở**.
@@ -97,13 +125,20 @@ Lệnh (gõ trong tin nhắn riêng với bot):
 | `/luot <email> <số>` | lượt AI mỗi ngày riêng cho người này (0 = theo vai trò) |
 | `/khoa <email>` · `/mo <email>` | khoá (đăng xuất mọi máy) / mở hoặc duyệt |
 | `/matkhau <email> <mật khẩu mới>` | đặt lại mật khẩu; bot tự xoá tin chứa mật khẩu |
+| `/mkmoi <email>` | bot tự sinh mật khẩu mạnh rồi đọc cho bạn (bỏ ký tự dễ nhìn lẫn) |
+| `/moi` | 15 tài khoản đăng ký gần nhất |
+| `/ungho` | xem thông tin ủng hộ đang hiện trên trang |
+| `/ungho <ngân hàng> <số tk> <tên chủ tk>` | đặt số tài khoản nhận ủng hộ (`vcb`, `tcb`, `mb`… hoặc 6 số BIN của NAPAS) |
+| `/ungho off` | tạm ẩn phần ủng hộ trên trang |
 
 - `/thongke` cho biết chuỗi model đang dùng và model nào đang quá tải.
 - Bot **hỏi tin mới mỗi phút** (lịch `hoiTelegram`, tạo tự động khi chạy `caiDat`) thay vì webhook, vì Apps
   Script trả 302 cho webhook. Có lệnh thì bot bám thêm ~40 giây để trả lời gần như tức thì.
 - Chỉ **tin riêng do chính chat ID quản trị gõ** mới được xử lý (không nhận nhóm, không nhận tin chuyển tiếp);
   người lạ nhắn bot thì bot im lặng. Nút bấm kiểm tra cả chat lẫn người bấm.
-- Key Gemini hỏng (401/403) → bot báo, tối đa 1 lần mỗi giờ.
+- Key Gemini hỏng (401/403) → bot báo, tối đa 1 lần mỗi giờ. Ai xin mã đặt lại mật khẩu bot cũng báo.
+- `/ungho` đáp lại **tên ngân hàng bot nhận ra** để bạn đối chiếu trước khi nó hiện lên trang — sai BIN là
+  người ủng hộ quét QR không được.
 - Tắt bot: chạy hàm `dungBot`. Bật lại: chạy `caiDat`.
 
 ## Cài máy chủ AI (một lần, khoảng 10 phút)
@@ -203,16 +238,21 @@ ai/
 ├── js/pdf.js, js/libs.js        đọc chữ, ảnh thu nhỏ, cắt trang PDF; nạp thư viện trong vendor/ khi cần
 ├── js/ui/pages.js               lưới trang để tick + xem trang lớn
 ├── js/config.js                 link /exec của máy chủ AI
-├── js/ui/auth.js                đăng nhập / đăng ký, menu tài khoản
+├── js/ui/auth.js                đăng nhập / đăng ký / quên mật khẩu, menu tài khoản
+├── js/ui/donate.js              hộp Ủng hộ; js/core/vietqr.js dựng nội dung mã QR VietQR
 ├── js/chart2026.js              danh mục chỉ tiêu mẫu TT99 + cây cộng dồn + mã TT200 tương ứng
 ├── js/core/                     logic thuần (đọc số VN, kiểm tra, quy đổi, nhận trang, prompt, dữ liệu nhiều kỳ, Excel)
-├── js/core/formxlsx.js          tạo file Form chuẩn hóa 2026 (.xlsx có định dạng)
+├── js/core/xlsxout.js           bộ ghi .xlsx viết tay (kiểu ô, tên đã định nghĩa, danh sách chọn trong ô)
+├── js/core/formxlsx.js          Form chuẩn hóa 2026; js/core/notesxlsx.js các sheet thuyết minh
+├── js/core/fcalc.js             tính sẵn giá trị ô công thức để trình xem không tự tính cũng thấy số
 ├── js/core/metrics.js           chỉ số tài chính + số liệu biểu đồ (máy tính, không qua AI)
 ├── js/ui/charts.js              vẽ biểu đồ SVG (không dùng thư viện ngoài)
-├── js/core/modelxlsx.js         tạo file Form chi tiết elevaTO (.xlsx)
+├── js/core/modelxlsx.js         Form chi tiết elevaTO — sao y sheet 03.Input_FS, giữ nguyên số dòng
 ├── js/targets/model.js          quy ba báo cáo + thuyết minh về đúng dòng sheet 03.Input_FS
+├── js/targets/sheets.js         bố cục 03.Input_FS, SINH TỰ ĐỘNG từ template (đừng sửa tay)
+├── tools/doc-template.py        đọc file model elevaTO (.xlsx) → sinh js/targets/sheets.js
 ├── backend/                     máy chủ Apps Script
-├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS, phông Be Vietnam Pro (xem vendor/README.md)
+├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS, qrcode, phông Be Vietnam Pro (xem vendor/README.md)
 └── tests/                       kiểm thử
 ```
 
@@ -223,4 +263,12 @@ cd ai
 npm test                 # kiểm thử đơn vị: đọc số, cây cộng dồn, quy đổi TT200, trích xuất, Excel, máy chủ, bot…
 npm install && npm run e2e   # chạy trang thật trong Chromium, máy chủ AI giả lập
 # xem giao diện từng bước: E2E_SHOTS=/thư/mục npm run e2e
+```
+
+Template model elevaTO đổi (thêm / bớt / đổi thứ tự dòng trong `03.Input_FS`) thì sinh lại bố cục:
+
+```bash
+cd ai
+python3 tools/doc-template.py /đường/dẫn/elevaTO_Model_Template.xlsx > js/targets/sheets.js
+npm test                 # bài kiểm tra chốt mọi dòng của template đều nằm đúng dòng đó trong file xuất ra
 ```
