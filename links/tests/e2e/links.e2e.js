@@ -125,6 +125,62 @@ test('trình chỉnh sửa: sửa → xem trước đổi theo → Đăng lên w
   await p.context().close();
 });
 
+test('ảnh minh hoạ của các ô và logo chân trang tải được', async () => {
+  const p = await page();
+  await p.goto(base + '/links/');
+  await p.waitForSelector('#grid .chip.img img');
+  await p.waitForFunction(() => [...document.querySelectorAll('#grid .chip.img img, .foot img.wm-light')].every((i) => i.complete && i.naturalWidth > 0));
+  assert.equal(await p.textContent('.foot-tag'), 'Fuel Your Financial Journey');
+  await p.context().close();
+});
+
+test('trình chỉnh sửa: kéo độ mờ / độ đục, đổi nền → khung xem trước đổi theo; ảnh đại diện chọn từ máy', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('input.sl');
+  await p.locator('input.sl').nth(0).fill('6');
+  await p.locator('input.sl').nth(1).fill('20');
+  await p.click('.segm button:has-text("Đêm")');
+  const frame = p.frames().find((f) => f.url().includes('preview'));
+  await frame.waitForFunction(() => document.documentElement.dataset.bg === 'midnight');
+  assert.deepEqual(await frame.evaluate(() => {
+    const cs = getComputedStyle(document.documentElement);
+    return [cs.getPropertyValue('--blur').trim(), cs.getPropertyValue('--tint').trim()];
+  }), ['6px', '0.2']);
+
+  // Ảnh PNG thật trong repo → cắt vuông, nén thành data URL và hiện trong xem trước.
+  const png = await readFile(join(ROOT, 'apple-touch-icon.png'));
+  const chooser = p.waitForEvent('filechooser');
+  await p.click('.fld:has(> .lbl:text("Ảnh đại diện")) button:has-text("Chọn ảnh từ máy")');
+  await (await chooser).setFiles({ name: 'ava.png', mimeType: 'image/png', buffer: png });
+  await frame.waitForFunction(() => document.querySelector('#ava').src.startsWith('data:image/'));
+  const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
+  assert.match(draft.profile.avatar, /^data:image\/(webp|jpeg);base64,/);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới, giữ nguyên chữ đã sửa', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  const old = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  delete old.theme;
+  old.profile.status = 'Minhtoantowork@gmail.com';
+  old.links = old.links.map((l) => ({ ...l, image: l.id === 'course' ? '../assets/model/dashboard-thumb.webp' : '' }));
+  await p.addInitScript((d) => {
+    if (window.top !== window || sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+  }, old);
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.lc');
+  const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
+  assert.equal(draft.profile.status, 'Minhtoantowork@gmail.com');
+  assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/course.svg');
+  assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/ai.svg');
+  assert.equal(draft.theme.blur, 22);
+  await p.context().close();
+});
+
 test('trang khoá học: /#dang-ky mở thẳng form đăng ký', async () => {
   const p = await page();
   await p.goto(base + '/#dang-ky');

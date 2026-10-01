@@ -94,3 +94,47 @@ export function panel(title, desc, open, ...body) {
     h('summary', {}, h('span', { class: 'p-t' }, h('b', {}, title), desc ? h('small', {}, desc) : null), h('span', { class: 'chev', 'aria-hidden': 'true' })),
     h('div', { class: 'p-body' }, ...body));
 }
+
+/** Thanh kéo có hiện số. */
+export function slider(label, value, min, max, unit, onInput, hint) {
+  const id = nextId();
+  const out = h('output', { for: id, class: 'sl-val' }, value + unit);
+  const input = h('input', { id, type: 'range', class: 'sl', min, max, step: 1 });
+  input.value = String(value);
+  const paint = () => input.style.setProperty('--p', ((input.value - min) / (max - min)) * 100 + '%');
+  paint();
+  input.addEventListener('input', () => { out.textContent = input.value + unit; paint(); onInput(Number(input.value)); });
+  return h('div', { class: 'fld' }, h('div', { class: 'sl-head' }, h('label', { for: id }, label), out), input,
+    hint ? h('small', { class: 'hint' }, hint) : null);
+}
+
+/**
+ * Ô chọn ảnh: xem trước + "Chọn ảnh từ máy" + "Ảnh có sẵn" + dán link.
+ * opts: { presets: {src: label}, base: tiền tố để hiện ảnh có sẵn, onPick: async () => dataUrl, hint, round }
+ */
+export function imageField(label, value, onChange, opts = {}) {
+  const isData = /^data:/.test(value || '');
+  const thumb = h('span', { class: 'im-thumb' + (opts.round ? ' round' : '') });
+  const setThumb = (v) => {
+    thumb.replaceChildren(v ? h('img', { src: (opts.resolve ? opts.resolve(v) : v), alt: '' }) : h('span', { html: svg('plus') }));
+  };
+  setThumb(value);
+  const url = field('', isData ? '' : value, (v) => { setThumb(v); onChange(v, false); },
+    { type: 'url', placeholder: isData ? 'Đang dùng ảnh tải lên từ máy' : 'hoặc dán link ảnh https://…', aria: label + ' — link ảnh' });
+  const gallery = opts.presets
+    ? h('div', { class: 'im-gallery', hidden: true }, ...Object.entries(opts.presets).map(([src, name]) =>
+      h('button', { type: 'button', title: name, 'aria-label': name, onclick: () => onChange(src, true) },
+        h('img', { src: opts.resolve ? opts.resolve(src) : src, alt: '' }))))
+    : null;
+  const tools = h('div', { class: 'im-tools' },
+    h('button', { type: 'button', class: 'btn btn-ghost sm', html: svg('download') + '<span>Chọn ảnh từ máy</span>', onclick: async (e) => {
+      const b = e.currentTarget;
+      b.disabled = true;
+      try { const v = await opts.onPick(); if (v) onChange(v, true); } finally { b.disabled = false; }
+    } }),
+    gallery ? h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => { gallery.hidden = !gallery.hidden; } }, 'Ảnh có sẵn') : null,
+    value ? h('button', { type: 'button', class: 'btn btn-ghost sm danger', onclick: () => onChange('', true) }, 'Bỏ ảnh') : null);
+  return h('div', { class: 'fld wide' }, h('span', { class: 'lbl' }, label),
+    h('div', { class: 'im' }, thumb, h('div', { class: 'im-r' }, tools, url)),
+    gallery, opts.hint ? h('small', { class: 'hint' }, opts.hint) : null);
+}
