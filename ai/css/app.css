@@ -49,12 +49,15 @@ a{color:var(--em-text)}
 .skip:focus{top:12px}
 
 /* ── Đầu trang ───────────────────────── */
-.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:12px max(20px,env(safe-area-inset-right)) 12px max(20px,env(safe-area-inset-left));
+/* Ba cột: tên công cụ bên trái · logo elevaTO cỡ lớn chính giữa · nút điều khiển bên phải.
+   Hai cột ngoài cùng rộng bằng nhau nên logo nằm đúng giữa thanh dù hai bên dài ngắn khác nhau. */
+.top{position:sticky;top:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:16px;
+  padding:10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left));
   background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;min-width:0}
-/* Thứ tự quan trọng: .logo-dark phải đứng SAU .logo/.logo-xl (cùng độ ưu tiên) thì bản tối mới ẩn ở giao diện sáng. */
-.logo{height:36px;width:auto;display:block}
-.logo-xl{height:92px;width:auto;display:block}
+.brand{justify-self:center;display:block;text-decoration:none;color:inherit;border-radius:10px}
+.brand:focus-visible{outline:2px solid var(--em);outline-offset:4px}
+/* Thứ tự quan trọng: .logo-dark phải đứng SAU .logo (cùng độ ưu tiên) thì bản tối mới ẩn ở giao diện sáng. */
+.logo{height:58px;width:auto;display:block}
 .logo-dark{display:none}
 :root[data-theme="dark"] .logo-light{display:none} :root[data-theme="dark"] .logo-dark{display:block}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-light{display:none} :root:not([data-theme="light"]) .logo-dark{display:block}}
@@ -66,10 +69,10 @@ a{color:var(--em-text)}
 .lang-sel:hover{border-color:var(--line-2)}
 .lang-sel:focus-visible{outline:2px solid var(--em);outline-offset:2px}
 @media (max-width:420px){.lang-sel{padding-right:24px;font-size:12px}}
-.product{display:flex;flex-direction:column;padding-left:14px;border-left:1px solid var(--line-2);line-height:1.2}
+.product{display:flex;flex-direction:column;line-height:1.2;min-width:0}
 .product b{font-size:15px;font-weight:800;color:var(--strong);letter-spacing:-.01em}
-.product small{font-size:11.5px;color:var(--muted)}
-.top-r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.product small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-r{justify-self:end;display:flex;align-items:center;gap:10px}
 .icon-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--field);background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:border-color .2s,transform .2s var(--ease)}
 .icon-btn:hover{border-color:var(--em)}
 .icon-btn:active{transform:scale(.94)}
@@ -219,9 +222,6 @@ details.pmap[open] > summary{margin-bottom:12px}
 .preset b{display:block;color:var(--strong);margin-bottom:4px}
 .preset small{color:var(--muted);font-size:12.5px;line-height:1.45;display:block}
 .preset[aria-pressed="true"]{border-color:var(--em);background:var(--em-soft);box-shadow:0 0 0 3px var(--em-soft)}
-/* Dải thương hiệu: logo elevaTO cỡ lớn (đã có sẵn dòng "Fuel Your Financial Journey") căn giữa đầu trang. */
-.bband{display:flex;justify-content:center;padding:4px 16px 30px}
-@media (max-width:700px){.bband{padding:0 16px 20px}.logo-xl{height:64px}}
 
 /* Thẻ xuất file */
 .cardx .unit-pick{display:flex;align-items:center;gap:8px;margin:10px 0 12px}
@@ -341,13 +341,19 @@ table.k td .tag{white-space:normal}
   .rail .hint{display:none}
   .step{padding:18px 16px}
   .step-h{gap:12px}
-  .top{padding:10px max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));gap:10px}
-  .logo{height:30px}
+  .top{padding:8px max(14px,env(safe-area-inset-right)) 8px max(14px,env(safe-area-inset-left));gap:10px}
+  .logo{height:42px}
   .product small,.acct-name{display:none}
   .acct summary{padding:3px}
   input.inp,select.inp{font-size:16px}           /* iPhone không tự phóng to khi gõ */
 }
-@media (max-width:420px){ .product{display:none} }
+/* Màn hẹp: không đủ chỗ cho ba cột — logo về bên trái, các nút bên phải. */
+@media (max-width:560px){
+  .top{grid-template-columns:auto 1fr}
+  .product{display:none}
+  .brand{justify-self:start}
+  .logo{height:36px}
+}
 
 
 /* ════════════════════════════════════════════════════════════
