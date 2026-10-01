@@ -8,6 +8,7 @@
 | `pdf-lib/` | pdf-lib | 1.17.1 | npm `pdf-lib/dist` | MIT |
 | `jszip/` | JSZip | 3.10.1 | npm `jszip/dist` | MIT (hoặc GPLv3) |
 | `sheetjs/` | SheetJS CE (xlsx) | 0.20.3 | https://cdn.sheetjs.com/xlsx-0.20.3/ | Apache-2.0 |
+| `qrcode/` | qrcode-generator (vẽ mã QR chuyển khoản ở phần Ủng hộ) | 1.4.4 | npm `qrcode-generator` | MIT (giấy phép ghi ngay đầu `qrcode.js`) |
 | `fonts/` | Be Vietnam Pro (woff2, 2 bộ ký tự `vietnamese` + `latin`, các nét 400–800) | bản Google Fonts phục vụ ngày 2026-10-01 | https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro (tệp .woff2 ở `fonts.gstatic.com`) | SIL OFL 1.1 — xem `fonts/OFL.txt` |
 
 SheetJS trên npm/cdnjs dừng ở 0.18.5 (có lỗi bảo mật CVE-2023-30533, CVE-2024-22363) — bản ở đây lấy từ CDN chính thức của SheetJS.
@@ -28,4 +29,12 @@ SHA-256 của các tệp phông (đối chiếu khi cập nhật):
   4f58af2d1c3e28a9ba14c51c82db2751d78344b75bdcb34de24a1031ebe59da6  bvp-700-vietnamese.woff2
   7c5d0871188c09339a6eb46948420ed9b11f3d06ea3ff1c5d1cf41b06a3504e7  bvp-800-latin.woff2
   26b241d1d5f489c8a65c1a3c4cdcdb48dd114a9ed7e0c0180182191f087cbe96  bvp-800-vietnamese.woff2
+```
+
+`qrcode/qrcode.js` để nguyên bản npm, chỉ chạy như script thường (tạo biến toàn cục `qrcode`).
+Nhờ nó mà mã QR ủng hộ dựng ngay trên máy người dùng: số tài khoản không đi qua dịch vụ sinh QR
+bên thứ ba, và CSP vẫn giữ `script-src 'self'`.
+
+```
+  18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780  qrcode/qrcode.js
 ```

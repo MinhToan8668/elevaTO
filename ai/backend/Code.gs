@@ -52,9 +52,13 @@ var PHIEN_TOI_DA    = 3;                   // mỗi tài khoản đăng nhập t
 var DN_SAI_TOI_DA   = 5;                   // đăng nhập sai bấy nhiêu lần trong 10 phút thì khoá tạm
 var DK_MOI_GIO      = 30;                  // chặn bot: tối đa số tài khoản mới mỗi giờ cho cả hệ thống
 var MK_TOI_THIEU    = 8;
+var MA_DL_PHUT      = 15;                  // mã đặt lại mật khẩu sống bao nhiêu phút
+var MA_DL_SAI       = 5;                   // nhập sai mã bấy nhiêu lần thì mã hết hiệu lực
+var MA_DL_MOI_GIO   = 3;                   // mỗi email xin tối đa bấy nhiêu mã mỗi giờ
+var MA_DL_HE_THONG  = 40;                  // cả hệ thống tối đa bấy nhiêu mã mỗi giờ (chặn spam mail)
 var BAM_VONG        = 1500;                // số vòng băm mật khẩu
 var GEMINI_API      = 'https://generativelanguage.googleapis.com/v1beta/models';
-var PHIEN_BAN       = '2026-10-03';       // đổi mỗi lần sửa file này, để biết bản nào đang chạy
+var PHIEN_BAN       = '2026-10-04';       // đổi mỗi lần sửa file này, để biết bản nào đang chạy
 var MIME_OK         = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'text/csv'];
 var GEN_KEYS        = ['temperature', 'topP', 'topK', 'maxOutputTokens', 'responseMimeType', 'responseSchema',
                        'responseJsonSchema', 'thinkingConfig', 'seed'];
@@ -89,6 +93,9 @@ function doPost(e) {
     var a = String(b.action || '');
     if (a === 'dangky') return json(dangKy(b));
     if (a === 'dangnhap') return json(dangNhap(b));
+    if (a === 'ungho') return json(ok({ ungho: thongTinUngHo() }));
+    if (a === 'quenmk') return json(quenMK(b));
+    if (a === 'datlaimk') return json(datLaiMKBangMa(b));
     if (a === 'toi' || a === 'dangxuat' || a === 'generate') {
       var tk = tkTuToken(b.token);
       if (!tk) return json(loi('auth', 'Phiên đăng nhập đã hết — đăng nhập lại'));
@@ -620,6 +627,124 @@ function datLaiMatKhau(email, mkMoi) {
 }
 function datLaiMatKhauHocVien() { datLaiMatKhau('email-hoc-vien@gmail.com', 'mat-khau-moi'); }
 
+// ─── Ủng hộ (số tài khoản do quản trị đặt bằng bot Telegram) ──
+
+// Mã ngân hàng theo NAPAS để dựng VietQR. Quản trị gõ mã ngắn hoặc 6 chữ số BIN; bot trả lại
+// tên ngân hàng đã nhận ra để đối chiếu trước khi hiện lên trang.
+var BANK = {
+  vcb: ['970436', 'Vietcombank'], ctg: ['970415', 'VietinBank'], icb: ['970415', 'VietinBank'],
+  bidv: ['970418', 'BIDV'], agri: ['970405', 'Agribank'], vba: ['970405', 'Agribank'],
+  tcb: ['970407', 'Techcombank'], mb: ['970422', 'MB Bank'], acb: ['970416', 'ACB'],
+  vpb: ['970432', 'VPBank'], tpb: ['970423', 'TPBank'], stb: ['970403', 'Sacombank'],
+  hdb: ['970437', 'HDBank'], vib: ['970441', 'VIB'], shb: ['970443', 'SHB'],
+  ocb: ['970448', 'OCB'], msb: ['970426', 'MSB'], seab: ['970468', 'SeABank'],
+  eib: ['970431', 'Eximbank'], bab: ['970409', 'BacABank'], pvcb: ['970412', 'PVcomBank'],
+  nab: ['970428', 'Nam A Bank'], bvb: ['970454', 'BVBank'], vab: ['970427', 'VietABank'],
+  abb: ['970425', 'ABBANK'], sgicb: ['970400', 'SaigonBank'], klb: ['970452', 'KienlongBank'],
+  lpb: ['970449', 'LPBank'], pgb: ['970430', 'PGBank'], ncb: ['970419', 'NCB'],
+  vietbank: ['970433', 'VietBank'], bvbank: ['970438', 'BaoVietBank'], scb: ['970429', 'SCB']
+};
+
+/** { bin, bank, stk, chu_tk, loi_nhan, loi_moi } hoặc null nếu quản trị chưa đặt. */
+function thongTinUngHo() {
+  var raw = props().getProperty('UNG_HO');
+  if (!raw) return null;
+  try {
+    var o = JSON.parse(raw);
+    if (!o || !/^[0-9]{6}$/.test(String(o.bin || '')) || !o.stk) return null;
+    return { bin: String(o.bin), bank: String(o.bank || ''), stk: String(o.stk),
+      chu_tk: String(o.chu_tk || ''), loi_nhan: String(o.loi_nhan || ''), loi_moi: String(o.loi_moi || '') };
+  } catch (e) { return null; }
+}
+
+/** Lưu thông tin ủng hộ. nganHang = mã ngắn trong BANK hoặc 6 chữ số BIN. */
+function datUngHo(nganHang, stk, chuTK, loiNhan) {
+  var k = String(nganHang || '').trim().toLowerCase(), b = BANK[k];
+  var bin = b ? b[0] : (/^[0-9]{6}$/.test(k) ? k : '');
+  if (!bin) throw new Error('Chưa rõ ngân hàng "' + nganHang + '". Gõ mã ngắn (vcb, tcb, mb…) hoặc 6 chữ số BIN của NAPAS.');
+  var so = String(stk || '').replace(/[^0-9A-Za-z]/g, '');
+  if (so.length < 6 || so.length > 19) throw new Error('Số tài khoản chưa đúng.');
+  var o = { bin: bin, bank: b ? b[1] : ('BIN ' + bin), stk: so, chu_tk: String(chuTK || '').trim().slice(0, 100),
+    loi_nhan: String(loiNhan || 'Ung ho elevaTO').trim().slice(0, 60), loi_moi: '' };
+  props().setProperty('UNG_HO', JSON.stringify(o));
+  return o;
+}
+
+// ─── Quên mật khẩu: máy chủ gửi mã 6 số qua email ───────────
+
+function khoaMa(email) { return 'dl_' + bamNhanh('ma|' + khoaEmail(email)); }
+function khoaSoLan(email) { return 'dls_' + bamNhanh('ma|' + khoaEmail(email)); }
+
+/**
+ * Xin mã đặt lại mật khẩu. Luôn trả ok dù email có tài khoản hay không — không để ai dò
+ * danh sách email đã đăng ký.
+ */
+function quenMK(b) {
+  var email = chuanEmail(b.email);
+  if (!emailHopLe(email)) return loi('email_sai', 'Email chưa đúng');
+  var cache = CacheService.getScriptCache();
+  var kGio = 'dlg_' + Math.floor(Date.now() / 3600000), kEmail = 'dle_' + bamNhanh(kGio + '|' + khoaEmail(email));
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    if (Number(cache.get(kGio) || 0) >= MA_DL_HE_THONG) return loi('busy', 'Đang có quá nhiều yêu cầu, thử lại sau ít phút', { retryAfter: 300 });
+    if (Number(cache.get(kEmail) || 0) >= MA_DL_MOI_GIO) return loi('cho', 'Đã gửi mã cho email này — kiểm tra hộp thư (cả thư rác), hoặc thử lại sau một giờ');
+    cache.put(kGio, String(Number(cache.get(kGio) || 0) + 1), 3700);
+    cache.put(kEmail, String(Number(cache.get(kEmail) || 0) + 1), 3700);
+  } finally { lock.releaseLock(); }
+
+  var tk = tkTheoEmail(email);
+  if (tk && tk.trangthai === 'active') {
+    var ma = String(Math.floor(Math.random() * 900000) + 100000);
+    cache.put(khoaMa(email), bamNhanh('dl|' + ma), MA_DL_PHUT * 60);
+    cache.put(khoaSoLan(email), '0', MA_DL_PHUT * 60);
+    guiMaDatLai(tk, ma);
+  }
+  return ok({ daGui: true, phut: MA_DL_PHUT });
+}
+
+function guiMaDatLai(tk, ma) {
+  var than = 'Xin chào ' + tk.ten + ',\n\n'
+    + 'Mã đặt lại mật khẩu elevaTO AI BCTC của bạn là: ' + ma + '\n'
+    + 'Mã có hiệu lực ' + MA_DL_PHUT + ' phút và chỉ dùng một lần.\n\n'
+    + 'Nếu không phải bạn yêu cầu thì bỏ qua email này — mật khẩu cũ vẫn dùng bình thường.\n\n'
+    + 'elevaTO · Zalo 0376 292 148 · minhtoantowork@gmail.com';
+  try {
+    MailApp.sendEmail({ to: String(tk.email), subject: 'Mã đặt lại mật khẩu elevaTO AI BCTC: ' + ma, body: than, name: 'elevaTO AI BCTC' });
+  } catch (e) {
+    console.error('guiMaDatLai: ' + e);
+    baoMotLan('mail_loi', 1800, '⚠️ Không gửi được email đặt lại mật khẩu (' + esc(String(e).slice(0, 200)) + '). Người dùng cần đặt lại bằng /mkmoi.');
+  }
+  baoMotLan('dl_' + tk.ma, 300, '🔑 ' + esc(tk.email) + ' xin mã đặt lại mật khẩu.');
+}
+
+/** Đổi mật khẩu bằng mã đã gửi qua email. Sai mã quá số lần cho phép thì mã hết hiệu lực. */
+function datLaiMKBangMa(b) {
+  var email = chuanEmail(b.email), ma = String(b.ma || '').replace(/\D/g, ''), mk = String(b.mk || '');
+  if (!email || !ma) return loi('thieu', 'Nhập email và mã trong email');
+  if (mk.length < MK_TOI_THIEU || mk.length > 200) return loi('mk_ngan', 'Mật khẩu cần ít nhất ' + MK_TOI_THIEU + ' ký tự');
+  var cache = CacheService.getScriptCache(), kMa = khoaMa(email), kSo = khoaSoLan(email);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var dung;
+  try {
+    var luu = cache.get(kMa);
+    if (!luu) return loi('ma_het', 'Mã đã hết hiệu lực — xin mã mới');
+    var sai = Number(cache.get(kSo) || 0);
+    if (sai >= MA_DL_SAI) { cache.remove(kMa); return loi('ma_het', 'Nhập sai mã nhiều lần — xin mã mới'); }
+    dung = bangNhau(bamNhanh('dl|' + ma), luu);
+    if (!dung) cache.put(kSo, String(sai + 1), MA_DL_PHUT * 60);
+    else { cache.remove(kMa); cache.remove(kSo); }
+  } finally { lock.releaseLock(); }
+  if (!dung) return loi('ma_sai', 'Mã chưa đúng — xem lại email');
+  var tk = tkTheoEmail(email);
+  if (!tk || tk.trangthai !== 'active') return loi('bi_khoa', 'Tài khoản không dùng được — liên hệ elevaTO');
+  doiMatKhau(tk, mk);
+  tgBaoQuanTri('🔑 ' + esc(tk.email) + ' đã tự đặt lại mật khẩu bằng mã gửi qua email.');
+  tk = tkTheoEmail(email);
+  return ok({ token: capPhien(tk), me: hoSo(tk) });
+}
+
 // ═════════════════════════════════════════════════════════════
 // BOT TELEGRAM
 // Bot HỎI tin mới mỗi phút (getUpdates) thay vì webhook: Apps Script trả 302 cho webhook nên
@@ -778,7 +903,12 @@ function chayLenh(lenh, arg) {
     '/free &lt;email&gt; — về tài khoản thường',
     '/luot &lt;email&gt; &lt;số&gt; — số lượt AI mỗi ngày (0 = theo vai trò)',
     '/khoa &lt;email&gt; · /mo &lt;email&gt; — khoá / mở (duyệt) tài khoản',
-    '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt lại mật khẩu (bot tự xoá tin có mật khẩu)'].join('\n');
+    '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt lại mật khẩu (bot tự xoá tin có mật khẩu)',
+    '/mkmoi &lt;email&gt; — bot tự sinh mật khẩu mạnh rồi đọc cho bạn',
+    '/moi — 15 tài khoản đăng ký gần nhất',
+    '/ungho — xem thông tin ủng hộ đang hiện trên trang',
+    '/ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt; — đặt số tài khoản nhận ủng hộ (vcb, tcb, mb… hoặc 6 số BIN)',
+    '/ungho off — tạm ẩn phần ủng hộ trên trang'].join('\n');
   if (lenh === '/start' || lenh === '/help') return { text: HELP };
   if (lenh === '/thongke') {
     var ds = docTK(), dem = { free: 0, hv: 0, gv: 0, cho: 0, off: 0 }, hom = homNay(), luot = 0, all = props().getProperties();
@@ -791,6 +921,14 @@ function chayLenh(lenh, arg) {
       (nghi ? ' (đang nghỉ ' + nghi + ')' : '') + '\nModel: ' + esc(chuoi.join(' → ') || '—') +
       (qt.length ? '\nĐang quá tải: ' + esc(qt.join(', ')) : '') };
   }
+  if (lenh === '/moi') {
+    var ds = docTK().slice(-15).reverse();
+    if (!ds.length) return { text: 'Chưa có tài khoản nào.' };
+    return { text: '<b>' + ds.length + ' tài khoản mới nhất</b>\n' + ds.map(function (x) {
+      return '• ' + esc(x.ten) + ' — <code>' + esc(x.email) + '</code> (' + TEN_VT[vaiTro(x)] + ' · ' + (TEN_TT[x.trangthai] || esc(x.trangthai)) + ')';
+    }).join('\n') + '\n\nGõ /tim &lt;email&gt; để mở nút xếp vai trò.' };
+  }
+  if (lenh === '/ungho') return lenhUngHo(arg);
   if (lenh === '/cho') {
     var cho = docTK().filter(function (x) { return x.trangthai === 'cho'; });
     if (!cho.length) return { text: 'Không có tài khoản nào chờ duyệt.' };
@@ -820,7 +958,43 @@ function chayLenh(lenh, arg) {
     try { doiMatKhau(tk, arg.slice(1).join(' ')); } catch (e) { return { text: '✘ ' + esc(e.message) }; }
     return { text: '✔ Đã đặt mật khẩu mới cho ' + esc(tk.email) + ' (các máy đang đăng nhập bị đăng xuất).' };
   }
+  if (lenh === '/mkmoi') {
+    var tkm = timTK(arg[0]);
+    if (!tkm) return { text: 'Không tìm thấy tài khoản ' + esc(arg[0] || '') + '. Gõ đúng email đã đăng ký.' };
+    var mk = mkNgauNhien();
+    doiMatKhau(tkm, mk);
+    return { text: '✔ Mật khẩu mới của ' + esc(tkm.email) + ': <code>' + esc(mk) + '</code>\n' +
+      'Gửi cho họ rồi XOÁ tin này. Các máy đang đăng nhập đã bị đăng xuất.' };
+  }
   return { text: 'Không rõ lệnh. Gõ /help.' };
+}
+
+/** Mật khẩu tạm: dễ đọc qua Telegram, bỏ các ký tự dễ nhìn lẫn (0/O, 1/l/I). */
+function mkNgauNhien() {
+  var bang = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789', out = '';
+  var b = Utilities.getUuid().replace(/-/g, '');
+  for (var i = 0; i < 14; i++) out += bang.charAt(parseInt(b.substr(i * 2, 2), 16) % bang.length);
+  return out;
+}
+
+function lenhUngHo(arg) {
+  if (!arg.length) {
+    var o = thongTinUngHo();
+    if (!o) return { text: 'Chưa đặt số tài khoản nhận ủng hộ — trang đang ẩn phần đó.\n' +
+      'Đặt bằng: /ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt;\nVí dụ: /ungho vcb 1012345678 NGUYEN VAN A' };
+    return { text: '💛 <b>Thông tin ủng hộ đang hiện trên trang</b>\n🏦 ' + esc(o.bank) + ' (BIN ' + esc(o.bin) + ')' +
+      '\n🔢 <code>' + esc(o.stk) + '</code>\n👤 ' + esc(o.chu_tk || '—') + '\n📝 ' + esc(o.loi_nhan) +
+      '\n\nĐổi: /ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt; · Ẩn: /ungho off' };
+  }
+  if (/^(off|tat|an)$/i.test(arg[0])) {
+    props().deleteProperty('UNG_HO');
+    return { text: '✔ Đã ẩn phần ủng hộ trên trang.' };
+  }
+  try {
+    var d = datUngHo(arg[0], arg[1], arg.slice(2).join(' '));
+    return { text: '✔ Trang sẽ hiện: <b>' + esc(d.bank) + '</b> (BIN ' + esc(d.bin) + ')\n🔢 <code>' + esc(d.stk) +
+      '</code>\n👤 ' + esc(d.chu_tk || '—') + '\n\nXem lại tên ngân hàng xem có đúng không nhé — sai BIN là người ủng hộ quét QR không được.' };
+  } catch (e) { return { text: '✘ ' + esc(e.message) }; }
 }
 
 function xuLyNut(q) {

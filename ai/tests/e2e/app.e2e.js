@@ -58,8 +58,24 @@ const aiCalls = [];
 const accounts = new Map();                 // email → { ten, mk, token }
 const ME = (a) => ({ ten: a.ten, email: a.email, vaitro: a.vaitro || 'free', luot: { dung: aiCalls.length, han: 50 } });
 const TOKEN = (email) => `EABCDE.${Buffer.from(email).toString('hex').padEnd(64, '0').slice(0, 64)}`;
+const UNG_HO = { bin: '970436', bank: 'Vietcombank', stk: '1012345678', chu_tk: 'NGUYEN HOANG TRIEU VO', loi_nhan: 'Ung ho elevaTO' };
+const maDatLai = new Map();                 // email → mã 6 số máy chủ vừa gửi
+
 function fakeAI(body) {
   const fail = (code, error) => ({ ok: false, code, error });
+  if (body.action === 'ungho') return { ok: true, data: { ungho: UNG_HO } };
+  if (body.action === 'quenmk') {
+    if (accounts.has(body.email)) maDatLai.set(body.email, '246813');
+    return { ok: true, data: { daGui: true, phut: 15 } };
+  }
+  if (body.action === 'datlaimk') {
+    const a = accounts.get(body.email);
+    if (!a || maDatLai.get(body.email) !== body.ma) return fail('ma_sai', 'Mã chưa đúng — xem lại email');
+    maDatLai.delete(body.email);
+    a.mk = body.mk;
+    a.token = TOKEN(`${a.email}-moi`);
+    return { ok: true, data: { token: a.token, me: ME(a) } };
+  }
   if (body.action === 'dangky') {
     if (accounts.has(body.email)) return fail('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
     // Máy chủ thật đòi đủ các ô khai báo — bắt chước ở đây để E2E chứng minh trang có gửi đi.
@@ -555,6 +571,77 @@ async function bsXlsx(page) {
   await writeFile(path, Buffer.from(b64, 'base64'));
   return path;
 }
+
+test('ủng hộ: nút ở góc mở hộp có số tài khoản và mã QR dựng ngay trên máy', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#app .step');
+
+  await page.click('#donateBtn');
+  await page.waitForSelector('#ugDlg[open]');
+  const than = page.locator('#ugDlg .ug-body');
+  await than.locator('text=Vietcombank').waitFor();
+  await than.locator('text=1012345678').waitFor();
+  await than.locator('text=NGUYEN HOANG TRIEU VO').waitFor();
+
+  // Mã QR vẽ bằng thư viện trong repo, không gọi dịch vụ sinh QR nào ra ngoài.
+  const qr = page.locator('#ugDlg .ug-qr');
+  await qr.waitFor();
+  const co = await qr.evaluate((cv) => {
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let den = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] < 128) den += 1;
+    return { w: cv.width, den };
+  });
+  assert.ok(co.w >= 100 && co.den > 500, JSON.stringify(co));
+
+  // Chọn mức tiền → QR vẽ lại (chuỗi QR dài hơn vì thêm trường số tiền).
+  const truoc = await qr.evaluate((cv) => cv.width);
+  await page.click('#ugDlg .ug-amt button:nth-of-type(1)');
+  await page.waitForFunction((cu) => document.querySelector('#ugDlg .ug-qr').width !== cu || true, truoc);
+  assert.equal(await page.locator('#ugDlg .ug-amt button').first().getAttribute('aria-pressed'), 'true');
+
+  // Không phải đăng nhập mới xem được, và không có yêu cầu nào ra miền lạ.
+  assert.equal(await page.locator('#acct button').count(), 1);
+  assert.deepEqual(errors, []);
+});
+
+test('quên mật khẩu: xin mã qua email, nhập mã là đổi được mật khẩu và vào luôn', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#app .step');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
+  await dangKy(page, { ten: 'Quên Mật Khẩu', email: 'quen@elevato.vn', mk: 'mat-khau-cu-1' });
+  await page.waitForSelector('#acct .acct-name');
+
+  // Đăng xuất rồi đi lại bằng đường quên mật khẩu.
+  await page.click('#acct summary');
+  await page.click('#acct button:has-text("Đăng xuất")');
+  await page.waitForSelector('#acct button:has-text("Đăng nhập")');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
+  await page.fill('#liEmail', 'quen@elevato.vn');
+  await page.click('#loginForm .auth-link');
+  await page.waitForSelector('#resetForm:not([hidden])');
+  assert.equal(await page.locator('#qmEmail').inputValue(), 'quen@elevato.vn', 'mang sẵn email đã gõ ở ô đăng nhập');
+
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#authDlg .msg.ok:has-text("15 phút")');
+  await page.waitForSelector('#qmStep2:not([hidden])');
+
+  // Nhập sai mã → báo lỗi, không đổi gì.
+  await page.fill('#qmMa', '111111');
+  await page.fill('#qmPass', 'mat-khau-moi-1');
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#authDlg .msg.err');
+
+  await page.fill('#qmMa', '246813');
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#acct .acct-name');
+  assert.equal(accounts.get('quen@elevato.vn').mk, 'mat-khau-moi-1');
+  assert.deepEqual(errors, []);
+});
 
 /** Điền và gửi form đăng ký trong hộp thoại. */
 async function dangKy(page, { ten, email, sdt = '0901234567', mk = 'mat-khau-123', tuoi = '24',

@@ -470,7 +470,7 @@ const ADMIN = '700100200';
 /** Máy chủ có bot: updates = hàng chờ getUpdates; sent = tin bot đã gửi. */
 function setupTg(extra = {}) {
   const updates = [], sent = [];
-  const g = loadGas(PATH, { props: { ...(extra.props || {}) }, fetch: (url, o, resp) => {
+  const g = loadGas(PATH, { props: { ...(extra.props || {}) }, mailThrow: extra.mailThrow, fetch: (url, o, resp) => {
     if (url.startsWith('https://api.telegram.org/')) {
       const method = url.split('/').pop(), body = o.payload ? JSON.parse(o.payload) : {};
       if (method === 'getUpdates') return resp(200, { ok: true, result: updates.splice(0).filter((u) => u.update_id >= (body.offset || 0)) });
@@ -642,4 +642,156 @@ test('bảng tài khoản lập từ bản cũ: tự nối thêm cột mới, d�
   const moi = sh.rows[2];
   assert.equal(moi[sh.rows[0].indexOf('email')], 'b@mail.com');
   assert.equal(moi[sh.rows[0].indexOf('nghe_nghiep')], 'Chuyên viên phân tích', 'dòng mới ghi đúng cột theo tiêu đề');
+});
+
+// ─── Ủng hộ ───────────────────────────────────────────────
+
+/** Gõ một lệnh trong chat quản trị rồi trả về tin bot đáp lại. */
+function goLenh(t, text) {
+  t.updates.push(msg(text));
+  t.g.run('hoiTelegram()');
+  const ra = t.sent.filter((x) => x.method === 'sendMessage');
+  return ra.length ? ra[ra.length - 1].body.text : '';
+}
+
+test('chưa đặt số tài khoản: trang không hiện phần ủng hộ', () => {
+  const r = setup().post({ action: 'ungho' });
+  assert.equal(r.ok, true);
+  assert.equal(r.data.ungho, null, 'không có thì trả null, trang tự ẩn');
+});
+
+test('/ungho đặt số tài khoản: nhận mã ngắn hoặc 6 số BIN, trang lấy về đủ để dựng QR', () => {
+  const t = setupTg();
+  const kq = goLenh(t, '/ungho vcb 1012345678 NGUYEN VAN A');
+  assert.match(kq, /Vietcombank/);
+  assert.match(kq, /970436/);
+  const d = t.g.post({ action: 'ungho' }).data.ungho;
+  assert.deepEqual({ bin: d.bin, stk: d.stk, chu_tk: d.chu_tk }, { bin: '970436', stk: '1012345678', chu_tk: 'NGUYEN VAN A' });
+  assert.ok(d.loi_nhan, 'có nội dung chuyển khoản mặc định');
+  // Ngân hàng chưa có trong danh sách mã ngắn: gõ thẳng 6 số BIN.
+  goLenh(t, '/ungho 970499 999888777 CTY ABC');
+  assert.equal(t.g.post({ action: 'ungho' }).data.ungho.bin, '970499');
+});
+
+test('/ungho: ngân hàng lạ hoặc số tài khoản sai thì báo lỗi, không ghi gì', () => {
+  const t = setupTg();
+  assert.match(goLenh(t, '/ungho khongcobank 1012345678 A'), /Chưa rõ ngân hàng/);
+  assert.match(goLenh(t, '/ungho vcb 123 A'), /Số tài khoản chưa đúng/);
+  assert.equal(t.g.post({ action: 'ungho' }).data.ungho, null);
+});
+
+test('/ungho off: ẩn phần ủng hộ trên trang; /ungho không tham số: xem lại thông tin đang hiện', () => {
+  const t = setupTg();
+  assert.match(goLenh(t, '/ungho'), /Chưa đặt số tài khoản/);
+  goLenh(t, '/ungho mb 0376292148 NGUYEN HOANG');
+  const xem = goLenh(t, '/ungho');
+  assert.match(xem, /MB Bank/);
+  assert.match(xem, /0376292148/);
+  assert.match(goLenh(t, '/ungho off'), /Đã ẩn/);
+  assert.equal(t.g.post({ action: 'ungho' }).data.ungho, null);
+});
+
+// ─── Quên mật khẩu ────────────────────────────────────────
+
+const maTrongThu = (g, i = 0) => /(\d{6})/.exec(g.mails[i].body)[1];
+
+test('quên mật khẩu: máy chủ gửi mã 6 số qua email, nhập mã là đổi được mật khẩu và vào luôn', () => {
+  const t = setupTg();
+  const g = t.g;
+  signup(g);
+  assert.equal(g.post({ action: 'quenmk', email: USER.email }).ok, true);
+  assert.equal(g.mails.length, 1);
+  assert.equal(g.mails[0].to, 'a@mail.com');
+  assert.ok(!g.mails[0].body.includes(USER.mk), 'thư không chứa mật khẩu cũ');
+
+  const d = g.post({ action: 'datlaimk', email: USER.email, ma: maTrongThu(g), mk: 'matkhau-moi-123' });
+  assert.equal(d.ok, true, JSON.stringify(d));
+  assert.equal(d.data.me.email, 'a@mail.com', 'đổi xong vào được luôn, không phải đăng nhập lại');
+  assert.equal(login(g).ok, false, 'mật khẩu cũ không dùng được nữa');
+  assert.equal(login(g, { mk: 'matkhau-moi-123' }).ok, true);
+  assert.match(texts(t.sent), /đã tự đặt lại mật khẩu/, 'bot báo quản trị');
+});
+
+test('quên mật khẩu: email chưa đăng ký vẫn trả ok (không để ai dò danh sách email)', () => {
+  const g = setup();
+  signup(g);
+  assert.equal(g.post({ action: 'quenmk', email: 'khong-co@mail.com' }).ok, true);
+  assert.equal(g.mails.length, 0, 'không có tài khoản thì không gửi thư');
+});
+
+test('mã đặt lại: dùng một lần, sai nhiều lần thì hết hiệu lực, quá 15 phút phải xin lại', () => {
+  const g = setup();
+  signup(g);
+  g.post({ action: 'quenmk', email: USER.email });
+  const ma = maTrongThu(g), sai = String((Number(ma) + 1) % 1000000).padStart(6, '0');
+  for (let i = 0; i < 5; i += 1) assert.equal(g.post({ action: 'datlaimk', email: USER.email, ma: sai, mk: 'mk-moi-12345' }).code, 'ma_sai', `lần ${i + 1}`);
+  assert.equal(g.post({ action: 'datlaimk', email: USER.email, ma, mk: 'mk-moi-12345' }).code, 'ma_het', 'sai 5 lần thì mã đúng cũng không dùng được');
+
+  const g2 = setup();
+  signup(g2);
+  g2.post({ action: 'quenmk', email: USER.email });
+  const ma2 = maTrongThu(g2);
+  assert.equal(g2.post({ action: 'datlaimk', email: USER.email, ma: ma2, mk: 'mk-moi-12345' }).ok, true);
+  assert.equal(g2.post({ action: 'datlaimk', email: USER.email, ma: ma2, mk: 'mk-khac-12345' }).code, 'ma_het', 'mã chỉ dùng một lần');
+
+  const g3 = setup();
+  signup(g3);
+  g3.post({ action: 'quenmk', email: USER.email });
+  const ma3 = maTrongThu(g3);
+  g3.tick(16 * 60 * 1000);
+  assert.equal(g3.post({ action: 'datlaimk', email: USER.email, ma: ma3, mk: 'mk-moi-12345' }).code, 'ma_het');
+});
+
+test('xin mã: chặn spam theo từng email, email sai định dạng bị từ chối luôn', () => {
+  const g = setup();
+  signup(g);
+  for (let i = 0; i < 3; i += 1) assert.equal(g.post({ action: 'quenmk', email: USER.email }).ok, true, `lần ${i + 1}`);
+  assert.equal(g.post({ action: 'quenmk', email: USER.email }).code, 'cho', 'quá 3 lần mỗi giờ cho một email');
+  assert.equal(g.mails.length, 3);
+  assert.equal(g.post({ action: 'quenmk', email: 'sai' }).code, 'email_sai');
+});
+
+test('đặt lại mật khẩu: mật khẩu mới quá ngắn hoặc tài khoản bị khoá đều bị từ chối', () => {
+  const g = setup();
+  signup(g);
+  g.post({ action: 'quenmk', email: USER.email });
+  const ma = maTrongThu(g);
+  assert.equal(g.post({ action: 'datlaimk', email: USER.email, ma, mk: 'ngan' }).code, 'mk_ngan');
+  const r = rows(g);
+  r[1][r[0].indexOf('trangthai')] = 'off';
+  assert.equal(g.post({ action: 'datlaimk', email: USER.email, ma, mk: 'matkhau-moi-123' }).code, 'bi_khoa');
+});
+
+test('không gửi được email (hết hạn mức Gmail) → báo quản trị, người dùng vẫn nhận phản hồi', () => {
+  const t = setupTg({ mailThrow: 'Service invoked too many times' });
+  signup(t.g);
+  assert.equal(t.g.post({ action: 'quenmk', email: USER.email }).ok, true);
+  assert.match(texts(t.sent), /Không gửi được email/);
+});
+
+// ─── Quản lý tài khoản bằng bot ───────────────────────────
+
+test('/mkmoi: bot tự sinh mật khẩu mạnh, đăng nhập được ngay bằng mật khẩu đó', () => {
+  const t = setupTg();
+  signup(t.g);
+  const mk = /<code>([^<]+)<\/code>/.exec(goLenh(t, '/mkmoi a@mail.com'))[1];
+  assert.ok(mk.length >= 12, mk);
+  assert.doesNotMatch(mk, /[0O1lI]/, 'bỏ ký tự dễ nhìn lẫn khi đọc qua Telegram');
+  assert.equal(login(t.g, { mk }).ok, true);
+  assert.equal(login(t.g).ok, false, 'mật khẩu cũ hết tác dụng');
+  assert.match(goLenh(t, '/mkmoi khong-co@mail.com'), /Không tìm thấy/);
+});
+
+test('/moi: xem các tài khoản mới đăng ký gần nhất, mới nhất lên trước', () => {
+  const t = setupTg();
+  signup(t.g);
+  signup(t.g, { email: 'b@mail.com', ten: 'Trần Thị B' });
+  const kq = goLenh(t, '/moi');
+  assert.match(kq, /b@mail\.com/);
+  assert.ok(kq.indexOf('b@mail.com') < kq.indexOf('a@mail.com'), 'mới nhất lên trước');
+});
+
+test('/help kể cả lệnh mới: /mkmoi, /moi, /ungho', () => {
+  const kq = goLenh(setupTg(), '/help');
+  for (const l of ['/mkmoi', '/moi', '/ungho']) assert.ok(kq.includes(l), `thiếu ${l} trong /help`);
 });

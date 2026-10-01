@@ -145,7 +145,7 @@ function renderGate(enter) {
     field('liEmail', t('au.email'), { type: 'email', autocomplete: 'username', inputmode: 'email', placeholder: 'ban@email.com' }),
     pw('liPass', t('au.pass'), 'current-password'),
     h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.login')),
-    h('p', { class: 'fine' }, t('au.forgot')));
+    h('p', { class: 'fine' }, h('button', { type: 'button', class: 'auth-link', disabled: off, onclick: () => moQuen() }, t('au.forgot'))));
   const signupForm = h('form', { class: 'auth-form', id: 'signupForm', novalidate: true, hidden: true },
     field('suTen', t('au.name'), { autocomplete: 'name', placeholder: t('au.name.ph'), maxlength: '60' }),
     field('suTuoi', t('au.age'), { type: 'number', min: '12', max: '100', inputmode: 'numeric', placeholder: '25' }),
@@ -159,13 +159,34 @@ function renderGate(enter) {
     h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.signup')),
     h('p', { class: 'fine' }, t('au.free')));
 
+  // Quên mật khẩu: máy chủ gửi mã 6 số qua email, nhập mã là đổi được mật khẩu và vào luôn.
+  const resetForm = h('form', { class: 'auth-form', id: 'resetForm', novalidate: true, hidden: true },
+    field('qmEmail', t('au.email'), { type: 'email', autocomplete: 'username', inputmode: 'email', placeholder: 'ban@email.com' }),
+    h('div', { class: 'fld', id: 'qmStep2', hidden: true },
+      h('label', { htmlFor: 'qmMa' }, t('au.code')),
+      h('input', { id: 'qmMa', class: 'inp', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6', placeholder: '123456' })),
+    h('div', { id: 'qmStep2b', hidden: true }, pw('qmPass', t('au.pass.new'), 'new-password')),
+    h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.sendCode')),
+    h('p', { class: 'fine auth-back' }, h('button', { type: 'button', class: 'auth-link', onclick: () => $('#tab-login').click() }, t('au.backLogin'))));
+
   const tabs = h('div', { class: 'seg', role: 'group', 'aria-label': t('au.tabs.aria') });
   const tab = (key, label, form) => h('button', { type: 'button', id: `tab-${key}`, 'aria-controls': form.id, 'aria-pressed': String(key === 'login'), onclick: () => {
     tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.id === `tab-${key}`)));
-    loginForm.hidden = key !== 'login'; signupForm.hidden = key !== 'signup';
+    loginForm.hidden = key !== 'login'; signupForm.hidden = key !== 'signup'; resetForm.hidden = true;
+    tabs.hidden = false;
+    phu.textContent = t('au.welcome.sub');
     setGateMsg();
   } }, label);
   tabs.append(tab('login', t('au.login'), loginForm), tab('signup', t('au.signup'), signupForm));
+
+  /** Mở form đặt lại mật khẩu (ẩn hai tab để không rối). */
+  const moQuen = () => {
+    loginForm.hidden = true; signupForm.hidden = true; resetForm.hidden = false; tabs.hidden = true;
+    phu.textContent = t('au.forgot.sub');
+    setGateMsg();
+    $('#qmEmail').value = $('#liEmail').value.trim();
+    $('#qmEmail').focus();
+  };
 
   const busy = (form, on, label) => {
     const b = form.querySelector('button[type=submit]');
@@ -200,17 +221,43 @@ function renderGate(enter) {
     finally { busy(signupForm, false, t('au.signup')); }
   });
 
+  resetForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('#qmEmail').value.trim();
+    if (!email) return setGateMsg('err', t('au.needEmail'));
+    const buoc2 = !$('#qmStep2').hidden;
+    const nhan = buoc2 ? t('au.setPass') : t('au.sendCode');
+    busy(resetForm, true, nhan);
+    try {
+      if (!buoc2) {
+        const d = await callApi(API, { action: 'quenmk', email });
+        $('#qmStep2').hidden = false; $('#qmStep2b').hidden = false;
+        resetForm.querySelector('button[type=submit]').textContent = t('au.setPass');
+        setGateMsg('ok', t('au.codeSent', { phut: d.phut || 15 }));
+        $('#qmMa').focus();
+        return;
+      }
+      const ma = $('#qmMa').value.trim(), mk = $('#qmPass').value;
+      if (!ma) return setGateMsg('err', t('au.needCode'));
+      if (mk.length < 8) return setGateMsg('err', t('au.shortPass'));
+      const d = await callApi(API, { action: 'datlaimk', email, ma, mk });
+      enter(d.token, d.me);
+    } catch (err) { setGateMsg(err.code === 'cho' ? 'warn' : 'err', err.message); }
+    finally { busy(resetForm, false, !$('#qmStep2').hidden ? t('au.setPass') : t('au.sendCode')); }
+  });
+
   // Lý do phải có tài khoản — đặt ngay đầu hộp để người dùng hiểu vì sao bị chặn giữa chừng.
   const vhy = h('p', { class: 'auth-why' });
+  const phu = h('p', { class: 'auth-sub' }, t('au.welcome.sub'));
   const cu = $('#authDlg');
   const dlg = h('dialog', { class: 'authdlg', id: 'authDlg', 'aria-label': t('au.card.aria') },
     h('button', { type: 'button', class: 'icon-btn sm auth-x', 'aria-label': t('vw.close'), onclick: () => dlg.close() }, '✕'),
     h('section', { class: 'auth-card' },
       h('h2', {}, t('au.welcome')),
-      h('p', { class: 'auth-sub' }, t('au.welcome.sub')),
+      phu,
       vhy,
       off ? h('p', { class: 'msg warn' }, t('au.off')) : null,
-      tabs, loginForm, signupForm, msg));
+      tabs, loginForm, signupForm, resetForm, msg));
   if (cu) cu.replaceWith(dlg); else document.body.append(dlg);
 
   moHop = (nhan) => {
@@ -223,14 +270,15 @@ function renderGate(enter) {
   return dlg;
 }
 
-const O_MAN = ['liEmail', 'liPass', 'suTen', 'suTuoi', 'suEmail', 'suSdt', 'suNN', 'suMD', 'suPass'];
+const O_MAN = ['liEmail', 'liPass', 'suTen', 'suTuoi', 'suEmail', 'suSdt', 'suNN', 'suMD', 'suPass', 'qmEmail', 'qmMa', 'qmPass'];
 
 /** Chụp lại những gì người dùng đang gõ dở trên màn đăng nhập (trước khi vẽ lại vì đổi ngôn ngữ). */
 function chupMan() {
   const msg = $('#authDlg .auth-msg .msg');
   return {
     o: Object.fromEntries(O_MAN.map((id) => [id, $(`#${id}`)?.value || ''])),
-    tab: $('#signupForm')?.hidden === false ? 'signup' : 'login',
+    tab: $('#resetForm')?.hidden === false ? 'reset' : $('#signupForm')?.hidden === false ? 'signup' : 'login',
+    buoc2: $('#qmStep2')?.hidden === false,
     msg: msg ? { kind: [...msg.classList].find((c) => c !== 'msg') || 'err', text: msg.textContent } : null,
   };
 }
@@ -238,6 +286,13 @@ function chupMan() {
 function datLaiMan(giu) {
   for (const [id, v] of Object.entries(giu.o)) { const el = $(`#${id}`); if (el && v) el.value = v; }
   if (giu.tab === 'signup') $('#tab-signup')?.click();
+  if (giu.tab === 'reset') {
+    $('#loginForm .auth-link')?.click();
+    if (giu.buoc2) {
+      $('#qmStep2').hidden = false; $('#qmStep2b').hidden = false;
+      $('#resetForm button[type=submit]').textContent = t('au.setPass');
+    }
+  }
   if (giu.msg) setGateMsg(giu.msg.kind, giu.msg.text);
 }
 
