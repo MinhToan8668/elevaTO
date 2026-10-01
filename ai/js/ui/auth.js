@@ -183,7 +183,6 @@ function renderGate(enter) {
   });
 
   mount($('#gate'),
-    brandBand(),
     h('div', { class: 'gate-in' },
       h('section', { class: 'hero' },
         h('span', { class: 'eyebrow' }, t('au.eyebrow')),
@@ -216,12 +215,6 @@ function datLaiMan(giu) {
   for (const [id, v] of Object.entries(giu.o)) { const el = $(`#${id}`); if (el && v) el.value = v; }
   if (giu.tab === 'signup') $('#tab-signup')?.click();
   if (giu.msg) setGateMsg(giu.msg.kind, giu.msg.text);
-}
-
-/** Dải thương hiệu: logo elevaTO cỡ lớn, giống dải trong ứng dụng. */
-function brandBand() {
-  const logo = (k) => h('img', { class: `logo-xl logo-${k}`, src: `../assets/logo-on-${k}.svg`, alt: 'elevaTO — Fuel Your Financial Journey', width: 260, height: 97 });
-  return h('div', { class: 'bband' }, logo('light'), logo('dark'));
 }
 
 function feat(n, title, text) {

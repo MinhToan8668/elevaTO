@@ -401,12 +401,12 @@ test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì 
   assert.deepEqual(errors, []);
 });
 
-test('thương hiệu: phông Be Vietnam Pro nằm trong repo, dải logo lớn căn giữa, logo đổi theo giao diện sáng/tối', { timeout: 60_000 }, async () => {
+test('thương hiệu: phông Be Vietnam Pro nằm trong repo, logo lớn căn giữa thanh đầu trang, đổi theo giao diện sáng/tối', { timeout: 60_000 }, async () => {
   const { page, errors } = await newPage();
   // Chặn mọi lời gọi ra ngoài: trang phải tự đủ phông chữ.
   await page.route((u) => !u.href.startsWith(base) && !u.href.startsWith('https://script.google.com'), (r) => r.abort());
   await page.goto(`${base}/ai/`);
-  await page.waitForSelector('#gate .bband');
+  await page.waitForSelector('#gate .auth-card');
   await page.evaluate(() => document.fonts.ready);
   // Kiểm cả nét thường lẫn nét đậm, với chữ có dấu tiếng Việt (bộ ký tự 'vietnamese') và chữ latin.
   const nap = await page.evaluate(() => ['400 15px "Be Vietnam Pro"', '800 15px "Be Vietnam Pro"']
@@ -414,23 +414,30 @@ test('thương hiệu: phông Be Vietnam Pro nằm trong repo, dải logo lớn 
   assert.deepEqual(nap, [true, true, true, true], 'phông Be Vietnam Pro phải nạp được từ vendor/fonts');
   assert.match(await page.evaluate(() => getComputedStyle(document.body).fontFamily), /Be Vietnam Pro/);
 
-  const band = page.locator('#gate .bband');
-  const lon = band.locator('.logo-xl.logo-light');
-  assert.ok(await lon.evaluate((img) => img.naturalWidth > 0), 'logo lớn tải được');
-  assert.ok(await lon.evaluate((img) => img.getBoundingClientRect().height >= 80), 'logo phải to');
+  // Logo nằm trên thanh đầu trang, cỡ lớn và căn giữa thanh — không còn dải logo riêng giữa trang.
+  assert.equal(await page.locator('.bband, .logo-xl').count(), 0, 'đã bỏ dải logo giữa trang');
+  const lon = page.locator('.top .brand .logo-light');
+  assert.ok(await lon.evaluate((img) => img.naturalWidth > 0), 'logo tải được');
+  assert.ok(await lon.evaluate((img) => img.getBoundingClientRect().height >= 50), 'logo trên thanh phải to');
   // Khẩu hiệu nằm sẵn trong logo nên không viết thêm dòng chữ trùng lặp.
-  assert.equal(await band.locator('.tagline').count(), 0);
+  assert.equal(await page.locator('.tagline').count(), 0);
   assert.match(await lon.getAttribute('alt'), /Fuel Your Financial Journey/);
-  // Dải nằm giữa trang
-  const [bw, pw] = await band.evaluate((el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, document.documentElement.clientWidth / 2]; });
-  assert.ok(Math.abs(bw - pw) < 2, `dải thương hiệu phải căn giữa (${bw} vs ${pw})`);
-  // Màn đăng nhập vẫn là hai cột, không bị dải thương hiệu đè layout.
-  assert.ok(await page.locator('#gate .gate-in .hero h1').isVisible(), 'phần giới thiệu bên trái vẫn còn');
-  assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector('.gate-in')).gridTemplateColumns.split(' ').length === 2));
+  const [bw, pw] = await page.locator('.top .brand').evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return [r.left + r.width / 2, document.documentElement.clientWidth / 2];
+  });
+  assert.ok(Math.abs(bw - pw) < 2, `logo phải căn giữa thanh đầu trang (${bw} vs ${pw})`);
+  // Logo không được đè lên tên công cụ bên trái hay cụm nút bên phải.
+  const cham = await page.evaluate(() => {
+    const r = (sel) => document.querySelector(sel)?.getBoundingClientRect();
+    const b = r('.top .brand'), p = r('.top .product'), c = r('.top-r');
+    return [p && p.right > b.left, c && c.left < b.right];
+  });
+  assert.deepEqual(cham, [false, false], 'logo chen vào tên công cụ hoặc cụm nút');
 
   await page.emulateMedia({ colorScheme: 'dark' });
-  assert.equal(await page.locator('#gate .bband .logo-light').isVisible(), false, 'giao diện tối: ẩn logo bản sáng');
-  assert.ok(await page.locator('#gate .bband .logo-dark').isVisible(), 'giao diện tối: hiện logo bản tối');
+  assert.equal(await page.locator('.top .brand .logo-light').isVisible(), false, 'giao diện tối: ẩn logo bản sáng');
+  assert.ok(await page.locator('.top .brand .logo-dark').isVisible(), 'giao diện tối: hiện logo bản tối');
   await page.emulateMedia({ colorScheme: 'light' });
   assert.deepEqual(errors, []);
 });
