@@ -323,10 +323,14 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
     const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
     return Object.fromEntries(wb.SheetNames.map((n) => [n, window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })]));
   }, (await readFile(table.path)).toString('base64'));
-  assert.deepEqual(Object.keys(book), ['Tổng quan', 'Tình hình tài chính', 'Kết quả kinh doanh', 'Lưu chuyển tiền tệ']);
-  const codes = (sheet) => book[sheet].slice(4).map((r) => r[0]).filter(Boolean).map(String);
+  // Tài khoản thử nghiệm là học viên nên có cả sheet thuyết minh; dòng Năm / Actual-Forecast
+  // đẩy phần số liệu xuống dòng 7 (chỉ số 6 trong mảng 0-based).
+  assert.deepEqual(Object.keys(book).slice(0, 4), ['Tổng quan', 'Tình hình tài chính', 'Kết quả kinh doanh', 'Lưu chuyển tiền tệ']);
+  assert.ok(Object.keys(book).includes('Mảng kinh doanh'), Object.keys(book).join(' | '));
+  const codes = (sheet) => book[sheet].slice(6).map((r) => r[0]).filter(Boolean).map(String);
   assert.deepEqual(codes('Kết quả kinh doanh'), ['60'], 'KQKD chỉ còn dòng được tick');
   assert.ok(codes('Tình hình tài chính').includes('111'), 'bảng khác không bị bỏ tick');
+  assert.equal(book['Kết quả kinh doanh'][4][1], 'Actual / Forecast', 'bố cục theo sheet của model');
 
   // Form chi tiết elevaTO: tải thẳng, không cần đưa file model vào
   const mdl = await download(page, () => page.click('#exportBox button:has-text("Tải Form chi tiết elevaTO")'));
@@ -335,15 +339,18 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
     const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
     return Object.fromEntries(wb.SheetNames.map((n) => [n, window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })]));
   }, (await readFile(mdl.path)).toString('base64'));
-  assert.ok(Object.keys(mBook).includes('Kết quả kinh doanh'), Object.keys(mBook).join(' | '));
-  const kq = mBook['Kết quả kinh doanh'].slice(4);
-  const dt = kq.find((r) => r[1] === 'Doanh thu thuần');
-  // BCTC mẫu in "Đơn vị tính: VND" → file xuất ra cũng bằng đồng, không quy về triệu nữa.
-  assert.ok(dt && dt.slice(2).some((v) => Number(v) === 500e9), `doanh thu 500 tỷ đồng: ${JSON.stringify(dt)}`);
+  // Sao y sheet 03.Input_FS của model: giữ nguyên số dòng, đơn vị triệu đồng để dán thẳng vào model.
+  assert.deepEqual(Object.keys(mBook), ['Tổng quan', '03.Input_FS'], Object.keys(mBook).join(' | '));
+  const ifs = mBook['03.Input_FS'];
+  assert.equal(ifs[3][1], 'Năm', 'dòng 4 của model là dòng Năm');
+  assert.equal(ifs[7][1], 'Net revenue', 'dòng 8 của model là Net revenue');
+  assert.ok(ifs[7].slice(2).some((v) => Number(v) === 500000), `doanh thu 500 tỷ → 500.000 triệu: ${JSON.stringify(ifs[7])}`);
 
-  // Không còn ô chọn đơn vị khi xuất: file giữ đúng đơn vị in trên BCTC, đổi hiển thị thì làm trong Excel.
+  // Đơn vị không còn chọn ở phần xuất mà chọn ngay trong file (sheet Tổng quan của Form chuẩn hóa).
   assert.equal(await page.locator('#exportBox .unit-pick').count(), 0, 'đã bỏ ô chọn đơn vị ở phần xuất');
-  assert.match(await page.locator('#exportBox .cardx .fine-l').first().innerText(), /đơn vị ghi trên BCTC \(đồng\)/);
+  // BCTC mẫu in "Đơn vị tính: VND" nên ô chọn đơn vị trong file mở ra ở đồng.
+  assert.equal(book['Tổng quan'][4][1], 'đồng', 'ô chọn đơn vị nằm trong file');
+  assert.match(await page.locator('#exportBox .cardx .fine-l').first().innerText(), /ô chọn đơn vị, đổi là mọi sheet tự tính lại/);
 
   // Tải lại trang → mở lại phiên tự lưu, không gọi thêm AI
   await page.waitForTimeout(1000);                                   // autosave (0,8 giây)
@@ -512,7 +519,10 @@ test('chọn ngôn ngữ Anh / Việt: đổi tại chỗ, nhớ lựa chọn, t
   assert.match(f.name, /Standard 2026 form\.xlsx$/, 'tên file theo ngôn ngữ');
   const o = await readXlsxCell(page, f.path, 'Financial position', /^A[23]$/);
   assert.equal(o.A2, 'STATEMENT OF FINANCIAL POSITION');
-  assert.match(o.A3, /^Unit: million VND/);
+  assert.match(o.A3, /^Unit as chosen on the Overview sheet/, 'đơn vị chọn trong file, chú thích cũng theo ngôn ngữ');
+  const ov = await readXlsxCell(page, f.path, 'Overview', /^[AB]5$/);
+  assert.equal(ov.A5, 'Display currency unit');
+  assert.equal(ov.B5, 'million VND', 'nạp từ file Excel nên đơn vị mặc định là triệu đồng');
 
   // Trang PDF: nút trong bảng chọn trang nằm trong bộ nhớ đệm riêng — phải đổi chữ theo.
   await page.setInputFiles('#fileInput', await bctcPdf());

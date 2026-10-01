@@ -20,7 +20,7 @@ const ds = addExtraction(emptyDataset(), {
 });
 
 test('Form chuẩn hóa 2026: đủ sheet, số đúng đơn vị, không cần file mẫu, SheetJS mở được', () => {
-  const files = buildFormXlsx(ds, { unit: 1e6, unitLabel: 'triệu đồng' });
+  const files = buildFormXlsx(ds, { unit: 1e6 });
   for (const f of ['[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/styles.xml']) assert.ok(files[f], f);
   const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
   assert.deepEqual(sheetNames(wb), ['Tổng quan', 'Tình hình tài chính', 'Kết quả kinh doanh']);
@@ -30,14 +30,41 @@ test('Form chuẩn hóa 2026: đủ sheet, số đúng đơn vị, không cần 
   assert.equal(bs[`D${row}`], 60000);
   assert.match(files[sheetPathByName(wb, rels, 'Tổng quan')], /CTCP &lt;ABC&gt; &amp; Co/);
   // Đọc lại bằng SheetJS như Excel sẽ mở
-  const zip = { ...files };
-  const book = XLSX.read(zipFiles(zip), { type: 'buffer' });
+  const book = XLSX.read(zipFiles({ ...files }), { type: 'buffer' });
   assert.deepEqual([...book.SheetNames], ['Tổng quan', 'Tình hình tài chính', 'Kết quả kinh doanh']);
-  assert.equal(book.Sheets['Kết quả kinh doanh'].D5?.v ?? findVal(book.Sheets['Kết quả kinh doanh'], '01'), 500000);
+  assert.equal(findVal(book.Sheets['Kết quả kinh doanh'], '01'), 500000);
+});
+
+test('bố cục theo sheet của model: dòng Năm, dòng Actual / Forecast, dải mục lớn, dòng tỷ lệ', () => {
+  const files = buildFormXlsx(ds, { unit: 1e6 });
+  const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
+  const kq = readCells(files[sheetPathByName(wb, rels, 'Kết quả kinh doanh')], []);
+  assert.equal(kq.B4, 'Chỉ tiêu');
+  assert.equal(kq.B5, 'Actual / Forecast');
+  assert.equal(kq.C5, '2024A', 'form chuẩn hóa chỉ có số thực tế nên mọi cột là A');
+  assert.equal(kq.D5, '2025A');
+  const nhan = Object.values(kq).filter((v) => typeof v === 'string');
+  assert.ok(nhan.includes('Tỷ lệ lợi nhuận gộp / doanh thu thuần'), 'phải có dòng biên lợi nhuận suy ra');
+  const bs = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
+  assert.match(bs, / s="18"/, 'dòng cấp 0 (A. Tài sản ngắn hạn…) dùng dải mục lớn');
+});
+
+test('dòng tỷ lệ là công thức, kỳ đầu để trống vì không có kỳ trước để so', () => {
+  const two = [2024, 2025].reduce((d, y) => addExtraction(d, {
+    file: `BCTC ${y}.pdf`, company: 'CTCP Hai Kỳ', meta: { ngay_ket_thuc: `${y}-12-31`, so_thang: 12 }, warnings: [], notes: {},
+    statements: { IS: { cur: { 'IS:01': 500e9, 'IS:11': 300e9 }, prev: {} } },
+  }), emptyDataset());
+  const files = buildFormXlsx(two, { unit: 1e6 });
+  const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
+  const xml = files[sheetPathByName(wb, rels, 'Kết quả kinh doanh')];
+  const cells = readCells(xml, []);
+  const n = Object.entries(cells).find(([k, v]) => /^B\d+$/.test(k) && v === 'Tăng trưởng doanh thu thuần (YoY)')[0].slice(1);
+  assert.doesNotMatch(xml, new RegExp(`<c r="C${n}"[^>]*><f>`), 'kỳ đầu không có dòng YoY');
+  assert.match(xml, new RegExp(`<c r="D${n}"[^>]*><f>IFERROR\\(D\\d+/C\\d+-1`), 'kỳ sau so với kỳ trước');
 });
 
 test('chỉ các dòng được tick; dòng tổng in đậm; cố định dòng tiêu đề', () => {
-  const files = buildFormXlsx(ds, { unit: 1, unitLabel: 'đồng', keys: new Set(['BS:111', 'BS:280']) });
+  const files = buildFormXlsx(ds, { unit: 1, keys: new Set(['BS:111', 'BS:280']) });
   const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
   assert.deepEqual(sheetNames(wb), ['Tổng quan', 'Tình hình tài chính']);
   const xml = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
@@ -62,7 +89,7 @@ const dsDu = addExtraction(emptyDataset(), {
 });
 
 test('dòng tổng ghi bằng công thức Excel: sửa dòng con thì tổng tự nhảy', () => {
-  const files = buildFormXlsx(dsDu, { unit: 1, unitLabel: 'đồng' });
+  const files = buildFormXlsx(dsDu, { unit: 1 });
   const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
   const xml = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
   const f = [...xml.matchAll(/<c r="(C\d+)"[^>]*><f>([^<]+)<\/f>/g)].map((m) => `${m[1]}=${m[2]}`);
@@ -71,11 +98,11 @@ test('dòng tổng ghi bằng công thức Excel: sửa dòng con thì tổng t�
 });
 
 test('cuối báo cáo có dòng KIỂM TRA cân đối, viết bằng công thức, khớp thì không tô đỏ', () => {
-  const files = buildFormXlsx(dsDu, { unit: 1, unitLabel: 'đồng' });
+  const files = buildFormXlsx(dsDu, { unit: 1 });
   const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
   const xml = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
   assert.match(xml, /KIỂM TRA: Tổng tài sản/);
-  const kt = /<row r="(\d+)"><c r="A\d+"[^>]*><is><t[^>]*><\/t><\/is><\/c><c r="B\d+"[^>]*><is><t[^>]*>KIỂM TRA[^<]*/.exec(xml);
+  const kt = /<row r="(\d+)"><c r="A\d+"[^/]*\/><c r="B\d+"[^>]*><is><t[^>]*>KIỂM TRA[^<]*/.exec(xml);
   assert.ok(kt, 'không thấy dòng kiểm tra');
   const dong = xml.slice(xml.indexOf(`<row r="${kt[1]}"`));
   assert.match(dong, /<f>C\d+-\(C\d+\+C\d+\)<\/f>/, 'dòng kiểm tra phải là công thức');
@@ -84,25 +111,61 @@ test('cuối báo cáo có dòng KIỂM TRA cân đối, viết bằng công th�
 test('ô lệch so với số in trên BCTC được tô đỏ', () => {
   const xau = JSON.parse(JSON.stringify(dsDu));
   xau.values[dsDu.periods[0].id]['BS:280'] += 9e9;              // tổng tài sản không khớp các dòng con
-  const files = buildFormXlsx(xau, { unit: 1, unitLabel: 'đồng' });
+  const files = buildFormXlsx(xau, { unit: 1 });
   const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
   const xml = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
   const soLech = (xml.match(/ s="15"/g) || []).length;         // 15 = kiểu số lệch (đỏ, nền hồng)
   assert.ok(soLech >= 1, 'phải có ít nhất một ô tô đỏ');
-  const sach = buildFormXlsx(dsDu, { unit: 1, unitLabel: 'đồng' });
+  const sach = buildFormXlsx(dsDu, { unit: 1 });
   const xmlSach = sach[sheetPathByName(sach['xl/workbook.xml'], sach['xl/_rels/workbook.xml.rels'], 'Tình hình tài chính')];
   assert.equal((xmlSach.match(/ s="15"/g) || []).length, 0, 'dữ liệu khớp thì không tô đỏ ô nào');
 });
 
-test('đơn vị hiển thị trong file do người dùng chọn, số gốc vẫn là đồng', () => {
-  const trieu = buildFormXlsx(ds, { unit: 1e6, unitLabel: 'triệu đồng' });
-  const dong = buildFormXlsx(ds, { unit: 1, unitLabel: 'đồng' });
-  const lay = (f) => readCells(f[sheetPathByName(f['xl/workbook.xml'], f['xl/_rels/workbook.xml.rels'], 'Tình hình tài chính')], []);
-  const c1 = Object.entries(lay(trieu)).find(([k]) => /^C\d+$/.test(k) && Number(lay(trieu)[k]));
-  const c2 = lay(dong)[c1[0]];
-  assert.equal(Math.round(Number(c2) / Number(c1[1])), 1e6, 'cùng ô: bản đồng gấp 1 triệu lần bản triệu đồng');
-  assert.match(trieu['xl/styles.xml'], /#,##0\.0/);
-  assert.match(dong['xl/styles.xml'], /#,##0;/);
+test('đơn vị chọn ngay trong file: ô chọn có dropdown, mọi ô số chia cho tên DonVi', () => {
+  const files = buildFormXlsx(ds, { unit: 1e6 });
+  const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
+  assert.match(wb, /<definedName name="DonVi">'Tổng quan'!\$C\$5<\/definedName>/, 'DonVi phải trỏ tới ô hệ số');
+  assert.ok(wb.indexOf('<definedNames>') > wb.indexOf('<sheets>'), 'definedNames nằm sau sheets');
+  assert.ok(wb.indexOf('<definedNames>') < wb.indexOf('<calcPr'), 'definedNames nằm trước calcPr');
+  const tq = files[sheetPathByName(wb, rels, 'Tổng quan')];
+  assert.match(tq, /<dataValidation type="list"[^>]*sqref="B5"/, 'ô B5 là danh sách chọn đơn vị');
+  assert.match(tq, /&quot;đồng,nghìn đồng,triệu đồng,tỷ đồng&quot;/);
+  assert.match(readCells(tq, []).B5, /^triệu đồng$/, 'mở file ra đang ở đơn vị đã chọn trên trang');
+  const bs = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
+  assert.match(bs, /<f>50000000000\/DonVi<\/f>/, 'số gốc giữ nguyên đồng, chia cho DonVi khi hiển thị');
+});
+
+test('số đã tính sẵn khớp đơn vị chọn sẵn, nên trình xem không tự tính cũng thấy số', () => {
+  const lay = (unit) => {
+    const f = buildFormXlsx(ds, { unit });
+    const c = readCells(f[sheetPathByName(f['xl/workbook.xml'], f['xl/_rels/workbook.xml.rels'], 'Tình hình tài chính')], []);
+    const r = Object.entries(c).find(([k, v]) => /^A\d+$/.test(k) && v === '111')[0].slice(1);
+    return Number(c[`D${r}`]);
+  };
+  assert.equal(lay(1), 60e9);
+  assert.equal(lay(1e6), 60000);
+  assert.equal(lay(1e9), 60);
+});
+
+test('sheet thuyết minh chỉ có khi tài khoản được mở (học viên / giảng viên)', () => {
+  const dsTm = addExtraction(emptyDataset(), {
+    file: 'BCTC 2025.pdf', company: 'CTCP Thuyết Minh', meta: { ngay_ket_thuc: '2025-12-31', so_thang: 12 }, warnings: [],
+    statements: { IS: { cur: { 'IS:01': 500e9, 'IS:11': 300e9 }, prev: {} } },
+    // Thuyết minh đã qua noteToModel (dataset lưu nguyên dạng này, đơn vị đồng).
+    notes: {
+      segments: [{ name: 'Cá tra', revenue: 400e9, gross: 80e9 }, { name: 'Phụ phẩm', revenue: 100e9 }],
+      debt: { stProceeds: 100e9, stRepay: 80e9, ltProceeds: 0, ltRepay: 0 },
+    },
+  });
+  const free = sheetNames(buildFormXlsx(dsTm, { unit: 1e6 })['xl/workbook.xml']);
+  assert.deepEqual(free, ['Tổng quan', 'Kết quả kinh doanh'], 'người dùng thường chỉ nhận báo cáo chính');
+  const hv = buildFormXlsx(dsTm, { unit: 1e6, details: true });
+  const ten = sheetNames(hv['xl/workbook.xml']);
+  assert.ok(ten.includes('Mảng kinh doanh') && ten.includes('Vay & tham số'), ten.join(' | '));
+  const mang = hv[sheetPathByName(hv['xl/workbook.xml'], hv['xl/_rels/workbook.xml.rels'], 'Mảng kinh doanh')];
+  const c = readCells(mang, []);
+  assert.ok(Object.values(c).includes('Cá tra') && Object.values(c).includes('Phụ phẩm'));
+  assert.match(mang, /<f>400000000000\/DonVi<\/f>/, 'thuyết minh cũng chia cho DonVi');
 });
 
 // ─── zip tối giản (store, không nén) để SheetJS đọc trong test ───

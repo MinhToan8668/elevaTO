@@ -50,14 +50,16 @@ function taiBtn(label, empty, lam) {
 function formCard(store, empty) {
   const s = store.get();
   const n = s.ticks ? s.ticks.length : allValueKeys(store).length;
+  const details = canUseModel(s.user);
   return h('div', { class: 'cardx' },
     h('h3', {}, t('ex.form.h')),
     h('p', {}, t('ex.form.lead', { n })),
     h('p', { class: 'fine-l' }, t('ex.unitNote', { unit: unitLabel(store.data().unit) })),
+    h('p', { class: 'fine-l' }, t(details ? 'ex.form.details' : 'ex.form.noDetails')),
     taiBtn(t('ex.form.btn'), empty || !n, async () => {
       const st = store.get(), { ds, unit } = store.data();
       return {
-        files: buildFormXlsx(ds, { keys: st.ticks ? new Set(st.ticks) : null, unit, unitLabel: unitLabel(unit) }),
+        files: buildFormXlsx(ds, { keys: st.ticks ? new Set(st.ticks) : null, unit, details: canUseModel(st.user) }),
         name: `${safeName(ds.company || 'BCTC')} - ${safeName(t('ex.form.file'))}.xlsx`,
       };
     }));
@@ -67,12 +69,11 @@ function modelCard(store, empty) {
   return h('div', { class: 'cardx em-card' },
     h('h3', {}, t('ex.model.h')),
     h('p', {}, t('ex.model.lead')),
-    h('p', { class: 'fine-l' }, t('ex.unitNote', { unit: unitLabel(store.data().unit) })),
+    h('p', { class: 'fine-l' }, t('ex.model.unit')),
     taiBtn(t('ex.model.btn'), empty, async () => {
-      const st = store.get(), { ds, unit } = store.data();
+      const st = store.get(), { ds } = store.data();
       return {
         files: buildModelXlsx(ds, {
-          unit, unitLabel: unitLabel(unit),
           segmentMap: effectiveSegmentMap(ds, st.segmentMap).map,
           segmentNames: effectiveSegmentNames(ds, st.segmentMap, st.segmentNames),
         }),
