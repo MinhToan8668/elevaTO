@@ -12,18 +12,14 @@ const div = (a, b) => (a === null || !b ? null : a / b);
 const pct = (a, b) => { const r = div(a, b); return r === null ? null : r * 100; };
 const sum = (...xs) => xs.reduce((t, x) => t + (x || 0), 0);
 
-/** Chỉ số hiện ở bảng dưới biểu đồ. fmt: 'x' số lần · '%' phần trăm. */
+/**
+ * Chỉ số hiện ở bảng dưới biểu đồ. fmt: 'x' số lần · '%' phần trăm.
+ * Tên và cách tính hiện trên trang lấy từ i18n: khoá `ratio.<key>` và `ratio.<key>.hint`.
+ */
 export const RATIO_ROWS = [
-  { key: 'current', label: 'Thanh toán hiện hành', fmt: 'x', hint: 'Tài sản ngắn hạn / Nợ ngắn hạn' },
-  { key: 'quick', label: 'Thanh toán nhanh', fmt: 'x', hint: '(Tài sản ngắn hạn − Hàng tồn kho) / Nợ ngắn hạn' },
-  { key: 'de', label: 'Nợ / Vốn chủ sở hữu', fmt: 'x', hint: 'Nợ phải trả / Vốn chủ sở hữu' },
-  { key: 'debtAsset', label: 'Nợ / Tổng tài sản', fmt: '%', hint: 'Nợ phải trả / Tổng tài sản' },
-  { key: 'gross', label: 'Biên lợi nhuận gộp', fmt: '%', hint: 'Lợi nhuận gộp / Doanh thu thuần' },
-  { key: 'ros', label: 'Biên lợi nhuận ròng (ROS)', fmt: '%', hint: 'Lợi nhuận sau thuế / Doanh thu thuần' },
-  { key: 'roa', label: 'ROA', fmt: '%', hint: 'Lợi nhuận sau thuế / Tổng tài sản bình quân (kỳ giữa niên độ quy về một năm)' },
-  { key: 'roe', label: 'ROE', fmt: '%', hint: 'Lợi nhuận sau thuế / Vốn chủ sở hữu bình quân (kỳ giữa niên độ quy về một năm)' },
-  { key: 'assetTurn', label: 'Vòng quay tài sản', fmt: 'x', hint: 'Doanh thu thuần / Tổng tài sản bình quân (kỳ giữa niên độ quy về một năm)' },
-  { key: 'cfoRevenue', label: 'Dòng tiền kinh doanh / Doanh thu', fmt: '%', hint: 'LC thuần từ HĐKD / Doanh thu thuần' },
+  { key: 'current', fmt: 'x' }, { key: 'quick', fmt: 'x' }, { key: 'de', fmt: 'x' }, { key: 'debtAsset', fmt: '%' },
+  { key: 'gross', fmt: '%' }, { key: 'ros', fmt: '%' }, { key: 'roa', fmt: '%' }, { key: 'roe', fmt: '%' },
+  { key: 'assetTurn', fmt: 'x' }, { key: 'cfoRevenue', fmt: '%' },
 ];
 
 /**
@@ -48,16 +44,16 @@ export function buildMetrics(ds) {
     if (!c.series.some((x) => x.values.some((v) => v !== null && v !== 0))) return;
     // Cột chồng chỉ vẽ được phần dương: có phần âm thì nói rõ để người dùng không hiểu nhầm.
     if (c.kind === 'stack') {
-      const am = c.series.filter((x) => x.values.some((v) => v !== null && v < 0)).map((x) => x.name.toLowerCase());
-      if (am.length) c.note = `Có khoản âm (${am.join(', ')} âm) nên không vẽ được thành cột — xem bảng số.`;
+      const am = c.series.filter((x) => x.values.some((v) => v !== null && v < 0)).map((x) => x.key);
+      if (am.length) c.negative = am;          // giao diện dịch tên khoản rồi mới ghép câu
     }
     charts.push(c);
   };
 
-  add({ id: 'revenue', title: 'Doanh thu & lợi nhuận', kind: 'bars', series: [
-    { name: 'Doanh thu thuần', values: col('IS:10') },
-    { name: 'Lợi nhuận gộp', values: col('IS:20') },
-    { name: 'Lợi nhuận sau thuế', values: col('IS:60') },
+  add({ id: 'revenue', kind: 'bars', series: [
+    { key: 'netRevenue', values: col('IS:10') },
+    { key: 'grossProfit', values: col('IS:20') },
+    { key: 'profitAfterTax', values: col('IS:60') },
   ] });
 
   const other = V.map((_, i) => {
@@ -65,29 +61,29 @@ export function buildMetrics(ds) {
     if (tong === null) return null;
     return tong - sum(abs(g(i, 'BS:110')), abs(g(i, 'BS:130')), abs(g(i, 'BS:140')), abs(g(i, 'BS:220')));
   });
-  add({ id: 'assets', title: 'Cơ cấu tài sản', kind: 'stack', series: [
-    { name: 'Tiền', values: col('BS:110', Math.abs) },
-    { name: 'Phải thu ngắn hạn', values: col('BS:130', Math.abs) },
-    { name: 'Hàng tồn kho', values: col('BS:140', Math.abs) },
-    { name: 'Tài sản cố định', values: col('BS:220', Math.abs) },
-    { name: 'Tài sản khác', values: other },
+  add({ id: 'assets', kind: 'stack', series: [
+    { key: 'cash', values: col('BS:110', Math.abs) },
+    { key: 'receivables', values: col('BS:130', Math.abs) },
+    { key: 'inventories', values: col('BS:140', Math.abs) },
+    { key: 'fixedAssets', values: col('BS:220', Math.abs) },
+    { key: 'otherAssets', values: other },
   ] });
 
-  add({ id: 'capital', title: 'Cơ cấu nguồn vốn', kind: 'stack', series: [
-    { name: 'Nợ ngắn hạn', values: col('BS:310', Math.abs) },
-    { name: 'Nợ dài hạn', values: col('BS:330', Math.abs) },
-    { name: 'Vốn chủ sở hữu', values: col('BS:400') },
+  add({ id: 'capital', kind: 'stack', series: [
+    { key: 'currentLiab', values: col('BS:310', Math.abs) },
+    { key: 'nonCurrentLiab', values: col('BS:330', Math.abs) },
+    { key: 'equity', values: col('BS:400') },
   ] });
 
-  add({ id: 'cashflow', title: 'Lưu chuyển tiền tệ', kind: 'bars', series: [
-    { name: 'Hoạt động kinh doanh', values: V.map((_, i) => cf(i, '20')) },
-    { name: 'Hoạt động đầu tư', values: V.map((_, i) => cf(i, '30')) },
-    { name: 'Hoạt động tài chính', values: V.map((_, i) => cf(i, '40')) },
+  add({ id: 'cashflow', kind: 'bars', series: [
+    { key: 'operating', values: V.map((_, i) => cf(i, '20')) },
+    { key: 'investing', values: V.map((_, i) => cf(i, '30')) },
+    { key: 'financing', values: V.map((_, i) => cf(i, '40')) },
   ] });
 
-  add({ id: 'margins', title: 'Biên lợi nhuận', kind: 'lines', unit: '%', series: [
-    { name: 'Biên gộp', values: V.map((_, i) => pct(g(i, 'IS:20'), g(i, 'IS:10'))) },
-    { name: 'Biên ròng', values: V.map((_, i) => pct(g(i, 'IS:60'), g(i, 'IS:10'))) },
+  add({ id: 'margins', kind: 'lines', unit: '%', series: [
+    { key: 'grossMargin', values: V.map((_, i) => pct(g(i, 'IS:20'), g(i, 'IS:10'))) },
+    { key: 'netMargin', values: V.map((_, i) => pct(g(i, 'IS:60'), g(i, 'IS:10'))) },
   ] });
 
   /**

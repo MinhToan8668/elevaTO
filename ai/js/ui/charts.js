@@ -3,6 +3,7 @@
 
 import { h, fmt } from './dom.js';
 import { buildMetrics } from '../core/metrics.js';
+import { t, locale } from '../i18n.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const COLORS = ['var(--em)', 'var(--blue)', 'var(--gold)', 'var(--red)', 'var(--line-3)'];
@@ -19,22 +20,26 @@ const s = (tag, attrs = {}, ...kids) => {
 /** @returns phần tử của tab, hoặc lời nhắn nếu chưa có số. */
 export function renderCharts(ds, unit, unitLabel) {
   const m = buildMetrics(ds);
-  if (!m.periods.length) return h('p', { class: 'empty' }, 'Chưa có dữ liệu để vẽ biểu đồ.');
-  if (!m.charts.length) return h('p', { class: 'empty' }, 'Số đã trích chưa đủ để vẽ biểu đồ — kiểm tra lại các bảng ở tab bên cạnh.');
+  if (!m.periods.length) return h('p', { class: 'empty' }, t('ch.none'));
+  if (!m.charts.length) return h('p', { class: 'empty' }, t('ch.thin'));
   return h('div', {},
-    h('p', { class: 'priv' }, `Biểu đồ và chỉ số do máy tính từ số đã trích (đơn vị ${unitLabel}). Sửa số ở các tab bên cạnh thì biểu đồ tự cập nhật.`),
+    h('p', { class: 'priv' }, t('ch.lead', { unit: unitLabel })),
     h('div', { class: 'charts' }, m.charts.map((c) => card(c, m.periods, unit, unitLabel))),
     ratioTable(m, unit));
 }
+
+/** Tên biểu đồ / tên đường số theo ngôn ngữ đang chọn (metrics.js chỉ phát ra khoá). */
+const chartTitle = (c) => t(`chart.${c.id}`);
+const serName = (ser) => t(`ser.${ser.key}`);
 
 function card(c, periods, unit, unitLabel) {
   const draw = { bars: barsChart, stack: stackChart, lines: linesChart }[c.kind];
   const money = c.unit !== '%';
   return h('figure', { class: 'chart' },
-    h('figcaption', {}, h('b', {}, c.title), h('span', { class: 'priv' }, money ? unitLabel : '%')),
+    h('figcaption', {}, h('b', {}, chartTitle(c)), h('span', { class: 'priv' }, money ? unitLabel : '%')),
     draw(c, periods, money ? unit : 1, money),
-    c.note ? h('p', { class: 'msg warn' }, c.note) : null,
-    h('ul', { class: 'legend' }, c.series.map((ser, i) => h('li', {}, h('i', { style: { background: COLORS[i % COLORS.length] } }), ser.name))),
+    c.negative ? h('p', { class: 'msg warn' }, t('chart.negative', { list: c.negative.map((k) => t(`ser.${k}`).toLowerCase()).join(', ') })) : null,
+    h('ul', { class: 'legend' }, c.series.map((ser, i) => h('li', {}, h('i', { style: { background: COLORS[i % COLORS.length] } }), serName(ser)))),
     dataTable(c, periods, money ? unit : 1, money ? unitLabel : '%'));
 }
 
@@ -60,7 +65,7 @@ function scale(values) {
 function frame(sc, periods, unit) {
   // Thang chia nhỏ hơn 1 đơn vị (ví dụ biên lợi nhuận 0–2%) thì ghi thêm số lẻ, không làm tròn thành 1, 1, 2, 2.
   const le = sc.step / unit < 1 ? 1 : 0;
-  const nhan = (v) => (v === 0 ? '0' : le ? (v / unit).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : fmt(v, unit));
+  const nhan = (v) => (v === 0 ? '0' : le ? (v / unit).toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : fmt(v, unit));
   const grid = sc.ticks.map((v) => s('g', {},
     s('line', { x1: PAD.l, x2: W - PAD.r, y1: sc.y(v), y2: sc.y(v), class: Math.abs(v) < sc.step / 1e6 ? 'ax0' : 'grid' }),
     s('text', { x: PAD.l - 8, y: sc.y(v) + 4, class: 'lbl', 'text-anchor': 'end' }, nhan(v))));
@@ -78,10 +83,10 @@ const band = (i, n) => ({ x: PAD.l + (PLOT.w * i) / n, w: PLOT.w / n });
 function dataTable(c, periods, unit, unitLabel) {
   const val = (v) => (v === null ? '—' : unitLabel === '%' ? `${v.toFixed(1)}%` : fmt(v, unit));
   return h('details', { class: 'chart-data' },
-    h('summary', {}, `Số của biểu đồ (${unitLabel})`),
+    h('summary', {}, t('ch.data', { unit: unitLabel })),
     h('div', { class: 'gridwrap' }, h('table', { class: 'k' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Chỉ tiêu'), periods.map((p) => h('th', { class: 'num' }, p.label)))),
-      h('tbody', {}, c.series.map((ser) => h('tr', {}, h('td', {}, ser.name), ser.values.map((v) => h('td', { class: 'num' }, val(v)))))))));
+      h('thead', {}, h('tr', {}, h('th', {}, t('ch.item')), periods.map((p) => h('th', { class: 'num' }, p.label)))),
+      h('tbody', {}, c.series.map((ser) => h('tr', {}, h('td', {}, serName(ser)), ser.values.map((v) => h('td', { class: 'num' }, val(v)))))))));
 }
 
 function barsChart(c, periods, unit, money) {
@@ -94,10 +99,10 @@ function barsChart(c, periods, unit, money) {
       if (!Number.isFinite(v)) return null;
       const x = b.x + b.w * 0.14 + bw * j, y0 = sc.y(0), y = sc.y(v);
       return s('rect', { x, y: Math.min(y, y0), width: Math.max(1, bw - 2), height: Math.max(1, Math.abs(y - y0)), rx: 3, fill: COLORS[j % COLORS.length] },
-        s('title', {}, `${ser.name} · ${p.label}: ${fmt(v, unit)}${money ? '' : '%'}`));
+        s('title', {}, `${serName(ser)} · ${p.label}: ${fmt(v, unit)}${money ? '' : '%'}`));
     });
   });
-  return svg(`${c.title} theo từng kỳ`, frame(sc, periods, unit), bars);
+  return svg(t('ch.byPeriod', { title: chartTitle(c) }), frame(sc, periods, unit), bars);
 }
 
 function stackChart(c, periods, unit, money) {
@@ -113,10 +118,10 @@ function stackChart(c, periods, unit, money) {
       const y = sc.y(acc + v), hgt = sc.y(acc) - y;
       acc += v;
       return s('rect', { x, y, width: bw, height: Math.max(1, hgt), fill: COLORS[j % COLORS.length] },
-        s('title', {}, `${ser.name} · ${p.label}: ${fmt(v, unit)} (${Math.round((v / (totals[i] || 1)) * 100)}%)`));
+        s('title', {}, `${serName(ser)} · ${p.label}: ${fmt(v, unit)} (${Math.round((v / (totals[i] || 1)) * 100)}%)`));
     });
   });
-  return svg(`${c.title} theo từng kỳ`, frame(sc, periods, unit), cols);
+  return svg(t('ch.byPeriod', { title: chartTitle(c) }), frame(sc, periods, unit), cols);
 }
 
 function linesChart(c, periods, unit, money) {
@@ -129,21 +134,21 @@ function linesChart(c, periods, unit, money) {
     return s('g', {},
       pts.length > 1 ? s('polyline', { points: pts.map(([x, y]) => `${x},${y}`).join(' '), fill: 'none', stroke: COLORS[j % COLORS.length], 'stroke-width': 2.5, 'stroke-linejoin': 'round' }) : null,
       ser.values.map((v, i) => (Number.isFinite(v)
-        ? s('circle', { cx: cx(i), cy: sc.y(v), r: 4, fill: COLORS[j % COLORS.length] }, s('title', {}, `${ser.name} · ${periods[i].label}: ${fmt(v, unit)}${money ? '' : '%'}`))
+        ? s('circle', { cx: cx(i), cy: sc.y(v), r: 4, fill: COLORS[j % COLORS.length] }, s('title', {}, `${serName(ser)} · ${periods[i].label}: ${fmt(v, unit)}${money ? '' : '%'}`))
         : null)));
   });
-  return svg(`${c.title} theo từng kỳ`, frame(sc, periods, unit), lines);
+  return svg(t('ch.byPeriod', { title: chartTitle(c) }), frame(sc, periods, unit), lines);
 }
 
 // ─── Bảng chỉ số ───────────────────────────────────────────
 
-const show = (v, fmtKind) => (v === null ? '—' : fmtKind === '%' ? `${v.toFixed(1)}%` : `${v.toFixed(2)} lần`);
+const show = (v, fmtKind) => (v === null ? '—' : fmtKind === '%' ? `${v.toFixed(1)}%` : t('ch.times', { v: v.toFixed(2) }));
 
 function ratioTable(m, unit) {
   return h('div', { class: 'gridwrap' },
     h('table', { class: 'k ratios' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Chỉ số'), m.periods.map((p) => h('th', { class: 'num' }, p.label)))),
+      h('thead', {}, h('tr', {}, h('th', {}, t('ch.ratio')), m.periods.map((p) => h('th', { class: 'num' }, p.label)))),
       h('tbody', {}, m.ratios.map((r) => h('tr', {},
-        h('td', {}, r.label, h('small', { class: 'priv' }, r.hint)),
+        h('td', {}, t(`ratio.${r.key}`), h('small', { class: 'priv' }, t(`ratio.${r.key}.hint`))),
         r.values.map((v) => h('td', { class: 'num' }, show(v, r.fmt))))))));
 }

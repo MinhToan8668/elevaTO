@@ -8,6 +8,7 @@
 
 import { periodsFromMeta } from './extract.js';
 import { validate } from './statements.js';
+import { t } from '../i18n.js';
 
 export function emptyDataset() {
   return { company: '', periods: [], values: {}, src: {}, notes: {}, conflicts: [], warnings: [], files: [] };
@@ -78,7 +79,7 @@ export function checkDataset(ds, opts = {}) {
     if (Number.isFinite(vals['CF:60']) && prevFY && Number.isFinite(prevFY['BS:110'])) {
       const diff = vals['CF:60'] - prevFY['BS:110'];
       if (Math.abs(diff) > Math.max(2, opts.unit || 1) * 2) {
-        issues.push({ key: 'CF:60=BS:110(năm trước)', kind: 'cross', reported: vals['CF:60'], computed: prevFY['BS:110'], diff, label: 'Tiền đầu kỳ LCTT ≠ tiền cuối năm trước trên CĐKT' });
+        issues.push({ key: 'CF:60=BS:110(năm trước)', kind: 'cross', reported: vals['CF:60'], computed: prevFY['BS:110'], diff, label: t('check.cfOpening') });
       }
     }
     out[p.id] = issues;

@@ -2,7 +2,8 @@
 // Phiên (token) lưu trong trình duyệt; máy chủ chỉ giữ bản băm và cho sống 30 ngày.
 
 import { h, mount, $ } from './dom.js';
-import { ROLE_NAME } from './store.js';
+import { ROLE_KEY, watch } from './store.js';
+import { t } from '../i18n.js';
 import { API } from '../config.js';
 import { callApi, createClient } from '../ai.js';
 
@@ -27,13 +28,13 @@ export function initials(ten) {
 export function quotaText(me) {
   const l = me?.luot;
   if (!l) return '';
-  return l.han ? `Còn ${Math.max(0, l.han - l.dung)}/${l.han} lượt AI hôm nay` : 'Không giới hạn lượt AI';
+  return l.han ? t('au.quota', { left: Math.max(0, l.han - l.dung), han: l.han }) : t('au.quotaFree');
 }
 
 export function initAuth(store, ctx, { onLogin }) {
   let session = readSession();
 
-  ctx.client = (onWait) => (session ? createClient({ api: API, token: session.token, onWait, onAuth: () => ctx.logout('Phiên đăng nhập đã hết — đăng nhập lại nhé') }) : null);
+  ctx.client = (onWait) => (session ? createClient({ api: API, token: session.token, onWait, onAuth: () => ctx.logout(t('au.expired')) }) : null);
   ctx.refreshQuota = async () => {
     if (!session) return;
     try { setUser(await ctx.client().me()); } catch (e) { /* lỗi mạng: giữ số cũ */ }
@@ -67,6 +68,15 @@ export function initAuth(store, ctx, { onLogin }) {
 
   renderGate(enter);
   store.on(renderAccount(ctx));
+  // Đổi ngôn ngữ: vẽ lại màn đăng nhập và menu tài khoản (hai phần này không nằm trong vòng vẽ của bước).
+  let langCu = store.get().lang;
+  watch(store, ['lang'], (st) => {
+    if (st.lang === langCu) return;
+    langCu = st.lang;
+    if (!session) renderGate(enter);
+    $('#acct').replaceChildren();                      // buộc renderAccount dựng lại với chữ mới
+    renderAccount(ctx)(store.get());
+  });
   closeMenuOutside();
   let flash = '';
   try { flash = sessionStorage.getItem('elevato-ai-msg') || ''; sessionStorage.removeItem('elevato-ai-msg'); } catch (e) { /* bỏ qua */ }
@@ -102,83 +112,83 @@ function renderGate(enter) {
   const field = (id, label, attrs) => h('div', { class: 'fld' }, h('label', { htmlFor: id }, label), h('input', { id, class: 'inp', required: true, disabled: off, ...attrs }));
   const pw = (id, label, autocomplete) => {
     const inp = h('input', { id, class: 'inp', type: 'password', required: true, minlength: '8', autocomplete, disabled: off });
-    const eye = h('button', { type: 'button', class: 'eye', 'aria-label': 'Hiện mật khẩu', 'aria-pressed': 'false', disabled: off, onclick: () => {
+    const eye = h('button', { type: 'button', class: 'eye', 'aria-label': t('au.show.aria'), 'aria-pressed': 'false', disabled: off, onclick: () => {
       const show = inp.type === 'password';
       inp.type = show ? 'text' : 'password';
       eye.setAttribute('aria-pressed', String(show));
-      eye.textContent = show ? 'Ẩn' : 'Hiện';
-    } }, 'Hiện');
+      eye.textContent = show ? t('au.hide') : t('au.show');
+    } }, t('au.show'));
     return h('div', { class: 'fld' }, h('label', { htmlFor: id }, label), h('div', { class: 'pw' }, inp, eye));
   };
 
   const loginForm = h('form', { class: 'auth-form', id: 'loginForm', novalidate: true },
-    field('liEmail', 'Email', { type: 'email', autocomplete: 'username', inputmode: 'email', placeholder: 'ban@email.com' }),
-    pw('liPass', 'Mật khẩu', 'current-password'),
-    h('button', { class: 'btn big', type: 'submit', disabled: off }, 'Đăng nhập'),
-    h('p', { class: 'fine' }, 'Quên mật khẩu? Nhắn elevaTO để được đặt lại.'));
+    field('liEmail', t('au.email'), { type: 'email', autocomplete: 'username', inputmode: 'email', placeholder: 'ban@email.com' }),
+    pw('liPass', t('au.pass'), 'current-password'),
+    h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.login')),
+    h('p', { class: 'fine' }, t('au.forgot')));
   const signupForm = h('form', { class: 'auth-form', id: 'signupForm', novalidate: true, hidden: true },
-    field('suTen', 'Họ và tên', { autocomplete: 'name', placeholder: 'Nguyễn Văn An', maxlength: '60' }),
-    field('suEmail', 'Email', { type: 'email', autocomplete: 'email', inputmode: 'email', placeholder: 'ban@email.com' }),
-    field('suSdt', 'Số điện thoại', { type: 'tel', autocomplete: 'tel', inputmode: 'tel', placeholder: '09xx xxx xxx' }),
-    pw('suPass', 'Mật khẩu (ít nhất 8 ký tự)', 'new-password'),
+    field('suTen', t('au.name'), { autocomplete: 'name', placeholder: t('au.name.ph'), maxlength: '60' }),
+    field('suEmail', t('au.email'), { type: 'email', autocomplete: 'email', inputmode: 'email', placeholder: 'ban@email.com' }),
+    field('suSdt', t('au.phone'), { type: 'tel', autocomplete: 'tel', inputmode: 'tel', placeholder: t('au.phone.ph') }),
+    pw('suPass', t('au.pass.new'), 'new-password'),
     // Ô bẫy bot: người thật không thấy, không điền.
     h('div', { class: 'trap', 'aria-hidden': 'true' }, h('label', {}, 'Website', h('input', { id: 'suWeb', tabindex: '-1', autocomplete: 'off' }))),
-    h('button', { class: 'btn big', type: 'submit', disabled: off }, 'Tạo tài khoản'),
-    h('p', { class: 'fine' }, 'Miễn phí. Mỗi ngày có sẵn lượt AI để trích xuất BCTC.'));
+    h('button', { class: 'btn big', type: 'submit', disabled: off }, t('au.signup')),
+    h('p', { class: 'fine' }, t('au.free')));
 
-  const tabs = h('div', { class: 'seg', role: 'group', 'aria-label': 'Đăng nhập hoặc đăng ký' });
+  const tabs = h('div', { class: 'seg', role: 'group', 'aria-label': t('au.tabs.aria') });
   const tab = (key, label, form) => h('button', { type: 'button', id: `tab-${key}`, 'aria-controls': form.id, 'aria-pressed': String(key === 'login'), onclick: () => {
     tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.id === `tab-${key}`)));
     loginForm.hidden = key !== 'login'; signupForm.hidden = key !== 'signup';
     setGateMsg();
   } }, label);
-  tabs.append(tab('login', 'Đăng nhập', loginForm), tab('signup', 'Tạo tài khoản', signupForm));
+  tabs.append(tab('login', t('au.login'), loginForm), tab('signup', t('au.signup'), signupForm));
 
   const busy = (form, on, label) => {
     const b = form.querySelector('button[type=submit]');
-    b.disabled = on; b.textContent = on ? 'Đang xử lý…' : label;
+    b.disabled = on; b.textContent = on ? t('au.working') : label;
     b.setAttribute('aria-busy', String(on));
   };
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = $('#liEmail').value.trim(), mk = $('#liPass').value;
-    if (!email || !mk) return setGateMsg('err', 'Nhập email và mật khẩu.');
-    busy(loginForm, true, 'Đăng nhập');
+    if (!email || !mk) return setGateMsg('err', t('au.needBoth'));
+    busy(loginForm, true, t('au.login'));
     try {
       const d = await callApi(API, { action: 'dangnhap', email, mk });
       enter(d.token, d.me);
     } catch (err) { setGateMsg(err.code === 'cho_duyet' ? 'warn' : 'err', err.message); }
-    finally { busy(loginForm, false, 'Đăng nhập'); }
+    finally { busy(loginForm, false, t('au.login')); }
   });
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = { action: 'dangky', ten: $('#suTen').value.trim(), email: $('#suEmail').value.trim(), sdt: $('#suSdt').value.trim(), mk: $('#suPass').value, website: $('#suWeb').value };
-    if (!body.ten || !body.email || !body.sdt || !body.mk) return setGateMsg('err', 'Điền đủ họ tên, email, số điện thoại và mật khẩu.');
-    if (body.mk.length < 8) return setGateMsg('err', 'Mật khẩu cần ít nhất 8 ký tự.');
-    busy(signupForm, true, 'Tạo tài khoản');
+    if (!body.ten || !body.email || !body.sdt || !body.mk) return setGateMsg('err', t('au.needAll'));
+    if (body.mk.length < 8) return setGateMsg('err', t('au.shortPass'));
+    busy(signupForm, true, t('au.signup'));
     try {
       const d = await callApi(API, body);
-      if (d.cho) { setGateMsg('ok', 'Đã tạo tài khoản. elevaTO sẽ duyệt sớm — bạn đăng nhập lại sau khi được duyệt nhé.'); return; }
+      if (d.cho) { setGateMsg('ok', t('au.pending')); return; }
       enter(d.token, d.me);
     } catch (err) { setGateMsg('err', err.message); }
-    finally { busy(signupForm, false, 'Tạo tài khoản'); }
+    finally { busy(signupForm, false, t('au.signup')); }
   });
 
   mount($('#gate'),
     brandBand(),
     h('div', { class: 'gate-in' },
       h('section', { class: 'hero' },
-        h('span', { class: 'eyebrow' }, 'Công cụ AI cho học viên elevaTO'),
-        h('h1', {}, 'Từ BCTC tới model forecast ', h('em', {}, 'trong vài phút')),
-        h('p', { class: 'hero-sub' }, 'Tải báo cáo tài chính (PDF, ảnh chụp hay Excel), xem và tick trang cần lấy — AI tự nhận bảng, đọc số và chuẩn hoá theo mẫu Thông tư 99/2025, kể cả BCTC mẫu cũ.'),
+        h('span', { class: 'eyebrow' }, t('au.eyebrow')),
+        h('h1', {}, t('au.h1'), h('em', {}, t('au.h1.em'))),
+        h('p', { class: 'hero-sub' }, t('au.sub')),
         h('ul', { class: 'feats' },
-          feat('01', 'Đọc mọi dạng BCTC', 'PDF điện tử, bản scan, ảnh chụp, file Excel — kể cả báo cáo cũ theo TT200.'),
-          feat('02', 'Số được kiểm tra chéo', 'AI chỉ chép số; máy tính tự cộng dồn, đối chiếu và tô đỏ chỗ lệch để bạn sửa.'),
-          feat('03', 'Xuất đúng mẫu 2026', 'Tải Form chuẩn hóa 2026 (.xlsx); học viên elevaTO điền thẳng vào model forecast, giữ nguyên công thức và biểu đồ.'))),
-      h('section', { class: 'auth-card', 'aria-label': 'Đăng nhập' },
-        h('h2', {}, 'Chào mừng bạn'),
-        h('p', { class: 'auth-sub' }, 'Đăng nhập hoặc tạo tài khoản miễn phí để bắt đầu.'),
-        off ? h('p', { class: 'msg warn' }, 'Công cụ đang được cài đặt — quay lại sau ít phút nhé.') : null,
+          feat('01', t('au.f1.t'), t('au.f1.d')),
+          feat('02', t('au.f2.t'), t('au.f2.d')),
+          feat('03', t('au.f3.t'), t('au.f3.d')))),
+      h('section', { class: 'auth-card', 'aria-label': t('au.card.aria') },
+        h('h2', {}, t('au.welcome')),
+        h('p', { class: 'auth-sub' }, t('au.welcome.sub')),
+        off ? h('p', { class: 'msg warn' }, t('au.off')) : null,
         tabs, loginForm, signupForm, msg)));
 }
 
@@ -207,13 +217,13 @@ function renderAccount(ctx) {
     const q = box.querySelector('.acct-q');
     if (q && prev && prev.email === me.email && prev.ten === me.ten && prev.vaitro === me.vaitro) { q.textContent = quotaText(me); return; }
     const menu = h('details', { class: 'acct' },
-      h('summary', { 'aria-label': `Tài khoản ${me.ten}` }, h('span', { class: 'ava', 'aria-hidden': 'true' }, initials(me.ten)), h('span', { class: 'acct-name' }, me.ten)),
+      h('summary', { 'aria-label': t('au.acct.aria', { name: me.ten }) }, h('span', { class: 'ava', 'aria-hidden': 'true' }, initials(me.ten)), h('span', { class: 'acct-name' }, me.ten)),
       h('div', { class: 'acct-pop' },
         h('b', {}, me.ten), h('small', {}, me.email),
         h('p', { class: 'acct-q' }, quotaText(me)),
-        h('span', { class: `tag ${me.vaitro === 'free' ? '' : 'em'}` }, ROLE_NAME[me.vaitro] || ROLE_NAME.free),
-        h('label', { class: 'chk acct-shared' }, h('input', { type: 'checkbox', id: 'sharedPc' }), h('span', {}, 'Máy dùng chung — xoá dữ liệu đang làm khi đăng xuất')),
-        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => ctx.logout('', { clearWork: $('#sharedPc')?.checked }) }, 'Đăng xuất')));
+        h('span', { class: `tag ${me.vaitro === 'free' ? '' : 'em'}` }, t(ROLE_KEY[me.vaitro] || ROLE_KEY.free)),
+        h('label', { class: 'chk acct-shared' }, h('input', { type: 'checkbox', id: 'sharedPc' }), h('span', {}, t('au.shared'))),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => ctx.logout('', { clearWork: $('#sharedPc')?.checked }) }, t('au.logout'))));
     mount(box, menu);
   };
 }

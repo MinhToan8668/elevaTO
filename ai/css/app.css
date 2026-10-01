@@ -58,6 +58,14 @@ a{color:var(--em-text)}
 .logo-dark{display:none}
 :root[data-theme="dark"] .logo-light{display:none} :root[data-theme="dark"] .logo-dark{display:block}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-light{display:none} :root:not([data-theme="light"]) .logo-dark{display:block}}
+/* Chọn ngôn ngữ: cùng khối với nút sáng/tối trên đầu trang */
+.lang-sel{height:38px;padding:0 28px 0 11px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--text);
+  font:600 13px/1 var(--font);cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%235d6b65' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;background-size:12px}
+.lang-sel:hover{border-color:var(--line-2)}
+.lang-sel:focus-visible{outline:2px solid var(--em);outline-offset:2px}
+@media (max-width:420px){.lang-sel{padding-right:24px;font-size:12px}}
 .product{display:flex;flex-direction:column;padding-left:14px;border-left:1px solid var(--line-2);line-height:1.2}
 .product b{font-size:15px;font-weight:800;color:var(--strong);letter-spacing:-.01em}
 .product small{font-size:11.5px;color:var(--muted)}

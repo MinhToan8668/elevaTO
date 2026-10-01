@@ -1,5 +1,7 @@
 // Nạp thư viện trong vendor/ khi cần (không nạp sẵn lúc mở trang, không dùng CDN).
 
+import { t } from './i18n.js';
+
 const pending = new Map();
 
 function loadScript(file, globalName) {
@@ -33,7 +35,7 @@ export async function openZip(buf, { maxTotal = 400e6, maxEntry = 150e6 } = {}) 
   for (const f of Object.values(zip.files)) {
     const n = Number(f._data?.uncompressedSize) || 0;
     total += n;
-    if (n > maxEntry || total > maxTotal) throw new Error('File Excel khi giải nén quá lớn — file hỏng hoặc không phải file Excel thật');
+    if (n > maxEntry || total > maxTotal) throw new Error(t('e.zipBomb'));
   }
   return zip;
 }

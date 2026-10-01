@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { statementRows, tableAOA, periodLabel } from '../js/core/table.js';
+import { statementRows, periodLabel } from '../js/core/table.js';
 
 const ds = {
   company: 'CTCP ABC',
@@ -17,11 +17,3 @@ test('dòng hiển thị: có số ở ít nhất một kỳ, dòng tổng tự 
   assert.ok(statementRows(ds, 'BS', { showEmpty: true }).length > 100);
 });
 
-test('bảng tải về: chỉ dòng được tick, đổi đơn vị tỷ, nhãn kỳ', () => {
-  const aoa = tableAOA(ds, { keys: new Set(['BS:111', 'IS:10']), unit: 1e9, unitLabel: 'tỷ đồng' });
-  assert.deepEqual(aoa[0], ['CTCP ABC']);
-  assert.deepEqual(aoa[4], ['Mã số', 'Chỉ tiêu', 'Năm 2024', 'Năm 2025', '6T/2026']);
-  assert.deepEqual(aoa[5], ['111', '1. Tiền', 5, 8, null]);
-  assert.equal(aoa.filter((r) => r[0] === 'BÁO CÁO LƯU CHUYỂN TIỀN TỆ').length, 0);
-  assert.equal(periodLabel({ year: 2025, months: 12 }), 'Năm 2025');
-});

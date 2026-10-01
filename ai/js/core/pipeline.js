@@ -8,6 +8,7 @@
 
 import { statementTask, NOTE_TASKS } from './prompts.js';
 import { statementToValues, noteToModel } from './extract.js';
+import { t } from '../i18n.js';
 
 const STATEMENTS = ['BS', 'IS', 'CF'];
 
@@ -29,14 +30,14 @@ export async function extractJob(job, io, opts = {}) {
   let goiY = '';                          // lời chỉ dẫn khi không đọc nổi bảng nào (giao diện hiện thay lỗi khô khan)
   const runSt = async (st) => {
     const pages = pagesFor(st);
-    if (!pages.length) { warnings.push(`Không tìm thấy trang ${NAME[st]} — chỉnh lại ở bước chọn trang nếu file có bảng này.`); return; }
+    if (!pages.length) { warnings.push(t('w.noPage', { st: NAME(st) })); return; }
     step({ key: st, state: 'run', label: `${NAME[st]} (trang ${list(pages)})` });
     try {
       // Gemini từ chối khuôn JSON (400) → coi như chưa đọc được, để lượt thử lại bên dưới
       // gọi lại bằng câu lệnh có tả cấu trúc thay cho khuôn.
       let res = await statementWithSplit(st, pages, io, step).catch((e) => {
         if (e?.code !== 'schema') throw e;
-        warnings.push(`${NAME[st]}: máy chủ AI từ chối khuôn JSON — đang thử lại bằng cách tả cấu trúc trong câu lệnh.`);
+        warnings.push(t('w.schema', { st: NAME(st) }));
         return null;
       });
       // Đọc ra rỗng: có thể do dạng file gửi đi (PDF scan, hoặc PDF có lớp chữ rác) chứ không phải
@@ -44,25 +45,25 @@ export async function extractJob(job, io, opts = {}) {
       if (!(res?.items || []).length) {
         // Đổi CẢ HAI thứ đáng nghi trong đúng một lượt thử lại: cách gửi (ảnh) và khuôn JSON (bỏ).
         // File scan vốn đã gửi ảnh nên lượt này thực chất chỉ bỏ khuôn — không gửi trùng.
-        const cach = job.scanned ? 'bỏ khuôn JSON' : 'ảnh trang, bỏ khuôn JSON';
-        step({ key: st, state: 'run', label: `${NAME[st]} — thử lại bằng ${cach} (trang ${list(pages)})` });
+        const cach = t(job.scanned ? 'step.how.schema' : 'step.how.image');
+        step({ key: st, state: 'run', label: t('step.retry', { st: NAME(st), how: cach, pages: list(pages) }) });
         const lai = await statementWithSplit(st, pages, io, step, { anh: true, moTaKhuon: true }).catch(() => null);
         if ((lai?.items || []).length) {
-          warnings.push(`${NAME[st]}: lần đầu đọc không ra số nên đã gửi lại bằng ảnh và bỏ khuôn JSON.`);
+          warnings.push(t('w.retried', { st: NAME(st) }));
           res = lai;
         }
       }
       if (!(res?.items || []).length) {
         trong.push(st);
-        warnings.push(`${NAME[st]}: không thấy bảng này trong các trang đã chọn (trang ${list(pages)}).`);
-        step({ key: st, state: 'fail', error: 'không thấy bảng trong các trang đã chọn' });
+        warnings.push(t('w.noTable', { st: NAME(st), pages: list(pages) }));
+        step({ key: st, state: 'fail', error: t('step.noTable') });
         return;
       }
       results[st] = res;
       step({ key: st, state: 'done' });
     } catch (e) {
       if (io.isFatal(e)) throw e;
-      warnings.push(`${NAME[st]}: ${e.message}`);
+      warnings.push(`${NAME(st)}: ${e.message}`);
       step({ key: st, state: 'fail', error: e.message });
     }
   };
@@ -95,8 +96,8 @@ export async function extractJob(job, io, opts = {}) {
     if (st === 'BS') bsRegime = r.regime;
     statements[st] = { cur: r.cur, prev: r.prev };
     units[st] = r.unit;
-    warnings.push(...r.warnings.map((w) => `${NAME[st]}: ${w}`));
-    if (r.unmapped.length) warnings.push(`${NAME[st]}: mã không quy đổi được sang mẫu 2026: ${r.unmapped.map((k) => k.split(':')[1]).join(', ')}`);
+    warnings.push(...r.warnings.map((w) => `${NAME(st)}: ${w}`));
+    if (r.unmapped.length) warnings.push(t('w.unmapped', { st: NAME(st), codes: r.unmapped.map((k) => k.split(':')[1]).join(', ') }));
   }
   const meta0 = (results.BS || results.IS || results.CF || {}).meta || {};
   const flowMeta = (results.IS || results.CF || {}).meta || {};
@@ -111,8 +112,8 @@ export async function extractJob(job, io, opts = {}) {
     const all = opts.exact ? [...(job.notes?.[g] || [])].sort((a, b) => a - b) : null;
     const pages = opts.exact ? all.slice(0, MAX_NOTE_PAGES) : withNext(job.notes?.[g] || [], job.types.length);
     if (!task) return;
-    if (all && all.length > MAX_NOTE_PAGES) warnings.push(`${task.label}: chỉ đọc ${MAX_NOTE_PAGES} trang đầu, bỏ trang ${list(all.slice(MAX_NOTE_PAGES))} — bỏ tick bớt trang không cần.`);
-    if (!pages.length) { warnings.push(`Không tìm thấy trang thuyết minh "${task.label}".`); return; }
+    if (all && all.length > MAX_NOTE_PAGES) warnings.push(t('w.noteCap', { task: task.label, max: MAX_NOTE_PAGES, pages: list(all.slice(MAX_NOTE_PAGES)) }));
+    if (!pages.length) { warnings.push(t('w.noNotePage', { task: task.label })); return; }
     step({ key: g, state: 'run', label: `${task.label} (trang ${range(pages)})` });
     try {
       const res = await io.ai.json({ parts: [...await io.parts(pages), { text: task.prompt }], schema: task.schema });
@@ -130,19 +131,20 @@ export async function extractJob(job, io, opts = {}) {
     pages: Object.fromEntries(STATEMENTS.map((s) => [s, pagesOf(s)])) };
 }
 
-const NAME = { BS: 'Tình hình tài chính', IS: 'Kết quả kinh doanh', CF: 'Lưu chuyển tiền tệ' };
-const TEN_TRANG = { ...NAME, NOTES: 'Thuyết minh', OTHER: 'bìa / mục lục / báo cáo kiểm toán' };
+/** Tên báo cáo / loại trang theo ngôn ngữ đang chọn. */
+const NAME = (st) => t(`xl.sheet.${st}`);
+const LOAI_TRANG = ['BS', 'IS', 'CF', 'NOTES', 'OTHER'];
+const tenTrang = (x) => (x === 'NOTES' || x === 'OTHER' ? t(`page.${x}`) : NAME(x));
 
 /** Lời nhắn: các trang đã tick thật ra là trang gì, và nên tick lại trang nào. */
 function moTaTrang(ds, xem) {
   const co = new Map();
-  for (const r of ds) { const p = Number(r.trang); if (xem.includes(p) && TEN_TRANG[r.loai]) co.set(p, r.loai); }
-  if (!co.size) return `AI xem trang ${list(xem)} nhưng không nhận ra trang nào là báo cáo tài chính. Mở xem trang lớn ở bước 2 để tick đúng trang có bảng số, hoặc kiểm tra xem bản scan có bị mờ quá không.`;
-  const gom = (loai) => [...co.entries()].filter(([, t]) => t === loai).map(([p]) => p).sort((a, b) => a - b);
-  const dong = Object.keys(TEN_TRANG).map((t) => { const p = gom(t); return p.length ? `trang ${list(p)}: ${TEN_TRANG[t]}` : ''; }).filter(Boolean);
+  for (const r of ds) { const p = Number(r.trang); if (xem.includes(p) && LOAI_TRANG.includes(r.loai)) co.set(p, r.loai); }
+  if (!co.size) return t('diag.none', { pages: list(xem) });
+  const gom = (loai) => [...co.entries()].filter(([, x]) => x === loai).map(([p]) => p).sort((a, b) => a - b);
+  const dong = LOAI_TRANG.map((x) => { const p = gom(x); return p.length ? t('diag.line', { pages: list(p), kind: tenTrang(x) }) : ''; }).filter(Boolean);
   const bang = STATEMENTS.flatMap(gom);
-  return `Các trang đã tick thật ra là — ${dong.join('; ')}.` +
-    (bang.length ? ` Tick lại đúng trang có bảng rồi trích xuất lại.` : ` Ba báo cáo chính nằm ở trang khác — mở xem trang lớn ở bước 2 để tìm và tick lại.`);
+  return t('diag.head', { list: dong.join('; ') }) + t(bang.length ? 'diag.retick' : 'diag.elsewhere');
 }
 
 /** Gọi AI một bảng; quá 60 giây / bị cắt → CĐKT chia tài sản / nguồn vốn, bảng khác chia đôi số trang. */
@@ -273,8 +275,8 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
     const inGroup = new Set(Object.values(notes).flat());
     const skip = unknown.filter((p) => types[p - 1] === 'OTHER');
     const loose = unknown.filter((p) => types[p - 1] === 'NOTES' && !inGroup.has(p));
-    if (skip.length) warnings.push(`Trang ${list(skip)}: AI thấy không phải CĐKT, KQKD, LCTT hay thuyết minh cần lấy — bỏ qua. Mở xem lại nếu cần.`);
-    if (loose.length) warnings.push(`Trang ${list(loose)}: thuyết minh nhưng không thuộc nhóm dữ liệu nào (TSCĐ, vay, vốn chủ…) — bỏ qua.`);
+    if (skip.length) warnings.push(t('w.skipped', { pages: list(skip) }));
+    if (loose.length) warnings.push(t('w.loose', { pages: list(loose) }));
   }
   for (const g of Object.keys(notes)) notes[g].sort((a, b) => a - b);
   return { types, notes, aiCalls, warnings, shared: [] };

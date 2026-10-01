@@ -4,11 +4,12 @@
 
 import { h, mount, $, toast, download, safeName } from './dom.js';
 import { watch, canUseModel } from './store.js';
-import { UNITS, allValueKeys } from './review.js';
+import { unitOptions, allValueKeys } from './review.js';
 import { effectiveSegmentMap, effectiveSegmentNames } from './notes.js';
 import { buildFormXlsx } from '../core/formxlsx.js';
 import { buildModelXlsx } from '../core/modelxlsx.js';
 import { loadJSZip } from '../libs.js';
+import { t, unitLabel } from '../i18n.js';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -16,7 +17,7 @@ const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.s
 const ui = { unit: 1e6 };
 
 export function initExporter(store) {
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'running', 'user'], () => render(store));
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'running', 'user', 'lang'], () => render(store));
 }
 
 function render(store) {
@@ -30,19 +31,17 @@ function render(store) {
 /** Chọn đơn vị ghi trong file Excel. */
 function unitPicker(store) {
   return h('label', { class: 'chk unit-pick' },
-    h('span', {}, 'Đơn vị trong file:'),
+    h('span', {}, t('ex.unit')),
     h('select', { class: 'inp', onchange: (e) => { ui.unit = Number(e.target.value); render(store); } },
-      UNITS.map(([v, l]) => h('option', { value: String(v), selected: ui.unit === v }, l))));
+      unitOptions().map(([v, l]) => h('option', { value: String(v), selected: ui.unit === v }, l))));
 }
-
-const unitLabel = () => (UNITS.find(([v]) => v === ui.unit) || [])[1] || 'đồng';
 
 /** Nút tải: dựng file trong trình duyệt rồi tải về. */
 function taiBtn(label, empty, lam) {
   const btn = h('button', { class: 'btn', disabled: empty, onclick: async () => {
     btn.disabled = true;
     const cu = btn.textContent;
-    btn.textContent = 'Đang tạo file…';
+    btn.textContent = t('ex.making');
     try {
       const { files, name } = await lam();
       const JSZip = await loadJSZip();
@@ -59,32 +58,32 @@ function formCard(store, empty) {
   const s = store.get();
   const n = s.ticks ? s.ticks.length : allValueKeys(store).length;
   return h('div', { class: 'cardx' },
-    h('h3', {}, 'Form chuẩn hóa 2026'),
-    h('p', {}, `Ba báo cáo chính theo mẫu Thông tư 99/2025, mỗi kỳ một cột. Dòng tổng là công thức Excel, cuối mỗi báo cáo có dòng kiểm tra cân đối, ô lệch tô đỏ. ${n} dòng đang tick ở bảng trên.`),
+    h('h3', {}, t('ex.form.h')),
+    h('p', {}, t('ex.form.lead', { n })),
     unitPicker(store),
-    taiBtn('Tải Form chuẩn hóa 2026 (.xlsx)', empty || !n, async () => {
+    taiBtn(t('ex.form.btn'), empty || !n, async () => {
       const st = store.get(), { ds } = store.data();
       return {
-        files: buildFormXlsx(ds, { keys: st.ticks ? new Set(st.ticks) : null, unit: ui.unit, unitLabel: unitLabel() }),
-        name: `${safeName(ds.company || 'BCTC')} - Form chuan hoa 2026.xlsx`,
+        files: buildFormXlsx(ds, { keys: st.ticks ? new Set(st.ticks) : null, unit: ui.unit, unitLabel: unitLabel(ui.unit) }),
+        name: `${safeName(ds.company || 'BCTC')} - ${safeName(t('ex.form.file'))}.xlsx`,
       };
     }));
 }
 
 function modelCard(store, empty) {
   return h('div', { class: 'cardx em-card' },
-    h('h3', {}, 'Form chi tiết elevaTO', h('span', { class: 'tag em' }, 'Học viên · Giảng viên')),
-    h('p', {}, 'Đủ dữ liệu model forecast cần: ba báo cáo đã quy về dòng của model, cộng doanh thu/LN gộp theo mảng, TSCĐ theo nhóm, biến động vốn chủ, vay — mỗi năm một cột, kèm số dòng tương ứng ở sheet 03.Input_FS.'),
+    h('h3', {}, t('ex.model.h'), h('span', { class: 'tag em' }, t('ex.model.tag'))),
+    h('p', {}, t('ex.model.lead')),
     unitPicker(store),
-    taiBtn('Tải Form chi tiết elevaTO (.xlsx)', empty, async () => {
+    taiBtn(t('ex.model.btn'), empty, async () => {
       const st = store.get(), { ds } = store.data();
       return {
         files: buildModelXlsx(ds, {
-          unit: ui.unit, unitLabel: unitLabel(),
+          unit: ui.unit, unitLabel: unitLabel(ui.unit),
           segmentMap: effectiveSegmentMap(ds, st.segmentMap).map,
           segmentNames: effectiveSegmentNames(ds, st.segmentMap, st.segmentNames),
         }),
-        name: `${safeName(ds.company || 'BCTC')} - Form chi tiet elevaTO.xlsx`,
+        name: `${safeName(ds.company || 'BCTC')} - ${safeName(t('ex.model.file'))}.xlsx`,
       };
     }));
 }
@@ -92,17 +91,17 @@ function modelCard(store, empty) {
 function lockedCard() {
   return h('div', { class: 'cardx locked' },
     h('span', { class: 'lock-ic', 'aria-hidden': 'true' }, '🔒'),
-    h('h3', {}, 'Form chi tiết elevaTO'),
-    h('p', {}, 'Thêm thuyết minh mà model forecast cần: doanh thu theo mảng, TSCĐ theo nhóm, biến động vốn chủ, vay.'),
-    h('p', { class: 'fine-l' }, 'Dành cho học viên và giảng viên elevaTO — nhắn elevaTO email đăng ký để được mở quyền.'),
-    h('button', { class: 'btn', disabled: true }, 'Chỉ dành cho học viên'));
+    h('h3', {}, t('ex.model.h')),
+    h('p', {}, t('ex.lock.lead')),
+    h('p', { class: 'fine-l' }, t('ex.lock.fine')),
+    h('button', { class: 'btn', disabled: true }, t('ex.lock.btn')));
 }
 
 /** Mở lại phiên đã lưu (tự lưu theo tài khoản). Trả false nếu không mở. */
 export function applySession(store, data) {
   const cur = store.get();
-  if (cur.running) { toast('Đang trích xuất — đợi xong rồi mở phiên.'); return false; }
-  if (cur.sources.length && !confirm('Mở phiên sẽ thay toàn bộ dữ liệu đang có trên trang (kể cả số sửa tay). Tiếp tục?')) return false;
+  if (cur.running) { toast(t('ex.busy')); return false; }
+  if (cur.sources.length && !confirm(t('ex.replaceAsk'))) return false;
   const { savedAt, ...rest } = data;
   store.set({
     ...rest,

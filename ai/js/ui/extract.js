@@ -4,13 +4,14 @@ import { h, mount, $, toast, keepFocus } from './dom.js';
 import { NOTE_KEYS, uid, watch } from './store.js';
 import { extractJob, planPicked, needsMap } from '../core/pipeline.js';
 import { isSplittable, isFatal } from '../ai.js';
+import { t } from '../i18n.js';
 
 const HAS_PICK = (j) => (j.picked?.length || 0) > 0;
 // Trang đã tick mà máy chưa biết loại (hay nhóm thuyết minh) → AI phải nhận trang trước (12 trang / lượt).
 const unknownPicked = (j) => (j.picked || []).filter((p) => needsMap(j, p)).length;
 
 export function initExtract(store, ctx) {
-  watch(store, ['jobs', 'user', 'running'], (s) => renderRun(s, store, ctx));
+  watch(store, ['jobs', 'user', 'running', 'lang'], (s) => renderRun(s, store, ctx));
 }
 
 /** Số lượt AI ước tính cho một file: 3 bảng chính + mỗi nhóm thuyết minh tìm thấy + nhận diện trang lạ. */
@@ -27,18 +28,18 @@ function renderRun(s, store, ctx) {
   const left = q && q.han ? Math.max(0, q.han - q.dung) : null;
   const noTable = todo.filter((j) => !HAS_PICK(j));
   let hint;
-  if (!todo.length) hint = s.jobs.some((j) => j.status === 'done') ? 'Mọi file đã trích xuất. Đổi trang đã chọn ở bước 2 để làm lại một file.' : 'Tải file PDF / ảnh ở bước 1.';
-  else hint = `${todo.length} file · khoảng ${calls} lượt AI${left !== null ? ` (còn ${left} lượt hôm nay)` : ''}. Mỗi file mất 1–3 phút.`;
+  if (!todo.length) hint = t(s.jobs.some((j) => j.status === 'done') ? 'run.allDone' : 'run.noFiles');
+  else hint = t('run.est', { n: todo.length, calls, left: left !== null ? t('run.left', { n: left }) : '' });
   const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || !s.user || noTable.length === todo.length, onclick: () => run(store, ctx) },
-    s.running ? 'Đang trích xuất…' : 'Trích xuất bằng AI');
-  const stopBtn = s.running ? h('button', { class: 'btn ghost', id: 'stopBtn', onclick: () => { ctx.stop = true; toast('Sẽ dừng sau file đang làm.'); } }, 'Dừng') : null;
+    t(s.running ? 'run.going' : 'run.go'));
+  const stopBtn = s.running ? h('button', { class: 'btn ghost', id: 'stopBtn', onclick: () => { ctx.stop = true; toast(t('run.stopping')); } }, t('run.stop')) : null;
   document.querySelector('.rail a[data-step="3"]').classList.toggle('done', s.jobs.some((j) => j.status === 'done'));
   const row = $('#runRow');
   keepFocus(row, () => mount(row,
     h('div', { style: { flex: '0 0 auto', display: 'flex', gap: '10px' } }, runBtn, stopBtn),
     h('p', { class: 'priv', style: { flex: '1 1 300px', margin: 0 } }, hint,
-      noTable.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, `${noTable.length} file chưa tick trang nào`) : null,
-      left !== null && calls > left ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, 'không đủ lượt hôm nay') : null)));
+      noTable.length ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, t('run.noPick', { n: noTable.length })) : null,
+      left !== null && calls > left ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, t('run.noQuota')) : null)));
 }
 
 async function run(store, ctx) {
@@ -46,10 +47,10 @@ async function run(store, ctx) {
   const waitLine = h('li', { class: 'wait', hidden: true }, h('i'), h('span'));
   const client = ctx.client((sec, msg) => {
     waitLine.hidden = false;
-    waitLine.lastChild.textContent = `${msg || 'Máy chủ đang bận'} — tự thử lại sau ${sec} giây`;
+    waitLine.lastChild.textContent = t('run.retry', { msg: msg || t('run.busy'), sec });
     setTimeout(() => { waitLine.hidden = true; }, sec * 1000);
   });
-  if (!client) return toast('Đăng nhập để trích xuất bằng AI');
+  if (!client) return toast(t('run.needLogin'));
   const s = store.get();
   const todo = s.jobs.filter((j) => j.kind !== 'xls' && j.status === 'ready' && HAS_PICK(j));
   ctx.stop = false;
@@ -66,7 +67,7 @@ async function run(store, ctx) {
         const li = lines[key] ||= ul.appendChild(h('li', {}, h('i'), h('span'), h('em')));
         li.className = state;
         if (label) li.children[1].textContent = label;
-        li.children[2].textContent = state === 'split' ? 'dài quá, chia nhỏ' : error ? error.slice(0, 120) : '';
+        li.children[2].textContent = state === 'split' ? t('run.split') : error ? error.slice(0, 120) : '';
       };
       // Bản scan: gửi ảnh cả lúc đọc bảng lẫn lúc nhận diện trang (gửi PDF scan hay ra kết quả rỗng).
       const io = { parts: (pages, o) => ctx.io.pageParts(j.id, pages, { anh: !!o?.anh }),
@@ -78,7 +79,7 @@ async function run(store, ctx) {
         const ext = { ...got, warnings: [...plan.warnings, ...got.warnings] };
         // Không đọc nổi bảng nào: hiện lời chỉ dẫn (AI vừa xem các trang đó là trang gì) thay vì câu cụt.
         if (!Object.keys(ext.statements).length) {
-          throw new Error(got.goiY || 'Không đọc được bảng nào — mở xem trang lớn ở bước 2, tick đúng trang có bảng số rồi làm lại.');
+          throw new Error(got.goiY || t('run.noTable'));
         }
         if (!store.get().jobs.some((x) => x.id === j.id)) continue;          // file đã bị bỏ trong lúc chạy
         store.set((st) => {
@@ -97,7 +98,7 @@ async function run(store, ctx) {
     ctx.refreshQuota?.();
   }
   if (ok) {
-    toast(`Xong ${ok} file — rà soát số ở bước 4.`);
+    toast(t('run.ok', { n: ok }));
     $('#s5').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

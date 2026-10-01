@@ -8,6 +8,7 @@
 // Mỗi ô trả kèm nguồn: bctc | tm (thuyết minh) | lctt (suy từ LCTT) | uoc (số tạm, cần bổ sung) | md (mặc định).
 
 import { computeTotals } from '../core/statements.js';
+import { t } from '../i18n.js';
 
 const M = 1e6;
 
@@ -142,12 +143,12 @@ function fillStatements(cells, vals, warn) {
     S(85, g('BS:411')); S(86, g('BS:412')); S(87, g('BS:415'));
     S(88, g('BS:400') - g('BS:411') - g('BS:412') - g('BS:415') - g('BS:420') - g('BS:429'));
     S(89, g('BS:420')); S(90, g('BS:429'));
-    if (g('BS:230') || g('BS:240') || g('BS:150')) warn.add('Có bất động sản đầu tư / tài sản sinh học: đã gộp vào "TS dài hạn khác" / "phải thu khác" vì model không có dòng riêng.');
+    if (g('BS:230') || g('BS:240') || g('BS:150')) warn.add(t('mw.investProp'));
   }
 
   const cfTotal = direct ? 'CF:T20' : 'CF:20';
   if (has(cfTotal) || has('CF:50') || has('CF:T50')) {
-    if (direct) warn.add('LCTT lập theo phương pháp trực tiếp: phần HĐKD dồn vào dòng 109 (model chỉ dùng để đối chiếu).');
+    if (direct) warn.add(t('mw.directCf'));
     const pbt = g('IS:50');
     const a = direct ? {} : {
       98: g('CF:02'), 99: g('CF:03'), 100: -g('IS:27'), 101: g('CF:06'), 103: g('CF:09'), 104: g('CF:10'),
@@ -220,7 +221,7 @@ function fillFixedAssets(cells, vals, notes, warn, year) {
     src = 'uoc';
     rows.buildings = { cost: cost54, accDep: acc55, additions: -cf('21'), depreciation: -g('CF:02') };
     rows.software = { cost: cost57, accDep: acc58, additions: 0, depreciation: 0 };
-    warn.add('Chưa có thuyết minh tài sản cố định theo nhóm: tạm dồn TSCĐ hữu hình vào "Nhà cửa", vô hình vào "Phần mềm"; capex và khấu hao lấy từ LCTT.');
+    warn.add(t('mw.noFaNote'));
   }
   for (const c of FA_CLASSES) {
     const x = rows[c.cls];
@@ -234,7 +235,7 @@ function fillFixedAssets(cells, vals, notes, warn, year) {
   } else if (has('BS:279')) {
     put(cells, GOODWILL_ROW, g('BS:279') / M, 'uoc');
     for (let i = 1; i <= 3; i++) put(cells, GOODWILL_ROW + i, 0, 'uoc');
-    if (g('BS:279')) warn.add('Chưa có thuyết minh lợi thế thương mại: tạm ghi giá trị còn lại vào nguyên giá.');
+    if (g('BS:279')) warn.add(t('mw.noGwNote'));
   }
 }
 
@@ -256,7 +257,7 @@ function fillDebt(cells, vals, notes, warn) {
     put(cells, 208, cf('33') / M, 'lctt'); put(cells, 209, cf('34') / M, 'lctt');
     put(cells, 210, 0, 'lctt'); put(cells, 211, 0, 'lctt');
     proceeds = cf('33') + cf('34');
-    warn.add('Chưa có thuyết minh vay: tiền vay / trả nợ lấy từ LCTT và tính hết là vay ngắn hạn.');
+    warn.add(t('mw.noDebtNote'));
   }
   if (Number.isFinite(cells._cfFinOther)) {
     put(cells, 123, (cells._cfFinOther - (proceeds || 0)) / M, 'bctc');
@@ -281,7 +282,7 @@ function fillEquity(cells, prevCells, vals, notes, warn) {
     put(cells, 200, v(e.devFundInc), src); put(cells, 201, -Math.abs(v(e.devFundDec)), src);
     put(cells, 202, -Math.abs(v(e.dividends)), src);
     const gapCap = dCap - [191, 192, 193, 194, 195].reduce((a, r) => a + cells[r].v, 0);
-    if (Math.abs(gapCap) > 1) { cells[191].v += gapCap; warn.add('Thuyết minh vốn chủ không khớp thay đổi vốn góp — phần chênh dồn vào "phát hành thường".'); }
+    if (Math.abs(gapCap) > 1) { cells[191].v += gapCap; warn.add(t('mw.equityGap')); }
   } else {
     put(cells, 191, pos(dCap), src); put(cells, 192, 0, src); put(cells, 193, 0, src); put(cells, 194, 0, src); put(cells, 195, neg(dCap), src);
     const dPrem = d(86, g('BS:412')); put(cells, 196, pos(dPrem), src); put(cells, 197, neg(dPrem), src);
@@ -289,7 +290,7 @@ function fillEquity(cells, prevCells, vals, notes, warn) {
     const dFund = d(88, cells[88] ? cells[88].v * M : 0);      // quỹ ĐTPT + vốn khác (dòng 88)
     put(cells, 200, pos(dFund), src); put(cells, 201, neg(dFund), src);
     put(cells, 202, (has('CF:36') ? g('CF:36') : 0) / M, has('CF:36') ? 'lctt' : 'uoc');
-    warn.add('Chưa có thuyết minh biến động vốn chủ: suy từ chênh lệch CĐKT và cổ tức đã trả trên LCTT.');
+    warn.add(t('mw.noEquityNote'));
   }
   // LNCPP: CHECK 206 đòi  LNCPP đầu kỳ + LN công ty mẹ + (202 + 203 + 204) = LNCPP cuối kỳ.
   // Lấy tăng/giảm khác từ thuyết minh (nếu có), phần còn lệch dồn vào 203 (dương) hoặc 204 (âm).
