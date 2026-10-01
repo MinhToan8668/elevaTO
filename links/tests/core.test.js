@@ -158,11 +158,10 @@ test('nút CTA có link độc hại thì trình chỉnh sửa báo', () => {
 
 test('theme: độ mờ, độ đục bị kẹp trong khoảng cho phép; nền lạ quay về mặc định', () => {
   assert.deepEqual(normalize({}).theme, THEME_DEFAULT);
-  const t = normalize({ theme: { blur: 999, tint: -5, background: 'neon', pattern: false } }).theme;
+  const t = normalize({ theme: { blur: 999, tint: -5, background: 'neon' } }).theme;
   assert.equal(t.blur, 48);
   assert.equal(t.tint, 5);
   assert.equal(t.background, 'aurora');
-  assert.equal(t.pattern, false);
   assert.equal(normalize({ theme: { blur: '12.6' } }).theme.blur, 13);
 });
 

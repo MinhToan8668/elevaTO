@@ -11,7 +11,7 @@ export const BACKGROUNDS = {
   midnight: 'Đêm',
   image: 'Ảnh tự chọn',
 };
-export const THEME_DEFAULT = { blur: 22, tint: 46, background: 'aurora', bgImage: '', pattern: true };
+export const THEME_DEFAULT = { blur: 22, tint: 46, background: 'aurora', bgImage: '' };
 // Ảnh tải lên được lưu thẳng trong data.json dưới dạng data URL (đã thu nhỏ) → cần giới hạn dài hơn link thường.
 const IMG_MAX = 300000;
 const BG_MAX = 900000;
@@ -144,7 +144,6 @@ export function normalize(raw) {
       tint: clamp(th.tint, 5, 95, THEME_DEFAULT.tint),
       background: has(BACKGROUNDS, th.background) ? th.background : THEME_DEFAULT.background,
       bgImage: str(th.bgImage, BG_MAX),
-      pattern: bool(th.pattern, THEME_DEFAULT.pattern),
     },
   };
 }

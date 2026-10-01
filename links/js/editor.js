@@ -202,7 +202,7 @@ function themePanel() {
     t.background === 'image'
       ? imageField('Ảnh nền', t.bgImage, (v, re) => update((d) => { d.theme.bgImage = v; }, { rerender: re }),
         { onPick: () => pick({ maxSide: 1600, quality: 0.78 }), hint: 'Ảnh phong cảnh, ảnh thành phố… kính trông đẹp nhất trên ảnh nhiều chi tiết.' })
-      : toggle('Hiện họa tiết lưới + biểu đồ trên nền', t.pattern, setT('pattern')));
+      : null);
 }
 
 function livePanel() {

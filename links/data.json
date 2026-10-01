@@ -206,7 +206,6 @@
     "blur": 22,
     "tint": 46,
     "background": "aurora",
-    "bgImage": "",
-    "pattern": true
+    "bgImage": ""
   }
 }
