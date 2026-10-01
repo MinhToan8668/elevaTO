@@ -160,6 +160,27 @@ test('trình chỉnh sửa: kéo độ mờ / độ đục, đổi nền → khu
   await p.context().close();
 });
 
+test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới, giữ nguyên chữ đã sửa', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  const old = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  delete old.theme;
+  old.profile.status = 'Minhtoantowork@gmail.com';
+  old.links = old.links.map((l) => ({ ...l, image: l.id === 'course' ? '../assets/model/dashboard-thumb.webp' : '' }));
+  await p.addInitScript((d) => {
+    if (window.top !== window || sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+  }, old);
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.lc');
+  const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
+  assert.equal(draft.profile.status, 'Minhtoantowork@gmail.com');
+  assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/course.svg');
+  assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/ai.svg');
+  assert.equal(draft.theme.blur, 22);
+  await p.context().close();
+});
+
 test('trang khoá học: /#dang-ky mở thẳng form đăng ký', async () => {
   const p = await page();
   await p.goto(base + '/#dang-ky');

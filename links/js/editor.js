@@ -363,6 +363,23 @@ async function loadPublished() {
   }
 }
 
+/**
+ * Nháp lưu từ bản trước (chưa có mục theme) → điền ảnh minh hoạ mới của bản trên web cho các ô
+ * trùng id mà nháp chưa có ảnh riêng. Chữ, link, thứ tự… chủ trang đã sửa thì giữ nguyên.
+ */
+const OLD_DEFAULT_IMAGES = ['', '../assets/model/dashboard-thumb.webp', '../assets/slides/course-map-thumb.webp'];
+function upgradeDraft(saved, publishedText) {
+  if (!saved || saved.theme || !publishedText) return saved;
+  const pub = JSON.parse(publishedText);
+  const imgById = new Map((pub.links || []).map((l) => [l.id, l.image]));
+  return {
+    ...saved,
+    theme: pub.theme,
+    links: (saved.links || []).map((l) =>
+      OLD_DEFAULT_IMAGES.includes(l.image || '') && imgById.get(l.id) ? { ...l, image: imgById.get(l.id) } : l),
+  };
+}
+
 async function boot() {
   $('#themeBtn .i-sun').outerHTML = svg('sun', 'i-sun');
   $('#themeBtn .i-moon').outerHTML = svg('moon', 'i-moon');
@@ -385,7 +402,8 @@ async function boot() {
   const ok = await loadPublished();
   const saved = ls.get(DRAFT_KEY);
   if (!ok) toast(saved ? 'Không tải được bản trên web — đang sửa tiếp bản nháp trên máy.' : 'Không tải được data.json. Tải lại trang để thử lại.');
-  draft = normalize(saved || JSON.parse(published || '{}'));
+  draft = normalize(upgradeDraft(saved, published) || JSON.parse(published || '{}'));
+  if (saved) ls.set(DRAFT_KEY, draft);
   renderForm();
   markDirty();
   sendPreview();
