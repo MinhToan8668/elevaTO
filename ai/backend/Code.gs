@@ -42,7 +42,9 @@ var AI_MAX_SYS      = 20000;               // độ dài chỉ dẫn hệ thốn
 var AI_MAX_THINK    = 8192;                // trần thinkingBudget
 var AI_MODEL_TTL    = 6 * 3600;            // nhớ danh sách model 6 giờ
 var AI_SO_MODEL     = 5;                   // chuỗi dự phòng: tối đa bấy nhiêu model (mỗi model có hạn mức miễn phí riêng)
-var AI_THU_TOI_DA   = 5;                   // mỗi lượt của người dùng thử Gemini tối đa bấy nhiêu lần (đổi key / đổi model)
+var AI_THU_TOI_DA   = 8;                   // mỗi lượt của người dùng thử Gemini tối đa bấy nhiêu lần (đổi key / đổi model).
+                                           // Đo 01/10/2026: các bản flash mới hay trả 429/503 ngay (0,1–7 giây),
+                                           // phải đủ lượt thử để chạm tới model cuối chuỗi — bản lite đọc được và nhanh.
 var AI_NGHI_QUA_TAI = 300;                 // model báo quá tải (503) thì nghỉ bấy nhiêu giây
 var AI_QUA_TAI_LAN  = 2;                   // phải lỗi bấy nhiêu lần mới cho model nghỉ (một người dùng không làm cả hệ thống ngừng)
 var PHIEN_NGAY      = 30;                  // phiên đăng nhập sống bao nhiêu ngày

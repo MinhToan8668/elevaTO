@@ -1,8 +1,8 @@
 // Cắt trang để gửi AI.
 //   PDF có chữ  → gửi PDF con: nhẹ nhất, AI đọc thẳng chữ gốc nên số chính xác nhất.
-//   PDF scan    → gửi ẢNH JPEG từng trang. Gửi PDF scan cho Gemini rất hay ra kết quả rỗng
-//                 (gặp thật với BCTC kiểm toán bản scan: cùng trang đó, gửi ảnh thì AI đọc được,
-//                 gửi PDF thì không thấy bảng nào), nên bản scan luôn đi đường ảnh.
+//   PDF scan    → cũng gửi PDF con. Đã đo trên BCTC hợp nhất VHC 2025 (64 trang scan CCITT G4):
+//                 3 trang CĐKT chỉ nặng 112 KB và Gemini đọc ra đủ 68 chỉ tiêu, trong khi ảnh JPEG
+//                 cùng 3 trang nặng hơn khoảng 10 lần. Ảnh chỉ dùng khi lượt đọc đầu không ra số.
 //   Ảnh chụp    → vốn đã là ảnh.
 
 import { toBase64 } from '../ai.js';
@@ -13,8 +13,8 @@ const MAX_INLINE = 13 * 1024 * 1024;
 export const CO_ANH = { width: 1800, quality: 0.8 };
 
 /** @returns 'pdf' | 'anh' */
-export function cachGui({ coPdf, scanned, cỡPdf }) {
-  if (!coPdf || scanned) return 'anh';
+export function cachGui({ coPdf, cỡPdf, anh = false }) {
+  if (!coPdf || anh) return 'anh';
   return cỡPdf <= MAX_INLINE ? 'pdf' : 'anh';
 }
 
@@ -31,13 +31,13 @@ export function createIO(ctx) {
     return out;
   }
 
-  async function pageParts(jobId, pages, { scanned = false } = {}) {
+  async function pageParts(jobId, pages, { anh = false } = {}) {
     const m = ctx.media.get(jobId);
     if (!m) throw new Error('File gốc không còn trong trình duyệt — tải lại file');
-    if (m.pdf && !scanned) {
+    if (m.pdf && !anh) {
       const { subsetPdf } = await import('../pdf.js');
       const bytes = await subsetPdf(m.pdf.bytes, pages);
-      if (cachGui({ coPdf: true, scanned, cỡPdf: bytes.length }) === 'pdf') {
+      if (cachGui({ coPdf: true, cỡPdf: bytes.length }) === 'pdf') {
         return [{ inlineData: { mimeType: 'application/pdf', data: await toBase64(bytes) } }];
       }
     }

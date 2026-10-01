@@ -87,15 +87,38 @@ test('đối chiếu chéo: tiền cuối kỳ LCTT = tiền CĐKT, LNTT LCTT = 
   assert.deepEqual(validate(v4).map((i) => i.key), ['IS:60=61+62']);
 });
 
-test('chuẩn hoá dấu: chi phí KQKD luôn dương, dòng (*) trên CĐKT luôn âm, LCTT giữ nguyên', () => {
+test('lệch vài trăm đồng do chính báo cáo làm tròn thì không báo đỏ; lệch thật vẫn báo', () => {
+  // Số thật của VHC 2024: LCTT từ HĐTC in -879.932.063.267 nhưng cộng các dòng con ra -879.932.062.267.
+  const base = { 'CF:31': -879932062267 - 0, 'CF:40': -879932063267 };
+  const nho = validate({ 'IS:50': 1000000, 'IS:51': 0, 'IS:52': 0, 'IS:60': 1000000 + 900 }, { unit: 1 });
+  assert.deepEqual(nho.map((i) => i.key), [], 'lệch 900 đồng trên 1 triệu: bỏ qua');
+  const lon = validate({ 'IS:50': 1000000000, 'IS:51': 0, 'IS:52': 0, 'IS:60': 1000000000 + 5000000 }, { unit: 1 });
+  assert.deepEqual(lon.map((i) => i.key), ['IS:60'], 'lệch 5 triệu: phải báo');
+  void base;
+});
+
+test('BCTC in chi phí số dương (không ngoặc): chi phí lấy trị tuyệt đối, dòng (*) trên CĐKT âm, LCTT giữ nguyên', () => {
   const out = normalizeSigns({
-    'IS:11': -500, 'IS:25': -7, 'IS:52': -3, 'IS:27': -9,
+    'IS:11': 500, 'IS:25': 7, 'IS:51': 3, 'IS:27': -9,
     'BS:223': 100, 'BS:142': -4, 'BS:131': 50, 'CF:21': -8, 'CF:02': 6,
   });
   assert.deepEqual(out, {
-    'IS:11': 500, 'IS:25': 7, 'IS:52': -3, 'IS:27': -9,
+    'IS:11': 500, 'IS:25': 7, 'IS:51': 3, 'IS:27': -9,
     'BS:223': -100, 'BS:142': -4, 'BS:131': 50, 'CF:21': -8, 'CF:02': 6,
   });
+});
+
+test('BCTC in chi phí trong ngoặc: dấu in là phần đóng góp — dòng chi phí in DƯƠNG là khoản được hoàn, phải giữ âm', () => {
+  // Số thật của BCTC hợp nhất VHC 2025: 51 in "(250.316.761.205)" là chi phí thuế,
+  // 52 in "7.660.626.461" KHÔNG ngoặc nghĩa là thuế hoãn lại được hoàn → cộng vào lợi nhuận.
+  const out = normalizeSigns({
+    'IS:11': -9980708521338, 'IS:25': -252381257893, 'IS:26': -312551875824,
+    'IS:51': -250316761205, 'IS:52': 7660626461, 'IS:50': 1749451450359, 'IS:60': 1506795315615,
+  });
+  assert.equal(out['IS:11'], 9980708521338, 'chi phí in ngoặc → dương');
+  assert.equal(out['IS:51'], 250316761205, 'thuế hiện hành là chi phí → dương');
+  assert.equal(out['IS:52'], -7660626461, 'thuế hoãn lại được hoàn → âm');
+  assert.equal(out['IS:50'] - out['IS:51'] - out['IS:52'], out['IS:60'], 'lợi nhuận sau thuế khớp đúng');
 });
 
 test('quy đổi mã Thông tư 200 → Thông tư 99', () => {

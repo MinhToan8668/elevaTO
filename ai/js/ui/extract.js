@@ -88,7 +88,7 @@ async function run(store, ctx) {
         li.children[2].textContent = state === 'split' ? 'dài quá, chia nhỏ' : error ? error.slice(0, 120) : '';
       };
       // Bản scan: gửi ảnh cả lúc đọc bảng lẫn lúc nhận diện trang (gửi PDF scan hay ra kết quả rỗng).
-      const io = { parts: (pages, o) => ctx.io.pageParts(j.id, pages, { scanned: j.scanned || !!o?.anh }),
+      const io = { parts: (pages, o) => ctx.io.pageParts(j.id, pages, { anh: !!o?.anh }),
         images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6), ai: client, isSplittable, isFatal };
       try {
         // Trang đã tick: trang máy biết loại giữ nguyên, trang chưa rõ nhờ AI nhận bảng; chỉ gửi đúng các trang này.
