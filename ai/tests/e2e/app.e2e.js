@@ -58,17 +58,33 @@ const aiCalls = [];
 const accounts = new Map();                 // email → { ten, mk, token }
 const ME = (a) => ({ ten: a.ten, email: a.email, vaitro: a.vaitro || 'free', luot: { dung: aiCalls.length, han: 50 } });
 const TOKEN = (email) => `EABCDE.${Buffer.from(email).toString('hex').padEnd(64, '0').slice(0, 64)}`;
+const UNG_HO = { bin: '970436', bank: 'Vietcombank', stk: '1012345678', chu_tk: 'NGUYEN HOANG TRIEU VO', loi_nhan: 'Ung ho elevaTO' };
+const maDatLai = new Map();                 // email → mã 6 số máy chủ vừa gửi
+
 function fakeAI(body) {
   const fail = (code, error) => ({ ok: false, code, error });
+  if (body.action === 'ungho') return { ok: true, data: { ungho: UNG_HO } };
+  if (body.action === 'quenmk') {
+    if (accounts.has(body.email)) maDatLai.set(body.email, '24681357');
+    return { ok: true, data: { daGui: true, phut: 15 } };
+  }
+  if (body.action === 'datlaimk') {
+    const a = accounts.get(body.email);
+    if (!a || maDatLai.get(body.email) !== body.ma) return fail('ma_sai', 'Mã chưa đúng hoặc đã hết hiệu lực — xin mã mới nếu cần');
+    maDatLai.delete(body.email);
+    a.mk = body.mk;
+    a.token = TOKEN(`${a.email}-moi`);
+    return { ok: true, data: { token: a.token, me: ME(a) } };
+  }
   if (body.action === 'dangky') {
     if (accounts.has(body.email)) return fail('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
     // Máy chủ thật đòi đủ các ô khai báo — bắt chước ở đây để E2E chứng minh trang có gửi đi.
     if (!(Number(body.tuoi) >= 12 && Number(body.tuoi) <= 100)) return fail('tuoi_sai', 'Tuổi chưa đúng');
-    if (!['hv', 'gv', 'free'].includes(body.nguyen_vong)) return fail('nv_sai', 'Chọn bạn là ai');
+    if (!String(body.nghe_nghiep || '').trim()) return fail('thieu', 'Cho biết nghề nghiệp');
     if (!String(body.muc_dich || '').trim()) return fail('thieu', 'Cho biết mục đích dùng');
     // Ai đăng ký cũng ở mức thường; học viên / giảng viên do quản trị xếp bằng bot Telegram.
     const a = { ten: body.ten, email: body.email, mk: body.mk, token: TOKEN(body.email), vaitro: 'free',
-      khai: { tuoi: Number(body.tuoi), nguyen_vong: body.nguyen_vong, muc_dich: body.muc_dich } };
+      khai: { tuoi: Number(body.tuoi), nghe_nghiep: body.nghe_nghiep, muc_dich: body.muc_dich } };
     accounts.set(body.email, a);
     return { ok: true, data: { token: a.token, me: ME(a) } };
   }
@@ -230,12 +246,15 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.fill('#liPass', 'sai-mat-khau');
   await page.click('#loginForm button[type=submit]');
   await page.waitForSelector('#authDlg .msg.err:has-text("chưa đúng")');
-  await dangKy(page, { ten: 'Học viên E2E', email: 'hv@elevato.vn', vt: 'gv' });
+  await dangKy(page, { ten: 'Học viên E2E', email: 'hv@elevato.vn' });
   await page.waitForSelector('#authDlg:not([open])', { state: 'attached' });
   assert.equal(await page.locator('#acct .acct-name').innerText(), 'Học viên E2E');
-  assert.deepEqual(accounts.get('hv@elevato.vn').khai, { tuoi: 24, nguyen_vong: 'gv', muc_dich: 'Dựng model forecast' },
-    'trang gửi đủ tuổi / vai trò tự khai / mục đích');
-  assert.equal(accounts.get('hv@elevato.vn').vaitro, 'free', 'tự khai giảng viên vẫn chỉ ở mức thường');
+  assert.deepEqual(accounts.get('hv@elevato.vn').khai,
+    { tuoi: 24, nghe_nghiep: 'Chuyên viên phân tích', muc_dich: 'Dựng model forecast' },
+    'trang gửi đủ tuổi / nghề nghiệp / mục đích');
+  assert.equal(accounts.get('hv@elevato.vn').vaitro, 'free', 'ai đăng ký cũng ở mức thường');
+  // Liên hệ hỗ trợ luôn hiện ở chân trang.
+  assert.match(await page.locator('.foot-ct').innerText(), /Zalo 0376 292 148[\s\S]*minhtoantowork@gmail\.com/);
   // Đăng ký xong tự chạy tiếp việc đang dở, không bắt bấm lại.
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
 
@@ -320,10 +339,14 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
     const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
     return Object.fromEntries(wb.SheetNames.map((n) => [n, window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })]));
   }, (await readFile(table.path)).toString('base64'));
-  assert.deepEqual(Object.keys(book), ['Tổng quan', 'Tình hình tài chính', 'Kết quả kinh doanh', 'Lưu chuyển tiền tệ']);
-  const codes = (sheet) => book[sheet].slice(4).map((r) => r[0]).filter(Boolean).map(String);
+  // Tài khoản thử nghiệm là học viên nên có cả sheet thuyết minh; dòng Năm / Actual-Forecast
+  // đẩy phần số liệu xuống dòng 7 (chỉ số 6 trong mảng 0-based).
+  assert.deepEqual(Object.keys(book).slice(0, 4), ['Tổng quan', 'Tình hình tài chính', 'Kết quả kinh doanh', 'Lưu chuyển tiền tệ']);
+  assert.ok(Object.keys(book).includes('Mảng kinh doanh'), Object.keys(book).join(' | '));
+  const codes = (sheet) => book[sheet].slice(6).map((r) => r[0]).filter(Boolean).map(String);
   assert.deepEqual(codes('Kết quả kinh doanh'), ['60'], 'KQKD chỉ còn dòng được tick');
   assert.ok(codes('Tình hình tài chính').includes('111'), 'bảng khác không bị bỏ tick');
+  assert.equal(book['Kết quả kinh doanh'][4][1], 'Actual / Forecast', 'bố cục theo sheet của model');
 
   // Form chi tiết elevaTO: tải thẳng, không cần đưa file model vào
   const mdl = await download(page, () => page.click('#exportBox button:has-text("Tải Form chi tiết elevaTO")'));
@@ -332,15 +355,18 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
     const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
     return Object.fromEntries(wb.SheetNames.map((n) => [n, window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })]));
   }, (await readFile(mdl.path)).toString('base64'));
-  assert.ok(Object.keys(mBook).includes('Kết quả kinh doanh'), Object.keys(mBook).join(' | '));
-  const kq = mBook['Kết quả kinh doanh'].slice(4);
-  const dt = kq.find((r) => r[1] === 'Doanh thu thuần');
-  // BCTC mẫu in "Đơn vị tính: VND" → file xuất ra cũng bằng đồng, không quy về triệu nữa.
-  assert.ok(dt && dt.slice(2).some((v) => Number(v) === 500e9), `doanh thu 500 tỷ đồng: ${JSON.stringify(dt)}`);
+  // Sao y sheet 03.Input_FS của model: giữ nguyên số dòng, đơn vị triệu đồng để dán thẳng vào model.
+  assert.deepEqual(Object.keys(mBook), ['Tổng quan', '03.Input_FS'], Object.keys(mBook).join(' | '));
+  const ifs = mBook['03.Input_FS'];
+  assert.equal(ifs[3][1], 'Năm', 'dòng 4 của model là dòng Năm');
+  assert.equal(ifs[7][1], 'Net revenue', 'dòng 8 của model là Net revenue');
+  assert.ok(ifs[7].slice(2).some((v) => Number(v) === 500000), `doanh thu 500 tỷ → 500.000 triệu: ${JSON.stringify(ifs[7])}`);
 
-  // Không còn ô chọn đơn vị khi xuất: file giữ đúng đơn vị in trên BCTC, đổi hiển thị thì làm trong Excel.
+  // Đơn vị không còn chọn ở phần xuất mà chọn ngay trong file (sheet Tổng quan của Form chuẩn hóa).
   assert.equal(await page.locator('#exportBox .unit-pick').count(), 0, 'đã bỏ ô chọn đơn vị ở phần xuất');
-  assert.match(await page.locator('#exportBox .cardx .fine-l').first().innerText(), /đơn vị ghi trên BCTC \(đồng\)/);
+  // BCTC mẫu in "Đơn vị tính: VND" nên ô chọn đơn vị trong file mở ra ở đồng.
+  assert.equal(book['Tổng quan'][4][1], 'đồng', 'ô chọn đơn vị nằm trong file');
+  assert.match(await page.locator('#exportBox .cardx .fine-l').first().innerText(), /ô chọn đơn vị, đổi là mọi sheet tự tính lại/);
 
   // Tải lại trang → mở lại phiên tự lưu, không gọi thêm AI
   await page.waitForTimeout(1000);                                   // autosave (0,8 giây)
@@ -489,7 +515,7 @@ test('chọn ngôn ngữ Anh / Việt: đổi tại chỗ, nhớ lựa chọn, t
   assert.equal(await page.locator('#authDlg .auth-card h2').innerText(), 'Welcome');
   await shot(page, '5-dang-nhap-en');
 
-  await dangKy(page, { ten: 'Nguyen Van An', email: 'en@elevato.vn', md: 'Building a forecast model' });
+  await dangKy(page, { ten: 'Nguyen Van An', email: 'en@elevato.vn', nn: 'Equity analyst', md: 'Building a forecast model' });
   await page.waitForSelector('#app .step');
   assert.equal(await page.locator('#h5').innerText(), 'Review & export');
 
@@ -509,7 +535,10 @@ test('chọn ngôn ngữ Anh / Việt: đổi tại chỗ, nhớ lựa chọn, t
   assert.match(f.name, /Standard 2026 form\.xlsx$/, 'tên file theo ngôn ngữ');
   const o = await readXlsxCell(page, f.path, 'Financial position', /^A[23]$/);
   assert.equal(o.A2, 'STATEMENT OF FINANCIAL POSITION');
-  assert.match(o.A3, /^Unit: million VND/);
+  assert.match(o.A3, /^Unit as chosen on the Overview sheet/, 'đơn vị chọn trong file, chú thích cũng theo ngôn ngữ');
+  const ov = await readXlsxCell(page, f.path, 'Overview', /^[AB]5$/);
+  assert.equal(ov.A5, 'Display currency unit');
+  assert.equal(ov.B5, 'million VND', 'nạp từ file Excel nên đơn vị mặc định là triệu đồng');
 
   // Trang PDF: nút trong bảng chọn trang nằm trong bộ nhớ đệm riêng — phải đổi chữ theo.
   await page.setInputFiles('#fileInput', await bctcPdf());
@@ -543,14 +572,118 @@ async function bsXlsx(page) {
   return path;
 }
 
+test('ủng hộ: nút ở góc mở hộp có số tài khoản và mã QR dựng ngay trên máy', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#app .step');
+
+  await page.click('#donateBtn');
+  await page.waitForSelector('#ugDlg[open]');
+  const than = page.locator('#ugDlg .ug-body');
+  await than.locator('text=Vietcombank').waitFor();
+  await than.locator('text=1012345678').waitFor();
+  await than.locator('text=NGUYEN HOANG TRIEU VO').waitFor();
+
+  // Mã QR vẽ bằng thư viện trong repo, không gọi dịch vụ sinh QR nào ra ngoài.
+  const qr = page.locator('#ugDlg .ug-qr');
+  await qr.waitFor();
+  const co = await qr.evaluate((cv) => {
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let den = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] < 128) den += 1;
+    return { w: cv.width, den };
+  });
+  assert.ok(co.w >= 100 && co.den > 500, JSON.stringify(co));
+
+  // Chọn mức tiền → QR phải vẽ lại (nội dung khác vì thêm trường số tiền) và KHÔNG nhỏ đi.
+  const anh = () => qr.evaluate((cv) => {
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let h = 0;
+    for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i]) >>> 0;
+    return { w: cv.width, h };
+  });
+  const truoc = await anh();
+  await page.click('#ugDlg .ug-amt button >> nth=0');
+  await page.waitForFunction((cu) => {
+    const cv = document.querySelector('#ugDlg .ug-qr');
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let h = 0;
+    for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i]) >>> 0;
+    return h !== cu;
+  }, truoc.h);
+  const sau = await anh();
+  assert.ok(sau.w >= truoc.w - 1, `ô QR nhỏ dần qua mỗi lần vẽ: ${truoc.w} → ${sau.w}`);
+  assert.equal(await page.locator('#ugDlg .ug-amt button').first().getAttribute('aria-pressed'), 'true');
+
+  // Bấm lại mức đang chọn là bỏ số tiền, QR trở về như cũ.
+  await page.click('#ugDlg .ug-amt button >> nth=0');
+  await page.waitForFunction((cu) => {
+    const cv = document.querySelector('#ugDlg .ug-qr');
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let h = 0;
+    for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i]) >>> 0;
+    return h === cu;
+  }, truoc.h);
+
+  // Không phải đăng nhập mới xem được, và không có yêu cầu nào ra miền lạ.
+  assert.equal(await page.locator('#acct button').count(), 1);
+  assert.deepEqual(errors, []);
+});
+
+test('quên mật khẩu: xin mã qua email, nhập mã là đổi được mật khẩu và vào luôn', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#app .step');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
+  await dangKy(page, { ten: 'Quên Mật Khẩu', email: 'quen@elevato.vn', mk: 'mat-khau-cu-1' });
+  await page.waitForSelector('#acct .acct-name');
+
+  // Đăng xuất rồi đi lại bằng đường quên mật khẩu.
+  await page.click('#acct summary');
+  await page.click('#acct button:has-text("Đăng xuất")');
+  await page.waitForSelector('#acct button:has-text("Đăng nhập")');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
+  await page.fill('#liEmail', 'quen@elevato.vn');
+  await page.click('#loginForm .auth-link');
+  await page.waitForSelector('#resetForm:not([hidden])');
+  assert.equal(await page.locator('#qmEmail').inputValue(), 'quen@elevato.vn', 'mang sẵn email đã gõ ở ô đăng nhập');
+
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#authDlg .msg.ok:has-text("15 phút")');
+  await page.waitForSelector('#qmStep2:not([hidden])');
+
+  // Nhập sai mã → báo lỗi và đưa về bước 1 để xin mã mới, không bắt tải lại trang.
+  await page.fill('#qmMa', '11111111');
+  await page.fill('#qmPass', 'mat-khau-moi-1');
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#authDlg .msg.err');
+  await page.locator('#qmStep2').waitFor({ state: 'hidden' });
+  assert.equal(await page.locator('#resetForm button[type=submit]').innerText(), 'Gửi mã về email');
+  assert.equal(await page.locator('#qmEmail').isEditable(), true, 'về bước 1 thì sửa lại email được');
+
+  // Xin mã mới rồi nhập đúng.
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#qmStep2:not([hidden])');
+  assert.equal(await page.locator('#qmEmail').isEditable(), false, 'bước 2 khoá email đã nhận mã');
+  await page.fill('#qmMa', '24681357');
+  await page.fill('#qmPass', 'mat-khau-moi-1');
+  await page.click('#resetForm button[type=submit]');
+  await page.waitForSelector('#acct .acct-name');
+  assert.equal(accounts.get('quen@elevato.vn').mk, 'mat-khau-moi-1');
+  assert.deepEqual(errors, []);
+});
+
 /** Điền và gửi form đăng ký trong hộp thoại. */
-async function dangKy(page, { ten, email, sdt = '0901234567', mk = 'mat-khau-123', tuoi = '24', vt = 'hv', md = 'Dựng model forecast' }) {
+async function dangKy(page, { ten, email, sdt = '0901234567', mk = 'mat-khau-123', tuoi = '24',
+  nn = 'Chuyên viên phân tích', md = 'Dựng model forecast' }) {
   await page.click('#tab-signup');
   await page.fill('#suTen', ten);
   await page.fill('#suTuoi', tuoi);
   await page.fill('#suEmail', email);
   await page.fill('#suSdt', sdt);
-  await page.selectOption('#suVT', vt);
+  await page.fill('#suNN', nn);
   await page.fill('#suMD', md);
   await page.fill('#suPass', mk);
   await page.click('#signupForm button[type=submit]');

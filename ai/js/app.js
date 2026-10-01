@@ -3,6 +3,7 @@
 import { h, mount, $, toast } from './ui/dom.js';
 import { createStore, initialState, watch } from './ui/store.js';
 import { initAuth } from './ui/auth.js';
+import { initDonate } from './ui/donate.js';
 import { initFiles } from './ui/files.js';
 import { initPages } from './ui/pages.js';
 import { initExtract } from './ui/extract.js';
@@ -30,6 +31,7 @@ initReview(store, ctx);
 initExporter(store, ctx);
 railSpy();
 initAuth(store, ctx, { onLogin: (me) => { offerRestore(me); autosave(me); } });
+initDonate();
 
 window.addEventListener('beforeunload', (e) => { if (store.get().running && !ctx.leaving) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('unhandledrejection', (e) => { toast(t('app.err', { msg: e.reason?.message || e.reason })); });

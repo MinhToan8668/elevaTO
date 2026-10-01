@@ -41,18 +41,29 @@ function conTrucTiep(xml, goc) {
 const dsMau = (() => {
   const BS = computeTotals({ 'BS:111': 60e9, 'BS:112': 40e9, 'BS:141': 30e9, 'BS:221': 70e9, 'BS:311': 50e9, 'BS:411': 150e9 });
   const IS = computeTotals({ 'IS:01': 500e9, 'IS:11': 300e9, 'IS:25': 30e9, 'IS:51': 25e9 });
+  // Có cả thuyết minh để các sheet chi tiết cũng đi qua bài kiểm lược đồ OOXML.
+  const notes = {
+    segments: [{ name: 'Xe du lịch', revenue: 300e9, gross: 120e9 }, { name: 'Xe tải', revenue: 200e9 }],
+    fixedAssets: { tangible: [{ cls: 'machinery', name: 'Máy móc', cost: 80e9, accDep: -20e9, additions: 15e9, depreciation: -8e9 }],
+      intangible: [{ cls: 'software', name: 'Phần mềm', cost: 10e9, accDep: -3e9, additions: 2e9, depreciation: -1e9 }] },
+    goodwill: { cost: 25e9, accAmort: -5e9, additions: 0, amortization: -2.5e9 },
+    equity: { capIssued: 10e9, dividends: 30e9 },
+    debt: { stProceeds: 100e9, stRepay: 80e9, ltProceeds: 20e9, ltRepay: 5e9 },
+    shares: 150e6, taxRate: 0.2,
+  };
   let ds = emptyDataset();
   for (const y of [2024, 2025]) {
     ds = addExtraction(ds, { file: `BCTC ${y}.pdf`, company: 'CÔNG TY TRÁCH NHIỆM HỮU HẠN THACO AUTO',
-      meta: { ngay_ket_thuc: `${y}-12-31`, so_thang: 12 }, warnings: [], notes: {},
+      meta: { ngay_ket_thuc: `${y}-12-31`, so_thang: 12 }, warnings: [], notes,
       statements: { BS: { cur: BS, prev: {} }, IS: { cur: IS, prev: {} } } });
   }
   return ds;
 })();
 
 const caHaiForm = () => [
-  ['Form chuẩn hóa', buildFormXlsx(dsMau, { unit: 1e6, unitLabel: 'triệu đồng' })],
-  ['Form chi tiết', buildModelXlsx(dsMau, { unit: 1e6, unitLabel: 'triệu đồng' })],
+  ['Form chuẩn hóa', buildFormXlsx(dsMau, { unit: 1e6, details: true })],
+  ['Form chuẩn hóa (đồng)', buildFormXlsx(dsMau, { unit: 1 })],
+  ['Form chi tiết', buildModelXlsx(dsMau, { segmentNames: ['Xe du lịch', 'Xe tải', '', '', ''] })],
 ];
 
 test('thứ tự thẻ đúng lược đồ OOXML — <sheets> phải đứng trước <calcPr>', () => {
@@ -118,8 +129,41 @@ test('ký tự XML không hợp lệ bị bỏ, kể cả nửa cặp thay thế
   assert.equal(esc('A\u0007B'), 'AB');
   assert.equal(esc('A\ud800B'), 'AB', 'nửa cặp cao lạc lõng');
   assert.equal(esc('A\udc00B'), 'AB', 'nửa cặp thấp lạc lõng');
+  // Bản cũ dò nửa cặp thấp bằng cách "ăn" ký tự đứng trước nên sót cái thứ hai → Excel đòi sửa file.
+  assert.equal(esc('\udc00\udc00'), '', 'hai nửa cặp thấp liền nhau');
+  assert.equal(esc('a\udc00\udc01'), 'a');
+  assert.equal(esc('\u0001\udc00'), '', 'ký tự điều khiển ngay trước nửa cặp thấp');
+  assert.equal(esc('x\u0000\udc00'), 'x');
   assert.equal(esc('Chữ 𝒜 ổn'), 'Chữ 𝒜 ổn', 'cặp thay thế hợp lệ phải giữ nguyên');
   assert.equal(esc('a & b < c > d "e"'), 'a &amp; b &lt; c &gt; d &quot;e&quot;');
+});
+
+test('ô chữ bị cắt về dưới trần 32.767 ký tự của Excel', () => {
+  const dai = 'a'.repeat(40000);
+  const xml = buildFormXlsx({ ...dsMau, company: dai }, {})['xl/worksheets/sheet1.xml'];
+  const t = /<t xml:space="preserve">(a+)<\/t>/.exec(xml);
+  assert.ok(t && t[1].length <= 32767, `ô chữ dài ${t ? t[1].length : 0} ký tự`);
+});
+
+test('ô chọn đơn vị: danh sách và lời nhắc trong giới hạn Excel chấp nhận', () => {
+  const tq = buildFormXlsx(dsMau, {})['xl/worksheets/sheet1.xml'];
+  const dv = /<formula1>&quot;([^<]*)&quot;<\/formula1>/.exec(tq);
+  assert.ok(dv, 'phải có danh sách đơn vị');
+  assert.doesNotMatch(dv[1], /&quot;|'/, 'mục trong danh sách không được chứa dấu nháy');
+  assert.ok(dv[1].length <= 255, 'Excel chỉ nhận danh sách tối đa 255 ký tự');
+  // Quá giới hạn là Excel coi file hỏng — bản dịch mới dài hơn cũng không được vượt.
+  assert.ok((/ promptTitle="([^"]*)"/.exec(tq) || [, ''])[1].length <= 32, 'promptTitle tối đa 32 ký tự');
+  assert.ok((/ prompt="([^"]*)"/.exec(tq) || [, ''])[1].length <= 255, 'prompt tối đa 255 ký tự');
+});
+
+test('công thức không bao giờ bắt đầu bằng dấu "=" (Excel từ chối mở)', () => {
+  for (const [ten, files] of caHaiForm()) {
+    for (const [path, xml] of Object.entries(files)) {
+      for (const m of xml.matchAll(/<f>([^<]*)<\/f>/g)) {
+        assert.doesNotMatch(m[1], /^=/, `${ten} · ${path}: <f>${m[1]}</f>`);
+      }
+    }
+  }
 });
 
 test('mã ô trong <c r="…"> khớp số dòng của <row r="…"> chứa nó', () => {

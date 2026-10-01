@@ -39,3 +39,6 @@ export async function openZip(buf, { maxTotal = 400e6, maxEntry = 150e6 } = {}) 
   }
   return zip;
 }
+
+/** Bộ vẽ mã QR (qrcode-generator) — chỉ nạp khi người dùng mở hộp Ủng hộ. */
+export const loadQR = () => loadScript('qrcode/qrcode.js', 'qrcode');

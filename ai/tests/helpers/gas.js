@@ -48,6 +48,7 @@ export function loadGas(path, opts = {}) {
   const logs = [];
   const sheets = fakeSheets();
   const triggers = [];
+  const mails = [];                                  // thư MailApp đã gửi (mã đặt lại mật khẩu)
   let now = opts.now || Date.parse('2026-09-30T03:00:00Z');
   const resp = (code, body = '', headers = {}) => ({
     getResponseCode: () => code,
@@ -81,6 +82,10 @@ export function loadGas(path, opts = {}) {
       computeDigest: (alg, s) => toSigned(crypto.createHash(alg).update(String(s), 'utf8').digest()),
       base64EncodeWebSafe: (bytes) => Buffer.from(bytes.map((b) => b & 255)).toString('base64url'),
     },
+    MailApp: {
+      sendEmail: (o) => { if (opts.mailThrow) throw new Error(opts.mailThrow); mails.push(o); },
+      getRemainingDailyQuota: () => (opts.mailQuota === undefined ? 100 : opts.mailQuota),
+    },
     Session: { getScriptTimeZone: () => 'Asia/Ho_Chi_Minh' },
     Logger: { log: (m) => logs.push(String(m)) },
     console: { error: (m) => logs.push(String(m)), log: () => {} },
@@ -89,7 +94,7 @@ export function loadGas(path, opts = {}) {
   vm.createContext(ctx);
   vm.runInContext(readFileSync(path, 'utf8'), ctx, { filename: path });
   return {
-    ctx, props, cache, calls, logs, triggers, books: sheets.books,
+    ctx, props, cache, calls, logs, triggers, mails, books: sheets.books,
     post: (body) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } })),
     tick: (ms) => { now += ms; },
     run: (code) => vm.runInContext(code, ctx),
