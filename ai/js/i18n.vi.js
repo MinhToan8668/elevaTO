@@ -395,7 +395,7 @@ export const VI = {
   'xlm.year': 'Năm {y}',
   'xlm.note.1': 'Chỉ lấy các kỳ 12 tháng — model forecast chạy theo năm.',
   'xlm.note.paste': 'Sheet 03.Input_FS trong file này GIỮ NGUYÊN SỐ DÒNG của model: chọn vùng số liệu rồi dán vào ô cùng dòng, cùng cột của model là khớp.',
-  'xlm.note.pasteRow': 'Chỉ dán các dòng NỀN VÀNG (dòng nhập tay). Dòng tổng và dòng CHECK trong model là công thức có lớp chặn cột forecast — dán đè lên là mất.',
+  'xlm.note.pasteRow': 'Dán bằng Paste Special → Values. Dán cả khối C8:…217 thì nhanh nhất nhưng các dòng tổng và dòng CHECK trong model thành số cứng; muốn giữ công thức của model thì chỉ dán các dòng NỀN VÀNG (dòng nhập tay).',
   'xlm.note.yellow': 'Ô nền vàng là ô nhập tay của model. Số in nghiêng là số máy ước tính / suy ra, nên rà lại trước khi dùng.',
   'xlm.note.check': 'Các dòng bắt đầu bằng → là dòng CHECK của model, phải bằng 0. Dòng TRẠNG THÁI ở trên cùng báo ✔ OK khi mọi CHECK đều khớp.',
   'xlm.warn': '{n} lưu ý khi dựng số:',

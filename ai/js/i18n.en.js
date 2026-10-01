@@ -395,7 +395,7 @@ export const EN = {
   'xlm.year': 'FY {y}',
   'xlm.note.1': 'Only 12-month periods are included — the forecast model runs on full years.',
   'xlm.note.paste': 'Sheet 03.Input_FS in this file KEEPS THE MODEL ROW NUMBERS: select the data block and paste it into the same rows and columns of the model.',
-  'xlm.note.pasteRow': 'Paste only the YELLOW rows (the manual-entry rows). Total and CHECK rows in the model are formulas that guard the forecast columns \u2014 pasting over them removes that guard.',
+  'xlm.note.pasteRow': 'Paste with Paste Special \u2192 Values. Pasting the whole C8:\u2026217 block is fastest but turns the model\u2019s total and CHECK rows into static numbers; to keep the model\u2019s formulas, paste only the YELLOW rows (the manual-entry rows).',
   'xlm.note.yellow': 'Yellow cells are the model\u2019s manual-entry cells. Italic figures were estimated or derived, so review them before relying on them.',
   'xlm.note.check': 'Rows starting with \u2192 are the model\u2019s CHECK rows and must be zero. The STATUS row at the top shows \u2714 OK once every check reconciles.',
   'xlm.warn': '{n} {n|note|notes} on how the figures were built:',
