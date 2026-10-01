@@ -317,17 +317,12 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   assert.ok(Object.keys(mBook).includes('Kết quả kinh doanh'), Object.keys(mBook).join(' | '));
   const kq = mBook['Kết quả kinh doanh'].slice(4);
   const dt = kq.find((r) => r[1] === 'Doanh thu thuần');
-  assert.ok(dt && dt.slice(2).some((v) => Number(v) === 500000), `doanh thu 500.000 triệu: ${JSON.stringify(dt)}`);
+  // BCTC mẫu in "Đơn vị tính: VND" → file xuất ra cũng bằng đồng, không quy về triệu nữa.
+  assert.ok(dt && dt.slice(2).some((v) => Number(v) === 500e9), `doanh thu 500 tỷ đồng: ${JSON.stringify(dt)}`);
 
-  // Đổi đơn vị trong file: số đổi theo, số gốc trên trang giữ nguyên
-  await page.selectOption('#exportBox .unit-pick select', '1000000000');
-  const ty = await download(page, () => page.click('#exportBox button:has-text("Tải Form chi tiết elevaTO")'));
-  const tyBook = await page.evaluate(async (b64) => {
-    const wb = window.XLSX.read(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), { type: 'array' });
-    return window.XLSX.utils.sheet_to_json(wb.Sheets['Kết quả kinh doanh'], { header: 1 });
-  }, (await readFile(ty.path)).toString('base64'));
-  const dtTy = tyBook.slice(4).find((r) => r[1] === 'Doanh thu thuần');
-  assert.ok(dtTy.slice(2).some((v) => Number(v) === 500), `đơn vị tỷ đồng: ${JSON.stringify(dtTy)}`);
+  // Không còn ô chọn đơn vị khi xuất: file giữ đúng đơn vị in trên BCTC, đổi hiển thị thì làm trong Excel.
+  assert.equal(await page.locator('#exportBox .unit-pick').count(), 0, 'đã bỏ ô chọn đơn vị ở phần xuất');
+  assert.match(await page.locator('#exportBox .cardx .fine-l').first().innerText(), /đơn vị ghi trên BCTC \(đồng\)/);
 
   // Tải lại trang → mở lại phiên tự lưu, không gọi thêm AI
   await page.waitForTimeout(1000);                                   // autosave (0,8 giây)
