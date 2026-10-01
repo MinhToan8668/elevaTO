@@ -2191,6 +2191,14 @@ initChrome();
 observe();
 initAdmin();
 
+/* Link thẳng tới form đăng ký (dùng trong trang link-in-bio): /#dang-ky, /#dang-ky-tu-hoc */
+function openFromHash(){
+  var m=location.hash.match(/^#dang-ky(-tu-hoc)?$/);
+  if(m) openModal(m[1]?'selfpaced':'live');
+}
+openFromHash();
+window.addEventListener('hashchange',openFromHash);
+
 })();
 </script>
 </body>

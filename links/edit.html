@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: data:; connect-src 'self' https://api.github.com; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Sửa trang link · elevaTO</title>
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="stylesheet" href="../ai/vendor/fonts/be-vietnam-pro.css">
+<link rel="stylesheet" href="css/links.css">
+<link rel="stylesheet" href="css/edit.css">
+<script src="../ai/js/theme.js"></script>
+<script type="module" src="js/editor.js"></script>
+</head>
+<body class="ed">
+<div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+
+<header class="ed-top glass">
+  <a class="brand" href="index.html" aria-label="Mở trang link">
+    <img class="logo logo-light" src="../assets/logo-on-light.svg" alt="elevaTO" width="218" height="81">
+    <img class="logo logo-dark" src="../assets/logo-on-dark.svg" alt="" width="218" height="81">
+  </a>
+  <div class="ed-title">
+    <b>Trang link-in-bio</b>
+    <small id="dirty" class="dirty">Đang tải…</small>
+  </div>
+  <div class="ed-act">
+    <button class="ibtn" id="themeBtn" type="button" aria-label="Đổi giao diện sáng / tối"><span class="i-sun"></span><span class="i-moon"></span></button>
+    <a class="btn btn-ghost hide-sm" href="index.html" target="_blank" rel="noopener">Xem trang</a>
+    <button class="btn btn-em" id="publishBtn" type="button">Đăng lên web</button>
+  </div>
+</header>
+
+<div class="ed-tabs glass" role="tablist" aria-label="Chế độ">
+  <button role="tab" id="tabEdit" aria-selected="true" aria-controls="form" type="button">Sửa nội dung</button>
+  <button role="tab" id="tabPrev" aria-selected="false" aria-controls="preview" type="button">Xem trước</button>
+</div>
+
+<div class="ed-body">
+  <main class="ed-form" id="form" aria-label="Nội dung trang"></main>
+  <aside class="ed-prev" id="preview" aria-label="Xem trước">
+    <div class="phone">
+      <div class="phone-notch" aria-hidden="true"></div>
+      <iframe id="frame" title="Xem trước trang link" src="index.html?preview"></iframe>
+    </div>
+    <p class="prev-note">Xem trước dùng bản nháp. Bấm link trong khung chỉ hiện đích đến.</p>
+  </aside>
+</div>
+
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
