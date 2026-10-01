@@ -1,7 +1,8 @@
-// Đăng nhập / đăng ký (kiểu Viral Studio của TMXK): màn chào + thẻ đăng nhập, menu tài khoản trên đầu trang.
+// Đăng nhập / đăng ký: ai cũng dùng được màn hình chính, chỉ việc gọi AI và tải file mới cần tài khoản
+// (ctx.canDo bật hộp đăng ký). Nút đăng nhập + menu tài khoản nằm ở góc trên.
 // Phiên (token) lưu trong trình duyệt; máy chủ chỉ giữ bản băm và cho sống 30 ngày.
 
-import { h, mount, $ } from './dom.js';
+import { h, mount, $, toast } from './dom.js';
 import { ROLE_KEY, watch } from './store.js';
 import { t } from '../i18n.js';
 import { API } from '../config.js';
@@ -35,6 +36,18 @@ export function initAuth(store, ctx, { onLogin }) {
   let session = readSession();
 
   ctx.client = (onWait) => (session ? createClient({ api: API, token: session.token, onWait, onAuth: () => ctx.logout(t('au.expired')) }) : null);
+  // Việc người dùng đang định làm khi bị chặn — đăng nhập xong chạy tiếp luôn, không bắt bấm lại.
+  let choLam = null;
+  /**
+   * Việc cần tài khoản (gọi AI, tải file). Chưa đăng nhập thì bật hộp đăng ký và trả false.
+   * @param lam  (tuỳ chọn) chạy lại ngay sau khi đăng nhập thành công
+   */
+  ctx.canDo = (nhan, lam) => {
+    if (session) return true;
+    choLam = lam || null;
+    openAuth(nhan);
+    return false;
+  };
   ctx.refreshQuota = async () => {
     if (!session) return;
     try { setUser(await ctx.client().me()); } catch (e) { /* lỗi mạng: giữ số cũ */ }
@@ -61,13 +74,17 @@ export function initAuth(store, ctx, { onLogin }) {
     session = { token, me };
     saveSession(session);
     store.set({ user: me });
-    showApp(true);
+    $('#authDlg')?.close();
     onLogin(me);
-    $('#main').focus({ preventScroll: true });          // người dùng bàn phím / đọc màn hình không bị mất chỗ
+    toast(t('au.hello', { name: me.ten }));
+    const lam = choLam; choLam = null;
+    if (lam) setTimeout(lam, 0);                        // chạy tiếp việc đang dở trước khi bị chặn
   }
 
   renderGate(enter);
-  store.on(renderAccount(ctx));
+  const veGoc = renderAccount(ctx);
+  store.on(veGoc);
+  veGoc(store.get());                                   // vẽ ngay nút "Đăng nhập / Đăng ký" cho khách chưa có tài khoản
   // Đổi ngôn ngữ: vẽ lại màn đăng nhập và menu tài khoản (hai phần này không nằm trong vòng vẽ của bước).
   // Giữ nguyên những gì người dùng đang gõ dở và các ô đã tick — vẽ lại chỉ để đổi chữ.
   let langCu = store.get().lang;
@@ -89,28 +106,23 @@ export function initAuth(store, ctx, { onLogin }) {
   let flash = '';
   try { flash = sessionStorage.getItem('elevato-ai-msg') || ''; sessionStorage.removeItem('elevato-ai-msg'); } catch (e) { /* bỏ qua */ }
 
+  // Ai cũng vào thẳng màn hình chính. Chỉ lúc gọi AI hoặc tải file mới cần tài khoản (xem ctx.canDo).
   if (session) {
     store.set({ user: session.me });
-    showApp(true);
     onLogin(session.me);
     ctx.refreshQuota();                                 // kiểm tra phiên còn sống + cập nhật lượt
-  } else {
-    showApp(false);
-    if (flash) setGateMsg('warn', flash);
+  } else if (flash) {
+    openAuth(flash);
   }
 }
 
-function showApp(on) {
-  document.documentElement.dataset.view = on ? 'app' : 'gate';
-  document.querySelector('.skip')?.setAttribute('href', on ? '#main' : '#gate');
-  $('#gate').hidden = on;
-  $('#app').hidden = !on;
-  $('#acct').hidden = !on;
-}
-
-// ─── Màn chào + đăng nhập / đăng ký ───────────────────────
+// ─── Hộp đăng nhập / đăng ký (chỉ bật khi cần) ────────────
 
 let setGateMsg = () => {};
+let moHop = () => {};
+
+/** Bật hộp đăng nhập kèm lời giải thích vì sao cần tài khoản. */
+export function openAuth(nhan) { moHop(nhan); }
 
 function renderGate(enter) {
   const msg = h('div', { class: 'auth-msg', 'aria-live': 'polite' });
@@ -136,8 +148,16 @@ function renderGate(enter) {
     h('p', { class: 'fine' }, t('au.forgot')));
   const signupForm = h('form', { class: 'auth-form', id: 'signupForm', novalidate: true, hidden: true },
     field('suTen', t('au.name'), { autocomplete: 'name', placeholder: t('au.name.ph'), maxlength: '60' }),
+    field('suTuoi', t('au.age'), { type: 'number', min: '12', max: '100', inputmode: 'numeric', placeholder: '25' }),
     field('suEmail', t('au.email'), { type: 'email', autocomplete: 'email', inputmode: 'email', placeholder: 'ban@email.com' }),
     field('suSdt', t('au.phone'), { type: 'tel', autocomplete: 'tel', inputmode: 'tel', placeholder: t('au.phone.ph') }),
+    // Người dùng tự khai; vai trò thật do elevaTO xếp qua bot Telegram.
+    h('div', { class: 'fld' }, h('label', { htmlFor: 'suVT' }, t('au.who')),
+      h('select', { id: 'suVT', class: 'inp', required: true, disabled: off },
+        h('option', { value: '' }, t('au.who.ph')),
+        ['hv', 'gv', 'free'].map((k) => h('option', { value: k }, t(`au.who.${k}`)))),
+      h('small', { class: 'fine-l' }, t('au.whoNote'))),
+    field('suMD', t('au.purpose'), { placeholder: t('au.purpose.ph'), maxlength: '300' }),
     pw('suPass', t('au.pass.new'), 'new-password'),
     // Ô bẫy bot: người thật không thấy, không điền.
     h('div', { class: 'trap', 'aria-hidden': 'true' }, h('label', {}, 'Website', h('input', { id: 'suWeb', tabindex: '-1', autocomplete: 'off' }))),
@@ -170,8 +190,11 @@ function renderGate(enter) {
   });
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const body = { action: 'dangky', ten: $('#suTen').value.trim(), email: $('#suEmail').value.trim(), sdt: $('#suSdt').value.trim(), mk: $('#suPass').value, website: $('#suWeb').value };
-    if (!body.ten || !body.email || !body.sdt || !body.mk) return setGateMsg('err', t('au.needAll'));
+    const body = { action: 'dangky', ten: $('#suTen').value.trim(), email: $('#suEmail').value.trim(), sdt: $('#suSdt').value.trim(),
+      mk: $('#suPass').value, tuoi: Number($('#suTuoi').value), nguyen_vong: $('#suVT').value, muc_dich: $('#suMD').value.trim(),
+      website: $('#suWeb').value };
+    if (!body.ten || !body.email || !body.sdt || !body.mk || !body.nguyen_vong || !body.muc_dich) return setGateMsg('err', t('au.needAll'));
+    if (!(body.tuoi >= 12 && body.tuoi <= 100)) return setGateMsg('err', t('au.badAge'));
     if (body.mk.length < 8) return setGateMsg('err', t('au.shortPass'));
     busy(signupForm, true, t('au.signup'));
     try {
@@ -182,28 +205,34 @@ function renderGate(enter) {
     finally { busy(signupForm, false, t('au.signup')); }
   });
 
-  mount($('#gate'),
-    h('div', { class: 'gate-in' },
-      h('section', { class: 'hero' },
-        h('span', { class: 'eyebrow' }, t('au.eyebrow')),
-        h('h1', {}, t('au.h1'), h('em', {}, t('au.h1.em'))),
-        h('p', { class: 'hero-sub' }, t('au.sub')),
-        h('ul', { class: 'feats' },
-          feat('01', t('au.f1.t'), t('au.f1.d')),
-          feat('02', t('au.f2.t'), t('au.f2.d')),
-          feat('03', t('au.f3.t'), t('au.f3.d')))),
-      h('section', { class: 'auth-card', 'aria-label': t('au.card.aria') },
-        h('h2', {}, t('au.welcome')),
-        h('p', { class: 'auth-sub' }, t('au.welcome.sub')),
-        off ? h('p', { class: 'msg warn' }, t('au.off')) : null,
-        tabs, loginForm, signupForm, msg)));
+  // Lý do phải có tài khoản — đặt ngay đầu hộp để người dùng hiểu vì sao bị chặn giữa chừng.
+  const vhy = h('p', { class: 'auth-why' });
+  const cu = $('#authDlg');
+  const dlg = h('dialog', { class: 'authdlg', id: 'authDlg', 'aria-label': t('au.card.aria') },
+    h('button', { type: 'button', class: 'icon-btn sm auth-x', 'aria-label': t('vw.close'), onclick: () => dlg.close() }, '✕'),
+    h('section', { class: 'auth-card' },
+      h('h2', {}, t('au.welcome')),
+      h('p', { class: 'auth-sub' }, t('au.welcome.sub')),
+      vhy,
+      off ? h('p', { class: 'msg warn' }, t('au.off')) : null,
+      tabs, loginForm, signupForm, msg));
+  if (cu) cu.replaceWith(dlg); else document.body.append(dlg);
+
+  moHop = (nhan) => {
+    vhy.textContent = nhan || '';
+    vhy.hidden = !nhan;
+    if (!dlg.open) dlg.showModal();
+    $('#liEmail')?.focus();
+  };
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });   // bấm ra ngoài thì đóng
+  return dlg;
 }
 
-const O_MAN = ['liEmail', 'liPass', 'suTen', 'suEmail', 'suSdt', 'suPass'];
+const O_MAN = ['liEmail', 'liPass', 'suTen', 'suTuoi', 'suEmail', 'suSdt', 'suVT', 'suMD', 'suPass'];
 
 /** Chụp lại những gì người dùng đang gõ dở trên màn đăng nhập (trước khi vẽ lại vì đổi ngôn ngữ). */
 function chupMan() {
-  const msg = $('#gate .auth-msg .msg');
+  const msg = $('#authDlg .auth-msg .msg');
   return {
     o: Object.fromEntries(O_MAN.map((id) => [id, $(`#${id}`)?.value || ''])),
     tab: $('#signupForm')?.hidden === false ? 'signup' : 'login',
@@ -217,10 +246,6 @@ function datLaiMan(giu) {
   if (giu.msg) setGateMsg(giu.msg.kind, giu.msg.text);
 }
 
-function feat(n, title, text) {
-  return h('li', {}, h('span', { class: 'fn' }, n), h('div', {}, h('b', {}, title), h('p', {}, text)));
-}
-
 // ─── Menu tài khoản trên đầu trang ────────────────────────
 
 function renderAccount(ctx) {
@@ -230,7 +255,7 @@ function renderAccount(ctx) {
     const prev = last;
     last = s.user;
     const box = $('#acct');
-    if (!s.user) { mount(box); return; }
+    if (!s.user) { mount(box, h('button', { class: 'btn sm', type: 'button', onclick: () => openAuth('') }, t('au.signinUp'))); return; }
     const me = s.user;
     // Chỉ đổi số lượt (sau mỗi lần trích xuất): sửa tại chỗ, menu đang mở không bị đóng.
     const q = box.querySelector('.acct-q');

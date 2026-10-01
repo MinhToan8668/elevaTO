@@ -25,7 +25,8 @@ function setup(fetchImpl, { keys = KEY, props = {} } = {}) {
   g.run(`GEMINI_KEY_MOI = ${JSON.stringify(keys)}; caiDat();`);
   return g;
 }
-const USER = { ten: 'nguyễn văn a', email: ' A@Mail.com ', sdt: '0901 234 567', mk: 'matkhau-123' };
+const USER = { ten: 'nguyễn văn a', email: ' A@Mail.com ', sdt: '0901 234 567', mk: 'matkhau-123',
+  tuoi: 24, nguyen_vong: 'hv', muc_dich: 'Dựng model forecast cho bài tập' };
 function signup(g, over = {}) { return g.post({ action: 'dangky', ...USER, ...over }); }
 function login(g, over = {}) { return g.post({ action: 'dangnhap', email: USER.email, mk: USER.mk, ...over }); }
 const rows = (g) => { const b = Object.values(g.books)[0]; return b.sheets.find((s) => s.name === 'TaiKhoan').rows; };
@@ -602,4 +603,44 @@ test('key Gemini hỏng → báo quản trị qua Telegram, tối đa 1 lần m�
   sent.length = 0;
   g.post(gen(tk)); g.post(gen(tk));
   assert.equal(sent.filter((x) => /key/i.test(x.body.text || '')).length, 1);
+});
+
+test('đăng ký: hỏi tuổi, bạn là ai và mục đích — ghi lại để quản trị xếp vai trò, KHÔNG tự phong', () => {
+  const g = setup();
+  const d = signup(g, { nguyen_vong: 'gv' }).data;
+  assert.equal(d.me.vaitro, 'free', 'tự khai là giảng viên vẫn chỉ ở mức thường — vai trò do quản trị đặt bằng bot');
+  const r = rows(g)[1], head = rows(g)[0];
+  const lay = (c) => r[head.indexOf(c)];
+  assert.equal(lay('nguyen_vong'), 'gv', 'vẫn lưu nguyện vọng để quản trị biết đường xếp');
+  assert.equal(Number(lay('tuoi')), 24);
+  assert.equal(lay('muc_dich'), 'Dựng model forecast cho bài tập');
+  assert.equal(lay('vaitro'), 'free');
+});
+
+test('đăng ký: thiếu hoặc sai tuổi / vai trò tự khai / mục đích đều bị từ chối', () => {
+  for (const [sua, ma] of [
+    [{ tuoi: undefined }, 'tuoi_sai'], [{ tuoi: 7 }, 'tuoi_sai'], [{ tuoi: 130 }, 'tuoi_sai'], [{ tuoi: 'abc' }, 'tuoi_sai'],
+    [{ nguyen_vong: '' }, 'nv_sai'], [{ nguyen_vong: 'admin' }, 'nv_sai'],
+    [{ muc_dich: '   ' }, 'thieu'],
+  ]) {
+    const r = signup(setup(), sua);
+    assert.equal(r.ok, false, JSON.stringify(sua));
+    assert.equal(r.code, ma, JSON.stringify(sua));
+  }
+});
+
+test('bảng tài khoản lập từ bản cũ: tự nối thêm cột mới, dữ liệu cũ giữ nguyên', () => {
+  const g = setup();
+  signup(g);                                                   // tạo bảng + một tài khoản
+  const b = Object.values(g.books)[0], sh = b.sheets.find((x) => x.name === 'TaiKhoan');
+  const cuoi = sh.rows[0].length;
+  // Giả lập bảng của bản cũ: cắt bỏ ba cột mới ở cả tiêu đề lẫn dòng dữ liệu.
+  sh.rows = sh.rows.map((r) => r.slice(0, cuoi - 3));
+  const truocEmail = sh.rows[1][sh.rows[0].indexOf('email')];
+  signup(g, { email: 'b@mail.com' });                          // lần ghi sau phải tự vá tiêu đề
+  assert.deepEqual(sh.rows[0].slice(-3), ['tuoi', 'nguyen_vong', 'muc_dich'], 'đã nối thêm cột mới');
+  assert.equal(sh.rows[1][sh.rows[0].indexOf('email')], truocEmail, 'dòng cũ không bị xê dịch');
+  const moi = sh.rows[2];
+  assert.equal(moi[sh.rows[0].indexOf('email')], 'b@mail.com');
+  assert.equal(moi[sh.rows[0].indexOf('nguyen_vong')], 'hv', 'dòng mới ghi đúng cột theo tiêu đề');
 });

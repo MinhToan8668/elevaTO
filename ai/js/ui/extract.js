@@ -30,7 +30,9 @@ function renderRun(s, store, ctx) {
   let hint;
   if (!todo.length) hint = t(s.jobs.some((j) => j.status === 'done') ? 'run.allDone' : 'run.noFiles');
   else hint = t('run.est', { n: todo.length, calls, left: left !== null ? t('run.left', { n: left }) : '' });
-  const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || !s.user || noTable.length === todo.length, onclick: () => run(store, ctx) },
+  // Chưa đăng nhập vẫn bấm được: bấm xong mới hiện hộp đăng ký, đỡ cụt hứng giữa chừng.
+  const runBtn = h('button', { class: 'btn', id: 'runBtn', disabled: s.running || !todo.length || noTable.length === todo.length,
+    onclick: () => { const go = () => run(store, ctx); if (ctx.canDo(t('au.why.run'), go)) go(); } },
     t(s.running ? 'run.going' : 'run.go'));
   const stopBtn = s.running ? h('button', { class: 'btn ghost', id: 'stopBtn', onclick: () => { ctx.stop = true; toast(t('run.stopping')); } }, t('run.stop')) : null;
   document.querySelector('.rail a[data-step="3"]').classList.toggle('done', s.jobs.some((j) => j.status === 'done'));

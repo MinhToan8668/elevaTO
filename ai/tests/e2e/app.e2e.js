@@ -62,7 +62,13 @@ function fakeAI(body) {
   const fail = (code, error) => ({ ok: false, code, error });
   if (body.action === 'dangky') {
     if (accounts.has(body.email)) return fail('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
-    const a = { ten: body.ten, email: body.email, mk: body.mk, token: TOKEN(body.email) };
+    // Máy chủ thật đòi đủ các ô khai báo — bắt chước ở đây để E2E chứng minh trang có gửi đi.
+    if (!(Number(body.tuoi) >= 12 && Number(body.tuoi) <= 100)) return fail('tuoi_sai', 'Tuổi chưa đúng');
+    if (!['hv', 'gv', 'free'].includes(body.nguyen_vong)) return fail('nv_sai', 'Chọn bạn là ai');
+    if (!String(body.muc_dich || '').trim()) return fail('thieu', 'Cho biết mục đích dùng');
+    // Ai đăng ký cũng ở mức thường; học viên / giảng viên do quản trị xếp bằng bot Telegram.
+    const a = { ten: body.ten, email: body.email, mk: body.mk, token: TOKEN(body.email), vaitro: 'free',
+      khai: { tuoi: Number(body.tuoi), nguyen_vong: body.nguyen_vong, muc_dich: body.muc_dich } };
     accounts.set(body.email, a);
     return { ok: true, data: { token: a.token, me: ME(a) } };
   }
@@ -159,36 +165,29 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   const pdfPath = await bctcPdf();
   const { page, errors } = await newPage();
   await page.goto(`${base}/ai/`);
-  // Chưa đăng nhập: chỉ thấy màn chào + đăng nhập, không có ô link máy chủ / mã truy cập nào.
-  await page.waitForSelector('#gate .auth-card');
-  assert.equal(await page.locator('#app').isVisible(), false);
+  // Chưa đăng nhập vẫn vào thẳng màn hình chính, không có tường đăng nhập ở cửa.
+  await page.waitForSelector('#app .step');
+  assert.equal(await page.locator('#authDlg[open]').count(), 0, 'không tự bật hộp đăng nhập');
   assert.equal(await page.locator('input[type=url], #apiIn, #codeIn').count(), 0);
   assert.ok(await page.locator('.top .logo-light').evaluate((img) => img.naturalWidth > 0), 'logo elevaTO hiện được');
-  await shot(page, '0-dang-nhap');
+  assert.match(await page.locator('#acct button').innerText(), /Đăng nhập \/ Đăng ký/);
+  await shot(page, '0-vao-thang');
   if (process.env.E2E_SHOTS) {
     await page.emulateMedia({ colorScheme: 'dark' });
-    await shot(page, '0-dang-nhap-toi', { fullPage: false });
+    await shot(page, '0-vao-thang-toi', { fullPage: false });
     await page.setViewportSize({ width: 390, height: 844 });
-    await shot(page, '0-dang-nhap-mobile', { fullPage: false });
+    await shot(page, '0-vao-thang-mobile', { fullPage: false });
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.emulateMedia({ colorScheme: 'light' });
   }
-  await page.fill('#liEmail', 'hv@elevato.vn');
-  await page.fill('#liPass', 'sai-mat-khau');
-  await page.click('#loginForm button[type=submit]');
-  await page.waitForSelector('#gate .msg.err:has-text("chưa đúng")');
-  await page.click('#tab-signup');
-  await page.fill('#suTen', 'Học viên E2E');
-  await page.fill('#suEmail', 'hv@elevato.vn');
-  await page.fill('#suSdt', '0901234567');
-  await page.fill('#suPass', 'mat-khau-123');
-  await page.click('#signupForm button[type=submit]');
-  await page.waitForSelector('#app:not([hidden])');
-  assert.equal(await page.locator('#acct .acct-name').innerText(), 'Học viên E2E');
-  assert.equal(await page.evaluate(() => typeof window.XLSX), 'undefined', 'thư viện Excel chỉ nạp khi cần');
 
+  // Tải file, chọn trang — vẫn chưa cần tài khoản.
   await page.setInputFiles('#fileInput', pdfPath);
-  await page.waitForSelector('#fileList .file:has-text("máy nhận ra CĐKT, KQKD, LCTT")', { timeout: 30_000 });
+  await page.waitForSelector('#fileList .file:has-text("máy nhận ra CĐKT, KQKD, LCTT")');
+  await page.waitForSelector('#pageMaps details.pmap');
+  assert.equal(aiCalls.length, 0, 'chưa gọi AI lần nào khi chưa đăng nhập');
+
+  assert.equal(await page.evaluate(() => typeof window.XLSX), 'undefined', 'thư viện Excel chỉ nạp khi cần');
   assert.equal(await page.locator('#pageMaps .tile').count(), 5);
   // Máy tick sẵn 3 bảng chính + trang thuyết minh nhận ra được (2–5), trang bìa không tick
   assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true]);
@@ -221,16 +220,35 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await page.waitForSelector('dialog.viewer:not([open])', { state: 'attached' });
   assert.ok(await page.evaluate(() => document.activeElement === document.querySelector('#pageMaps .tile-img')), 'đóng xem trang → quay về ảnh trang đã bấm');
 
+  // Bấm "Trích xuất bằng AI" mới hiện hộp đăng ký — đây là chỗ đầu tiên cần tài khoản.
+  assert.equal(aiCalls.length, 0, 'chưa gọi AI lần nào khi chưa đăng nhập');
+  await page.click('#runBtn');
+  await page.waitForSelector('#authDlg[open]');
+  assert.match(await page.locator('#authDlg .auth-why').innerText(), /cần tài khoản/);
+  await shot(page, '0b-hoi-dang-ky', { fullPage: false });
+  await page.fill('#liEmail', 'hv@elevato.vn');
+  await page.fill('#liPass', 'sai-mat-khau');
+  await page.click('#loginForm button[type=submit]');
+  await page.waitForSelector('#authDlg .msg.err:has-text("chưa đúng")');
+  await dangKy(page, { ten: 'Học viên E2E', email: 'hv@elevato.vn', vt: 'gv' });
+  await page.waitForSelector('#authDlg:not([open])', { state: 'attached' });
+  assert.equal(await page.locator('#acct .acct-name').innerText(), 'Học viên E2E');
+  assert.deepEqual(accounts.get('hv@elevato.vn').khai, { tuoi: 24, nguyen_vong: 'gv', muc_dich: 'Dựng model forecast' },
+    'trang gửi đủ tuổi / vai trò tự khai / mục đích');
+  assert.equal(accounts.get('hv@elevato.vn').vaitro, 'free', 'tự khai giảng viên vẫn chỉ ở mức thường');
+  // Đăng ký xong tự chạy tiếp việc đang dở, không bắt bấm lại.
+  await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
+
   // Tài khoản thường: thẻ Form chi tiết elevaTO bị khoá
   assert.equal(await page.locator('#exportBox .cardx.locked').count(), 1, 'form elevaTO khoá với tài khoản thường');
 
-  // Nâng lên học viên → mở khoá
+  // Nâng lên học viên (quản trị xếp bằng bot Telegram) → mở khoá, không phải tự phong lúc đăng ký
   accounts.get('hv@elevato.vn').vaitro = 'hv';
   await page.reload();
   await page.setInputFiles('#fileInput', pdfPath);
   await page.waitForSelector('#pageMaps .tile');
-
-  await page.click('#runBtn');
+  await page.click('#runBtn');                                   // đã đăng nhập: chạy thẳng, không hỏi lại
+  assert.equal(await page.locator('#authDlg[open]').count(), 0, 'đã đăng nhập thì không hỏi lại');
   await page.waitForSelector('#review .sum .pc', { timeout: 60_000 });
   assert.equal(await page.locator('#exportBox .cardx.locked').count(), 0, 'học viên xuất được form elevaTO');
   assert.ok(aiCalls.length >= 4, `gọi AI ${aiCalls.length} lần`);
@@ -338,21 +356,23 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   // Đăng xuất → về màn đăng nhập; đăng nhập lại người khác không thấy phiên làm việc của người trước.
   await page.click('#acct summary');
   await page.click('#acct button:has-text("Đăng xuất")');
-  await page.waitForSelector('#gate .auth-card');
+  await page.waitForSelector('#app .step');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
   assert.equal(await page.evaluate(() => localStorage.getItem('elevato-ai-phien')), null);
-  await page.click('#tab-signup');
-  await page.fill('#suTen', 'Người Khác'); await page.fill('#suEmail', 'khac@elevato.vn');
-  await page.fill('#suSdt', '0912345678'); await page.fill('#suPass', 'mat-khau-456');
-  await page.click('#signupForm button[type=submit]');
-  await page.waitForSelector('#app:not([hidden])');
+  await dangKy(page, { ten: 'Người Khác', email: 'khac@elevato.vn' });
+  await page.waitForSelector('#app .step');
   assert.equal(await page.locator('#restore .banner').count(), 0, 'không mời mở phiên của tài khoản khác');
   assert.deepEqual(errors, [], 'không có lỗi JavaScript trên trang');
 });
 
-test('chưa cài máy chủ: màn chào báo đang cài đặt, không cho đăng nhập', { timeout: 60_000 }, async () => {
+test('chưa cài máy chủ: hộp đăng nhập báo đang cài đặt, không cho đăng nhập', { timeout: 60_000 }, async () => {
   const { page, errors } = await newPage({ configured: false });
   await page.goto(`${base}/ai/`);
-  await page.waitForSelector('#gate .msg.warn:has-text("đang được cài đặt")');
+  await page.waitForSelector('#app .step');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
+  await page.waitForSelector('#authDlg .msg.warn:has-text("đang được cài đặt")');
   assert.equal(await page.locator('#loginForm button[type=submit]').isDisabled(), true);
   assert.deepEqual(errors, []);
 });
@@ -365,7 +385,7 @@ test('phiên hết hạn khi đang dùng → tự về màn đăng nhập kèm l
     localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: 'EZZZZZ.' + '0'.repeat(64), me: { ten: 'Cũ', email: 'cu@x.vn', luot: { dung: 0, han: 5 } } }));
   });
   await page.goto(`${base}/ai/`);
-  await page.waitForSelector('#gate .msg.warn:has-text("Phiên đăng nhập đã hết")');
+  await page.waitForSelector('#authDlg[open] .auth-why:has-text("Phiên đăng nhập đã hết")');
 });
 
 test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì người dùng nhập ở bước 4', { timeout: 60_000 }, async () => {
@@ -373,7 +393,7 @@ test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì 
   accounts.set('xls@elevato.vn', { ten: 'Excel', email: 'xls@elevato.vn', mk: 'x', token: TOKEN('xls@elevato.vn') });
   await page.addInitScript((t) => localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Excel', email: 'xls@elevato.vn', luot: { dung: 0, han: 5 } } })), TOKEN('xls@elevato.vn'));
   await page.goto(`${base}/ai/`);
-  await page.waitForSelector('#app:not([hidden])');
+  await page.waitForSelector('#app .step');
   await page.addScriptTag({ url: '/ai/vendor/sheetjs/xlsx.full.min.js' });
   const b64 = await page.evaluate((items) => {
     const aoa = [['CÔNG TY ABC'], ['BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH'], ['Đơn vị tính: triệu đồng'], ['Chỉ tiêu', 'Mã số', 'Thuyết minh', 'Năm nay', 'Năm trước'],
@@ -401,7 +421,7 @@ test('thương hiệu: phông Be Vietnam Pro nằm trong repo, logo lớn căn g
   // Chặn mọi lời gọi ra ngoài: trang phải tự đủ phông chữ.
   await page.route((u) => !u.href.startsWith(base) && !u.href.startsWith('https://script.google.com'), (r) => r.abort());
   await page.goto(`${base}/ai/`);
-  await page.waitForSelector('#gate .auth-card');
+  await page.waitForSelector('#app .step');
   await page.evaluate(() => document.fonts.ready);
   // Kiểm cả nét thường lẫn nét đậm, với chữ có dấu tiếng Việt (bộ ký tự 'vietnamese') và chữ latin.
   const nap = await page.evaluate(() => ['400 15px "Be Vietnam Pro"', '800 15px "Be Vietnam Pro"']
@@ -441,34 +461,36 @@ test('chọn ngôn ngữ Anh / Việt: đổi tại chỗ, nhớ lựa chọn, t
   // Trình duyệt tiếng Anh: chưa chọn gì thì trang tự mở bằng tiếng Anh.
   const en = await newPage({ locale: 'en-US' });
   await en.page.goto(`${base}/ai/`);
-  await en.page.waitForSelector('#gate .auth-card');
+  await en.page.waitForSelector('#app .step');
   assert.equal(await en.page.locator('#langSel').inputValue(), 'en', 'tự nhận ngôn ngữ trình duyệt');
+  assert.match(await en.page.locator('#acct button').innerText(), /Sign in \/ Sign up/);
   await en.context.close();
 
   const { page, errors, context } = await newPage();
   await page.goto(`${base}/ai/`);
-  await page.waitForSelector('#gate .auth-card');
+  await page.waitForSelector('#app .step');
   assert.equal(await page.locator('#langSel').inputValue(), 'vi', 'trình duyệt tiếng Việt → tiếng Việt');
-  assert.equal(await page.locator('#gate .auth-card h2').innerText(), 'Chào mừng bạn');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
+  assert.equal(await page.locator('#authDlg .auth-card h2').innerText(), 'Chào mừng bạn');
 
   await page.selectOption('#langSel', 'en');
-  assert.equal(await page.locator('#gate .auth-card h2').innerText(), 'Welcome', 'đổi ngay, không nạp lại trang');
+  assert.equal(await page.locator('#authDlg .auth-card h2').innerText(), 'Welcome', 'đổi ngay, không nạp lại trang');
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
   assert.equal(await page.locator('.skip').innerText(), 'Skip to content', 'chữ trong HTML tĩnh cũng đổi');
   assert.equal(await page.locator('.rail a[data-step="2"] .t').innerText(), 'Upload statements');
 
   // Nhớ lựa chọn sang lần mở sau.
   await page.reload();
-  await page.waitForSelector('#gate .auth-card');
+  await page.waitForSelector('#app .step');
   assert.equal(await page.locator('#langSel').inputValue(), 'en', 'lựa chọn đã lưu thắng ngôn ngữ trình duyệt');
-  assert.equal(await page.locator('#gate .auth-card h2').innerText(), 'Welcome');
+  await page.click('#acct button');
+  await page.waitForSelector('#authDlg[open]');
+  assert.equal(await page.locator('#authDlg .auth-card h2').innerText(), 'Welcome');
   await shot(page, '5-dang-nhap-en');
 
-  await page.click('#tab-signup');
-  await page.fill('#suTen', 'Nguyen Van An'); await page.fill('#suEmail', 'en@elevato.vn');
-  await page.fill('#suSdt', '0900000111'); await page.fill('#suPass', 'matkhau123');
-  await page.click('#signupForm button[type=submit]');
-  await page.waitForSelector('#app:not([hidden])');
+  await dangKy(page, { ten: 'Nguyen Van An', email: 'en@elevato.vn', md: 'Building a forecast model' });
+  await page.waitForSelector('#app .step');
   assert.equal(await page.locator('#h5').innerText(), 'Review & export');
 
   // Nạp số từ file Excel (không tốn lượt AI): bảng rà soát và file xuất ra đều bằng tiếng Anh.
@@ -519,6 +541,19 @@ async function bsXlsx(page) {
   const path = join(tmp, 'cdkt-en.xlsx');
   await writeFile(path, Buffer.from(b64, 'base64'));
   return path;
+}
+
+/** Điền và gửi form đăng ký trong hộp thoại. */
+async function dangKy(page, { ten, email, sdt = '0901234567', mk = 'mat-khau-123', tuoi = '24', vt = 'hv', md = 'Dựng model forecast' }) {
+  await page.click('#tab-signup');
+  await page.fill('#suTen', ten);
+  await page.fill('#suTuoi', tuoi);
+  await page.fill('#suEmail', email);
+  await page.fill('#suSdt', sdt);
+  await page.selectOption('#suVT', vt);
+  await page.fill('#suMD', md);
+  await page.fill('#suPass', mk);
+  await page.click('#signupForm button[type=submit]');
 }
 
 async function readXlsxCell(page, path, sheet, refRe) {

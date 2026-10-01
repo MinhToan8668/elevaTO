@@ -60,7 +60,10 @@ var GEN_KEYS        = ['temperature', 'topP', 'topK', 'maxOutputTokens', 'respon
                        'responseJsonSchema', 'thinkingConfig', 'seed'];
 var TK_SHEET        = 'TaiKhoan';
 var TK_COT          = ['ma', 'email', 'ten', 'sdt', 'salt', 'hash', 'vaitro', 'trangthai', 'luot_ngay',
-                       'phien', 'tao_luc', 'dangnhap_cuoi', 'ghi_chu'];
+                       'phien', 'tao_luc', 'dangnhap_cuoi', 'ghi_chu',
+                       // Khai báo lúc đăng ký — chỉ để tham khảo. Vai trò thật do quản trị đặt bằng bot.
+                       'tuoi', 'nguyen_vong', 'muc_dich'];
+var NGUYEN_VONG     = { hv: 'Học viên', gv: 'Giảng viên', free: 'Người dùng' };
 
 function props() { return PropertiesService.getScriptProperties(); }
 function json(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
@@ -72,7 +75,7 @@ function doGet() { return json({ ok: true, service: 'elevaTO AI', ban: PHIEN_BAN
 
 /**
  * { action, … } → { ok:true, data } | { ok:false, code, error, retryAfter? }
- *   dangky {ten,email,sdt,mk} · dangnhap {email,mk} · toi {token} · dangxuat {token} · generate {token, contents…}
+ *   dangky {ten,email,sdt,mk,tuoi,nguyen_vong,muc_dich} · dangnhap {email,mk} · toi {token} · dangxuat {token} · generate {token, contents…}
  * code: auth (cần đăng nhập lại) · sai · khoa_tam · cho_duyet · bi_khoa · thieu · email_sai · sdt_sai · mk_ngan
  *       · da_ton_tai · quota · busy · timeout · blocked · bad · upstream · setup
  * Trang gửi Content-Type: text/plain để tránh CORS preflight.
@@ -117,7 +120,16 @@ function bangTK() {
     sh.setName(TK_SHEET);
   }
   if (sh.getLastRow() === 0) { sh.appendRow(TK_COT); sh.setFrozenRows(1); }
+  else themCotThieu(sh);
   return sh;
+}
+
+/** Bảng lập từ bản cũ: nối thêm các cột mới vào tiêu đề, dữ liệu đang có giữ nguyên. */
+function themCotThieu(sh) {
+  var head = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String);
+  var thieu = TK_COT.filter(function (c) { return head.indexOf(c) < 0; });
+  if (!thieu.length) return;
+  sh.getRange(1, head.length + 1, 1, thieu.length).setValues([thieu]);
 }
 
 /** Mọi tài khoản: [{ _r: số dòng, ma, email, … }] */
@@ -248,10 +260,16 @@ function dangKy(b) {
   if (b.website) return loi('thieu', 'Thiếu thông tin');                      // ô bẫy bot
   var ten = chuanTen(b.ten), email = chuanEmail(b.email), mk = String(b.mk || '');
   var sdt = String(b.sdt || '').replace(/\D/g, '');
+  var tuoi = Math.round(Number(b.tuoi));
+  var nv = String(b.nguyen_vong || '').trim().toLowerCase();
+  var mucDich = String(b.muc_dich || '').trim().slice(0, 300);
   if (!ten || !email || !mk || !sdt) return loi('thieu', 'Điền đủ họ tên, email, số điện thoại và mật khẩu');
   if (!emailHopLe(email)) return loi('email_sai', 'Email chưa đúng');
   if (sdt.length < 9 || sdt.length > 12) return loi('sdt_sai', 'Số điện thoại chưa đúng');
   if (mk.length < MK_TOI_THIEU || mk.length > 200) return loi('mk_ngan', 'Mật khẩu cần ít nhất ' + MK_TOI_THIEU + ' ký tự');
+  if (!(tuoi >= 12 && tuoi <= 100)) return loi('tuoi_sai', 'Tuổi chưa đúng');
+  if (!NGUYEN_VONG[nv]) return loi('nv_sai', 'Chọn bạn là học viên, giảng viên hay người dùng');
+  if (!mucDich) return loi('thieu', 'Cho biết bạn định dùng công cụ để làm gì');
 
   var salt = ngauNhien(), hash = bamMK(mk, salt);                        // băm (chậm) làm ngoài khoá
   var cache = CacheService.getScriptCache(), kGio = 'dk_' + Math.floor(Date.now() / 3600000);
@@ -266,8 +284,13 @@ function dangKy(b) {
     var sh = bangTK(), ds = docTK(sh), k = khoaEmail(email);
     if (ds.some(function (x) { return khoaEmail(x.email) === k; })) return loi('da_ton_tai', 'Email này đã có tài khoản — đăng nhập nhé');
     var duyet = /^(1|true|co)$/i.test(String(props().getProperty('AI_CAN_DUYET') || ''));
-    sh.appendRow([maMoi(ds), oChu(email), oChu(ten), "'" + sdt, salt, hash, 'free', duyet ? 'cho' : 'active', '', '[]',
-      new Date().toISOString(), '', '']);
+    // Ai cũng vào ở mức thường; học viên / giảng viên do quản trị xếp bằng bot Telegram.
+    var gt = { ma: maMoi(ds), email: oChu(email), ten: oChu(ten), sdt: "'" + sdt, salt: salt, hash: hash,
+      vaitro: 'free', trangthai: duyet ? 'cho' : 'active', luot_ngay: '', phien: '[]',
+      tao_luc: new Date().toISOString(), dangnhap_cuoi: '', ghi_chu: '',
+      tuoi: tuoi, nguyen_vong: nv, muc_dich: oChu(mucDich) };
+    var head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+    sh.appendRow(head.map(function (c) { return gt.hasOwnProperty(c) ? gt[c] : ''; }));
     tk = tkTheoEmail(email);
   } finally { lock.releaseLock(); }
   baoTaiKhoanMoi(tk, sdt);
@@ -646,7 +669,13 @@ function nutTaiKhoan(tk) {
   ];
 }
 function moTaTaiKhoan(tk) {
+  var khai = '';
+  if (tk.nguyen_vong || tk.tuoi) {
+    khai = '\n👤 Tự khai: ' + (NGUYEN_VONG[String(tk.nguyen_vong)] || '—') + (tk.tuoi ? ' · ' + esc(String(tk.tuoi)) + ' tuổi' : '');
+  }
+  if (tk.muc_dich) khai += '\n🎯 ' + esc(String(tk.muc_dich));
   return '<b>' + esc(tk.ten) + '</b> · <code>' + esc(tk.ma) + '</code>\n📧 ' + esc(tk.email) + '\n📱 ' + esc(String(tk.sdt).replace(/^'/, '')) +
+    khai +
     '\n🏷 ' + TEN_VT[vaiTro(tk)] + ' · ' + (TEN_TT[tk.trangthai] || esc(tk.trangthai)) +
     '\n🤖 Hôm nay ' + daDung(tk) + (laGV(tk) ? ' lượt (không giới hạn)' : '/' + hanNgay(tk) + ' lượt');
 }
