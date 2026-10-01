@@ -59,7 +59,7 @@ export const TILE_ICONS = [
 
 /** Chuỗi <svg> hoàn chỉnh cho một icon. Tên lạ → icon link. */
 export function svg(name, cls = '') {
-  const ic = ICONS[name] || ICONS.link;
+  const ic = Object.prototype.hasOwnProperty.call(ICONS, name) ? ICONS[name] : ICONS.link;
   const paint = ic.kind === 'fill'
     ? 'fill="currentColor"'
     : 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';

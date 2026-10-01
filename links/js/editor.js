@@ -193,7 +193,7 @@ function githubPanel() {
   tok.querySelector('input').id = 'tokenInput';
   tok.querySelector('label').setAttribute('for', 'tokenInput');
   const remember = toggle('Nhớ token trên máy này', remembered, (v) => saveToken(getToken(), v),
-    'Tắt: token mất khi đóng tab. Chỉ bật trên máy của riêng bạn.');
+    'Tắt (khuyên dùng): token mất khi đóng tab. Bật thì token nằm trong trình duyệt, mọi trang trên minhtoan8668.github.io đọc được — chỉ bật trên máy riêng và đặt hạn ngắn cho token.');
   const status = h('p', { class: 'gh-status', id: 'ghStatus', role: 'status' });
   return panel('Đăng lên web', 'Kết nối GitHub một lần', !getToken(),
     h('ol', { class: 'steps' },
@@ -253,6 +253,8 @@ async function doPublish() {
     setTimeout(() => $('#tokenInput') && $('#tokenInput').focus(), 400);
     return;
   }
+  // Chặn lỡ tay đăng một trang trống đè lên trang thật (ví dụ khi data.json không tải được).
+  if (!draft.links.length && !confirm('Trang đang không có ô link nào. Vẫn đăng lên web?')) return;
   const btn = $('#publishBtn');
   btn.disabled = true;
   btn.textContent = 'Đang đăng…';
@@ -292,9 +294,10 @@ async function importJson(file) {
 
 async function resetDraft() {
   if (!confirm('Bỏ mọi thay đổi chưa đăng và lấy lại bản đang chạy trên web?')) return;
+  // Tải được bản trên web rồi mới xoá nháp — mạng lỗi giữa chừng thì không mất gì.
+  if (!(await loadPublished())) { toast('Không tải được bản trên web. Nháp vẫn giữ nguyên, thử lại sau.'); return; }
   ls.del(DRAFT_KEY);
-  await loadPublished();
-  draft = normalize(JSON.parse(published || '{}'));
+  draft = normalize(JSON.parse(published));
   renderForm(); markDirty(); sendPreview();
 }
 
@@ -314,14 +317,15 @@ function setTab(prev) {
   document.body.classList.toggle('show-prev', prev);
 }
 
+/** Tải bản đang chạy trên web. Lỗi thì giữ nguyên `published` cũ và trả false. */
 async function loadPublished() {
   try {
     const r = await fetch('data.json', { cache: 'no-cache' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     published = serialize(await r.json());
+    return true;
   } catch (e) {
-    published = '';
-    toast('Không tải được data.json — đang dùng bản nháp trên máy (nếu có).');
+    return false;
   }
 }
 
@@ -344,8 +348,9 @@ async function boot() {
   window.addEventListener('message', (e) => {
     if (e.origin === location.origin && e.data && e.data.type === 'elevato-links:ready') sendPreview();
   });
-  await loadPublished();
+  const ok = await loadPublished();
   const saved = ls.get(DRAFT_KEY);
+  if (!ok) toast(saved ? 'Không tải được bản trên web — đang sửa tiếp bản nháp trên máy.' : 'Không tải được data.json. Tải lại trang để thử lại.');
   draft = normalize(saved || JSON.parse(published || '{}'));
   renderForm();
   markDirty();

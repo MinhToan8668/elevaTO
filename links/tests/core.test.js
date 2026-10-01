@@ -130,3 +130,28 @@ test('lỗi GitHub ra câu dễ hiểu', () => {
   assert.match(githubError(409), /bản mới hơn/);
   assert.match(githubError(0), /mạng/);
 });
+
+test('link gõ thiếu https:// được tự thêm; link sang trang khác giả dạng đường dẫn bị chặn', () => {
+  assert.equal(safeUrl('minhtoan.vn'), 'https://minhtoan.vn');
+  assert.equal(safeUrl('drive.google.com/file/d/x'), 'https://drive.google.com/file/d/x');
+  assert.equal(socialUrl('website', 'minhtoan.vn'), 'https://minhtoan.vn');
+  assert.equal(safeUrl('slide.pdf'), 'slide.pdf');
+  assert.equal(safeUrl('../#slides'), '../#slides');
+  assert.equal(safeUrl('/\\evil.example'), '');
+  assert.equal(safeUrl('\\\\evil.example'), '');
+});
+
+test('tên kiểu prototype trong data.json không làm sập trang', () => {
+  const d = normalize({ socials: [{ type: 'constructor', url: 'https://x.vn' }, { type: 'toString', url: '@a' }],
+    links: [{ title: 'A', url: 'https://a.vn', accent: 'constructor', icon: '__proto__' }] });
+  assert.deepEqual(d.socials.map((s) => s.type), ['website', 'website']);
+  assert.equal(visibleSocials(d).length, 2);
+  assert.equal(d.links[0].accent, 'emerald');
+  assert.match(svg('__proto__'), /^<svg /);
+  assert.ok(!svg('constructor').includes('undefined'));
+});
+
+test('nút CTA có link độc hại thì trình chỉnh sửa báo', () => {
+  const [l] = normalize({ links: [{ title: 'A', url: 'https://a.vn', size: 'feature', ctaUrl: 'javascript:alert(1)' }] }).links;
+  assert.equal(hiddenReason(l), 'Link của nút không hợp lệ');
+});

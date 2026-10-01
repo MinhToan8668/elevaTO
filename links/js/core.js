@@ -23,7 +23,7 @@ export const SOCIALS = {
   telegram: { label: 'Telegram', icon: 'telegram', build: (v) => handle(v, 'https://t.me/') },
   email: { label: 'Email', icon: 'mail', build: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'mailto:' + v : v) },
   phone: { label: 'Điện thoại', icon: 'phone', build: (v) => (/^\+?[\d\s.-]{8,}$/.test(v) ? 'tel:' + v.replace(/[^\d+]/g, '') : v) },
-  website: { label: 'Website', icon: 'globe', build: (v) => v },
+  website: { label: 'Website', icon: 'globe', build: (v) => withScheme(v) },
 };
 
 function handle(v, prefix) {
@@ -36,24 +36,36 @@ function phone(v, prefix) {
   return /^\+?[\d\s.-]{8,}$/.test(v) ? prefix + digits.replace(/^84/, '0') : handle(v, prefix);
 }
 
+// Đuôi file hay gặp: "slide.pdf" là file cạnh trang, không phải tên miền.
+const FILE_EXT = /\.(html?|json|js|css|pdf|png|jpe?g|webp|gif|svg|ico|xlsx?|docx?|pptx?|zip|txt)$/i;
+
+/** "minhtoan.vn", "drive.google.com/…" (gõ thiếu https://) → thêm https:// cho khỏi thành link tương đối hỏng. */
+export function withScheme(u) {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(u) || /^[./#?\\]/.test(u)) return u;
+  const host = u.split(/[/?#]/)[0];
+  return /^([a-z0-9-]+\.)+[a-z]{2,24}(:\d+)?$/i.test(host) && !FILE_EXT.test(host) ? 'https://' + u : u;
+}
+
 /** Chỉ cho qua link http(s), mailto, tel, sms và đường dẫn tương đối; mọi thứ khác (javascript:, data:…) thành ''. */
 export function safeUrl(raw) {
-  const u = String(raw == null ? '' : raw).trim();
+  const u = withScheme(String(raw == null ? '' : raw).trim());
   if (!u) return '';
   // Bỏ ký tự điều khiển và khoảng trắng trước khi xét scheme: "java\tscript:" vẫn bị trình duyệt hiểu là javascript:
   const probe = u.replace(/[\u0000- \u007f]/g, '');
   const m = probe.match(/^([a-z][a-z0-9+.-]*):/i);
-  if (!m) return u.startsWith('//') ? '' : u;
+  // "//x", "/\x", "\\x" đều bị trình duyệt hiểu là link sang trang khác → không coi là đường dẫn tương đối.
+  if (!m) return /^[\\/]{2}/.test(probe) ? '' : u;
   return ['http', 'https', 'mailto', 'tel', 'sms'].includes(m[1].toLowerCase()) ? u : '';
 }
 
 export function socialUrl(type, value) {
   const v = String(value == null ? '' : value).trim();
   if (!v) return '';
-  const def = SOCIALS[type];
+  const def = has(SOCIALS, type) ? SOCIALS[type] : null;
   return safeUrl(def ? def.build(v) : v);
 }
 
+const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const str = (v, max = 300) => String(v == null ? '' : v).trim().slice(0, max);
 const bool = (v, dflt) => (typeof v === 'boolean' ? v : dflt);
 
@@ -85,7 +97,7 @@ export function normalize(raw) {
       .filter((s) => s.value || s.label)
       .slice(0, 4),
     socials: (Array.isArray(d.socials) ? d.socials : [])
-      .map((s) => ({ type: SOCIALS[s && s.type] ? s.type : 'website', url: str(s && s.url, 500) }))
+      .map((s) => ({ type: s && has(SOCIALS, s.type) ? s.type : 'website', url: str(s && s.url, 500) }))
       .slice(0, 10),
     links: (Array.isArray(d.links) ? d.links : []).map(normalizeLink).slice(0, 40),
     live: { enabled: bool(live.enabled, false), api: str(live.api, 500) },
@@ -102,7 +114,7 @@ function normalizeLink(l) {
     url: str(x.url, 1000),
     size: SIZES.includes(x.size) ? x.size : 'half',
     icon: str(x.icon, 30) || 'link',
-    accent: ACCENTS[x.accent] ? x.accent : 'emerald',
+    accent: has(ACCENTS, x.accent) ? x.accent : 'emerald',
     image: str(x.image, 1000),
     badge: str(x.badge, 12),
     hidden: bool(x.hidden, false),
@@ -135,6 +147,7 @@ export function hiddenReason(l) {
   if (!l.title) return 'Chưa có tiêu đề';
   if (!l.url.trim()) return 'Chưa có link — đang ẩn';
   if (!safeUrl(l.url)) return 'Link không hợp lệ — đang ẩn';
+  if (l.size === 'feature' && l.ctaUrl.trim() && !safeUrl(l.ctaUrl)) return 'Link của nút không hợp lệ';
   return '';
 }
 

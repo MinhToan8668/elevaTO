@@ -32,8 +32,10 @@ Lần đầu cần một token GitHub (làm một lần):
 3. *Permissions → Repository permissions*: **Contents → Read and write**. Không cần quyền nào khác.
 4. Dán token vào mục **Đăng lên web** trong trình chỉnh sửa, bấm **Kiểm tra kết nối**.
 
-Token chỉ nằm trong trình duyệt của bạn (mặc định mất khi đóng tab; bật "Nhớ token trên máy này" nếu
-là máy riêng). Trang `edit.html` để công khai cũng không sao: không có token thì không ghi được gì.
+Token chỉ nằm trong trình duyệt của bạn và mặc định mất khi đóng tab. Nếu bật "Nhớ token trên máy này",
+token được lưu lại và mọi trang trên `minhtoan8668.github.io` đều đọc được — chỉ bật trên máy riêng, và đặt
+hạn ngắn (vd. 30–90 ngày) khi tạo token. Trang `edit.html` để công khai cũng không sao: không có token thì
+không ghi được gì.
 
 Không muốn dùng token? Bấm **Sao lưu → Tải data.json**, rồi thay file `links/data.json` trong repo bằng file đó.
 

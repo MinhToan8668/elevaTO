@@ -117,7 +117,7 @@ function tile(l, i) {
         : h('a', { class: 'cover', ...linkAttrs(l.url), 'aria-label': l.title }),
       h('div', { class: 'f-top' + (l.badge ? ' has-badge' : '') }, chip(l), text, badge(l)),
       liveBlock(l),
-      l.cta ? h('a', { class: 'cta', ...linkAttrs(l.ctaUrl || l.url) }, l.cta, h('span', { html: svg('arrow') })) : null);
+      l.cta ? h('a', { class: 'cta', ...linkAttrs(safeUrl(l.ctaUrl) || l.url) }, l.cta, h('span', { html: svg('arrow') })) : null);
   } else {
     const attrs = { class: `tile ${l.size}` };
     el = sheet
