@@ -50,6 +50,61 @@ test('chỉ các dòng được tick; dòng tổng in đậm; cố định dòng
   assert.match(xml, /^<\?xml[^>]*\?><worksheet[^>]*><sheetPr><pageSetUpPr fitToPage="1"\/><\/sheetPr><sheetViews>/, 'in vừa một trang ngang: sheetPr đứng trước sheetViews');
 });
 
+// BCTC đủ dòng để có cây cộng dồn thật: 280 = 100 + 200, 440 = 300 + 400.
+const dsDu = addExtraction(emptyDataset(), {
+  file: 'BCTC 2025.pdf', company: 'CTCP Đầy Đủ', meta: { ngay_ket_thuc: '2025-12-31', so_thang: 12 }, warnings: [], notes: {},
+  statements: {
+    BS: { cur: {
+      'BS:111': 60e9, 'BS:112': 40e9, 'BS:141': 30e9, 'BS:100': 130e9, 'BS:221': 70e9, 'BS:200': 70e9, 'BS:280': 200e9,
+      'BS:311': 50e9, 'BS:300': 50e9, 'BS:411': 150e9, 'BS:400': 150e9, 'BS:440': 200e9,
+    }, prev: {} },
+  },
+});
+
+test('dòng tổng ghi bằng công thức Excel: sửa dòng con thì tổng tự nhảy', () => {
+  const files = buildFormXlsx(dsDu, { unit: 1, unitLabel: 'đồng' });
+  const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
+  const xml = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
+  const f = [...xml.matchAll(/<c r="(C\d+)"[^>]*><f>([^<]+)<\/f>/g)].map((m) => `${m[1]}=${m[2]}`);
+  assert.ok(f.length >= 3, `phải có công thức, đang có ${f.length}`);
+  assert.ok(f.some((x) => /=[+-]?C\d+([+-]C\d+)+$/.test(x)), f.slice(0, 3).join(' | '));
+});
+
+test('cuối báo cáo có dòng KIỂM TRA cân đối, viết bằng công thức, khớp thì không tô đỏ', () => {
+  const files = buildFormXlsx(dsDu, { unit: 1, unitLabel: 'đồng' });
+  const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
+  const xml = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
+  assert.match(xml, /KIỂM TRA: Tổng tài sản/);
+  const kt = /<row r="(\d+)"><c r="A\d+"[^>]*><is><t[^>]*><\/t><\/is><\/c><c r="B\d+"[^>]*><is><t[^>]*>KIỂM TRA[^<]*/.exec(xml);
+  assert.ok(kt, 'không thấy dòng kiểm tra');
+  const dong = xml.slice(xml.indexOf(`<row r="${kt[1]}"`));
+  assert.match(dong, /<f>C\d+-\(C\d+\+C\d+\)<\/f>/, 'dòng kiểm tra phải là công thức');
+});
+
+test('ô lệch so với số in trên BCTC được tô đỏ', () => {
+  const xau = JSON.parse(JSON.stringify(dsDu));
+  xau.values[dsDu.periods[0].id]['BS:280'] += 9e9;              // tổng tài sản không khớp các dòng con
+  const files = buildFormXlsx(xau, { unit: 1, unitLabel: 'đồng' });
+  const wb = files['xl/workbook.xml'], rels = files['xl/_rels/workbook.xml.rels'];
+  const xml = files[sheetPathByName(wb, rels, 'Tình hình tài chính')];
+  const soLech = (xml.match(/ s="15"/g) || []).length;         // 15 = kiểu số lệch (đỏ, nền hồng)
+  assert.ok(soLech >= 1, 'phải có ít nhất một ô tô đỏ');
+  const sach = buildFormXlsx(dsDu, { unit: 1, unitLabel: 'đồng' });
+  const xmlSach = sach[sheetPathByName(sach['xl/workbook.xml'], sach['xl/_rels/workbook.xml.rels'], 'Tình hình tài chính')];
+  assert.equal((xmlSach.match(/ s="15"/g) || []).length, 0, 'dữ liệu khớp thì không tô đỏ ô nào');
+});
+
+test('đơn vị hiển thị trong file do người dùng chọn, số gốc vẫn là đồng', () => {
+  const trieu = buildFormXlsx(ds, { unit: 1e6, unitLabel: 'triệu đồng' });
+  const dong = buildFormXlsx(ds, { unit: 1, unitLabel: 'đồng' });
+  const lay = (f) => readCells(f[sheetPathByName(f['xl/workbook.xml'], f['xl/_rels/workbook.xml.rels'], 'Tình hình tài chính')], []);
+  const c1 = Object.entries(lay(trieu)).find(([k]) => /^C\d+$/.test(k) && Number(lay(trieu)[k]));
+  const c2 = lay(dong)[c1[0]];
+  assert.equal(Math.round(Number(c2) / Number(c1[1])), 1e6, 'cùng ô: bản đồng gấp 1 triệu lần bản triệu đồng');
+  assert.match(trieu['xl/styles.xml'], /#,##0\.0/);
+  assert.match(dong['xl/styles.xml'], /#,##0;/);
+});
+
 // ─── zip tối giản (store, không nén) để SheetJS đọc trong test ───
 import { deflateRawSync, crc32 } from 'node:zlib';
 function zipFiles(files) {

@@ -1,20 +1,18 @@
-// "Form chuẩn hóa 2026": dựng file .xlsx có định dạng (tiêu đề, cố định dòng tiêu đề, số có dấu phân cách,
-// dòng tổng in đậm) từ bộ dữ liệu — không cần file mẫu. Trả về { đường dẫn trong zip: nội dung XML };
-// trình duyệt nén bằng JSZip, bài kiểm tra nén bằng zlib.
+// "Form chuẩn hóa 2026": file .xlsx ba báo cáo chính theo mẫu Thông tư 99/2025 — không cần file mẫu.
+// Dòng tổng ghi bằng CÔNG THỨC Excel (sửa một dòng con là tổng tự nhảy), ô lệch so với số in trên BCTC
+// được tô đỏ, cuối mỗi báo cáo có dòng kiểm tra cân đối.
 
 import { statementRows } from './table.js';
 import { checkDataset } from './dataset.js';
+import { CHART } from '../chart2026.js';
 import { numToCol } from './xlsx.js';
+import { esc, S, cellStr, cellNum, cellFormula, row, sheetXml, bookFiles } from './xlsxout.js';
 
 const SHEET = { BS: 'Tình hình tài chính', IS: 'Kết quả kinh doanh', CF: 'Lưu chuyển tiền tệ' };
 const TITLE = { BS: 'BÁO CÁO TÌNH HÌNH TÀI CHÍNH', IS: 'BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH', CF: 'BÁO CÁO LƯU CHUYỂN TIỀN TỆ' };
 const HEAD_ROW = 4;
-
-// Chỉ số kiểu ô trong styles.xml (cellXfs) — xem stylesXml().
-const S = { title: 1, sub: 2, head: 3, code: 4, label: 5, labelB: 6, labelI: 7, num: 8, numB: 9, labelTot: 10, codeTot: 11, numTot: 12, text: 13, textB: 14 };
-
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-  .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+const SUM_OF = new Map(CHART.filter((i) => i.sum).map((i) => [`${i.st}:${i.code}`, i.sum]));
+const TOL = 1000;                                   // lệch dưới 1.000 đồng là do bản in làm tròn
 
 export function periodTitle(p) {
   if (p.months === 12) return `Năm ${p.year}`;
@@ -24,94 +22,30 @@ export function periodTitle(p) {
 /**
  * @param ds       bộ dữ liệu (dataset.js)
  * @param opts.keys  Set các dòng được tick (null = mọi dòng có số)
- * @param opts.unit  1 | 1e3 | 1e6 | 1e9 ; opts.unitLabel chữ đơn vị
+ * @param opts.unit  đơn vị hiển thị trong file: 1 | 1e3 | 1e6 | 1e9
  * @returns { [path]: string }
  */
 export function buildFormXlsx(ds, { keys = null, unit = 1e6, unitLabel = 'triệu đồng', now = new Date() } = {}) {
-  const sheets = [{ name: 'Tổng quan', xml: overviewSheet(ds, unitLabel, now) }];
+  const checks = checkDataset(ds);
+  const sheets = [{ name: 'Tổng quan', xml: overviewSheet(ds, checks, unitLabel, now) }];
   for (const st of ['BS', 'IS', 'CF']) {
     const rows = statementRows(ds, st).filter((r) => !keys || keys.has(r.key));
-    if (rows.length) sheets.push({ name: SHEET[st], xml: statementSheet(ds, st, rows, unit, unitLabel) });
+    if (rows.length) sheets.push({ name: SHEET[st], xml: statementSheet(ds, st, rows, checks, unit, unitLabel) });
   }
-  const files = {
-    '[Content_Types].xml': contentTypes(sheets.length),
-    '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
-    'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
-      sheets.map((s, i) => `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets></workbook>',
-    'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
-      sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('') +
-      `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
-    'xl/styles.xml': stylesXml(unit),
-  };
-  sheets.forEach((s, i) => { files[`xl/worksheets/sheet${i + 1}.xml`] = s.xml; });
-  return files;
+  return bookFiles(sheets, unit);
 }
 
-function contentTypes(n) {
-  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
-    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
-    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
-    Array.from({ length: n }, (_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('') +
-    '</Types>';
+/** Ô lệch so với số in trên BCTC → tô đỏ. checkDataset trả về theo từng kỳ. */
+function lechSet(checks) {
+  const out = new Set();
+  for (const [period, list] of Object.entries(checks || {})) for (const i of list) out.add(`${period}|${i.key}`);
+  return out;
 }
 
-function stylesXml(unit) {
-  const fmt = unit >= 1e6 ? '#,##0.0;(#,##0.0);"–"' : '#,##0;(#,##0);"–"';
-  const xf = (font, fill, border, extra = '', num = 0) =>
-    `<xf numFmtId="${num}" fontId="${font}" fillId="${fill}" borderId="${border}" xfId="0"${num ? ' applyNumberFormat="1"' : ''} applyFont="1" applyFill="1" applyBorder="1"${extra ? ` applyAlignment="1">${extra}</xf>` : '/>'}`;
-  const al = (a) => `<alignment ${a}/>`;
-  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    `<numFmts count="1"><numFmt numFmtId="164" formatCode="${esc(fmt)}"/></numFmts>` +
-    '<fonts count="6">' +
-      '<font><sz val="11"/><name val="Calibri"/></font>' +                                   // 0
-      '<font><b/><sz val="11"/><name val="Calibri"/></font>' +                               // 1 đậm
-      '<font><b/><sz val="15"/><color rgb="FF0E1613"/><name val="Calibri"/></font>' +       // 2 tiêu đề
-      '<font><i/><sz val="10"/><color rgb="FF5D6B65"/><name val="Calibri"/></font>' +       // 3 chú thích
-      '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>' +       // 4 chữ trắng
-      '<font><sz val="10"/><color rgb="FF5D6B65"/><name val="Calibri"/></font>' +           // 5 mã số
-    '</fonts>' +
-    '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFE3F8F0"/><bgColor indexed="64"/></patternFill></fill>' +
-      '<fill><patternFill patternType="solid"><fgColor rgb="FF06704F"/><bgColor indexed="64"/></patternFill></fill></fills>' +
-    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' +
-      '<border><left/><right/><top/><bottom style="thin"><color rgb="FFD7E0DC"/></bottom><diagonal/></border></borders>' +
-    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="15">' +
-      xf(0, 0, 0) +                                                    // 0
-      xf(2, 0, 0) +                                                    // 1 title
-      xf(3, 0, 0) +                                                    // 2 sub
-      xf(4, 3, 0, al('horizontal="center" vertical="center" wrapText="1"')) + // 3 head
-      xf(5, 0, 1, al('horizontal="center"')) +                         // 4 code
-      xf(0, 0, 1, al('wrapText="1" vertical="top"')) +                 // 5 label
-      xf(1, 0, 1, al('wrapText="1" vertical="top"')) +                 // 6 label đậm
-      xf(0, 0, 1, al('horizontal="left" wrapText="1" vertical="top" indent="2"')) +      // 7 label thụt
-      xf(0, 0, 1, '', 164) +                                           // 8 số
-      xf(1, 0, 1, '', 164) +                                           // 9 số đậm
-      xf(1, 2, 1, al('wrapText="1" vertical="top"')) +                 // 10 label tổng (nền xanh nhạt)
-      xf(5, 2, 1, al('horizontal="center"')) +                         // 11 mã tổng
-      xf(1, 2, 1, '', 164) +                                           // 12 số tổng
-      xf(0, 0, 0, al('wrapText="1" vertical="top"')) +                 // 13 chữ
-      xf(1, 0, 0) +                                                    // 14 chữ đậm
-    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
-}
-
-const cellStr = (ref, v, s) => `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
-const cellNum = (ref, v, s) => (Number.isFinite(v) ? `<c r="${ref}" s="${s}"><v>${v}</v></c>` : `<c r="${ref}" s="${s}"/>`);
-const row = (r, cells, ht) => `<row r="${r}"${ht ? ` ht="${ht}" customHeight="1"` : ''}>${cells.join('')}</row>`;
-
-function sheetXml({ cols, rowsXml, freeze, merges = [] }) {
-  const pane = freeze ? `<pane xSplit="${freeze.x}" ySplit="${freeze.y}" topLeftCell="${numToCol(freeze.x + 1)}${freeze.y + 1}" activePane="bottomRight" state="frozen"/>` : '';
-  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
-    `<sheetViews><sheetView workbookViewId="0" showGridLines="0">${pane}</sheetView></sheetViews>` +
-    `<cols>${cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` +
-    `<sheetData>${rowsXml.join('')}</sheetData>` +
-    (merges.length ? `<mergeCells count="${merges.length}">${merges.map((m) => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '') +
-    '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup orientation="portrait" fitToWidth="1" fitToHeight="0"/></worksheet>';
-}
-
-function statementSheet(ds, st, rows, unit, unitLabel) {
+function statementSheet(ds, st, rows, checks, unit, unitLabel) {
   const last = numToCol(2 + ds.periods.length);
+  const lech = lechSet(checks);
+  const dongCua = new Map(rows.map((r, i) => [r.key, HEAD_ROW + 1 + i]));   // khoá chỉ tiêu → dòng trong sheet
   const out = [
     row(1, [cellStr('A1', ds.company || 'Doanh nghiệp', S.title)], 22),
     row(2, [cellStr('A2', TITLE[st], S.textB)]),
@@ -124,17 +58,77 @@ function statementSheet(ds, st, rows, unit, unitLabel) {
     const tot = r.lvl === 0 || r.kind === 'total';
     const sub = !tot && (r.lvl <= 1 || r.kind === 'sub');
     const lab = tot ? S.labelTot : sub ? S.labelB : r.lvl >= 3 || r.kind === 'memo' ? S.labelI : S.label;
+    const cong = congThuc(ds, r.key, dongCua, unit);
     out.push(row(n, [
       cellStr(`A${n}`, r.code, tot ? S.codeTot : S.code),
       cellStr(`B${n}`, r.label, lab),
-      ...ds.periods.map((p, j) => cellNum(`${numToCol(3 + j)}${n}`, Number.isFinite(r.values[p.id]) ? Math.round(r.values[p.id] / unit * 1000) / 1000 : null, tot ? S.numTot : sub ? S.numB : S.num)),
+      ...ds.periods.map((p, j) => {
+        const col = numToCol(3 + j);
+        const v = Number.isFinite(r.values[p.id]) ? Math.round(r.values[p.id] / unit * 1000) / 1000 : null;
+        const do_ = lech.has(`${p.id}|${r.key}`);
+        const ki = do_ ? S.numDo : tot ? S.numTot : sub ? S.numB : S.num;
+        // Dòng tổng có đủ dòng con trong sheet → ghi công thức để sửa tay là tổng tự nhảy.
+        return cong ? cellFormula(`${col}${n}`, cong(col), v, ki) : cellNum(`${col}${n}`, v, ki);
+      }),
     ]));
   });
+  out.push(...dongKiemTra(ds, st, dongCua, unit));
   return sheetXml({ cols: [9, 58, ...ds.periods.map(() => 18)], rowsXml: out, freeze: { x: 2, y: HEAD_ROW }, merges: [`A1:${last}1`, `A2:${last}2`, `A3:${last}3`] });
 }
 
-function overviewSheet(ds, unitLabel, now) {
-  const checks = checkDataset(ds);
+/**
+ * Công thức cộng các dòng con có mặt trong sheet — chỉ dùng khi cộng lại đúng bằng số đang hiển thị
+ * ở MỌI kỳ. Thiếu dòng con, hoặc số in trên BCTC không khớp các dòng con, thì giữ số cứng
+ * (ô đó đã được tô đỏ) để file xuất ra không tự ý đổi số của báo cáo.
+ */
+function congThuc(ds, key, dongCua, unit) {
+  const sum = SUM_OF.get(key);
+  if (!sum || !sum.length) return null;
+  const st = key.split(':')[0];
+  const phan = sum.map(([code, dau]) => ({ code: `${st}:${code}`, dau, n: dongCua.get(`${st}:${code}`) })).filter((x) => x.n);
+  if (phan.length < 2) return null;
+  for (const p of ds.periods) {
+    const v = ds.values[p.id]?.[key];
+    if (!Number.isFinite(v)) continue;
+    const tong = phan.reduce((t, x) => t + x.dau * (ds.values[p.id]?.[x.code] || 0), 0);
+    if (Math.abs(tong - v) > TOL) return null;
+  }
+  void unit;
+  return (col) => phan.map((p, i) => `${i === 0 ? (p.dau < 0 ? '-' : '') : (p.dau < 0 ? '-' : '+')}${col}${p.n}`).join('');
+}
+
+/** Dòng kiểm tra cuối mỗi báo cáo: chênh lệch phải bằng 0. */
+const KIEM_TRA = {
+  BS: { nhan: 'KIỂM TRA: Tổng tài sản − (Nợ phải trả + Vốn chủ sở hữu)', a: 'BS:280', b: ['BS:300', 'BS:400'] },
+  IS: { nhan: 'KIỂM TRA: LNST − (Cổ đông công ty mẹ + Cổ đông không kiểm soát)', a: 'IS:60', b: ['IS:61', 'IS:62'] },
+  CF: { nhan: 'KIỂM TRA: Tiền cuối kỳ − (Tiền đầu kỳ + LC thuần + Ảnh hưởng tỷ giá)', a: 'CF:70', b: ['CF:60', 'CF:50', 'CF:61'] },
+};
+
+function dongKiemTra(ds, st, dongCua, unit) {
+  const k = KIEM_TRA[st];
+  if (!k) return [];
+  const a = dongCua.get(k.a), b = k.b.map((x) => dongCua.get(x)).filter(Boolean);
+  if (!a || b.length !== k.b.length) return [];
+  const n = HEAD_ROW + 1 + dongCua.size + 1;
+  const vals = ds.periods.map((p) => {
+    const g = (key) => ds.values[p.id]?.[key];
+    const av = g(k.a), bv = k.b.reduce((t, x) => t + (g(x) || 0), 0);
+    return Number.isFinite(av) ? (av - bv) / unit : null;
+  });
+  return [row(n, [
+    cellStr(`A${n}`, '', S.codeTot),
+    cellStr(`B${n}`, k.nhan, S.labelTot),
+    ...ds.periods.map((p, j) => {
+      const col = numToCol(3 + j);
+      const f = `${col}${a}-(${b.map((x) => `${col}${x}`).join('+')})`;
+      const v = vals[j] === null ? null : Math.round(vals[j] * 1000) / 1000;
+      const lech = v !== null && Math.abs(vals[j] * unit) > TOL;
+      return cellFormula(`${col}${n}`, f, v, lech ? S.numDo : S.numCheck);
+    }),
+  ])];
+}
+
+function overviewSheet(ds, checks, unitLabel, now) {
   const out = [
     row(1, [cellStr('A1', 'FORM CHUẨN HÓA 2026 — BÁO CÁO TÀI CHÍNH', S.title)], 22),
     row(2, [cellStr('A2', ds.company || 'Doanh nghiệp', S.textB)]),
@@ -146,10 +140,12 @@ function overviewSheet(ds, unitLabel, now) {
     const files = [...new Set(Object.values(ds.src[p.id] || {}).map((x) => (x.manual ? 'sửa tay' : x.file)).filter(Boolean))].join('; ');
     const iss = checks[p.id] || [];
     out.push(row(n, [cellStr(`A${n}`, periodTitle(p), S.labelB), cellNum(`B${n}`, p.months, S.text), cellStr(`C${n}`, files, S.label),
-      cellStr(`D${n}`, iss.length ? `${iss.length} chỗ lệch: ${iss.slice(0, 3).map((x) => x.label).join('; ')}` : '✓ Khớp', S.label)]));
+      cellStr(`D${n}`, iss.length ? `${iss.length} chỗ lệch: ${iss.slice(0, 3).map((x) => x.label).join('; ')}` : '✓ Khớp', iss.length ? S.labelDo : S.label)]));
   });
   let n = 7 + ds.periods.length;
   const notes = [
+    'Dòng tổng là công thức Excel: sửa một dòng con thì tổng tự tính lại.',
+    'Cuối mỗi báo cáo có dòng KIỂM TRA, phải bằng 0. Ô tô đỏ là chỗ số in trên BCTC không khớp các dòng con.',
     'BCTC kỳ kết thúc từ năm 2025 trở về trước lập theo mẫu Thông tư 200/2014 được quy đổi sang mã số mẫu Thông tư 99/2025.',
     'Số âm hiển thị trong ngoặc. Chi phí trên KQKD ghi số dương như trên BCTC.',
     `Tạo bởi elevaTO · AI BCTC lúc ${now.toLocaleString('vi-VN')}.`,
@@ -157,3 +153,5 @@ function overviewSheet(ds, unitLabel, now) {
   for (const t of notes) { out.push(row(n, [cellStr(`A${n}`, t, S.sub)])); n++; }
   return sheetXml({ cols: [22, 11, 48, 60], rowsXml: out, merges: ['A1:D1', 'A2:D2', 'A3:D3'] });
 }
+
+export { esc };
