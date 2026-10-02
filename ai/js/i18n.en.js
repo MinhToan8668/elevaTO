@@ -68,8 +68,11 @@ export const EN = {
   'pages.tip': 'Click a thumbnail for the full page · Shift + tick to select a range',
   'pages.foot': 'Tick the three main statements plus the notes you need (fixed assets, borrowings, equity, revenue by segment…). The tighter the selection, the faster and cheaper the extraction.',
   'pages.noDraw': 'Could not render the page: {msg}',
+  'pages.rotTag': 'rotated {deg}°',
 
   // Page viewer
+  'vw.rot': 'Rotate the page 90°',
+  'vw.rotNow': 'Rotated {deg}° — click to rotate another 90°',
   'vw.zoomOut': 'Zoom out',
   'vw.zoomIn': 'Zoom in',
   'vw.close': 'Close',
@@ -478,6 +481,7 @@ export const EN = {
   'w.noteCap': '{task}: only the first {max} {max|page|pages} were read, pages {pages} were skipped — untick the pages you do not need.',
   'w.noNotePage': 'No note page found for "{task}".',
   'w.skipped': 'Pages {pages}: the AI found no statement of financial position, income statement, cash flow or any of the notes you asked for here — skipped. Open them to check if needed.',
+  'w.xoay': '{n|Page|Pages} {pages} {n|is|are} printed sideways: rotated upright before sending to the AI. Open them to check, and use the rotate button at the top if the text is still sideways.',
   'w.loose': 'Pages {pages}: notes, but not in any of the data groups (fixed assets, borrowings, equity…) — skipped.',
   'w.noUnit': 'The unit of measure could not be read ("{raw}") — assuming VND; please confirm.',
   'w.noCode': 'Skipped a line with no code and no matching name: "{name}"',

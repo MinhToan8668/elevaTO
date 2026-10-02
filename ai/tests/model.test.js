@@ -213,3 +213,57 @@ test('không mượn cột "đầu năm" khi hai năm không liền kề', () =>
   assert.equal(o.byYear[2023][150].src, 'uoc');
   assert.ok(o.warnings.some((w) => /Chưa có thuyết minh tài sản cố định.*2023/.test(w)), o.warnings.join(' | '));
 });
+
+test('thuyết minh bộ phận một năm đủ tách mảng cho cả năm trước (khối "Năm trước")', () => {
+  const ds2 = structuredClone(ds);
+  const v = computeTotals(ds2.values.FY2026), u = computeTotals(ds2.values.FY2025);
+  ds2.notes = { FY2026: { segments: [
+    { name: 'Xe ô tô', revenue: v['IS:10'] - 1e12, gross: 4e11,
+      prev: { name: 'Xe ô tô', revenue: u['IS:10'] - 8e11, gross: 3e11 } },
+    { name: 'Dịch vụ sửa chữa', revenue: 1e12, gross: 2e11,
+      prev: { name: 'Dịch vụ sửa chữa', revenue: 8e11, gross: 15e10 } },
+  ] } };
+  const o = buildModel(ds2, { segmentMap: { 'Xe ô tô': 0, 'Dịch vụ sửa chữa': 1 } });
+  const c25 = o.byYear[2025];
+  assert.equal(c25[133].v, 8e5, '2025 phải có mảng dịch vụ riêng, không dồn hết vào mảng 1');
+  assert.equal(c25[141].v, 15e4);
+  assert.equal(c25[133].src, 'tm', 'số của năm trước in ngay trong thuyết minh, không phải số ước tính');
+  assert.ok(Math.abs(sheet(o, 2025)[138]) < 0.01, 'CHECK 138 năm 2025 = ' + sheet(o, 2025)[138]);
+  assert.ok(Math.abs(sheet(o, 2026)[138]) < 0.01);
+  assert.ok(!o.warnings.some((w) => /doanh thu theo mảng/.test(w)), o.warnings.join(' | '));
+});
+
+test('bộ phận: không mượn khối "Năm trước" khi hai năm không liền kề', () => {
+  const ds2 = structuredClone(ds);
+  ds2.periods = [{ id: 'FY2025', year: 2023, months: 12 }, { id: 'FY2026', year: 2026, months: 12 }];
+  const v = computeTotals(ds2.values.FY2026);
+  ds2.notes = { FY2026: { segments: [{ name: 'Một mảng', revenue: v['IS:10'], gross: 1e11, prev: { name: 'Một mảng', revenue: 5e12, gross: 1e11 } }] } };
+  const o = buildModel(ds2);
+  assert.equal(o.byYear[2023][132].src, 'uoc');
+  assert.ok(o.warnings.some((w) => /doanh thu theo mảng.*2023/.test(w)), o.warnings.join(' | '));
+});
+
+test('bảng biến động vốn chủ hai năm: khối trên dùng cho năm liền trước', () => {
+  const ds2 = structuredClone(ds);
+  // Ba năm, trong đó 2024 lặp lại số 2025 → biến động vốn chủ năm 2025 bằng 0, dễ soi dòng cổ tức.
+  ds2.periods = [{ id: 'FY2024', year: 2024, months: 12 }, ...ds2.periods];
+  ds2.values.FY2024 = structuredClone(ds2.values.FY2025);
+  ds2.notes = { FY2026: { equity: { dividends: 3e11, prev: { dividends: 1e11, reOtherDec: 2e10 } } } };
+  const o = buildModel(ds2);
+  assert.equal(o.byYear[2025][202].v, -1e5, 'cổ tức 2025 phải lấy từ khối năm trước của bảng');
+  assert.equal(o.byYear[2025][202].src, 'tm');
+  assert.equal(o.byYear[2026][202].v, -3e5);
+  assert.ok(!o.warnings.some((w) => /biến động vốn chủ/.test(w)), o.warnings.join(' | '));
+});
+
+test('vốn chủ: thuyết minh chỉ có một năm thì năm trước vẫn báo thiếu', () => {
+  const ds2 = structuredClone(ds);
+  ds2.periods = [{ id: 'FY2024', year: 2024, months: 12 }, ...ds2.periods];
+  ds2.values.FY2024 = structuredClone(ds2.values.FY2025);
+  ds2.notes = { FY2026: { equity: { dividends: 3e11 } } };
+  const o = buildModel(ds2);
+  const w = o.warnings.find((x) => /biến động vốn chủ/.test(x));
+  assert.ok(w, o.warnings.join(' | '));
+  assert.match(w, /2025/);
+  assert.doesNotMatch(w, /2026/);
+});

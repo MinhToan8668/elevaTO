@@ -297,3 +297,32 @@ test('gợi ý trang để tick sẵn: PDF có chữ → các trang bảng + thu
   assert.deepEqual(suggestPicks({ kind: 'pdf', scanned: true, types: ['UNKNOWN', 'UNKNOWN'], notes: {} }), []);
   assert.deepEqual(suggestPicks({ kind: 'img', scanned: true, types: ['UNKNOWN', 'UNKNOWN', 'UNKNOWN'], notes: {} }), [1, 2, 3]);
 });
+
+test('trang in ngang: lượt nhận trang trả góc xoay, chỉ nhận 90/180/270', async () => {
+  const { planPicked } = await import('../js/core/pipeline.js');
+  const io = {
+    images: async (pages) => pages.map(() => ({ inlineData: { mimeType: 'image/jpeg', data: 'x' } })),
+    ai: { json: async () => [
+      { trang: 3, loai: 'NOTES', nhom: ['segments'], xoay: '90' },
+      { trang: 9, loai: 'NOTES', nhom: ['equity'], xoay: '270' },
+      { trang: 10, loai: 'BS', xoay: '0' },
+      { trang: 11, loai: 'IS', xoay: '45' },
+    ] },
+  };
+  const job = { numPages: 12, types: Array(12).fill('UNKNOWN'), notes: {} };
+  const r = await planPicked(job, [3, 9, 10, 11], io);
+  assert.deepEqual(r.rot, { 3: 90, 9: 270 }, 'xoay 0 và góc lạ thì không ghi');
+  const w = r.warnings.find((x) => /in ngang/.test(x));
+  assert.ok(w, r.warnings.join(' | '));
+  assert.match(w, /3, 9/);
+});
+
+test('bản scan: mapPagesWithAI trả luôn góc xoay từng trang', async () => {
+  const { mapPagesWithAI } = await import('../js/core/pipeline.js');
+  const io = {
+    images: async (p) => p.map(() => ({ inlineData: {} })),
+    ai: { json: async () => [{ trang: 1, loai: 'NOTES', nhom: ['segments'], xoay: '90' }, { trang: 2, loai: 'NOTES', xoay: '' }] },
+  };
+  const r = await mapPagesWithAI(2, io);
+  assert.deepEqual(r.rot, { 1: 90 });
+});

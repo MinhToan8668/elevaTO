@@ -216,8 +216,59 @@ function guessIntangible(name, nhom) {
   return 'other';
 }
 
+// Cột / dòng tổng và cột loại trừ của bảng thuyết minh. AI được dặn bỏ (xem prompts.js) nhưng
+// vẫn hay chép vào: lấy một cột "Cộng" làm mảng là nhân đôi doanh thu, lấy "Loại trừ" là tạo mảng âm.
+const COT_TONG = /^(cong|tong(\s+cong)?|total|loai tru.*|dieu chinh.*)$/;
+export const laCotTong = (name) => COT_TONG.test(normLabel(name));
+
 const neg = (v) => (v ? -Math.abs(v) : 0);
 const abs = (v) => (v ? Math.abs(v) : 0);
+
+// ── Bảng biến động vốn chủ ────────────────────────────────
+// Bảng in theo ma trận (dòng = nghiệp vụ, cột = thành phần vốn). Một dòng model hay phải cộng
+// nhiều dòng của bảng, nên AI chép từng dòng còn code mới xếp vào dòng model và cộng lại.
+const EQ_SO_DU = /^(so du|tai ngay|so (dau|cuoi))/;              // dòng số dư, không phải phát sinh
+const EQ_CONG_KHOI = /^(tang|giam) trong (nam|ky)$/;             // dòng cộng của khối tăng / giảm
+const EQ_LAI_NAM = /(^|\s)(lai|lo|loi nhuan)( sau thue)?( trong (nam|ky)| nam nay)/;   // đã có ở KQKD
+const EQ_CO_TUC_CP = /co tuc bang co phieu|co tuc bang cp/;
+const EQ_THUONG = /co phieu thuong/;
+const EQ_ESOP = /esop|nguoi lao dong/;
+const EQ_CO_TUC_TIEN = /co tuc bang tien|tra co tuc|chi co tuc/;
+
+/**
+ * Các dòng của một khối năm → dòng 191–205 của model.
+ * @param rows [{ ten, von_gop, thang_du, co_phieu_quy, quy_dtpt, lncpp, lickks }]
+ * @param so chuỗi trên bảng → số (đồng), ô trống = 0
+ */
+function equityMove(rows, so) {
+  const chiTiet = [], congKhoi = [];
+  for (const r of rows || []) {
+    const ten = normLabel(r.ten);
+    if (EQ_SO_DU.test(ten) || EQ_LAI_NAM.test(ten) || laCotTong(r.ten)) continue;
+    (EQ_CONG_KHOI.test(ten) ? congKhoi : chiTiet).push(r);
+  }
+  // Bảng tách chi tiết thì bỏ dòng cộng (lấy cả hai là nhân đôi); bảng không tách thì dòng cộng là tất cả.
+  const dung = chiTiet.length ? chiTiet : congKhoi;
+  const out = {};
+  const cong = (f, v) => { out[f] = (out[f] || 0) + Math.abs(v); };
+  for (const r of dung) {
+    const ten = normLabel(r.ten);
+    const vg = so(r.von_gop), td = so(r.thang_du), cq = so(r.co_phieu_quy);
+    const qu = so(r.quy_dtpt), re = so(r.lncpp), ks = so(r.lickks);
+    if (vg) {
+      if (EQ_CO_TUC_CP.test(ten)) cong('capStockDiv', vg);
+      else if (EQ_THUONG.test(ten)) cong('capBonus', vg);
+      else if (EQ_ESOP.test(ten)) cong('capEsop', vg);
+      else cong(vg > 0 ? 'capIssued' : 'capDecrease', vg);
+    }
+    if (td) cong(td > 0 ? 'premiumInc' : 'premiumDec', td);
+    if (cq) cong(cq < 0 ? 'treasuryInc' : 'treasuryDec', cq);      // mua cổ phiếu quỹ làm giảm vốn chủ
+    if (qu) cong(qu > 0 ? 'devFundInc' : 'devFundDec', qu);
+    if (re) cong(EQ_CO_TUC_TIEN.test(ten) ? 'dividends' : re > 0 ? 'reOtherInc' : 'reOtherDec', re);
+    if (ks) out.nciChange = (out.nciChange || 0) + ks;              // giữ dấu: tăng hay giảm đều được
+  }
+  return out;
+}
 
 /** Kết quả AI cho một nhóm thuyết minh → dạng model.js cần (đơn vị đồng). */
 export function noteToModel(kind, ai) {
@@ -226,7 +277,7 @@ export function noteToModel(kind, ai) {
   const opt = (x) => { const v = parseVN(x); return v === null ? undefined : v * unit; };
   if (kind === 'fixedAssets') {
     // Giữ cả SỐ ĐẦU NĂM: đó chính là số cuối năm TRƯỚC, nên một bảng thuyết minh đủ tách nhóm
-    // TSCĐ cho hai năm liền nhau (xem faMoiNam trong targets/model.js).
+    // TSCĐ cho hai năm liền nhau (xem muonNamTruoc trong targets/model.js).
     const row = (x, cls) => {
       const r = {
         cls, name: String(x.ten || ''), cost: n(x.nguyen_gia_cuoi), accDep: neg(n(x.hao_mon_cuoi)),
@@ -236,17 +287,30 @@ export function noteToModel(kind, ai) {
       if (mo !== undefined) { r.costOpen = mo; r.accDepOpen = neg(n(x.hao_mon_dau)); }
       return r;
     };
+    const thuc = (ds) => (ds || []).filter((x) => !laCotTong(x.ten));
     return {
-      tangible: (ai.tangible || []).map((x) => row(x, TANGIBLE.includes(x.nhom) ? x.nhom : guessTangible(x.ten))),
-      intangible: (ai.intangible || []).map((x) => row(x, guessIntangible(x.ten, x.nhom))),
+      tangible: thuc(ai.tangible).map((x) => row(x, TANGIBLE.includes(x.nhom) ? x.nhom : guessTangible(x.ten))),
+      intangible: thuc(ai.intangible).map((x) => row(x, guessIntangible(x.ten, x.nhom))),
     };
   }
   if (kind === 'segments') {
-    return (ai.segments || []).filter((s) => parseVN(s.doanh_thu) !== null).map((s) => {
+    // Lãi gộp: lấy dòng "Lãi gộp" nếu có, không thì doanh thu trừ giá vốn.
+    const gopFrom = (revenue, gpRaw, gvRaw) => {
+      const gp = parseVN(gpRaw);
+      if (gp !== null) return gp * unit;
+      return parseVN(gvRaw) !== null ? revenue - abs(n(gvRaw)) : undefined;
+    };
+    const keo = (o, revenue, gross) => { o.revenue = revenue; if (gross !== undefined) o.gross = gross; return o; };
+    return (ai.segments || []).filter((s) => parseVN(s.doanh_thu) !== null && !laCotTong(s.ten)).map((s) => {
       const revenue = n(s.doanh_thu);
-      const gp = parseVN(s.loi_nhuan_gop);
-      const gross = gp !== null ? gp * unit : (parseVN(s.gia_von) !== null ? revenue - abs(n(s.gia_von)) : undefined);
-      return gross === undefined ? { name: String(s.ten || ''), revenue } : { name: String(s.ten || ''), revenue, gross };
+      const out = keo({ name: String(s.ten || '') }, revenue, gopFrom(revenue, s.loi_nhuan_gop, s.gia_von));
+      // Khối "Năm trước" của bảng báo cáo bộ phận: đủ để tách mảng cho năm liền trước
+      // (xem muonNamTruoc trong targets/model.js), thay vì dồn hết doanh thu vào mảng 1.
+      if (parseVN(s.doanh_thu_truoc) !== null) {
+        const rPrev = n(s.doanh_thu_truoc);
+        out.prev = keo({ name: out.name }, rPrev, gopFrom(rPrev, s.loi_nhuan_gop_truoc, s.gia_von_truoc));
+      }
+      return out;
     });
   }
   if (kind === 'debt') {
@@ -254,19 +318,10 @@ export function noteToModel(kind, ai) {
     return { stProceeds: abs(n(st.vay_trong_ky)), stRepay: abs(n(st.tra_trong_ky)), ltProceeds: abs(n(lt.vay_trong_ky)), ltRepay: abs(n(lt.tra_trong_ky)) };
   }
   if (kind === 'equity') {
-    const MAP = {
-      von_gop_phat_hanh: ['capIssued', 1], co_phieu_thuong: ['capBonus', 1], esop: ['capEsop', 1], co_tuc_co_phieu: ['capStockDiv', 1],
-      von_gop_giam: ['capDecrease', 0], thang_du_tang: ['premiumInc', 1], thang_du_giam: ['premiumDec', 0],
-      co_phieu_quy_mua: ['treasuryInc', 0], co_phieu_quy_ban: ['treasuryDec', 0], quy_dtpt_tang: ['devFundInc', 1],
-      quy_dtpt_giam: ['devFundDec', 0], co_tuc_tien: ['dividends', 0], lncpp_tang_khac: ['reOtherInc', 1],
-      lncpp_giam_khac: ['reOtherDec', 0], lickks_thay_doi: ['nciChange', 2],
-    };
-    const out = {};
-    for (const [k, [f, mode]] of Object.entries(MAP)) {
-      const v = opt(ai[k]);
-      if (v === undefined) continue;
-      out[f] = mode === 2 ? v : Math.abs(v);
-    }
+    const out = equityMove(ai.nam_nay, n);
+    // Bảng in HAI khối năm liền nhau → khối trên là phát sinh của năm trước.
+    const truoc = equityMove(ai.nam_truoc, n);
+    if (Object.keys(truoc).length) out.prev = truoc;
     return out;
   }
   if (kind === 'goodwill') {

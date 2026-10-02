@@ -31,13 +31,23 @@ export async function pageTexts(doc, onProgress) {
   return out;
 }
 
-/** Vẽ một trang ra canvas. `hold` (tuỳ chọn) nhận `hold.task` để người gọi huỷ lần vẽ đã lỗi thời. */
-export async function renderPage(doc, n, width, hold) { return render(doc, n, width, hold); }
+/** Góc quay thêm (độ, theo chiều kim đồng hồ) về 0/90/180/270 — số lạ thì coi như 0. */
+export const chuanXoay = (rot) => {
+  const q = Math.round(Number(rot) || 0);
+  return q % 90 ? 0 : ((q % 360) + 360) % 360;
+};
 
-async function render(doc, n, width, hold) {
+/**
+ * Vẽ một trang ra canvas. `hold` (tuỳ chọn) nhận `hold.task` để người gọi huỷ lần vẽ đã lỗi thời.
+ * `rot` quay thêm so với chiều PDF khai báo — bản scan hay có trang in ngang mà không khai /Rotate riêng.
+ */
+export async function renderPage(doc, n, width, hold, rot = 0) { return render(doc, n, width, hold, rot); }
+
+async function render(doc, n, width, hold, rot = 0) {
   const page = await doc.getPage(n);
-  const vp1 = page.getViewport({ scale: 1 });
-  const vp = page.getViewport({ scale: width / vp1.width });
+  const rotation = page.rotate + chuanXoay(rot);
+  const vp1 = page.getViewport({ scale: 1, rotation });
+  const vp = page.getViewport({ scale: width / vp1.width, rotation });
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
   const ctx = canvas.getContext('2d');
@@ -48,22 +58,29 @@ async function render(doc, n, width, hold) {
   return canvas;
 }
 
-export async function thumbnail(doc, n, width = 150) {
-  return (await render(doc, n, width)).toDataURL('image/jpeg', 0.6);
+export async function thumbnail(doc, n, width = 150, rot = 0) {
+  return (await render(doc, n, width, null, rot)).toDataURL('image/jpeg', 0.6);
 }
 
 /** Trang → JPEG base64 (cho bản scan / file quá nặng). */
-export async function pageJpeg(doc, n, width = 1500, quality = 0.75) {
-  return (await render(doc, n, width)).toDataURL('image/jpeg', quality).split(',')[1];
+export async function pageJpeg(doc, n, width = 1500, quality = 0.75, rot = 0) {
+  return (await render(doc, n, width, null, rot)).toDataURL('image/jpeg', quality).split(',')[1];
 }
 
-/** PDF mới chỉ gồm các trang đã chọn (đánh số từ 1). */
-export async function subsetPdf(bytes, pages) {
+/**
+ * PDF mới chỉ gồm các trang đã chọn (đánh số từ 1).
+ * @param rot { [số trang]: độ } quay thêm cho trang in ngang, để AI đọc được xuôi
+ */
+export async function subsetPdf(bytes, pages, rot = {}) {
   const PDFLib = await loadPdfLib();
   const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
   const out = await PDFLib.PDFDocument.create();
   const copied = await out.copyPages(src, pages.map((p) => p - 1));
-  copied.forEach((p) => out.addPage(p));
+  copied.forEach((p, i) => {
+    const q = chuanXoay(rot[pages[i]]);
+    if (q) p.setRotation(PDFLib.degrees((p.getRotation().angle + q) % 360));
+    out.addPage(p);
+  });
   return out.save();
 }
 

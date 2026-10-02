@@ -445,6 +445,8 @@ table.g thead th{background:var(--glass-strong);-webkit-backdrop-filter:var(--bl
 .btn.sm{border-radius:999px;padding:6px 13px}
 .btn.big{border-radius:16px}
 .icon-btn.sm{width:34px;height:34px;font-size:17px;font-weight:700;color:var(--strong)}
+.icon-btn.on{border-color:var(--em);color:var(--em)}
+.icon-btn[hidden]{display:none}
 
 /* ── Chọn trang ───────────────────────── */
 .pmap > summary{display:flex;flex-direction:column;gap:2px}

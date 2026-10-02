@@ -146,7 +146,13 @@ test('thuyết minh mảng, vay, vốn chủ, tham số → dạng model', () =>
   assert.deepEqual(seg, [{ name: 'Dược', revenue: 3000, gross: 600 }, { name: 'Nhựa', revenue: 2000, gross: 300 }]);
   const debt = noteToModel('debt', { meta: { don_vi: 'đồng' }, vay_ngan_han: { vay_trong_ky: '100', tra_trong_ky: '(80)' }, vay_dai_han: { vay_trong_ky: '', tra_trong_ky: '5' } });
   assert.deepEqual(debt, { stProceeds: 100, stRepay: 80, ltProceeds: 0, ltRepay: 5 });
-  const eq = noteToModel('equity', { meta: { don_vi: 'đồng' }, esop: '20', co_tuc_tien: '(110)', lncpp_giam_khac: '7' });
+  const eq = noteToModel('equity', { meta: { don_vi: 'đồng' }, nam_nay: [
+    { ten: 'Tại ngày 01/01/2025', von_gop: '1.000', lncpp: '500' },
+    { ten: '- Phát hành cổ phiếu cho người lao động (ESOP)', von_gop: '20' },
+    { ten: '- Chia cổ tức bằng tiền', lncpp: '(110)' },
+    { ten: '- Trích quỹ khen thưởng, phúc lợi', lncpp: '(7)' },
+    { ten: 'Tại ngày 31/12/2025', von_gop: '1.020', lncpp: '383' },
+  ] });
   assert.equal(eq.capEsop, 20); assert.equal(eq.dividends, 110); assert.equal(eq.reOtherDec, 7); assert.equal(eq.capIssued, undefined);
   const par = noteToModel('params', { so_co_phieu_luu_hanh: '221.320.100', thue_suat_tndn: '20%' });
   assert.deepEqual(par, { shares: 221320100, taxRate: 0.2 });
@@ -178,4 +184,134 @@ test('BCTC kỳ kết thúc năm 2025 trở về trước luôn đọc theo mẫ
   // Báo cáo 2026 theo mẫu mới giữ nguyên mã
   const bs26 = { meta: { don_vi: 'VND', ngay_ket_thuc: '30/06/2026' }, items: [{ c: '280', n: 'TỔNG CỘNG TÀI SẢN', v: '10', p: '8' }] };
   assert.equal(statementToValues('BS', bs26).regime, 'TT99');
+});
+
+test('bộ phận: khối "Năm trước" của bảng vào trường prev (HAX trang 34)', () => {
+  const seg = noteToModel('segments', { meta: { don_vi: 'VND' }, segments: [
+    { ten: 'Kinh doanh Xe Ô tô', doanh_thu: '5.000', gia_von: '(4.400)', loi_nhuan_gop: '600',
+      doanh_thu_truoc: '4.000', gia_von_truoc: '(3.500)', loi_nhuan_gop_truoc: '500' },
+    { ten: 'Dịch vụ sửa chữa, bán phụ tùng và khác', doanh_thu: '1.000', gia_von_truoc: '(700)', doanh_thu_truoc: '900' },
+  ] });
+  assert.deepEqual(seg[0].prev, { name: 'Kinh doanh Xe Ô tô', revenue: 4000, gross: 500 });
+  assert.deepEqual(seg[1].prev, { name: 'Dịch vụ sửa chữa, bán phụ tùng và khác', revenue: 900, gross: 200 });
+  assert.equal(seg[1].gross, undefined, 'năm nay không in giá vốn lẫn lãi gộp thì để trống');
+  const mot = noteToModel('segments', { meta: { don_vi: 'VND' }, segments: [{ ten: 'Một mảng', doanh_thu: '100', doanh_thu_truoc: '' }] });
+  assert.equal('prev' in mot[0], false, 'bảng chỉ in một năm thì không có prev');
+});
+
+test('vốn chủ: ma trận hai năm của HAX (phụ lục 01) → đúng dòng model, cộng nhiều dòng vào một dòng', () => {
+  // Số chép từ BCTC hợp nhất HAX 2025 đã kiểm toán, phụ lục số 01.
+  const eq = noteToModel('equity', { meta: { don_vi: 'VND' },
+    nam_truoc: [
+      { ten: 'Tại ngày 01/01/2024', von_gop: '934.275.650.000', thang_du: '30.524.927.236', lncpp: '150.223.013.451', lickks: '48.980.301.766' },
+      { ten: 'Tăng trong năm', von_gop: '140.121.160.000', lncpp: '124.973.224.111', lickks: '241.263.696.699' },
+      { ten: '- Lãi trong năm', lncpp: '124.973.224.111', lickks: '78.596.451.809' },
+      { ten: '- Cổ đông không kiểm soát tăng vốn góp tại công ty con', lickks: '134.500.222.500' },
+      { ten: 'Ảnh hưởng từ việc thay đổi tỷ lệ lợi ích cổ đông không kiểm soát trong năm', lickks: '28.167.022.390' },
+      { ten: '- Bổ sung từ chia cổ tức bằng cổ phiếu từ lợi nhuận sau thuế và từ thặng dư vốn cổ phần', von_gop: '140.121.160.000' },
+      { ten: 'Giảm trong năm', thang_du: '(30.524.927.236)', lncpp: '(146.196.648.784)', lickks: '(2.900.846.105)' },
+      { ten: '- Chia cổ tức bằng cổ phiếu từ lợi nhuận sau thuế và từ thặng dư vốn cổ phần', thang_du: '(30.524.927.236)', lncpp: '(109.596.232.764)' },
+      { ten: 'Ảnh hưởng từ việc thay đổi tỷ lệ lợi ích cổ đông không kiểm soát trong năm', lncpp: '(8.551.944.893)' },
+      { ten: '- Chia cổ tức bằng tiền', lncpp: '(28.028.269.500)', lickks: '(2.858.908.000)' },
+      { ten: '- Trích quỹ khen thưởng, phúc lợi', lncpp: '(20.201.627)', lickks: '(41.938.105)' },
+      { ten: 'Tại ngày 31/12/2024', von_gop: '1.074.396.810.000', lncpp: '128.999.588.778', lickks: '287.343.152.360' },
+    ],
+    nam_nay: [
+      { ten: 'Tại ngày 01/01/2025', von_gop: '1.074.396.810.000', lncpp: '128.999.588.778', lickks: '287.343.152.360' },
+      { ten: 'Tăng trong năm', lncpp: '6.171.109.675', lickks: '38.253.319.314' },
+      { ten: '- Lãi trong năm', lncpp: '5.619.381.333', lickks: '33.464.389.461' },
+      { ten: '- Hợp cộng tài sản thuần của công ty con từ việc công ty mẹ nắm quyền kiểm soát', lickks: '4.788.929.853' },
+      { ten: '- Ảnh hưởng của sự thay đổi tỷ lệ lợi ích CĐKKS phát sinh trong năm', lncpp: '551.728.342' },
+      { ten: 'Giảm trong năm', lncpp: '(109.957.743.795)', lickks: '(57.122.119.707)' },
+      { ten: 'Ảnh hưởng từ việc thay đổi tỷ lệ lợi ích cổ đông không kiểm soát trong năm', lickks: '(971.728.342)' },
+      { ten: 'Giá phí khoản đầu tư vào công ty con cấp 2 của cổ đông không kiểm soát', lickks: '(33.160.594.425)' },
+      { ten: '- Chia cổ tức bằng tiền', lncpp: '(107.439.681.000)', lickks: '(22.952.299.000)' },
+      { ten: '- Trích khen thưởng ban điều hành', lncpp: '(2.500.000.000)' },
+      { ten: '- Trích quỹ khen thưởng, phúc lợi', lncpp: '(18.062.795)', lickks: '(37.497.940)' },
+      { ten: 'Tại ngày 31/12/2025', von_gop: '1.074.396.810.000', lncpp: '25.212.954.658', lickks: '268.474.351.967' },
+    ] });
+
+  // Năm nay: cổ tức tiền đứng riêng, hai dòng trích quỹ gộp vào "LNCPP giảm khác".
+  assert.equal(eq.dividends, 107439681000);
+  assert.equal(eq.reOtherDec, 2500000000 + 18062795);
+  assert.equal(eq.reOtherInc, 551728342);
+  assert.equal(eq.capIssued, undefined, 'vốn góp không đổi trong năm');
+  // LICĐKKS giữ dấu và cộng dồn: khớp đúng chênh lệch số dư trừ lãi của cổ đông không kiểm soát.
+  assert.equal(eq.nciChange, 4788929853 - 971728342 - 33160594425 - 22952299000 - 37497940);
+  assert.equal(eq.nciChange, 268474351967 - 287343152360 - 33464389461);
+
+  // Năm trước: cổ tức bằng cổ phiếu ghi vào vốn góp, phần đối ứng vào thặng dư và LNCPP.
+  const p = eq.prev;
+  assert.equal(p.capStockDiv, 140121160000);
+  assert.equal(p.premiumDec, 30524927236);
+  assert.equal(p.reOtherDec, 109596232764 + 8551944893 + 20201627);
+  assert.equal(p.dividends, 28028269500);
+  assert.equal(p.nciChange, 134500222500 + 28167022390 - 2858908000 - 41938105);
+  assert.equal(p.nciChange, 287343152360 - 48980301766 - 78596451809);
+});
+
+test('vốn chủ: bảng không tách chi tiết thì lấy dòng "Tăng/Giảm trong năm"', () => {
+  const eq = noteToModel('equity', { meta: { don_vi: 'VND' }, nam_nay: [
+    { ten: 'Số dư đầu năm', von_gop: '1.000' },
+    { ten: 'Tăng trong năm', von_gop: '200' },
+    { ten: 'Giảm trong năm', lncpp: '(50)' },
+    { ten: 'Số dư cuối năm', von_gop: '1.200' },
+  ] });
+  assert.equal(eq.capIssued, 200);
+  assert.equal(eq.reOtherDec, 50);
+  const mot = noteToModel('equity', { meta: { don_vi: 'VND' }, nam_nay: [{ ten: '- Chia cổ tức bằng tiền', lncpp: '(100)' }] });
+  assert.equal('prev' in mot, false, 'bảng chỉ in một năm thì không có prev');
+});
+
+test('bỏ cột / dòng tổng của bảng thuyết minh (Cộng, Tổng cộng, Loại trừ)', () => {
+  const seg = noteToModel('segments', { meta: { don_vi: 'VND' }, segments: [
+    { ten: 'Xe ô tô', doanh_thu: '5.000' }, { ten: 'Loại trừ nội bộ', doanh_thu: '(200)' },
+    { ten: 'Cộng', doanh_thu: '4.800' },
+  ] });
+  assert.deepEqual(seg.map((s) => s.name), ['Xe ô tô']);
+  const fa = noteToModel('fixedAssets', { meta: { don_vi: 'VND' }, tangible: [
+    { ten: 'Nhà cửa, vật kiến trúc', nguyen_gia_cuoi: '100', hao_mon_cuoi: '20' },
+    { ten: 'Tổng cộng', nguyen_gia_cuoi: '100', hao_mon_cuoi: '20' },
+  ], intangible: [{ ten: 'Tổng', nguyen_gia_cuoi: '5', hao_mon_cuoi: '1' }] });
+  assert.deepEqual(fa.tangible.map((x) => x.name), ['Nhà cửa, vật kiến trúc']);
+  assert.deepEqual(fa.intangible, []);
+  const giu = noteToModel('segments', { meta: { don_vi: 'VND' }, segments: [{ ten: 'Tổng hợp cơ khí', doanh_thu: '1' }] });
+  assert.deepEqual(giu.map((s) => s.name), ['Tổng hợp cơ khí'], 'tên có chữ "Tổng" nhưng không phải dòng tổng thì giữ');
+});
+
+// ─── Số thật từ BCTC hợp nhất HAX 2025 đã kiểm toán ───
+
+test('bộ phận: bảng hai năm của HAX (trang 34) — bỏ cột "Cộng", giữ cả năm trước', () => {
+  const seg = noteToModel('segments', { meta: { don_vi: 'VND' }, segments: [
+    { ten: 'Kinh doanh Xe Ô tô', doanh_thu: '4.114.081.231.685', gia_von: '3.857.001.390.036', loi_nhuan_gop: '257.079.841.649',
+      doanh_thu_truoc: '4.945.304.179.048', gia_von_truoc: '4.555.729.599.839', loi_nhuan_gop_truoc: '389.574.579.209' },
+    { ten: 'Kinh doanh dịch vụ sửa chữa, bán phụ tùng và khác', doanh_thu: '536.500.510.420', gia_von: '438.721.526.041', loi_nhuan_gop: '97.778.984.379',
+      doanh_thu_truoc: '567.983.165.126', gia_von_truoc: '445.634.638.196', loi_nhuan_gop_truoc: '122.348.526.930' },
+    { ten: 'Cộng', doanh_thu: '4.650.581.742.105', loi_nhuan_gop: '354.858.826.028', doanh_thu_truoc: '5.513.287.344.174' },
+  ] });
+  assert.equal(seg.length, 2);
+  assert.equal(seg[0].revenue + seg[1].revenue, 4650581742105, 'tổng hai mảng đúng bằng dòng Cộng in trên bảng');
+  assert.equal(seg[0].gross + seg[1].gross, 354858826028);
+  assert.equal(seg[0].prev.revenue + seg[1].prev.revenue, 5513287344174);
+  assert.equal(seg[0].prev.gross + seg[1].prev.gross, 511923106139);
+});
+
+test('TSCĐ: bảng của HAX (trang 25) — "Tăng trong năm" trong khối hao mòn là khấu hao năm', () => {
+  const fa = noteToModel('fixedAssets', { meta: { don_vi: 'VND' }, tangible: [
+    { ten: 'Nhà cửa, vật kiến trúc', nhom: 'buildings', nguyen_gia_dau: '243.439.059.314', mua: '54.223.073.451',
+      giam_khac: '(24.696.189.929)', nguyen_gia_cuoi: '272.965.942.836',
+      hao_mon_dau: '103.864.639.518', khau_hao: '24.028.873.361', hao_mon_cuoi: '126.528.547.095' },
+    { ten: 'Tài sản khác', nhom: 'other', nguyen_gia_dau: '2.871.960.172', mua: '340.693.889',
+      giam_khac: '(553.551.987)', nguyen_gia_cuoi: '2.659.102.074',
+      hao_mon_dau: '2.318.335.678', khau_hao: '122.398.764', hao_mon_cuoi: '2.292.013.342' },
+    { ten: 'Cộng', nguyen_gia_dau: '637.849.733.342', nguyen_gia_cuoi: '537.908.755.779', hao_mon_dau: '188.721.710.386', hao_mon_cuoi: '209.428.869.757' },
+  ] });
+  assert.equal(fa.tangible.length, 2, 'cột "Cộng" không phải một nhóm tài sản');
+  const nha = fa.tangible[0];
+  assert.equal(nha.cost, 272965942836);
+  assert.equal(nha.accDep, -126528547095, 'hao mòn in dương trên bảng, vào model phải là số âm');
+  assert.equal(nha.additions, 54223073451);
+  assert.equal(nha.depreciation, -24028873361);
+  assert.equal(nha.costOpen, 243439059314, 'giữ cột đầu năm để tách nhóm cho năm trước');
+  assert.equal(nha.accDepOpen, -103864639518);
 });

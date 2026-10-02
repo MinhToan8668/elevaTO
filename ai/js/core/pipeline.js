@@ -209,6 +209,7 @@ export async function mapPagesWithAI(total, io, { batch = 12, onStep } = {}) {
   const { pageMapTask } = await import('./prompts.js');
   const types = Array(total).fill('OTHER');
   const notes = Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []]));
+  const rot = {};
   for (let start = 1; start <= total; start += batch) {
     const pages = Array.from({ length: Math.min(batch, total - start + 1) }, (_, i) => start + i);
     onStep?.({ key: 'map', state: 'run', label: t('step.mapping', { from: start, to: pages[pages.length - 1], total }) });
@@ -219,10 +220,17 @@ export async function mapPagesWithAI(total, io, { batch = 12, onStep } = {}) {
       if (!(i >= start - 1 && i < start - 1 + pages.length)) continue;          // AI đánh số sai → bỏ
       if (['BS', 'IS', 'CF', 'NOTES', 'OTHER'].includes(r.loai)) types[i] = r.loai;
       for (const g of Array.isArray(r.nhom) ? r.nhom : []) if (Object.hasOwn(notes, g) && types[i] === 'NOTES') notes[g].push(i + 1);
+      ghiXoay(rot, i + 1, r.xoay);
     }
   }
   onStep?.({ key: 'map', state: 'done' });
-  return { types, notes, scanned: true };
+  return { types, notes, rot, scanned: true };
+}
+
+/** Góc quay AI đọc được cho một trang (chỉ nhận 90/180/270; 0 thì không cần ghi). */
+function ghiXoay(rot, page, raw) {
+  const q = Math.round(Number(raw) || 0);
+  if (q % 90 === 0 && ((q % 360) + 360) % 360) rot[page] = ((q % 360) + 360) % 360;
 }
 
 const KNOWN = ['BS', 'IS', 'CF', 'NOTES'];
@@ -242,6 +250,7 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
   const sel = [...new Set(picked)].filter((p) => p >= 1 && p <= n).sort((a, b) => a - b).slice(0, MAX_TRANG);
   const types = Array(n).fill('OTHER');
   const notes = Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []]));
+  const rot = {};
   const grouped = new Set();
   for (const [g, pages] of Object.entries(job.notes || {})) if (Object.hasOwn(notes, g)) for (const p of pages || []) grouped.add(p);
   const unknown = [];
@@ -255,7 +264,7 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
   }
   const warnings = [];
   // Không lấy thuyết minh và ít trang chưa rõ: khỏi tốn lượt nhận trang — gửi thẳng các trang đó vào lượt đọc từng bảng.
-  if (!wantNotes && unknown.length <= batch) return { types, notes, aiCalls: 0, warnings, shared: unknown };
+  if (!wantNotes && unknown.length <= batch) return { types, notes, rot, aiCalls: 0, warnings, shared: unknown };
   let aiCalls = 0;
   if (unknown.length) {
     const { pageMapTask } = await import('./prompts.js');
@@ -270,6 +279,7 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
         if (!chunk.includes(p) || !KNOWN.concat('OTHER').includes(r.loai)) continue;   // AI đánh số sai → bỏ
         types[p - 1] = r.loai;
         if (r.loai === 'NOTES') for (const g of Array.isArray(r.nhom) ? r.nhom : []) if (Object.hasOwn(notes, g) && !notes[g].includes(p)) notes[g].push(p);
+        ghiXoay(rot, p, r.xoay);
       }
     }
     onStep?.({ key: 'map', state: 'done' });
@@ -280,7 +290,9 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
     if (loose.length) warnings.push(t('w.loose', { pages: list(loose) }));
   }
   for (const g of Object.keys(notes)) notes[g].sort((a, b) => a - b);
-  return { types, notes, aiCalls, warnings, shared: [] };
+  const nghieng = Object.keys(rot).map(Number).sort((a, b) => a - b);
+  if (nghieng.length) warnings.push(t('w.xoay', { pages: list(nghieng), n: nghieng.length }));
+  return { types, notes, rot, aiCalls, warnings, shared: [] };
 }
 
 /** Trang đã tick cần AI nhận diện: máy chưa rõ loại, hoặc là thuyết minh nhưng chưa rõ thuộc nhóm nào. */

@@ -19,6 +19,13 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   ← / → chuyển trang, Space để tick). Tick ô góc trang để chọn, Shift + tick chọn cả dãy; nút "Chọn gợi ý",
   "Chọn tất cả", "Bỏ chọn". Chỉ những trang đã tick được gửi cho AI — trang máy chưa nhận ra thì AI tự xem
   trang đó thuộc CĐKT, KQKD, LCTT hay thuyết minh.
+- **Trang in ngang tự xoay cho đứng**: báo cáo bộ phận và bảng biến động vốn chủ thường in ngang nhưng đóng
+  cùng chiều với trang dọc, nên ảnh gửi AI bị nằm ngang và đọc sai số. Lượt nhận trang hỏi luôn chiều của
+  từng trang và xoay cả ảnh nhỏ, trang xem lớn lẫn trang gửi AI; còn lệch thì bấm nút ⟳ ở góc trên khi xem
+  trang lớn (0° → 90° → 180° → 270°).
+- **Thuyết minh của một năm đủ dùng cho hai năm**: bảng thuyết minh năm sau gần như luôn in kèm số năm trước
+  (TSCĐ: cột "số đầu năm"; báo cáo bộ phận và bảng biến động vốn chủ: khối "Năm trước"), nên chỉ cần trích
+  thuyết minh của năm mới nhất là năm liền trước cũng có số thật thay vì số ước tính.
 - **Theo mẫu Thông tư 99/2025/TT-BTC** (áp dụng từ 01/01/2026). BCTC có **ngày kết thúc kỳ từ năm 2025 trở về
   trước** luôn được hiểu là mẫu cũ TT200 và tự quy đổi mã sang mẫu mới (tổng tài sản 270 → 280, doanh thu tài
   chính 21 → 22, …), nên nhập chung một mẫu với BCTC 2026.

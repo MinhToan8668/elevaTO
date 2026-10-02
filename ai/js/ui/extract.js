@@ -71,12 +71,18 @@ async function run(store, ctx) {
         if (label) li.children[1].textContent = label;
         li.children[2].textContent = state === 'split' ? t('run.split') : error ? error.slice(0, 120) : '';
       };
+      // Góc quay đọc lại từ store mỗi lần gửi: người dùng xoay tay ở bước 2, hoặc lượt nhận trang
+      // vừa phát hiện trang in ngang (patchJob ngay dưới) — cả hai phải ăn vào lượt đọc bảng sau đó.
+      const rot = () => store.get().jobs.find((x) => x.id === j.id)?.rot || {};
       // Bản scan: gửi ảnh cả lúc đọc bảng lẫn lúc nhận diện trang (gửi PDF scan hay ra kết quả rỗng).
-      const io = { parts: (pages, o) => ctx.io.pageParts(j.id, pages, { anh: !!o?.anh }),
-        images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6), ai: client, isSplittable, isFatal };
+      const io = { parts: (pages, o) => ctx.io.pageParts(j.id, pages, { anh: !!o?.anh, rot: rot() }),
+        images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6, rot()), ai: client, isSplittable, isFatal };
       try {
         // Trang đã tick: trang máy biết loại giữ nguyên, trang chưa rõ nhờ AI nhận bảng; chỉ gửi đúng các trang này.
         const plan = await planPicked(j, j.picked, io, { onStep });
+        // Trang AI thấy nằm ngang: nhớ vào file để lượt đọc bảng gửi ảnh đã quay, và bước 2 hiện đúng chiều.
+        const them = Object.entries(plan.rot || {}).filter(([p, q]) => rot()[p] !== q);
+        if (them.length) ctx.patchJob(j.id, { rot: { ...rot(), ...Object.fromEntries(them) } });
         const got = await extractJob({ name: j.name, scanned: j.scanned, types: plan.types, notes: plan.notes, shared: plan.shared }, io, { noteGroups: NOTE_KEYS, onStep, exact: true });
         const ext = { ...got, warnings: [...plan.warnings, ...got.warnings] };
         // Không đọc nổi bảng nào: hiện lời chỉ dẫn (AI vừa xem các trang đó là trang gì) thay vì câu cụt.
