@@ -1,6 +1,6 @@
 // Trình chỉnh sửa trang link-in-bio: sửa bản nháp (lưu trên máy), xem trước trực tiếp, đăng lên GitHub.
 
-import { normalize, serialize, newId, hiddenReason, safeImg, glassIconFor, ACCENTS, SOCIALS, ICON_LIBRARY, BACKGROUNDS } from './core.js';
+import { normalize, serialize, newId, hiddenReason, safeImg, glassIconFor, cleanToken, tokenProblem, ACCENTS, SOCIALS, ICON_LIBRARY, BACKGROUNDS } from './core.js';
 import * as iconify from './iconify.js';
 import { svg, TILE_ICONS } from './icons.js';
 import { h, field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
@@ -250,8 +250,19 @@ function githubPanel() {
   const r = repoCfg();
   const setRepo = (k) => (v) => ls.set(REPO_KEY, { ...repoCfg(), [k]: v.trim() });
   const remembered = Boolean(ls.get(TOKEN_KEY));
-  const tok = field('Token GitHub', getToken(), (v) => saveToken(v.trim(), remember.querySelector('input').checked),
-    { type: 'password', placeholder: 'github_pat_…', wide: true });
+  const tokHint = h('small', { class: 'hint', id: 'tokenHint' });
+  const showTokHint = (t) => {
+    const problem = t ? tokenProblem(t) : '';
+    tokHint.textContent = !t ? 'Dán token bắt đầu bằng github_pat_…' : problem || 'Đúng dạng token ✓ — bấm “Kiểm tra kết nối” để thử.';
+    tokHint.className = 'hint ' + (!t ? '' : problem ? 'bad' : 'ok');
+  };
+  const tok = field('Token GitHub', getToken(), (v) => {
+    const t = cleanToken(v);
+    saveToken(t, remember.querySelector('input').checked);
+    showTokHint(t);
+  }, { type: 'password', placeholder: 'github_pat_…', wide: true });
+  tok.append(tokHint);
+  showTokHint(getToken());
   tok.querySelector('input').id = 'tokenInput';
   tok.querySelector('label').setAttribute('for', 'tokenInput');
   const remember = toggle('Nhớ token trên máy này', remembered, (v) => saveToken(getToken(), v),
@@ -278,11 +289,20 @@ function saveToken(token, remember) {
 async function testConnection() {
   const st = $('#ghStatus');
   const token = getToken();
-  if (!token) { st.textContent = 'Chưa có token.'; st.className = 'gh-status bad'; return; }
+  const problem = tokenProblem(token);
+  if (problem) { st.textContent = problem; st.className = 'gh-status bad'; return; }
   st.textContent = 'Đang kiểm tra…'; st.className = 'gh-status';
+  const repo = repoCfg();
   try {
-    const { canPush } = await checkAccess(repoCfg(), token);
-    st.textContent = canPush ? 'Kết nối được, có quyền ghi ✓' : 'Đọc được repo nhưng chưa có quyền ghi — bật Contents: Read and write.';
+    const { login, canPush } = await checkAccess(repo, token);
+    const who = login ? `Token của @${login}` : 'Token hợp lệ';
+    if (canPush) {
+      st.textContent = `${who} · có quyền ghi vào ${repo.owner}/${repo.repo} ✓ — giờ bấm “Đăng lên web” được rồi.`;
+    } else if (login && login.toLowerCase() !== repo.owner.toLowerCase()) {
+      st.textContent = `${who}, không phải chủ repo ${repo.owner}. Đăng nhập GitHub bằng tài khoản ${repo.owner} rồi tạo token (Resource owner = ${repo.owner}).`;
+    } else {
+      st.textContent = `${who} nhưng chưa có quyền ghi — khi tạo token chọn repo ${repo.repo} và bật Contents: Read and write.`;
+    }
     st.className = 'gh-status ' + (canPush ? 'ok' : 'bad');
   } catch (e) { st.textContent = e.message; st.className = 'gh-status bad'; }
 }
@@ -308,8 +328,8 @@ function renderForm() {
 /* ── đăng, sao lưu ────────────────────────────── */
 async function doPublish() {
   const token = getToken();
-  if (!token) {
-    toast('Cần kết nối GitHub trước — dán token ở mục "Đăng lên web".');
+  if (!token || tokenProblem(token)) {
+    toast(token ? tokenProblem(token) : 'Cần kết nối GitHub trước — dán token ở mục "Đăng lên web".');
     const ghPanel = [...document.querySelectorAll('details.panel')].find((d) => d.querySelector('#tokenInput'));
     if (ghPanel) { ghPanel.open = true; ghPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     setTimeout(() => $('#tokenInput') && $('#tokenInput').focus(), 400);

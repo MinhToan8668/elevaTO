@@ -114,7 +114,7 @@ test('trình chỉnh sửa: sửa → xem trước đổi theo → Đăng lên w
   await p.waitForSelector('#tokenInput:visible');
   assert.equal(put, null);
 
-  await p.fill('#tokenInput', 'github_pat_test');
+  await p.fill('#tokenInput', 'github_pat_' + 'A1b2C3d4E5'.repeat(8) + '_xy');
   await p.click('#publishBtn');
   await p.waitForFunction(() => /khớp/.test(document.querySelector('#dirty').textContent));
   assert.equal(put.sha, 'sha1');
@@ -224,6 +224,23 @@ test('trình chỉnh sửa: nháp khác web thì báo rõ; một nút đổi m�
   assert.equal(saved.links[0].image, 'art/glass/course.svg');
   assert.equal(saved.links[1].title, 'AI đọc BCTC siêu nhanh');
   assert.ok(saved.links.every((l) => l.imageStyle === 'photo'));
+  await p.context().close();
+});
+
+test('trình chỉnh sửa: dán nhầm mật khẩu thì báo ngay; token bị GitHub từ chối thì nói rõ lý do', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.route('https://api.github.com/**', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{"message":"Bad credentials"}' }));
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('#tokenInput');
+  await p.fill('#tokenInput', 'MatKhauCuaToi@123');
+  assert.match(await p.textContent('#tokenHint'), /không phải token/);
+  await p.click('button:has-text("Kiểm tra kết nối")');
+  assert.match(await p.textContent('#ghStatus'), /không phải token/);
+
+  await p.fill('#tokenInput', '  github_pat_' + 'A1b2C3d4E5'.repeat(8) + '_xy\n');
+  assert.match(await p.textContent('#tokenHint'), /Đúng dạng token/);
+  await p.click('button:has-text("Kiểm tra kết nối")');
+  await p.waitForFunction(() => /không nhận token/.test(document.querySelector('#ghStatus').textContent));
   await p.context().close();
 });
 

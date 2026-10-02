@@ -297,10 +297,27 @@ export function serialize(data) {
   return JSON.stringify(normalize(data), null, 2) + '\n';
 }
 
+/** Chuỗi chủ trang dán vào → token sạch: bỏ khoảng trắng / xuống dòng, dấu nháy, tiền tố "Bearer " hay "token ". */
+export function cleanToken(raw) {
+  return String(raw == null ? '' : raw).trim()
+    .replace(/^(bearer|token)\s+/i, '')
+    .replace(/^["'`“”]+|["'`“”]+$/g, '')
+    .replace(/\s+/g, '');
+}
+
+/** '' nếu trông đúng là token GitHub; ngược lại là lời giải thích vì sao chắc chắn không dùng được. */
+export function tokenProblem(t) {
+  if (!t) return 'Chưa có token.';
+  if (/^github_pat_[A-Za-z0-9_]{60,}$/.test(t) || /^gh[pousr]_[A-Za-z0-9]{30,}$/.test(t)) return '';
+  if (/^github_pat_/.test(t)) return 'Token bị thiếu ký tự — token đầy đủ dài khoảng 93 ký tự. Bấm nút copy cạnh token trên GitHub rồi dán lại cả chuỗi.';
+  if (/^gh[pousr]_/.test(t)) return 'Token bị thiếu ký tự. Copy lại cả chuỗi.';
+  return 'Đây không phải token GitHub: token luôn bắt đầu bằng "github_pat_" (hoặc "ghp_"). Đừng dán mật khẩu hay email GitHub.';
+}
+
 /** Lỗi GitHub API → câu tiếng Việt chủ trang hiểu và biết phải làm gì. */
 export function githubError(status, body) {
   const msg = body && body.message ? String(body.message) : '';
-  if (status === 401) return 'Token sai hoặc đã hết hạn. Tạo token mới rồi dán lại.';
+  if (status === 401) return 'GitHub không nhận token này (gõ sai, copy thiếu, đã hết hạn hoặc đã bị xoá). Tạo token mới, bấm nút copy cạnh token rồi dán lại.';
   if (status === 403 || (status === 404 && /resource not accessible/i.test(msg)))
     return 'Token chưa có quyền ghi. Khi tạo token, chọn đúng repo và bật Contents: Read and write.';
   if (status === 404) return 'Không thấy repo hoặc nhánh. Kiểm tra lại tên chủ repo, tên repo, nhánh.';

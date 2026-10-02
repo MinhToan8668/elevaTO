@@ -61,7 +61,14 @@ test('mất mạng → báo kiểm tra mạng', async () => {
   await assert.rejects(currentSha(DEFAULT_REPO, 'tok', fn), /mạng/);
 });
 
-test('checkAccess báo có quyền ghi hay không', async () => {
-  const { fn } = fakeFetch([{ status: 200, body: {} }, { status: 200, body: { permissions: { push: false } } }]);
-  assert.deepEqual(await checkAccess(DEFAULT_REPO, 'tok', fn), { canPush: false });
+test('checkAccess báo token của ai và có quyền ghi hay không', async () => {
+  const { fn, calls } = fakeFetch([{ status: 200, body: { login: 'MinhToan8668' } }, { status: 200, body: {} }, { status: 200, body: { permissions: { push: true } } }]);
+  assert.deepEqual(await checkAccess(DEFAULT_REPO, 'tok', fn), { login: 'MinhToan8668', canPush: true });
+  assert.equal(calls[0].url, 'https://api.github.com/user');
+});
+
+test('checkAccess: token bị GitHub từ chối (401) → báo ngay, không hỏi tiếp', async () => {
+  const { fn, calls } = fakeFetch([{ status: 401, body: { message: 'Bad credentials' } }]);
+  await assert.rejects(checkAccess(DEFAULT_REPO, 'tok', fn), /không nhận token/);
+  assert.equal(calls.length, 1);
 });

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, safeImg, socialUrl, normalize, glassIconFor, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
@@ -123,7 +123,7 @@ test('mọi icon chọn được đều có hình, svg() không bao giờ trả 
 });
 
 test('lỗi GitHub ra câu dễ hiểu', () => {
-  assert.match(githubError(401), /Token sai/);
+  assert.match(githubError(401), /không nhận token/);
   assert.match(githubError(403), /Contents: Read and write/);
   assert.match(githubError(404, { message: 'Resource not accessible by personal access token' }), /quyền ghi/);
   assert.match(githubError(404, { message: 'Not Found' }), /Không thấy repo/);
@@ -217,4 +217,17 @@ test('glassIconFor: theo id ô, rồi theo tiêu đề / link; không đoán đ�
   assert.equal(glassIconFor({ id: 'x3', title: 'Liên hệ', url: 'mailto:a@b.vn' }), 'art/glass/mail.svg');
   assert.equal(glassIconFor({ id: 'x4', title: 'Đặt lịch tư vấn' }), 'art/glass/calendar.svg');
   assert.equal(glassIconFor({ id: 'x5', title: 'Trang lạ' }), '');
+});
+
+test('token: dọn chuỗi dán vào và nhận ra ngay thứ chắc chắn không phải token', () => {
+  const real = 'github_pat_' + 'A1b2C3d4E5'.repeat(8) + '_xy';
+  assert.equal(cleanToken('  "' + real + '"\n'), real);
+  assert.equal(cleanToken('Bearer ' + real), real);
+  assert.equal(cleanToken(real.slice(0, 40) + ' ' + real.slice(40)), real);
+  assert.equal(tokenProblem(real), '');
+  assert.equal(tokenProblem('ghp_' + 'a'.repeat(36)), '');
+  assert.match(tokenProblem(real.slice(0, 30)), /thiếu ký tự/);
+  assert.match(tokenProblem('MatKhauCuaToi@123'), /không phải token/);
+  assert.match(tokenProblem('minhtoan@gmail.com'), /không phải token/);
+  assert.equal(tokenProblem(''), 'Chưa có token.');
 });
