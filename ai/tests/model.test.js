@@ -144,3 +144,72 @@ test('đơn vị & tham số: cổ phiếu (triệu cp), thuế suất, số nă
   assert.equal(c[217].v, 10);
   assert.equal(c[214], undefined, 'chưa có số cổ phiếu thì để trống, không đoán');
 });
+
+// ─── Thuyết minh nhiều năm (ca thật: VHC chỉ trích thuyết minh của năm mới nhất) ───
+
+test('thuyết minh TSCĐ một năm đủ tách nhóm cho cả năm trước (cột "số đầu năm")', () => {
+  const ds2 = structuredClone(ds);
+  const v = ds2.values.FY2026, u = ds2.values.FY2025;
+  // Bảng biến động của năm 2026 in luôn số đầu năm — đó chính là số cuối năm 2025.
+  ds2.notes = { FY2026: { fixedAssets: {
+    tangible: [
+      { cls: 'buildings', name: 'Nhà cửa, vật kiến trúc', cost: v['BS:222'] - 100e9, accDep: v['BS:223'] + 10e9,
+        additions: 5e9, depreciation: -3e9, costOpen: u['BS:222'] - 60e9, accDepOpen: u['BS:223'] + 6e9 },
+      { cls: 'machinery', name: 'Máy móc và thiết bị', cost: 100e9, accDep: -10e9,
+        additions: 1e9, depreciation: -1e9, costOpen: 60e9, accDepOpen: -6e9 },
+    ],
+    intangible: [{ cls: 'land', name: 'Quyền sử dụng đất', cost: v['BS:228'], accDep: v['BS:229'],
+      additions: 0, depreciation: 0, costOpen: u['BS:228'], accDepOpen: u['BS:229'] }],
+  } } };
+  const o = buildModel(ds2);
+  const c25 = o.byYear[2025];
+  assert.equal(c25[155].v, 60e3, '2025 phải có dòng Máy móc riêng, không dồn hết vào Nhà cửa');
+  assert.equal(c25[150].v, (u['BS:222'] - 60e9) / M);
+  assert.equal(c25[150].src, 'tm', 'nguyên giá lấy từ thuyết minh, không phải số ước tính');
+  assert.equal(c25[152].src, 'uoc', 'capex chia theo tỷ trọng nên là số ước tính');
+  // Vẫn khớp CĐKT ở cả hai năm.
+  assert.ok(Math.abs(sheet(o, 2025)[189]) < 0.01, 'CHECK 189 năm 2025 = ' + sheet(o, 2025)[189]);
+  assert.ok(Math.abs(sheet(o, 2026)[189]) < 0.01, 'CHECK 189 năm 2026 = ' + sheet(o, 2026)[189]);
+  assert.ok(o.warnings.some((w) => /2025/.test(w) && /đầu năm/.test(w)), o.warnings.join(' | '));
+  assert.ok(!o.warnings.some((w) => /Chưa có thuyết minh tài sản cố định/.test(w)), 'đã có thuyết minh thì đừng báo thiếu');
+});
+
+test('cảnh báo thiếu thuyết minh phải nói rõ NĂM NÀO thiếu', () => {
+  const ds2 = structuredClone(ds);
+  ds2.notes = { FY2026: { segments: [{ name: 'Một mảng', revenue: ds2.values.FY2026['IS:10'], gross: 1e11 }] } };
+  const o = buildModel(ds2);
+  const seg = o.warnings.find((w) => /doanh thu theo mảng/.test(w));
+  assert.ok(seg, o.warnings.join(' | '));
+  assert.match(seg, /2025/, 'phải nêu năm thiếu');
+  assert.doesNotMatch(seg, /2026/, 'năm đã có thuyết minh thì không nằm trong danh sách thiếu');
+});
+
+test('năm nào cũng có thuyết minh thì không còn câu "chưa có thuyết minh" nào', () => {
+  const ds2 = structuredClone(ds);
+  const n = (p) => ({
+    segments: [{ name: 'Một mảng', revenue: ds2.values[p]['IS:10'], gross: 1e11 }],
+    debt: { stProceeds: 1e11, stRepay: 5e10, ltProceeds: 0, ltRepay: 0 },
+    equity: { capIssued: 0, dividends: 0 },
+    fixedAssets: { tangible: [{ cls: 'buildings', name: 'Nhà cửa', cost: ds2.values[p]['BS:222'], accDep: ds2.values[p]['BS:223'], additions: 0, depreciation: 0 }], intangible: [] },
+    goodwill: { cost: ds2.values[p]['BS:279'] || 0, accAmort: 0, additions: 0, amortization: 0 },
+  });
+  ds2.notes = { FY2025: n('FY2025'), FY2026: n('FY2026') };
+  const o = buildModel(ds2);
+  assert.deepEqual(o.warnings.filter((w) => /Chưa có thuyết minh/.test(w)), []);
+});
+
+test('không mượn cột "đầu năm" khi hai năm không liền kề', () => {
+  const ds2 = structuredClone(ds);
+  ds2.periods = [{ id: 'FY2025', year: 2023, months: 12 }, { id: 'FY2026', year: 2026, months: 12 }];
+  const v = ds2.values.FY2026;
+  ds2.notes = { FY2026: { fixedAssets: {
+    tangible: [{ cls: 'buildings', name: 'Nhà cửa', cost: v['BS:222'], accDep: v['BS:223'],
+      additions: 0, depreciation: 0, costOpen: 1e12, accDepOpen: -1e11 }],
+    intangible: [],
+  } } };
+  const o = buildModel(ds2);
+  // Cột đầu năm của thuyết minh 2026 là số cuối năm 2025, không phải 2023 → không được dùng.
+  assert.notEqual(o.byYear[2023][150].v, 1e6, 'không được lấy số đầu năm 2026 cho năm 2023');
+  assert.equal(o.byYear[2023][150].src, 'uoc');
+  assert.ok(o.warnings.some((w) => /Chưa có thuyết minh tài sản cố định.*2023/.test(w)), o.warnings.join(' | '));
+});

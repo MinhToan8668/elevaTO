@@ -192,3 +192,30 @@ function findVal(sheet, code) {
   const r = Object.keys(sheet).find((k) => /^A\d+$/.test(k) && sheet[k].v === code);
   return sheet['D' + r.slice(1)]?.v;
 }
+
+test('sheet TSCĐ bày theo đúng bảng biến động in trong BCTC, giữ tên nhóm của BCTC', () => {
+  // Ca thật: thuyết minh VHC có "Phương tiện vận tải, truyền dẫn" — model gọi là "Phương tiện vận tải".
+  // File xuất ra phải giữ TÊN IN TRÊN BCTC, không ép về nhãn của model.
+  const dsFa = addExtraction(emptyDataset(), {
+    file: 'BCTC 2025.pdf', company: 'CTCP Thủy Sản', meta: { ngay_ket_thuc: '2025-12-31', so_thang: 12 }, warnings: [],
+    statements: { IS: { cur: { 'IS:01': 500e9, 'IS:11': 300e9 }, prev: {} } },
+    notes: { fixedAssets: {
+      tangible: [{ cls: 'transport', name: 'Phương tiện vận tải, truyền dẫn',
+        costOpen: 318e9, additions: 12e9, cost: 326e9, accDepOpen: -188e9, depreciation: -28e9, accDep: -214e9 }],
+      intangible: [{ cls: 'other', name: 'Vườn cây lâu năm', costOpen: 40e9, additions: 0, cost: 40e9, accDepOpen: -4e9, depreciation: -1e9, accDep: -5e9 }],
+    } },
+  });
+  const f = buildFormXlsx(dsFa, { unit: 1e6, details: true });
+  const wb = f['xl/workbook.xml'], rels = f['xl/_rels/workbook.xml.rels'];
+  const c = readCells(f[sheetPathByName(wb, rels, 'TSCĐ & LTTM')], []);
+  const nhan = Object.values(c).filter((v) => typeof v === 'string');
+  assert.ok(nhan.some((x) => x.startsWith('Phương tiện vận tải, truyền dẫn')), nhan.join(' | '));
+  assert.ok(nhan.some((x) => x.startsWith('Vườn cây lâu năm')), 'nhóm lạ vẫn hiện nguyên tên trên BCTC');
+  // Thứ tự dòng đúng như bảng biến động: đầu năm → tăng → cuối năm, rồi hao mòn.
+  const thuTu = ['Nguyên giá đầu năm', 'Tăng', 'Nguyên giá cuối năm', 'Hao mòn lũy kế đầu năm', 'Khấu hao', 'Hao mòn lũy kế cuối năm'];
+  const dong = Object.entries(c).filter(([k]) => /^A\d+$/.test(k)).map(([k, v]) => [Number(k.slice(1)), v])
+    .sort((a, b) => a[0] - b[0]).map(([, v]) => v).filter((v) => thuTu.includes(v));
+  assert.deepEqual(dong.slice(0, 6), thuTu);
+  const r = Object.entries(c).find(([k, v]) => /^A\d+$/.test(k) && v === 'Nguyên giá đầu năm')[0].slice(1);
+  assert.equal(c[`B${r}`], 318000, 'số đầu năm lấy đúng từ thuyết minh');
+});
