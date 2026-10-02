@@ -1,6 +1,10 @@
 /**
  * elevaTO AI — máy chủ tài khoản + gọi Gemini cho công cụ AI BCTC
  * ============================================================
+ *
+ * ⚠️ BẢN CŨ. Máy chủ đã chuyển sang Cloudflare Workers — xem ai/worker/ (code tự lên máy chủ
+ *    mỗi lần push, key cất kín trong Cloudflare, không phải dán tay file này nữa).
+ *    Giữ lại ở đây để còn chỗ quay về trong lúc chuyển; dọn đi khi bản mới đã chạy ổn.
  * Dự án Apps Script RIÊNG (không dính landing page, không dính công cụ upload).
  * Người dùng đăng ký / đăng nhập bằng email + mật khẩu (giống Viral Studio của TMXK);
  * tài khoản nằm trong Google Sheet "elevaTO AI — Tài khoản" do hàm caiDat tạo.

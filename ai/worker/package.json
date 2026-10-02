@@ -1,0 +1,14 @@
+{
+  "name": "elevato-ai-worker",
+  "private": true,
+  "type": "module",
+  "description": "Máy chủ elevaTO AI BCTC trên Cloudflare Workers (thay Google Apps Script)",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "db": "wrangler d1 execute elevato-ai --remote --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}

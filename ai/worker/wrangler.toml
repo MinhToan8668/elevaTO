@@ -1,0 +1,34 @@
+name = "elevato-ai"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+workers_dev = true
+
+# Cơ sở dữ liệu D1. `database_id` lấy khi tạo:
+#   npx wrangler d1 create elevato-ai
+# rồi dán vào dòng dưới và đẩy lược đồ:
+#   npx wrangler d1 execute elevato-ai --remote --file=schema.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "elevato-ai"
+database_id = "DAN_DATABASE_ID_VAO_DAY"
+
+[vars]
+# Mở rộng / siết lại ở đây, khỏi sửa code. Để trống thì lấy mặc định trong src/caidat.js.
+AI_LUOT_FREE = "10"          # lượt AI mỗi ngày của tài khoản thường
+AI_LUOT_HV = "40"            # lượt AI mỗi ngày của học viên (giảng viên không giới hạn)
+MAIL_TEN = "elevaTO AI BCTC"
+# Số vòng PBKDF2 khi băm mật khẩu. Gói Workers Free chỉ cho 10ms CPU mỗi yêu cầu nên để vừa phải;
+# lên gói Paid thì đổi thành "200000" — người đang có tài khoản vẫn đăng nhập bình thường vì bản
+# băm tự ghi kèm số vòng của chính nó.
+BAM_VONG = "15000"
+
+# ─────────────────────────────────────────────────────────────
+# Các giá trị BÍ MẬT không đặt ở đây (file này nằm trong repo).
+# Đặt bằng lệnh, mỗi lệnh hỏi giá trị rồi cất kín trong Cloudflare:
+#   npx wrangler secret put GEMINI_KEYS   # key Google AI Studio, nhiều key cách nhau dấu phẩy
+#   npx wrangler secret put TG_TOKEN      # token bot Telegram của @BotFather
+#   npx wrangler secret put TG_ADMIN      # chat ID của bạn (nhiều người: cách nhau dấu phẩy)
+#   npx wrangler secret put TG_SECRET     # chuỗi ngẫu nhiên tự nghĩ, để Telegram chứng minh là thật
+#   npx wrangler secret put BREVO_KEY     # API key Brevo để gửi mã đặt lại mật khẩu
+#   npx wrangler secret put MAIL_TU       # địa chỉ gửi thư đã xác minh trên Brevo
+# ─────────────────────────────────────────────────────────────
