@@ -9,7 +9,7 @@
 
 // DÒNG DƯỚI DO MÁY ĐIỀN: sau mỗi lần triển khai, GitHub Actions lấy địa chỉ workers.dev thật rồi
 // tự sửa và commit (xem ai/worker/tools/config-url.mjs). Sửa cả CSP trong index.html / edit.html.
-export const BACKEND_URL = 'https://elevato-ai.minhtoantowork.workers.dev';
+export const BACKEND_URL = 'https://elevato.minhtoantowork.workers.dev';
 const LINKS_URL = BACKEND_URL + '/links';
 const TIMEOUT_MS = 8000;
 

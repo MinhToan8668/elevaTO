@@ -104,3 +104,31 @@ test('config.js không còn dòng API như mong đợi thì dừng, không ghi b
     assert.match(String(e.stderr), /không còn dòng/);
   }
 });
+
+// Bài canh cả repo: 4 chỗ khai địa chỉ máy chủ phải trùng khớp.
+// Lần đổi tên Worker vừa rồi lệch đúng kiểu này — script có sửa cả 4 file nhưng workflow chỉ
+// `git add` một file, nên 3 file kia âm thầm giữ địa chỉ cũ và trang link sẽ chết khi xoá Worker cũ.
+test('mọi chỗ trỏ tới máy chủ đều cùng một địa chỉ', () => {
+  const doc = (f) => readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');
+  const API = /^export const API = '([^']+)';$/m.exec(doc('ai/js/config.js'));
+  const LINKS = /^export const BACKEND_URL = '([^']+)';$/m.exec(doc('links/js/backend.js'));
+  assert.ok(API && LINKS, 'thiếu dòng khai báo địa chỉ');
+  assert.equal(LINKS[1], API[1], 'links/js/backend.js lệch với ai/js/config.js');
+
+  for (const f of ['links/index.html', 'links/edit.html']) {
+    const dc = [...doc(f).matchAll(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/g)].map((m) => m[0]);
+    assert.ok(dc.length, `${f}: CSP không khai địa chỉ máy chủ nào`);
+    for (const x of new Set(dc)) assert.equal(x, API[1], `${f}: CSP còn địa chỉ cũ`);
+  }
+});
+
+// Và workflow phải commit ĐỦ các file ấy, nếu không sửa xong cũng rơi mất.
+test('workflow commit đủ mọi file config-url.mjs sửa tới', () => {
+  const yml = readFileSync(new URL('../../.github/workflows/worker.yml', import.meta.url), 'utf8');
+  const add = /^\s*git add (.+)$/m.exec(yml);        // dòng lệnh thật, không phải chữ trong chú thích
+  assert.ok(add, 'workflow không có bước git add');
+  for (const f of ['ai/js/config.js', 'links/js/backend.js', 'links/index.html', 'links/edit.html']) {
+    assert.ok(add[1].includes(f), `workflow quên git add ${f}`);
+  }
+  assert.doesNotMatch(add[1], /^-A|\s-A(\s|$)/, 'git add -A sẽ commit nhầm database_id vào wrangler.toml');
+});
