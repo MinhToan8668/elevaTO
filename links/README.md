@@ -62,6 +62,7 @@ links/
 ├── data.json         toàn bộ nội dung trang (trình chỉnh sửa ghi vào đây)
 ├── art/              bộ icon elevaTO (glass), icon 3D (3d), bộ cũ (classic), logo chữ cho chân trang
 ├── css/links.css     giao diện trang (edit.css: thêm cho trình chỉnh sửa)
+├── fonts/            Plus Jakarta Sans (phông tiêu đề, OFL) — chữ thường dùng Be Vietnam Pro của ai/
 ├── js/core.js        logic thuần: lọc link an toàn, chuẩn hoá dữ liệu, số chỗ cohort
 ├── js/page.js        vẽ trang
 ├── js/editor.js      trình chỉnh sửa (edit-ui.js: ô nhập, thanh kéo, chọn ảnh; image.js: nén ảnh từ máy;

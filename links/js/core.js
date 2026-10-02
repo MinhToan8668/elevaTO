@@ -11,7 +11,7 @@ export const BACKGROUNDS = {
   midnight: 'Đêm',
   image: 'Ảnh tự chọn',
 };
-export const THEME_DEFAULT = { blur: 22, tint: 46, background: 'aurora', bgImage: '' };
+export const THEME_DEFAULT = { blur: 18, tint: 40, background: 'aurora', bgImage: '' };
 // Ảnh tải lên được lưu thẳng trong data.json dưới dạng data URL (đã thu nhỏ) → cần giới hạn dài hơn link thường.
 const IMG_MAX = 300000;
 const BG_MAX = 900000;
