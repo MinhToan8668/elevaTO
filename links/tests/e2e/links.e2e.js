@@ -128,7 +128,7 @@ test('trình chỉnh sửa: sửa → xem trước đổi theo → Đăng lên w
 test('ảnh minh hoạ của các ô và logo chân trang tải được', async () => {
   const p = await page();
   await p.goto(base + '/links/');
-  await p.waitForSelector('#grid .chip.ico img');
+  await p.waitForSelector('#grid .chip.img img, #grid .chip.ico img');
   await p.waitForFunction(() => [...document.querySelectorAll('#grid .chip.ico img, #grid .chip.img img, .foot img.wm-light')].every((i) => i.complete && i.naturalWidth > 0));
   assert.equal(await p.textContent('.foot-tag'), 'Fuel Your Financial Journey');
   await p.context().close();

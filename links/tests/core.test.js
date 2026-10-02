@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, safeImg, socialUrl, normalize, THEME_DEFAULT, ART, ICON3D, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
@@ -178,8 +178,11 @@ test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụ
   assert.equal(safeImg('art/course.svg'), 'art/course.svg');
 });
 
-test('ảnh có sẵn: mọi file trong ART đều tồn tại và là SVG hợp lệ', async () => {
-  for (const src of Object.keys(ART)) {
+test('bộ icon elevaTO và bộ icon cũ: mọi file đều có, là SVG 120×120 không chứa script', async () => {
+  assert.equal(Object.keys(GLASS).length, 16);
+  assert.ok(Object.keys(CLASSIC).length >= 8);
+  assert.deepEqual(ICON_LIBRARY.map((s) => [s.key, s.style]), [['glass', 'photo'], ['3d', 'icon'], ['classic', 'photo']]);
+  for (const src of [...Object.keys(GLASS), ...Object.keys(CLASSIC)]) {
     const svgText = await readFile(new URL('../' + src, import.meta.url), 'utf8');
     assert.match(svgText, /^<svg [^>]*viewBox="0 0 120 120"/, src);
     assert.doesNotMatch(svgText, /<script|on\w+=/i, src);

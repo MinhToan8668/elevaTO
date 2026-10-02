@@ -63,11 +63,12 @@ img{display:block;max-width:100%}
 :root[data-bg="ocean"] .bg{--b1:rgba(14,165,233,.55); --b2:rgba(37,99,235,.45); --b3:rgba(20,184,166,.4); --b4:rgba(165,180,252,.4)}
 :root[data-bg="sunset"] .bg{--b1:rgba(251,113,133,.5); --b2:rgba(245,158,11,.45); --b3:rgba(168,85,247,.36); --b4:rgba(249,115,22,.36)}
 :root[data-bg="midnight"] .bg{--b1:rgba(99,102,241,.5); --b2:rgba(139,92,246,.42); --b3:rgba(14,165,233,.36); --b4:rgba(236,72,153,.3)}
-.bg i{position:absolute;border-radius:50%;filter:blur(48px);animation:drift 26s ease-in-out infinite alternate}
-.bg .b1{width:58vmax;height:58vmax;left:-18vmax;top:-20vmax;background:radial-gradient(circle,var(--b1),transparent 64%)}
-.bg .b2{width:50vmax;height:50vmax;right:-20vmax;top:10vmax;background:radial-gradient(circle,var(--b2),transparent 64%);animation-duration:32s;animation-delay:-8s}
-.bg .b3{width:54vmax;height:54vmax;left:6vmax;bottom:-28vmax;background:radial-gradient(circle,var(--b3),transparent 64%);animation-duration:38s;animation-delay:-14s}
-.bg .b4{width:30vmax;height:30vmax;right:8vmax;bottom:6vmax;background:radial-gradient(circle,var(--b4),transparent 64%);animation-duration:28s;animation-delay:-4s}
+.bg i{position:absolute;border-radius:50%;animation:drift 26s ease-in-out infinite alternate}
+/* Khối màu có lõi đặc, mép mềm vừa phải (không dùng filter blur) — kính trong vẫn thấy nền rõ, không nhoè */
+.bg .b1{width:62vmax;height:62vmax;left:-20vmax;top:-24vmax;background:radial-gradient(circle,var(--b1) 0 42%,transparent 70%)}
+.bg .b2{width:52vmax;height:52vmax;right:-18vmax;top:8vmax;background:radial-gradient(circle,var(--b2) 0 40%,transparent 70%);animation-duration:32s;animation-delay:-8s}
+.bg .b3{width:58vmax;height:58vmax;left:2vmax;bottom:-30vmax;background:radial-gradient(circle,var(--b3) 0 40%,transparent 70%);animation-duration:38s;animation-delay:-14s}
+.bg .b4{width:30vmax;height:30vmax;right:14vmax;bottom:4vmax;background:radial-gradient(circle,var(--b4) 0 44%,transparent 70%);animation-duration:28s;animation-delay:-4s}
 :root[data-theme="dark"] .bg i{opacity:.75}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bg i{opacity:.75}}
 @keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
