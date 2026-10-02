@@ -1,0 +1,44 @@
+# Đẩy máy chủ elevaTO AI BCTC lên Cloudflare Workers mỗi khi thư mục ai/worker đổi.
+# Nhờ workflow này mà không phải copy paste code vào đâu nữa — cứ push là máy chủ tự cập nhật.
+#
+# Cần hai secret trong repo (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   token có quyền "Edit Cloudflare Workers" + "D1 Edit"
+#   CLOUDFLARE_ACCOUNT_ID  Account ID thấy ở trang chủ Cloudflare
+# Xem ai/worker/README.md để biết cách lấy.
+
+name: Máy chủ AI (Cloudflare Workers)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ai/worker/**'
+      - '.github/workflows/worker.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: worker-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tạo / cập nhật các bảng. Lược đồ viết kiểu CREATE TABLE IF NOT EXISTS nên chạy lại vô hại.
+      - name: Dựng bảng D1
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ai/worker
+          command: d1 execute elevato-ai --remote --yes --file=schema.sql
+
+      - name: Triển khai Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ai/worker
+          command: deploy

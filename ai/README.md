@@ -143,51 +143,42 @@ Lệnh (gõ trong tin nhắn riêng với bot):
 | `/ungho off` | tạm ẩn phần ủng hộ trên trang |
 
 - `/thongke` cho biết chuỗi model đang dùng và model nào đang quá tải.
-- Bot **hỏi tin mới mỗi phút** (lịch `hoiTelegram`, tạo tự động khi chạy `caiDat`) thay vì webhook, vì Apps
-  Script trả 302 cho webhook. Có lệnh thì bot bám thêm ~40 giây để trả lời gần như tức thì.
 - Chỉ **tin riêng do chính chat ID quản trị gõ** mới được xử lý (không nhận nhóm, không nhận tin chuyển tiếp);
   người lạ nhắn bot thì bot im lặng. Nút bấm kiểm tra cả chat lẫn người bấm.
 - Key Gemini hỏng (401/403) → bot báo, tối đa 1 lần mỗi giờ. Ai xin mã đặt lại mật khẩu bot cũng báo.
 - `/ungho` đáp lại **tên ngân hàng bot nhận ra** để bạn đối chiếu trước khi nó hiện lên trang — sai BIN là
   người ủng hộ quét QR không được. Bảng mã ngân hàng **sinh tự động** bằng `tools/banks.py` từ danh sách
   chính thức của NAPAS, đừng sửa tay (bot đáp lại tên lấy từ chính dòng đó nên gõ tay sai là không ai nhận ra).
-- Tắt bot: chạy hàm `dungBot`. Bật lại: chạy `caiDat`.
+- Bot dùng **webhook**: Telegram đẩy tin sang ngay nên lệnh trả lời tức thì. Worker tự nối webhook ở lượt
+  truy cập đầu sau khi triển khai, không phải gõ lệnh gì.
 
-## Cài máy chủ AI (một lần, khoảng 10 phút)
+## Cài máy chủ AI (một lần, khoảng 20 phút)
 
-1. Vào <https://script.google.com> → **Dự án mới**, đặt tên `elevaTO AI`
-   (dự án riêng — không dùng chung dự án landing page hay upload).
-2. Dán toàn bộ `Code.gs` (bản elevaTO gửi riêng, đã có sẵn key, token bot và chat ID) vào `Code.gs`.
-   Dùng bản trong repo thì dán key Gemini vào `GEMINI_KEY_MOI` (nhiều key cách nhau dấu phẩy), token
-   @BotFather vào `TG_TOKEN_MOI`, chat ID của bạn vào `TG_CHAT_MOI`.
-3. ⚙ **Cài đặt dự án** → tick *Hiển thị tệp kê khai "appsscript.json"* → mở `appsscript.json`, dán nội dung
-   `ai/backend/appsscript.json`.
-4. Mở bot trên Telegram, bấm **Start** (bot chỉ nhắn được cho người đã Start).
-5. Chọn hàm **`caiDat`** → **Chạy** → cấp quyền (gọi ra ngoài, tạo bảng tính, tạo lịch chạy cho bot). Nhật ký in
-   ra link bảng tài khoản và model sẽ dùng; bot nhắn thử "đã kết nối". Chạy xong có thể đổi các dòng key/token
-   về `'DAN_…'` rồi Lưu (đã cất trong Script Properties).
-6. **Triển khai → Triển khai mới → Ứng dụng web**: *Thực thi với tư cách*: **Tôi**; *Ai có quyền truy cập*:
-   **Bất kỳ ai** → Triển khai → chép link `…/exec`.
-7. Dán link `/exec` vào `ai/js/config.js` (`API = '…'`) và đẩy lên GitHub (hoặc gửi link cho Claude làm hộ).
-   Trước bước này trang hiện "đang được cài đặt" và chưa cho đăng nhập.
-8. Tự đăng ký một tài khoản trên trang, rồi nhắn bot `/giangvien <email của bạn>` (hoặc sửa email trong hàm
-   `taoQuanTri` → Chạy) để thành giảng viên.
+Máy chủ chạy trên **Cloudflare Workers**, mã nguồn trong [`ai/worker/`](worker/). Đẩy lên bằng GitHub
+Actions: sửa gì trong `ai/worker/` rồi `git push` là máy chủ tự cập nhật — **không phải dán tay code
+vào đâu nữa**, và key không bao giờ nằm trong repo.
 
-Sửa `Code.gs` sau này: dán bản mới → **Triển khai → Quản lý triển khai → ✎ → Phiên bản: Phiên bản mới →
-Triển khai** để giữ nguyên link `/exec`, rồi chạy lại `caiDat` một lần (nếu Google hỏi quyền mới thì cấp).
-Thêm key: sửa Script Property `GEMINI_KEYS` (mỗi dòng một key) hoặc dán vào `GEMINI_KEY_MOI` rồi chạy lại `caiDat`.
+Các bước cài lần đầu (tạo cơ sở dữ liệu D1, lấy API token, cất key, nối bot Telegram, nối Brevo để gửi
+email) viết đầy đủ trong **[ai/worker/README.md](worker/README.md)**.
+
+Xong bước cuối, dán địa chỉ `https://elevato-ai.<tài-khoản>.workers.dev` vào `ai/js/config.js`
+(`API = '…'`). Trước bước đó trang hiện "đang được cài đặt" và chưa cho đăng nhập.
+
+Tự đăng ký một tài khoản trên trang, rồi nhắn bot `/giangvien <email của bạn>` để thành giảng viên.
+
+> `ai/backend/` là bản Apps Script cũ, giữ lại để còn chỗ quay về trong lúc chuyển. Bản mới chạy ổn thì dọn đi.
 
 ### Bảo vệ
 
-- Mật khẩu băm 1500 vòng có muối + "tiêu" riêng trong Script Properties; bảng chỉ giữ bản băm của mật khẩu
-  và của phiên. Sai mật khẩu 5 lần → khoá tạm 10 phút; có ô bẫy bot và trần số đăng ký mỗi giờ.
+- Mật khẩu băm PBKDF2-SHA256 có muối riêng từng người; cơ sở dữ liệu chỉ giữ bản băm của mật khẩu và của
+  token phiên. Sai mật khẩu 5 lần → khoá tạm 10 phút; có ô bẫy bot và trần số đăng ký mỗi giờ.
 - Mỗi tài khoản có hạn mức lượt/ngày theo vai trò (giữ lượt trước khi gọi Gemini, lỗi thì trả lại) và tối đa
   `AI_RPM_MA` (6) lượt/phút; mỗi key tối đa `AI_RPM` (12) lượt/phút.
 - Nhiều key Gemini: key nào hết hạn mức phút (429) thì nghỉ, máy chủ chuyển ngay sang key khác.
 - Model do máy chủ chọn, trang không đổi được. Máy chủ giữ **chuỗi model dự phòng** (bản flash chính thức mới
   → cũ, cuối cùng flash-lite): model nào quá tải (HTTP 503) thì nghỉ 5 phút và máy chủ chuyển ngay sang model
   sau **trong cùng một lượt** — mỗi model có hạn mức miễn phí riêng nên ít khi báo "quá tải". Muốn cố định một
-  model: Script Property `AI_MODEL`.
+  model: biến `AI_MODEL` trong `worker/wrangler.toml`.
 - Máy chủ chỉ chuyển tiếp nội dung trích xuất (PDF / ảnh / chữ có giới hạn độ dài), không cho dùng công cụ.
 - Trang chỉ chạy script của chính nó (CSP `script-src 'self'` + `'wasm-unsafe-eval'` cho bộ giải ảnh scan của pdf.js,
   thư viện trong `vendor/`), không dùng `innerHTML`
@@ -197,10 +188,10 @@ Thêm key: sửa Script Property `GEMINI_KEYS` (mỗi dòng một key) hoặc d�
 
 - Gemini miễn phí giới hạn số lượt mỗi phút / mỗi ngày theo **từng model**. Máy chủ giữ tối đa `AI_RPM` (12)
   lượt/phút mỗi key, `AI_RPM_MA` (6) lượt/phút mỗi tài khoản; hết hạn mức ở model này thì đổi key rồi đổi
-  model (tối đa `AI_THU_TOI_DA` = 5 lần gọi cho một lượt), quá nữa thì trang tự chờ rồi thử lại.
+  model (tối đa `AI_THU_TOI_DA` = 8 lần gọi cho một lượt), quá nữa thì trang tự chờ rồi thử lại.
   Một BCTC tốn 3 lượt ở Form phổ thông; Form riêng elevaTO thêm 1 lượt mỗi nhóm thuyết minh và 1 lượt mỗi
   12 trang AI phải tự nhận diện.
-- Apps Script chỉ chờ một lượt gọi tối đa ~60 giây: bảng dài quá thì trang tự chia đôi rồi gọi lại.
+- Một lượt gọi Gemini chờ có hạn: bảng dài quá thì trang tự chia đôi rồi gọi lại.
 - Gemini bản miễn phí có thể dùng dữ liệu gửi lên để cải thiện dịch vụ — chỉ dùng cho BCTC đã công bố.
 - Nhật ký lỗi của máy chủ che token bot.
 - Model: máy chủ lấy danh sách model Gemini hiện có (tự cập nhật khi Google ra model mới) và dùng bản *flash*
@@ -249,7 +240,7 @@ ai/
 ├── js/ai.js                     gọi máy chủ AI (chờ khi bận, chia nhỏ khi quá giờ)
 ├── js/pdf.js, js/libs.js        đọc chữ, ảnh thu nhỏ, cắt trang PDF; nạp thư viện trong vendor/ khi cần
 ├── js/ui/pages.js               lưới trang để tick + xem trang lớn
-├── js/config.js                 link /exec của máy chủ AI
+├── js/config.js                 địa chỉ máy chủ AI
 ├── js/ui/auth.js                đăng nhập / đăng ký / quên mật khẩu, menu tài khoản
 ├── js/ui/donate.js              hộp Ủng hộ; js/core/vietqr.js dựng nội dung mã QR VietQR
 ├── js/chart2026.js              danh mục chỉ tiêu mẫu TT99 + cây cộng dồn + mã TT200 tương ứng
@@ -263,8 +254,9 @@ ai/
 ├── js/targets/model.js          quy ba báo cáo + thuyết minh về đúng dòng sheet 03.Input_FS
 ├── js/targets/sheets.js         bố cục 03.Input_FS, SINH TỰ ĐỘNG từ template (đừng sửa tay)
 ├── tools/doc-template.py        đọc file model elevaTO (.xlsx) → sinh js/targets/sheets.js
-├── tools/banks.py               lấy bảng mã ngân hàng NAPAS → khối var BANK trong backend/Code.gs
-├── backend/                     máy chủ Apps Script
+├── tools/banks.py               lấy bảng mã ngân hàng NAPAS → bảng BANK trong worker/src/ungho.js
+├── worker/                      máy chủ Cloudflare Workers (xem worker/README.md)
+├── backend/                     máy chủ Apps Script — BẢN CŨ, giữ tạm trong lúc chuyển
 ├── vendor/                      pdf.js, pdf-lib, JSZip, SheetJS, qrcode, phông Be Vietnam Pro (xem vendor/README.md)
 └── tests/                       kiểm thử
 ```
