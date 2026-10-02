@@ -6,11 +6,13 @@ import { svg, TILE_ICONS } from './icons.js';
 import { h, field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
 import { fileToDataUrl, pickFile, dataUrlKb } from './image.js';
 import { DEFAULT_REPO, publish, checkAccess } from './github.js';
+import { saveLinks, checkKey, fetchLinks } from './backend.js';
 
 const $ = (s) => document.querySelector(s);
 const DRAFT_KEY = 'elevato-links-draft';
 const REPO_KEY = 'elevato-links-repo';
 const TOKEN_KEY = 'elevato-links-token';
+const ADMINKEY_KEY = 'elevato-links-adminkey';
 const PREVIEW_DEBOUNCE_MS = 150;
 
 let draft = null;        // bản đang sửa (dạng chuẩn)
@@ -25,6 +27,7 @@ const ls = {
 };
 const repoCfg = () => ({ ...DEFAULT_REPO, ...(ls.get(REPO_KEY) || {}) });
 const getToken = () => ls.get(TOKEN_KEY, sessionStorage) || ls.get(TOKEN_KEY) || '';
+const getKey = () => ls.get(ADMINKEY_KEY, sessionStorage) || ls.get(ADMINKEY_KEY) || '';
 
 /* ── cập nhật bản nháp ────────────────────────── */
 // Mỗi thay đổi tạo bản sao mới (không sửa đè object cũ), rồi lưu nháp + đẩy sang khung xem trước.
@@ -268,7 +271,10 @@ function githubPanel() {
   const remember = toggle('Nhớ token trên máy này', remembered, (v) => saveToken(getToken(), v),
     'Tắt (khuyên dùng): token mất khi đóng tab. Bật thì token nằm trong trình duyệt, mọi trang trên minhtoan8668.github.io đọc được — chỉ bật trên máy riêng và đặt hạn ngắn cho token.');
   const status = h('p', { class: 'gh-status', id: 'ghStatus', role: 'status' });
-  return panel('Đăng lên web', 'Kết nối GitHub một lần', !getToken(),
+  return h('details', { class: 'sub', open: Boolean(getToken() && !getKey()) },
+    h('summary', {}, 'Cách khác: đăng qua GitHub bằng token'),
+    h('div', { class: 'p-body' },
+    h('small', { class: 'hint block' }, 'Ghi thẳng file links/data.json trong repo; trang đổi sau khoảng 1 phút. Chỉ cần khi không dùng máy chủ elevaTO.'),
     h('ol', { class: 'steps' },
       h('li', {}, 'Mở ', h('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener' }, 'GitHub → tạo Fine-grained token'), '.'),
       h('li', {}, 'Repository access: ', h('b', {}, 'Only select repositories'), ' → chọn ', h('b', {}, r.repo), '.'),
@@ -280,7 +286,43 @@ function githubPanel() {
       field('Nhánh', r.branch, setRepo('branch'))),
     h('div', { class: 'gh-row' },
       h('button', { type: 'button', class: 'btn btn-ghost', onclick: testConnection }, 'Kiểm tra kết nối'),
-      status));
+      status)));
+}
+
+/** Mục "Đăng lên web": cách chính là máy chủ elevaTO (Apps Script) với ADMIN_KEY; GitHub là cách phụ. */
+function publishPanel() {
+  const keyInput = field('ADMIN_KEY', getKey(), (v) => saveKey(v.trim(), rememberKey.querySelector('input').checked),
+    { type: 'password', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', wide: true });
+  keyInput.querySelector('input').id = 'adminKeyInput';
+  keyInput.querySelector('label').setAttribute('for', 'adminKeyInput');
+  const rememberKey = toggle('Nhớ key trên máy này', Boolean(ls.get(ADMINKEY_KEY)), (v) => saveKey(getKey(), v),
+    'Tắt (khuyên dùng): key mất khi đóng tab. Key này cũng xem được danh sách đăng ký — chỉ bật trên máy riêng.');
+  const st = h('p', { class: 'gh-status', id: 'keyStatus', role: 'status' });
+  return panel('Đăng lên web', 'Lưu thẳng lên máy chủ elevaTO — trang đổi ngay', !getKey() && !getToken(),
+    h('ol', { class: 'steps' },
+      h('li', {}, 'Mở bot Telegram quản trị elevaTO, gõ ', h('b', {}, '/linkkey'), '.'),
+      h('li', {}, 'Copy key bot gửi, dán vào ô dưới, bấm ', h('b', {}, 'Kiểm tra key'), '.'),
+      h('li', {}, 'Bấm ', h('b', {}, 'Đăng lên web'), ' ở góc trên — trang link cập nhật ngay, không cần token GitHub.')),
+    keyInput, rememberKey,
+    h('div', { class: 'gh-row' },
+      h('button', { type: 'button', class: 'btn btn-ghost', onclick: testKey }, 'Kiểm tra key'),
+      st),
+    githubPanel());
+}
+function saveKey(key, remember) {
+  ls.del(ADMINKEY_KEY); ls.del(ADMINKEY_KEY, sessionStorage);
+  if (key) ls.set(ADMINKEY_KEY, key, remember ? localStorage : sessionStorage);
+}
+async function testKey() {
+  const st = $('#keyStatus');
+  const key = getKey();
+  if (!key) { st.textContent = 'Chưa có key — gõ /linkkey trong bot Telegram để lấy.'; st.className = 'gh-status bad'; return; }
+  st.textContent = 'Đang kiểm tra…'; st.className = 'gh-status';
+  try {
+    await checkKey(key);
+    st.textContent = 'Key đúng ✓ — bấm “Đăng lên web” là trang cập nhật ngay.';
+    st.className = 'gh-status ok';
+  } catch (e) { st.textContent = e.message; st.className = 'gh-status bad'; }
 }
 function saveToken(token, remember) {
   ls.del(TOKEN_KEY); ls.del(TOKEN_KEY, sessionStorage);
@@ -319,20 +361,27 @@ function renderForm() {
   const form = $('#form');
   const y = form.scrollTop;
   const openState = [...form.querySelectorAll('details.panel')].map((d) => d.open);
-  form.replaceChildren(profilePanel(), themePanel(), linksPanel(), socialsPanel(), statsPanel(), livePanel(), metaPanel(), githubPanel(), backupPanel());
+  form.replaceChildren(profilePanel(), themePanel(), linksPanel(), socialsPanel(), statsPanel(), livePanel(), metaPanel(), publishPanel(), backupPanel());
   // Giữ nguyên phần nào đang mở / đang đóng sau khi vẽ lại.
   if (openState.length) form.querySelectorAll('details.panel').forEach((d, i) => { d.open = openState[i]; });
   form.scrollTop = y;
 }
 
 /* ── đăng, sao lưu ────────────────────────────── */
+function openPublishPanel(focusId) {
+  const pnl = [...document.querySelectorAll('details.panel')].find((d) => d.querySelector('#adminKeyInput'));
+  if (pnl) { pnl.open = true; pnl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  if (focusId === 'tokenInput') { const sub = pnl && pnl.querySelector('details.sub'); if (sub) sub.open = true; }
+  setTimeout(() => $('#' + focusId) && $('#' + focusId).focus(), 400);
+}
+
 async function doPublish() {
+  const key = getKey();
   const token = getToken();
-  if (!token || tokenProblem(token)) {
-    toast(token ? tokenProblem(token) : 'Cần kết nối GitHub trước — dán token ở mục "Đăng lên web".');
-    const ghPanel = [...document.querySelectorAll('details.panel')].find((d) => d.querySelector('#tokenInput'));
-    if (ghPanel) { ghPanel.open = true; ghPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    setTimeout(() => $('#tokenInput') && $('#tokenInput').focus(), 400);
+  if (!key && (!token || tokenProblem(token))) {
+    if (token) { toast(tokenProblem(token)); openPublishPanel('tokenInput'); return; }
+    toast('Dán ADMIN_KEY ở mục "Đăng lên web" trước — lấy key bằng lệnh /linkkey trong bot Telegram.');
+    openPublishPanel('adminKeyInput');
     return;
   }
   // Chặn lỡ tay đăng một trang trống đè lên trang thật (ví dụ khi data.json không tải được).
@@ -342,10 +391,15 @@ async function doPublish() {
   btn.textContent = 'Đang đăng…';
   const content = serialize(draft);
   try {
-    await publish(repoCfg(), token, content, 'links: cập nhật trang link-in-bio');
+    if (key) {
+      await saveLinks(key, JSON.parse(content));
+      toast('Đã lưu ✓ Trang link đã cập nhật — mở lại trang là thấy.');
+    } else {
+      await publish(repoCfg(), token, content, 'links: cập nhật trang link-in-bio');
+      toast('Đã đăng ✓ Trang cập nhật sau khoảng 1 phút.');
+    }
     published = content;
     markDirty();
-    toast('Đã đăng ✓ Trang cập nhật sau khoảng 1 phút.');
   } catch (e) {
     toast(e.message);
   } finally {
@@ -401,6 +455,8 @@ function setTab(prev) {
 
 /** Tải bản đang chạy trên web. Lỗi thì giữ nguyên `published` cũ và trả false. */
 async function loadPublished() {
+  const live = await fetchLinks();
+  if (live) { published = serialize(live); return true; }
   try {
     const r = await fetch('data.json', { cache: 'no-cache' });
     if (!r.ok) throw new Error('HTTP ' + r.status);

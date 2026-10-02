@@ -35,27 +35,50 @@ Trang gom mọi thứ của elevaTO vào một màn hình, để gắn vào bio 
 ## Sửa trang
 
 Mở `edit.html`. Mọi thay đổi hiện ngay trong khung điện thoại bên phải và được lưu nháp trên máy.
-Bấm **Đăng lên web** để áp dụng: trình chỉnh sửa ghi `links/data.json` vào repo, GitHub Pages dựng lại
-trang sau khoảng một phút.
+Bấm **Đăng lên web** để áp dụng.
 
-Lần đầu cần một token GitHub (làm một lần):
+### Cách chính: máy chủ elevaTO (không cần token GitHub)
+
+Trình chỉnh sửa lưu nội dung lên **backend Apps Script của trang khoá học** (`backend/Code.gs`, chung với
+bot Telegram). Trang công khai đọc nội dung từ đó — bấm Đăng là trang **đổi ngay**. `data.json` trong repo
+chỉ còn là bản dự phòng khi máy chủ chưa lưu gì hoặc không trả lời.
+
+1. Nhắn bot Telegram quản trị lệnh **`/linkkey`** → bot gửi ADMIN_KEY.
+2. Trình chỉnh sửa → mục **Đăng lên web** → dán key → **Kiểm tra key** → bấm **Đăng lên web**.
+
+Nội dung nằm trong sheet ẩn `LinksData` của Google Sheet đăng ký (chia nhiều ô vì mỗi ô tối đa 50.000 ký tự).
+Gõ sai key quá 20 lần trong 15 phút thì máy chủ tạm khoá việc lưu.
+
+**Cập nhật Apps Script (làm một lần, sau khi có bản `backend/Code.gs` mới):**
+
+1. Mở Google Sheet **elevaTO Đăng ký** → **Tiện ích mở rộng → Apps Script**.
+2. Mở file `Code.gs`, chọn hết (Ctrl+A), dán toàn bộ nội dung `backend/Code.gs` mới, bấm 💾.
+   Token bot và danh sách admin nằm trong Script Properties nên không mất.
+3. **Triển khai → Quản lý bản triển khai** → bấm ✏️ ở bản đang chạy → *Phiên bản*: **Phiên bản mới** → **Triển khai**.
+   Phải sửa bản đang có (đừng bấm "Bản triển khai mới") để giữ nguyên URL `/exec` mà trang đang gọi.
+4. Nhắn bot `/linkkey` để kiểm tra — bot trả về key là xong.
+
+### Cách khác: GitHub token
+
+Trong mục **Đăng lên web** mở **Cách khác: đăng qua GitHub bằng token** — trình chỉnh sửa ghi thẳng
+`links/data.json` vào repo, GitHub Pages dựng lại trang sau khoảng một phút. Lưu ý: nếu máy chủ elevaTO đã có
+nội dung, trang công khai ưu tiên bản trên máy chủ.
+
+Tạo token (làm một lần):
 
 1. GitHub → **Settings → Developer settings → Fine-grained tokens → Generate new token**
    (hoặc mở thẳng <https://github.com/settings/personal-access-tokens/new>).
 2. *Repository access*: **Only select repositories** → chọn `elevaTO`.
 3. *Permissions → Repository permissions*: **Contents → Read and write**. Không cần quyền nào khác.
-4. Dán token vào mục **Đăng lên web** trong trình chỉnh sửa, bấm **Kiểm tra kết nối**.
+4. Dán token vào ô **Token GitHub**, bấm **Kiểm tra kết nối**.
 
-Token chỉ nằm trong trình duyệt của bạn và mặc định mất khi đóng tab. Nếu bật "Nhớ token trên máy này",
-token được lưu lại và mọi trang trên `minhtoan8668.github.io` đều đọc được — chỉ bật trên máy riêng, và đặt
-hạn ngắn (vd. 30–90 ngày) khi tạo token. Trang `edit.html` để công khai cũng không sao: không có token thì
-không ghi được gì.
+Token / key chỉ nằm trong trình duyệt của bạn và mặc định mất khi đóng tab. Nếu bật "Nhớ … trên máy này",
+chúng được lưu lại và mọi trang trên `minhtoan8668.github.io` đều đọc được — chỉ bật trên máy riêng.
+Trang `edit.html` để công khai cũng không sao: không có key / token thì không lưu được gì.
 
 Báo **"GitHub không nhận token này"** (lỗi 401) nghĩa là GitHub từ chối chuỗi đã dán: thường là dán nhầm
 mật khẩu, copy thiếu ký tự (token đầy đủ bắt đầu bằng `github_pat_`, dài ~93 ký tự, GitHub chỉ hiện **một lần**
-lúc tạo — bấm nút copy cạnh nó), hoặc token đã hết hạn / bị xoá. Cách sửa: tạo token mới khi đang đăng nhập
-tài khoản chủ repo, dán lại, bấm **Kiểm tra kết nối** — trình chỉnh sửa báo token của tài khoản nào và có quyền
-ghi hay chưa.
+lúc tạo — bấm nút copy cạnh nó), hoặc token đã hết hạn / bị xoá.
 
 Không muốn dùng token? Bấm **Sao lưu → Tải data.json**, rồi thay file `links/data.json` trong repo bằng file đó.
 
@@ -73,7 +96,8 @@ links/
 ├── js/page.js        vẽ trang
 ├── js/editor.js      trình chỉnh sửa (edit-ui.js: ô nhập, thanh kéo, chọn ảnh; image.js: nén ảnh từ máy;
 │                     iconify.js: tìm icon)
-├── js/github.js      đăng data.json qua GitHub API
+├── js/backend.js     đọc / lưu nội dung qua backend Apps Script (backend/Code.gs)
+├── js/github.js      đăng data.json qua GitHub API (cách phụ)
 └── tests/            node --test (+ e2e Playwright)
 ```
 

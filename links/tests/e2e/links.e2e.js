@@ -111,7 +111,8 @@ test('trình chỉnh sửa: sửa → xem trước đổi theo → Đăng lên w
 
   // Chưa có token → mở phần kết nối GitHub thay vì gửi.
   await p.click('#publishBtn');
-  await p.waitForSelector('#tokenInput:visible');
+  await p.waitForSelector('#adminKeyInput:visible');
+  await p.click('summary:has-text("Cách khác: đăng qua GitHub")');
   assert.equal(put, null);
 
   await p.fill('#tokenInput', 'github_pat_' + 'A1b2C3d4E5'.repeat(8) + '_xy');
@@ -231,7 +232,8 @@ test('trình chỉnh sửa: dán nhầm mật khẩu thì báo ngay; token bị 
   const p = await page({ viewport: { width: 1400, height: 900 } });
   await p.route('https://api.github.com/**', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{"message":"Bad credentials"}' }));
   await p.goto(base + '/links/edit.html');
-  await p.waitForSelector('#tokenInput');
+  await p.waitForSelector('#tokenInput', { state: 'attached' });
+  await p.click('summary:has-text("Cách khác: đăng qua GitHub")');
   await p.fill('#tokenInput', 'MatKhauCuaToi@123');
   assert.match(await p.textContent('#tokenHint'), /không phải token/);
   await p.click('button:has-text("Kiểm tra kết nối")');
@@ -241,6 +243,65 @@ test('trình chỉnh sửa: dán nhầm mật khẩu thì báo ngay; token bị 
   assert.match(await p.textContent('#tokenHint'), /Đúng dạng token/);
   await p.click('button:has-text("Kiểm tra kết nối")');
   await p.waitForFunction(() => /không nhận token/.test(document.querySelector('#ghStatus').textContent));
+  await p.context().close();
+});
+
+test('máy chủ elevaTO: trang ưu tiên nội dung đã lưu trên Apps Script, dự phòng data.json', async () => {
+  const p = await page();
+  const saved = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  saved.links[1].title = 'AI đọc BCTC (bản trên máy chủ)';
+  await p.route(/script\.google\.com.*action=links/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data: saved }) }));
+  await p.goto(base + '/links/');
+  await p.waitForSelector('#grid .ttl:has-text("bản trên máy chủ")');
+  await p.context().close();
+
+  // Máy chủ chưa có bản mới (trả "unknown action") → vẫn hiện data.json bình thường.
+  const q = await page();
+  await q.route(/script\.google\.com.*action=links/, (r) => r.fulfill({ contentType: 'application/json', body: '{"ok":false,"error":"unknown action"}' }));
+  await q.goto(base + '/links/');
+  await q.waitForSelector('#grid .ttl:has-text("AI đọc BCTC")');
+  assert.deepEqual(q.errors, []);
+  await q.context().close();
+});
+
+test('trình chỉnh sửa: lưu bằng ADMIN_KEY lên máy chủ elevaTO, không cần token GitHub', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  const posts = [];
+  await p.route(/script\.google\.com/, async (r) => {
+    const req = r.request();
+    if (req.method() !== 'POST') return r.fulfill({ contentType: 'application/json', body: '{"ok":true,"data":null}' });
+    const body = JSON.parse(req.postData());
+    posts.push({ body, type: req.headers()['content-type'] });
+    const ok = body.key === 'dung-key';
+    return r.fulfill({ contentType: 'application/json',
+      body: JSON.stringify(ok ? { ok: true, updatedAt: '02/10/2026 10:00' } : { ok: false, error: 'unauthorized' }) });
+  });
+  let githubCalled = false;
+  await p.route('https://api.github.com/**', (r) => { githubCalled = true; return r.abort(); });
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.lc');
+
+  // Chưa có key → bấm Đăng thì mở ô ADMIN_KEY.
+  await p.click('#publishBtn');
+  await p.waitForSelector('#adminKeyInput:visible');
+
+  await p.fill('#adminKeyInput', 'sai-key');
+  await p.click('button:has-text("Kiểm tra key")');
+  await p.waitForFunction(() => /không đúng/.test(document.querySelector('#keyStatus').textContent));
+  await p.fill('#adminKeyInput', 'dung-key');
+  await p.click('button:has-text("Kiểm tra key")');
+  await p.waitForFunction(() => /Key đúng/.test(document.querySelector('#keyStatus').textContent));
+
+  await p.click('.lc-toggle:has-text("Zalo Minh nhé")');
+  await p.fill('.lc.open input[type="url"] >> nth=0', 'https://zalo.me/0901234567');
+  await p.click('#publishBtn');
+  await p.waitForFunction(() => /khớp/.test(document.querySelector('#dirty').textContent));
+  const save = posts.find((x) => x.body.action === 'saveLinks');
+  assert.equal(save.body.key, 'dung-key');
+  assert.match(save.type, /^text\/plain/);
+  assert.equal(save.body.data.links.find((l) => l.id === 'zalo').url, 'https://zalo.me/0901234567');
+  assert.equal(githubCalled, false);
+  assert.deepEqual(p.errors, []);
   await p.context().close();
 });
 
