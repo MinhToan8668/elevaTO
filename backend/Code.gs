@@ -1536,10 +1536,24 @@ function tatCheDoHoi() {
  * script.scriptapp, mà quyền đó có thể bị thiếu (xem đếmLich bên dưới).
  */
 function datLichHoi() {
+  donLichUpload();
   tgApi('deleteWebhook', { drop_pending_updates: false });
   datMocMoiNhat();
   goLichHoi();
   ScriptApp.newTrigger('hoiTelegram').timeBased().everyMinutes(1).create();
+}
+
+/**
+ * Lịch chạy chuyenTelegram là của công cụ upload. Nó chỉ có mặt ở đây nếu code upload từng bị dán
+ * nhầm vào dự án này; giờ hàm đó không còn nên lịch cứ chạy lỗi mỗi phút → xoá đi.
+ */
+function donLichUpload() {
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'chuyenTelegram') { ScriptApp.deleteTrigger(t); n++; }
+  });
+  if (n) Logger.log('✔ Đã xoá ' + n + ' lịch chạy chuyenTelegram còn sót của công cụ upload.');
+  return n;
 }
 
 function goLichHoi() {

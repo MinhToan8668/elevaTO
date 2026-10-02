@@ -15,6 +15,7 @@ function load() {
   const cache = {};
   const sent = [];
   const sheets = [];
+  const triggers = [{ fn: 'chuyenTelegram' }, { fn: 'chuyenTelegram' }];
   const sheetApi = (sh) => ({
     getName: () => sh.name,
     getLastRow: () => sh.rows.length,
@@ -43,7 +44,16 @@ function load() {
     CacheService: { getScriptCache: () => ({ get: (k) => cache[k] ?? null, put: (k, v) => { cache[k] = String(v); }, remove: (k) => { delete cache[k]; } }) },
     LockService: { getScriptLock: () => ({ waitLock: () => {}, tryLock: () => true, releaseLock: () => {} }) },
     SpreadsheetApp: { getActiveSpreadsheet: () => book },
-    UrlFetchApp: { fetch: (url, o) => { sent.push({ url, body: JSON.parse(o.payload || '{}') }); return { getContentText: () => '{"ok":true,"result":{}}', getResponseCode: () => 200 }; } },
+    UrlFetchApp: { fetch: (url, o) => {
+      sent.push({ url, body: JSON.parse(o.payload || '{}') });
+      const result = /getUpdates/.test(url) ? [] : {};
+      return { getContentText: () => JSON.stringify({ ok: true, result }), getResponseCode: () => 200 };
+    } },
+    ScriptApp: {
+      getProjectTriggers: () => triggers.map((t) => ({ getHandlerFunction: () => t.fn, t })),
+      deleteTrigger: (h) => { const i = triggers.indexOf(h.t); if (i >= 0) triggers.splice(i, 1); },
+      newTrigger: (fn) => { const b = { timeBased: () => b, everyMinutes: () => b, create: () => { triggers.push({ fn }); return {}; } }; return b; },
+    },
     ContentService: { createTextOutput: (t) => ({ setMimeType: () => t }), MimeType: { JSON: 'json' } },
     Utilities: { formatDate: () => '02/10/2026 10:00', getUuid: () => 'uuid' },
     Logger: { log: (m) => { if (process.env.GASLOG) console.log(m); } },
@@ -51,7 +61,7 @@ function load() {
   vm.createContext(ctx);
   vm.runInContext(readFileSync(PATH, 'utf8'), ctx, { filename: PATH });
   return {
-    ctx, props, cache, sent, sheets,
+    ctx, props, cache, sent, sheets, triggers,
     get: (p) => JSON.parse(ctx.doGet({ parameter: p })),
     post: (b) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(b) } })),
   };
@@ -133,4 +143,12 @@ test('các API cũ của trang khoá học vẫn chạy', () => {
   const g = load();
   assert.equal(g.get({ action: 'config' }).ok, true);
   assert.equal(g.get({ action: 'regs', key: 'sai' }).error, 'unauthorized');
+});
+
+test('dựng lại lịch hỏi bot: xoá lịch chuyenTelegram do công cụ upload để lại, giữ đúng một lịch hoiTelegram', () => {
+  const g = load();
+  g.ctx.datLichHoi();
+  assert.deepEqual(g.triggers.map((t) => t.fn), ['hoiTelegram']);
+  g.ctx.datLichHoi();
+  assert.deepEqual(g.triggers.map((t) => t.fn), ['hoiTelegram']);
 });
