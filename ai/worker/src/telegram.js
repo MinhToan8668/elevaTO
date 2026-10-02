@@ -2,7 +2,7 @@
 // Workers trả lời thẳng được nên Telegram đẩy tin sang ngay, không tốn lịch chạy, không trễ.
 // Chỉ tin NHẮN RIÊNG do đúng chat quản trị (TG_ADMIN) gõ mới được ra lệnh.
 
-import { boMoiPhien, doiMK, hanNgay, khoaLuot, laGV, vaiTro } from './auth.js';
+import { bamSHA, boMoiPhien, doiMK, hanNgay, khoaLuot, laGV, vaiTro } from './auth.js';
 import { demTK, docCaiDat, docDem, ghiCaiDat, suaTK, timTK, tkChoDuyet, tkMoiNhat, tkTheoMa } from './db.js';
 import { thongKeAI } from './gemini.js';
 import { anUngHo, datUngHo, thongTinUngHo } from './ungho.js';
@@ -59,6 +59,42 @@ export function taoBao(env) {
 // ─── Webhook ────────────────────────────────────────────────
 
 /**
+ * Menu lệnh Telegram: nút "Menu" cạnh ô soạn tin, và gõ "/" ra gợi ý.
+ * Chỉ đặt cho riêng chat quản trị — người lạ mở bot sẽ không thấy menu lệnh họ không dùng được.
+ * Tên lệnh phải khớp chayLenh bên dưới; mô tả ngắn, Telegram cắt chỗ dài.
+ */
+const MENU_LENH = [
+  { command: 'thongke', description: 'Số tài khoản, lượt AI hôm nay, key Gemini' },
+  { command: 'cho', description: 'Tài khoản đang chờ duyệt' },
+  { command: 'moi', description: '15 tài khoản đăng ký gần nhất' },
+  { command: 'tim', description: 'Tra cứu tài khoản theo email hoặc tên' },
+  { command: 'hocvien', description: 'Xếp học viên — điền được model elevaTO' },
+  { command: 'giangvien', description: 'Xếp giảng viên — không giới hạn lượt' },
+  { command: 'free', description: 'Về tài khoản thường' },
+  { command: 'luot', description: 'Đặt số lượt AI mỗi ngày (0 = theo vai trò)' },
+  { command: 'mo', description: 'Mở / duyệt tài khoản' },
+  { command: 'khoa', description: 'Khoá tài khoản' },
+  { command: 'mkmoi', description: 'Sinh mật khẩu mới rồi đọc cho bạn' },
+  { command: 'matkhau', description: 'Đặt lại mật khẩu bạn tự chọn' },
+  { command: 'ungho', description: 'Xem / đặt số tài khoản nhận ủng hộ' },
+  { command: 'help', description: 'Danh sách lệnh đầy đủ' },
+];
+
+/** Đăng ký menu lệnh. Nhớ theo nội dung menu nên sửa danh sách trên là tự đăng ký lại. */
+async function ngoMenuLenh(env) {
+  const admins = tgAdmins(env);
+  if (!admins.length) return;
+  const ban = await bamSHA(JSON.stringify(MENU_LENH) + admins.join(','));
+  if (await docCaiDat(env.DB, 'tg_menu') === ban) return;
+  let xong = true;
+  for (const id of admins) {
+    const r = await tgApi(env, 'setMyCommands', { commands: MENU_LENH, scope: { type: 'chat', chat_id: String(id) } });
+    if (!r || !r.ok) xong = false;
+  }
+  if (xong) await ghiCaiDat(env.DB, 'tg_menu', ban);
+}
+
+/**
  * Đăng ký webhook nếu chưa đăng ký cho đúng địa chỉ này. Chạy ngầm sau mỗi yêu cầu
  * nên cài đặt không cần bước gõ lệnh nào: triển khai xong là bot sống.
  */
@@ -72,6 +108,7 @@ export async function ngoWebhook(env, url) {
     if (!r || !r.ok) { console.error(`setWebhook hỏng: ${(r && r.description) || 'không gọi được Telegram'}`); return; }
     await ghiCaiDat(env.DB, 'tg_webhook', can);
   }
+  await ngoMenuLenh(env);
   // Lời chào ghi nhớ RIÊNG: chưa bấm Start với bot thì Telegram từ chối gửi, và webhook đã đăng ký
   // rồi nên nếu gộp chung thì người dùng vĩnh viễn không nhận được tin nào, tưởng bot chết.
   // Tách ra thì bấm Start xong, lượt truy cập sau là lời chào tới nơi.
@@ -324,3 +361,5 @@ async function xuLyNut(env, q) {
   });
 }
 
+
+export { MENU_LENH };

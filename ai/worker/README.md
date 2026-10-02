@@ -137,8 +137,9 @@ máy chủ chạy y như chưa cài gì.
 > 2–3 key trong AI Studio rồi dán cả vào một dòng, cách nhau dấu phẩy.
 
 **Nhớ mở Telegram bấm Start với bot của bạn** — bot không nhắn được cho người chưa Start.
-Rồi mở lại địa chỉ máy chủ một lần: bot sẽ tự nối webhook và nhắn
-"✅ Bot elevaTO AI BCTC đã kết nối". Gõ `/help` xem các lệnh.
+Rồi mở lại địa chỉ máy chủ một lần: bot sẽ tự nối webhook, tự đăng ký **menu lệnh** và nhắn
+"✅ Bot elevaTO AI BCTC đã kết nối". Từ đó bấm nút **Menu** cạnh ô soạn tin (hoặc gõ `/`) là ra
+danh sách lệnh kèm mô tả.
 
 ### 6. Gửi email (Brevo)
 
