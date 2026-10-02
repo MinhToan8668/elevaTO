@@ -24,8 +24,12 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write          # để tự ghi địa chỉ máy chủ vào ai/js/config.js
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
 
       # Tìm (hoặc tạo) cơ sở dữ liệu D1 rồi điền database_id vào wrangler.toml — để người cài
       # không phải vào dashboard tạo tay rồi chép ID. Có rồi thì dùng lại, không tạo thêm.
@@ -45,9 +49,35 @@ jobs:
           command: d1 execute elevato-ai --remote --yes --file=schema.sql
 
       - name: Triển khai Worker
+        id: trien_khai
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ai/worker
           command: deploy
+
+      # Điền địa chỉ vừa triển khai vào ai/js/config.js — bước thủ công cuối cùng, nay bỏ nốt.
+      # Workflow này chỉ chạy khi ai/worker/** đổi, nên commit vào js/config.js không gọi lại chính nó.
+      - name: Trỏ trang web sang máy chủ vừa triển khai
+        env:
+          URL: ${{ steps.trien_khai.outputs.deployment-url }}
+          RA: ${{ steps.trien_khai.outputs.command-output }}
+        run: |
+          # Triển khai đã xong rồi: không lấy được địa chỉ thì cảnh báo chứ đừng báo đỏ cả lượt chạy.
+          KQ=$(node ai/worker/tools/config-url.mjs "${URL:-$RA}") || {
+            echo "::warning::Không đọc được địa chỉ máy chủ từ wrangler — sửa tay ai/js/config.js."
+            exit 0
+          }
+          echo "$KQ"
+          case "$KQ" in
+            DOI*)
+              git config user.name  'github-actions[bot]'
+              git config user.email 'github-actions[bot]@users.noreply.github.com'
+              git add ai/js/config.js
+              git commit -m "chore: trỏ trang web sang máy chủ ${KQ#DOI } [skip ci]"
+              git push || {
+                echo "::warning::Không đẩy được commit (nhánh có thể đang được bảo vệ)."
+                echo "::warning::Sửa tay ai/js/config.js thành: ${KQ#DOI }"
+              } ;;
+          esac
