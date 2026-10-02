@@ -34,16 +34,16 @@ function chay(diaChi, config, them = {}) {
 test('lọc địa chỉ từ đúng khối chữ wrangler in ra khi triển khai', () => {
   const thuc = [
     'Total Upload: 42.12 KiB / gzip: 9.80 KiB',
-    'Uploaded elevato-ai (3.21 sec)',
-    'Deployed elevato-ai triggers (0.52 sec)',
-    '  https://elevato-ai.minhtoan.workers.dev',
+    'Uploaded elevato (3.21 sec)',
+    'Deployed elevato triggers (0.52 sec)',
+    '  https://elevato.minhtoan.workers.dev',
     'Current Version ID: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
   ].join('\n');
-  assert.equal(locDiaChi(thuc), 'https://elevato-ai.minhtoan.workers.dev');
+  assert.equal(locDiaChi(thuc), 'https://elevato.minhtoan.workers.dev');
 });
 
 test('bỏ dấu / ở cuối — trang tự nối đường dẫn, hai dấu / liền nhau là gọi hỏng', () => {
-  assert.equal(locDiaChi('https://elevato-ai.minhtoan.workers.dev/'), 'https://elevato-ai.minhtoan.workers.dev');
+  assert.equal(locDiaChi('https://elevato.minhtoan.workers.dev/'), 'https://elevato.minhtoan.workers.dev');
   assert.equal(locDiaChi('  https://may-chu.cua-toi.com//  '), 'https://may-chu.cua-toi.com');
 });
 
@@ -54,16 +54,16 @@ test('không có địa chỉ https thì trả rỗng để chỗ gọi báo l�
 });
 
 test('chỉ sửa đúng dòng API, giữ nguyên phần chú thích phía trên', () => {
-  const r = chay('https://elevato-ai.minhtoan.workers.dev');
-  assert.match(r.ra, /^DOI https:\/\/elevato-ai\.minhtoan\.workers\.dev$/);
-  assert.match(r.config, /^export const API = 'https:\/\/elevato-ai\.minhtoan\.workers\.dev';$/m);
+  const r = chay('https://elevato.minhtoan.workers.dev');
+  assert.match(r.ra, /^DOI https:\/\/elevato\.minhtoan\.workers\.dev$/);
+  assert.match(r.config, /^export const API = 'https:\/\/elevato\.minhtoan\.workers\.dev';$/m);
   assert.equal(r.config.split('\n').length, doc('ai/js/config.js').split('\n').length);
   assert.match(r.config, /DÒNG DƯỚI DO MÁY ĐIỀN/, 'phần chú thích phải còn nguyên');
   assert.doesNotMatch(r.config, /script\.google\.com/);
 });
 
 test('địa chỉ đã đúng sẵn ở cả bốn file thì báo GIU để workflow khỏi commit thừa', () => {
-  const dc = 'https://elevato-ai.minhtoan.workers.dev';
+  const dc = 'https://elevato.minhtoan.workers.dev';
   const r = chay(dc, `// chú thích\nexport const API = '${dc}';\n`, {
     backend: `export const BACKEND_URL = '${dc}';\n`,
     trang: `<meta content="connect-src 'self' ${dc}">\n`,

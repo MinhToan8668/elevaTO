@@ -23,7 +23,7 @@ function chay(toml, { danhSach = [], env = {} } = {}) {
     globalThis.fetch = async (url, init = {}) => {
       appendFileSync(${JSON.stringify(nhatKy)}, JSON.stringify({ url: String(url), method: init.method || 'GET' }) + '\\n');
       if (String(url).includes('?name=')) return new Response(JSON.stringify({ success: true, result: ${JSON.stringify(danhSach)} }));
-      return new Response(JSON.stringify({ success: true, result: { uuid: ${JSON.stringify(ID)}, name: 'elevato-ai' } }));
+      return new Response(JSON.stringify({ success: true, result: { uuid: ${JSON.stringify(ID)}, name: 'elevato' } }));
     };
     await import(${JSON.stringify(join(thu, 'tools/d1-id.mjs'))});
   `;
@@ -46,13 +46,13 @@ test('chưa có cơ sở dữ liệu thì tạo mới rồi điền id vào wran
 });
 
 test('đã có cơ sở dữ liệu cùng tên thì dùng lại, KHÔNG tạo thêm', () => {
-  const r = chay(null, { danhSach: [{ uuid: ID, name: 'elevato-ai' }] });
+  const r = chay(null, { danhSach: [{ uuid: ID, name: 'elevato' }] });
   assert.deepEqual(r.goi.map((x) => x.method), ['GET'], 'không được gọi POST tạo mới');
   assert.match(r.toml, new RegExp(`database_id = "${ID}"`));
 });
 
 test('Cloudflare lọc theo tên kiểu "chứa chuỗi" nên tên gần giống không được tính là trùng', () => {
-  const r = chay(null, { danhSach: [{ uuid: 'khac', name: 'elevato-ai-thu-nghiem' }] });
+  const r = chay(null, { danhSach: [{ uuid: 'khac', name: 'elevato-thu-nghiem' }] });
   assert.equal(r.goi.length, 2, 'phải tạo mới vì tên không khớp hẳn');
   assert.match(r.toml, new RegExp(`database_id = "${ID}"`));
 });
