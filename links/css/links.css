@@ -260,7 +260,7 @@ img{display:block;max-width:100%}
 
 /* chân trang: logo chữ + khẩu hiệu */
 .foot{display:flex;align-items:center;justify-content:center;gap:12px;padding:20px 0 6px}
-.foot-brand{display:block;border-radius:6px}
+.foot-brand{display:flex;align-items:center;min-height:24px;padding:3px 2px;border-radius:6px}   /* min-height 24px: đủ to để bấm bằng ngón tay (WCAG 2.5.8) kể cả khi logo bị thu nhỏ trên màn hẹp */
 .wm{height:22px;width:auto;filter:drop-shadow(0 1px 1px rgb(0 0 0 / .14)) drop-shadow(0 3px 10px rgb(0 0 0 / .14))}
 :root[data-theme="dark"] .wm{filter:drop-shadow(0 1px 1px rgb(0 0 0 / .5)) drop-shadow(0 3px 12px rgb(0 0 0 / .45))}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wm{filter:drop-shadow(0 1px 1px rgb(0 0 0 / .5)) drop-shadow(0 3px 12px rgb(0 0 0 / .45))}}

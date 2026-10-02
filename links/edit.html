@@ -25,7 +25,7 @@
   </a>
   <div class="ed-title">
     <b>Trang link-in-bio</b>
-    <small id="dirty" class="dirty">Đang tải…</small>
+    <small id="dirty" class="dirty" role="status">Đang tải…</small>
   </div>
   <div class="ed-act">
     <button class="ibtn" id="themeBtn" type="button" aria-label="Đổi giao diện sáng / tối"><span class="i-sun"></span><span class="i-moon"></span></button>
@@ -34,9 +34,10 @@
   </div>
 </header>
 
-<div class="ed-tabs glass" role="tablist" aria-label="Chế độ">
-  <button role="tab" id="tabEdit" aria-selected="true" aria-controls="form" type="button">Sửa nội dung</button>
-  <button role="tab" id="tabPrev" aria-selected="false" aria-controls="preview" type="button">Xem trước</button>
+<!-- Màn hẹp chỉ đủ chỗ cho một bên (CSS ẩn hai nút này trên màn rộng, lúc đó cả hai bên cùng hiện). -->
+<div class="ed-tabs glass" role="group" aria-label="Chế độ xem">
+  <button id="tabEdit" type="button" aria-pressed="true">Sửa nội dung</button>
+  <button id="tabPrev" type="button" aria-pressed="false">Xem trước</button>
 </div>
 
 <div class="ed-body">
@@ -45,7 +46,7 @@
     <div class="phone">
       <iframe id="frame" title="Xem trước trang link" src="index.html?preview"></iframe>
     </div>
-    <p class="prev-note" id="prevNote">Xem trước dùng bản nháp.</p>
+    <p class="prev-note" id="prevNote" role="status">Xem trước dùng bản nháp.</p>
   </aside>
 </div>
 

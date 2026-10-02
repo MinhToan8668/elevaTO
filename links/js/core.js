@@ -86,6 +86,16 @@ export const ACCENTS = {
   amber: '#f59e0b',
   slate: '#64748b',
 };
+// Tên tiếng Việt của màu nhấn — nút chọn màu chỉ là hình tròn nên đây là thứ trình đọc màn hình đọc ra.
+export const ACCENT_LABELS = {
+  emerald: 'Xanh ngọc',
+  cyan: 'Xanh ngọc lam',
+  blue: 'Xanh dương',
+  violet: 'Tím',
+  rose: 'Hồng đỏ',
+  amber: 'Vàng cam',
+  slate: 'Xám đá',
+};
 
 // Mạng xã hội: nhãn hiển thị, icon, và cách đổi thứ người dùng gõ (handle, số điện thoại) thành URL đầy đủ.
 export const SOCIALS = {

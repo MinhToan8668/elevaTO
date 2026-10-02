@@ -2,10 +2,10 @@
 // ?preview: chạy trong khung xem trước của trình chỉnh sửa, nhận bản nháp qua postMessage và không mở link thật.
 
 import { normalize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo, ACCENTS } from './core.js';
+import { $, h, store, toast, toggleTheme } from './dom.js';
 import { svg } from './icons.js';
 import { fetchLinks } from './backend.js';
 
-const $ = (s) => document.querySelector(s);
 const DATA_CACHE = 'elevato-links-v1';
 const CFG_CACHE = 'elevato_cfg_v2';   // trang khoá học lưu cấu hình cohort ở khoá này (cùng origin) → dùng lại được ngay
 const PREVIEW = new URLSearchParams(location.search).has('preview');
@@ -14,27 +14,16 @@ const LIVE_TIMEOUT_MS = 8000;
 let data = null;
 let cohort = null;
 
-/* ── tiện ích DOM ─────────────────────────────── */
-function h(tag, attrs, ...kids) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v == null || v === false) continue;
-    if (k === 'class') el.className = v;
-    else if (k === 'html') el.innerHTML = v;        // chỉ dùng cho icon SVG tĩnh
-    else el.setAttribute(k, v === true ? '' : v);
-  }
-  for (const c of kids.flat()) if (c != null && c !== '') el.append(c);
-  return el;
-}
-const store = {
-  get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* chế độ riêng tư: bỏ qua */ } },
-};
+/* ── link ─────────────────────────────────────── */
 const absUrl = (u) => { try { return new URL(u, location.href).href; } catch (e) { return u; } };
-const isExternal = (u) => { try { return new URL(u, location.href).origin !== location.origin; } catch (e) { return true; } };
+
+/** Link ra ngoài elevaTO thì mở tab mới; link trong trang (../#dang-ky…) thì đi luôn. */
 function linkAttrs(url) {
   const href = safeUrl(url);
-  return isExternal(href) && /^https?:/i.test(absUrl(href)) ? { href, target: '_blank', rel: 'noopener' } : { href };
+  let abs = null;
+  try { abs = new URL(href, location.href); } catch (e) { /* link lạ: coi như trong trang */ }
+  const newTab = Boolean(abs) && abs.origin !== location.origin && /^https?:$/.test(abs.protocol);
+  return newTab ? { href, target: '_blank', rel: 'noopener' } : { href };
 }
 
 /* ── danh thiếp ───────────────────────────────── */
@@ -203,15 +192,7 @@ function closeSheet() {
   if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
 }
 
-/* ── toast, chia sẻ, giao diện ────────────────── */
-let toastT = 0;
-function toast(msg) {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.add('on');
-  clearTimeout(toastT);
-  toastT = setTimeout(() => t.classList.remove('on'), 2200);
-}
+/* ── chia sẻ ──────────────────────────────────── */
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch (e) {
     // Trình duyệt trong app (TikTok, Zalo…) hay chặn clipboard API → cách cũ.
@@ -232,13 +213,6 @@ async function share() {
     try { await navigator.share({ title, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
   }
   toast((await copy(url)) ? 'Đã copy link trang' : url);
-}
-function toggleTheme() {
-  const root = document.documentElement;
-  const cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const next = cur === 'dark' ? 'light' : 'dark';
-  root.setAttribute('data-theme', next);
-  try { localStorage.setItem('elevato-theme', next); } catch (e) { /* bỏ qua */ }
 }
 
 /* ── tải dữ liệu ──────────────────────────────── */

@@ -50,12 +50,18 @@ export const ICONS = {
   verified: F('<path d="M12 1.5l2.47 1.8 3.05-.02.94 2.9 2.47 1.8-.95 2.9.95 2.9-2.47 1.8-.94 2.9-3.05-.02L12 22.5l-2.47-1.8-3.05.02-.94-2.9-2.47-1.8.95-2.9-.95-2.9 2.47-1.8.94-2.9 3.05.02z"/><path d="M8 12.2l2.6 2.6L16.2 9.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'),
 };
 
-/** Icon chọn được cho ô link (trình chỉnh sửa hiện đúng danh sách này). */
-export const TILE_ICONS = [
-  'book', 'sparkles', 'slides', 'chart', 'calculator', 'play', 'file', 'calendar', 'users', 'briefcase',
-  'gift', 'star', 'rocket', 'coffee', 'message', 'download', 'link', 'globe', 'mail', 'phone',
-  'zalo', 'tiktok', 'facebook', 'linkedin', 'youtube', 'instagram', 'telegram',
-];
+/**
+ * Icon chọn được cho ô link, kèm tên tiếng Việt — trình chỉnh sửa hiện đúng danh sách này và dùng tên
+ * làm nhãn cho trình đọc màn hình (tên khoá là tiếng Anh, chỉ dùng trong data.json).
+ */
+export const TILE_ICONS = {
+  book: 'Sách', sparkles: 'Lấp lánh', slides: 'Slide', chart: 'Biểu đồ', calculator: 'Máy tính',
+  play: 'Video', file: 'Tài liệu', calendar: 'Lịch', users: 'Nhóm', briefcase: 'Cặp công sở',
+  gift: 'Quà', star: 'Ngôi sao', rocket: 'Tên lửa', coffee: 'Cà phê', message: 'Tin nhắn',
+  download: 'Tải về', link: 'Liên kết', globe: 'Website', mail: 'Email', phone: 'Điện thoại',
+  zalo: 'Zalo', tiktok: 'TikTok', facebook: 'Facebook', linkedin: 'LinkedIn', youtube: 'YouTube',
+  instagram: 'Instagram', telegram: 'Telegram',
+};
 
 /** Chuỗi <svg> hoàn chỉnh cho một icon. Tên lạ → icon link. */
 export function svg(name, cls = '') {
