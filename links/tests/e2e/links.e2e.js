@@ -201,7 +201,7 @@ test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới
   assert.equal(draft.profile.status, 'Minhtoantowork@gmail.com');
   assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/glass/course.svg');
   assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/glass/ai.svg');
-  assert.equal(draft.theme.blur, 22);
+  assert.equal(draft.theme.blur, 18);
   await p.context().close();
 });
 

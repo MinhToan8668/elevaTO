@@ -210,8 +210,8 @@
     "api": "https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec"
   },
   "theme": {
-    "blur": 22,
-    "tint": 46,
+    "blur": 18,
+    "tint": 40,
     "background": "aurora",
     "bgImage": ""
   }
