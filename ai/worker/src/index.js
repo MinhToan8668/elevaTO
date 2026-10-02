@@ -5,6 +5,7 @@
 // địa chỉ trong js/config.js, không phải sửa gì khác.
 //
 //   dangky · dangnhap · toi · dangxuat · generate · ungho · quenmk · datlaimk
+//   links · checkKey · saveLinks  (trang link-in-bio — xem src/links.js)
 //   code: auth · sai · khoa_tam · cho_duyet · bi_khoa · thieu · email_sai · sdt_sai · mk_ngan
 //         · da_ton_tai · quota · busy · timeout · blocked · bad · upstream · setup · ma_sai · cho
 
@@ -15,6 +16,7 @@ import { goiGemini } from './gemini.js';
 import { baoQuanTri, baoTaiKhoanMoi, ngoWebhook, nhanTin, taoBao } from './telegram.js';
 import { quenMK, datLaiMKBangMa } from './quenmk.js';
 import { thongTinUngHo } from './ungho.js';
+import { linksChoWeb, linksKiemKey, linksLuu } from './links.js';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -22,14 +24,19 @@ const CORS = {
   'access-control-allow-methods': 'POST, GET, OPTIONS',
   'access-control-max-age': '86400',
 };
-const json = (obj, status = 200) =>
-  new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } });
+const json = (obj, status = 200, them) =>
+  new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS, ...them } });
 
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (url.pathname === '/tg' && req.method === 'POST') return tgWebhook(req, env, ctx);
+    // Nội dung trang link-in-bio: đọc công khai, không nhớ đệm — chủ trang bấm Đăng là đổi ngay.
+    if (url.pathname === '/links' && req.method === 'GET') {
+      if (!env.DB) return json(loi('setup', 'Máy chủ chưa nối cơ sở dữ liệu D1 (xem README của worker)'));
+      return json(await linksChoWeb(env.DB), 200, { 'cache-control': 'no-store' });
+    }
     if (req.method === 'GET') {
       ctx.waitUntil(nen(env, url));
       return json({ ok: true, service: 'elevaTO AI', ban: PHIEN_BAN });
@@ -66,6 +73,10 @@ async function xuLy(req, env, ctx) {
     }
     if (a === 'dangnhap') return await dangNhap(env, b);
     if (a === 'ungho') return ok({ ungho: await thongTinUngHo(env.DB) });
+    // Trang link-in-bio giữ nguyên giao thức cũ (ok/updatedAt ở ngoài cùng), xem src/links.js.
+    if (a === 'links') return await linksChoWeb(env.DB);
+    if (a === 'checkKey') return await linksKiemKey(env, b);
+    if (a === 'saveLinks') return await linksLuu(env, b);
     if (a === 'quenmk') return await quenMK(env, b, bao);
     if (a === 'datlaimk') return await datLaiMKBangMa(env, b, (t) => baoQuanTri(env, t));
     if (a === 'toi' || a === 'dangxuat' || a === 'generate') {
