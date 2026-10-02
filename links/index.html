@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#e9f1ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#04080a" media="(prefers-color-scheme: dark)">
+<title>Minh Toàn · elevaTO</title>
+<meta name="description" content="Khóa Financial Modeling thực chiến, công cụ AI đọc BCTC, slide miễn phí và cách liên hệ Minh Toàn — tất cả ở một chỗ.">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Minh Toàn · elevaTO">
+<meta property="og:description" content="Financial Modeling thực chiến · AI đọc BCTC · Slide miễn phí · Liên hệ">
+<meta property="og:url" content="https://minhtoan8668.github.io/elevaTO/links/">
+<meta property="og:image" content="https://minhtoan8668.github.io/elevaTO/icon-512.png">
+<link rel="canonical" href="https://minhtoan8668.github.io/elevaTO/links/">
+<meta property="og:locale" content="vi_VN">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preload" as="font" type="font/woff2" href="../ai/vendor/fonts/bvp-400-vietnamese.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="fonts/pjs-vietnamese.woff2" crossorigin>
+<link rel="stylesheet" href="../ai/vendor/fonts/be-vietnam-pro.css">
+<link rel="stylesheet" href="fonts/plus-jakarta-sans.css">
+<link rel="stylesheet" href="css/links.css">
+<script src="../ai/js/theme.js"></script>
+<script type="module" src="js/page.js"></script>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i><span class="bg-img" id="bgImg"></span></div>
+
+<div class="page">
+  <header class="bar">
+    <a class="brand" href="../" aria-label="elevaTO — trang chủ">
+      <img class="logo logo-light" src="../assets/logo-on-light.svg" alt="elevaTO" width="218" height="81" fetchpriority="high">
+      <img class="logo logo-dark" src="../assets/logo-on-dark.svg" alt="" width="218" height="81">
+    </a>
+    <div class="bar-r">
+      <button class="ibtn lg" id="themeBtn" type="button" aria-label="Đổi giao diện sáng / tối"><span class="i-sun"></span><span class="i-moon"></span></button>
+      <button class="ibtn lg" id="shareBtn" type="button" aria-label="Chia sẻ trang này"></button>
+    </div>
+  </header>
+
+  <main class="main" id="main" aria-busy="true">
+    <!-- Danh thiếp: ảnh, tên, số liệu, mạng xã hội -->
+    <section class="card lg" id="card" aria-label="Giới thiệu">
+      <div class="who">
+        <div class="ava-wrap">
+          <img class="ava" id="ava" alt="" width="84" height="84" decoding="async">
+          <span class="ava-dot" id="avaDot" hidden></span>
+        </div>
+        <div class="who-txt">
+          <h1 class="name"><span id="name" class="sk sk-name"></span><span id="verified" hidden></span></h1>
+          <p class="handle" id="handle"></p>
+          <p class="tagline" id="tagline"><span class="sk sk-line"></span></p>
+        </div>
+      </div>
+      <dl class="stats" id="stats"></dl>
+      <div class="row2">
+        <p class="status" id="status" hidden><span class="pulse"></span><span id="statusTxt"></span></p>
+        <nav class="socials" id="socials" aria-label="Mạng xã hội"></nav>
+      </div>
+    </section>
+
+    <section class="grid" id="grid" aria-label="Liên kết">
+      <div class="tile lg sk-tile feature"></div><div class="tile lg sk-tile"></div><div class="tile lg sk-tile"></div>
+    </section>
+
+    <p class="err" id="err" role="alert" hidden></p>
+  </main>
+
+  <footer class="foot">
+    <a class="foot-brand" href="../" aria-label="elevaTO — trang chủ">
+      <img class="wm wm-light" src="art/wordmark-light.svg" alt="elevaTO" width="218" height="60" loading="lazy">
+      <img class="wm wm-dark" src="art/wordmark-dark.svg" alt="" width="218" height="60" loading="lazy">
+    </a>
+    <span class="foot-sep" aria-hidden="true"></span>
+    <span class="foot-tag">Fuel Your Financial Journey</span>
+  </footer>
+</div>
+
+<!-- Thẻ chi tiết: mở ra khi bấm vào ô có bật "hiện thẻ chi tiết trước" -->
+<dialog class="sheet" id="sheet" aria-labelledby="sheetTitle">
+  <div class="sheet-in lg">
+    <span class="sheet-grab" aria-hidden="true"></span>
+    <button class="ibtn lg sheet-x" id="sheetX" type="button" aria-label="Đóng"></button>
+    <div class="sheet-head">
+      <span class="chip" id="sheetIc"></span>
+      <div>
+        <h2 id="sheetTitle"></h2>
+        <p id="sheetSub"></p>
+      </div>
+    </div>
+    <img class="sheet-img" id="sheetImg" alt="" hidden>
+    <p class="sheet-text" id="sheetText"></p>
+    <ul class="sheet-list" id="sheetList"></ul>
+    <div class="sheet-act">
+      <a class="btn btn-em" id="sheetGo" target="_blank" rel="noopener"></a>
+      <button class="btn btn-ghost" id="sheetCopy" type="button">Copy link</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

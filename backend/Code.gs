@@ -1,11 +1,13 @@
 /**
  * elevaTO — Backend (Google Apps Script Web App)
  * ============================================================
- * Một file duy nhất đảm nhiệm 3 việc:
+ * Một file duy nhất đảm nhiệm 4 việc:
  *   1. API config  — landing page fetch để render toàn bộ nội dung động
  *   2. API đăng ký — nhận form, lưu Google Sheet, báo Telegram
  *   3. Bot Telegram — đổi cohort / giá / slot / lịch học ngay trên chat,
  *                     web tự cập nhật mà KHÔNG cần sửa source code
+ *   4. Trang link-in-bio (/links/) — trình chỉnh sửa lưu nội dung vào đây bằng ADMIN_KEY,
+ *                     trang công khai đọc ra; không cần token GitHub
  *
  * Cài đặt: xem SETUP.md
  * ============================================================
@@ -16,7 +18,7 @@
 // ═════════════════════════════════════════════════════════════
 var TG_TOKEN   = 'DAN_TOKEN_BOT';          // token từ @BotFather
 var TG_ADMIN   = 'DAN_CHAT_ID';            // chat id của bạn, từ @userinfobot
-var WEBAPP_URL = 'DAN_URL_EXEC';           // URL Web App, PHẢI kết thúc bằng /exec
+var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec'; // URL Web App, PHẢI kết thúc bằng /exec
 // ═════════════════════════════════════════════════════════════
 
 
@@ -29,6 +31,7 @@ var PROP_ADMIN    = 'TG_ADMIN_IDS';    // chat id được phép ra lệnh, phâ
 var PROP_ADMINKEY = 'ADMIN_KEY';       // key xem danh sách đăng ký từ web
 var PROP_OFFSET   = 'TG_OFFSET';       // vị trí đã đọc tới, dùng cho chế độ hỏi định kỳ
 var SHEET_REGS    = 'DangKy';
+var SHEET_LINKS   = 'LinksData';       // nội dung trang link-in-bio (sheet ẩn)
 var SHEET_LOG     = 'Log';
 
 var REG_HEADERS = ['ID','Thời gian','Cohort','Họ tên','SĐT','Năm sinh','Email',
@@ -285,6 +288,7 @@ function doGet(e) {
     var action = p.action || 'config';
 
     if (action === 'config') return json({ ok: true, config: configChoWeb() });
+    if (action === 'links')  return json(linksForWeb());
 
     if (action === 'regs') {
       if (p.key !== props().getProperty(PROP_ADMINKEY)) {
@@ -341,6 +345,8 @@ function doPost(e) {
     }
 
     if (body.action === 'register') return json(handleRegister(body));
+    if (body.action === 'saveLinks') return json(handleSaveLinks(body));
+    if (body.action === 'checkKey')  return json(handleCheckKey(body));
 
     return json({ ok: false, error: 'unknown action' });
   } catch (err) {
@@ -357,6 +363,89 @@ function ghiLoi(cho, err) {
     var sh = ss().getSheetByName(SHEET_LOG) || ss().insertSheet(SHEET_LOG);
     sh.appendRow([nowVN(), cho, String(err), String(err && err.stack || '')]);
   } catch (e3) {}
+}
+
+// ─────────────────────────────────────────────────────────────
+// 4b. TRANG LINK-IN-BIO
+//     Nội dung (JSON, có thể kèm ảnh nhúng) nằm trong sheet ẩn LinksData, chia thành
+//     nhiều ô vì mỗi ô Sheet chứa tối đa 50.000 ký tự. Không dùng Script Properties
+//     (giới hạn 9KB/mục) và không cần thêm quyền Drive.
+// ─────────────────────────────────────────────────────────────
+var LINKS_CHUNK     = 45000;            // ký tự mỗi ô
+var LINKS_MAX       = 2000000;          // ~2MB — đủ cho vài ảnh đã nén
+var LINKS_FAIL_MAX  = 20;               // gõ sai key quá số lần này trong 15 phút thì tạm khoá
+var PROP_LINKS_AT   = 'LINKS_UPDATED_AT';
+
+/** Đọc nội dung trang link đã lưu; null nếu chưa lưu lần nào hoặc dữ liệu hỏng. */
+function linksRead() {
+  var sh = ss().getSheetByName(SHEET_LINKS);
+  if (!sh || sh.getLastRow() < 1) return null;
+  var rows = sh.getRange(1, 1, sh.getLastRow(), 1).getValues();
+  // Mỗi ô có tiền tố "~" để Sheet không tự đổi chuỗi thành số, ngày hay công thức.
+  var txt = rows.map(function (r) { return String(r[0] || '').replace(/^~/, ''); }).join('');
+  if (!txt) return null;
+  try { return JSON.parse(txt); } catch (err) { ghiLoi('linksRead', err); return null; }
+}
+
+function linksWrite(txt) {
+  var sh = ss().getSheetByName(SHEET_LINKS) || ss().insertSheet(SHEET_LINKS);
+  var chunks = [];
+  for (var i = 0; i < txt.length; i += LINKS_CHUNK) chunks.push(['~' + txt.slice(i, i + LINKS_CHUNK)]);
+  var old = sh.getLastRow();
+  while (chunks.length < old) chunks.push(['']);          // xoá phần thừa của bản cũ dài hơn
+  sh.getRange(1, 1, chunks.length, 1).setValues(chunks);
+  try { sh.hideSheet(); } catch (err) { /* không ẩn được cũng không sao */ }
+}
+
+function linksForWeb() {
+  return { ok: true, data: linksRead(), updatedAt: props().getProperty(PROP_LINKS_AT) || '' };
+}
+
+/** Đúng ADMIN_KEY? Đếm số lần sai để chặn dò key liên tục. */
+function linksKeyOk(key) {
+  var cache = CacheService.getScriptCache();
+  var fails = Number(cache.get('links_fail') || 0);
+  if (fails >= LINKS_FAIL_MAX) return 'locked';
+  var real = props().getProperty(PROP_ADMINKEY) || '';
+  if (real && String(key || '') === real) return 'ok';
+  cache.put('links_fail', String(fails + 1), 900);
+  return 'bad';
+}
+
+function handleCheckKey(body) {
+  var r = linksKeyOk(body.key);
+  return r === 'ok' ? { ok: true } : { ok: false, error: r === 'locked' ? 'locked' : 'unauthorized' };
+}
+
+function handleSaveLinks(body) {
+  var auth = linksKeyOk(body.key);
+  if (auth !== 'ok') return { ok: false, error: auth === 'locked' ? 'locked' : 'unauthorized' };
+  var d = body.data;
+  if (!d || typeof d !== 'object' || !Array.isArray(d.links) || !d.profile) return { ok: false, error: 'invalid' };
+  var txt = JSON.stringify(d);
+  if (txt.length > LINKS_MAX) return { ok: false, error: 'too_large' };
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (err) { return { ok: false, error: 'busy' }; }
+  try {
+    linksWrite(txt);
+    var at = nowVN();
+    props().setProperty(PROP_LINKS_AT, at);
+    return { ok: true, updatedAt: at };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function cmdLinkKey(chatId) {
+  tgSend(chatId, [
+    '🔗 *Key lưu trang link-in-bio*',
+    '',
+    '`' + (props().getProperty(PROP_ADMINKEY) || 'chưa có — chạy hàm setup') + '`',
+    '',
+    'Mở trang sửa → mục *Đăng lên web* → dán key vào ô *ADMIN\\_KEY* → bấm *Kiểm tra key*.',
+    '_Key này cũng mở được danh sách đăng ký, đừng gửi cho ai._'
+  ].join('\n'));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -583,6 +672,8 @@ function handleTelegram(u) {
     case 'tuchoi':    return cmdApprove(chatId, args, 'rejected', '/tuchoi');
     case 'sheet':     return cmdSheet(chatId);
     case 'id':        return tgSend(chatId, 'Chat ID: `' + chatId + '`');
+    case 'linkkey':
+    case 'trangsua':  return cmdLinkKey(chatId);
   }
 
   tgSend(chatId, 'Không hiểu lệnh `' + text + '`. Gõ /menu để xem danh sách lệnh.');
@@ -746,7 +837,10 @@ function cmdMenu(chatId) {
     '',
     '*✅ Duyệt*',
     '/duyet `R2508241030` hoặc `/duyet 0901234567`',
-    '/tuchoi `<id hoặc sđt>`'
+    '/tuchoi `<id hoặc sđt>`',
+    '',
+    '*🔗 Trang link-in-bio*',
+    '/linkkey — lấy key để lưu trang link từ trình chỉnh sửa'
   ].join('\n');
   tgSend(chatId, t, [[{ text: '📊 Xem tình trạng', callback_data: 'st:' }]]);
 }
@@ -1126,11 +1220,14 @@ function setup() {
       drop_pending_updates: true
     });
     tucThi = !!(hook && hook.ok);
+    if (tucThi) { try { datLichCanh(); } catch (e2) {} }
   }
 
   if (tucThi) {
     out.push('✔ Đã nối webhook — bot trả lời TỨC THÌ');
     out.push('  Đã tự thử /exec trước khi nối và thấy trả về 200.');
+    out.push('  Lịch canh webhook chạy mỗi ' + CANH_PHUT + ' phút: hỏng thì tự nối lại,');
+    out.push('  không nối được thì tự lùi về chế độ hỏi định kỳ và nhắn cho bạn.');
     out.push('  Nếu sau này bot im, chạy  batCheDoHoi  để lùi về chế độ chậm mà chắc.');
     Logger.log(out.join('\n'));
     tgSend(adminIds()[0],
@@ -1271,6 +1368,9 @@ function noiWebhook() {
     allowed_updates: ['message', 'callback_query'],
     drop_pending_updates: true
   });
+  if (r && r.ok) {
+    try { datLichCanh(); } catch (err) { Logger.log('⚠ Không đặt được lịch canh webhook: ' + err); }
+  }
   Logger.log(r && r.ok
     ? '✔ Đã nối webhook: ' + url + '\n' +
       '  Đã gỡ lịch hỏi định kỳ để tránh xử lý trùng.\n\n' +
@@ -1289,7 +1389,7 @@ function dungBot() {
   var r = tgApi('deleteWebhook', { drop_pending_updates: true });
   var out = ['✔ Đã ngắt webhook (' + (r && r.ok ? 'ok' : JSON.stringify(r)) + ')'];
   try {
-    out.push('✔ Đã gỡ ' + goLichHoi() + ' lịch chạy. Bot im ngay lập tức.');
+    out.push('✔ Đã gỡ ' + (goLichHoi() + goLichCanh()) + ' lịch chạy. Bot im ngay lập tức.');
     out.push('  Chạy  batCheDoHoi  để bật lại.');
   } catch (err) {
     out.push('✘ Không gỡ được lịch chạy bằng code.');
@@ -1406,6 +1506,7 @@ function kiemTraWebApp() {
 //     Không cần URL công khai, không dính lỗi chuyển hướng 302.
 //     Đổi lại: bot trả lời chậm hơn, tối đa khoảng 1 phút.
 // ─────────────────────────────────────────────────────────────
+var CANH_PHUT     = 30;   // bao lâu canh webhook một lần (phút)
 var HOI_TRAN_GIAY = 30;   // trần thời gian một lượt chạy được phép bám
 var HOI_CHO_GIAY  = 10;   // mỗi lần hỏi nằm chờ bao lâu khi đang có việc
 var HOI_RONG_TOI  = 2;    // im lặng mấy lượt liền thì thôi bám, nhường lượt sau
@@ -1442,10 +1543,79 @@ function tatCheDoHoi() {
  * script.scriptapp, mà quyền đó có thể bị thiếu (xem đếmLich bên dưới).
  */
 function datLichHoi() {
+  donLichUpload();
+  try { goLichCanh(); } catch (err) { /* thiếu quyền ScriptApp — bỏ qua */ }
   tgApi('deleteWebhook', { drop_pending_updates: false });
   datMocMoiNhat();
   goLichHoi();
   ScriptApp.newTrigger('hoiTelegram').timeBased().everyMinutes(1).create();
+}
+
+/**
+ * Lịch chạy chuyenTelegram là của công cụ upload. Nó chỉ có mặt ở đây nếu code upload từng bị dán
+ * nhầm vào dự án này; giờ hàm đó không còn nên lịch cứ chạy lỗi mỗi phút → xoá đi.
+ */
+function donLichUpload() {
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'chuyenTelegram') { ScriptApp.deleteTrigger(t); n++; }
+  });
+  if (n) Logger.log('✔ Đã xoá ' + n + ' lịch chạy chuyenTelegram còn sót của công cụ upload.');
+  return n;
+}
+
+/**
+ * Lịch canh webhook. Webhook cho phản hồi tức thì nhưng có thể chết âm thầm:
+ * deploy lại, đổi quyền truy cập, hay Apps Script trả lỗi vài lần là Telegram
+ * bỏ cuộc mà không báo ai. Lịch này nửa tiếng soi một lần, hỏng thì tự nối lại,
+ * nối lại không xong thì lùi về chế độ hỏi định kỳ và nhắn cho admin biết.
+ */
+function datLichCanh() {
+  goLichCanh();
+  ScriptApp.newTrigger('canhWebhook').timeBased().everyMinutes(CANH_PHUT).create();
+}
+
+function goLichCanh() {
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'canhWebhook') { ScriptApp.deleteTrigger(t); n++; }
+  });
+  return n;
+}
+
+function canhWebhook() {
+  var info = tgApi('getWebhookInfo', {});
+  if (!info || !info.ok || !info.result) return;          // mạng lỗi — để lượt sau
+  var w = info.result;
+  var url = String(WEBAPP_URL || '').trim();
+
+  // Không còn ở chế độ webhook (đã lùi về lịch hỏi) → lịch canh hết việc.
+  if (!w.url) { try { goLichCanh(); } catch (err) {} return; }
+
+  // Hỏng là khi Telegram vừa gặp lỗi gần đây VÀ đang có tin ùn lại chưa giao được.
+  var loiMoi = w.last_error_date && (Date.now() / 1000 - w.last_error_date) < CANH_PHUT * 60;
+  var dongUn = Number(w.pending_update_count || 0) > 0;
+  if (w.url === url && !(loiMoi && dongUn)) return;       // vẫn đang chạy tốt
+
+  var r = tgApi('setWebhook', {
+    url: url,
+    allowed_updates: ['message', 'callback_query'],
+    drop_pending_updates: false
+  });
+  if (r && r.ok && webhookDungDuoc()) {
+    tgSend(adminIds()[0], '⚠️ Webhook vừa trục trặc, đã tự nối lại. Bot chạy tiếp bình thường.');
+    return;
+  }
+
+  // Nối lại không xong → lùi về chế độ chậm mà chắc, đừng để bot câm.
+  try {
+    datLichHoi();
+    tgSend(adminIds()[0], '⚠️ Webhook hỏng, nối lại không được nên đã lùi về *chế độ hỏi định kỳ* ' +
+      '(tin đầu chờ tối đa 1 phút). Bot vẫn nhận lệnh bình thường.\n\n' +
+      'Muốn nhanh lại: deploy phiên bản mới rồi chạy hàm  noiWebhook.');
+  } catch (err) {
+    ghiLoi('canhWebhook', err);
+  }
 }
 
 function goLichHoi() {

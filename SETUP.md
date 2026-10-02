@@ -31,6 +31,7 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
 |---|---|
 | **Bot Telegram** | cohort, số chỗ, giá, lịch học, số buổi, năm kinh nghiệm, video, banner, trạng thái |
 | **Sửa thẳng `index.html`** | người dạy và các dòng chứng chỉ, link TikTok, thông tin công ty mẫu, toàn bộ chữ trên trang |
+| **`links/edit.html`** | trang link-in-bio cho TikTok (`/links/`) — lưu lên chính backend này bằng ADMIN_KEY (bot: `/linkkey`), xem [`links/README.md`](links/README.md) |
 
 Ranh giới này là **bắt buộc**, không phải quy ước cho vui. Backend chỉ gửi cho
 trang những khối nó sửa được. Nếu nó gửi cả mấy khối chữ kia thì bản lưu trong
@@ -320,3 +321,66 @@ hiếm khi đổi nên để trong code cho gọn.
 **Chuỗi `{{...}}` trong FAQ** được thay bằng giá trị thật lúc render — ví dụ
 `{{computed.price.earlyBird}}` sẽ ra `3.000.000đ`. Nhờ vậy câu trả lời FAQ
 không bao giờ lệch giá so với bảng học phí.
+
+---
+
+## Bot im hoặc trả lời chậm
+
+Bot chạy được ở hai chế độ:
+
+| | Phản hồi | Cần gì |
+|---|---|---|
+| **Webhook** (nên dùng) | tức thì | URL `/exec` của bản đang triển khai phải trả 200 |
+| **Hỏi định kỳ** | tin đầu chờ tới 1 phút, các tin tiếp theo trong ~30 giây sau đó thì tức thì | một lịch chạy `hoiTelegram` mỗi phút |
+
+Triệu chứng **"lệnh đầu nhanh, lệnh sau im"** là dấu hiệu đang ở chế độ hỏi định kỳ: sau khi trả lời,
+script bám lại nghe thêm khoảng 20–30 giây rồi nghỉ, lệnh gửi sau đó phải chờ lượt chạy kế tiếp.
+
+**Bật chế độ tức thì:** mở Apps Script → chọn hàm `noiWebhook` → **Run**. Nhắn bot `/menu`, phải trả lời
+trong một hai giây. Nếu không nối được, chạy `kiemTraWebApp` để xem `/exec` đang trả về gì — thường là
+bản đang triển khai vẫn còn code cũ, cứ **Triển khai → Quản lý bản triển khai → ✏️ → Phiên bản mới**
+rồi chạy lại.
+
+`noiWebhook` cũng dựng một **lịch canh** (`canhWebhook`, 30 phút một lần): nếu Telegram báo lỗi và có tin
+ùn lại, nó tự nối webhook lại; nối không được thì tự lùi về chế độ hỏi định kỳ và nhắn cho bạn biết —
+bot không bao giờ câm lặng. Muốn quay về chế độ chậm mà chắc: chạy `batCheDoHoi`. Bot nhắn loạn: chạy `dungBot`.
+
+**Bot im hoàn toàn:** mở ⏰ **Trình kích hoạt** (cột trái). Phải có `canhWebhook` (chế độ webhook) hoặc
+`hoiTelegram` mỗi phút (chế độ hỏi). Không có cái nào thì chạy `setup` — nó tự chọn chế độ tốt nhất.
+Còn dòng `chuyenTelegram` thì xoá: đó là lịch của công cụ upload bỏ lại.
+
+---
+
+## Sự cố: backend trả về "elevaTO upload"
+
+Mở `<URL /exec>?action=config` thấy `{"ok":true,"service":"elevaTO upload"}` thay vì cấu hình cohort nghĩa là
+**code công cụ upload đã bị dán vào dự án backend trang khoá học**. Lúc đó form đăng ký không vào Sheet, trang
+khoá học hiện số liệu dự phòng, lệnh bot khoá học không chạy. Tách lại như sau (làm đúng thứ tự):
+
+**A. Dựng công cụ upload ở dự án riêng** — để upload vẫn dùng được trong lúc sửa:
+
+1. **script.google.com → Dự án mới**, đặt tên `elevaTO Upload`.
+2. Làm đúng 5 bước trong [`upload/README.md`](upload/README.md) (dán `upload/backend/Code.gs` +
+   `upload/backend/appsscript.json`, triển khai Web App, điền 3 dòng đầu, chạy `caiDat`).
+3. Bot nhắn link trang upload mới (kèm key) → mở link đó trên máy hay tải file. Link cũ thôi dùng.
+   Danh sách **Kho** sẽ trống vì kho nằm ở dự án cũ — file đã gửi vẫn còn nguyên trong chat Telegram.
+
+**B. Trả dự án trang khoá học về đúng code:**
+
+1. Mở Google Sheet **elevaTO Đăng ký** → **Tiện ích mở rộng → Apps Script**.
+2. `Code.gs`: chọn hết, dán toàn bộ [`backend/Code.gs`](backend/Code.gs) → 💾.
+3. **⚙️ Cài đặt dự án** → bật **Hiện tệp kê khai "appsscript.json"** → mở `appsscript.json`, chọn hết, dán
+   [`backend/appsscript.json`](backend/appsscript.json) → 💾. (Bản của upload xin quyền Drive và thiếu quyền
+   đọc Sheet — để nguyên thì backend khoá học không mở được Sheet đăng ký.)
+4. Cột trái **Dịch vụ**: nếu có **Drive** (do upload thêm vào) thì bấm ⋮ → **Xoá**.
+5. Chọn hàm `setup` → **Run** → cho phép quyền. `setup` dựng lại lịch hỏi bot `hoiTelegram` và tự xoá lịch
+   `chuyenTelegram` mà công cụ upload để lại.
+6. **Triển khai → Quản lý bản triển khai** → ✏️ ở bản đang chạy → *Phiên bản*: **Phiên bản mới** → **Triển khai**.
+   Sửa bản đang có, đừng tạo bản triển khai mới — URL `/exec` phải giữ nguyên vì trang khoá học và trang link đang gọi nó.
+
+**C. Kiểm tra:**
+
+- Mở `<URL /exec>?action=config` → thấy `"config":{…"cohort"…}` là đúng.
+- Nhắn bot `/status` → bot trả tình trạng cohort; `/linkkey` → bot gửi key cho trang link.
+- Tự gửi thử một đăng ký trên trang khoá học → phải hiện dòng mới trong sheet **DangKy** và bot báo.
+

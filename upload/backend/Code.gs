@@ -650,7 +650,18 @@ function linkTrang() {
  * Google sẽ hỏi quyền Drive; hàm lưu token, tạo key, tạo thư mục, rồi nhắn
  * link trang (kèm sẵn key) vào Telegram. Chạy lại nhiều lần vẫn an toàn.
  */
+/** Dự án này có phải backend trang khoá học (gắn Sheet đăng ký) không — dấu hiệu: cấu hình cohort / admin bot. */
+function laDuAnKhoaHoc() {
+  return Boolean(props().getProperty('SITE_CONFIG') || props().getProperty('TG_ADMIN_IDS'));
+}
+
 function caiDat() {
+  // Dán nhầm file này vào dự án backend trang khoá học là trang khoá học chết hẳn:
+  // form đăng ký, cấu hình cohort, lệnh bot đều đi vào code upload. Chặn ngay từ đầu.
+  if (laDuAnKhoaHoc()) {
+    throw new Error('Đây là dự án backend TRANG KHOÁ HỌC (gắn Sheet đăng ký) — đừng cài công cụ upload ở đây. ' +
+                    'Dán lại backend/Code.gs vào dự án này, rồi tạo DỰ ÁN MỚI riêng cho upload (xem upload/README.md).');
+  }
   if (TG_TOKEN.indexOf('DAN_') === 0 || TG_CHAT.indexOf('DAN_') === 0) {
     throw new Error('Chưa điền TG_TOKEN và TG_CHAT ở đầu file.');
   }
