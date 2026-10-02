@@ -14,8 +14,8 @@ const chainable = (o) => new Proxy(o, { get: (t, k) => (k in t ? t[k] : () => ch
  * @param hookInfo kết quả getWebhookInfo giả lập
  * @param opts.setOk setWebhook có thành công không; opts.execOk /exec có trả 200 không
  */
-function load(hookInfo, { setOk = true, execOk = true, triggers = [] } = {}) {
-  const props = { ADMIN_KEY: 'k', TG_BOT_TOKEN: 'bot', TG_ADMIN_IDS: '42' };
+function load(hookInfo, { setOk = true, execOk = true, triggers = [], props: extra = {} } = {}) {
+  const props = { ADMIN_KEY: 'k', TG_BOT_TOKEN: 'bot', TG_ADMIN_IDS: '42', ...extra };
   const sent = [];
   const list = triggers.map((fn) => ({ fn }));
   const sheets = [];
@@ -26,7 +26,8 @@ function load(hookInfo, { setOk = true, execOk = true, triggers = [] } = {}) {
   });
   const ctx = {
     PropertiesService: { getScriptProperties: () => ({
-      getProperty: (k) => props[k] ?? null, setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: (k) => { delete props[k]; },
+      getProperty: (k) => props[k] ?? null, setProperty: (k, v) => { props[k] = String(v); },
+      deleteProperty: (k) => { delete props[k]; }, getProperties: () => ({ ...props }),
     }) },
     CacheService: { getScriptCache: () => ({ get: () => null, put: () => {}, remove: () => {} }) },
     LockService: { getScriptLock: () => ({ waitLock: () => {}, tryLock: () => true, releaseLock: () => {} }) },
@@ -133,4 +134,30 @@ test('dungBot: gỡ sạch mọi lịch, không còn gì tự nối webhook lạ
   g.ctx.dungBot();
   assert.deepEqual(tren(g.triggers), []);
   assert.ok(daGui(g.sent, 'deleteWebhook').length);
+});
+
+test('donDauVetUpload: xoá sạch dấu vết upload, giữ nguyên cấu hình backend khoá học', () => {
+  const g = load({ url: EXEC }, {
+    triggers: ['chuyenTelegram', 'hoiTelegram', 'chuyenTelegram'],
+    props: {
+      SITE_CONFIG: '{"cohort":1}', TG_OFFSET: '77', LINKS_UPDATED_AT: '02/10/2026 10:00',
+      UPLOAD_KEY: 'u', UPLOAD_FOLDER_ID: 'f', TG_CHAT_ID: '42',
+      TGJOB_abc: '{}', TGLIB_abc: '{}', TGFID_abc_0: 'x', TGRES_abc: '{}', TGTAM_abc: '{}',
+    },
+  });
+  assert.equal(g.ctx.donDauVetUpload(), 8);
+
+  // Cấu hình của backend khoá học phải còn nguyên — nhất là token dùng chung.
+  assert.deepEqual(Object.keys(g.props).sort(),
+    ['ADMIN_KEY', 'LINKS_UPDATED_AT', 'SITE_CONFIG', 'TG_ADMIN_IDS', 'TG_BOT_TOKEN', 'TG_OFFSET']);
+  assert.equal(g.props.TG_BOT_TOKEN, 'bot');
+  assert.deepEqual(tren(g.triggers), ['hoiTelegram']);
+});
+
+test('donDauVetUpload: dự án sạch rồi thì chạy lại không xoá nhầm gì', () => {
+  const g = load({ url: EXEC }, { triggers: ['canhWebhook'] });
+  const truoc = Object.keys(g.props).sort();
+  assert.equal(g.ctx.donDauVetUpload(), 0);
+  assert.deepEqual(Object.keys(g.props).sort(), truoc);
+  assert.deepEqual(tren(g.triggers), ['canhWebhook']);
 });

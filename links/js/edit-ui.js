@@ -1,25 +1,14 @@
 // Các khối giao diện nhỏ của trình chỉnh sửa: ô nhập, công tắc, nút chọn. Không giữ trạng thái —
 // mỗi khối nhận giá trị hiện tại và một hàm báo thay đổi.
 
+import { h } from './dom.js';
+import { safeImg } from './core.js';
 import { svg } from './icons.js';
 
 let uid = 0;
 const nextId = () => 'f' + (uid += 1);
 
-export function h(tag, attrs, ...kids) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v == null || v === false) continue;
-    if (k === 'class') el.className = v;
-    else if (k === 'html') el.innerHTML = v;            // chỉ dùng cho icon SVG tĩnh
-    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-    else el.setAttribute(k, v === true ? '' : v);
-  }
-  for (const c of kids.flat()) if (c != null && c !== '') el.append(c);
-  return el;
-}
-
-/** Ô nhập có nhãn. opts: { multiline, rows, placeholder, hint, type, max, list } */
+/** Ô nhập có nhãn. opts: { multiline, rows, placeholder, hint, type, max, wide, aria, inputmode } */
 export function field(label, value, onInput, opts = {}) {
   const id = nextId();
   const input = opts.multiline
@@ -43,49 +32,83 @@ export function toggle(label, checked, onChange, hint) {
     hint ? h('small', { class: 'hint' }, hint) : null);
 }
 
-/** Nhóm nút chọn một (như radio). options: [[value, label], …] */
+/**
+ * Nhóm nút chọn một, theo đúng cách bàn phím của radiogroup (WAI-ARIA): chỉ nút đang chọn vào được
+ * bằng Tab, rồi dùng mũi tên / Home / End để chuyển — thay vì phải Tab qua từng nút một.
+ * @param options [[giá trị, nhãn], …]
+ * @param build (nút, giá trị, nhãn) — vẽ thêm vào nút (icon, màu…); mặc định chỉ đặt nhãn làm chữ.
+ */
+function radioGroup({ label, cls, options, value, onChange, build }) {
+  const wrap = h('div', { class: cls, role: 'radiogroup', 'aria-label': label });
+  const btns = options.map(([v, text]) => {
+    // data-fk: khoá để renderForm() tìm lại đúng nút này mà trả con trỏ bàn phím về sau khi vẽ lại.
+    const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(v === value), 'data-fk': label + '|' + v });
+    b.tabIndex = v === value ? 0 : -1;
+    if (build) build(b, v, text); else b.append(text);
+    // Bấm lại đúng ô đang chọn thì thôi — không thì form bị vẽ lại một lần chẳng để làm gì.
+    b.addEventListener('click', () => { if (b.getAttribute('aria-checked') !== 'true') select(b, v); });
+    wrap.append(b);
+    return b;
+  });
+  // Giá trị hiện tại không có trong danh sách → vẫn phải có một nút vào được bằng Tab.
+  if (btns.length && !btns.some((b) => b.tabIndex === 0)) btns[0].tabIndex = 0;
+
+  function select(btn, v, focus = false) {
+    btns.forEach((x) => { x.setAttribute('aria-checked', String(x === btn)); x.tabIndex = x === btn ? 0 : -1; });
+    if (focus) btn.focus();
+    onChange(v);
+  }
+
+  wrap.addEventListener('keydown', (e) => {
+    // Alt+← là lệnh "quay lại" của trình duyệt, Ctrl/Cmd+mũi tên là lệnh của hệ điều hành — đừng nuốt mất.
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const i = btns.indexOf(document.activeElement);
+    if (i < 0) return;
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    const j = step ? (i + step + btns.length) % btns.length : (e.key === 'Home' ? 0 : e.key === 'End' ? btns.length - 1 : -1);
+    if (j < 0) return;
+    e.preventDefault();
+    select(btns[j], options[j][0], true);
+  });
+  return wrap;
+}
+
+/** Nhóm nút chọn một dạng thanh ngang. options: [[giá trị, nhãn], …] */
 export function segmented(label, value, options, onChange) {
-  const wrap = h('div', { class: 'segm', role: 'radiogroup', 'aria-label': label });
-  for (const [v, text] of options) {
-    const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(v === value) }, text);
-    b.addEventListener('click', () => {
-      wrap.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
-      onChange(v);
-    });
-    wrap.append(b);
-  }
-  return h('div', { class: 'fld' }, h('span', { class: 'lbl' }, label), wrap);
+  return h('div', { class: 'fld' }, h('span', { class: 'lbl' }, label),
+    radioGroup({ label, cls: 'segm', options, value, onChange }));
 }
 
-export function iconPicker(value, names, onChange) {
-  const wrap = h('div', { class: 'icons', role: 'radiogroup', 'aria-label': 'Icon' });
-  for (const n of names) {
-    const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(n === value), title: n, 'aria-label': n, html: svg(n) });
-    b.addEventListener('click', () => {
-      wrap.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
-      onChange(n);
-    });
-    wrap.append(b);
-  }
-  return h('div', { class: 'fld wide' }, h('span', { class: 'lbl' }, 'Icon'), wrap);
+/** Chọn icon nét cho ô. icons: { tên: 'Nhãn tiếng Việt' } */
+export function iconPicker(value, icons, onChange) {
+  const group = radioGroup({
+    label: 'Icon', cls: 'icons', options: Object.entries(icons), value, onChange,
+    build: (b, name, text) => {
+      b.innerHTML = svg(name);
+      b.setAttribute('title', text);
+      b.setAttribute('aria-label', text);
+    },
+  });
+  return h('div', { class: 'fld wide' }, h('span', { class: 'lbl' }, 'Icon'), group);
 }
 
-export function swatches(value, accents, onChange) {
-  const wrap = h('div', { class: 'swatches', role: 'radiogroup', 'aria-label': 'Màu nhấn' });
-  for (const [name, hex] of Object.entries(accents)) {
-    const b = h('button', { type: 'button', role: 'radio', 'aria-checked': String(name === value), title: name, 'aria-label': name });
-    b.style.setProperty('--sw', hex);
-    b.addEventListener('click', () => {
-      wrap.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
-      onChange(name);
-    });
-    wrap.append(b);
-  }
-  return h('div', { class: 'fld' }, h('span', { class: 'lbl' }, 'Màu nhấn'), wrap);
+/** Chọn màu nhấn. accents: { tên: '#hex' } · labels: { tên: 'Tên tiếng Việt' } */
+export function swatches(value, accents, labels, onChange) {
+  const group = radioGroup({
+    label: 'Màu nhấn', cls: 'swatches', options: Object.keys(accents).map((k) => [k, labels[k] || k]), value, onChange,
+    build: (b, name, text) => {
+      b.style.setProperty('--sw', accents[name]);
+      b.setAttribute('title', text);
+      b.setAttribute('aria-label', text);
+    },
+  });
+  return h('div', { class: 'fld' }, h('span', { class: 'lbl' }, 'Màu nhấn'), group);
 }
 
-export function iconBtn(icon, label, onClick, cls = '') {
-  return h('button', { type: 'button', class: 'mini ' + cls, 'aria-label': label, title: label, html: svg(icon), onclick: onClick });
+/** Nút tròn nhỏ (lên / xuống / nhân bản / xoá). fk: khoá để giữ con trỏ bàn phím khi form vẽ lại. */
+export function iconBtn(icon, label, onClick, cls = '', fk = '') {
+  return h('button', { type: 'button', class: 'mini ' + cls, 'aria-label': label, title: label,
+    'data-fk': fk || null, html: svg(icon), onclick: onClick });
 }
 
 /** Khung một phần của form, mở/đóng được. */
@@ -112,24 +135,32 @@ export function slider(label, value, min, max, unit, onInput, hint) {
  * Ô chọn ảnh: xem trước + các cách lấy ảnh. onChange(value, rerender, style) — style 'icon' (hình trong suốt
  * đặt trên ô màu) hoặc 'photo' (ảnh lấp kín ô).
  * opts: { sets: [{ label, style, items: {src: tên} }] — các bộ icon có sẵn, iconify: hàm tìm icon, onPick: tải từ máy,
- *         style: kiểu hiện tại, round, hint, tools: [[tên, link], …] }
+ *         style: kiểu hiện tại, onStyle, round, hint, tools: [[tên, link], …] }
  */
 export function imageField(label, value, onChange, opts = {}) {
   const isData = /^data:/.test(value || '');
   const thumb = h('span', { class: 'im-thumb' + (opts.round ? ' round' : '') + (opts.style === 'icon' && value ? ' ico' : '') });
-  const setThumb = (v) => thumb.replaceChildren(v ? h('img', { src: v, alt: '' }) : h('span', { html: svg('plus') }));
+  // Lọc qua safeImg: link ảnh gõ tay / nạp từ file JSON lạ không được biến ô xem trước thành nơi gọi ra ngoài.
+  const setThumb = (v) => thumb.replaceChildren(safeImg(v) ? h('img', { src: safeImg(v), alt: '' }) : h('span', { html: svg('plus') }));
   setThumb(value);
   const url = field('', isData ? '' : value, (v) => { setThumb(v); onChange(v, false, 'photo'); },
     { type: 'url', placeholder: isData ? 'Đang dùng ảnh tải lên / icon đã chọn' : 'hoặc dán link ảnh https://…', aria: label + ' — link ảnh' });
 
+  // Mỗi "ngăn" (bộ icon có sẵn, ô tìm icon) có một nút mở/đóng; mở ngăn này thì các ngăn khác đóng lại.
   const panes = [];
-  const pane = (node) => { node.hidden = true; panes.push(node); return node; };
-  const toggleBtn = (text, node) => h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => {
-    const show = node.hidden;
-    panes.forEach((p) => { p.hidden = true; });
-    node.hidden = !show;
-    if (show) { const q = node.querySelector('input'); if (q) q.focus(); }
-  } }, text);
+  const pane = (node) => { node.hidden = true; node.id = nextId(); panes.push(node); return node; };
+  const toggleBtn = (text, node) => {
+    const b = h('button', { type: 'button', class: 'btn btn-ghost sm', 'aria-expanded': 'false', 'aria-controls': node.id,
+      onclick: () => {
+        const show = node.hidden;
+        panes.forEach((p) => { p.hidden = true; });
+        node.hidden = !show;
+        b.closest('.im-tools').querySelectorAll('[aria-expanded]').forEach((x) => x.setAttribute('aria-expanded', 'false'));
+        b.setAttribute('aria-expanded', String(show));
+        if (show) { const q = node.querySelector('input'); if (q) q.focus(); }
+      } }, text);
+    return b;
+  };
   const grid = (entries, style) => h('div', { class: 'im-gallery' }, ...entries.map(([src, name]) =>
     h('button', { type: 'button', title: name, 'aria-label': name, class: style === 'icon' ? 'ico' : '', onclick: () => onChange(src, true, style) },
       h('img', { src, alt: '', loading: 'lazy' }))));
@@ -138,7 +169,7 @@ export function imageField(label, value, onChange, opts = {}) {
   let search = null;
   if (opts.iconify) {
     const results = h('div', { class: 'im-gallery' });
-    const status = h('small', { class: 'hint' }, 'Gõ tiếng Anh: chart, money, robot, book, phone, coffee…');
+    const status = h('small', { class: 'hint', role: 'status' }, 'Gõ tiếng Anh: chart, money, robot, book, phone, coffee…');
     const q = h('input', { class: 'inp', type: 'search', placeholder: 'Tìm trong 200.000+ icon (Iconify)', 'aria-label': 'Tìm icon' });
     const run = async () => {
       const term = q.value.trim();

@@ -1618,6 +1618,53 @@ function canhWebhook() {
   }
 }
 
+/**
+ * Khoá Script Properties do công cụ upload tạo ra. TG_BOT_TOKEN KHÔNG có trong danh sách:
+ * hai bên dùng chung đúng khoá đó, xoá là bot khoá học mất token.
+ */
+function khoaCuaUpload() {
+  var cuaTa = [PROP_CONFIG, PROP_TOKEN, PROP_ADMIN, PROP_ADMINKEY, PROP_OFFSET, PROP_LINKS_AT];
+  var ten = ['UPLOAD_KEY', 'UPLOAD_FOLDER_ID', 'TG_CHAT_ID'];
+  var tienTo = ['TGJOB_', 'TGLIB_', 'TGFID_', 'TGRES_', 'TGTAM_'];
+  return Object.keys(props().getProperties()).filter(function (k) {
+    if (cuaTa.indexOf(k) > -1) return false;
+    if (ten.indexOf(k) > -1) return true;
+    return tienTo.some(function (t) { return k.indexOf(t) === 0; });
+  });
+}
+
+/**
+ * Dọn dấu vết công cụ upload còn sót trong dự án này — chỉ cần khi code upload từng bị dán nhầm
+ * vào đây. Không đụng gì tới cấu hình backend khoá học, chạy lại bao nhiêu lần cũng được.
+ */
+function donDauVetUpload() {
+  var out = [];
+
+  var khoa = khoaCuaUpload();
+  khoa.forEach(function (k) { props().deleteProperty(k); });
+  out.push(khoa.length
+    ? '✔ Đã xoá ' + khoa.length + ' mục cài đặt của upload: ' + khoa.slice(0, 8).join(', ') +
+      (khoa.length > 8 ? '…' : '')
+    : '• Không còn mục cài đặt nào của upload');
+
+  try {
+    var n = donLichUpload();
+    out.push(n ? '✔ Đã xoá ' + n + ' lịch chạy chuyenTelegram' : '• Không còn lịch chạy nào của upload');
+  } catch (err) {
+    out.push('✘ Không đọc được danh sách lịch chạy: ' + err);
+  }
+
+  out.push('');
+  out.push('Hai thứ code không tự xem được, bạn liếc qua giúp:');
+  out.push('  1. ⚙️ Cài đặt dự án → appsscript.json: oauthScopes phải là spreadsheets.currentonly,');
+  out.push('     script.external_request, script.scriptapp. Có drive.file là còn của upload.');
+  out.push('  2. Cột trái → Dịch vụ: có "Drive" thì bấm ⋮ → Xoá.');
+  out.push('  3. Cột trái → Tệp: chỉ nên có Code.gs (và appsscript.json).');
+
+  Logger.log(out.join('\n'));
+  return khoa.length;
+}
+
 function goLichHoi() {
   var n = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) {

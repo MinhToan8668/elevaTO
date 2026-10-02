@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   safeUrl, safeImg, socialUrl, normalize, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
-  cohortInfo, utf8ToBase64, serialize, githubError,
+  cohortInfo, utf8ToBase64, serialize, githubError, ACCENTS, ACCENT_LABELS,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
 
@@ -109,7 +109,7 @@ test('serialize ổn định: chạy lại không đổi nội dung (để biế
 
 test('data.json trong repo hợp lệ: icon có thật, ô nổi bật có số chỗ trực tiếp', async () => {
   const d = normalize(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
-  for (const l of d.links) assert.ok(TILE_ICONS.includes(l.icon), 'icon lạ: ' + l.icon);
+  for (const l of d.links) assert.ok(TILE_ICONS[l.icon], 'icon lạ: ' + l.icon);
   for (const s of d.socials) assert.ok(s.type);
   assert.ok(d.links.some((l) => l.size === 'feature' && l.live));
   assert.match(d.live.api, /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/);
@@ -117,9 +117,19 @@ test('data.json trong repo hợp lệ: icon có thật, ô nổi bật có số 
 });
 
 test('mọi icon chọn được đều có hình, svg() không bao giờ trả chuỗi rỗng', () => {
-  for (const n of TILE_ICONS) assert.ok(ICONS[n], n);
+  for (const n of Object.keys(TILE_ICONS)) assert.ok(ICONS[n], n);
   assert.match(svg('không-có'), /^<svg /);
   assert.match(svg('tiktok'), /fill="currentColor"/);
+});
+
+// Nút chọn icon / màu chỉ là hình, nên nhãn là thứ duy nhất trình đọc màn hình đọc ra.
+test('icon và màu nhấn nào cũng có nhãn tiếng Việt cho trình đọc màn hình', () => {
+  for (const [name, label] of Object.entries(TILE_ICONS)) {
+    assert.equal(typeof label, 'string', name);
+    assert.ok(label && label !== name, 'icon thiếu nhãn: ' + name);
+  }
+  for (const name of Object.keys(ACCENTS)) assert.ok(ACCENT_LABELS[name], 'màu thiếu nhãn: ' + name);
+  assert.deepEqual(Object.keys(ACCENT_LABELS).sort(), Object.keys(ACCENTS).sort());
 });
 
 test('lỗi GitHub ra câu dễ hiểu', () => {

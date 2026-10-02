@@ -305,6 +305,128 @@ test('trình chỉnh sửa: lưu bằng ADMIN_KEY lên máy chủ elevaTO, khôn
   await p.context().close();
 });
 
+test('trình chỉnh sửa dùng được bằng bàn phím: mũi tên chọn trong nhóm, Tab không phải bấm 27 lần', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.goto(base + '/links/edit.html');
+  await p.click('.lc-toggle:has-text("AI đọc BCTC")');
+
+  // Nhóm "Kiểu ô": chỉ nút đang chọn vào được bằng Tab (roving tabindex), các nút khác bị bỏ qua.
+  const sizes = p.locator('.lc.open .segm[aria-label="Kiểu ô"] button');
+  assert.deepEqual(await sizes.evaluateAll((els) => els.map((e) => e.tabIndex)), [-1, -1, 0]);
+
+  // Mũi tên đổi lựa chọn và con trỏ bàn phím vẫn ở trong nhóm dù form được vẽ lại.
+  await sizes.nth(2).focus();
+  await p.keyboard.press('ArrowRight');
+  await p.waitForFunction(() => document.activeElement.dataset.fk === 'Kiểu ô|feature');
+  assert.equal(await p.evaluate(() => document.activeElement.getAttribute('aria-checked')), 'true');
+  const frame = p.frames().find((f) => f.url().includes('preview'));
+  await frame.waitForSelector('.tile.feature .ttl:has-text("AI đọc BCTC")');
+
+  // Nhóm màu nhấn: Home / End chạy về đầu / cuối danh sách.
+  await p.locator('.lc.open .swatches button[aria-checked="true"]').focus();
+  await p.keyboard.press('End');
+  assert.equal(await p.evaluate(() => document.activeElement.dataset.fk), 'Màu nhấn|slate');
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft')).links.find((l) => l.id === 'ai').accent === 'slate');
+
+  // Nút mở bộ icon nói rõ đang mở hay đóng; mở bộ khác thì bộ cũ đóng lại.
+  const tools = p.locator('.lc.open .im-tools');
+  await tools.locator('button:has-text("Icon 3D")').click();
+  assert.equal(await tools.locator('button:has-text("Icon 3D")').getAttribute('aria-expanded'), 'true');
+  await tools.locator('button:has-text("Bộ icon cũ")').click();
+  assert.equal(await tools.locator('button:has-text("Icon 3D")').getAttribute('aria-expanded'), 'false');
+  assert.equal(await tools.locator('button:has-text("Bộ icon cũ")').getAttribute('aria-expanded'), 'true');
+
+  // Bỏ ảnh của ô → hiện bảng icon nét, nhãn là tiếng Việt (trình đọc màn hình đọc được), không phải tên khoá tiếng Anh.
+  await tools.locator('button:has-text("Bỏ ảnh")').click();
+  assert.equal(await p.getAttribute('.lc.open .icons button[data-fk="Icon|rocket"]', 'aria-label'), 'Tên lửa');
+  assert.equal(await p.getAttribute('.lc.open .icons button[data-fk="Icon|rocket"]', 'title'), 'Tên lửa');
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('gõ xong đóng/tải lại trang ngay: nháp vẫn còn (lưu nháp được gộp lại nên không chạy sau từng ký tự)', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.lc');
+
+  // Gõ rồi tải lại ngay, không chờ lượt lưu đang hoãn — trang phải lưu nốt trước khi đóng.
+  await p.fill('textarea.inp >> nth=0', 'Giới thiệu vừa gõ xong thì tải lại');
+  await p.reload();
+  await p.waitForSelector('.lc');
+  assert.equal(await p.inputValue('textarea.inp >> nth=0'), 'Giới thiệu vừa gõ xong thì tải lại');
+  assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')).profile.tagline),
+    'Giới thiệu vừa gõ xong thì tải lại');
+  assert.match(await p.textContent('#dirty'), /chưa đăng/);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('chỉ mở trang sửa rồi chuyển tab, không sửa gì: không ghi nháp đè lên bản đang chạy trên web', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.lc');
+
+  // Chuyển sang tab khác rồi quay lại, và mở thẻ một ô (chỉ xem, không sửa gì).
+  await p.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await p.click('.lc-toggle:has-text("AI đọc BCTC")');
+  assert.equal(await p.evaluate(() => localStorage.getItem('elevato-links-draft')), null,
+    'chưa sửa gì thì không được tạo nháp — lần sau mở lại sẽ thấy bản chụp cũ đè lên trang trên web');
+
+  // "Bỏ nháp, lấy bản trên web" rồi chuyển tab cũng không được dựng lại nháp.
+  await p.fill('textarea.inp >> nth=0', 'sửa thử');
+  await p.waitForFunction(() => localStorage.getItem('elevato-links-draft'));
+  p.on('dialog', (d) => d.accept());
+  await p.click('summary:has-text("Sao lưu")');
+  await p.click('button:has-text("Bỏ nháp, lấy bản trên web")');
+  await p.waitForFunction(() => localStorage.getItem('elevato-links-draft') === null);
+  await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => localStorage.getItem('elevato-links-draft')), null);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('ADMIN_KEY không bật "nhớ trên máy": chỉ nằm trong tab này, đóng tab là mất', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('#adminKeyInput', { state: 'attached' });
+  await p.fill('#adminKeyInput', 'dung-key');
+  assert.deepEqual(await p.evaluate(() => [localStorage.getItem('elevato-links-adminkey'), sessionStorage.getItem('elevato-links-adminkey')]),
+    [null, '"dung-key"']);
+
+  // Bật "nhớ" → chuyển sang localStorage và KHÔNG để lại bản sao ở chỗ cũ; tắt lại thì ngược lại.
+  await p.click('.panel:has(#adminKeyInput) .sw-lbl:has-text("Nhớ key trên máy này")');
+  assert.deepEqual(await p.evaluate(() => [localStorage.getItem('elevato-links-adminkey'), sessionStorage.getItem('elevato-links-adminkey')]),
+    ['"dung-key"', null]);
+  await p.click('.panel:has(#adminKeyInput) .sw-lbl:has-text("Nhớ key trên máy này")');
+  assert.deepEqual(await p.evaluate(() => [localStorage.getItem('elevato-links-adminkey'), sessionStorage.getItem('elevato-links-adminkey')]),
+    [null, '"dung-key"']);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('đổi sáng / tối: lưu đúng dạng mà mọi trang elevaTO đọc được, khung xem trước đổi theo', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 }, colorScheme: 'light' });
+  await p.goto(base + '/links/edit.html');
+  await p.click('#themeBtn');
+  // ai/js/theme.js đọc chuỗi thô trong <head>, không phải JSON — lưu '"dark"' là mọi trang mất giao diện tối.
+  assert.equal(await p.evaluate(() => localStorage.getItem('elevato-theme')), 'dark');
+  const frame = p.frames().find((f) => f.url().includes('preview'));
+  assert.equal(await frame.evaluate(() => document.documentElement.dataset.theme), 'dark');
+
+  const q = await page({ colorScheme: 'light' });
+  await q.goto(base + '/links/');
+  await q.click('#themeBtn');
+  assert.equal(await q.evaluate(() => localStorage.getItem('elevato-theme')), 'dark');
+  await q.reload();
+  assert.equal(await q.evaluate(() => document.documentElement.dataset.theme), 'dark');
+  await p.context().close();
+  await q.context().close();
+});
+
 test('trang khoá học: /#dang-ky mở thẳng form đăng ký', async () => {
   const p = await page();
   await p.goto(base + '/#dang-ky');

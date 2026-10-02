@@ -378,6 +378,13 @@ khoá học hiện số liệu dự phòng, lệnh bot khoá học không chạy
 6. **Triển khai → Quản lý bản triển khai** → ✏️ ở bản đang chạy → *Phiên bản*: **Phiên bản mới** → **Triển khai**.
    Sửa bản đang có, đừng tạo bản triển khai mới — URL `/exec` phải giữ nguyên vì trang khoá học và trang link đang gọi nó.
 
+**B'. Dọn dấu vết upload còn sót** (sau bước B, chạy một lần):
+
+Chọn hàm **`donDauVetUpload`** → **Run** → xem Nhật ký thực thi. Nó xoá các mục cài đặt và lịch chạy
+của công cụ upload còn nằm lại trong dự án này, **không đụng** cấu hình backend khoá học
+(`TG_BOT_TOKEN` hai bên dùng chung nên được giữ nguyên). Nhật ký cũng nhắc 3 thứ phải tự nhìn:
+`appsscript.json` còn `drive.file` không, cột **Dịch vụ** còn **Drive** không, cột **Tệp** có file `.gs` lạ không.
+
 **C. Kiểm tra:**
 
 - Mở `<URL /exec>?action=config` → thấy `"config":{…"cohort"…}` là đúng.
