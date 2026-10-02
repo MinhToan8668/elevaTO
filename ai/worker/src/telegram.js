@@ -77,6 +77,7 @@ const MENU_LENH = [
   { command: 'mkmoi', description: 'Sinh mật khẩu mới rồi đọc cho bạn' },
   { command: 'matkhau', description: 'Đặt lại mật khẩu bạn tự chọn' },
   { command: 'ungho', description: 'Xem / đặt số tài khoản nhận ủng hộ' },
+  { command: 'linkkey', description: 'Key để sửa trang link-in-bio' },
   { command: 'help', description: 'Danh sách lệnh đầy đủ' },
 ];
 
