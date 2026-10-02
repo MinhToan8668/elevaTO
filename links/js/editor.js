@@ -1,6 +1,6 @@
 // Trình chỉnh sửa trang link-in-bio: sửa bản nháp (lưu trên máy), xem trước trực tiếp, đăng lên GitHub.
 
-import { normalize, serialize, newId, hiddenReason, safeImg, ACCENTS, SOCIALS, ICON_LIBRARY, BACKGROUNDS } from './core.js';
+import { normalize, serialize, newId, hiddenReason, safeImg, glassIconFor, ACCENTS, SOCIALS, ICON_LIBRARY, BACKGROUNDS } from './core.js';
 import * as iconify from './iconify.js';
 import { svg, TILE_ICONS } from './icons.js';
 import { h, field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
@@ -43,6 +43,12 @@ function markDirty() {
   const changed = serialize(draft) !== published;
   el.textContent = changed ? 'Có thay đổi chưa đăng · nháp đã lưu trên máy này' : 'Đang khớp với bản trên web';
   el.classList.toggle('on', changed);
+  // Khung xem trước luôn là BẢN NHÁP → nói rõ khi nó khác trang đang chạy trên web.
+  const note = $('#prevNote');
+  note.textContent = changed
+    ? 'Đang xem BẢN NHÁP trên máy này — khác trang đang chạy trên web. Bấm “Đăng lên web” để web giống hệt khung này.'
+    : 'Khung này giống hệt trang đang chạy trên web.';
+  note.classList.toggle('on', changed);
 }
 
 let prevT = 0;
@@ -196,7 +202,22 @@ function linksPanel() {
     openLink = id;
     update((d) => { d.links.push({ ...normalize({ links: [{}] }).links[0], id, title: 'Ô mới', size: 'half', icon: 'link' }); }, { rerender: true });
   } });
-  return panel('Các ô link', 'Thứ tự trong danh sách = thứ tự trên trang', true, list, add);
+  const sync = h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: useGlassIcons },
+    'Dùng bộ icon elevaTO cho tất cả ô');
+  return panel('Các ô link', 'Thứ tự trong danh sách = thứ tự trên trang', true,
+    h('div', { class: 'gh-row' }, sync, h('small', { class: 'hint' }, 'Đổi icon của mọi ô sang bộ elevaTO; chữ và link giữ nguyên.')),
+    list, add);
+}
+
+function useGlassIcons() {
+  let n = 0;
+  update((d) => {
+    d.links.forEach((l) => {
+      const icon = glassIconFor(l);
+      if (icon && (l.image !== icon || l.imageStyle !== 'photo')) { l.image = icon; l.imageStyle = 'photo'; n += 1; }
+    });
+  }, { rerender: true });
+  toast(n ? `Đã đổi icon ${n} ô sang bộ elevaTO. Bấm Đăng lên web để web cập nhật.` : 'Các ô đã dùng bộ icon elevaTO rồi.');
 }
 
 function themePanel() {

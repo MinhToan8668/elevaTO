@@ -47,6 +47,23 @@ export const CLASSIC = {
   [C('course')]: 'Khoá học', [C('ai')]: 'AI', [C('slides')]: 'Slide', [C('trial')]: 'Video',
   [C('model')]: 'Model', 'art/zalo.svg': 'Zalo', [C('cv')]: 'CV', [C('coffee')]: 'Coffee',
 };
+// Ô nào hợp với icon nào trong bộ elevaTO: theo id ô trước, rồi theo chữ trong tiêu đề / link.
+const GLASS_HINTS = [
+  ['zalo', /zalo/], ['cv', /\bcv\b|hồ sơ|resume/], ['slides', /slide/], ['trial', /học thử|video|demo|youtube/],
+  ['model', /model|dgw|excel/], ['ai', /\bai\b|bctc|gpt/], ['course', /khoá|khóa|course|modeling|đăng ký/],
+  ['coffee', /coffee|cà phê|cafe/], ['calendar', /lịch|calendar|booking/], ['mail', /e-?mail|gmail|mailto:/],
+  ['book', /sách|book|ebook|tài liệu/], ['chat', /tin nhắn|chat|message|messenger|telegram/],
+  ['money', /tiền|money|giá|học phí|donate|ủng hộ/], ['phone', /điện thoại|phone|hotline|tel:/],
+];
+/** Icon bộ elevaTO phù hợp với ô (đường dẫn art/glass/…), hoặc '' nếu không đoán được. */
+export function glassIconFor(link) {
+  const id = String(link.id || '');
+  if (has(GLASS, G(id))) return G(id);
+  const text = (String(link.title || '') + ' ' + String(link.url || '')).toLowerCase();
+  const hit = GLASS_HINTS.find(([, re]) => re.test(text));
+  return hit ? G(hit[0]) : '';
+}
+
 /** Các bộ icon có sẵn, theo thứ tự hiện trong trình chỉnh sửa. style: kiểu hiển thị khi chọn icon của bộ đó. */
 export const ICON_LIBRARY = [
   { key: 'glass', label: 'Bộ icon elevaTO', style: 'photo', items: GLASS },

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, safeImg, socialUrl, normalize, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, glassIconFor, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
@@ -208,4 +208,13 @@ test('ảnh minh hoạ đời trước tự đổi sang icon 3D; kiểu hiển t
   assert.deepEqual([b.image, b.imageStyle], ['art/zalo.svg', 'photo']);
   assert.equal(c.imageStyle, 'icon');
   assert.equal(d.imageStyle, 'icon');
+});
+
+test('glassIconFor: theo id ô, rồi theo tiêu đề / link; không đoán được thì để trống', () => {
+  assert.equal(glassIconFor({ id: 'course', title: 'bất kỳ' }), 'art/glass/course.svg');
+  assert.equal(glassIconFor({ id: 'x1', title: 'Zalo Minh nhé' }), 'art/glass/zalo.svg');
+  assert.equal(glassIconFor({ id: 'x2', title: 'My CV' }), 'art/glass/cv.svg');
+  assert.equal(glassIconFor({ id: 'x3', title: 'Liên hệ', url: 'mailto:a@b.vn' }), 'art/glass/mail.svg');
+  assert.equal(glassIconFor({ id: 'x4', title: 'Đặt lịch tư vấn' }), 'art/glass/calendar.svg');
+  assert.equal(glassIconFor({ id: 'x5', title: 'Trang lạ' }), '');
 });
