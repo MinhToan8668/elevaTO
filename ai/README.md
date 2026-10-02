@@ -152,14 +152,15 @@ Lệnh (gõ trong tin nhắn riêng với bot):
 - Bot dùng **webhook**: Telegram đẩy tin sang ngay nên lệnh trả lời tức thì. Worker tự nối webhook ở lượt
   truy cập đầu sau khi triển khai, không phải gõ lệnh gì.
 
-## Cài máy chủ AI (một lần, khoảng 20 phút)
+## Cài máy chủ AI (một lần, khoảng 15 phút)
 
 Máy chủ chạy trên **Cloudflare Workers**, mã nguồn trong [`ai/worker/`](worker/). Đẩy lên bằng GitHub
 Actions: sửa gì trong `ai/worker/` rồi `git push` là máy chủ tự cập nhật — **không phải dán tay code
 vào đâu nữa**, và key không bao giờ nằm trong repo.
 
-Các bước cài lần đầu (tạo cơ sở dữ liệu D1, lấy API token, cất key, nối bot Telegram, nối Brevo để gửi
-email) viết đầy đủ trong **[ai/worker/README.md](worker/README.md)**.
+Các bước cài lần đầu viết đầy đủ, từng cú bấm, trong **[ai/worker/README.md](worker/README.md)**:
+tạo tài khoản Cloudflare → lấy API token → dán 2 secret vào GitHub → bấm chạy workflow (cơ sở dữ liệu
+D1 workflow **tự tạo**, không phải lập tay) → cất key Gemini / token bot / Brevo vào Cloudflare.
 
 Xong bước cuối, dán địa chỉ `https://elevato-ai.<tài-khoản>.workers.dev` vào `ai/js/config.js`
 (`API = '…'`). Trước bước đó trang hiện "đang được cài đặt" và chưa cho đăng nhập.

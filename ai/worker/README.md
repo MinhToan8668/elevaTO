@@ -17,89 +17,142 @@ Cloudflare — không ai phải gửi file có key cho ai nữa.
 
 ---
 
-## Cài đặt lần đầu (làm một lần, khoảng 20 phút)
+## Cài đặt lần đầu
 
-### 1. Tài khoản Cloudflare
+Làm một lần, khoảng 15 phút. Không phải cài gì vào máy, làm hết trên trình duyệt.
 
-Đăng ký miễn phí ở [dash.cloudflare.com](https://dash.cloudflare.com). Vào trang chủ, bên phải
-có **Account ID** — chép lại, lát nữa dùng.
+### 1. Tài khoản Cloudflare và Account ID
 
-### 2. Tạo cơ sở dữ liệu D1
+Đăng ký miễn phí ở **[dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)**
+(email + mật khẩu, không cần thẻ). Xác minh email rồi đăng nhập.
 
-Trong Cloudflare: **Storage & Databases → D1 → Create database**, đặt tên đúng là **`elevato-ai`**.
-Tạo xong, trang chi tiết có **Database ID** — chép và dán vào `ai/worker/wrangler.toml`,
-thay chỗ `DAN_DATABASE_ID_VAO_DAY`, rồi commit.
+Lấy **Account ID**: vào trang bất kỳ trong dashboard, nhìn thanh địa chỉ:
 
-> Database ID không phải thứ bí mật (phải có token mới dùng được), nên để trong repo không sao.
+```
+https://dash.cloudflare.com/ab12cd34ef56.../workers
+                             ^^^^^^^^^^^^^^^ đây là Account ID
+```
 
-### 3. Tạo API token cho GitHub
+Chuỗi 32 ký tự ngay sau `dash.cloudflare.com/` chính là nó. Chép ra để lát dán.
 
-**My Profile → API Tokens → Create Token → dùng mẫu "Edit Cloudflare Workers"**.
-Trong phần Permissions, bấm **+ Add more** và thêm **Account → D1 → Edit**. Tạo xong chép token
-(chỉ hiện một lần).
+### 2. Tạo API token cho GitHub
 
-Vào GitHub: **Settings → Secrets and variables → Actions → New repository secret**, thêm hai cái:
+1. Góc trên phải → ảnh đại diện → **My Profile** → **API Tokens**
+   (hoặc vào thẳng [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)).
+2. **Create Token**.
+3. Tìm dòng **Edit Cloudflare Workers** → bấm **Use template**.
+4. Màn hình Permissions hiện sẵn vài dòng. Bấm **+ Add more** rồi chọn:
+   **Account** · **D1** · **Edit**
+   *(thiếu dòng này thì workflow không tạo được cơ sở dữ liệu)*
+5. Phần **Account Resources**: chọn **Include** · tài khoản của bạn.
+   Phần **Zone Resources** cứ để nguyên mặc định.
+6. **Continue to summary** → **Create Token**.
+7. Màn hình cuối hiện token — **chép ngay**, đóng trang là không xem lại được nữa.
 
-| Tên | Giá trị |
+### 3. Dán hai secret vào GitHub
+
+Mở repo trên GitHub → **Settings** → **Secrets and variables** → **Actions** →
+**New repository secret**. Thêm hai cái:
+
+| Name | Secret |
 |---|---|
-| `CLOUDFLARE_API_TOKEN` | token vừa tạo |
+| `CLOUDFLARE_API_TOKEN` | token vừa chép ở bước 2 |
 | `CLOUDFLARE_ACCOUNT_ID` | Account ID ở bước 1 |
 
-### 4. Đẩy lần đầu
+> Secret của GitHub không ai xem lại được, kể cả bạn — quên thì tạo token mới rồi ghi đè.
 
-Push bất kỳ thay đổi nào trong `ai/worker/` (hoặc vào tab **Actions** của repo, chọn
-*Máy chủ AI (Cloudflare Workers)* → **Run workflow**). Xong sẽ có địa chỉ dạng:
+### 4. Bấm chạy lần đầu
+
+Repo trên GitHub → tab **Actions** → chọn **Máy chủ AI (Cloudflare Workers)** ở cột trái →
+**Run workflow** → **Run workflow**.
+
+Khoảng một phút sau, ba bước hiện dấu tích xanh:
+
+```
+✔ Chuẩn bị cơ sở dữ liệu D1     ← tự tạo database "elevato-ai", không phải lập tay
+✔ Dựng bảng D1                  ← tạo các bảng tài khoản, phiên, bộ đếm
+✔ Triển khai Worker             ← đẩy code lên
+```
+
+Bấm vào bước **Triển khai Worker** để xem địa chỉ máy chủ ở dòng cuối:
 
 ```
 https://elevato-ai.<tên-tài-khoản>.workers.dev
 ```
 
-Mở bằng trình duyệt, thấy `{"ok":true,"service":"elevaTO AI",...}` là máy chủ đã sống
-(chưa cài key nên chưa trích xuất được — bước sau).
+Mở địa chỉ đó bằng trình duyệt. Thấy `{"ok":true,"service":"elevaTO AI",...}` là máy chủ đã sống.
+(Chưa cài key nên chưa trích xuất được — bước sau.)
 
-### 5. Cất các giá trị bí mật
+### 5. Cất key và token vào Cloudflare
 
-Cloudflare: **Workers & Pages → elevato-ai → Settings → Variables and Secrets → Add**,
-chọn loại **Secret** cho từng cái:
+Dashboard Cloudflare → **Workers & Pages** → trong **Overview** bấm **elevato-ai** →
+**Settings** → mục **Variables and Secrets** → **Add**.
 
-| Tên | Là gì | Lấy ở đâu |
+Mỗi dòng dưới đây là một lần bấm **Add**, chọn **Type: Secret**, điền **Variable name** và **Value**:
+
+| Variable name | Value | Lấy ở đâu |
 |---|---|---|
-| `GEMINI_KEYS` | key Gemini, nhiều key cách nhau dấu phẩy | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `TG_TOKEN` | token bot Telegram | nhắn [@BotFather](https://t.me/BotFather) → `/newbot` |
-| `TG_ADMIN` | chat ID của bạn (nhiều người: cách nhau dấu phẩy) | nhắn [@userinfobot](https://t.me/userinfobot) |
-| `TG_SECRET` | chuỗi ngẫu nhiên tự nghĩ (20+ ký tự) | để Telegram chứng minh tin là thật |
+| `GEMINI_KEYS` | key Gemini (nhiều key cách nhau dấu phẩy) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → **Create API key** |
+| `TG_TOKEN` | token bot | Telegram → [@BotFather](https://t.me/BotFather) → `/newbot` → đặt tên → nhận token |
+| `TG_ADMIN` | chat ID của bạn | Telegram → [@userinfobot](https://t.me/userinfobot) → bấm **Start** → nó đọc số Id |
+| `TG_SECRET` | chuỗi ngẫu nhiên tự nghĩ, 20+ ký tự | gõ bừa cũng được, chỉ cần dài và không đoán ra |
 | `BREVO_KEY` | API key gửi thư | bước 6 |
 | `MAIL_TU` | địa chỉ gửi thư đã xác minh | bước 6 |
 
-Nhiều key Gemini thì tốt hơn một: hết hạn mức key này, máy chủ tự chuyển key khác.
+Điền xong hết, bấm **Deploy** ở cuối trang để các secret có hiệu lực.
 
-Cất xong, mở lại địa chỉ máy chủ một lần — bot sẽ tự nối webhook và nhắn cho bạn
-"✅ Bot elevaTO AI BCTC đã kết nối". Nhớ bấm **Start** với bot trước.
+> Nhiều key Gemini thì tốt hơn một: hết hạn mức key này, máy chủ tự chuyển key khác. Cứ tạo
+> 2–3 key trong AI Studio rồi dán cả vào một dòng, cách nhau dấu phẩy.
+
+**Nhớ mở Telegram bấm Start với bot của bạn** — bot không nhắn được cho người chưa Start.
+Rồi mở lại địa chỉ máy chủ một lần: bot sẽ tự nối webhook và nhắn
+"✅ Bot elevaTO AI BCTC đã kết nối". Gõ `/help` xem các lệnh.
 
 ### 6. Gửi email (Brevo)
 
 Workers không tự gửi được thư, nên mã đặt lại mật khẩu đi qua [Brevo](https://www.brevo.com)
-(miễn phí 300 thư/ngày, **không cần tên miền riêng**):
+— miễn phí 300 thư/ngày và **không cần tên miền riêng**:
 
-1. Đăng ký, vào **Senders, Domains & Dedicated IPs → Senders → Add a sender**, điền
-   `minhtoantowork@gmail.com`. Brevo gửi thư xác minh — bấm vào là xong.
-2. **SMTP & API → API Keys → Generate a new API key**.
-3. Cất `BREVO_KEY` = key đó, `MAIL_TU` = địa chỉ vừa xác minh (bước 5).
+1. Đăng ký ở [brevo.com](https://www.brevo.com) (chọn gói **Free**).
+2. Menu trái → **Senders, Domains & Dedicated IPs** → tab **Senders** → **Add a sender**.
+   Điền tên hiển thị và email `minhtoantowork@gmail.com`. Brevo gửi thư xác minh về hòm đó —
+   bấm vào link trong thư là xong.
+3. Góc trên phải → tên tài khoản → **SMTP & API** → tab **API Keys** →
+   **Generate a new API key** → đặt tên → chép key.
+4. Quay lại bước 5, cất `BREVO_KEY` = key vừa chép, `MAIL_TU` = `minhtoantowork@gmail.com`.
 
 Chưa cài Brevo thì mọi thứ khác vẫn chạy, chỉ riêng "quên mật khẩu" là không gửi được thư —
-lúc đó bot sẽ nhắn báo cho bạn và bạn cấp mật khẩu mới bằng lệnh `/mkmoi`.
+lúc đó bot nhắn báo cho bạn và bạn cấp mật khẩu mới bằng lệnh `/mkmoi`.
 
 ### 7. Trỏ trang web sang máy chủ mới
 
-Sửa `ai/js/config.js`:
+Sửa `ai/js/config.js`, thay dòng cuối bằng địa chỉ ở bước 4:
 
 ```js
 export const API = 'https://elevato-ai.<tên-tài-khoản>.workers.dev';
 ```
 
-Commit, push. Xong.
+Commit, push. Xong — trang đã chạy trên máy chủ mới.
+
+### 8. Tự cho mình quyền giảng viên
+
+Mở trang, đăng ký một tài khoản. Bot nhắn báo có tài khoản mới kèm nút bấm — bấm
+**👨‍🏫 Giảng viên**, hoặc gõ `/giangvien <email của bạn>`.
 
 ---
+
+### Hỏng ở đâu thì xem gì
+
+| Hiện tượng | Nguyên nhân hay gặp |
+|---|---|
+| Actions đỏ ở bước **Chuẩn bị cơ sở dữ liệu D1** | token thiếu quyền **D1 Edit** (bước 2.4), hoặc Account ID sai |
+| Actions đỏ ở bước **Triển khai Worker** | token không phải mẫu **Edit Cloudflare Workers** |
+| Trang báo "đang được cài đặt" | chưa đổi địa chỉ trong `ai/js/config.js` (bước 7) |
+| Trích xuất báo `setup` | chưa cất `GEMINI_KEYS` (bước 5) |
+| Bot không nhắn gì | chưa bấm **Start** với bot, hoặc `TG_ADMIN` không phải số Id của bạn |
+| Quên mật khẩu không nhận được thư | chưa xác minh người gửi trên Brevo (bước 6.2) |
+
+Xem nhật ký máy chủ: **Workers & Pages → elevato-ai → Logs → Begin log stream**.
 
 ## Từ đây về sau
 
@@ -159,9 +212,11 @@ Các hạn mức miễn phí còn lại đều thừa thãi với quy mô này: 
 ```bash
 cd ai/worker
 npm install
-npx wrangler d1 execute elevato-ai --local --file=schema.sql
+npx wrangler d1 execute elevato-ai --local --file=schema.sql --yes
 npx wrangler dev
 ```
+
+Chạy ở máy dùng cơ sở dữ liệu riêng trong `.wrangler/`, không đụng tới dữ liệu thật.
 
 Bộ kiểm tra chạy bằng SQLite thật, không cần Cloudflare:
 
@@ -175,6 +230,7 @@ cd ai && npm test          # tests/worker*.test.js
 worker/
 ├── wrangler.toml      tên Worker, nối D1, các biến chỉnh được
 ├── schema.sql         bảng D1 (tài khoản, phiên, bộ đếm, cài đặt)
+├── tools/d1-id.mjs    tìm / tạo cơ sở dữ liệu D1 rồi điền id, chạy trong GitHub Actions
 └── src/
     ├── index.js       bộ định tuyến: một đường POST { action, … } + webhook Telegram
     ├── caidat.js      hằng số và trần
