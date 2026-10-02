@@ -20,6 +20,7 @@ Cloudflare — không ai phải gửi file có key cho ai nữa.
 ## Cài đặt lần đầu
 
 Làm một lần, khoảng 15 phút. Không phải cài gì vào máy, làm hết trên trình duyệt.
+Cơ sở dữ liệu D1 và địa chỉ máy chủ trong `config.js` đều do workflow tự lo.
 
 ### 1. Tài khoản Cloudflare và Account ID
 
@@ -124,20 +125,16 @@ Workers không tự gửi được thư, nên mã đặt lại mật khẩu đi 
 Chưa cài Brevo thì mọi thứ khác vẫn chạy, chỉ riêng "quên mật khẩu" là không gửi được thư —
 lúc đó bot nhắn báo cho bạn và bạn cấp mật khẩu mới bằng lệnh `/mkmoi`.
 
-### 7. Trỏ trang web sang máy chủ mới
+### 7. Tự cho mình quyền giảng viên
 
-Sửa `ai/js/config.js`, thay dòng cuối bằng địa chỉ ở bước 4:
+Trang web **tự được trỏ sang máy chủ mới**: ngay sau khi triển khai, workflow lấy địa chỉ
+workers.dev thật rồi sửa và commit vào `ai/js/config.js` giúp bạn. Chờ GitHub Pages dựng lại
+(khoảng một phút) rồi mở trang.
 
-```js
-export const API = 'https://elevato-ai.<tên-tài-khoản>.workers.dev';
-```
-
-Commit, push. Xong — trang đã chạy trên máy chủ mới.
-
-### 8. Tự cho mình quyền giảng viên
-
-Mở trang, đăng ký một tài khoản. Bot nhắn báo có tài khoản mới kèm nút bấm — bấm
+Đăng ký một tài khoản trên trang. Bot nhắn báo có tài khoản mới kèm nút bấm — bấm
 **👨‍🏫 Giảng viên**, hoặc gõ `/giangvien <email của bạn>`.
+
+Xong. Từ đây sửa gì trong `ai/worker/` chỉ cần push.
 
 ---
 
@@ -147,7 +144,7 @@ Mở trang, đăng ký một tài khoản. Bot nhắn báo có tài khoản mớ
 |---|---|
 | Actions đỏ ở bước **Chuẩn bị cơ sở dữ liệu D1** | token thiếu quyền **D1 Edit** (bước 2.4), hoặc Account ID sai |
 | Actions đỏ ở bước **Triển khai Worker** | token không phải mẫu **Edit Cloudflare Workers** |
-| Trang báo "đang được cài đặt" | chưa đổi địa chỉ trong `ai/js/config.js` (bước 7) |
+| Trang báo "đang được cài đặt" | GitHub Pages chưa dựng lại xong, hoặc workflow không đẩy được commit vào `ai/js/config.js` (xem cảnh báo ở cuối lượt chạy) |
 | Trích xuất báo `setup` | chưa cất `GEMINI_KEYS` (bước 5) |
 | Bot không nhắn gì | chưa bấm **Start** với bot, hoặc `TG_ADMIN` không phải số Id của bạn |
 | Quên mật khẩu không nhận được thư | chưa xác minh người gửi trên Brevo (bước 6.2) |
@@ -230,7 +227,9 @@ cd ai && npm test          # tests/worker*.test.js
 worker/
 ├── wrangler.toml      tên Worker, nối D1, các biến chỉnh được
 ├── schema.sql         bảng D1 (tài khoản, phiên, bộ đếm, cài đặt)
-├── tools/d1-id.mjs    tìm / tạo cơ sở dữ liệu D1 rồi điền id, chạy trong GitHub Actions
+├── tools/
+│   ├── d1-id.mjs      tìm / tạo cơ sở dữ liệu D1 rồi điền id, chạy trong GitHub Actions
+│   └── config-url.mjs điền địa chỉ vừa triển khai vào ai/js/config.js
 └── src/
     ├── index.js       bộ định tuyến: một đường POST { action, … } + webhook Telegram
     ├── caidat.js      hằng số và trần

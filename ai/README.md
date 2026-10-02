@@ -159,13 +159,12 @@ Actions: sửa gì trong `ai/worker/` rồi `git push` là máy chủ tự cập
 vào đâu nữa**, và key không bao giờ nằm trong repo.
 
 Các bước cài lần đầu viết đầy đủ, từng cú bấm, trong **[ai/worker/README.md](worker/README.md)**:
-tạo tài khoản Cloudflare → lấy API token → dán 2 secret vào GitHub → bấm chạy workflow (cơ sở dữ liệu
-D1 workflow **tự tạo**, không phải lập tay) → cất key Gemini / token bot / Brevo vào Cloudflare.
+tạo tài khoản Cloudflare → lấy API token → dán 2 secret vào GitHub → bấm chạy workflow → cất key
+Gemini / token bot / Brevo vào Cloudflare. Chỉ có vậy: **cơ sở dữ liệu D1 workflow tự tạo**, và
+**địa chỉ máy chủ workflow tự điền vào `ai/js/config.js`** sau mỗi lần triển khai.
 
-Xong bước cuối, dán địa chỉ `https://elevato-ai.<tài-khoản>.workers.dev` vào `ai/js/config.js`
-(`API = '…'`). Trước bước đó trang hiện "đang được cài đặt" và chưa cho đăng nhập.
-
-Tự đăng ký một tài khoản trên trang, rồi nhắn bot `/giangvien <email của bạn>` để thành giảng viên.
+Cuối cùng tự đăng ký một tài khoản trên trang, rồi nhắn bot `/giangvien <email của bạn>` để thành
+giảng viên.
 
 > `ai/backend/` là bản Apps Script cũ, giữ lại để còn chỗ quay về trong lúc chuyển. Bản mới chạy ổn thì dọn đi.
 
