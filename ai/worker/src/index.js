@@ -12,7 +12,7 @@ import { PHIEN_BAN, so } from './caidat.js';
 import { boPhien, dangKy, dangNhap, hoSo, loi, ok, tkTuToken } from './auth.js';
 import { don, giay, ghiCaiDat, docCaiDat } from './db.js';
 import { goiGemini } from './gemini.js';
-import { baoQuanTri, baoTaiKhoanMoi, ngoWebhook, nhanTin, taoBao } from './telegram.js';
+import { baoQuanTri, baoTaiKhoanMoi, ngoWebhook, nhanTin, taoBao, tinhTrang } from './telegram.js';
 import { quenMK, datLaiMKBangMa } from './quenmk.js';
 import { thongTinUngHo } from './ungho.js';
 
@@ -32,7 +32,9 @@ export default {
     if (url.pathname === '/tg' && req.method === 'POST') return tgWebhook(req, env, ctx);
     if (req.method === 'GET') {
       ctx.waitUntil(nen(env, url));
-      return json({ ok: true, service: 'elevaTO AI', ban: PHIEN_BAN });
+      // `cai` chỉ nói phần nào ĐÃ cài, không bao giờ lộ giá trị — để lúc cài biết ngay thiếu gì
+      // (bot im lặng vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò).
+      return json({ ok: true, service: 'elevaTO AI', ban: PHIEN_BAN, cai: tinhTrang(env) });
     }
     if (req.method !== 'POST') return json(loi('bad', 'Không rõ yêu cầu'), 405);
     ctx.waitUntil(nen(env, url));
