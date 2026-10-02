@@ -261,7 +261,9 @@ img{display:block;max-width:100%}
 /* chân trang: logo chữ + khẩu hiệu */
 .foot{display:flex;align-items:center;justify-content:center;gap:12px;padding:20px 0 6px}
 .foot-brand{display:block;border-radius:6px}
-.wm{height:22px;width:auto}
+.wm{height:22px;width:auto;filter:drop-shadow(0 1px 1px rgb(0 0 0 / .14)) drop-shadow(0 3px 10px rgb(0 0 0 / .14))}
+:root[data-theme="dark"] .wm{filter:drop-shadow(0 1px 1px rgb(0 0 0 / .5)) drop-shadow(0 3px 12px rgb(0 0 0 / .45))}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wm{filter:drop-shadow(0 1px 1px rgb(0 0 0 / .5)) drop-shadow(0 3px 12px rgb(0 0 0 / .45))}}
 .foot-sep{width:1.5px;height:18px;border-radius:2px;background:currentColor;color:var(--strong);opacity:.3}
 .foot-tag{font-family:var(--display);font-size:13px;font-weight:800;letter-spacing:.01em;color:#0a0f0d;
   text-shadow:0 1px 1px rgb(0 0 0 / .14),0 3px 12px rgb(0 0 0 / .16)}
