@@ -169,7 +169,7 @@ test('trình chỉnh sửa: chọn icon 3D có sẵn và tìm icon Iconify cho m
   await p.goto(base + '/links/edit.html');
   await p.click('.lc-toggle:has-text("AI đọc BCTC")');
   await p.click('.lc.open button:has-text("Icon 3D")');
-  await p.click('.lc.open .im-gallery button[title="Tên lửa"]');
+  await p.click('.lc.open .im-gallery button.ico[title="Tên lửa"]');
   const frame = p.frames().find((f) => f.url().includes('preview'));
   await frame.waitForSelector('.tile .chip.ico img[src="art/3d/rocket.webp"]');
 
@@ -199,8 +199,8 @@ test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới
   await p.waitForSelector('.lc');
   const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
   assert.equal(draft.profile.status, 'Minhtoantowork@gmail.com');
-  assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/3d/chart-increasing.webp');
-  assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/3d/robot.webp');
+  assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/glass/course.svg');
+  assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/glass/ai.svg');
   assert.equal(draft.theme.blur, 22);
   await p.context().close();
 });
