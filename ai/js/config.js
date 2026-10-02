@@ -3,4 +3,4 @@
 // DÒNG DƯỚI DO MÁY ĐIỀN: sau mỗi lần triển khai, GitHub Actions lấy địa chỉ workers.dev thật
 // rồi tự sửa và commit vào đây (xem .github/workflows/worker.yml). Không phải chép tay.
 // Sửa tay cũng được — lần triển khai sau máy sẽ ghi đè bằng địa chỉ đang chạy thật.
-export const API = 'https://script.google.com/macros/s/AKfycbyfN0X-o0S0pNTXofTa1Tqy113V5TpgK-X4DXIVGLt9YVBgxEBsTgZog2G370HlWLw-/exec';
+export const API = 'https://elevato-ai.minhtoantowork.workers.dev';
