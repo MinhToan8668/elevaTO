@@ -79,25 +79,77 @@ export const MODEL_ROWS = [
  * @param opts.segmentMap { [tên mảng trong thuyết minh]: ô 0..4 }
  * @returns { byYear: {[year]: {[row]: {v, src}}}, warnings: string[] }
  */
+/**
+ * Năm nào thiếu thuyết minh nào. Gom lại rồi báo MỘT dòng kèm danh sách năm, thay vì một câu
+ * trống không: trích xuất thuyết minh cho năm mới nhất mà vẫn thấy "Chưa có thuyết minh…" thì
+ * người dùng tưởng cả lượt trích xuất hỏng.
+ */
+function gomThieu() {
+  const nam = { seg: [], fa: [], debt: [], equity: [], gw: [] };
+  return {
+    ghi: (loai, year) => nam[loai].push(year),
+    ra: (warn) => {
+      for (const [loai, ds] of Object.entries(nam)) {
+        if (ds.length) warn.add(t(`mw.thieu.${loai}`, { years: ds.join(', '), n: ds.length }));
+      }
+    },
+  };
+}
+
 export function buildModel(ds, opts = {}) {
   const warn = new Set();
+  const thieu = gomThieu();
   const byYear = {};
   const years = ds.periods.filter((p) => p.months === 12).sort((a, b) => a.year - b.year);
+  const fa = faMoiNam(ds, years);
+  const dauNam = [...fa].filter(([, x]) => x.dauNam).map(([y]) => y);
+  if (dauNam.length) warn.add(t('mw.faDauNam', { years: dauNam.join(', '), n: dauNam.length }));
   let prev = null;
   for (const p of years) {
     const vals = computeTotals(ds.values[p.id] || {});
     const notes = (ds.notes && ds.notes[p.id]) || {};
     const cells = {};
     fillStatements(cells, vals, warn);
-    fillSegments(cells, vals, notes, opts.segmentMap, warn, p.year);
-    fillFixedAssets(cells, vals, notes, warn, p.year);
-    fillDebt(cells, vals, notes, warn);
-    if (prev) fillEquity(cells, prev.cells, vals, notes, warn);
+    fillSegments(cells, vals, notes, opts.segmentMap, warn, thieu, p.year);
+    fillFixedAssets(cells, vals, notes, warn, thieu, p.year, fa.get(p.year));
+    fillDebt(cells, vals, notes, thieu, p.year);
+    if (prev) fillEquity(cells, prev.cells, vals, notes, warn, thieu, p.year);
     fillParams(cells, notes, warn, p.year);
     byYear[p.year] = cells;
     prev = { cells };
   }
+  thieu.ra(warn);
   return { byYear, warnings: [...warn] };
+}
+
+/**
+ * Thuyết minh TSCĐ dùng cho từng năm. Bảng biến động của năm sau in luôn SỐ ĐẦU NĂM — đó chính
+ * là số cuối năm trước — nên tải thuyết minh một năm là tách được nhóm TSCĐ cho cả năm liền trước,
+ * thay vì dồn hết vào "Nhà cửa".
+ * @returns Map<năm, { fa, dauNam }>  dauNam = true khi số lấy từ cột đầu năm của thuyết minh năm sau
+ */
+function faMoiNam(ds, years) {
+  const co = (x) => !!x && !!(x.tangible?.length || x.intangible?.length);
+  const cua = (p) => ((ds.notes && ds.notes[p.id]) || {}).fixedAssets;
+  const ra = new Map();
+  years.forEach((p, i) => {
+    if (co(cua(p))) { ra.set(p.year, { fa: cua(p), dauNam: false }); return; }
+    // Chỉ mượn được khi năm sau LIỀN KỀ: bộ dữ liệu có 2022 và 2024 thì cột đầu năm của thuyết
+    // minh 2024 là số cuối năm 2023, không phải 2022.
+    const ke = years[i + 1];
+    if (!ke || ke.year !== p.year + 1) return;
+    const sau = cua(ke);
+    if (co(sau) && moDau(sau)) ra.set(p.year, { fa: moDau(sau), dauNam: true });
+  });
+  return ra;
+}
+
+/** Cột "số đầu năm" của bảng biến động → thuyết minh của năm trước (chỉ có nguyên giá & hao mòn). */
+function moDau(fa) {
+  const lay = (ds) => (ds || []).filter((x) => Number.isFinite(x.costOpen))
+    .map((x) => ({ cls: x.cls, name: x.name, cost: x.costOpen, accDep: x.accDepOpen || 0, additions: 0, depreciation: 0 }));
+  const tangible = lay(fa.tangible), intangible = lay(fa.intangible);
+  return tangible.length || intangible.length ? { tangible, intangible } : null;
 }
 
 const put = (cells, row, v, src) => { if (Number.isFinite(v)) cells[row] = { v, src }; };
@@ -168,14 +220,14 @@ function fillStatements(cells, vals, warn) {
   }
 }
 
-function fillSegments(cells, vals, notes, segmentMap, warn, year) {
+function fillSegments(cells, vals, notes, segmentMap, warn, thieu, year) {
   const { g, has } = getter(vals);
   if (!has('IS:10')) return;
   const segs = Array.isArray(notes.segments) ? notes.segments.filter((s) => Number.isFinite(s.revenue)) : [];
   if (!segs.length) {
     put(cells, 132, g('IS:10') / M, 'uoc'); put(cells, 140, g('IS:20') / M, 'uoc');
     for (let i = 1; i < SEGMENT_SLOTS; i++) { put(cells, 132 + i, 0, 'uoc'); put(cells, 140 + i, 0, 'uoc'); }
-    warn.add(t('mw.noSegNote'));
+    thieu.ghi('seg', year);
     return;
   }
   const rev = Array(SEGMENT_SLOTS).fill(0), gp = Array(SEGMENT_SLOTS).fill(0);
@@ -195,12 +247,12 @@ function fillSegments(cells, vals, notes, segmentMap, warn, year) {
   gp.forEach((v, i) => put(cells, 140 + i, v / M, 'tm'));
 }
 
-function fillFixedAssets(cells, vals, notes, warn, year) {
+function fillFixedAssets(cells, vals, notes, warn, thieu, year, faNam) {
   const { g, has, cf } = getter(vals);
   if (!has('BS:222') && !has('BS:228') && !has('BS:220')) return;
   const cost54 = g('BS:222') + g('BS:225'), acc55 = g('BS:223') + g('BS:226');
   const cost57 = g('BS:228'), acc58 = g('BS:229');
-  const fa = notes.fixedAssets;
+  const fa = faNam ? faNam.fa : null;
   const zero = () => ({ cost: 0, accDep: 0, additions: 0, depreciation: 0 });
   const rows = Object.fromEntries(FA_CLASSES.map((c) => [c.cls, zero()]));
   let src = 'tm';
@@ -217,16 +269,21 @@ function fillFixedAssets(cells, vals, notes, warn, year) {
     if (Math.abs(cost54 - tangCost - lease) > Math.max(1e9, Math.abs(cost54) * 0.001) || Math.abs(cost57 - intCost) > Math.max(1e9, Math.abs(cost57) * 0.001)) {
       warn.add(t('mw.faGap', { year }));
     }
+    // Lấy từ cột ĐẦU NĂM của thuyết minh năm sau: có nguyên giá & hao mòn theo nhóm, nhưng không có
+    // phát sinh trong năm → chia capex và khấu hao của năm đó theo tỷ trọng nguyên giá, ghi là số ước tính.
+    if (faNam.dauNam) chiaTheoNguyenGia(rows, -cf('21'), -g('CF:02'));
   } else {
     src = 'uoc';
     rows.buildings = { cost: cost54, accDep: acc55, additions: -cf('21'), depreciation: -g('CF:02') };
     rows.software = { cost: cost57, accDep: acc58, additions: 0, depreciation: 0 };
-    warn.add(t('mw.noFaNote'));
+    thieu.ghi('fa', year);
   }
+  // Nguyên giá & hao mòn lấy từ thuyết minh; phát sinh trong năm ở bản "đầu năm" chỉ là ước tính.
+  const srcPS = faNam && faNam.dauNam ? 'uoc' : src;
   for (const c of FA_CLASSES) {
     const x = rows[c.cls];
     put(cells, c.row, x.cost / M, src); put(cells, c.row + 1, x.accDep / M, src);
-    put(cells, c.row + 2, x.additions / M, src); put(cells, c.row + 3, x.depreciation / M, src);
+    put(cells, c.row + 2, x.additions / M, srcPS); put(cells, c.row + 3, x.depreciation / M, srcPS);
   }
   const gw = notes.goodwill;
   if (gw && Number.isFinite(gw.cost)) {
@@ -235,7 +292,18 @@ function fillFixedAssets(cells, vals, notes, warn, year) {
   } else if (has('BS:279')) {
     put(cells, GOODWILL_ROW, g('BS:279') / M, 'uoc');
     for (let i = 1; i <= 3; i++) put(cells, GOODWILL_ROW + i, 0, 'uoc');
-    if (g('BS:279')) warn.add(t('mw.noGwNote'));
+    if (g('BS:279')) thieu.ghi('gw', year);
+  }
+}
+
+/** Chia một tổng (capex, khấu hao) cho các nhóm TSCĐ theo tỷ trọng nguyên giá. */
+function chiaTheoNguyenGia(rows, capex, khauHao) {
+  const tong = Object.values(rows).reduce((a, x) => a + Math.abs(x.cost), 0);
+  if (!tong) return;
+  for (const x of Object.values(rows)) {
+    const t = Math.abs(x.cost) / tong;
+    x.additions = capex * t;
+    x.depreciation = khauHao * t;
   }
 }
 
@@ -244,7 +312,7 @@ function add(t, x) {
 }
 const sumOf = (rows, kind, k) => FA_CLASSES.filter((c) => c.kind === kind).reduce((a, c) => a + rows[c.cls][k], 0);
 
-function fillDebt(cells, vals, notes, warn) {
+function fillDebt(cells, vals, notes, thieu, year) {
   const { cf, has } = getter(vals);
   const d = notes.debt;
   let proceeds;
@@ -257,7 +325,7 @@ function fillDebt(cells, vals, notes, warn) {
     put(cells, 208, cf('33') / M, 'lctt'); put(cells, 209, cf('34') / M, 'lctt');
     put(cells, 210, 0, 'lctt'); put(cells, 211, 0, 'lctt');
     proceeds = cf('33') + cf('34');
-    warn.add(t('mw.noDebtNote'));
+    thieu.ghi('debt', year);
   }
   if (Number.isFinite(cells._cfFinOther)) {
     put(cells, 123, (cells._cfFinOther - (proceeds || 0)) / M, 'bctc');
@@ -265,7 +333,7 @@ function fillDebt(cells, vals, notes, warn) {
   delete cells._cfFinOther;
 }
 
-function fillEquity(cells, prevCells, vals, notes, warn) {
+function fillEquity(cells, prevCells, vals, notes, warn, thieu, year) {
   const { g, has } = getter(vals);
   if (!has('BS:411') || !prevCells[85]) return;
   const d = (row, cur) => cur / M - (prevCells[row] ? prevCells[row].v : 0);
@@ -290,7 +358,7 @@ function fillEquity(cells, prevCells, vals, notes, warn) {
     const dFund = d(88, cells[88] ? cells[88].v * M : 0);      // quỹ ĐTPT + vốn khác (dòng 88)
     put(cells, 200, pos(dFund), src); put(cells, 201, neg(dFund), src);
     put(cells, 202, (has('CF:36') ? g('CF:36') : 0) / M, has('CF:36') ? 'lctt' : 'uoc');
-    warn.add(t('mw.noEquityNote'));
+    thieu.ghi('equity', year);
   }
   // LNCPP: CHECK 206 đòi  LNCPP đầu kỳ + LN công ty mẹ + (202 + 203 + 204) = LNCPP cuối kỳ.
   // Lấy tăng/giảm khác từ thuyết minh (nếu có), phần còn lệch dồn vào 203 (dương) hoặc 204 (âm).

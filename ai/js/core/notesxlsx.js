@@ -10,8 +10,9 @@ import { S, DV, cellStr, row, sheetXml, soThuong, tinhSanO, ghiO, periodTitle } 
 import { t } from '../i18n.js';
 
 const HEAD_ROW = 4;
-const FA_CLS = ['buildings', 'machinery', 'transport', 'office', 'other', 'land', 'software'];
-const FA_DONG = [['cost', 'cost'], ['acc', 'accDep'], ['add', 'additions'], ['dep', 'depreciation']];
+// Bày đúng thứ tự bảng biến động TSCĐ in trong BCTC: đầu năm → tăng → cuối năm, rồi hao mòn.
+const FA_DONG = [['costOpen', 'costOpen'], ['add', 'additions'], ['cost', 'cost'],
+  ['accOpen', 'accDepOpen'], ['dep', 'depreciation'], ['acc', 'accDep']];
 const GW_DONG = ['cost', 'accAmort', 'additions', 'amortization'];
 const DEBT_DONG = ['stProceeds', 'stRepay', 'ltProceeds', 'ltRepay'];
 const EQ_DONG = ['capIssued', 'capBonus', 'capEsop', 'capStockDiv', 'capDecrease', 'premiumInc', 'premiumDec',
@@ -111,15 +112,20 @@ function khoiMang(ds) {
   ];
 }
 
+/**
+ * TSCĐ bày theo ĐÚNG CÁC DÒNG IN TRONG THUYẾT MINH, không ép về 7 nhóm của model: BCTC nào có
+ * nhóm lạ ("Vườn cây lâu năm", "Súc vật làm việc"…) thì vẫn hiện nguyên tên, kèm nhóm model nó
+ * được xếp vào để đối chiếu. Riêng form chi tiết elevaTO vẫn giữ nhãn của model để dán cho khớp dòng.
+ */
 function khoiTSCD(ds) {
-  const co = (cls, kind) => ds.periods.some((p) => lopTSCD((ds.notes && ds.notes[p.id]) || {}, cls, kind));
   const nhom = [];
-  for (const cls of FA_CLS) {
-    const kind = ['land', 'software'].includes(cls) ? 'intangible' : 'tangible';
-    if (!co(cls, kind)) continue;
+  for (const { kind, name, cls } of nhomTSCD(ds)) {
+    // Chỉ chú thêm nhóm của model khi tên in trên BCTC khác nó, khỏi lặp "Nhà cửa (HH · Nhà cửa)".
+    const mau = t(`tm.fa.${cls}`);
+    const phu = mau.toLowerCase() === name.toLowerCase() ? t(`tm.fa.${kind}`) : `${t(`tm.fa.${kind}`)} · ${mau}`;
     nhom.push({
-      ten: `${t(`tm.fa.${cls}`)} (${t(`tm.fa.${kind}`)})`,
-      rows: FA_DONG.map(([k, f]) => ({ label: t(`tm.fa.${k}`), get: (no) => lopTSCD(no, cls, kind)?.[f] })),
+      ten: `${name} (${phu})`,
+      rows: FA_DONG.map(([k, f]) => ({ label: t(`tm.fa.${k}`), get: (no) => lopTSCD(no, kind, name)?.[f] })),
     });
   }
   const coGW = ds.periods.some((p) => (ds.notes && ds.notes[p.id]?.goodwill));
@@ -127,7 +133,22 @@ function khoiTSCD(ds) {
   return nhom;
 }
 
-const lopTSCD = (notes, cls, kind) => (notes.fixedAssets?.[kind] || []).find((x) => x.cls === cls);
+/** Các dòng TSCĐ có trong thuyết minh của bất kỳ kỳ nào, giữ thứ tự in. */
+function nhomTSCD(ds) {
+  const ra = new Map();
+  for (const p of ds.periods) {
+    const fa = (ds.notes && ds.notes[p.id]?.fixedAssets) || {};
+    for (const kind of ['tangible', 'intangible']) {
+      for (const x of fa[kind] || []) {
+        const khoa = `${kind}|${x.name}`;
+        if (!ra.has(khoa)) ra.set(khoa, { kind, name: x.name || t(`tm.fa.${x.cls}`), cls: x.cls });
+      }
+    }
+  }
+  return [...ra.values()];
+}
+
+const lopTSCD = (notes, kind, name) => (notes.fixedAssets?.[kind] || []).find((x) => x.name === name);
 
 function khoiVonChu(ds) {
   const co = (f) => ds.periods.some((p) => Number.isFinite((ds.notes && ds.notes[p.id]?.equity)?.[f]));

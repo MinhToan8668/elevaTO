@@ -225,10 +225,17 @@ export function noteToModel(kind, ai) {
   const n = (x) => { const v = parseVN(x); return v === null ? 0 : v * unit; };
   const opt = (x) => { const v = parseVN(x); return v === null ? undefined : v * unit; };
   if (kind === 'fixedAssets') {
-    const row = (x, cls) => ({
-      cls, name: String(x.ten || ''), cost: n(x.nguyen_gia_cuoi), accDep: neg(n(x.hao_mon_cuoi)),
-      additions: n(x.mua) + n(x.xdcb) + n(x.tang_khac) || 0, depreciation: neg(n(x.khau_hao)),
-    });
+    // Giữ cả SỐ ĐẦU NĂM: đó chính là số cuối năm TRƯỚC, nên một bảng thuyết minh đủ tách nhóm
+    // TSCĐ cho hai năm liền nhau (xem faMoiNam trong targets/model.js).
+    const row = (x, cls) => {
+      const r = {
+        cls, name: String(x.ten || ''), cost: n(x.nguyen_gia_cuoi), accDep: neg(n(x.hao_mon_cuoi)),
+        additions: n(x.mua) + n(x.xdcb) + n(x.tang_khac) || 0, depreciation: neg(n(x.khau_hao)),
+      };
+      const mo = opt(x.nguyen_gia_dau);
+      if (mo !== undefined) { r.costOpen = mo; r.accDepOpen = neg(n(x.hao_mon_dau)); }
+      return r;
+    };
     return {
       tangible: (ai.tangible || []).map((x) => row(x, TANGIBLE.includes(x.nhom) ? x.nhom : guessTangible(x.ten))),
       intangible: (ai.intangible || []).map((x) => row(x, guessIntangible(x.ten, x.nhom))),
