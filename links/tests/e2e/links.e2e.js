@@ -408,6 +408,21 @@ test('ADMIN_KEY không bật "nhớ trên máy": chỉ nằm trong tab này, đ�
   await p.context().close();
 });
 
+test('khung xem trước luôn nạp index.html mới nhất, không lấy bản cũ trong bộ nhớ đệm', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.lc');
+  const src = await p.getAttribute('#frame', 'src');
+  assert.match(src, /^index\.html\?preview&t=\d+$/, 'thiếu dấu thời gian → sửa index.html xong khung vẫn vẽ bản cũ');
+
+  // Khung phải vẽ đúng bản index.html hiện tại: thanh đầu trang là một viên kính chung, không phải hai nút rời.
+  const frame = p.frames().find((f) => f.url().includes('preview'));
+  assert.equal(await frame.evaluate(() => document.querySelector('.bar-r').className), 'bar-r lg');
+  assert.equal(await frame.evaluate(() => document.querySelectorAll('.bar-r .bar-div').length), 1);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 test('đổi sáng / tối: lưu đúng dạng mà mọi trang elevaTO đọc được, khung xem trước đổi theo', async () => {
   const p = await page({ viewport: { width: 1400, height: 900 }, colorScheme: 'light' });
   await p.goto(base + '/links/edit.html');

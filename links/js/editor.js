@@ -32,6 +32,15 @@ export function upgradeDraft(saved, publishedText) {
   };
 }
 
+/**
+ * Khung xem trước nạp index.html của chính trang công khai. Máy chủ cho HTML sống trong bộ nhớ đệm
+ * khá lâu (GitHub Pages: 10 phút), nên ngay sau khi đổi index.html thì khung này vẫn vẽ theo bản cũ —
+ * chủ trang tưởng code hỏng. Gắn dấu thời gian để mỗi lần mở trang sửa là lấy bản mới nhất.
+ */
+function loadPreview() {
+  $('#frame').src = 'index.html?preview&t=' + Date.now();
+}
+
 function bindChrome() {
   $('#themeBtn .i-sun').outerHTML = svg('sun', 'i-sun');
   $('#themeBtn .i-moon').outerHTML = svg('moon', 'i-moon');
@@ -59,6 +68,7 @@ function bindChrome() {
 
 async function boot() {
   bindChrome();
+  loadPreview();
   const ok = await loadPublished();
   const saved = store.get(DRAFT_KEY);
   if (!ok) toast(saved ? 'Không tải được bản trên web — đang sửa tiếp bản nháp trên máy.' : 'Không tải được data.json. Tải lại trang để thử lại.');

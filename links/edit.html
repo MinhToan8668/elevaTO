@@ -44,7 +44,9 @@
   <main class="ed-form" id="form" aria-label="Nội dung trang"></main>
   <aside class="ed-prev" id="preview" aria-label="Xem trước">
     <div class="phone">
-      <iframe id="frame" title="Xem trước trang link" src="index.html?preview"></iframe>
+      <!-- src đặt trong editor.js kèm dấu thời gian: khung này phải luôn là bản index.html mới nhất,
+           không thì sửa xong trang công khai mà khung vẫn vẽ theo bản cũ còn trong bộ nhớ đệm. -->
+      <iframe id="frame" title="Xem trước trang link"></iframe>
     </div>
     <p class="prev-note" id="prevNote" role="status">Xem trước dùng bản nháp.</p>
   </aside>
