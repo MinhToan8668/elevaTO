@@ -37,11 +37,11 @@ export function publishPanel() {
     { type: 'password', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', wide: true });
   labelFor(keyInput, 'adminKeyInput');
   const rememberKey = toggle('Nhớ key trên máy này', Boolean(store.get(ADMINKEY_KEY)), (v) => saveKey(getKey(), v),
-    'Tắt (khuyên dùng): key mất khi đóng tab. Key này cũng xem được danh sách đăng ký — chỉ bật trên máy riêng.');
+    'Tắt (khuyên dùng): key mất khi đóng tab. Ai có key cũng sửa được trang link — chỉ bật trên máy riêng.');
   const st = h('p', { class: 'gh-status', id: 'keyStatus', role: 'status' });
-  return panel('Đăng lên web', 'Lưu thẳng lên máy chủ elevaTO — trang đổi ngay', !getKey() && !getToken(),
+  return panel('Đăng lên web', 'Lưu thẳng lên máy chủ elevaTO (Cloudflare) — trang đổi ngay', !getKey() && !getToken(),
     h('ol', { class: 'steps' },
-      h('li', {}, 'Mở bot Telegram quản trị elevaTO, gõ ', h('b', {}, '/linkkey'), '.'),
+      h('li', {}, 'Mở bot Telegram ', h('b', {}, 'elevaTO AI BCTC'), ' (bot của máy chủ Cloudflare), gõ ', h('b', {}, '/linkkey'), '.'),
       h('li', {}, 'Copy key bot gửi, dán vào ô dưới, bấm ', h('b', {}, 'Kiểm tra key'), '.'),
       h('li', {}, 'Bấm ', h('b', {}, 'Đăng lên web'), ' ở góc trên — trang link cập nhật ngay, không cần token GitHub.')),
     keyInput, rememberKey,
@@ -60,7 +60,7 @@ function labelFor(fld, id) {
 async function testKey() {
   const st = $('#keyStatus');
   const key = getKey();
-  if (!key) { setStatus(st, 'Chưa có key — gõ /linkkey trong bot Telegram để lấy.', 'bad'); return; }
+  if (!key) { setStatus(st, 'Chưa có key — gõ /linkkey trong bot Telegram “elevaTO AI BCTC” để lấy.', 'bad'); return; }
   setStatus(st, 'Đang kiểm tra…');
   try {
     await checkKey(key);
@@ -142,7 +142,7 @@ export async function doPublish() {
   const token = getToken();
   if (!key && (!token || tokenProblem(token))) {
     if (token) { toast(tokenProblem(token)); openPublishPanel('tokenInput'); return; }
-    toast('Dán ADMIN_KEY ở mục "Đăng lên web" trước — lấy key bằng lệnh /linkkey trong bot Telegram.');
+    toast('Dán ADMIN_KEY ở mục "Đăng lên web" trước — lấy key bằng lệnh /linkkey trong bot Telegram “elevaTO AI BCTC”.');
     openPublishPanel('adminKeyInput');
     return;
   }

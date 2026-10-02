@@ -37,26 +37,31 @@ Trang gom mọi thứ của elevaTO vào một màn hình, để gắn vào bio 
 Mở `edit.html`. Mọi thay đổi hiện ngay trong khung điện thoại bên phải và được lưu nháp trên máy.
 Bấm **Đăng lên web** để áp dụng.
 
-### Cách chính: máy chủ elevaTO (không cần token GitHub)
+### Cách chính: máy chủ elevaTO trên Cloudflare Workers (không cần token GitHub)
 
-Trình chỉnh sửa lưu nội dung lên **backend Apps Script của trang khoá học** (`backend/Code.gs`, chung với
-bot Telegram). Trang công khai đọc nội dung từ đó — bấm Đăng là trang **đổi ngay**. `data.json` trong repo
-chỉ còn là bản dự phòng khi máy chủ chưa lưu gì hoặc không trả lời.
+Trình chỉnh sửa lưu nội dung lên **Worker** (`ai/worker/src/links.js`, chung máy chủ với công cụ AI).
+Trang công khai đọc từ đó — bấm Đăng là trang **đổi ngay**. `data.json` trong repo là bản dự phòng khi
+máy chủ chưa lưu gì hoặc không trả lời.
 
-1. Nhắn bot Telegram quản trị lệnh **`/linkkey`** → bot gửi ADMIN_KEY.
+1. Nhắn bot Telegram **elevaTO AI BCTC** lệnh **`/linkkey`** → bot gửi ADMIN_KEY (lần đầu hỏi thì tự sinh).
 2. Trình chỉnh sửa → mục **Đăng lên web** → dán key → **Kiểm tra key** → bấm **Đăng lên web**.
 
-Nội dung nằm trong sheet ẩn `LinksData` của Google Sheet đăng ký (chia nhiều ô vì mỗi ô tối đa 50.000 ký tự).
+Đúng bot nào: `/linkkey` ở bot **elevaTO AI BCTC** (máy chủ Cloudflare). Bot đăng ký khoá học là bot khác,
+key của nó không mở được trang link.
+
+Nội dung nằm trong bảng `cai_dat` của cơ sở dữ liệu D1, cắt thành nhiều dòng vì D1 giới hạn mỗi ô 1MB.
 Gõ sai key quá 20 lần trong 15 phút thì máy chủ tạm khoá việc lưu.
 
-**Cập nhật Apps Script (làm một lần, sau khi có bản `backend/Code.gs` mới):**
+Máy chủ tự cập nhật: đổi gì trong `ai/worker/` rồi đẩy lên `main` là GitHub Actions triển khai lại và tự
+điền địa chỉ mới vào `links/js/backend.js` cùng khai báo `connect-src` trong CSP của hai trang — không phải
+chép tay (xem `ai/worker/tools/config-url.mjs`).
 
-1. Mở Google Sheet **elevaTO Đăng ký** → **Tiện ích mở rộng → Apps Script**.
-2. Mở file `Code.gs`, chọn hết (Ctrl+A), dán toàn bộ nội dung `backend/Code.gs` mới, bấm 💾.
-   Token bot và danh sách admin nằm trong Script Properties nên không mất.
-3. **Triển khai → Quản lý bản triển khai** → bấm ✏️ ở bản đang chạy → *Phiên bản*: **Phiên bản mới** → **Triển khai**.
-   Phải sửa bản đang có (đừng bấm "Bản triển khai mới") để giữ nguyên URL `/exec` mà trang đang gọi.
-4. Nhắn bot `/linkkey` để kiểm tra — bot trả về key là xong.
+**Vì sao đổi khỏi Apps Script:** đo được Apps Script trả lời mất ~4 giây. Trang vẽ bản dự phòng trước rồi
+mới đổi sang nội dung thật, người xem thấy giao diện nhảy. Worker trả lời trong vài chục mili-giây.
+Phần trang link trong `backend/Code.gs` vẫn còn nhưng không ai gọi nữa.
+
+Số chỗ cohort trực tiếp trên ô nổi bật **vẫn** lấy từ backend Apps Script của trang khoá học (ô *URL Web App*
+trong mục "Số chỗ cohort trực tiếp") — đó là nơi bot đăng ký ghi số, không liên quan Worker.
 
 ### Cách khác: GitHub token
 
@@ -102,9 +107,10 @@ links/
 │   ├── edit-publish.js đăng lên web: ADMIN_KEY / token GitHub
 │   └── edit-ui.js      khối nhỏ: ô nhập, công tắc, nhóm chọn một, thanh kéo, chọn ảnh
 │                       (image.js: nén ảnh từ máy · iconify.js: tìm icon)
-├── js/backend.js     đọc / lưu nội dung qua backend Apps Script (backend/Code.gs)
+├── js/backend.js     đọc / lưu nội dung qua Worker Cloudflare (ai/worker/src/links.js)
+├── js/boot-theme.js  áp giao diện kính đã lưu trước nhịp vẽ đầu tiên (khỏi nháy lúc mới mở)
 ├── js/github.js      đăng data.json qua GitHub API (cách phụ)
-└── tests/            node --test (+ e2e Playwright)
+└── tests/            node --test (+ e2e Playwright; fixtures/data.json là dữ liệu kiểm thử cố định)
 ```
 
 Chạy test: `cd links && npm test` · `npm run e2e` (cần Playwright).

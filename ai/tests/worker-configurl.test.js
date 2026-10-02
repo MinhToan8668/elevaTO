@@ -10,14 +10,25 @@ import { locDiaChi } from '../worker/tools/config-url.mjs';
 // nó chỉ đụng đúng dòng API và nhận ra địa chỉ trong cả khối chữ wrangler in ra.
 const GOC = new URL('../', import.meta.url).pathname;
 
-function chay(diaChi, config) {
+// Công cụ sửa 4 file: ai/js/config.js, links/js/backend.js và CSP của links/index.html + edit.html.
+// Dựng đủ cả bốn trong cây tạm, mặc định lấy nội dung thật trong repo.
+const REPO = new URL('../../', import.meta.url).pathname;
+const doc = (d) => readFileSync(join(REPO, d), 'utf8');
+
+function chay(diaChi, config, them = {}) {
   const thu = mkdtempSync(join(tmpdir(), 'cfgurl-'));
-  mkdirSync(join(thu, 'worker/tools'), { recursive: true });
-  mkdirSync(join(thu, 'js'), { recursive: true });
-  cpSync(join(GOC, 'worker/tools/config-url.mjs'), join(thu, 'worker/tools/config-url.mjs'));
-  writeFileSync(join(thu, 'js/config.js'), config ?? readFileSync(join(GOC, 'js/config.js'), 'utf8'));
-  const ra = execFileSync(process.execPath, [join(thu, 'worker/tools/config-url.mjs'), diaChi], { encoding: 'utf8' });
-  return { ra: ra.trim(), config: readFileSync(join(thu, 'js/config.js'), 'utf8') };
+  mkdirSync(join(thu, 'ai/worker/tools'), { recursive: true });
+  mkdirSync(join(thu, 'ai/js'), { recursive: true });
+  mkdirSync(join(thu, 'links/js'), { recursive: true });
+  cpSync(join(GOC, 'worker/tools/config-url.mjs'), join(thu, 'ai/worker/tools/config-url.mjs'));
+  writeFileSync(join(thu, 'ai/js/config.js'), config ?? doc('ai/js/config.js'));
+  writeFileSync(join(thu, 'links/js/backend.js'), them.backend ?? doc('links/js/backend.js'));
+  writeFileSync(join(thu, 'links/index.html'), them.trang ?? doc('links/index.html'));
+  writeFileSync(join(thu, 'links/edit.html'), them.sua ?? doc('links/edit.html'));
+  const ra = execFileSync(process.execPath, [join(thu, 'ai/worker/tools/config-url.mjs'), diaChi], { encoding: 'utf8' });
+  const lay = (d) => readFileSync(join(thu, d), 'utf8');
+  return { ra: ra.trim(), config: lay('ai/js/config.js'), backend: lay('links/js/backend.js'),
+    trang: lay('links/index.html'), sua: lay('links/edit.html') };
 }
 
 test('lọc địa chỉ từ đúng khối chữ wrangler in ra khi triển khai', () => {
@@ -46,16 +57,43 @@ test('chỉ sửa đúng dòng API, giữ nguyên phần chú thích phía trên
   const r = chay('https://elevato-ai.minhtoan.workers.dev');
   assert.match(r.ra, /^DOI https:\/\/elevato-ai\.minhtoan\.workers\.dev$/);
   assert.match(r.config, /^export const API = 'https:\/\/elevato-ai\.minhtoan\.workers\.dev';$/m);
-  assert.equal(r.config.split('\n').length, readFileSync(join(GOC, 'js/config.js'), 'utf8').split('\n').length);
+  assert.equal(r.config.split('\n').length, doc('ai/js/config.js').split('\n').length);
   assert.match(r.config, /DÒNG DƯỚI DO MÁY ĐIỀN/, 'phần chú thích phải còn nguyên');
   assert.doesNotMatch(r.config, /script\.google\.com/);
 });
 
-test('địa chỉ đã đúng sẵn thì báo GIU để workflow khỏi commit thừa', () => {
+test('địa chỉ đã đúng sẵn ở cả bốn file thì báo GIU để workflow khỏi commit thừa', () => {
   const dc = 'https://elevato-ai.minhtoan.workers.dev';
-  const r = chay(dc, `// chú thích\nexport const API = '${dc}';\n`);
+  const r = chay(dc, `// chú thích\nexport const API = '${dc}';\n`, {
+    backend: `export const BACKEND_URL = '${dc}';\n`,
+    trang: `<meta content="connect-src 'self' ${dc}">\n`,
+    sua: `<meta content="connect-src 'self' ${dc}">\n`,
+  });
   assert.equal(r.ra, `GIU ${dc}`);
   assert.equal(r.config, `// chú thích\nexport const API = '${dc}';\n`);
+});
+
+// Trang link gọi Worker nên địa chỉ phải đổi đồng thời ở nơi gọi lẫn CSP — lệch một chỗ là trình
+// duyệt chặn, trang lặng lẽ quay về bản dự phòng.
+test('đổi địa chỉ: sửa luôn links/js/backend.js và connect-src trong CSP của hai trang', () => {
+  const dc = 'https://elevato-ai-moi.minhtoan.workers.dev';
+  const r = chay(dc);
+  assert.equal(r.ra, `DOI ${dc}`);
+  assert.match(r.backend, new RegExp(`^export const BACKEND_URL = '${dc}';$`, 'm'));
+  for (const [ten, html] of [['index.html', r.trang], ['edit.html', r.sua]]) {
+    const csp = /connect-src ([^;"]*)/.exec(html);
+    assert.ok(csp, ten + ' mất khai báo connect-src');
+    assert.ok(csp[1].includes(dc), ten + ' chưa cho gọi địa chỉ mới: ' + csp[1]);
+    assert.ok(csp[1].includes('script.google.com'), ten + ' mất quyền gọi backend khoá học (số chỗ cohort)');
+  }
+  assert.ok(!r.trang.includes('elevato-ai.minhtoantowork.workers.dev'), 'còn sót địa chỉ cũ trong CSP');
+});
+
+test('CSP chưa nhắc tới địa chỉ cũ thì để yên, không chèn bừa', () => {
+  const dc = 'https://elevato-ai-moi.minhtoan.workers.dev';
+  const r = chay(dc, undefined, { trang: `<meta content="connect-src 'self'">\n` });
+  assert.equal(r.trang, `<meta content="connect-src 'self'">\n`);
+  assert.match(r.backend, new RegExp(dc));
 });
 
 test('config.js không còn dòng API như mong đợi thì dừng, không ghi bừa', () => {

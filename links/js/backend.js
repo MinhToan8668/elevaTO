@@ -1,18 +1,33 @@
-// Nối trang link với backend Apps Script của trang khoá học (backend/Code.gs, cùng bot Telegram).
+// Nối trang link với máy chủ elevaTO trên Cloudflare Workers (mã nguồn ở ai/worker/src/links.js).
 // Trang công khai đọc nội dung ở đây; trình chỉnh sửa lưu vào đây bằng ADMIN_KEY — không cần token GitHub.
-// Gửi Content-Type text/plain để trình duyệt không hỏi CORS trước (Apps Script không trả lời được bước đó).
+//
+// Trước đây dùng Apps Script, nhưng đo được nó trả lời mất ~4 giây: trang vẽ bản dự phòng rồi mới
+// đổi sang nội dung thật, người xem thấy giao diện nhảy. Worker trả lời trong vài chục mili-giây.
+//
+// Gửi Content-Type text/plain cho POST để trình duyệt khỏi hỏi CORS trước — bớt một vòng đi về;
+// Worker đọc thân yêu cầu dạng chữ rồi tự phân tích JSON nên không quan tâm nhãn này.
 
-export const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec';
+// DÒNG DƯỚI DO MÁY ĐIỀN: sau mỗi lần triển khai, GitHub Actions lấy địa chỉ workers.dev thật rồi
+// tự sửa và commit (xem ai/worker/tools/config-url.mjs). Sửa cả CSP trong index.html / edit.html.
+export const BACKEND_URL = 'https://elevato-ai.minhtoantowork.workers.dev';
+const LINKS_URL = BACKEND_URL + '/links';
 const TIMEOUT_MS = 8000;
 
+// Mã lỗi → câu tiếng Việt. Worker tự trả câu tiếng Việt rồi, bảng này để lời văn trong trang
+// không đổi theo máy chủ, và để các mã của bản Apps Script cũ vẫn hiểu được.
 const MESSAGES = {
-  unauthorized: 'ADMIN_KEY không đúng. Nhắn bot Telegram lệnh /linkkey để lấy key, rồi dán lại.',
+  auth: 'ADMIN_KEY không đúng. Nhắn bot Telegram “elevaTO AI BCTC” lệnh /linkkey để lấy key, rồi dán lại.',
+  unauthorized: 'ADMIN_KEY không đúng. Nhắn bot Telegram “elevaTO AI BCTC” lệnh /linkkey để lấy key, rồi dán lại.',
+  khoa_tam: 'Nhập sai key nhiều lần quá — máy chủ tạm khoá 15 phút. Lấy đúng key bằng /linkkey rồi thử lại sau.',
   locked: 'Nhập sai key nhiều lần quá — máy chủ tạm khoá 15 phút. Lấy đúng key bằng /linkkey rồi thử lại sau.',
+  bad: 'Dữ liệu trang không đúng dạng — tải lại trang sửa rồi thử lại.',
   invalid: 'Dữ liệu trang không đúng dạng — tải lại trang sửa rồi thử lại.',
+  qua_lon: 'Trang nặng quá (ảnh tải lên quá lớn). Bỏ bớt ảnh hoặc dùng ảnh nhỏ hơn.',
   too_large: 'Trang nặng quá (ảnh tải lên quá lớn). Bỏ bớt ảnh hoặc dùng ảnh nhỏ hơn.',
+  setup: 'Máy chủ chưa nối cơ sở dữ liệu D1 — xem ai/worker/README.md.',
   busy: 'Máy chủ đang bận — đợi vài giây rồi bấm lại.',
-  'unknown action': 'Máy chủ Apps Script chưa có bản mới. Dán backend/Code.gs mới vào Apps Script rồi Triển khai → Quản lý bản triển khai → sửa → Phiên bản mới (xem links/README.md).',
-  internal: 'Máy chủ gặp lỗi — xem sheet Log trong Google Sheet.',
+  internal: 'Máy chủ gặp lỗi, thử lại sau ít phút.',
+  upstream: 'Máy chủ gặp lỗi, thử lại sau ít phút.',
 };
 
 async function call(url, init, fetchFn) {
@@ -29,14 +44,17 @@ async function call(url, init, fetchFn) {
 }
 
 function fail(body) {
-  const code = body && body.error ? String(body.error) : '';
-  return new Error(MESSAGES[code] || 'Máy chủ báo lỗi' + (code ? ': ' + code : '') + '.');
+  const code = String((body && (body.code || body.error)) || '');
+  if (MESSAGES[code]) return new Error(MESSAGES[code]);
+  // Mã lạ: máy chủ đã kèm sẵn câu giải thích thì dùng luôn, hơn là bắt chủ trang đoán mã.
+  const msg = body && body.error ? String(body.error) : '';
+  return new Error(msg || 'Máy chủ báo lỗi' + (code ? ': ' + code : '') + '.');
 }
 
 /** Nội dung trang đã lưu trên máy chủ, hoặc null (chưa lưu lần nào / máy chủ chưa có bản mới / lỗi mạng). */
 export async function fetchLinks(fetchFn = fetch) {
   try {
-    const body = await call(BACKEND_URL + '?action=links&t=' + Date.now(), { cache: 'no-store' }, fetchFn);
+    const body = await call(LINKS_URL + '?t=' + Date.now(), { cache: 'no-store' }, fetchFn);
     return body && body.ok && body.data && typeof body.data === 'object' ? body.data : null;
   } catch (e) {
     return null;

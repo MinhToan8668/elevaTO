@@ -5,6 +5,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 import { execSync } from 'node:child_process';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -12,6 +13,10 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 // Nội dung thật trong links/data.json do chủ trang đổi bất cứ lúc nào; test chạy trên bản mẫu cố định.
 const MAU = join(ROOT, 'links/tests/fixtures/data.json');
+// Nội dung trang nằm trên Worker; số chỗ cohort vẫn lấy từ backend khoá học (Apps Script).
+// Lấy địa chỉ từ chính mã nguồn để bài kiểm tra không lệch khi lần triển khai sau đổi địa chỉ.
+const WORKER = /BACKEND_URL = '([^']+)'/.exec(readFileSync(join(ROOT, 'links/js/backend.js'), 'utf8'))[1];
+const CHUA_LUU = { ok: true, data: null, updatedAt: '' };
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
   '.webp': 'image/webp', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 const COHORT = { ok: true, config: { cohort: { number: 7, status: 'open', openText: 'Sắp mở' }, slots: { max: 10, base: 4, registered: 1 },
@@ -50,6 +55,7 @@ async function page(opts = {}) {
   p.on('pageerror', (e) => p.errors.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') p.errors.push(m.text()); });
   await p.route(/script\.google\.com/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(COHORT) }));
+  await p.route(WORKER + '/**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(CHUA_LUU) }));
   return p;
 }
 
@@ -95,7 +101,7 @@ test('vào lại trang: không để data.json đè lên nội dung chủ trang 
   daDang.links[1].title = 'Nội dung chủ trang đã đăng';
   await p.addInitScript((d) => localStorage.setItem('elevato-links-v1', JSON.stringify(d)), daDang);
   let traLoi = null;
-  await p.route(/script\.google\.com.*action=links/, async (r) => {
+  await p.route(WORKER + '/links*', async (r) => {
     traLoi = () => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data: daDang }) });
   });
   await p.goto(base + '/links/');
@@ -333,14 +339,14 @@ test('máy chủ elevaTO: trang ưu tiên nội dung đã lưu trên Apps Script
   const p = await page();
   const saved = JSON.parse(await readFile(MAU, 'utf8'));
   saved.links[1].title = 'AI đọc BCTC (bản trên máy chủ)';
-  await p.route(/script\.google\.com.*action=links/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data: saved }) }));
+  await p.route(WORKER + '/links*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data: saved }) }));
   await p.goto(base + '/links/');
   await p.waitForSelector('#grid .ttl:has-text("bản trên máy chủ")');
   await p.context().close();
 
   // Máy chủ chưa có bản mới (trả "unknown action") → vẫn hiện data.json bình thường.
   const q = await page();
-  await q.route(/script\.google\.com.*action=links/, (r) => r.fulfill({ contentType: 'application/json', body: '{"ok":false,"error":"unknown action"}' }));
+  await q.route(WORKER + '/links*', (r) => r.fulfill({ contentType: 'application/json', body: '{"ok":false,"code":"setup","error":"chưa nối D1"}' }));
   await q.goto(base + '/links/');
   await q.waitForSelector('#grid .ttl:has-text("AI đọc BCTC")');
   assert.deepEqual(q.errors, []);
@@ -350,14 +356,14 @@ test('máy chủ elevaTO: trang ưu tiên nội dung đã lưu trên Apps Script
 test('trình chỉnh sửa: lưu bằng ADMIN_KEY lên máy chủ elevaTO, không cần token GitHub', async () => {
   const p = await page({ viewport: { width: 1400, height: 900 } });
   const posts = [];
-  await p.route(/script\.google\.com/, async (r) => {
+  await p.route(WORKER + '/**', async (r) => {
     const req = r.request();
-    if (req.method() !== 'POST') return r.fulfill({ contentType: 'application/json', body: '{"ok":true,"data":null}' });
+    if (req.method() !== 'POST') return r.fulfill({ contentType: 'application/json', body: JSON.stringify(CHUA_LUU) });
     const body = JSON.parse(req.postData());
     posts.push({ body, type: req.headers()['content-type'] });
     const ok = body.key === 'dung-key';
     return r.fulfill({ contentType: 'application/json',
-      body: JSON.stringify(ok ? { ok: true, updatedAt: '02/10/2026 10:00' } : { ok: false, error: 'unauthorized' }) });
+      body: JSON.stringify(ok ? { ok: true, updatedAt: '02/10/2026 10:00' } : { ok: false, code: 'auth', error: 'ADMIN_KEY không đúng' }) });
   });
   let githubCalled = false;
   await p.route('https://api.github.com/**', (r) => { githubCalled = true; return r.abort(); });

@@ -1,5 +1,24 @@
 # Máy chủ elevaTO AI BCTC — Cloudflare Workers
 
+## Trang link-in-bio dùng chung máy chủ này
+
+Nội dung trang `links/` (link-in-bio gắn ở bio TikTok) cũng lưu ở đây, trong bảng `cai_dat` của D1:
+
+| Đường | Việc |
+|---|---|
+| `GET /links` | Trang công khai đọc nội dung — không cần key, không nhớ đệm |
+| `POST { action:'checkKey', key }` | Nút *Kiểm tra key* trong trình chỉnh sửa |
+| `POST { action:'saveLinks', key, data }` | Nút *Đăng lên web* |
+
+Key lấy bằng lệnh **`/linkkey`** của bot — chưa có thì tự sinh ngay lần hỏi đầu, cất trong D1.
+Gõ sai 20 lần trong 15 phút thì nghỉ. Mã nguồn: `src/links.js`.
+
+Nội dung có thể kèm ảnh nhúng nên được cắt thành nhiều dòng (300.000 ký tự mỗi dòng) — D1 giới hạn mỗi ô 1MB.
+
+Sau mỗi lần triển khai, `tools/config-url.mjs` tự điền địa chỉ mới vào `ai/js/config.js`,
+`links/js/backend.js` và khai báo `connect-src` trong CSP của `links/index.html` + `links/edit.html`.
+
+
 Thay cho bản Google Apps Script (`ai/backend/Code.gs`). Cùng một giao thức, nên trang web chỉ
 phải đổi đúng một dòng địa chỉ trong `ai/js/config.js`.
 

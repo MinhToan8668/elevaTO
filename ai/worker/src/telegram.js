@@ -6,6 +6,7 @@ import { boMoiPhien, doiMK, hanNgay, khoaLuot, laGV, vaiTro } from './auth.js';
 import { demTK, docCaiDat, docDem, ghiCaiDat, suaTK, timTK, tkChoDuyet, tkMoiNhat, tkTheoMa } from './db.js';
 import { thongKeAI } from './gemini.js';
 import { anUngHo, datUngHo, thongTinUngHo } from './ungho.js';
+import { linksKey } from './links.js';
 
 export const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -123,6 +124,7 @@ export async function baoTaiKhoanMoi(env, tk) {
 const HELP = ['<b>Bot quản trị elevaTO AI BCTC</b>',
   '/thongke — số tài khoản, lượt AI hôm nay, key',
   '/cho — tài khoản đang chờ duyệt',
+  '/linkkey — key để lưu trang link-in-bio từ trình chỉnh sửa',
   '/tim &lt;email hoặc tên&gt; — tra cứu (kèm nút xếp vai trò)',
   '/hocvien &lt;email&gt; — xếp học viên (điền được model)',
   '/giangvien &lt;email&gt; — xếp giảng viên (không giới hạn lượt)',
@@ -144,12 +146,23 @@ async function timMot(env, email) {
   return (ds.results || [])[0] || null;
 }
 
+/** Key của trang link-in-bio. Chưa có thì tự sinh ngay lần hỏi đầu. */
+async function lenhLinkKey(env) {
+  const key = await linksKey(env.DB);
+  return { text: [
+    '🔗 <b>Key lưu trang link-in-bio</b>', '', `<code>${esc(key)}</code>`, '',
+    'Mở trang sửa → mục <b>Đăng lên web</b> → dán vào ô ADMIN_KEY → bấm <b>Kiểm tra key</b>.',
+    '<i>Ai có key này cũng sửa được trang link, đừng gửi cho người khác.</i>',
+  ].join('\n') };
+}
+
 export async function chayLenh(env, lenh, arg) {
   if (lenh === '/start' || lenh === '/help') return { text: HELP };
   if (lenh === '/thongke') return lenhThongKe(env);
   if (lenh === '/moi') return lenhMoi(env);
   if (lenh === '/mkmoi') return lenhMkMoi(env, arg[0]);
   if (lenh === '/ungho') return lenhUngHo(env, arg);
+  if (lenh === '/linkkey') return lenhLinkKey(env);
   if (lenh === '/cho') return lenhCho(env);
   if (lenh === '/tim') return lenhTim(env, arg);
   if (VT[lenh] || TT[lenh] || lenh === '/luot' || lenh === '/matkhau') {
