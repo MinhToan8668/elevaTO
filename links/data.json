@@ -53,7 +53,7 @@
       "size": "feature",
       "icon": "book",
       "accent": "emerald",
-      "image": "art/3d/chart-increasing.webp",
+      "image": "art/glass/course.svg",
       "badge": "",
       "hidden": false,
       "live": true,
@@ -65,7 +65,7 @@
         "bullets": [],
         "button": ""
       },
-      "imageStyle": "icon"
+      "imageStyle": "photo"
     },
     {
       "id": "ai",
@@ -75,7 +75,7 @@
       "size": "half",
       "icon": "sparkles",
       "accent": "violet",
-      "image": "art/3d/robot.webp",
+      "image": "art/glass/ai.svg",
       "badge": "Mới",
       "hidden": false,
       "live": false,
@@ -87,7 +87,7 @@
         "bullets": [],
         "button": ""
       },
-      "imageStyle": "icon"
+      "imageStyle": "photo"
     },
     {
       "id": "slides",
@@ -97,7 +97,7 @@
       "size": "half",
       "icon": "slides",
       "accent": "amber",
-      "image": "art/3d/bar-chart.webp",
+      "image": "art/glass/slides.svg",
       "badge": "Free",
       "hidden": false,
       "live": false,
@@ -114,7 +114,7 @@
         ],
         "button": "Xem slide"
       },
-      "imageStyle": "icon"
+      "imageStyle": "photo"
     },
     {
       "id": "trial",
@@ -124,7 +124,7 @@
       "size": "half",
       "icon": "play",
       "accent": "cyan",
-      "image": "art/3d/clapper-board.webp",
+      "image": "art/glass/trial.svg",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -136,7 +136,7 @@
         "bullets": [],
         "button": ""
       },
-      "imageStyle": "icon"
+      "imageStyle": "photo"
     },
     {
       "id": "model",
@@ -146,7 +146,7 @@
       "size": "half",
       "icon": "chart",
       "accent": "blue",
-      "image": "art/3d/laptop.webp",
+      "image": "art/glass/model.svg",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -158,7 +158,7 @@
         "bullets": [],
         "button": ""
       },
-      "imageStyle": "icon"
+      "imageStyle": "photo"
     },
     {
       "id": "zalo",
@@ -168,7 +168,7 @@
       "size": "wide",
       "icon": "zalo",
       "accent": "blue",
-      "image": "art/zalo.svg",
+      "image": "art/glass/zalo.svg",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -190,7 +190,7 @@
       "size": "wide",
       "icon": "file",
       "accent": "slate",
-      "image": "art/3d/briefcase.webp",
+      "image": "art/glass/cv.svg",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -202,7 +202,7 @@
         "bullets": [],
         "button": ""
       },
-      "imageStyle": "icon"
+      "imageStyle": "photo"
     }
   ],
   "live": {

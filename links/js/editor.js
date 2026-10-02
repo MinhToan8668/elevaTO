@@ -1,6 +1,6 @@
 // Trình chỉnh sửa trang link-in-bio: sửa bản nháp (lưu trên máy), xem trước trực tiếp, đăng lên GitHub.
 
-import { normalize, serialize, newId, hiddenReason, safeImg, ACCENTS, SOCIALS, ART, ICON3D, BACKGROUNDS } from './core.js';
+import { normalize, serialize, newId, hiddenReason, safeImg, ACCENTS, SOCIALS, ICON_LIBRARY, BACKGROUNDS } from './core.js';
 import * as iconify from './iconify.js';
 import { svg, TILE_ICONS } from './icons.js';
 import { h, field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
@@ -81,7 +81,7 @@ function profilePanel() {
       field('Handle', p.handle, set('handle'), { placeholder: '@toanelevato', max: 60 })),
     field('Giới thiệu ngắn', p.tagline, set('tagline'), { multiline: true, rows: 2, max: 200, wide: true }),
     imageField('Ảnh đại diện', p.avatar, (v, re) => update((d) => { d.profile.avatar = v; }, { rerender: re }),
-      { round: true, onPick: () => pick({ maxSide: 420, square: true }), presets: { '../assets/instructor-sm.webp': 'Ảnh hiện tại' } }),
+      { round: true, onPick: () => pick({ maxSide: 420, square: true }), sets: [{ label: 'Ảnh có sẵn', style: 'photo', items: { '../assets/instructor-sm.webp': 'Ảnh hiện tại' } }] }),
     field('Dòng trạng thái', p.status, set('status'), { max: 80, placeholder: 'Ví dụ: Đang mở lịch Coffee Connect',
       hint: 'Để trống: tự hiện trạng thái cohort (nếu không có ô nổi bật nào đang hiện số chỗ).', wide: true }),
     toggle('Hiện dấu tích xanh cạnh tên', p.verified, set('verified')));
@@ -166,10 +166,10 @@ function linkCard(l, i) {
     segmented('Kiểu ô', l.size, [['feature', 'Nổi bật (to nhất)'], ['wide', 'Ngang cả hàng'], ['half', 'Nửa hàng']], setRe('size')),
     imageField('Icon / ảnh của ô', l.image,
       (v, re, style) => update((d) => { d.links[i].image = v; if (style) d.links[i].imageStyle = style; }, { rerender: re }),
-      { icons3d: ICON3D, presets: ART, iconify, style: l.imageStyle,
+      { sets: ICON_LIBRARY, iconify, style: l.imageStyle,
         onStyle: setRe('imageStyle'),
         onPick: () => pick({ maxSide: 256, square: true }),
-        hint: 'Icon 3D: bộ Fluent Emoji của Microsoft. Tìm icon: thư viện Iconify. Ảnh từ máy được tự cắt vuông, thu nhỏ. Bỏ ảnh thì ô dùng icon nét.',
+        hint: 'Bộ icon elevaTO: vẽ riêng kiểu Liquid Glass. Icon 3D: Fluent Emoji của Microsoft. Bộ icon cũ: bản trước. Tìm icon: thư viện Iconify. Ảnh từ máy được tự cắt vuông, thu nhỏ. Bỏ ảnh thì ô dùng icon nét.',
         tools: [['Iconify', 'https://icon-sets.iconify.design/'], ['Canva', 'https://www.canva.com/'], ['Flaticon', 'https://www.flaticon.com/'],
           ['Icons8', 'https://icons8.com/icons'], ['Fluent Emoji 3D', 'https://github.com/microsoft/fluentui-emoji']] }),
     l.image ? null : iconPicker(l.icon, TILE_ICONS, setRe('icon')),

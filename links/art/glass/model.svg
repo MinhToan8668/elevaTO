@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120"><title>Model mẫu</title>
+<defs>
+<linearGradient id="bg" x1=".15" y1="0" x2=".85" y2="1"><stop offset="0" stop-color="#5d6fe8"/><stop offset="1" stop-color="#121a4f"/></linearGradient>
+<radialGradient id="lt" cx=".22" cy=".08" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".5" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<radialGradient id="vg" cx=".5" cy="1.1" r=".75"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+<linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".82"/></linearGradient>
+<linearGradient id="fr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity=".28"/></linearGradient>
+<linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".45" stop-color="#fff" stop-opacity=".1"/><stop offset=".7" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#fff" stop-opacity=".45"/></linearGradient>
+<filter id="sh" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#121a4f" flood-opacity=".55"/></filter>
+<filter id="gw" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+</defs>
+<rect width="120" height="120" rx="27" fill="url(#bg)"/>
+<rect width="120" height="120" rx="27" fill="url(#vg)"/>
+<rect width="120" height="120" rx="27" fill="url(#lt)"/>
+<g filter="url(#sh)"><rect x="16" y="22" width="88" height="76" rx="11" fill="url(#gl)"/><circle cx="27" cy="32" r="3" fill="#f87171"/><circle cx="36" cy="32" r="3" fill="#fbbf24"/><circle cx="45" cy="32" r="3" fill="#34d399"/><rect x="26" y="44" width="30" height="16" rx="4" fill="#e0e7ff"/><rect x="62" y="44" width="32" height="16" rx="4" fill="#d1fae5"/><rect x="28" y="74" width="8" height="16" rx="2" fill="#6366f1"/><rect x="40" y="68" width="8" height="22" rx="2" fill="#818cf8"/><rect x="52" y="78" width="8" height="12" rx="2" fill="#a5b4fc"/><path d="M66 86 L76 76 L84 80 L94 68" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+<rect x="1" y="1" width="118" height="118" rx="26" fill="none" stroke="url(#rim)" stroke-width="2"/>
+</svg>

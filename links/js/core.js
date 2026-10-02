@@ -33,8 +33,26 @@ export const ICON3D = {
   [I3('party-popper')]: 'Ăn mừng', [I3('link')]: 'Liên kết', [I3('pushpin')]: 'Ghim', [I3('magnifying-glass-tilted-right')]: 'Tìm kiếm',
   [I3('gear')]: 'Cài đặt', [I3('key')]: 'Chìa khoá', [I3('locked')]: 'Khoá', [I3('compass')]: 'La bàn',
 };
-/** Ảnh có sẵn dạng "ảnh" (lấp kín ô): logo thương hiệu. */
-export const ART = { 'art/zalo.svg': 'Zalo' };
+// Bộ icon elevaTO kiểu Liquid Glass (vẽ riêng, art/glass/) — mỗi icon là một ô vuông bo góc hoàn chỉnh → kiểu "photo".
+const G = (slug) => 'art/glass/' + slug + '.svg';
+export const GLASS = {
+  [G('course')]: 'Khoá học', [G('ai')]: 'AI', [G('slides')]: 'Slide', [G('trial')]: 'Video học thử',
+  [G('model')]: 'Model', [G('zalo')]: 'Zalo', [G('cv')]: 'CV', [G('coffee')]: 'Coffee',
+  [G('calendar')]: 'Lịch', [G('chat')]: 'Tin nhắn', [G('mail')]: 'Email', [G('money')]: 'Tiền',
+  [G('book')]: 'Sách', [G('rocket')]: 'Tên lửa', [G('star')]: 'Ngôi sao', [G('phone')]: 'Điện thoại',
+};
+// Bộ icon vẽ ở bản trước (art/classic/) — giữ lại để vẫn chọn được.
+const C = (slug) => 'art/classic/' + slug + '.svg';
+export const CLASSIC = {
+  [C('course')]: 'Khoá học', [C('ai')]: 'AI', [C('slides')]: 'Slide', [C('trial')]: 'Video',
+  [C('model')]: 'Model', 'art/zalo.svg': 'Zalo', [C('cv')]: 'CV', [C('coffee')]: 'Coffee',
+};
+/** Các bộ icon có sẵn, theo thứ tự hiện trong trình chỉnh sửa. style: kiểu hiển thị khi chọn icon của bộ đó. */
+export const ICON_LIBRARY = [
+  { key: 'glass', label: 'Bộ icon elevaTO', style: 'photo', items: GLASS },
+  { key: '3d', label: 'Icon 3D', style: 'icon', items: ICON3D },
+  { key: 'classic', label: 'Bộ icon cũ', style: 'photo', items: CLASSIC },
+];
 export const IMAGE_STYLES = ['icon', 'photo'];
 // Ảnh minh hoạ đời trước (đã bỏ) → icon 3D tương ứng, để nháp / data.json cũ không bị ảnh vỡ.
 const LEGACY_ART = {

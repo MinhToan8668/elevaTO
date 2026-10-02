@@ -111,7 +111,7 @@ export function slider(label, value, min, max, unit, onInput, hint) {
 /**
  * Ô chọn ảnh: xem trước + các cách lấy ảnh. onChange(value, rerender, style) — style 'icon' (hình trong suốt
  * đặt trên ô màu) hoặc 'photo' (ảnh lấp kín ô).
- * opts: { presets: ảnh "photo" có sẵn, icons3d: icon 3D có sẵn, iconify: hàm tìm icon, onPick: tải từ máy,
+ * opts: { sets: [{ label, style, items: {src: tên} }] — các bộ icon có sẵn, iconify: hàm tìm icon, onPick: tải từ máy,
  *         style: kiểu hiện tại, round, hint, tools: [[tên, link], …] }
  */
 export function imageField(label, value, onChange, opts = {}) {
@@ -134,8 +134,7 @@ export function imageField(label, value, onChange, opts = {}) {
     h('button', { type: 'button', title: name, 'aria-label': name, class: style === 'icon' ? 'ico' : '', onclick: () => onChange(src, true, style) },
       h('img', { src, alt: '', loading: 'lazy' }))));
 
-  const icons = opts.icons3d ? pane(grid(Object.entries(opts.icons3d), 'icon')) : null;
-  const photos = opts.presets ? pane(grid(Object.entries(opts.presets), 'photo')) : null;
+  const sets = (opts.sets || []).map((set) => ({ label: set.label, node: pane(grid(Object.entries(set.items), set.style)) }));
   let search = null;
   if (opts.iconify) {
     const results = h('div', { class: 'im-gallery' });
@@ -160,14 +159,13 @@ export function imageField(label, value, onChange, opts = {}) {
   }
 
   const tools = h('div', { class: 'im-tools' },
-    icons ? toggleBtn('Icon 3D', icons) : null,
+    ...sets.map((set) => toggleBtn(set.label, set.node)),
     search ? toggleBtn('Tìm icon', search) : null,
     h('button', { type: 'button', class: 'btn btn-ghost sm', html: svg('download') + '<span>Ảnh từ máy</span>', onclick: async (e) => {
       const b = e.currentTarget;
       b.disabled = true;
       try { const v = await opts.onPick(); if (v) onChange(v, true, 'photo'); } finally { b.disabled = false; }
     } }),
-    photos ? toggleBtn('Ảnh có sẵn', photos) : null,
     value ? h('button', { type: 'button', class: 'btn btn-ghost sm danger', onclick: () => onChange('', true, opts.style) }, 'Bỏ ảnh') : null);
 
   const styleSel = value && opts.onStyle

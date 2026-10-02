@@ -19,6 +19,9 @@ Trang gom mọi thứ của elevaTO vào một màn hình, để gắn vào bio 
   với công cụ AI (`ai/`). **Độ mờ (blur)**, **độ đục của kính** và **hình nền** (4 dải màu có sẵn hoặc ảnh tự
   chọn) chỉnh bằng thanh kéo trong trình chỉnh sửa.
 - **Icon cho từng ô** (trình chỉnh sửa → mở một ô → *Icon / ảnh của ô*):
+  - **Bộ icon elevaTO** (mặc định): 16 icon vẽ riêng kiểu Liquid Glass trong `art/glass/` — khoá học, AI,
+    slide, học thử, model, Zalo, CV, coffee, lịch, tin nhắn, email, tiền, sách, tên lửa, ngôi sao, điện thoại.
+  - **Bộ icon cũ**: bộ vẽ ở bản trước, giữ lại trong `art/classic/`.
   - **Icon 3D**: 48 icon Fluent Emoji 3D của Microsoft có sẵn trong `art/3d/` (giấy phép MIT), hiện trên ô
     vuông bo góc tô theo màu nhấn của ô — giống icon app iPhone.
   - **Tìm icon**: tìm thẳng trong thư viện [Iconify](https://icon-sets.iconify.design/) (200.000+ icon, chỉ
@@ -57,7 +60,7 @@ links/
 ├── index.html        trang công khai
 ├── edit.html         trình chỉnh sửa
 ├── data.json         toàn bộ nội dung trang (trình chỉnh sửa ghi vào đây)
-├── art/              icon 3D (art/3d), logo Zalo, logo chữ cho chân trang
+├── art/              bộ icon elevaTO (glass), icon 3D (3d), bộ cũ (classic), logo chữ cho chân trang
 ├── css/links.css     giao diện trang (edit.css: thêm cho trình chỉnh sửa)
 ├── js/core.js        logic thuần: lọc link an toàn, chuẩn hoá dữ liệu, số chỗ cohort
 ├── js/page.js        vẽ trang
