@@ -19,7 +19,7 @@ const sessionKey = (user) => `elevato-ai-session:${String(user?.email || '').toL
 const store = createStore({ ...initialState(), lang: initialLang() });
 const ctx = { media: new Map(), stop: false };
 ctx.io = createIO(ctx);
-ctx.pageImages = (jobId, pages, width, quality) => ctx.io.pageImages(jobId, pages, width, quality);
+ctx.pageImages = (jobId, pages, width, quality, rot) => ctx.io.pageImages(jobId, pages, width, quality, rot);
 
 setLang(store.get().lang, { nho: false });   // mới mở trang: chưa phải lựa chọn của người dùng
 initTheme();

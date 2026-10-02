@@ -7,9 +7,12 @@ import { suggestPicks } from '../core/pipeline.js';
 import { t } from '../i18n.js';
 
 const SHORT = (k) => (k === 'NOTES' ? t('st.NOTES.long') : ['BS', 'IS', 'CF'].includes(k) ? t(`st.${k}`) : '');
-const thumbCache = new Map();          // `${jobId}:${page}` → dataURL
+const thumbCache = new Map();          // `${jobId}:${page}:${độ xoay}` → dataURL
 const panels = new Map();              // jobId → { el, sig } — tick một trang không vẽ lại cả lưới
 const lastClick = new Map();           // jobId → trang tick gần nhất (Shift + tick để chọn một dải)
+const XOAY = [0, 90, 180, 270];
+const chuan = (deg) => { const q = Math.round(Number(deg) || 0); return q % 90 ? 0 : ((q % 360) + 360) % 360; };
+const xoayCua = (j, n) => chuan((j?.rot || {})[n]);
 
 export function initPages(store, ctx) {
   ctx.forgetThumbs = (id) => { for (const k of thumbCache.keys()) if (k.startsWith(`${id}:`)) thumbCache.delete(k); panels.delete(id); };
@@ -18,6 +21,16 @@ export function initPages(store, ctx) {
     if (!j) return;
     const sorted = [...new Set(picked)].filter((p) => p >= 1 && p <= j.numPages).sort((a, b) => a - b);
     ctx.patchJob(id, { picked: sorted, goiY: goiY ? sorted : j.goiY, status: j.status === 'done' ? 'ready' : j.status });
+  };
+  // Trang in ngang (báo cáo bộ phận, bảng biến động vốn chủ của bản scan): xoay để đọc được,
+  // và để ảnh gửi AI cũng xoay theo — AI đọc bảng nằm ngang rất hay sai số.
+  ctx.setRot = (id, page, deg) => {
+    const j = store.get().jobs.find((x) => x.id === id);
+    if (!j) return;
+    const rot = { ...(j.rot || {}) };
+    const q = chuan(deg);
+    if (q) rot[page] = q; else delete rot[page];
+    ctx.patchJob(id, { rot });
   };
   // theoForm sửa trang đã chọn → store đổi → watch chạy lại và vẽ với state mới; lần này bỏ qua để không vẽ bằng state cũ.
   watch(store, ['jobs', 'running', 'lang'], (s) => render(s, store, ctx));
@@ -67,21 +80,24 @@ function panel(j0, store, ctx, isOpen) {
     chk.addEventListener('click', (e) => toggle(n, chk.checked, e.shiftKey));
     const tag = h('span', { class: 'tile-t' });
     const tile = h('div', { class: 'tile' }, img, h('label', { class: 'tile-chk' }, chk), tag);
-    tiles.push({ tile, chk, tag });
+    tiles.push({ tile, chk, tag, img });
     grid.append(tile);
   }
-  lazyThumbs(grid, ctx);
+  lazyThumbs(grid, ctx, store);
 
   const sync = (nj) => {
     j = nj;
     const set = new Set(j.picked || []);
-    tiles.forEach(({ tile, chk, tag }, i) => {
-      const n = i + 1, on = set.has(n), lbl = j.scanned ? '' : SHORT(j.types?.[i]);
+    tiles.forEach(({ tile, chk, tag, img }, i) => {
+      const n = i + 1, on = set.has(n), deg = xoayCua(j, n);
+      const lbl = [j.scanned ? '' : SHORT(j.types?.[i]), deg ? t('pages.rotTag', { deg }) : ''].filter(Boolean).join(' · ');
       tile.classList.toggle('on', on);
       if (chk.checked !== on) chk.checked = on;
       tag.textContent = lbl;
       tag.hidden = !lbl;
       chk.setAttribute('aria-label', lbl ? t('pages.pickType.aria', { n, t: lbl }) : t('pages.pick.aria', { n }));
+      // Đã vẽ rồi mà góc xoay đổi (người dùng xoay tay, hoặc AI vừa phát hiện trang nằm ngang) → vẽ lại.
+      if (img.dataset.rot !== undefined && img.dataset.rot !== String(deg)) paintThumb(img, ctx, store);
     });
     count.textContent = t('pages.count', { n: set.size, all: j.numPages });
     count.classList.toggle('em', true);
@@ -105,28 +121,31 @@ function panel(j0, store, ctx, isOpen) {
   return { el, sync };
 }
 
-function lazyThumbs(grid, ctx) {
+function lazyThumbs(grid, ctx, store) {
   const io = new IntersectionObserver((entries) => {
     for (const en of entries) {
       if (!en.isIntersecting) continue;
       io.unobserve(en.target);
-      paintThumb(en.target, ctx);
+      paintThumb(en.target, ctx, store);
     }
   }, { rootMargin: '300px' });
   grid.querySelectorAll('.tile-img').forEach((el) => io.observe(el));
 }
 
-async function paintThumb(el, ctx) {
+async function paintThumb(el, ctx, store) {
   const { job, page } = el.dataset;
-  const key = `${job}:${page}`;
+  const j = store.get().jobs.find((x) => x.id === job);
+  const deg = xoayCua(j, Number(page));
+  const key = `${job}:${page}:${deg}`;
   const m = ctx.media.get(job);
   if (!m) return;
+  el.dataset.rot = String(deg);                 // sync() so với số này để biết phải vẽ lại
   try {
     let url = thumbCache.get(key);
     if (!url && m.urls) url = m.urls[page - 1];
     if (!url && m.pdf) {
       const { thumbnail } = await import('../pdf.js');
-      url = await thumbnail(m.pdf.doc, Number(page), 220);
+      url = await thumbnail(m.pdf.doc, Number(page), 220, deg);
       thumbCache.set(key, url);
     }
     if (url) el.style.backgroundImage = `url("${url}")`;
@@ -155,15 +174,17 @@ function buildViewer(store, ctx) {
   const next = h('button', { type: 'button', class: 'btn ghost', id: 'vwNext', onclick: () => go(1) });
   const zOut = h('button', { type: 'button', class: 'icon-btn sm', onclick: () => zoom(-0.25) }, '−');
   const zIn = h('button', { type: 'button', class: 'icon-btn sm', onclick: () => zoom(0.25) }, '+');
+  const rotBtn = h('button', { type: 'button', class: 'icon-btn sm', id: 'vwRot', onclick: () => xoay() }, '⟳');
   const close = h('button', { type: 'button', class: 'icon-btn sm', onclick: () => dlg.close() }, '✕');
   const dlg = h('dialog', { class: 'viewer', 'aria-labelledby': 'vwTitle' },
-    h('div', { class: 'vw-head' }, title, pos, h('span', { class: 'sp' }), zOut, zoomTxt, zIn, close),
+    h('div', { class: 'vw-head' }, title, pos, h('span', { class: 'sp' }), rotBtn, zOut, zoomTxt, zIn, close),
     stage,
     h('div', { class: 'vw-foot' }, prev, pick, next));
   /** Chữ cố định của hộp — gọi lại mỗi lần mở để đổi ngôn ngữ giữa hai lần mở là ăn ngay. */
   const datChu = () => {
     prev.textContent = t('vw.prev');
     next.textContent = t('vw.next');
+    rotBtn.setAttribute('aria-label', t('vw.rot'));
     zOut.setAttribute('aria-label', t('vw.zoomOut'));
     zIn.setAttribute('aria-label', t('vw.zoomIn'));
     close.setAttribute('aria-label', t('vw.close'));
@@ -186,6 +207,11 @@ function buildViewer(store, ctx) {
     pick.setAttribute('aria-pressed', String(on));
     pick.classList.toggle('ghost', !on);
     pick.disabled = store.get().running;
+    const deg = xoayCua(j, page);
+    rotBtn.hidden = !ctx.media.get(jobId)?.pdf;            // ảnh chụp: xoay trước khi tải lên
+    rotBtn.disabled = store.get().running;
+    rotBtn.classList.toggle('on', !!deg);
+    rotBtn.title = deg ? t('vw.rotNow', { deg }) : t('vw.rot');
     const lost = [prev, next].includes(document.activeElement);
     prev.disabled = page <= 1; next.disabled = page >= j.numPages;
     if (lost && document.activeElement?.disabled) stage.focus();
@@ -216,7 +242,7 @@ function buildViewer(store, ctx) {
       const { renderPage } = await import('../pdf.js');
       const px = wantPx();
       const my2 = (hold = {});
-      const canvas = await renderPage(m.pdf.doc, page, px, my2);
+      const canvas = await renderPage(m.pdf.doc, page, px, my2, xoayCua(j, page));
       if (my !== token) { canvas.width = 0; canvas.height = 0; return; }
       canvas.style.width = `${scale * 100}%`;
       canvas.setAttribute('role', 'img');
@@ -256,7 +282,7 @@ function buildViewer(store, ctx) {
     const my = ++token, px = wantPx(), my2 = (hold = {});
     try {
       const { renderPage } = await import('../pdf.js');
-      const canvas = await renderPage(m.pdf.doc, page, px, my2);
+      const canvas = await renderPage(m.pdf.doc, page, px, my2, xoayCua(job(), page));
       if (my !== token) { canvas.width = 0; canvas.height = 0; return; }
       canvas.style.width = `${scale * 100}%`;
       canvas.setAttribute('role', 'img');
@@ -267,6 +293,14 @@ function buildViewer(store, ctx) {
       stage.scrollTop = top * stage.scrollHeight;
       if (old instanceof HTMLCanvasElement) { old.width = 0; old.height = 0; }
     } catch { /* bản cũ vẫn hiện, chỉ kém nét */ }
+  }
+  /** Xoay trang đang xem thêm 90°, vòng 0 → 90 → 180 → 270 → 0. */
+  function xoay() {
+    const j = job(); if (!j || store.get().running) return;
+    const tiep = XOAY[(XOAY.indexOf(xoayCua(j, page)) + 1) % XOAY.length];
+    ctx.setRot(jobId, page, tiep);
+    stage.scrollTop = 0; stage.scrollLeft = 0;
+    paint();
   }
   function togglePick() {
     const j = job(); if (!j || store.get().running) return;

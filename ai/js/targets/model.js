@@ -101,8 +101,10 @@ export function buildModel(ds, opts = {}) {
   const thieu = gomThieu();
   const byYear = {};
   const years = ds.periods.filter((p) => p.months === 12).sort((a, b) => a.year - b.year);
-  const fa = faMoiNam(ds, years);
-  const dauNam = [...fa].filter(([, x]) => x.dauNam).map(([y]) => y);
+  const fa = muonNamTruoc(ds, years, 'fixedAssets', coFa, moDauFa);
+  const seg = muonNamTruoc(ds, years, 'segments', coSeg, truocSeg);
+  const eq = muonNamTruoc(ds, years, 'equity', coEquity, truocEquity);
+  const dauNam = [...fa].filter(([, x]) => x.muon).map(([y]) => y);
   if (dauNam.length) warn.add(t('mw.faDauNam', { years: dauNam.join(', '), n: dauNam.length }));
   let prev = null;
   for (const p of years) {
@@ -110,10 +112,10 @@ export function buildModel(ds, opts = {}) {
     const notes = (ds.notes && ds.notes[p.id]) || {};
     const cells = {};
     fillStatements(cells, vals, warn);
-    fillSegments(cells, vals, notes, opts.segmentMap, warn, thieu, p.year);
+    fillSegments(cells, vals, tmCua(seg, p.year), opts.segmentMap, warn, thieu, p.year);
     fillFixedAssets(cells, vals, notes, warn, thieu, p.year, fa.get(p.year));
     fillDebt(cells, vals, notes, thieu, p.year);
-    if (prev) fillEquity(cells, prev.cells, vals, notes, warn, thieu, p.year);
+    if (prev) fillEquity(cells, prev.cells, vals, tmCua(eq, p.year), warn, thieu, p.year);
     fillParams(cells, notes, warn, p.year);
     byYear[p.year] = cells;
     prev = { cells };
@@ -123,29 +125,50 @@ export function buildModel(ds, opts = {}) {
 }
 
 /**
- * Thuyết minh TSCĐ dùng cho từng năm. Bảng biến động của năm sau in luôn SỐ ĐẦU NĂM — đó chính
- * là số cuối năm trước — nên tải thuyết minh một năm là tách được nhóm TSCĐ cho cả năm liền trước,
- * thay vì dồn hết vào "Nhà cửa".
- * @returns Map<năm, { fa, dauNam }>  dauNam = true khi số lấy từ cột đầu năm của thuyết minh năm sau
+ * Thuyết minh dùng cho từng năm. Bảng thuyết minh của năm sau gần như luôn in luôn số của năm
+ * trước (TSCĐ: cột "số đầu năm"; báo cáo bộ phận & biến động vốn chủ: khối "Năm trước") — nên
+ * tải thuyết minh một năm là có số cho cả năm liền trước, thay vì phải ước tính.
+ * @param co (thuyết minh) → có số dùng được hay không
+ * @param truoc (thuyết minh năm sau) → thuyết minh của năm trước, hoặc null nếu bảng không in
+ * @returns Map<năm, { tm, muon }>  muon = true khi số lấy từ thuyết minh của năm liền sau
  */
-function faMoiNam(ds, years) {
-  const co = (x) => !!x && !!(x.tangible?.length || x.intangible?.length);
-  const cua = (p) => ((ds.notes && ds.notes[p.id]) || {}).fixedAssets;
+function muonNamTruoc(ds, years, kind, co, truoc) {
+  const cua = (p) => ((ds.notes && ds.notes[p.id]) || {})[kind];
   const ra = new Map();
   years.forEach((p, i) => {
-    if (co(cua(p))) { ra.set(p.year, { fa: cua(p), dauNam: false }); return; }
-    // Chỉ mượn được khi năm sau LIỀN KỀ: bộ dữ liệu có 2022 và 2024 thì cột đầu năm của thuyết
-    // minh 2024 là số cuối năm 2023, không phải 2022.
+    if (co(cua(p))) { ra.set(p.year, { tm: cua(p), muon: false }); return; }
+    // Chỉ mượn được khi năm sau LIỀN KỀ: bộ dữ liệu có 2022 và 2024 thì khối năm trước của
+    // thuyết minh 2024 là số năm 2023, không phải 2022.
     const ke = years[i + 1];
     if (!ke || ke.year !== p.year + 1) return;
     const sau = cua(ke);
-    if (co(sau) && moDau(sau)) ra.set(p.year, { fa: moDau(sau), dauNam: true });
+    if (!co(sau)) return;
+    const x = truoc(sau);
+    if (x) ra.set(p.year, { tm: x, muon: true });
   });
   return ra;
 }
 
+/** Thuyết minh đã chọn cho một năm (của chính năm đó, hoặc mượn từ năm liền sau). */
+const tmCua = (map, year) => (map.get(year) || {}).tm;
+
+const coFa = (x) => !!x && !!(x.tangible?.length || x.intangible?.length);
+const coSeg = (x) => Array.isArray(x) && x.some((s) => Number.isFinite(s.revenue));
+const coEquity = (x) => !!x && Object.keys(x).some((k) => k !== 'prev');
+
+/** Khối "Năm trước" của báo cáo bộ phận → danh sách mảng của năm trước. */
+function truocSeg(segs) {
+  const ds = segs.filter((s) => s.prev && Number.isFinite(s.prev.revenue)).map((s) => s.prev);
+  return ds.length ? ds : null;
+}
+
+/** Khối năm trước của bảng biến động vốn chủ. */
+function truocEquity(e) {
+  return e.prev && Object.keys(e.prev).length ? e.prev : null;
+}
+
 /** Cột "số đầu năm" của bảng biến động → thuyết minh của năm trước (chỉ có nguyên giá & hao mòn). */
-function moDau(fa) {
+function moDauFa(fa) {
   const lay = (ds) => (ds || []).filter((x) => Number.isFinite(x.costOpen))
     .map((x) => ({ cls: x.cls, name: x.name, cost: x.costOpen, accDep: x.accDepOpen || 0, additions: 0, depreciation: 0 }));
   const tangible = lay(fa.tangible), intangible = lay(fa.intangible);
@@ -220,10 +243,10 @@ function fillStatements(cells, vals, warn) {
   }
 }
 
-function fillSegments(cells, vals, notes, segmentMap, warn, thieu, year) {
+function fillSegments(cells, vals, tm, segmentMap, warn, thieu, year) {
   const { g, has } = getter(vals);
   if (!has('IS:10')) return;
-  const segs = Array.isArray(notes.segments) ? notes.segments.filter((s) => Number.isFinite(s.revenue)) : [];
+  const segs = Array.isArray(tm) ? tm.filter((s) => Number.isFinite(s.revenue)) : [];
   if (!segs.length) {
     put(cells, 132, g('IS:10') / M, 'uoc'); put(cells, 140, g('IS:20') / M, 'uoc');
     for (let i = 1; i < SEGMENT_SLOTS; i++) { put(cells, 132 + i, 0, 'uoc'); put(cells, 140 + i, 0, 'uoc'); }
@@ -252,7 +275,7 @@ function fillFixedAssets(cells, vals, notes, warn, thieu, year, faNam) {
   if (!has('BS:222') && !has('BS:228') && !has('BS:220')) return;
   const cost54 = g('BS:222') + g('BS:225'), acc55 = g('BS:223') + g('BS:226');
   const cost57 = g('BS:228'), acc58 = g('BS:229');
-  const fa = faNam ? faNam.fa : null;
+  const fa = faNam ? faNam.tm : null;
   const zero = () => ({ cost: 0, accDep: 0, additions: 0, depreciation: 0 });
   const rows = Object.fromEntries(FA_CLASSES.map((c) => [c.cls, zero()]));
   let src = 'tm';
@@ -271,7 +294,7 @@ function fillFixedAssets(cells, vals, notes, warn, thieu, year, faNam) {
     }
     // Lấy từ cột ĐẦU NĂM của thuyết minh năm sau: có nguyên giá & hao mòn theo nhóm, nhưng không có
     // phát sinh trong năm → chia capex và khấu hao của năm đó theo tỷ trọng nguyên giá, ghi là số ước tính.
-    if (faNam.dauNam) chiaTheoNguyenGia(rows, -cf('21'), -g('CF:02'));
+    if (faNam.muon) chiaTheoNguyenGia(rows, -cf('21'), -g('CF:02'));
   } else {
     src = 'uoc';
     rows.buildings = { cost: cost54, accDep: acc55, additions: -cf('21'), depreciation: -g('CF:02') };
@@ -279,7 +302,7 @@ function fillFixedAssets(cells, vals, notes, warn, thieu, year, faNam) {
     thieu.ghi('fa', year);
   }
   // Nguyên giá & hao mòn lấy từ thuyết minh; phát sinh trong năm ở bản "đầu năm" chỉ là ước tính.
-  const srcPS = faNam && faNam.dauNam ? 'uoc' : src;
+  const srcPS = faNam && faNam.muon ? 'uoc' : src;
   for (const c of FA_CLASSES) {
     const x = rows[c.cls];
     put(cells, c.row, x.cost / M, src); put(cells, c.row + 1, x.accDep / M, src);
@@ -333,11 +356,11 @@ function fillDebt(cells, vals, notes, thieu, year) {
   delete cells._cfFinOther;
 }
 
-function fillEquity(cells, prevCells, vals, notes, warn, thieu, year) {
+function fillEquity(cells, prevCells, vals, tm, warn, thieu, year) {
   const { g, has } = getter(vals);
   if (!has('BS:411') || !prevCells[85]) return;
   const d = (row, cur) => cur / M - (prevCells[row] ? prevCells[row].v : 0);
-  const e = notes.equity;
+  const e = coEquity(tm) ? tm : null;
   const src = e ? 'tm' : 'uoc';
   const pos = (x) => Math.max(0, x), neg = (x) => Math.min(0, x);
   const dCap = d(85, g('BS:411'));

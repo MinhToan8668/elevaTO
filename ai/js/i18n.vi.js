@@ -68,8 +68,11 @@ export const VI = {
   'pages.tip': 'Bấm vào ảnh để xem trang lớn · Shift + tick để chọn một dải trang',
   'pages.foot': 'Tick trang ba báo cáo chính và các trang thuyết minh cần lấy (TSCĐ, vay, vốn chủ, doanh thu theo mảng…). Chọn càng đúng, AI đọc càng nhanh và ít tốn lượt.',
   'pages.noDraw': 'Không vẽ được trang: {msg}',
+  'pages.rotTag': 'xoay {deg}°',
 
   // Xem trang lớn
+  'vw.rot': 'Xoay trang 90°',
+  'vw.rotNow': 'Đang xoay {deg}° — bấm để xoay thêm 90°',
   'vw.zoomOut': 'Thu nhỏ',
   'vw.zoomIn': 'Phóng to',
   'vw.close': 'Đóng',
@@ -478,6 +481,7 @@ export const VI = {
   'w.noteCap': '{task}: chỉ đọc {max} trang đầu, bỏ trang {pages} — bỏ tick bớt trang không cần.',
   'w.noNotePage': 'Không tìm thấy trang thuyết minh "{task}".',
   'w.skipped': 'Trang {pages}: AI thấy không phải CĐKT, KQKD, LCTT hay thuyết minh cần lấy — bỏ qua. Mở xem lại nếu cần.',
+  'w.xoay': '{n|Trang|Các trang} {pages} in ngang: đã tự xoay cho đứng trước khi gửi AI. Mở xem lại nếu chữ vẫn nằm ngang, bấm nút xoay ở góc trên.',
   'w.loose': 'Trang {pages}: thuyết minh nhưng không thuộc nhóm dữ liệu nào (TSCĐ, vay, vốn chủ…) — bỏ qua.',
   'w.noUnit': 'Không đọc được đơn vị tính ("{raw}") — tạm hiểu là đồng, cần xác nhận.',
   'w.noCode': 'Bỏ qua dòng không có mã và không khớp tên: "{name}"',

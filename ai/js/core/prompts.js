@@ -94,28 +94,51 @@ const FA_ROW = obj({
   nhom: { type: 'STRING', enum: ['buildings', 'machinery', 'transport', 'office', 'other', 'land', 'software'] },
   nguyen_gia_dau: S, mua: S, xdcb: S, tang_khac: S, thanh_ly: S, giam_khac: S, nguyen_gia_cuoi: S,
   hao_mon_dau: S, khau_hao: S, hao_mon_cuoi: S,
-}, ['ten', 'nguyen_gia_cuoi', 'hao_mon_cuoi']);
+}, ['ten', 'nguyen_gia_dau', 'nguyen_gia_cuoi', 'hao_mon_dau', 'hao_mon_cuoi']);
+
+// Cột/dòng tổng của bảng thuyết minh BCTC Việt Nam hay đặt tên này — lấy nhầm là nhân đôi số.
+const BO_COT_TONG = 'KHÔNG lấy cột hay dòng tổng: "Cộng", "Tổng", "Tổng cộng", "Loại trừ", "Điều chỉnh".';
+const DON_VI_BANG = 'meta.don_vi: đơn vị tính của bảng — chép dòng "Đơn vị tính:…" nếu có, nếu không thì lấy đơn vị ghi ở ĐẦU CỘT (ví dụ "VND", "Triệu VND").';
+
+// Một DÒNG của bảng biến động vốn chủ: nhãn dòng + số ở từng cột thành phần vốn.
+// Chép theo dòng (không ép AI gộp sẵn) vì một dòng model hay phải cộng nhiều dòng của bảng:
+// HAX 2025 có tới ba dòng cùng rơi vào "LNCPP giảm khác" (cổ tức bằng cổ phiếu, trích quỹ, thù lao).
+const EQUITY_ROW = obj({
+  ten: { type: 'STRING', description: 'Nhãn dòng, chép nguyên văn' },
+  von_gop: S, thang_du: S, co_phieu_quy: S, quy_dtpt: S, lncpp: S, lickks: S,
+}, ['ten']);
 
 export const NOTE_TASKS = {
   fixedAssets: {
     label: 'Tài sản cố định theo nhóm (hữu hình, vô hình)',
     schema: obj({ meta: obj({ don_vi: S }), tangible: arr(FA_ROW), intangible: arr(FA_ROW) }, ['meta', 'tangible']),
     prompt: [
-      'Đọc thuyết minh TÀI SẢN CỐ ĐỊNH HỮU HÌNH và TÀI SẢN CỐ ĐỊNH VÔ HÌNH (bảng biến động: cột là các nhóm tài sản, dòng là nguyên giá / hao mòn).',
-      'Mỗi nhóm tài sản (mỗi CỘT của bảng, KHÔNG lấy cột "Tổng cộng") là một phần tử, lấy số của NĂM NAY (bảng năm nay, không phải bảng năm trước).',
-      'nhom: nhà cửa/vật kiến trúc → buildings; máy móc thiết bị → machinery; phương tiện vận tải/truyền dẫn → transport; thiết bị dụng cụ quản lý → office; còn lại (hữu hình) → other; quyền sử dụng đất → land; phần mềm và vô hình khác → software.',
-      'nguyen_gia_dau/cuoi = số dư đầu/cuối năm của nguyên giá; mua = mua trong năm; xdcb = đầu tư XDCB hoàn thành; tang_khac = tăng khác; thanh_ly, giam_khac = giảm;',
-      'hao_mon_dau/cuoi = số dư đầu/cuối năm của giá trị hao mòn lũy kế; khau_hao = khấu hao (trích) trong năm.',
-      'TSCĐ vô hình đưa vào intangible, hữu hình vào tangible. meta.don_vi: đơn vị tính của bảng.',
+      'Đọc thuyết minh TÀI SẢN CỐ ĐỊNH HỮU HÌNH và TÀI SẢN CỐ ĐỊNH VÔ HÌNH (bảng biến động: mỗi CỘT là một nhóm tài sản, các dòng là Nguyên giá rồi Giá trị hao mòn lũy kế).',
+      `Mỗi nhóm tài sản (mỗi cột) là một phần tử. ${BO_COT_TONG}`,
+      'nhom: nhà cửa/vật kiến trúc → buildings; máy móc thiết bị → machinery; phương tiện vận tải/truyền dẫn → transport; thiết bị dụng cụ quản lý/văn phòng → office; tài sản (hữu hình) khác → other; quyền sử dụng đất (lâu dài hay có thời hạn) → land; phần mềm và vô hình khác → software.',
+      'Khối NGUYÊN GIÁ: nguyen_gia_dau = "Số dư đầu năm" / "Số đầu năm"; nguyen_gia_cuoi = "Số dư cuối năm" / "Số cuối năm";',
+      '  mua = mua sắm trong năm ("Tăng trong năm" khi bảng không tách riêng); xdcb = "Chuyển từ xây dựng cơ bản dở dang" / XDCB hoàn thành;',
+      '  tang_khac = tăng khác, kể cả "Phân loại lại" (ghi số âm nếu in trong ngoặc); thanh_ly = "Thanh lý/xóa sổ"; giam_khac = "Giảm trong năm" còn lại.',
+      'Khối GIÁ TRỊ HAO MÒN LŨY KẾ: hao_mon_dau / hao_mon_cuoi = số dư đầu / cuối năm;',
+      '  khau_hao = khấu hao trích trong năm — nhiều báo cáo ghi dòng này là "Tăng trong năm" NGAY TRONG KHỐI HAO MÒN, đừng nhầm với "Tăng trong năm" của khối nguyên giá.',
+      'Hao mòn lũy kế thường in số DƯƠNG trong bảng này; cứ chép nguyên văn như in.',
+      'Bỏ qua khối "Giá trị còn lại" (nó bằng nguyên giá trừ hao mòn).',
+      `TSCĐ vô hình đưa vào intangible, hữu hình vào tangible. ${DON_VI_BANG}`,
     ].join('\n'),
   },
   segments: {
     label: 'Doanh thu & lợi nhuận gộp theo mảng / bộ phận',
-    schema: obj({ meta: obj({ don_vi: S, nguon: S }), segments: arr(obj({ ten: S, doanh_thu: S, gia_von: S, loi_nhuan_gop: S }, ['ten', 'doanh_thu'])) }, ['meta', 'segments']),
+    schema: obj({ meta: obj({ don_vi: S, nguon: S }), segments: arr(obj({
+      ten: S, doanh_thu: S, gia_von: S, loi_nhuan_gop: S,
+      doanh_thu_truoc: S, gia_von_truoc: S, loi_nhuan_gop_truoc: S,
+    }, ['ten', 'doanh_thu'])) }, ['meta', 'segments']),
     prompt: [
       'Đọc thuyết minh BÁO CÁO BỘ PHẬN theo lĩnh vực kinh doanh (hoặc thuyết minh doanh thu / giá vốn chi tiết theo sản phẩm, dịch vụ nếu không có báo cáo bộ phận).',
-      'Mỗi bộ phận / nhóm sản phẩm là một phần tử, số của NĂM NAY: doanh thu thuần, giá vốn, lợi nhuận gộp (dòng nào không có thì "").',
-      'KHÔNG lấy cột/dòng "Tổng cộng", "Loại trừ", "Điều chỉnh". meta.nguon: tên thuyết minh đã dùng. meta.don_vi: đơn vị tính.',
+      'Mỗi bộ phận / nhóm sản phẩm là MỘT phần tử: doanh_thu, gia_von, loi_nhuan_gop (dòng nào không có thì "").',
+      'Bảng thường có cả NĂM NAY và NĂM TRƯỚC (hai khối dòng "Năm nay" / "Năm trước", hoặc hai nhóm cột):',
+      'lấy luôn số năm trước vào doanh_thu_truoc / gia_von_truoc / loi_nhuan_gop_truoc. Không có năm trước thì để "".',
+      `${BO_COT_TONG} Bỏ cả báo cáo bộ phận theo KHU VỰC ĐỊA LÝ, chỉ lấy theo lĩnh vực kinh doanh.`,
+      `meta.nguon: tên thuyết minh đã dùng. ${DON_VI_BANG}`,
     ].join('\n'),
   },
   debt: {
@@ -124,29 +147,39 @@ export const NOTE_TASKS = {
     prompt: [
       'Đọc thuyết minh VAY VÀ NỢ THUÊ TÀI CHÍNH (ngắn hạn và dài hạn), bảng biến động trong NĂM NAY.',
       'vay_trong_ky = cột/dòng "Tăng" (tiền vay mới), tra_trong_ky = "Giảm" (trả nợ), kèm số đầu năm, cuối năm. Lấy dòng TỔNG của từng loại (ngắn hạn, dài hạn).',
-      'Phần nợ dài hạn đến hạn trả chuyển sang ngắn hạn KHÔNG tính là vay mới. meta.don_vi: đơn vị tính.',
+      `Phần nợ dài hạn đến hạn trả chuyển sang ngắn hạn KHÔNG tính là vay mới. ${DON_VI_BANG}`,
     ].join('\n'),
   },
   equity: {
     label: 'Biến động vốn chủ sở hữu',
     schema: obj({
       meta: obj({ don_vi: S }),
-      von_gop_phat_hanh: S, co_phieu_thuong: S, esop: S, co_tuc_co_phieu: S, von_gop_giam: S,
-      thang_du_tang: S, thang_du_giam: S, co_phieu_quy_mua: S, co_phieu_quy_ban: S,
-      quy_dtpt_tang: S, quy_dtpt_giam: S, co_tuc_tien: S, lncpp_tang_khac: S, lncpp_giam_khac: S, lickks_thay_doi: S,
-    }, ['meta']),
+      nam_nay: arr(EQUITY_ROW),
+      nam_truoc: arr(EQUITY_ROW),
+    }, ['meta', 'nam_nay']),
     prompt: [
-      'Đọc BẢNG ĐỐI CHIẾU BIẾN ĐỘNG CỦA VỐN CHỦ SỞ HỮU, chỉ các dòng phát sinh trong NĂM NAY.',
-      'Vốn góp: von_gop_phat_hanh (phát hành thường/chào bán), co_phieu_thuong (thưởng), esop, co_tuc_co_phieu (chia cổ tức bằng cổ phiếu), von_gop_giam.',
-      'thang_du_tang/giam (thặng dư vốn cổ phần); co_phieu_quy_mua / co_phieu_quy_ban; quy_dtpt_tang/giam (quỹ đầu tư phát triển).',
-      'Lợi nhuận chưa phân phối: co_tuc_tien (chia cổ tức bằng tiền), lncpp_tang_khac, lncpp_giam_khac (trích quỹ, thù lao HĐQT, giảm khác) — KHÔNG gồm lợi nhuận trong năm.',
-      'lickks_thay_doi: thay đổi lợi ích cổ đông không kiểm soát do mua/bán công ty con (nếu có). meta.don_vi: đơn vị tính.',
+      'Đọc BẢNG ĐỐI CHIẾU BIẾN ĐỘNG CỦA VỐN CHỦ SỞ HỮU (nhiều báo cáo in thành phụ lục riêng ở cuối thuyết minh,',
+      'tên kiểu "PHỤ LỤC SỐ 01: TÌNH HÌNH TĂNG GIẢM VỐN CHỦ SỞ HỮU"; bảng có thể kéo dài sang trang sau).',
+      'Bảng là một MA TRẬN: mỗi DÒNG là một nghiệp vụ, mỗi CỘT là một thành phần vốn chủ.',
+      'Mỗi dòng nghiệp vụ là MỘT phần tử; ten = nhãn dòng chép nguyên văn; số lấy ở Ô GIAO của dòng với từng cột:',
+      '  von_gop = cột "Vốn đầu tư của chủ sở hữu" / "Vốn góp của chủ sở hữu";',
+      '  thang_du = "Thặng dư vốn cổ phần"; co_phieu_quy = "Cổ phiếu quỹ";',
+      '  quy_dtpt = "Quỹ đầu tư phát triển" (hoặc vốn khác / quỹ khác thuộc vốn chủ);',
+      '  lncpp = "Lợi nhuận sau thuế chưa phân phối"; lickks = "Lợi ích của cổ đông không kiểm soát".',
+      'Ô trống hay gạch ngang thì để "". Giữ nguyên ngoặc đơn của số âm.',
+      'Bảng thường có HAI KHỐI năm liền nhau, mỗi khối mở đầu bằng "Số dư đầu năm" / "Tại ngày 01/01/…" và',
+      'khép lại bằng "Số dư cuối năm" / "Tại ngày 31/12/…". Khối của NĂM GẦN NHẤT vào nam_nay, khối năm liền',
+      'trước vào nam_truoc. Chỉ in một năm thì bỏ hẳn nam_truoc.',
+      'Chép các dòng NGHIỆP VỤ CHI TIẾT (thường có gạch đầu dòng). Dòng cộng của khối ("Tăng trong năm",',
+      '"Giảm trong năm") chỉ chép khi bảng KHÔNG tách chi tiết bên dưới nó.',
+      `Bỏ dòng số dư đầu năm / cuối năm và cột "Cộng". ${BO_COT_TONG}`,
+      DON_VI_BANG,
     ].join('\n'),
   },
   goodwill: {
     label: 'Lợi thế thương mại',
     schema: obj({ meta: obj({ don_vi: S }), nguyen_gia: S, phan_bo_luy_ke: S, tang: S, phan_bo_trong_ky: S }, ['meta']),
-    prompt: 'Đọc thuyết minh LỢI THẾ THƯƠNG MẠI năm nay: nguyen_gia (nguyên giá cuối năm), phan_bo_luy_ke (phân bổ lũy kế cuối năm), tang (tăng trong năm), phan_bo_trong_ky (phân bổ trong năm). meta.don_vi: đơn vị tính.',
+    prompt: `Đọc thuyết minh LỢI THẾ THƯƠNG MẠI năm nay: nguyen_gia (nguyên giá cuối năm), phan_bo_luy_ke (phân bổ lũy kế cuối năm), tang (tăng trong năm), phan_bo_trong_ky (phân bổ trong năm). ${DON_VI_BANG}`,
   },
   params: {
     label: 'Số cổ phiếu lưu hành, thuế suất TNDN',
@@ -161,6 +194,9 @@ export const PAGE_MAP_SCHEMA = arr(obj({
   trang: I,
   loai: { type: 'STRING', enum: ['BS', 'IS', 'CF', 'NOTES', 'OTHER'] },
   nhom: arr({ type: 'STRING', enum: ['fixedAssets', 'debt', 'equity', 'segments', 'goodwill', 'params'] }),
+  // Bản scan hay có trang in ngang (báo cáo bộ phận, bảng biến động vốn chủ) nhưng đóng cùng chiều
+  // với các trang dọc → ảnh gửi AI bị nằm ngang. Hỏi luôn ở lượt nhận trang, khỏi tốn thêm lượt.
+  xoay: { type: 'STRING', enum: ['0', '90', '180', '270'] },
 }, ['trang', 'loai']));
 
 /** @param pages số trang đầu (các trang liên tiếp) hoặc danh sách số trang theo đúng thứ tự ảnh đính kèm */
@@ -175,6 +211,9 @@ export function pageMapTask(pages) {
       'Với MỖI trang, cho biết loai: BS (tình hình tài chính / cân đối kế toán), IS (kết quả kinh doanh), CF (lưu chuyển tiền tệ), NOTES (thuyết minh), OTHER (bìa, mục lục, báo cáo kiểm toán, ban giám đốc…).',
       'Trang tiếp nối của một bảng (không có tiêu đề) vẫn cùng loại với bảng đó.',
       'Với trang NOTES, nhom = các thuyết minh có trên trang: fixedAssets (TSCĐ hữu hình/vô hình), debt (vay và nợ thuê tài chính), equity (biến động vốn chủ sở hữu), segments (báo cáo bộ phận / doanh thu theo mảng), goodwill (lợi thế thương mại), params (số cổ phiếu lưu hành, thuế suất TNDN).',
+      'xoay: ảnh trang này phải quay bao nhiêu độ THEO CHIỀU KIM ĐỒNG HỒ để chữ nằm ngang và đọc từ trái sang phải —',
+      '"0" nếu chữ đã xuôi; "90" nếu chữ chạy từ dưới lên trên (phải nghiêng đầu sang trái mới đọc được);',
+      '"180" nếu chữ ngược đầu; "270" nếu chữ chạy từ trên xuống dưới. Không chắc thì ghi "0".',
     ].join('\n'),
   };
 }

@@ -20,29 +20,31 @@ export function cachGui({ coPdf, cỡPdf, anh = false }) {
 }
 
 export function createIO(ctx) {
-  async function pageImages(jobId, pages, width = 1600, quality = 0.8) {
+  /** @param rot { [số trang]: độ } quay thêm cho trang in ngang (xem pdf.js) */
+  async function pageImages(jobId, pages, width = 1600, quality = 0.8, rot = {}) {
     const m = ctx.media.get(jobId);
     if (!m) throw new Error(t('io.gone'));
     const { pageJpeg, imageJpeg } = await import('../pdf.js');
     const out = [];
     for (const n of pages) {
-      const data = m.pdf ? await pageJpeg(m.pdf.doc, n, width, quality) : await imageJpeg(m.images[n - 1], Math.max(width, 1200), quality);
+      const data = m.pdf ? await pageJpeg(m.pdf.doc, n, width, quality, rot[n])
+        : await imageJpeg(m.images[n - 1], Math.max(width, 1200), quality);
       out.push({ inlineData: { mimeType: 'image/jpeg', data } });
     }
     return out;
   }
 
-  async function pageParts(jobId, pages, { anh = false } = {}) {
+  async function pageParts(jobId, pages, { anh = false, rot = {} } = {}) {
     const m = ctx.media.get(jobId);
     if (!m) throw new Error(t('io.gone'));
     if (m.pdf && !anh) {
       const { subsetPdf } = await import('../pdf.js');
-      const bytes = await subsetPdf(m.pdf.bytes, pages);
+      const bytes = await subsetPdf(m.pdf.bytes, pages, rot);
       if (cachGui({ coPdf: true, cỡPdf: bytes.length }) === 'pdf') {
         return [{ inlineData: { mimeType: 'application/pdf', data: await toBase64(bytes) } }];
       }
     }
-    return pageImages(jobId, pages, CO_ANH.width, CO_ANH.quality);
+    return pageImages(jobId, pages, CO_ANH.width, CO_ANH.quality, rot);
   }
 
   return { pageImages, pageParts };
