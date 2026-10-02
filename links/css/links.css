@@ -68,12 +68,12 @@ img{display:block;max-width:100%}
 :root[data-bg="ocean"] .bg{--b1:rgba(14,165,233,.55); --b2:rgba(37,99,235,.45); --b3:rgba(20,184,166,.4); --b4:rgba(165,180,252,.4)}
 :root[data-bg="sunset"] .bg{--b1:rgba(251,113,133,.5); --b2:rgba(245,158,11,.45); --b3:rgba(168,85,247,.36); --b4:rgba(249,115,22,.36)}
 :root[data-bg="midnight"] .bg{--b1:rgba(99,102,241,.5); --b2:rgba(139,92,246,.42); --b3:rgba(14,165,233,.36); --b4:rgba(236,72,153,.3)}
-.bg i{position:absolute;border-radius:50%;animation:drift 26s ease-in-out infinite alternate}
-/* Khối màu có lõi đặc, mép mềm vừa phải (không dùng filter blur) — kính trong vẫn thấy nền rõ, không nhoè */
-.bg .b1{width:62vmax;height:62vmax;left:-20vmax;top:-24vmax;background:radial-gradient(circle,var(--b1) 0 42%,transparent 70%)}
-.bg .b2{width:52vmax;height:52vmax;right:-18vmax;top:8vmax;background:radial-gradient(circle,var(--b2) 0 40%,transparent 70%);animation-duration:32s;animation-delay:-8s}
-.bg .b3{width:58vmax;height:58vmax;left:2vmax;bottom:-30vmax;background:radial-gradient(circle,var(--b3) 0 40%,transparent 70%);animation-duration:38s;animation-delay:-14s}
-.bg .b4{width:30vmax;height:30vmax;right:14vmax;bottom:4vmax;background:radial-gradient(circle,var(--b4) 0 44%,transparent 70%);animation-duration:28s;animation-delay:-4s}
+.bg i{position:absolute;border-radius:50%;filter:blur(26px);animation:drift 26s ease-in-out infinite alternate}
+/* Khối màu nhoè vừa phải; dải chuyển nhiều nấc để mượt, không thành vệt */
+.bg .b1{width:62vmax;height:62vmax;left:-20vmax;top:-24vmax;background:radial-gradient(circle,var(--b1) 0 30%,color-mix(in srgb,var(--b1) 60%,transparent) 48%,color-mix(in srgb,var(--b1) 22%,transparent) 60%,transparent 70%)}
+.bg .b2{width:52vmax;height:52vmax;right:-18vmax;top:8vmax;background:radial-gradient(circle,var(--b2) 0 30%,color-mix(in srgb,var(--b2) 60%,transparent) 48%,color-mix(in srgb,var(--b2) 22%,transparent) 60%,transparent 70%);animation-duration:32s;animation-delay:-8s}
+.bg .b3{width:58vmax;height:58vmax;left:2vmax;bottom:-30vmax;background:radial-gradient(circle,var(--b3) 0 30%,color-mix(in srgb,var(--b3) 60%,transparent) 48%,color-mix(in srgb,var(--b3) 22%,transparent) 60%,transparent 70%);animation-duration:38s;animation-delay:-14s}
+.bg .b4{width:30vmax;height:30vmax;right:14vmax;bottom:4vmax;background:radial-gradient(circle,var(--b4) 0 32%,color-mix(in srgb,var(--b4) 60%,transparent) 50%,color-mix(in srgb,var(--b4) 22%,transparent) 62%,transparent 70%);animation-duration:28s;animation-delay:-4s}
 :root[data-theme="dark"] .bg i{opacity:.75}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bg i{opacity:.75}}
 @keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
@@ -90,14 +90,14 @@ img{display:block;max-width:100%}
    và viền bắt sáng chéo (::before, vẽ bằng mask để chỉ còn đúng 1 đường viền). */
 .lg{position:relative;isolation:isolate;
   background:linear-gradient(160deg,var(--glass),var(--glass-2));
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(190%) brightness(1.04);backdrop-filter:blur(var(--blur)) saturate(190%) brightness(1.04);
+  -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);backdrop-filter:blur(var(--blur)) saturate(150%);
   box-shadow:var(--glass-hi),var(--glass-shadow)}
 .lg::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;padding:1.2px;pointer-events:none;
   background:linear-gradient(135deg,var(--rim-a),var(--rim-b) 32%,transparent 50%,var(--rim-b) 68%,var(--rim-c));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
   mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
 /* trình chỉnh sửa và khung toast dùng chung tên cũ */
-.glass{background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(190%);backdrop-filter:blur(var(--blur)) saturate(190%);
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(150%);backdrop-filter:blur(var(--blur)) saturate(150%);
   border:1px solid var(--glass-line);box-shadow:var(--glass-hi),var(--glass-shadow)}
 
 /* ═══ KHUNG TRANG ═══ */
@@ -262,8 +262,11 @@ img{display:block;max-width:100%}
 .foot{display:flex;align-items:center;justify-content:center;gap:12px;padding:20px 0 6px}
 .foot-brand{display:block;border-radius:6px}
 .wm{height:22px;width:auto}
-.foot-sep{width:1.5px;height:18px;border-radius:2px;background:var(--brand-grad);opacity:.6}
-.foot-tag{font-family:var(--display);font-size:13px;font-weight:800;letter-spacing:.01em;color:var(--em-text);background:var(--brand-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.foot-sep{width:1.5px;height:18px;border-radius:2px;background:currentColor;color:var(--strong);opacity:.3}
+.foot-tag{font-family:var(--display);font-size:13px;font-weight:800;letter-spacing:.01em;color:#0a0f0d;
+  text-shadow:0 1px 1px rgb(0 0 0 / .14),0 3px 12px rgb(0 0 0 / .16)}
+:root[data-theme="dark"] .foot-tag{color:#fff;text-shadow:0 1px 1px rgb(0 0 0 / .5),0 3px 14px rgb(0 0 0 / .45)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .foot-tag{color:#fff;text-shadow:0 1px 1px rgb(0 0 0 / .5),0 3px 14px rgb(0 0 0 / .45)}}
 
 /* ═══ THẺ CHI TIẾT ═══ */
 .sheet{--ac:#18cb96;border:0;padding:0;margin:auto auto 0;width:100%;max-width:468px;max-height:88vh;background:transparent;color:var(--text);overflow:visible}

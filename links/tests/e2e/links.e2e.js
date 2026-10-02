@@ -205,6 +205,28 @@ test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới
   await p.context().close();
 });
 
+test('trình chỉnh sửa: nháp khác web thì báo rõ; một nút đổi mọi ô sang bộ icon elevaTO, giữ chữ đã sửa', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  const draft = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  draft.links = draft.links.map((l) => ({ ...l, image: 'art/3d/laptop.webp', imageStyle: 'icon' }));
+  draft.links[1].title = 'AI đọc BCTC siêu nhanh';
+  await p.addInitScript((d) => {
+    if (window.top !== window || sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+  }, draft);
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('#prevNote.on');
+  await p.click('button:has-text("Dùng bộ icon elevaTO cho tất cả ô")');
+  const frame = p.frames().find((f) => f.url().includes('preview'));
+  await frame.waitForSelector('.tile .chip.img img[src="art/glass/ai.svg"]');
+  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
+  assert.equal(saved.links[0].image, 'art/glass/course.svg');
+  assert.equal(saved.links[1].title, 'AI đọc BCTC siêu nhanh');
+  assert.ok(saved.links.every((l) => l.imageStyle === 'photo'));
+  await p.context().close();
+});
+
 test('trang khoá học: /#dang-ky mở thẳng form đăng ký', async () => {
   const p = await page();
   await p.goto(base + '/#dang-ky');
