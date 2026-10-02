@@ -1220,11 +1220,14 @@ function setup() {
       drop_pending_updates: true
     });
     tucThi = !!(hook && hook.ok);
+    if (tucThi) { try { datLichCanh(); } catch (e2) {} }
   }
 
   if (tucThi) {
     out.push('✔ Đã nối webhook — bot trả lời TỨC THÌ');
     out.push('  Đã tự thử /exec trước khi nối và thấy trả về 200.');
+    out.push('  Lịch canh webhook chạy mỗi ' + CANH_PHUT + ' phút: hỏng thì tự nối lại,');
+    out.push('  không nối được thì tự lùi về chế độ hỏi định kỳ và nhắn cho bạn.');
     out.push('  Nếu sau này bot im, chạy  batCheDoHoi  để lùi về chế độ chậm mà chắc.');
     Logger.log(out.join('\n'));
     tgSend(adminIds()[0],
@@ -1365,6 +1368,9 @@ function noiWebhook() {
     allowed_updates: ['message', 'callback_query'],
     drop_pending_updates: true
   });
+  if (r && r.ok) {
+    try { datLichCanh(); } catch (err) { Logger.log('⚠ Không đặt được lịch canh webhook: ' + err); }
+  }
   Logger.log(r && r.ok
     ? '✔ Đã nối webhook: ' + url + '\n' +
       '  Đã gỡ lịch hỏi định kỳ để tránh xử lý trùng.\n\n' +
@@ -1383,7 +1389,7 @@ function dungBot() {
   var r = tgApi('deleteWebhook', { drop_pending_updates: true });
   var out = ['✔ Đã ngắt webhook (' + (r && r.ok ? 'ok' : JSON.stringify(r)) + ')'];
   try {
-    out.push('✔ Đã gỡ ' + goLichHoi() + ' lịch chạy. Bot im ngay lập tức.');
+    out.push('✔ Đã gỡ ' + (goLichHoi() + goLichCanh()) + ' lịch chạy. Bot im ngay lập tức.');
     out.push('  Chạy  batCheDoHoi  để bật lại.');
   } catch (err) {
     out.push('✘ Không gỡ được lịch chạy bằng code.');
@@ -1500,6 +1506,7 @@ function kiemTraWebApp() {
 //     Không cần URL công khai, không dính lỗi chuyển hướng 302.
 //     Đổi lại: bot trả lời chậm hơn, tối đa khoảng 1 phút.
 // ─────────────────────────────────────────────────────────────
+var CANH_PHUT     = 30;   // bao lâu canh webhook một lần (phút)
 var HOI_TRAN_GIAY = 30;   // trần thời gian một lượt chạy được phép bám
 var HOI_CHO_GIAY  = 10;   // mỗi lần hỏi nằm chờ bao lâu khi đang có việc
 var HOI_RONG_TOI  = 2;    // im lặng mấy lượt liền thì thôi bám, nhường lượt sau
@@ -1537,6 +1544,7 @@ function tatCheDoHoi() {
  */
 function datLichHoi() {
   donLichUpload();
+  try { goLichCanh(); } catch (err) { /* thiếu quyền ScriptApp — bỏ qua */ }
   tgApi('deleteWebhook', { drop_pending_updates: false });
   datMocMoiNhat();
   goLichHoi();
@@ -1554,6 +1562,60 @@ function donLichUpload() {
   });
   if (n) Logger.log('✔ Đã xoá ' + n + ' lịch chạy chuyenTelegram còn sót của công cụ upload.');
   return n;
+}
+
+/**
+ * Lịch canh webhook. Webhook cho phản hồi tức thì nhưng có thể chết âm thầm:
+ * deploy lại, đổi quyền truy cập, hay Apps Script trả lỗi vài lần là Telegram
+ * bỏ cuộc mà không báo ai. Lịch này nửa tiếng soi một lần, hỏng thì tự nối lại,
+ * nối lại không xong thì lùi về chế độ hỏi định kỳ và nhắn cho admin biết.
+ */
+function datLichCanh() {
+  goLichCanh();
+  ScriptApp.newTrigger('canhWebhook').timeBased().everyMinutes(CANH_PHUT).create();
+}
+
+function goLichCanh() {
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'canhWebhook') { ScriptApp.deleteTrigger(t); n++; }
+  });
+  return n;
+}
+
+function canhWebhook() {
+  var info = tgApi('getWebhookInfo', {});
+  if (!info || !info.ok || !info.result) return;          // mạng lỗi — để lượt sau
+  var w = info.result;
+  var url = String(WEBAPP_URL || '').trim();
+
+  // Không còn ở chế độ webhook (đã lùi về lịch hỏi) → lịch canh hết việc.
+  if (!w.url) { try { goLichCanh(); } catch (err) {} return; }
+
+  // Hỏng là khi Telegram vừa gặp lỗi gần đây VÀ đang có tin ùn lại chưa giao được.
+  var loiMoi = w.last_error_date && (Date.now() / 1000 - w.last_error_date) < CANH_PHUT * 60;
+  var dongUn = Number(w.pending_update_count || 0) > 0;
+  if (w.url === url && !(loiMoi && dongUn)) return;       // vẫn đang chạy tốt
+
+  var r = tgApi('setWebhook', {
+    url: url,
+    allowed_updates: ['message', 'callback_query'],
+    drop_pending_updates: false
+  });
+  if (r && r.ok && webhookDungDuoc()) {
+    tgSend(adminIds()[0], '⚠️ Webhook vừa trục trặc, đã tự nối lại. Bot chạy tiếp bình thường.');
+    return;
+  }
+
+  // Nối lại không xong → lùi về chế độ chậm mà chắc, đừng để bot câm.
+  try {
+    datLichHoi();
+    tgSend(adminIds()[0], '⚠️ Webhook hỏng, nối lại không được nên đã lùi về *chế độ hỏi định kỳ* ' +
+      '(tin đầu chờ tối đa 1 phút). Bot vẫn nhận lệnh bình thường.\n\n' +
+      'Muốn nhanh lại: deploy phiên bản mới rồi chạy hàm  noiWebhook.');
+  } catch (err) {
+    ghiLoi('canhWebhook', err);
+  }
 }
 
 function goLichHoi() {
