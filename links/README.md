@@ -93,9 +93,15 @@ links/
 ├── css/links.css     giao diện trang (edit.css: thêm cho trình chỉnh sửa)
 ├── fonts/            Plus Jakarta Sans (phông tiêu đề, OFL) — chữ thường dùng Be Vietnam Pro của ai/
 ├── js/core.js        logic thuần: lọc link an toàn, chuẩn hoá dữ liệu, số chỗ cohort
-├── js/page.js        vẽ trang
-├── js/editor.js      trình chỉnh sửa (edit-ui.js: ô nhập, thanh kéo, chọn ảnh; image.js: nén ảnh từ máy;
-│                     iconify.js: tìm icon)
+├── js/dom.js         tiện ích dùng chung cho cả hai trang: tạo element, lưu trên máy, thông báo, sáng/tối
+├── js/icons.js       bộ icon SVG dùng chung
+├── js/page.js        vẽ trang công khai
+├── js/editor.js      trình chỉnh sửa — khởi động và nối các nút
+│   ├── edit-state.js   bản nháp: lưu trên máy, đẩy sang khung xem trước, so với bản trên web
+│   ├── edit-panels.js  nội dung form (hồ sơ, giao diện, từng ô link, sao lưu…)
+│   ├── edit-publish.js đăng lên web: ADMIN_KEY / token GitHub
+│   └── edit-ui.js      khối nhỏ: ô nhập, công tắc, nhóm chọn một, thanh kéo, chọn ảnh
+│                       (image.js: nén ảnh từ máy · iconify.js: tìm icon)
 ├── js/backend.js     đọc / lưu nội dung qua backend Apps Script (backend/Code.gs)
 ├── js/github.js      đăng data.json qua GitHub API (cách phụ)
 └── tests/            node --test (+ e2e Playwright)
@@ -104,3 +110,6 @@ links/
 Chạy test: `cd links && npm test` · `npm run e2e` (cần Playwright).
 
 Link chỉ nhận `http(s)`, `mailto:`, `tel:`, `sms:` và đường dẫn tương đối — `javascript:` hay `data:` bị bỏ.
+
+Trình chỉnh sửa dùng được bằng bàn phím: trong các nhóm chọn một (kiểu ô, hình nền, icon, màu nhấn) dùng
+**Tab** để vào nhóm rồi **mũi tên / Home / End** để chọn — không phải bấm Tab qua từng nút.
