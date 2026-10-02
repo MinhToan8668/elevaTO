@@ -2,7 +2,7 @@
    Độ mờ (--blur) và độ đục của kính (--tint) do data.json quyết định, trang gán lên :root lúc chạy. */
 :root{
   color-scheme:light;
-  --blur:18px; --tint:.4;          /* trùng theme trong data.json → nhịp vẽ đầu đã đúng, không nháy */
+  --blur:0px; --tint:.05;          /* trùng theme trong data.json → nhịp vẽ đầu đã đúng, không nháy */
   --em:#18cb96; --em-ink:#03261a; --em-text:#067a56;
   --text:#14201b; --strong:#06110d; --muted:#3b4a44;
   --base:#eef4f1;
@@ -336,38 +336,38 @@ img{display:block;max-width:100%}
    Chỉ xét BỀ NGANG, không xét chiều cao: Safari thu/giãn thanh công cụ khi cuộn làm chiều cao
    màn đổi liên tục, khoá theo chiều cao thì bố cục nhảy qua nhảy lại giữa chừng. */
 @media (max-width:560px){
-  .page{padding-bottom:max(6px,env(safe-area-inset-bottom))}
-  .logo{height:36px}
-  .bar{padding:2px 0 5px}
-  .main{gap:7px}
+  .page{padding-bottom:max(4px,env(safe-area-inset-bottom))}
+  .logo{height:34px}
+  .bar{padding:0 0 4px}
+  .main{gap:6px}
 
-  .card{padding:10px 13px 9px;border-radius:26px}
+  .card{padding:9px 12px 8px;border-radius:24px}
   .who{gap:12px}
-  .ava-wrap{width:66px;height:66px}
+  .ava-wrap{width:58px;height:58px}
   .name{font-size:20px}.ver{width:18px;height:18px}
   .handle{font-size:12.5px}
-  .tagline{font-size:12.5px;line-height:1.42;-webkit-line-clamp:2;line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
-  .stats{margin-top:8px;border-radius:15px}.stat{padding:5px 4px}.stat dd{font-size:15.5px}.stat dt{font-size:10.5px}
-  .row2{margin-top:7px;gap:6px}
-  .status{padding:6px 12px;font-size:12px}
-  .soc{height:36px;border-radius:12px}.soc .ic{width:18px;height:18px}
+  .tagline{font-size:12.5px;line-height:1.38;-webkit-line-clamp:2;line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+  .stats{margin-top:7px;border-radius:14px}.stat{padding:4px 4px}.stat dd{font-size:15.5px}.stat dt{font-size:10.5px}
+  .row2{margin-top:6px;gap:5px}
+  .status{padding:5px 12px;font-size:12px}
+  .soc{height:34px;border-radius:11px}.soc .ic{width:17.5px;height:17.5px}
 
-  .grid{gap:6px}
-  .tile{padding:10px;border-radius:20px}
+  .grid{gap:5px}
+  .tile{padding:9px;border-radius:19px}
   .tile.half{min-height:96px;gap:8px}
-  .chip{width:40px;height:40px;border-radius:12px}.chip .ic{width:19px;height:19px}
+  .chip{width:38px;height:38px;border-radius:11px}.chip .ic{width:18px;height:18px}
   .ttl{font-size:13.5px}
   .sub{font-size:11.5px;-webkit-line-clamp:2;line-clamp:2}
 
-  .tile.feature{gap:8px;padding:11px;border-radius:23px}
+  .tile.feature{gap:7px;padding:10px;border-radius:22px}
   .f-top{gap:11px}
-  .f-top .chip{width:58px;height:58px}.f-top .chip .ic{width:26px;height:26px}
+  .f-top .chip{width:54px;height:54px}.f-top .chip .ic{width:24px;height:24px}
   .f-top .ttl{font-size:16.5px}
   .f-top .sub{font-size:12px;-webkit-line-clamp:2;line-clamp:2}
-  .live{gap:4px}
-  .cta{padding:9px 16px;font-size:14.5px;border-radius:14px}
+  .live{gap:3px}
+  .cta{padding:8px 16px;font-size:14.5px;border-radius:13px}
 
-  .foot{gap:9px;padding:4px 0 0}.wm{height:19px}.foot-tag{font-size:11.5px}
+  .foot{gap:8px;padding:2px 0 0}.wm{height:17px}.foot-tag{font-size:11px}
 }
 @media (max-width:360px){
   .logo{height:38px}                      /* màn 320px: logo và viên nút sát nhau quá */

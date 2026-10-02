@@ -2,15 +2,15 @@
   "version": 1,
   "meta": {
     "title": "Minh Toàn · elevaTO",
-    "description": "Khóa Financial Modeling thực chiến, công cụ AI đọc BCTC, slide miễn phí và cách liên hệ Minh Toàn — tất cả ở một chỗ."
+    "description": "Khóa Financial Modeling thực chiến, công cụ AI đọc BCTC, slide miễn phí và thông tin liên hệ Minh Toàn"
   },
   "profile": {
     "name": "Minh Toàn",
-    "handle": "@toanelevato",
+    "handle": "@financewithto",
     "tagline": "1 anh bạn làm Corporate Banking & M&A · Founder elevaTO",
     "avatar": "../assets/instructor-sm.webp",
-    "verified": true,
-    "status": ""
+    "verified": false,
+    "status": "Minhtoantowork@gmail.com"
   },
   "stats": [
     {
@@ -33,78 +33,79 @@
     },
     {
       "type": "facebook",
-      "url": ""
+      "url": "https://www.facebook.com/share/1CBjrf8BAm/?mibextid=wwXIfr"
     },
     {
       "type": "linkedin",
-      "url": ""
+      "url": "https://www.linkedin.com/in/toan-huynh-minh-393279222/"
     },
     {
-      "type": "zalo",
-      "url": ""
+      "type": "phone",
+      "url": "0376292148"
     }
   ],
   "links": [
     {
       "id": "course",
-      "title": "Financial Modeling thực chiến",
+      "title": "Financial Modeling + PT BCTC",
       "subtitle": "8 buổi live — tự build 3-Statement, DCF, Comps trên BCTC công ty niêm yết",
       "url": "../",
       "size": "feature",
       "icon": "book",
-      "accent": "emerald",
-      "image": "art/glass/course.svg",
+      "accent": "violet",
+      "image": "art/glass/model.svg",
+      "imageStyle": "photo",
       "badge": "",
       "hidden": false,
       "live": true,
-      "cta": "Giữ chỗ",
-      "ctaUrl": "../#dang-ky",
+      "cta": "Đăng Ký",
+      "ctaUrl": "https://minhtoan8668.github.io/elevaTO/",
       "details": {
         "enabled": false,
         "text": "",
         "bullets": [],
         "button": ""
-      },
-      "imageStyle": "photo"
+      }
     },
     {
       "id": "ai",
       "title": "AI đọc BCTC",
-      "subtitle": "Thả PDF báo cáo tài chính, nhận về file Excel model",
-      "url": "../ai/",
-      "size": "half",
+      "subtitle": "Trích xuất PDF BCTC, nhận về file Excel Data",
+      "url": "https://minhtoan8668.github.io/elevaTO/ai/",
+      "size": "feature",
       "icon": "sparkles",
-      "accent": "violet",
-      "image": "art/glass/ai.svg",
-      "badge": "Mới",
-      "hidden": false,
-      "live": false,
-      "cta": "",
-      "ctaUrl": "",
-      "details": {
-        "enabled": false,
-        "text": "",
-        "bullets": [],
-        "button": ""
-      },
-      "imageStyle": "photo"
-    },
-    {
-      "id": "slides",
-      "title": "Modeling Slides",
-      "subtitle": "Slide DCF, WACC, dòng tiền tự do — xem miễn phí",
-      "url": "../#slides",
-      "size": "half",
-      "icon": "slides",
-      "accent": "amber",
-      "image": "art/glass/slides.svg",
+      "accent": "blue",
+      "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxZW0iIGhlaWdodD0iMWVtIiB2aWV3Qm94PSIwIDAgMTQgMTQiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIj48cGF0aCBmaWxsPSIjOGZiZmZhIiBkPSJNOC4zNDIgMS4yMDJjLS4xOC4xNy0uNDEuMjg3LS42NjQuMzMyYy0yLjA3Mi4zNi0yLjA3MiAzLjMzNCAwIDMuNjk1Yy41MTguMDkuOTMuNDg0IDEuMDQyLjk5OGwuMDIuMDg3Yy40MyAxLjk3MSAzLjIzNyAxLjk4NCAzLjY4NS4wMTZsLjAyNC0uMTAyYy4wNTMtLjIzMy4xNjctLjQ0MS4zMjUtLjYwOGE2LjUwMSA2LjUwMSAwIDEgMS00LjQzMi00LjQxOCIvPjxwYXRoIGZpbGw9IiMyODU5YzUiIGQ9Ik04LjM0MiAxLjIwMmE2LjUgNi41IDAgMCAwLTEuNTcxLS4yNXEuMjI4LjM1NS40MzIuNzIzcS4yMTYtLjA5NS40NzUtLjE0MWMuMjU1LS4wNDUuNDg0LS4xNjMuNjY0LS4zMzJtLjQwOSA1LjE2M2MuNDI0IDEuNzQyIDIuNzM3IDEuOSAzLjQ5NS40NThoLjc1OWE2LjYgNi42IDAgMCAxIDAgMS4yNUgxMC4wNmExNC42IDE0LjYgMCAwIDEtMS42ODYgNS42MTJjLS41MTEuMTUtMS4wNDguMjQtMS42MDMuMjZhMTMuMyAxMy4zIDAgMCAwIDIuMDMzLTUuODcySDQuMjYyYTEzLjMgMTMuMyAwIDAgMCAyLjAzNCA1Ljg3MmE2LjUgNi41IDAgMCAxLTEuNjAzLS4yNmExNC42IDE0LjYgMCAwIDEtMS42ODYtNS42MTJILjA2MmE2LjYgNi42IDAgMCAxIDAtMS4yNWgyLjk0NWExNC42IDE0LjYgMCAwIDEgMS42ODYtNS42MTJhNi41IDYuNSAwIDAgMSAxLjYwMy0uMjZhMTMuMyAxMy4zIDAgMCAwLTIuMDM0IDUuODcyaDQuNTQyYTE0IDE0IDAgMCAwLS4wNTMtLjQ1OCIvPjxwYXRoIGZpbGw9IiMyODU5YzUiIGQ9Ik0xMS4zNjYuNjc0Yy0uMTktLjgzNS0xLjM4Mi0uODMtMS41NjUuMDA3bC0uMDA3LjAzM2wtLjAxNC4wNjRhMi4zOCAyLjM4IDAgMCAxLTEuOTE2IDEuODI3Yy0uODcuMTUxLS44NyAxLjQwMSAwIDEuNTUzYTIuMzggMi4zOCAwIDAgMSAxLjkxOCAxLjgzNmwuMDIuMDg4Yy4xODIuODM2IDEuMzczLjg0MSAxLjU2NC4wMDdsLjAyMy0uMTAyYTIuNCAyLjQgMCAwIDEgMS45MjUtMS44MjhjLjg3Mi0uMTUyLjg3Mi0xLjQwNCAwLTEuNTU2QTIuNCAyLjQgMCAwIDEgMTEuMzkyLjc5MWwtLjAxOC0uMDc4bC0uMDA4LS4wNFoiLz48L2c+PC9zdmc+",
+      "imageStyle": "icon",
       "badge": "Free",
       "hidden": false,
       "live": false,
       "cta": "",
       "ctaUrl": "",
       "details": {
-        "enabled": true,
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
+    },
+    {
+      "id": "slides",
+      "title": "Modeling Slides",
+      "subtitle": "Slides Modeling Chi Tiết",
+      "url": "../#slides",
+      "size": "wide",
+      "icon": "slides",
+      "accent": "amber",
+      "image": "art/glass/slides.svg",
+      "imageStyle": "photo",
+      "badge": "Free",
+      "hidden": false,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": false,
         "text": "Bộ slide mình dùng để dạy, dành cho các bạn muốn hiểu hơn về Modeling.",
         "bullets": [
           "Vì sao doanh nghiệp đáng giá ngần đó tiền",
@@ -113,30 +114,7 @@
           "Bài tập thực hành có đáp án"
         ],
         "button": "Xem slide"
-      },
-      "imageStyle": "photo"
-    },
-    {
-      "id": "trial",
-      "title": "Học thử buổi 1",
-      "subtitle": "Video buổi Phân tích Bảng cân đối kế toán",
-      "url": "../#demo",
-      "size": "half",
-      "icon": "play",
-      "accent": "cyan",
-      "image": "art/glass/trial.svg",
-      "badge": "",
-      "hidden": false,
-      "live": false,
-      "cta": "",
-      "ctaUrl": "",
-      "details": {
-        "enabled": false,
-        "text": "",
-        "bullets": [],
-        "button": ""
-      },
-      "imageStyle": "photo"
+      }
     },
     {
       "id": "model",
@@ -146,9 +124,10 @@
       "size": "half",
       "icon": "chart",
       "accent": "blue",
-      "image": "art/glass/model.svg",
+      "image": "art/3d/laptop.webp",
+      "imageStyle": "icon",
       "badge": "",
-      "hidden": false,
+      "hidden": true,
       "live": false,
       "cta": "",
       "ctaUrl": "",
@@ -157,18 +136,18 @@
         "text": "",
         "bullets": [],
         "button": ""
-      },
-      "imageStyle": "photo"
+      }
     },
     {
       "id": "zalo",
-      "title": "Zalo Minh nhé",
-      "subtitle": "Liên hệ hoặc hẹn Coffee Connect ☕",
-      "url": "",
-      "size": "wide",
+      "title": "Zalo Mình nhé",
+      "subtitle": "Contact or Coffee Connect ☕",
+      "url": "https://zalo.me/0376292148",
+      "size": "half",
       "icon": "zalo",
       "accent": "blue",
-      "image": "art/glass/zalo.svg",
+      "image": "art/zalo.svg",
+      "imageStyle": "photo",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -179,18 +158,40 @@
         "text": "",
         "bullets": [],
         "button": ""
-      },
-      "imageStyle": "photo"
+      }
+    },
+    {
+      "id": "trial",
+      "title": "Học thử buổi 1",
+      "subtitle": "Video buổi Phân tích Bảng cân đối kế toán",
+      "url": "../#demo",
+      "size": "half",
+      "icon": "play",
+      "accent": "cyan",
+      "image": "art/3d/clapper-board.webp",
+      "imageStyle": "icon",
+      "badge": "",
+      "hidden": true,
+      "live": false,
+      "cta": "",
+      "ctaUrl": "",
+      "details": {
+        "enabled": false,
+        "text": "",
+        "bullets": [],
+        "button": ""
+      }
     },
     {
       "id": "cv",
       "title": "My CV",
       "subtitle": "Kinh nghiệm Corporate Banking, M&A",
-      "url": "",
-      "size": "wide",
+      "url": "https://drive.google.com/file/d/1-e_wVbMXOZPNL-WQEGqJukscq8pmCg15/view?usp=sharing",
+      "size": "half",
       "icon": "file",
       "accent": "slate",
-      "image": "art/glass/cv.svg",
+      "image": "art/3d/page-facing-up.webp",
+      "imageStyle": "photo",
       "badge": "",
       "hidden": false,
       "live": false,
@@ -201,8 +202,7 @@
         "text": "",
         "bullets": [],
         "button": ""
-      },
-      "imageStyle": "photo"
+      }
     }
   ],
   "live": {
@@ -210,8 +210,8 @@
     "api": "https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec"
   },
   "theme": {
-    "blur": 18,
-    "tint": 40,
+    "blur": 0,
+    "tint": 5,
     "background": "aurora",
     "bgImage": ""
   }
