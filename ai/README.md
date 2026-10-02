@@ -142,6 +142,9 @@ Lệnh (gõ trong tin nhắn riêng với bot):
 | `/ungho <ngân hàng> <số tk> <tên chủ tk>` | đặt số tài khoản nhận ủng hộ (`vcb`, `tcb`, `mb`… hoặc 6 số BIN của NAPAS) |
 | `/ungho off` | tạm ẩn phần ủng hộ trên trang |
 
+- Bot tự đăng ký **menu lệnh**: bấm nút **Menu** cạnh ô soạn tin, hoặc gõ `/` là ra danh sách có mô tả.
+  Menu chỉ đặt cho riêng chat quản trị — người lạ mở bot không thấy. Sửa danh sách trong `MENU_LENH`
+  (`worker/src/telegram.js`) rồi push là bot tự đăng ký lại.
 - `/thongke` cho biết chuỗi model đang dùng và model nào đang quá tải.
 - Chỉ **tin riêng do chính chat ID quản trị gõ** mới được xử lý (không nhận nhóm, không nhận tin chuyển tiếp);
   người lạ nhắn bot thì bot im lặng. Nút bấm kiểm tra cả chat lẫn người bấm.

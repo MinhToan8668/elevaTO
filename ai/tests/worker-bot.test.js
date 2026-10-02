@@ -314,3 +314,38 @@ test('chưa bấm Start với bot: webhook vẫn đăng ký, và lời chào t�
     assert.equal(tin.length, 1, 'đã chào rồi thì thôi, không nhắc lại mỗi lượt');
   } finally { globalThis.fetch = that; }
 });
+
+// ─── Menu lệnh ──────────────────────────────────────────────
+
+test('menu lệnh: đăng ký cho riêng chat quản trị, một lần rồi thôi', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await goi(env, { action: 'ungho' });
+    const dat = f.tg.filter((x) => x.method === 'setMyCommands');
+    assert.equal(dat.length, 1);
+    assert.deepEqual(dat[0].scope, { type: 'chat', chat_id: ADMIN }, 'người lạ không thấy menu lệnh của quản trị');
+    assert.ok(dat[0].commands.length >= 10);
+    await goi(env, { action: 'ungho' });
+    assert.equal(f.tg.filter((x) => x.method === 'setMyCommands').length, 1, 'đăng ký rồi thì thôi');
+  } finally { f.thoi(); }
+});
+
+test('mọi lệnh trong menu đều là lệnh bot chạy thật, và đúng khuôn Telegram đòi', async () => {
+  const { MENU_LENH, chayLenh } = await import('../worker/src/telegram.js');
+  for (const { command, description } of MENU_LENH) {
+    assert.match(command, /^[a-z0-9_]{1,32}$/, `tên lệnh "${command}" sai khuôn Telegram`);
+    assert.ok(description.length >= 3 && description.length <= 256, `mô tả "${command}" dài sai`);
+  }
+  assert.equal(new Set(MENU_LENH.map((x) => x.command)).size, MENU_LENH.length, 'không được trùng lệnh');
+
+  // Gõ lệnh trong menu mà bot trả "Không rõ lệnh" là menu nói dối.
+  const env = env0();
+  const f = moFetch();
+  try {
+    for (const { command } of MENU_LENH) {
+      const kq = await chayLenh(env, `/${command}`, []);
+      assert.doesNotMatch(kq.text, /Không rõ lệnh/, `/${command} không có trong chayLenh`);
+    }
+  } finally { f.thoi(); }
+});
