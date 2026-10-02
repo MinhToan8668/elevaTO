@@ -10,6 +10,8 @@ import { execSync } from 'node:child_process';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+// Nội dung thật trong links/data.json do chủ trang đổi bất cứ lúc nào; test chạy trên bản mẫu cố định.
+const MAU = join(ROOT, 'links/tests/fixtures/data.json');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
   '.webp': 'image/webp', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 const COHORT = { ok: true, config: { cohort: { number: 7, status: 'open', openText: 'Sắp mở' }, slots: { max: 10, base: 4, registered: 1 },
@@ -26,7 +28,7 @@ let server, base, browser;
 before(async () => {
   server = http.createServer(async (req, res) => {
     const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
-    let file = join(ROOT, path);
+    let file = path === '/links/data.json' ? MAU : join(ROOT, path);
     if (file.endsWith('/')) file += 'index.html';
     try {
       const buf = await readFile(file);
@@ -85,6 +87,29 @@ test('trên điện thoại: cả trang vừa một màn, không phải lướt'
   await p.context().close();
 });
 
+test('vào lại trang: không để data.json đè lên nội dung chủ trang đã đăng trong lúc chờ máy chủ', async () => {
+  // Apps Script mất vài giây, còn data.json nằm cùng máy chủ với trang nên về sau ~50ms. Nếu data.json
+  // được vẽ đè lên bản đã lưu lần trước thì người xem quen thấy: đúng → nội dung cũ vài giây → đúng lại.
+  const p = await page();
+  const daDang = JSON.parse(await readFile(MAU, 'utf8'));
+  daDang.links[1].title = 'Nội dung chủ trang đã đăng';
+  await p.addInitScript((d) => localStorage.setItem('elevato-links-v1', JSON.stringify(d)), daDang);
+  let traLoi = null;
+  await p.route(/script\.google\.com.*action=links/, async (r) => {
+    traLoi = () => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data: daDang }) });
+  });
+  await p.goto(base + '/links/');
+  await p.waitForSelector('#grid .ttl');
+  // data.json đã về từ lâu; máy chủ thì chưa. Nội dung phải vẫn là bản đã lưu.
+  await p.waitForTimeout(600);
+  const titles = await p.$$eval('#grid .ttl', (els) => els.map((e) => e.textContent));
+  assert.ok(titles.includes('Nội dung chủ trang đã đăng'),
+    'data.json đã đè lên bản đã lưu — người xem thấy nội dung cũ trong lúc chờ máy chủ: ' + JSON.stringify(titles));
+  if (traLoi) await traLoi();
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 test('mới mở trang là kính đã đúng ngay, không hiện mặc định rồi mới nhảy sang bản thật', async () => {
   const p = await page();
   // Chặn mọi nguồn dữ liệu: những gì thấy được lúc này chính là nhịp vẽ đầu tiên.
@@ -95,6 +120,7 @@ test('mới mở trang là kính đã đúng ngay, không hiện mặc định r
     const cs = getComputedStyle(document.documentElement);
     return [cs.getPropertyValue('--blur').trim(), cs.getPropertyValue('--tint').trim()];
   });
+  // CSS mặc định phản chiếu data.json THẬT trong repo, không phải bản mẫu của test.
   const d = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   // CSS ghi ".4", JS ghi "0.4" — cùng một số, so bằng số.
   assert.equal(cssTheme[0], d.theme.blur + 'px',
@@ -244,7 +270,7 @@ test('trình chỉnh sửa: chọn icon 3D có sẵn và tìm icon Iconify cho m
 
 test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới, giữ nguyên chữ đã sửa', async () => {
   const p = await page({ viewport: { width: 1400, height: 900 } });
-  const old = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const old = JSON.parse(await readFile(MAU, 'utf8'));
   delete old.theme;
   old.profile.status = 'Minhtoantowork@gmail.com';
   old.links = old.links.map((l) => ({ ...l, image: l.id === 'course' ? '../assets/model/dashboard-thumb.webp' : '' }));
@@ -265,7 +291,7 @@ test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới
 
 test('trình chỉnh sửa: nháp khác web thì báo rõ; một nút đổi mọi ô sang bộ icon elevaTO, giữ chữ đã sửa', async () => {
   const p = await page({ viewport: { width: 1400, height: 900 } });
-  const draft = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const draft = JSON.parse(await readFile(MAU, 'utf8'));
   draft.links = draft.links.map((l) => ({ ...l, image: 'art/3d/laptop.webp', imageStyle: 'icon' }));
   draft.links[1].title = 'AI đọc BCTC siêu nhanh';
   await p.addInitScript((d) => {
@@ -305,7 +331,7 @@ test('trình chỉnh sửa: dán nhầm mật khẩu thì báo ngay; token bị 
 
 test('máy chủ elevaTO: trang ưu tiên nội dung đã lưu trên Apps Script, dự phòng data.json', async () => {
   const p = await page();
-  const saved = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const saved = JSON.parse(await readFile(MAU, 'utf8'));
   saved.links[1].title = 'AI đọc BCTC (bản trên máy chủ)';
   await p.route(/script\.google\.com.*action=links/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data: saved }) }));
   await p.goto(base + '/links/');

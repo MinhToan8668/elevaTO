@@ -1,7 +1,7 @@
 // Trang link-in-bio công khai: đọc data.json → vẽ danh thiếp + lưới ô link.
 // ?preview: chạy trong khung xem trước của trình chỉnh sửa, nhận bản nháp qua postMessage và không mở link thật.
 
-import { normalize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo, ACCENTS } from './core.js';
+import { normalize, serialize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo, ACCENTS } from './core.js';
 import { $, h, store, toast, toggleTheme } from './dom.js';
 import { svg } from './icons.js';
 import { fetchLinks } from './backend.js';
@@ -226,7 +226,11 @@ async function share() {
 // Nội dung trang: ưu tiên bản lưu trên máy chủ Apps Script (trình chỉnh sửa lưu vào đó, đổi ngay),
 // data.json trong repo là bản dự phòng khi máy chủ chưa có gì hoặc không trả lời.
 let cohortStarted = false;
+let daVe = '';                       // nội dung đang hiện, dạng chuẩn
 function apply(raw) {
+  const json = serialize(raw);
+  if (json === daVe) return;         // y hệt thứ đang hiện → khỏi vẽ lại, khỏi nháy
+  daVe = json;
   if (!PREVIEW) store.set(DATA_CACHE, raw);
   data = normalize(raw);
   render();
@@ -249,9 +253,12 @@ async function loadData() {
     return;
   }
 
+  // data.json nằm cùng máy chủ với trang nên về sau ~50ms, còn Apps Script mất vài giây. Nếu để
+  // data.json vẽ đè lên bản đã lưu lần trước thì người xem quen thấy: đúng → nội dung cũ (vài giây)
+  // → đúng trở lại. Bản lưu luôn mới bằng hoặc hơn data.json, nên chỉ dùng data.json khi chưa có gì.
   let fromBackend = false;
   const backend = fetchLinks().then((raw) => { if (raw) { fromBackend = true; apply(raw); } return raw; });
-  const file = loadFile().then((raw) => { if (!fromBackend) apply(raw); return raw; }).catch(() => null);
+  const file = loadFile().then((raw) => { if (!fromBackend && !cached) apply(raw); return raw; }).catch(() => null);
   const [b, f] = await Promise.all([backend, file]);
   if (b || f || data) return;
   $('#grid').replaceChildren();
