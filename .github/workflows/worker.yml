@@ -46,7 +46,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ai/worker
-          command: d1 execute elevato-ai --remote --yes --file=schema.sql
+          command: d1 execute elevato --remote --yes --file=schema.sql
 
       - name: Triển khai Worker
         id: trien_khai

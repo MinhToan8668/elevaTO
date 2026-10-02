@@ -89,7 +89,7 @@ Repo trên GitHub → tab **Actions** → chọn **Máy chủ AI (Cloudflare Wor
 Khoảng một phút sau, ba bước hiện dấu tích xanh:
 
 ```
-✔ Chuẩn bị cơ sở dữ liệu D1     ← tự tạo database "elevato-ai", không phải lập tay
+✔ Chuẩn bị cơ sở dữ liệu D1     ← tự tạo database "elevato", không phải lập tay
 ✔ Dựng bảng D1                  ← tạo các bảng tài khoản, phiên, bộ đếm
 ✔ Triển khai Worker             ← đẩy code lên
 ```
@@ -97,7 +97,7 @@ Khoảng một phút sau, ba bước hiện dấu tích xanh:
 Bấm vào bước **Triển khai Worker** để xem địa chỉ máy chủ ở dòng cuối:
 
 ```
-https://elevato-ai.<tên-tài-khoản>.workers.dev
+https://elevato.<tên-tài-khoản>.workers.dev
 ```
 
 Mở địa chỉ đó bằng trình duyệt. Thấy `{"ok":true,"service":"elevaTO AI",...}` là máy chủ đã sống.
@@ -116,7 +116,7 @@ có hay chưa, không bao giờ in ra giá trị).
 
 ### 5. Cất key và token vào Cloudflare
 
-Dashboard Cloudflare → **Workers & Pages** → trong **Overview** bấm **elevato-ai** →
+Dashboard Cloudflare → **Workers & Pages** → trong **Overview** bấm **elevato** →
 **Settings** → mục **Variables and Secrets** → **Add**.
 
 Mỗi dòng dưới đây là một lần bấm **Add**, chọn **Type: Secret**, điền **Variable name** và **Value**:
@@ -181,7 +181,7 @@ Xong. Từ đây sửa gì trong `ai/worker/` chỉ cần push.
 | Bot không nhắn gì | mở địa chỉ máy chủ xem `cai.bot`: `false` = thiếu `TG_TOKEN` / `TG_SECRET` / `TG_ADMIN`, hoặc quên bấm **Deploy** sau khi thêm secret. `true` mà vẫn im = chưa bấm **Start** với bot (bấm xong, mở lại trang là lời chào tới) |
 | Quên mật khẩu không nhận được thư | chưa xác minh người gửi trên Brevo (bước 6.2) |
 
-Xem nhật ký máy chủ: **Workers & Pages → elevato-ai → Logs → Begin log stream**.
+Xem nhật ký máy chủ: **Workers & Pages → elevato → Logs → Begin log stream**.
 
 ## Từ đây về sau
 
@@ -241,7 +241,7 @@ Các hạn mức miễn phí còn lại đều thừa thãi với quy mô này: 
 ```bash
 cd ai/worker
 npm install
-npx wrangler d1 execute elevato-ai --local --file=schema.sql --yes
+npx wrangler d1 execute elevato --local --file=schema.sql --yes
 npx wrangler dev
 ```
 

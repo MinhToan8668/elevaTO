@@ -1,15 +1,15 @@
-name = "elevato-ai"
+name = "elevato"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 workers_dev = true
 
 # Cơ sở dữ liệu D1. `database_id` lấy khi tạo:
-#   npx wrangler d1 create elevato-ai
+#   npx wrangler d1 create elevato
 # rồi dán vào dòng dưới và đẩy lược đồ:
-#   npx wrangler d1 execute elevato-ai --remote --file=schema.sql
+#   npx wrangler d1 execute elevato --remote --file=schema.sql
 [[d1_databases]]
 binding = "DB"
-database_name = "elevato-ai"
+database_name = "elevato"
 database_id = "DAN_DATABASE_ID_VAO_DAY"
 
 [vars]
