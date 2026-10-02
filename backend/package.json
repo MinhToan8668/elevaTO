@@ -1,0 +1,9 @@
+{
+  "name": "elevato-backend",
+  "private": true,
+  "type": "module",
+  "description": "Backend Apps Script trang khoá học: config, đăng ký, bot Telegram, trang link-in-bio",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\""
+  }
+}

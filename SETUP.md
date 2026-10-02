@@ -324,6 +324,33 @@ không bao giờ lệch giá so với bảng học phí.
 
 ---
 
+## Bot im hoặc trả lời chậm
+
+Bot chạy được ở hai chế độ:
+
+| | Phản hồi | Cần gì |
+|---|---|---|
+| **Webhook** (nên dùng) | tức thì | URL `/exec` của bản đang triển khai phải trả 200 |
+| **Hỏi định kỳ** | tin đầu chờ tới 1 phút, các tin tiếp theo trong ~30 giây sau đó thì tức thì | một lịch chạy `hoiTelegram` mỗi phút |
+
+Triệu chứng **"lệnh đầu nhanh, lệnh sau im"** là dấu hiệu đang ở chế độ hỏi định kỳ: sau khi trả lời,
+script bám lại nghe thêm khoảng 20–30 giây rồi nghỉ, lệnh gửi sau đó phải chờ lượt chạy kế tiếp.
+
+**Bật chế độ tức thì:** mở Apps Script → chọn hàm `noiWebhook` → **Run**. Nhắn bot `/menu`, phải trả lời
+trong một hai giây. Nếu không nối được, chạy `kiemTraWebApp` để xem `/exec` đang trả về gì — thường là
+bản đang triển khai vẫn còn code cũ, cứ **Triển khai → Quản lý bản triển khai → ✏️ → Phiên bản mới**
+rồi chạy lại.
+
+`noiWebhook` cũng dựng một **lịch canh** (`canhWebhook`, 30 phút một lần): nếu Telegram báo lỗi và có tin
+ùn lại, nó tự nối webhook lại; nối không được thì tự lùi về chế độ hỏi định kỳ và nhắn cho bạn biết —
+bot không bao giờ câm lặng. Muốn quay về chế độ chậm mà chắc: chạy `batCheDoHoi`. Bot nhắn loạn: chạy `dungBot`.
+
+**Bot im hoàn toàn:** mở ⏰ **Trình kích hoạt** (cột trái). Phải có `canhWebhook` (chế độ webhook) hoặc
+`hoiTelegram` mỗi phút (chế độ hỏi). Không có cái nào thì chạy `setup` — nó tự chọn chế độ tốt nhất.
+Còn dòng `chuyenTelegram` thì xoá: đó là lịch của công cụ upload bỏ lại.
+
+---
+
 ## Sự cố: backend trả về "elevaTO upload"
 
 Mở `<URL /exec>?action=config` thấy `{"ok":true,"service":"elevaTO upload"}` thay vì cấu hình cohort nghĩa là
