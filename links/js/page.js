@@ -140,6 +140,12 @@ function renderGrid(d) {
   if (!links.length) $('#err').textContent = 'Chưa có link nào được bật.';
 }
 
+/** Màu thanh trạng thái của trình duyệt = màu thật ở đỉnh trang (--chrome trong links.css). */
+function syncChrome() {
+  const mau = getComputedStyle(document.documentElement).getPropertyValue('--chrome').trim();
+  if (mau) document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', mau));
+}
+
 /** Độ mờ, độ trong của kính và nền trang — lấy từ data.theme. */
 function applyTheme(t) {
   const root = document.documentElement;
@@ -150,6 +156,7 @@ function applyTheme(t) {
   document.body.classList.toggle('has-bgimg', Boolean(img));
   // url("…") trong CSS: chặn dấu nháy / xuống dòng để chuỗi không thoát khỏi url().
   $('#bgImg').style.setProperty('background-image', img ? 'url("' + img.replace(/["\\\n\r]/g, encodeURIComponent) + '")' : 'none');
+  syncChrome();
 }
 
 function render() {
@@ -282,7 +289,7 @@ function boot() {
   $('#themeBtn .i-moon').outerHTML = svg('moon', 'i-moon');
   $('#shareBtn').innerHTML = svg('share');
   $('#sheetX').innerHTML = svg('close');
-  $('#themeBtn').addEventListener('click', toggleTheme);
+  $('#themeBtn').addEventListener('click', () => { toggleTheme(); syncChrome(); });
   $('#shareBtn').addEventListener('click', share);
   $('#sheetX').addEventListener('click', closeSheet);
   $('#sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSheet(); });

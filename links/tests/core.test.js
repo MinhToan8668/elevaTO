@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   safeUrl, safeImg, socialUrl, normalize, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
-  cohortInfo, utf8ToBase64, serialize, githubError, ACCENTS, ACCENT_LABELS,
+  cohortInfo, utf8ToBase64, serialize, githubError, ACCENTS, ACCENT_LABELS, BACKGROUNDS,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
 
@@ -130,6 +130,32 @@ test('icon và màu nhấn nào cũng có nhãn tiếng Việt cho trình đọc
   }
   for (const name of Object.keys(ACCENTS)) assert.ok(ACCENT_LABELS[name], 'màu thiếu nhãn: ' + name);
   assert.deepEqual(Object.keys(ACCENT_LABELS).sort(), Object.keys(ACCENTS).sort());
+});
+
+// Nhịp vẽ đầu tiên dùng giá trị mặc định trong CSS; JS áp theme thật vài trăm mili-giây sau.
+// Hai bên lệch nhau là người xem thấy "giao diện cũ" rồi mới nhảy sang bản đúng.
+test('mặc định --blur/--tint trong CSS trùng theme của data.json (khỏi nháy lúc mới mở)', async () => {
+  const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
+  const d = normalize(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
+  const root = css.slice(css.indexOf(':root{'), css.indexOf('}', css.indexOf(':root{')));
+  assert.match(root, new RegExp('--blur:' + d.theme.blur + 'px'), 'đổi theme trong data.json thì sửa cả mặc định trong CSS');
+  assert.match(root, new RegExp('--tint:' + String(d.theme.tint / 100).replace(/^0/, '').replace('.', '\\.')));
+});
+
+// Màu thanh trạng thái của trình duyệt phải có cho mọi nền, không thì iPhone hở dải đen ở đỉnh.
+test('nền nào cũng có --chrome, và thẻ theme-color dự phòng trùng nền mặc định', async () => {
+  const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  for (const bg of Object.keys(BACKGROUNDS)) {
+    if (bg === 'image') continue;               // nền ảnh tự chọn: không đoán trước được màu
+    const re = bg === 'aurora' ? /:root\{--chrome:#[0-9a-f]{6}\}/ : new RegExp('\\[data-bg="' + bg + '"\\]\\{--chrome:#[0-9a-f]{6}\\}');
+    assert.match(css, re, 'thiếu --chrome cho nền ' + bg);
+    assert.match(css, new RegExp('\\[data-theme="dark"\\]' + (bg === 'aurora' ? '' : '\\[data-bg="' + bg + '"\\]') + '\\{--chrome:'), 'thiếu --chrome nền tối cho ' + bg);
+  }
+  const sang = css.match(/:root\{--chrome:(#[0-9a-f]{6})\}/)[1];
+  const toi = css.match(/:root\[data-theme="dark"\]\{--chrome:(#[0-9a-f]{6})\}/)[1];
+  assert.ok(html.includes('content="' + sang + '" media="(prefers-color-scheme: light)"'), 'thẻ theme-color sáng lệch --chrome');
+  assert.ok(html.includes('content="' + toi + '" media="(prefers-color-scheme: dark)"'), 'thẻ theme-color tối lệch --chrome');
 });
 
 test('lỗi GitHub ra câu dễ hiểu', () => {

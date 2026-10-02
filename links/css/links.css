@@ -2,7 +2,7 @@
    Độ mờ (--blur) và độ đục của kính (--tint) do data.json quyết định, trang gán lên :root lúc chạy. */
 :root{
   color-scheme:light;
-  --blur:22px; --tint:.46;
+  --blur:18px; --tint:.4;          /* trùng theme trong data.json → nhịp vẽ đầu đã đúng, không nháy */
   --em:#18cb96; --em-ink:#03261a; --em-text:#067a56;
   --text:#14201b; --strong:#06110d; --muted:#3b4a44;
   --base:#eef4f1;
@@ -61,6 +61,25 @@ img{display:block;max-width:100%}
 [hidden]{display:none!important}
 :focus-visible{outline:2px solid var(--em);outline-offset:3px}
 .offscreen{position:fixed;left:-9999px;top:0;opacity:0}
+
+/* Màu thật ở đỉnh trang: chụp dải 3px sát mép trên ở ba khổ điện thoại (390x750, 430x880, 360x700)
+   rồi lấy trung bình — ba khổ chỉ lệch nhau 1–5 đơn vị nên một giá trị dùng chung là đủ.
+   boot-theme.js chép vào <meta name="theme-color">. Lệch nhiều là iPhone hở một dải đen ở vùng
+   thanh trạng thái, nhìn như trang bị đóng khung. Nền ảnh tự chọn thì không đoán được, dùng mặc định. */
+:root{--chrome:#bdebdc}
+:root[data-bg="ocean"]{--chrome:#bbe1ef}
+:root[data-bg="sunset"]{--chrome:#f0d8d9}
+:root[data-bg="midnight"]{--chrome:#cfd4f1}
+:root[data-theme="dark"]{--chrome:#094537}
+:root[data-theme="dark"][data-bg="ocean"]{--chrome:#073850}
+:root[data-theme="dark"][data-bg="sunset"]{--chrome:#4b272b}
+:root[data-theme="dark"][data-bg="midnight"]{--chrome:#21244f}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--chrome:#094537}
+  :root:not([data-theme="light"])[data-bg="ocean"]{--chrome:#073850}
+  :root:not([data-theme="light"])[data-bg="sunset"]{--chrome:#4b272b}
+  :root:not([data-theme="light"])[data-bg="midnight"]{--chrome:#21244f}
+}
 
 /* ═══ NỀN: các mảng màu trôi chậm, hoặc ảnh nền tự chọn ═══ */
 .bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
@@ -311,19 +330,44 @@ img{display:block;max-width:100%}
   transform:translate(-50%,24px);opacity:0;pointer-events:none;transition:transform .35s var(--spring),opacity .25s}
 .toast.on{transform:translate(-50%,0);opacity:1}
 
-/* ═══ màn thấp: dồn cho vừa một màn hình ═══ */
-@media (max-height:760px) and (max-width:560px){
-  .logo{height:40px}
-  .bar{padding-bottom:8px}
-  .card{padding:13px 14px 12px}
-  .ava-wrap{width:72px;height:72px}
-  .name{font-size:21px}
-  .stats{margin-top:10px}.stat{padding:7px 4px}.stat dd{font-size:15.5px}
-  .row2{margin-top:10px}.soc{width:36px;height:36px;border-radius:12px}.soc .ic{width:17px;height:17px}
-  .tile.half{min-height:104px;gap:8px;padding:12px}
-  .chip{width:40px;height:40px}
-  .f-top .chip{width:60px;height:60px}
-  .cta{padding:10px 16px}
+/* ═══ điện thoại: dồn cho cả trang vừa đúng một màn, khỏi phải lướt ═══
+   Đa số người xem vào từ bio TikTok nên đây là khổ chính, không phải trường hợp phụ.
+   Số đo lấy từ khổ thật của iPhone trong Safari (390x750, đã trừ thanh công cụ).
+   Chỉ xét BỀ NGANG, không xét chiều cao: Safari thu/giãn thanh công cụ khi cuộn làm chiều cao
+   màn đổi liên tục, khoá theo chiều cao thì bố cục nhảy qua nhảy lại giữa chừng. */
+@media (max-width:560px){
+  .page{padding-bottom:max(6px,env(safe-area-inset-bottom))}
+  .logo{height:36px}
+  .bar{padding:2px 0 5px}
+  .main{gap:7px}
+
+  .card{padding:10px 13px 9px;border-radius:26px}
+  .who{gap:12px}
+  .ava-wrap{width:66px;height:66px}
+  .name{font-size:20px}.ver{width:18px;height:18px}
+  .handle{font-size:12.5px}
+  .tagline{font-size:12.5px;line-height:1.42;-webkit-line-clamp:2;line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+  .stats{margin-top:8px;border-radius:15px}.stat{padding:5px 4px}.stat dd{font-size:15.5px}.stat dt{font-size:10.5px}
+  .row2{margin-top:7px;gap:6px}
+  .status{padding:6px 12px;font-size:12px}
+  .soc{height:36px;border-radius:12px}.soc .ic{width:18px;height:18px}
+
+  .grid{gap:6px}
+  .tile{padding:10px;border-radius:20px}
+  .tile.half{min-height:96px;gap:8px}
+  .chip{width:40px;height:40px;border-radius:12px}.chip .ic{width:19px;height:19px}
+  .ttl{font-size:13.5px}
+  .sub{font-size:11.5px;-webkit-line-clamp:2;line-clamp:2}
+
+  .tile.feature{gap:8px;padding:11px;border-radius:23px}
+  .f-top{gap:11px}
+  .f-top .chip{width:58px;height:58px}.f-top .chip .ic{width:26px;height:26px}
+  .f-top .ttl{font-size:16.5px}
+  .f-top .sub{font-size:12px;-webkit-line-clamp:2;line-clamp:2}
+  .live{gap:4px}
+  .cta{padding:9px 16px;font-size:14.5px;border-radius:14px}
+
+  .foot{gap:9px;padding:4px 0 0}.wm{height:19px}.foot-tag{font-size:11.5px}
 }
 @media (max-width:360px){
   .logo{height:38px}                      /* màn 320px: logo và viên nút sát nhau quá */
@@ -333,7 +377,7 @@ img{display:block;max-width:100%}
   .soc{height:38px}
   .ava-wrap{width:64px;height:64px}
   .name{font-size:19px}.ver{width:17px;height:17px}
-  .tagline{font-size:12.5px}
+  .tagline{font-size:12.5px;-webkit-line-clamp:3;line-clamp:3}   /* màn 320px chữ xuống dòng nhiều, cắt 2 dòng là mất tên thương hiệu */
   .stat dt{font-size:10.5px}
   .f-top .chip{width:54px;height:54px}
   .f-top .ttl{font-size:15.5px}

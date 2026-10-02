@@ -67,6 +67,63 @@ test('trang link: danh thiếp, ô nổi bật có số chỗ trực tiếp, ô 
   await p.context().close();
 });
 
+test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
+  // Khổ thật của iPhone trong Safari sau khi trừ thanh công cụ. Đa số người xem vào từ bio TikTok.
+  const p = await page({ viewport: { width: 390, height: 750 } });
+  await p.goto(base + '/links/');
+  await p.waitForSelector('.tile.feature .live');
+  await p.waitForTimeout(400);
+  const d = await p.evaluate(() => ({
+    caTrang: Math.round(document.documentElement.scrollHeight), manHinh: innerHeight,
+    dayChanTrang: Math.round(document.querySelector('.foot').getBoundingClientRect().bottom),
+    soO: document.querySelectorAll('#grid .tile').length,
+  }));
+  assert.equal(d.soO, 5);
+  assert.ok(d.dayChanTrang <= d.manHinh, `chân trang rơi khỏi màn: ${d.dayChanTrang} > ${d.manHinh}`);
+  assert.ok(d.caTrang <= d.manHinh + 8, `trang tràn ${d.caTrang - d.manHinh}px so với màn`);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('mới mở trang là kính đã đúng ngay, không hiện mặc định rồi mới nhảy sang bản thật', async () => {
+  const p = await page();
+  // Chặn mọi nguồn dữ liệu: những gì thấy được lúc này chính là nhịp vẽ đầu tiên.
+  await p.route(/data\.json/, (r) => r.abort());
+  await p.goto(base + '/links/');
+  await p.waitForSelector('.bar');
+  const cssTheme = await p.evaluate(() => {
+    const cs = getComputedStyle(document.documentElement);
+    return [cs.getPropertyValue('--blur').trim(), cs.getPropertyValue('--tint').trim()];
+  });
+  const d = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  // CSS ghi ".4", JS ghi "0.4" — cùng một số, so bằng số.
+  assert.equal(cssTheme[0], d.theme.blur + 'px',
+    'nhịp vẽ đầu dùng độ mờ khác data.json → người xem thấy giao diện nhảy sau 1-2 giây');
+  assert.equal(Number(cssTheme[1]), d.theme.tint / 100,
+    'nhịp vẽ đầu dùng độ đục khác data.json → người xem thấy giao diện nhảy sau 1-2 giây');
+  await p.context().close();
+});
+
+test('màu thanh trạng thái khớp màu đỉnh trang, và đổi theo nền đang chọn', async () => {
+  const p = await page();
+  await p.goto(base + '/links/');
+  await p.waitForSelector('.tile.feature');
+  const doc = () => p.evaluate(() => ({
+    meta: [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.content),
+    chrome: getComputedStyle(document.documentElement).getPropertyValue('--chrome').trim(),
+  }));
+  const a1 = await doc();
+  assert.ok(a1.meta.every((m) => m === a1.chrome), 'thẻ theme-color không khớp --chrome: ' + JSON.stringify(a1));
+  assert.match(a1.chrome, /^#[0-9a-f]{6}$/);
+
+  // Đổi nền (chủ trang chọn trong trình sửa) thì màu thanh trạng thái phải đổi theo.
+  await p.evaluate(() => { document.documentElement.dataset.bg = 'sunset'; document.querySelector('#themeBtn').click(); document.querySelector('#themeBtn').click(); });
+  const a2 = await doc();
+  assert.notEqual(a2.chrome, a1.chrome, 'đổi nền mà màu thanh trạng thái đứng im');
+  assert.ok(a2.meta.every((m) => m === a2.chrome));
+  await p.context().close();
+});
+
 test('màn 320px không bị tràn ngang, cả sáng lẫn tối', async () => {
   for (const colorScheme of ['light', 'dark']) {
     const p = await page({ viewport: { width: 320, height: 640 }, colorScheme });

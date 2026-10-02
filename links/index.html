@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta name="theme-color" content="#e9f1ee" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#04080a" media="(prefers-color-scheme: dark)">
+<!-- Màu thanh trạng thái = màu thật ở đỉnh trang. Hai thẻ này là bản dự phòng khi không có JS;
+     js/boot-theme.js ghi đè bằng màu đúng của nền chủ trang đang chọn. -->
+<meta name="theme-color" content="#bdebdc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#094537" media="(prefers-color-scheme: dark)">
 <title>Minh Toàn · elevaTO</title>
 <meta name="description" content="Khóa Financial Modeling thực chiến, công cụ AI đọc BCTC, slide miễn phí và cách liên hệ Minh Toàn — tất cả ở một chỗ.">
 <meta property="og:type" content="profile">
@@ -24,6 +26,7 @@
 <link rel="stylesheet" href="fonts/plus-jakarta-sans.css">
 <link rel="stylesheet" href="css/links.css">
 <script src="../ai/js/theme.js"></script>
+<script src="js/boot-theme.js"></script>
 <script type="module" src="js/page.js"></script>
 </head>
 <body>
