@@ -36,8 +36,15 @@ export function tgGui(env, chatId, text, nut) {
   return tgApi(env, 'sendMessage', p);
 }
 
+/** @returns true nếu ít nhất một người nhận được — chưa bấm Start với bot thì Telegram từ chối. */
 export async function baoQuanTri(env, text, nut) {
-  for (const id of tgAdmins(env)) await tgGui(env, id, text, nut);
+  let den = false;
+  for (const id of tgAdmins(env)) {
+    const r = await tgGui(env, id, text, nut);
+    if (r && r.ok) den = true;
+    else if (r) console.error(`Telegram từ chối gửi cho ${id}: ${r.description || ''}`);
+  }
+  return den;
 }
 
 /** Báo quản trị nhưng tối đa 1 lần mỗi `giay` giây cho cùng một loại việc. */
@@ -52,20 +59,34 @@ export function taoBao(env) {
 // ─── Webhook ────────────────────────────────────────────────
 
 /**
- * Đăng ký webhook nếu chưa đăng ký cho đúng địa chỉ này. Chạy ngầm sau yêu cầu đầu tiên
+ * Đăng ký webhook nếu chưa đăng ký cho đúng địa chỉ này. Chạy ngầm sau mỗi yêu cầu
  * nên cài đặt không cần bước gõ lệnh nào: triển khai xong là bot sống.
  */
 export async function ngoWebhook(env, url) {
   if (!env.TG_TOKEN || !env.TG_SECRET) return;
   const can = `${url}|${env.TG_SECRET.slice(0, 4)}`;
-  if (await docCaiDat(env.DB, 'tg_webhook') === can) return;
-  const r = await tgApi(env, 'setWebhook', {
-    url, secret_token: env.TG_SECRET, allowed_updates: ['message', 'callback_query'], drop_pending_updates: true,
-  });
-  if (r && r.ok) {
+  if (await docCaiDat(env.DB, 'tg_webhook') !== can) {
+    const r = await tgApi(env, 'setWebhook', {
+      url, secret_token: env.TG_SECRET, allowed_updates: ['message', 'callback_query'], drop_pending_updates: true,
+    });
+    if (!r || !r.ok) { console.error(`setWebhook hỏng: ${(r && r.description) || 'không gọi được Telegram'}`); return; }
     await ghiCaiDat(env.DB, 'tg_webhook', can);
-    await baoQuanTri(env, '✅ Bot <b>elevaTO AI BCTC</b> đã kết nối (Cloudflare Workers).\nGõ /help để xem các lệnh quản trị.');
   }
+  // Lời chào ghi nhớ RIÊNG: chưa bấm Start với bot thì Telegram từ chối gửi, và webhook đã đăng ký
+  // rồi nên nếu gộp chung thì người dùng vĩnh viễn không nhận được tin nào, tưởng bot chết.
+  // Tách ra thì bấm Start xong, lượt truy cập sau là lời chào tới nơi.
+  if (!tgAdmins(env).length || await docCaiDat(env.DB, 'tg_chao') === can) return;
+  const den = await baoQuanTri(env, '✅ Bot <b>elevaTO AI BCTC</b> đã kết nối (Cloudflare Workers).\nGõ /help để xem các lệnh quản trị.');
+  if (den) await ghiCaiDat(env.DB, 'tg_chao', can);
+}
+
+/** Phần cài đặt nào đã có — cho đường GET báo lại, khỏi phải đoán khi bot im hay AI không chạy. */
+export function tinhTrang(env) {
+  return {
+    ai: !!String(env.GEMINI_KEYS || '').trim(),
+    bot: !!(env.TG_TOKEN && env.TG_SECRET && tgAdmins(env).length),
+    mail: !!(env.BREVO_KEY && env.MAIL_TU),
+  };
 }
 
 /** Một tin Telegram gửi tới. Luôn trả 200 cho Telegram, lỗi chỉ ghi log. */

@@ -257,3 +257,60 @@ test('Brevo lỗi thì báo quản trị chứ không im lặng', async () => {
     assert.match(tin.join('\n'), /Không gửi được email đặt lại mật khẩu.*Brevo trả 400/s);
   } finally { globalThis.fetch = that; }
 });
+
+// ─── Cài đặt còn thiếu ──────────────────────────────────────
+
+test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò', async () => {
+  const xem = async (env) => (await (await worker.fetch(new Request(API), env, moCtx())).json()).cai;
+  assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot: false, mail: false });
+  assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot: true, mail: true });
+  // Thiếu đúng một mảnh của bot thì vẫn phải báo bot: false.
+  assert.equal((await xem(env0({ TG_SECRET: '' }))).bot, false, 'thiếu TG_SECRET');
+  assert.equal((await xem(env0({ TG_TOKEN: '' }))).bot, false, 'thiếu TG_TOKEN');
+  assert.equal((await xem(env0({ TG_ADMIN: '' }))).bot, false, 'thiếu TG_ADMIN');
+  assert.equal((await xem(env0({ BREVO_KEY: '' }))).mail, false);
+  // Không được lộ giá trị nào ra ngoài.
+  const than = await (await worker.fetch(new Request(API), env0({ GEMINI_KEYS: 'key-that' }), moCtx())).text();
+  assert.doesNotMatch(than, /key-that|token-bot|bimat|brevo/);
+});
+
+test('thiếu TG_SECRET thì không đăng ký webhook (im lặng như đang gặp), có đủ thì đăng ký', async () => {
+  const f = moFetch();
+  try {
+    await goi(env0({ TG_SECRET: '' }), { action: 'ungho' });
+    assert.deepEqual(f.tg.filter((x) => x.method === 'setWebhook'), []);
+    await goi(env0(), { action: 'ungho' });
+    assert.equal(f.tg.filter((x) => x.method === 'setWebhook').length, 1);
+  } finally { f.thoi(); }
+});
+
+test('chưa bấm Start với bot: webhook vẫn đăng ký, và lời chào tự gửi lại khi Start xong', async () => {
+  const that = globalThis.fetch;
+  let choPhep = false;
+  const tin = [];
+  globalThis.fetch = async (url, init) => {
+    const u = String(url), than = init && init.body ? JSON.parse(init.body) : {};
+    if (!u.includes('api.telegram.org')) return new Response('{}');
+    if (u.endsWith('/sendMessage')) {
+      if (!choPhep) return new Response('{"ok":false,"description":"Forbidden: bot can\'t initiate conversation with a user"}');
+      tin.push(than.text);
+      return new Response('{"ok":true,"result":{}}');
+    }
+    return new Response('{"ok":true,"result":{}}');
+  };
+  try {
+    const env = env0();
+    await goi(env, { action: 'ungho' });
+    assert.deepEqual(tin, [], 'chưa Start thì chưa nhận được gì');
+    await goi(env, { action: 'ungho' });
+    assert.deepEqual(tin, [], 'vẫn chưa Start');
+
+    choPhep = true;                                   // người dùng vừa bấm Start
+    await goi(env, { action: 'ungho' });
+    assert.equal(tin.length, 1, 'lời chào phải tới nơi ở lượt truy cập sau');
+    assert.match(tin[0], /đã kết nối/);
+
+    await goi(env, { action: 'ungho' });
+    assert.equal(tin.length, 1, 'đã chào rồi thì thôi, không nhắc lại mỗi lượt');
+  } finally { globalThis.fetch = that; }
+});

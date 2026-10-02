@@ -101,7 +101,18 @@ https://elevato-ai.<tên-tài-khoản>.workers.dev
 ```
 
 Mở địa chỉ đó bằng trình duyệt. Thấy `{"ok":true,"service":"elevaTO AI",...}` là máy chủ đã sống.
-(Chưa cài key nên chưa trích xuất được — bước sau.)
+
+Phần `cai` trong câu trả lời cho biết **đã cài được những gì** — lúc này đang trống hết, đúng:
+
+```json
+{"ok":true,"service":"elevaTO AI","ban":"…","cai":{"ai":false,"bot":false,"mail":false}}
+                                                        │          │           └ BREVO_KEY + MAIL_TU
+                                                        │          └ TG_TOKEN + TG_SECRET + TG_ADMIN
+                                                        └ GEMINI_KEYS
+```
+
+Mở lại địa chỉ này sau bước 5 để kiểm: cái nào còn `false` là secret đó chưa vào (nó chỉ báo
+có hay chưa, không bao giờ in ra giá trị).
 
 ### 5. Cất key và token vào Cloudflare
 
@@ -119,7 +130,8 @@ Mỗi dòng dưới đây là một lần bấm **Add**, chọn **Type: Secret**
 | `BREVO_KEY` | API key gửi thư | bước 6 |
 | `MAIL_TU` | địa chỉ gửi thư đã xác minh | bước 6 |
 
-Điền xong hết, bấm **Deploy** ở cuối trang để các secret có hiệu lực.
+**Điền xong hết phải bấm `Deploy` ở cuối trang** — không bấm thì secret chưa có hiệu lực, và
+máy chủ chạy y như chưa cài gì.
 
 > Nhiều key Gemini thì tốt hơn một: hết hạn mức key này, máy chủ tự chuyển key khác. Cứ tạo
 > 2–3 key trong AI Studio rồi dán cả vào một dòng, cách nhau dấu phẩy.
@@ -165,7 +177,7 @@ Xong. Từ đây sửa gì trong `ai/worker/` chỉ cần push.
 | Actions đỏ ở bước **Triển khai Worker** | token không phải mẫu **Edit Cloudflare Workers** |
 | Trang báo "đang được cài đặt" | GitHub Pages chưa dựng lại xong, hoặc workflow không đẩy được commit vào `ai/js/config.js` (xem cảnh báo ở cuối lượt chạy) |
 | Trích xuất báo `setup` | chưa cất `GEMINI_KEYS` (bước 5) |
-| Bot không nhắn gì | chưa bấm **Start** với bot, hoặc `TG_ADMIN` không phải số Id của bạn |
+| Bot không nhắn gì | mở địa chỉ máy chủ xem `cai.bot`: `false` = thiếu `TG_TOKEN` / `TG_SECRET` / `TG_ADMIN`, hoặc quên bấm **Deploy** sau khi thêm secret. `true` mà vẫn im = chưa bấm **Start** với bot (bấm xong, mở lại trang là lời chào tới) |
 | Quên mật khẩu không nhận được thư | chưa xác minh người gửi trên Brevo (bước 6.2) |
 
 Xem nhật ký máy chủ: **Workers & Pages → elevato-ai → Logs → Begin log stream**.
