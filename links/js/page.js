@@ -3,6 +3,7 @@
 
 import { normalize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo, ACCENTS } from './core.js';
 import { svg } from './icons.js';
+import { fetchLinks } from './backend.js';
 
 const $ = (s) => document.querySelector(s);
 const DATA_CACHE = 'elevato-links-v1';
@@ -241,25 +242,42 @@ function toggleTheme() {
 }
 
 /* ── tải dữ liệu ──────────────────────────────── */
+// Nội dung trang: ưu tiên bản lưu trên máy chủ Apps Script (trình chỉnh sửa lưu vào đó, đổi ngay),
+// data.json trong repo là bản dự phòng khi máy chủ chưa có gì hoặc không trả lời.
+let cohortStarted = false;
+function apply(raw) {
+  if (!PREVIEW) store.set(DATA_CACHE, raw);
+  data = normalize(raw);
+  render();
+  if (!cohortStarted) { cohortStarted = true; loadCohort(); }
+}
+
+async function loadFile() {
+  const r = await fetch('data.json', { cache: 'no-cache' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
 async function loadData() {
   const cached = PREVIEW ? null : store.get(DATA_CACHE);
-  if (cached) { data = normalize(cached); render(); }
-  try {
-    const r = await fetch('data.json', { cache: 'no-cache' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const raw = await r.json();
-    if (!PREVIEW) store.set(DATA_CACHE, raw);
-    if (PREVIEW && data) return;          // trình chỉnh sửa đã gửi bản nháp tới trước → giữ bản nháp
-    data = normalize(raw);
-    render();
-  } catch (e) {
-    if (data) return;                       // đang có bản lưu trên máy → vẫn hiện được
-    $('#grid').replaceChildren();
-    const err = $('#err');
-    err.hidden = false;
-    err.replaceChildren('Chưa tải được trang. ', h('a', { href: '../' }, 'Mở trang elevaTO'), ' hoặc thử tải lại.');
-    $('#main').removeAttribute('aria-busy');
+  if (cached) apply(cached);
+
+  if (PREVIEW) {
+    // Khung xem trước: trình chỉnh sửa gửi bản nháp sang; data.json chỉ để có gì hiện trong lúc chờ.
+    try { const raw = await loadFile(); if (!data) apply(raw); } catch (e) { /* đợi bản nháp */ }
+    return;
   }
+
+  let fromBackend = false;
+  const backend = fetchLinks().then((raw) => { if (raw) { fromBackend = true; apply(raw); } return raw; });
+  const file = loadFile().then((raw) => { if (!fromBackend) apply(raw); return raw; }).catch(() => null);
+  const [b, f] = await Promise.all([backend, file]);
+  if (b || f || data) return;
+  $('#grid').replaceChildren();
+  const err = $('#err');
+  err.hidden = false;
+  err.replaceChildren('Chưa tải được trang. ', h('a', { href: '../' }, 'Mở trang elevaTO'), ' hoặc thử tải lại.');
+  $('#main').removeAttribute('aria-busy');
 }
 
 async function loadCohort() {
@@ -329,7 +347,7 @@ function boot() {
     window.parent.postMessage({ type: 'elevato-links:ready' }, location.origin);
   }
 
-  loadData().then(loadCohort);
+  loadData();
 }
 
 boot();

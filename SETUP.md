@@ -31,7 +31,7 @@ Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở 
 |---|---|
 | **Bot Telegram** | cohort, số chỗ, giá, lịch học, số buổi, năm kinh nghiệm, video, banner, trạng thái |
 | **Sửa thẳng `index.html`** | người dạy và các dòng chứng chỉ, link TikTok, thông tin công ty mẫu, toàn bộ chữ trên trang |
-| **`links/edit.html`** | trang link-in-bio cho TikTok (`/links/`) — xem [`links/README.md`](links/README.md) |
+| **`links/edit.html`** | trang link-in-bio cho TikTok (`/links/`) — lưu lên chính backend này bằng ADMIN_KEY (bot: `/linkkey`), xem [`links/README.md`](links/README.md) |
 
 Ranh giới này là **bắt buộc**, không phải quy ước cho vui. Backend chỉ gửi cho
 trang những khối nó sửa được. Nếu nó gửi cả mấy khối chữ kia thì bản lưu trong
