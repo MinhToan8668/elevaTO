@@ -321,3 +321,39 @@ hiếm khi đổi nên để trong code cho gọn.
 **Chuỗi `{{...}}` trong FAQ** được thay bằng giá trị thật lúc render — ví dụ
 `{{computed.price.earlyBird}}` sẽ ra `3.000.000đ`. Nhờ vậy câu trả lời FAQ
 không bao giờ lệch giá so với bảng học phí.
+
+---
+
+## Sự cố: backend trả về "elevaTO upload"
+
+Mở `<URL /exec>?action=config` thấy `{"ok":true,"service":"elevaTO upload"}` thay vì cấu hình cohort nghĩa là
+**code công cụ upload đã bị dán vào dự án backend trang khoá học**. Lúc đó form đăng ký không vào Sheet, trang
+khoá học hiện số liệu dự phòng, lệnh bot khoá học không chạy. Tách lại như sau (làm đúng thứ tự):
+
+**A. Dựng công cụ upload ở dự án riêng** — để upload vẫn dùng được trong lúc sửa:
+
+1. **script.google.com → Dự án mới**, đặt tên `elevaTO Upload`.
+2. Làm đúng 5 bước trong [`upload/README.md`](upload/README.md) (dán `upload/backend/Code.gs` +
+   `upload/backend/appsscript.json`, triển khai Web App, điền 3 dòng đầu, chạy `caiDat`).
+3. Bot nhắn link trang upload mới (kèm key) → mở link đó trên máy hay tải file. Link cũ thôi dùng.
+   Danh sách **Kho** sẽ trống vì kho nằm ở dự án cũ — file đã gửi vẫn còn nguyên trong chat Telegram.
+
+**B. Trả dự án trang khoá học về đúng code:**
+
+1. Mở Google Sheet **elevaTO Đăng ký** → **Tiện ích mở rộng → Apps Script**.
+2. `Code.gs`: chọn hết, dán toàn bộ [`backend/Code.gs`](backend/Code.gs) → 💾.
+3. **⚙️ Cài đặt dự án** → bật **Hiện tệp kê khai "appsscript.json"** → mở `appsscript.json`, chọn hết, dán
+   [`backend/appsscript.json`](backend/appsscript.json) → 💾. (Bản của upload xin quyền Drive và thiếu quyền
+   đọc Sheet — để nguyên thì backend khoá học không mở được Sheet đăng ký.)
+4. Cột trái **Dịch vụ**: nếu có **Drive** (do upload thêm vào) thì bấm ⋮ → **Xoá**.
+5. Chọn hàm `setup` → **Run** → cho phép quyền. `setup` dựng lại lịch hỏi bot `hoiTelegram` và tự xoá lịch
+   `chuyenTelegram` mà công cụ upload để lại.
+6. **Triển khai → Quản lý bản triển khai** → ✏️ ở bản đang chạy → *Phiên bản*: **Phiên bản mới** → **Triển khai**.
+   Sửa bản đang có, đừng tạo bản triển khai mới — URL `/exec` phải giữ nguyên vì trang khoá học và trang link đang gọi nó.
+
+**C. Kiểm tra:**
+
+- Mở `<URL /exec>?action=config` → thấy `"config":{…"cohort"…}` là đúng.
+- Nhắn bot `/status` → bot trả tình trạng cohort; `/linkkey` → bot gửi key cho trang link.
+- Tự gửi thử một đăng ký trên trang khoá học → phải hiện dòng mới trong sheet **DangKy** và bot báo.
+

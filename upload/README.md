@@ -37,6 +37,11 @@ Trên Mac cũng được bằng Terminal: `cat 'ten-file.mp4'.0* > 'ten-file.mp4
 | `backend/Code.gs` | Code dán vào dự án Apps Script riêng |
 | `backend/appsscript.json` | Quyền của dự án đó: `drive.file`, gọi ra ngoài, đặt lịch chạy |
 
+> ⚠️ **Phải là dự án Apps Script MỚI, riêng.** Đừng dán vào dự án mở từ Google Sheet *elevaTO Đăng ký*
+> (Tiện ích mở rộng → Apps Script) — đó là backend trang khoá học. Dán đè vào đó thì form đăng ký, số chỗ
+> cohort và lệnh bot đều chết. `caiDat` giờ tự chặn nếu nhận ra đang ở dự án đó.
+> Lỡ dán nhầm rồi: xem mục **Sự cố: backend trả về "elevaTO upload"** trong `SETUP.md`.
+
 ## Cài đặt — 5 bước
 
 1. Vào **script.google.com → Dự án mới**, đặt tên `elevaTO Upload`.
