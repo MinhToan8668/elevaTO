@@ -185,3 +185,5 @@ select.inp{appearance:none;cursor:pointer;padding-right:28px;
 .im-search .im-gallery{padding:0;background:none;border:0;max-height:260px;overflow:auto}
 .im-gallery{max-height:300px;overflow:auto}
 .hint a{color:var(--em-text);font-weight:700}
+.hint.ok{color:var(--em-text);font-weight:600}
+.hint.bad{color:#e11d48;font-weight:600}

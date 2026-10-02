@@ -35,11 +35,15 @@ export async function currentSha(repo, token, fetchFn = fetch) {
 
 /** Kiểm tra token đọc được repo và nhánh — dùng cho nút "Kiểm tra kết nối". */
 export async function checkAccess(repo, token, fetchFn = fetch) {
+  // /user trả về tài khoản sở hữu token — để báo "token của @ai" và bắt lỗi 401 sớm, rõ ràng.
+  const me = await call(fetchFn, `${API}/user`, { headers: headers(token) });
+  if (!me.ok) throw new Error(githubError(me.status, me.body));
+  const login = (me.body && me.body.login) || '';
   const r = await call(fetchFn, `${API}/repos/${enc(repo.owner)}/${enc(repo.repo)}/branches/${enc(repo.branch)}`, { headers: headers(token) });
   if (!r.ok) throw new Error(githubError(r.status, r.body));
   const meta = await call(fetchFn, `${API}/repos/${enc(repo.owner)}/${enc(repo.repo)}`, { headers: headers(token) });
   const canPush = Boolean(meta.body && meta.body.permissions && meta.body.permissions.push);
-  return { canPush };
+  return { login, canPush };
 }
 
 /** Ghi nội dung mới vào file. Gặp xung đột (có bản mới hơn) thì lấy sha mới và thử lại đúng một lần. */

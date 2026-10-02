@@ -51,6 +51,12 @@ token được lưu lại và mọi trang trên `minhtoan8668.github.io` đều 
 hạn ngắn (vd. 30–90 ngày) khi tạo token. Trang `edit.html` để công khai cũng không sao: không có token thì
 không ghi được gì.
 
+Báo **"GitHub không nhận token này"** (lỗi 401) nghĩa là GitHub từ chối chuỗi đã dán: thường là dán nhầm
+mật khẩu, copy thiếu ký tự (token đầy đủ bắt đầu bằng `github_pat_`, dài ~93 ký tự, GitHub chỉ hiện **một lần**
+lúc tạo — bấm nút copy cạnh nó), hoặc token đã hết hạn / bị xoá. Cách sửa: tạo token mới khi đang đăng nhập
+tài khoản chủ repo, dán lại, bấm **Kiểm tra kết nối** — trình chỉnh sửa báo token của tài khoản nào và có quyền
+ghi hay chưa.
+
 Không muốn dùng token? Bấm **Sao lưu → Tải data.json**, rồi thay file `links/data.json` trong repo bằng file đó.
 
 ## Cấu trúc
