@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { locDiaChi } from '../worker/tools/config-url.mjs';
@@ -10,7 +10,8 @@ import { locDiaChi } from '../worker/tools/config-url.mjs';
 // nó chỉ đụng đúng dòng API và nhận ra địa chỉ trong cả khối chữ wrangler in ra.
 const GOC = new URL('../', import.meta.url).pathname;
 
-// Công cụ sửa 4 file: ai/js/config.js, links/js/backend.js và CSP của links/index.html + edit.html.
+// Công cụ sửa 6 file: ai/js/config.js, links/js/backend.js, index.html, và CSP của ai/index.html
+// + links/index.html + links/edit.html.
 // Dựng đủ cả bốn trong cây tạm, mặc định lấy nội dung thật trong repo.
 const REPO = new URL('../../', import.meta.url).pathname;
 const doc = (d) => readFileSync(join(REPO, d), 'utf8');
@@ -22,14 +23,16 @@ function chay(diaChi, config, them = {}) {
   mkdirSync(join(thu, 'links/js'), { recursive: true });
   cpSync(join(GOC, 'worker/tools/config-url.mjs'), join(thu, 'ai/worker/tools/config-url.mjs'));
   writeFileSync(join(thu, 'ai/js/config.js'), config ?? doc('ai/js/config.js'));
+  writeFileSync(join(thu, 'ai/index.html'), them.trangAi ?? doc('ai/index.html'));
   writeFileSync(join(thu, 'links/js/backend.js'), them.backend ?? doc('links/js/backend.js'));
   writeFileSync(join(thu, 'links/index.html'), them.trang ?? doc('links/index.html'));
   writeFileSync(join(thu, 'links/edit.html'), them.sua ?? doc('links/edit.html'));
   writeFileSync(join(thu, 'index.html'), them.khoaHoc ?? doc('index.html'));
   const ra = execFileSync(process.execPath, [join(thu, 'ai/worker/tools/config-url.mjs'), diaChi], { encoding: 'utf8' });
   const lay = (d) => readFileSync(join(thu, d), 'utf8');
-  return { ra: ra.trim(), config: lay('ai/js/config.js'), backend: lay('links/js/backend.js'),
-    trang: lay('links/index.html'), sua: lay('links/edit.html'), khoaHoc: lay('index.html') };
+  return { ra: ra.trim(), config: lay('ai/js/config.js'), trangAi: lay('ai/index.html'),
+    backend: lay('links/js/backend.js'), trang: lay('links/index.html'), sua: lay('links/edit.html'),
+    khoaHoc: lay('index.html') };
 }
 
 test('lọc địa chỉ từ đúng khối chữ wrangler in ra khi triển khai', () => {
@@ -67,6 +70,7 @@ test('địa chỉ đã đúng sẵn ở mọi file thì báo GIU để workflow
   const dc = 'https://elevato.minhtoan.workers.dev';
   const r = chay(dc, `// chú thích\nexport const API = '${dc}';\n`, {
     backend: `export const BACKEND_URL = '${dc}';\n`,
+    trangAi: `<meta content="connect-src 'self' ${dc}">\n`,
     trang: `<meta content="connect-src 'self' ${dc}">\n`,
     sua: `<meta content="connect-src 'self' ${dc}">\n`,
     khoaHoc: `  var API = '${dc}';\n`,
@@ -82,6 +86,8 @@ test('đổi địa chỉ: sửa luôn links/js/backend.js, index.html và conne
   const r = chay(dc);
   assert.equal(r.ra, `DOI ${dc}`);
   assert.match(r.backend, new RegExp(`^export const BACKEND_URL = '${dc}';$`, 'm'));
+  const cspAi = /connect-src ([^;"]*)/.exec(r.trangAi)[1];
+  assert.ok(cspAi.includes(dc), 'ai/index.html chưa cho gọi địa chỉ mới: ' + cspAi);
   for (const [ten, html] of [['index.html', r.trang], ['edit.html', r.sua]]) {
     const csp = /connect-src ([^;"]*)/.exec(html);
     assert.ok(csp, ten + ' mất khai báo connect-src');
@@ -119,19 +125,40 @@ test('mọi chỗ trỏ tới máy chủ đều cùng một địa chỉ', () =>
   assert.equal(LINKS[1], API[1], 'links/js/backend.js lệch với ai/js/config.js');
   assert.equal(KH[1], API[1], 'index.html (trang khoá học) lệch với ai/js/config.js');
 
-  for (const f of ['links/index.html', 'links/edit.html']) {
-    const dc = [...doc(f).matchAll(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/g)].map((m) => m[0]);
-    assert.ok(dc.length, `${f}: CSP không khai địa chỉ máy chủ nào`);
-    for (const x of new Set(dc)) assert.equal(x, API[1], `${f}: CSP còn địa chỉ cũ`);
+  // Danh sách trang KHÔNG viết tay: trang AI từng bị bỏ quên đúng vì nó không có trong danh sách
+  // nào cả. CSP chặn connect-src là mọi lệnh gọi máy chủ chết lặng — không lỗi đỏ, không gì cả,
+  // trang chỉ hiện "chưa cài". Nên cứ trang nào có khai connect-src thì phải cho gọi máy chủ.
+  for (const f of trangCoCSP()) {
+    const csp = /connect-src ([^;"]*)/.exec(doc(f))[1];
+    assert.ok(csp.includes(API[1]), `${f}: CSP chặn máy chủ — connect-src đang là "${csp}"`);
+    const cu = [...csp.matchAll(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/g)].map((m) => m[0]);
+    for (const x of new Set(cu)) assert.equal(x, API[1], `${f}: CSP còn địa chỉ cũ`);
   }
 });
+
+/** Mọi trang .html trong repo có khai connect-src. Quét thật chứ không chép danh sách. */
+function trangCoCSP() {
+  const goc = new URL('../../', import.meta.url);
+  const ra = [];
+  const di = (thuMuc) => {
+    for (const e of readdirSync(new URL(thuMuc, goc), { withFileTypes: true })) {
+      if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === 'vendor') continue;
+      const d = `${thuMuc}${e.name}`;
+      if (e.isDirectory()) di(`${d}/`);
+      else if (e.name.endsWith('.html') && readFileSync(new URL(d, goc), 'utf8').includes('connect-src')) ra.push(d);
+    }
+  };
+  di('');
+  assert.ok(ra.length >= 3, `chỉ thấy ${ra.length} trang có CSP — bài kiểm tra quét hỏng rồi`);
+  return ra;
+}
 
 // Và workflow phải commit ĐỦ các file ấy, nếu không sửa xong cũng rơi mất.
 test('workflow commit đủ mọi file config-url.mjs sửa tới', () => {
   const yml = readFileSync(new URL('../../.github/workflows/worker.yml', import.meta.url), 'utf8');
   const add = /^\s*git add (.+)$/m.exec(yml);        // dòng lệnh thật, không phải chữ trong chú thích
   assert.ok(add, 'workflow không có bước git add');
-  for (const f of ['ai/js/config.js', 'links/js/backend.js', 'links/index.html', 'links/edit.html', 'index.html']) {
+  for (const f of ['ai/js/config.js', 'ai/index.html', 'links/js/backend.js', 'links/index.html', 'links/edit.html', 'index.html']) {
     assert.ok(add[1].includes(f), `workflow quên git add ${f}`);
   }
   assert.doesNotMatch(add[1], /^-A|\s-A(\s|$)/, 'git add -A sẽ commit nhầm database_id vào wrangler.toml');

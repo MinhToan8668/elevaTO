@@ -76,7 +76,7 @@ jobs:
               git config user.email 'github-actions[bot]@users.noreply.github.com'
               # Nêu đủ tên file config-url.mjs sửa. KHÔNG dùng `git add -A`: d1-id.mjs vừa ghi
               # database_id vào wrangler.toml ngay trên runner, commit nhầm là lộ vào repo.
-              git add ai/js/config.js links/js/backend.js links/index.html links/edit.html index.html
+              git add ai/js/config.js ai/index.html links/js/backend.js links/index.html links/edit.html index.html
               git commit -m "chore: trỏ trang web sang máy chủ ${KQ#DOI } [skip ci]"
               git push || {
                 echo "::warning::Không đẩy được commit (nhánh có thể đang được bảo vệ)."
