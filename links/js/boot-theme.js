@@ -12,7 +12,7 @@
     var blur = Number(t.blur);
     var tint = Number(t.tint);
     if (isFinite(blur)) root.style.setProperty('--blur', Math.min(48, Math.max(0, Math.round(blur))) + 'px');
-    if (isFinite(tint)) root.style.setProperty('--tint', String(Math.min(95, Math.max(5, Math.round(tint))) / 100));
+    if (isFinite(tint)) root.style.setProperty('--tint', String(Math.min(95, Math.max(0, Math.round(tint))) / 100));
     if (/^(aurora|ocean|sunset|midnight|image)$/.test(String(t.background))) root.dataset.bg = t.background;
   }
   // --chrome (links.css) là màu thật ở đỉnh trang, đo riêng cho từng nền × sáng/tối.

@@ -75,6 +75,43 @@ test('trang link: danh thiếp, ô nổi bật có số chỗ trực tiếp, ô 
   await p.context().close();
 });
 
+test('nhãn góc không bao giờ đè lên chữ, kể cả nhãn dài nhất', async () => {
+  const p = await page();
+  // Nhãn dài 12 ký tự — mức tối đa normalize() cho phép — đặt lên cả ba kiểu ô.
+  const d = JSON.parse(await readFile(MAU, 'utf8'));
+  d.links = d.links.map((l, i) => ({ ...l, hidden: false, badge: 'Sắp hết chỗ', size: ['feature', 'wide', 'half'][i % 3] }));
+  await p.route(WORKER + '/links*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data: d }) }));
+  await p.goto(base + '/links/');
+  await p.waitForSelector('#grid .badge');
+  await p.waitForTimeout(400);
+  const de = await p.evaluate(() => [...document.querySelectorAll('#grid .tile')].map((t) => {
+    const b = t.querySelector('.badge');
+    if (!b) return null;
+    const B = b.getBoundingClientRect();
+    return [...t.querySelectorAll('.ttl, .sub')]
+      .map((e) => e.getBoundingClientRect())
+      .filter((R) => R.width && R.right > B.left + 1 && R.left < B.right - 1 && R.bottom > B.top + 1 && R.top < B.bottom - 1)
+      .map(() => t.querySelector('.ttl').textContent);
+  }).filter(Boolean).flat());
+  assert.deepEqual(de, [], 'nhãn đè lên chữ ở ô: ' + de.join(', '));
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('panel trang sửa vẫn đọc được dù chủ trang kéo kính trong suốt hẳn', async () => {
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.panel.glass');
+  // Trang sửa dùng chung links.css; mặt kính của nó phải độc lập với theme của trang link.
+  const nen = await p.evaluate(() => {
+    document.documentElement.style.setProperty('--tint', '0');
+    const cs = getComputedStyle(document.querySelector('.panel.glass')).backgroundColor;
+    return Number(/rgba?\([^)]*?([\d.]+)\)$/.exec(cs)?.[1] ?? 1);
+  });
+  assert.ok(nen >= 0.25, 'panel mờ quá, không đọc được: alpha ' + nen);
+  await p.context().close();
+});
+
 test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
   // Khổ thật của iPhone trong Safari sau khi trừ thanh công cụ. Đa số người xem vào từ bio TikTok.
   const p = await page({ viewport: { width: 390, height: 750 } });

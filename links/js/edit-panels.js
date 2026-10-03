@@ -194,7 +194,7 @@ function themePanel() {
   const setT = (k, re = false) => (v) => update((d) => { d.theme[k] = v; }, { rerender: re });
   return panel('Giao diện kính', 'Độ mờ, độ trong, hình nền', true,
     slider('Độ mờ của kính (blur)', t.blur, 0, 48, 'px', setT('blur'), '0 = kính trong suốt hẳn, càng lớn càng mờ như kính mờ iPhone.'),
-    slider('Độ đục của kính', t.tint, 5, 95, '%', setT('tint'), 'Thấp = trong, nhìn rõ nền phía sau. Cao = trắng/đen đặc hơn, chữ dễ đọc hơn.'),
+    slider('Độ đục của kính', t.tint, 0, 95, '%', setT('tint'), '0 = trong suốt hẳn, chỉ còn vành mép bẻ sáng như kính thật. Cao = trắng/đen đặc hơn, chữ dễ đọc hơn.'),
     segmented('Hình nền', t.background, Object.entries(BACKGROUNDS), setT('background', true)),
     t.background === 'image'
       ? imageField('Ảnh nền', t.bgImage, (v, re) => update((d) => { d.theme.bgImage = v; }, { rerender: re }),

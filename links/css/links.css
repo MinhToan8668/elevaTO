@@ -7,13 +7,17 @@
   --text:#14201b; --strong:#06110d; --muted:#3b4a44;
   --base:#eef4f1;
   /* kính */
-  /* Độ đục trên thanh kéo được nhân hệ số < 1 → cùng một con số nhưng kính trong hơn bản trước */
+  /* Độ đục trên thanh kéo được nhân hệ số < 1 → cùng một con số nhưng kính trong hơn bản trước.
+     Kéo về 0 thì mặt kính trong suốt hoàn toàn; tấm kính vẫn "thấy" được nhờ vành mép bẻ sáng
+     (--len) và vệt sáng mép (--glass-hi), chứ không nhờ một lớp màu đục đè lên nền như cách cũ. */
   --glass:rgb(255 255 255 / calc(var(--tint) * .58));
   --glass-2:rgb(255 255 255 / calc(var(--tint) * .26));
+  --len:brightness(1.22) saturate(1.55);     /* mép kính bẻ sáng thứ phía sau — dấu hiệu của kính thật */
+  --len-w:2.2px;                             /* bề dày vành bẻ sáng */
   --glass-strong:rgb(255 255 255 / .86); --glass-soft:rgb(255 255 255 / .32);
   --glass-line:rgb(255 255 255 / .7);
   --rim-a:rgb(255 255 255 / .95); --rim-b:rgb(255 255 255 / .12); --rim-c:rgb(255 255 255 / .55);
-  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .9), inset 0 -1px 0 rgb(255 255 255 / .22), inset 0 12px 20px -16px rgb(255 255 255 / .6);
+  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .95), inset 0 -1px 0 rgb(255 255 255 / .3), inset 0 12px 20px -16px rgb(255 255 255 / .65), inset 0 -12px 18px -18px rgb(10 30 22 / .18);
   --glass-shadow:0 1px 2px rgb(10 30 22 / .05), 0 10px 30px -6px rgb(10 30 22 / .16);
   --sk:rgb(10 30 22 / .08);
   --ease:cubic-bezier(.22,1,.36,1);
@@ -32,7 +36,8 @@
     --glass-strong:rgb(24 30 34 / .9); --glass-soft:rgb(255 255 255 / .06);
     --glass-line:rgb(255 255 255 / .14);
     --rim-a:rgb(255 255 255 / .45); --rim-b:rgb(255 255 255 / .04); --rim-c:rgb(255 255 255 / .22);
-    --glass-hi:inset 0 1px 0 rgb(255 255 255 / .18), inset 0 -1px 0 rgb(255 255 255 / .04), inset 0 14px 24px -16px rgb(255 255 255 / .16);
+    --glass-hi:inset 0 1px 0 rgb(255 255 255 / .22), inset 0 -1px 0 rgb(255 255 255 / .05), inset 0 14px 24px -16px rgb(255 255 255 / .18), inset 0 -14px 22px -18px rgb(0 0 0 / .5);
+    --len:brightness(1.35) saturate(1.4);   /* nền tối: bẻ sáng mạnh tay hơn, nhưng vành mỏng nên không chói */
     --glass-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
     --sk:rgb(255 255 255 / .07);
   }
@@ -46,7 +51,8 @@
   --glass-strong:rgb(24 30 34 / .9); --glass-soft:rgb(255 255 255 / .06);
   --glass-line:rgb(255 255 255 / .14);
   --rim-a:rgb(255 255 255 / .45); --rim-b:rgb(255 255 255 / .04); --rim-c:rgb(255 255 255 / .22);
-  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .18), inset 0 -1px 0 rgb(255 255 255 / .04), inset 0 14px 24px -16px rgb(255 255 255 / .16);
+  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .22), inset 0 -1px 0 rgb(255 255 255 / .05), inset 0 14px 24px -16px rgb(255 255 255 / .18), inset 0 -14px 22px -18px rgb(0 0 0 / .5);
+  --len:brightness(1.35) saturate(1.4);   /* nền tối: bẻ sáng mạnh tay hơn, nhưng vành mỏng nên không chói */
   --glass-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
   --sk:rgb(255 255 255 / .07);
 }
@@ -112,7 +118,11 @@ img{display:block;max-width:100%}
   background:linear-gradient(160deg,var(--glass),var(--glass-2));
   -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);backdrop-filter:blur(var(--blur)) saturate(150%);
   box-shadow:var(--glass-hi),var(--glass-shadow)}
-.lg::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;padding:1.2px;pointer-events:none;
+/* Vành mép: chỉ rộng vài pixel nhưng LÀM SÁNG thứ nằm phía sau (backdrop-filter trong vùng mask),
+   đúng cách kính thật bẻ ánh sáng ở rìa. Nhờ vậy kéo độ đục về 0 vẫn thấy rõ ranh giới tấm kính,
+   không phải tô một lớp màu đục đè lên nền. Vệt sáng chéo vẽ chồng lên trên cùng. */
+.lg::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;padding:var(--len-w);pointer-events:none;
+  -webkit-backdrop-filter:var(--len);backdrop-filter:var(--len);
   background:linear-gradient(135deg,var(--rim-a),var(--rim-b) 32%,transparent 50%,var(--rim-b) 68%,var(--rim-c));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
   mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
@@ -246,14 +256,15 @@ img{display:block;max-width:100%}
   background:linear-gradient(150deg,color-mix(in srgb,var(--ac) 18%,var(--glass)),var(--glass-2) 60%)}
 .cover{position:absolute!important;inset:0;z-index:4!important;border-radius:inherit}
 .f-top{display:flex;gap:13px;align-items:center;pointer-events:none}
-.f-top.has-badge{padding-right:56px}
 .f-top .chip{width:70px;height:70px;border-radius:20px}
 .f-top .chip.img{border-radius:23%}
 .f-top .chip.ico{border-radius:26%}
 .f-top .chip .ic{width:30px;height:30px}
 .f-top .ttl{font-size:18px;line-height:1.22;font-weight:800;letter-spacing:-.005em}
 .f-top .sub{font-size:12.5px;-webkit-line-clamp:3}
-.f-top .badge{top:13px;right:13px;position:absolute}
+/* Nhãn nằm TRONG dòng, không đặt tuyệt đối: chừa chỗ bằng một con số cố định thì nhãn dài hơn
+   số đó là đè lên chữ. Thành ô co giãn thì chữ tự thu lại, không bao giờ chồng nhau. */
+.f-top .badge{position:static;flex:none;align-self:flex-start;margin-left:auto}
 .live{display:flex;flex-direction:column;gap:7px;pointer-events:none}
 .live-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:500;color:var(--muted)}
 .live-row.small{font-size:11.5px}
@@ -336,7 +347,10 @@ img{display:block;max-width:100%}
    Chỉ xét BỀ NGANG, không xét chiều cao: Safari thu/giãn thanh công cụ khi cuộn làm chiều cao
    màn đổi liên tục, khoá theo chiều cao thì bố cục nhảy qua nhảy lại giữa chừng. */
 @media (max-width:560px){
-  .page{padding-bottom:max(4px,env(safe-area-inset-bottom))}
+  /* Lề hai bên mỏng lại cho thẻ gần sát mép máy — nhìn tràn màn hình hơn hẳn.
+     Lề trên vẫn tôn trọng safe-area: đẩy chữ lên dưới cụm camera là không đọc được. */
+  .page{padding:max(4px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right))
+        max(4px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left))}
   .logo{height:34px}
   .bar{padding:0 0 4px}
   .main{gap:6px}

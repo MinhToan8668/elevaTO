@@ -1,5 +1,15 @@
 /* Trình chỉnh sửa trang link — dựa trên token kính của links.css. */
-body.ed{overflow:hidden}
+
+/* Ghim mặt kính cho RIÊNG trang sửa. links.css lấy mặc định theo theme của trang link, nên chủ
+   trang kéo kính trong suốt hẳn là panel ở đây cũng tàng hình theo — mà đây là công cụ làm việc,
+   phải đọc được mọi lúc. Khung xem trước là tài liệu riêng (iframe) nên không dính.
+   Phải khai lại --glass chứ không chỉ --tint: :root tính sẵn --glass từ --tint của CHÍNH :root
+   rồi mới truyền xuống, nên đổi mỗi --tint ở đây không có tác dụng gì. */
+body.ed{overflow:hidden;--blur:20px;
+  --glass:rgb(255 255 255 / .36); --glass-2:rgb(255 255 255 / .16)}
+:root[data-theme="dark"] body.ed{--glass:rgb(30 38 42 / .46); --glass-2:rgb(20 26 30 / .28)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) body.ed{--glass:rgb(30 38 42 / .46); --glass-2:rgb(20 26 30 / .28)}}
 .ed .glass{border-radius:22px}
 
 .ed-top{position:fixed;top:10px;left:10px;right:10px;z-index:20;display:flex;align-items:center;gap:14px;padding:8px 10px 8px 16px}
