@@ -1,6 +1,12 @@
 /**
  * elevaTO — Backend (Google Apps Script Web App)
  * ============================================================
+ *
+ * ⚠️ BẢN CŨ. Trang khoá học và trang link đã chuyển sang Cloudflare Worker — xem ai/worker/
+ *    (code tự lên máy chủ mỗi lần push, key cất kín trong Cloudflare).
+ *    Giữ lại để còn chỗ quay về trong lúc chuyển, và để chạy hàm xemAdminKey + đường
+ *    ?action=regs khi kéo đăng ký cũ sang (lệnh /nhapdangky của bot elevaTO).
+ *    Dọn đi khi bản mới đã chạy ổn.
  * Một file duy nhất đảm nhiệm 4 việc:
  *   1. API config  — landing page fetch để render toàn bộ nội dung động
  *   2. API đăng ký — nhận form, lưu Google Sheet, báo Telegram

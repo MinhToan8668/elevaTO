@@ -105,10 +105,12 @@ Mở địa chỉ đó bằng trình duyệt. Thấy `{"ok":true,"service":"elev
 Phần `cai` trong câu trả lời cho biết **đã cài được những gì** — lúc này đang trống hết, đúng:
 
 ```json
-{"ok":true,"service":"elevaTO AI","ban":"…","cai":{"ai":false,"bot":false,"mail":false}}
-                                                        │          │           └ BREVO_KEY + MAIL_TU
-                                                        │          └ TG_TOKEN + TG_SECRET + TG_ADMIN
-                                                        └ GEMINI_KEYS
+{"ok":true,"service":"elevaTO","ban":"…",
+ "cai":{"ai":false,"bot_ai":false,"bot_el":false,"mail":false}}
+          │          │             │              └ BREVO_KEY + MAIL_TU
+          │          │             └ TG_EL_TOKEN  (bot khoá học + trang link)
+          │          └ TG_AI_TOKEN (bot AI BCTC)
+          └ GEMINI_KEYS            (mọi secret bot còn cần TG_ADMIN + TG_SECRET)
 ```
 
 Mở lại địa chỉ này sau bước 5 để kiểm: cái nào còn `false` là secret đó chưa vào (nó chỉ báo
@@ -124,9 +126,10 @@ Mỗi dòng dưới đây là một lần bấm **Add**, chọn **Type: Secret**
 | Variable name | Value | Lấy ở đâu |
 |---|---|---|
 | `GEMINI_KEYS` | key Gemini (nhiều key cách nhau dấu phẩy) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → **Create API key** |
-| `TG_TOKEN` | token bot | Telegram → [@BotFather](https://t.me/BotFather) → `/newbot` → đặt tên → nhận token |
-| `TG_ADMIN` | chat ID của bạn | Telegram → [@userinfobot](https://t.me/userinfobot) → bấm **Start** → nó đọc số Id |
-| `TG_SECRET` | chuỗi ngẫu nhiên tự nghĩ, 20+ ký tự | gõ bừa cũng được, chỉ cần dài và không đoán ra |
+| `TG_AI_TOKEN` | token bot **AI BCTC** | Telegram → [@BotFather](https://t.me/BotFather) → `/mybots` → bot AI → **API Token** |
+| `TG_EL_TOKEN` | token bot **elevaTO** (khoá học + trang link) | cùng chỗ, chọn bot elevaTO |
+| `TG_ADMIN` | chat ID của bạn — dùng chung cả hai bot | Telegram → [@userinfobot](https://t.me/userinfobot) → **Start** |
+| `TG_SECRET` | chuỗi ngẫu nhiên tự nghĩ, 20+ ký tự — dùng chung cả hai bot | gõ bừa cũng được, chỉ cần dài |
 | `BREVO_KEY` | API key gửi thư | bước 6 |
 | `MAIL_TU` | địa chỉ gửi thư đã xác minh | bước 6 |
 
@@ -136,7 +139,7 @@ máy chủ chạy y như chưa cài gì.
 > Nhiều key Gemini thì tốt hơn một: hết hạn mức key này, máy chủ tự chuyển key khác. Cứ tạo
 > 2–3 key trong AI Studio rồi dán cả vào một dòng, cách nhau dấu phẩy.
 
-**Nhớ mở Telegram bấm Start với bot của bạn** — bot không nhắn được cho người chưa Start.
+**Nhớ mở Telegram bấm Start với CẢ HAI bot** — bot không nhắn được cho người chưa Start.
 Rồi mở lại địa chỉ máy chủ một lần: bot sẽ tự nối webhook, tự đăng ký **menu lệnh** và nhắn
 "✅ Bot elevaTO AI BCTC đã kết nối". Từ đó bấm nút **Menu** cạnh ô soạn tin (hoặc gõ `/`) là ra
 danh sách lệnh kèm mô tả.
@@ -178,10 +181,43 @@ Xong. Từ đây sửa gì trong `ai/worker/` chỉ cần push.
 | Actions đỏ ở bước **Triển khai Worker** | token không phải mẫu **Edit Cloudflare Workers** |
 | Trang báo "đang được cài đặt" | GitHub Pages chưa dựng lại xong, hoặc workflow không đẩy được commit vào `ai/js/config.js` (xem cảnh báo ở cuối lượt chạy) |
 | Trích xuất báo `setup` | chưa cất `GEMINI_KEYS` (bước 5) |
-| Bot không nhắn gì | mở địa chỉ máy chủ xem `cai.bot`: `false` = thiếu `TG_TOKEN` / `TG_SECRET` / `TG_ADMIN`, hoặc quên bấm **Deploy** sau khi thêm secret. `true` mà vẫn im = chưa bấm **Start** với bot (bấm xong, mở lại trang là lời chào tới) |
+| Bot không nhắn gì | mở địa chỉ máy chủ xem `cai.bot_ai` / `cai.bot_el`: `false` = thiếu `TG_TOKEN` / `TG_SECRET` / `TG_ADMIN`, hoặc quên bấm **Deploy** sau khi thêm secret. `true` mà vẫn im = chưa bấm **Start** với bot (bấm xong, mở lại trang là lời chào tới) |
 | Quên mật khẩu không nhận được thư | chưa xác minh người gửi trên Brevo (bước 6.2) |
 
 Xem nhật ký máy chủ: **Workers & Pages → elevato → Logs → Begin log stream**.
+
+## Worker này phục vụ những gì
+
+| Trang | Đường trên web | Phần trong Worker |
+|---|---|---|
+| Khoá học (đăng ký Financial Modeling) | `/` | `GET ?action=config` · `POST action=register` — `src/khoahoc.js` |
+| Link-in-bio | `/links/` | `GET /links` · `saveLinks` · `checkKey` — `src/links.js` |
+| AI BCTC | `/ai/` | `dangky` · `dangnhap` · `generate` … — `src/auth.js`, `src/gemini.js` |
+
+Trang upload (`/upload/`) vẫn chạy trên Apps Script: nó đẩy file lên Google Drive bằng quyền sẵn
+có của Apps Script, bê sang đây phải dựng OAuth service account — rắc rối hơn hẳn phần còn lại.
+
+### Hai bot Telegram
+
+Telegram chỉ cho **một webhook mỗi token**, nên mỗi bot một đường riêng:
+
+| Bot | Token | Đường webhook | Lo việc gì |
+|---|---|---|---|
+| AI BCTC | `TG_AI_TOKEN` | `/tg/ai` | tài khoản, lượt AI, ủng hộ |
+| elevaTO | `TG_EL_TOKEN` | `/tg/el` | cohort, giá, chỗ, đăng ký khoá học, trang link |
+
+Cả hai dùng chung `TG_ADMIN` và `TG_SECRET`. Worker tự đăng ký webhook và menu lệnh cho từng bot.
+
+### Chuyển đăng ký khoá học cũ sang (làm một lần)
+
+Đăng ký cũ nằm trong Google Sheet của bản Apps Script. Bản cũ sẵn có đường xuất, nên Worker tự
+kéo về — không phải chép tay:
+
+1. Apps Script → chạy hàm `xemAdminKey` → chép ADMIN_KEY trong nhật ký.
+2. Nhắn bot elevaTO: `/nhapdangky <link /exec của Apps Script> <ADMIN_KEY>`
+
+Mã đăng ký là khoá chính nên chạy lại bao nhiêu lần cũng không nhân đôi. Nhập xong bot in luôn
+bảng tình hình để đối chiếu.
 
 ## Từ đây về sau
 
@@ -268,7 +304,10 @@ worker/
     ├── db.js          D1: bộ đếm nguyên tử, cài đặt, tài khoản
     ├── auth.js        đăng ký, đăng nhập, phiên, băm mật khẩu, hạn lượt
     ├── gemini.js      proxy Gemini: nhiều key, chuỗi model dự phòng, giữ nhịp
-    ├── telegram.js    webhook + lệnh quản trị
+    ├── tg.js          lớp gửi tin / webhook / menu lệnh dùng chung cho cả hai bot
+    ├── telegram.js    bot AI BCTC
+    ├── botel.js       bot elevaTO — lệnh trang khoá học + trang link
+    ├── khoahoc.js     cấu hình trang khoá học + nhận đăng ký
     ├── quenmk.js      mã đặt lại mật khẩu
     ├── mail.js        gửi thư qua Brevo
     └── ungho.js       số tài khoản nhận ủng hộ + bảng BIN ngân hàng

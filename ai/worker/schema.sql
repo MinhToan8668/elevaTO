@@ -44,3 +44,20 @@ CREATE TABLE IF NOT EXISTS cai_dat (
   gia_tri TEXT NOT NULL,
   het_luc INTEGER NOT NULL DEFAULT 0      -- 0 = không hết hạn
 );
+
+-- Đăng ký khoá học (thay sheet "DangKy" của bản Apps Script).
+CREATE TABLE IF NOT EXISTS dang_ky (
+  id         TEXT PRIMARY KEY,          -- R + yyMMddHHmmss
+  tao_luc    TEXT NOT NULL,             -- dd/MM/yyyy HH:mm giờ Việt Nam, để đọc cho người
+  cohort     TEXT NOT NULL,             -- "Cohort 07"
+  ten        TEXT NOT NULL,
+  sdt        TEXT NOT NULL,
+  sdt_so     TEXT NOT NULL,             -- số điện thoại chỉ còn chữ số, để so trùng
+  nam        TEXT, email TEXT, nghe TEXT, muc_tieu TEXT,
+  nguon      TEXT,                      -- web | web-tuhoc …
+  trang_thai TEXT NOT NULL DEFAULT 'pending',   -- pending | confirmed | rejected
+  ghi_chu    TEXT
+);
+CREATE INDEX IF NOT EXISTS dk_cohort ON dang_ky (cohort, trang_thai);
+CREATE INDEX IF NOT EXISTS dk_sdt ON dang_ky (sdt_so);
+CREATE INDEX IF NOT EXISTS dk_tao_luc ON dang_ky (tao_luc);

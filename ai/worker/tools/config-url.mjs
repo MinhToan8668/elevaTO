@@ -5,9 +5,9 @@
 //
 //   node tools/config-url.mjs <địa chỉ>
 //
-// Sửa 4 chỗ: ai/js/config.js, links/js/backend.js, và khai báo connect-src trong CSP của
-// links/index.html + links/edit.html. Địa chỉ CŨ lấy từ chính config.js rồi thay khắp nơi, nên
-// không phải giữ danh sách địa chỉ ở hai chỗ.
+// Sửa 5 chỗ: ai/js/config.js, links/js/backend.js, index.html (trang khoá học), và khai báo
+// connect-src trong CSP của links/index.html + links/edit.html. Địa chỉ CŨ lấy từ chính config.js
+// rồi thay khắp nơi, nên không phải giữ danh sách địa chỉ ở hai chỗ.
 //
 // In ra "DOI" nếu có sửa, "GIU" nếu địa chỉ đã đúng sẵn (workflow dựa vào đó để biết có cần commit).
 
@@ -18,6 +18,8 @@ const duong = new URL('../../js/config.js', import.meta.url);
 const DONG = /^(export const API = )'[^']*';$/m;
 // Dòng khai báo địa chỉ ở từng file, và các file chỉ cần thay địa chỉ cũ bằng địa chỉ mới.
 const DONG_LINKS = /^(export const BACKEND_URL = )'[^']*';$/m;
+const DONG_KHOA_HOC = /^(\s*var API = )'[^']*';/m;
+const duongKhoaHoc = new URL('../../../index.html', import.meta.url);
 const duongLinks = new URL('../../../links/js/backend.js', import.meta.url);
 const duongCSP = ['../../../links/index.html', '../../../links/edit.html']
   .map((d) => new URL(d, import.meta.url));
@@ -59,6 +61,7 @@ function chay(raw) {
   const truoc = (DONG.exec(readFileSync(duong, 'utf8')) ? /'([^']*)'/.exec(RegExp.lastMatch)[1] : '');
   let doi = suaDong(duong, DONG, 'ai/js/config.js', dc);
   doi = suaDong(duongLinks, DONG_LINKS, 'links/js/backend.js', dc) || doi;
+  doi = suaDong(duongKhoaHoc, DONG_KHOA_HOC, 'index.html', dc) || doi;
   if (truoc) for (const d of duongCSP) doi = thayKhap(d, truoc, dc) || doi;
   console.log(`${doi ? 'DOI' : 'GIU'} ${dc}`);
 }
