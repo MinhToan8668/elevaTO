@@ -202,7 +202,7 @@ export function normalize(raw) {
     live: { enabled: bool(live.enabled, false), api: str(live.api, 500) },
     theme: {
       blur: clamp(th.blur, 0, 48, THEME_DEFAULT.blur),
-      tint: clamp(th.tint, 5, 95, THEME_DEFAULT.tint),
+      tint: clamp(th.tint, 0, 95, THEME_DEFAULT.tint),   // 0 = kính trong suốt hẳn, chỉ còn vành mép
       background: has(BACKGROUNDS, th.background) ? th.background : THEME_DEFAULT.background,
       bgImage: str(th.bgImage, BG_MAX),
     },

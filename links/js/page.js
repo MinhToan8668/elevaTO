@@ -106,7 +106,7 @@ function tile(l, i) {
       sheet
         ? h('button', { class: 'cover', type: 'button', 'aria-label': l.title })
         : h('a', { class: 'cover', ...linkAttrs(l.url), 'aria-label': l.title }),
-      h('div', { class: 'f-top' + (l.badge ? ' has-badge' : '') }, chip(l), text, badge(l)),
+      h('div', { class: 'f-top' }, chip(l), text, badge(l)),
       liveBlock(l),
       l.cta ? h('a', { class: 'cta', ...linkAttrs(safeUrl(l.ctaUrl) || l.url) }, l.cta, h('span', { html: svg('arrow') })) : null);
   } else {

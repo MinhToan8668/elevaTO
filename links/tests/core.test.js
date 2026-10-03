@@ -196,7 +196,7 @@ test('theme: độ mờ, độ đục bị kẹp trong khoảng cho phép; nền
   assert.deepEqual(normalize({}).theme, THEME_DEFAULT);
   const t = normalize({ theme: { blur: 999, tint: -5, background: 'neon' } }).theme;
   assert.equal(t.blur, 48);
-  assert.equal(t.tint, 5);
+  assert.equal(t.tint, 0);     // 0 = kính trong suốt hẳn, vẫn thấy tấm kính nhờ vành mép bẻ sáng
   assert.equal(t.background, 'aurora');
   assert.equal(normalize({ theme: { blur: '12.6' } }).theme.blur, 13);
 });
