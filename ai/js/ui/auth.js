@@ -330,7 +330,14 @@ function renderAccount(ctx) {
     const prev = last;
     last = s.user;
     const box = $('#acct');
-    if (!s.user) { mount(box, h('button', { class: 'btn sm', type: 'button', onclick: () => openAuth('') }, t('au.signinUp'))); return; }
+    // Hai nhãn, CSS giấu bớt một: màn hẹp chỉ vừa "Đăng nhập", để nguyên "Đăng nhập / Đăng ký"
+    // là nút xuống hai dòng và đẩy vỡ cả thanh đầu trang.
+    if (!s.user) {
+      mount(box, h('button', { class: 'btn sm acct-in', type: 'button', onclick: () => openAuth('') },
+        h('span', { class: 'acct-in-dai' }, t('au.signinUp')),
+        h('span', { class: 'acct-in-ngan' }, t('au.signinUp.ngan'))));
+      return;
+    }
     const me = s.user;
     // Chỉ đổi số lượt (sau mỗi lần trích xuất): sửa tại chỗ, menu đang mở không bị đóng.
     const q = box.querySelector('.acct-q');

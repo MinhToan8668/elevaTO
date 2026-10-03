@@ -105,7 +105,13 @@ function initTheme() {
 // Chọn ngôn ngữ: đổi tại chỗ, mọi phần giao diện vẽ lại (state.lang nằm trong watch của ui/*.js).
 function initLangPicker() {
   const sel = $('#langSel');
-  mount(sel, LANGS.map(([v, l]) => h('option', { value: v, selected: getLang() === v }, l)));
+  // Trên điện thoại ô chọn co lại còn 56px, tên đầy đủ sẽ bị cắt cụt ("Tiếng V…") — nên đổi
+  // sang mã hai chữ. CSS không đổi được chữ hiện trong <select> nên phải vẽ lại nhãn ở đây.
+  const hep = matchMedia('(max-width:560px)');
+  const ve = () => mount(sel, LANGS.map(([v, ten, ngan]) =>
+    h('option', { value: v, selected: getLang() === v }, hep.matches ? ngan : ten)));
+  ve();
+  hep.addEventListener('change', ve);
   sel.addEventListener('change', () => {
     store.set({ lang: setLang(sel.value) });
   });
