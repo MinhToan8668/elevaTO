@@ -282,7 +282,7 @@ export const VI = {
   'au.hide': 'Ẩn',
   'au.show.aria': 'Hiện mật khẩu',
   'au.forgot': 'Quên mật khẩu?',
-  'au.forgot.sub': 'Nhập email đã đăng ký, máy chủ gửi cho bạn một mã 6 số để đặt mật khẩu mới.',
+  'au.forgot.sub': 'Nhập email đã đăng ký, máy chủ gửi cho bạn một mã 8 số để đặt mật khẩu mới.',
   'au.code': 'Mã trong email (8 số)',
   'au.resend': 'Gửi lại mã',
   'au.sendCode': 'Gửi mã về email',

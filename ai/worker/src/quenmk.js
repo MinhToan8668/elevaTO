@@ -6,6 +6,7 @@ import {
 } from './auth.js';
 import { docCaiDat, ghiCaiDat, tkTheoKhoa, themDem, xoaCaiDat, xoaDem } from './db.js';
 import { guiThu } from './mail.js';
+import { esc } from './tg.js';
 
 const khoaMa = async (email) => `dl_${await bamSHA(`ma|${khoaEmail(email)}`)}`;
 const khoaNghi = async (email) => `dln_${await bamSHA(`nghi|${khoaEmail(email)}`)}`;
@@ -41,7 +42,17 @@ export async function quenMK(env, b, bao) {
     return loi('cho', 'Đã gửi mã cho email này — kiểm tra hộp thư (cả thư rác), hoặc thử lại sau một giờ');
   }
   const tk = await tkTheoKhoa(env.DB, khoaEmail(email));
-  if (!tk || tk.trangthai !== 'active') return ok({ daGui: true, phut: SO.MA_DL_PHUT });
+  if (!tk || tk.trangthai !== 'active') {
+    // Người xin vẫn thấy "đã gửi" (không để ai dò danh sách email), nhưng QUẢN TRỊ thì được báo:
+    // không có cái này thì cảnh "bấm gửi, thấy báo thành công, chờ mãi không có thư" là một hộp
+    // đen — chẳng cách nào biết tại máy chủ hỏng hay tại gõ nhầm email.
+    const vi = !tk ? 'không có tài khoản nào dùng email này'
+      : tk.trangthai === 'cho' ? 'tài khoản đang CHỜ DUYỆT — gõ /mo để duyệt rồi họ xin mã lại'
+        : 'tài khoản đang bị KHOÁ';
+    await bao?.('mail_khong_gui', 1800,
+      `📭 Có người xin mã đặt lại mật khẩu cho <code>${esc(email)}</code> nhưng ${vi}, nên không gửi thư nào.`);
+    return ok({ daGui: true, phut: SO.MA_DL_PHUT });
+  }
 
   if (!await themDem(env.DB, `dlg_${gio}`, so(env, 'MA_DL_HE_THONG'), 3700)) {
     return loi('busy', 'Đang có quá nhiều yêu cầu, thử lại sau ít phút', { retryAfter: 300 });
