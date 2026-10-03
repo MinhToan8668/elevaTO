@@ -658,6 +658,39 @@ test('ủng hộ: nút ở góc mở hộp có số tài khoản và mã QR dự
   assert.deepEqual(errors, []);
 });
 
+// Người dùng hay kéo cả chục BCTC nhiều năm vào một lượt. Mỗi file tốn một lượt AI và làm trang
+// nặng, mà BCTC đã kiểm toán vốn in sẵn hai năm nên hai file là đủ bốn năm model cần.
+test('mở tối đa 2 báo cáo một lúc, và nút xoá hết để nhập công ty khác', { timeout: 120_000 }, async () => {
+  const pdf = await bctcPdf();
+  const { page, errors } = await newPage();
+  await page.goto(`${base}/ai/`);
+  await page.waitForSelector('#app .step');
+
+  // Thả ba file một lượt: chỉ hai cái đầu vào, cái thứ ba phải báo rõ là bị bỏ chứ không im.
+  await page.setInputFiles('#fileInput', [pdf, pdf, pdf]);
+  await page.waitForFunction(() => document.querySelectorAll('#fileList li').length === 2);
+  await page.locator('#toast:has-text("bỏ qua 1 file")').waitFor();
+  assert.match(await page.locator('#fileBar .fine').innerText(), /Còn 0 chỗ/);
+
+  // Đã đầy thì thêm nữa cũng không vào.
+  await page.setInputFiles('#fileInput', pdf);
+  await page.locator('#toast:has-text("bỏ qua 1 file")').waitFor();
+  assert.equal(await page.locator('#fileList li').count(), 2, 'đã đầy mà vẫn nhận thêm file');
+
+  // Xoá hết → danh sách trống, bảng chọn trang cũng trống theo.
+  page.once('dialog', (d) => d.accept());
+  await page.click('#fileBar button');
+  await page.waitForFunction(() => document.querySelectorAll('#fileList li').length === 0);
+  assert.equal(await page.locator('#fileBar button').count(), 0, 'xoá hết rồi mà thanh công cụ còn');
+  assert.equal(await page.locator('#pageMaps .pmap').count(), 0, 'bảng chọn trang chưa dọn theo');
+
+  // Xoá xong vẫn nhận công ty mới bình thường.
+  await page.setInputFiles('#fileInput', pdf);
+  await page.waitForFunction(() => document.querySelectorAll('#fileList li').length === 1);
+  assert.match(await page.locator('#fileBar .fine').innerText(), /Còn 1 chỗ/);
+  assert.deepEqual(errors, []);
+});
+
 // Đa số người xem vào bằng điện thoại. Thanh đầu trang AI từng nhồi logo + sáng/tối + ngôn ngữ
 // + ủng hộ + đăng nhập thành 441px trên màn 390px: trang cuộn ngang được và nút đăng nhập bị đẩy
 // lòi ra ngoài mép. Bài này canh cả BỐN trang, ở ba khổ máy hay gặp nhất.

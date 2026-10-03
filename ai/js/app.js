@@ -30,7 +30,15 @@ initExtract(store, ctx);
 initReview(store, ctx);
 initExporter(store, ctx);
 railSpy();
-initAuth(store, ctx, { onLogin: (me) => { offerRestore(me); autosave(me); } });
+initAuth(store, ctx, { onLogin: (me) => {
+  offerRestore(me);
+  autosave(me);
+  // "Xoá hết" ở bước 1 gọi vào đây: khoá phiên theo email nên chỉ app.js biết tên nó.
+  ctx.quenPhien = () => {
+    try { localStorage.removeItem(sessionKey(me)); } catch (e) { /* bị chặn thì thôi */ }
+    mount($('#restore'));
+  };
+} });
 initDonate();
 
 window.addEventListener('beforeunload', (e) => { if (store.get().running && !ctx.leaving) { e.preventDefault(); e.returnValue = ''; } });
