@@ -33,9 +33,13 @@ const BAT_TAT = {
 const lay = (o, d) => d.reduce((x, k) => (x == null ? x : x[k]), o);
 const dat = (o, d, v) => { d.slice(0, -1).reduce((x, k) => x[k], o)[d.at(-1)] = v; };
 
-/** Thẻ trả lời khi bấm một lệnh trơn: cho thấy giá trị đang dùng và câu lệnh mẫu để copy. */
+/**
+ * Thẻ cho thấy giá trị đang dùng. Bình thường lệnh trơn được tg.js giữ lại để hỏi nên thẻ này
+ * ít khi hiện; nó là lối thoát khi giá trị gõ vào không đọc được.
+ */
 function goiY(dang, vd, chu, nut) {
-  let t = `⚙️ ${dang}\n\nMuốn đổi thì bấm dòng dưới để copy, dán vào ô chat rồi sửa giá trị:\n${ma(vd)}`;
+  let t = `⚙️ ${dang}\n\nGõ ${ma(String(vd).split(' ')[0])} rồi trả lời câu bot hỏi, `
+    + `hoặc gõ liền một dòng: ${ma(vd)}`;
   if (chu) t += `\n\n${ng(chu)}`;
   return { text: t, nut };
 }
@@ -95,8 +99,8 @@ const MENU = [
 ];
 
 /**
- * Bảng điều khiển. Mỗi lệnh có giá trị thì in kèm GIÁ TRỊ ĐANG CHẠY THẬT, không phải số ví dụ:
- * bấm chữ lệnh (Telegram tự tô xanh) để bot hiện thẻ gợi ý, hoặc chạm con số để copy rồi sửa.
+ * Bảng điều khiển. Mỗi lệnh có giá trị thì in kèm GIÁ TRỊ ĐANG CHẠY THẬT, không phải số ví dụ —
+ * nhìn một lượt là biết web đang đặt gì. Bấm chữ lệnh thì bot hỏi rồi chờ trả lời.
  */
 async function huongDan(env) {
   const c = await cauHinhDayDu(env.DB);
@@ -104,8 +108,8 @@ async function huongDan(env) {
   return [
     `⚙️ ${b('elevaTO — Bảng điều khiển')}`,
     ng('Mọi thay đổi ở đây tự động hiện lên web trong ~1 phút.'), '',
-    `👉 Lệnh ${b('không')} có giá trị phía sau (/status, /mo, /cohortmoi…) thì bấm là chạy.`,
-    `Lệnh ${b('có')} giá trị thì chạm con số để copy, dán vào ô chat rồi sửa — hoặc bấm chữ lệnh để bot hiện thẻ gợi ý kèm nút ➕➖.`, '',
+    `👉 Bấm lệnh nào cũng được. Lệnh cần giá trị thì bot ${b('hỏi')}, mình trả lời thẳng vào ô chat — khỏi nhớ cú pháp.`,
+    `Quen tay rồi thì gõ liền một dòng cũng chạy: ${ma('/slot 12')}. Đang hỏi dở mà đổi ý thì ${ma('/huy')}.`, '',
 
     `📊 ${b('Xem')}`,
     `/status — tình trạng hiện tại (${esc(c.computed.cohortLabel)}, ${c.computed.totalRegistered}/${c.slots.max} chỗ)`,
@@ -189,20 +193,25 @@ async function lenhStatus(env) {
   ] };
 }
 
+/** Nút ➖ ➕ nhích giá trị, gắn vào tin xác nhận để sửa tiếp khỏi phải gõ lại lệnh. */
+const nutNhich = (cmd) => {
+  const spec = SO_LENH[cmd];
+  const n = spec.tien ? tienNgan(spec.buoc) : spec.buoc;
+  return [[{ text: `➖ ${n}`, callback_data: `adj:${cmd}:-${spec.buoc}` },
+    { text: `➕ ${n}`, callback_data: `adj:${cmd}:${spec.buoc}` }]];
+};
+
 async function datSo(env, cmd, args) {
   const spec = SO_LENH[cmd];
   const cfg = await docCauHinh(env.DB);
-  if (!String(args).trim()) {
-    return goiY(`${spec.nhan} đang là ${b(docSo(spec, lay(cfg, spec.duong)))}`, spec.vd,
-      spec.tien ? 'Gõ tắt cũng được: 3tr · 3M · 2tr5 · 3,5tr · 500k' : '',
-      [[{ text: `➖ ${spec.tien ? tienNgan(spec.buoc) : spec.buoc}`, callback_data: `adj:${cmd}:-${spec.buoc}` },
-        { text: `➕ ${spec.tien ? tienNgan(spec.buoc) : spec.buoc}`, callback_data: `adj:${cmd}:${spec.buoc}` }]]);
-  }
   const n = spec.tien ? docTien(args) : parseInt(String(args).replace(/\D/g, ''), 10);
-  if (!Number.isFinite(n) || n < 0) return goiY(`Không đọc được giá trị ${ma(args)}`, spec.vd);
+  if (!Number.isFinite(n) || n < 0) {
+    return { text: `⚠️ Không đọc được ${ma(args)}. ${spec.nhan} vẫn là ${b(docSo(spec, lay(cfg, spec.duong)))}.\n\n`
+      + `Gõ ${ma(`/${cmd}`)} rồi trả lời lại.${spec.tien ? `\n${ng('Gõ tắt cũng được: 3tr · 3M · 2tr5 · 3,5tr · 500k')}` : ''}` };
+  }
   dat(cfg, spec.duong, n);
   await ghiCauHinh(env.DB, cfg);
-  return { text: `✅ ${spec.nhan} = ${b(docSo(spec, n))}\n\nWeb sẽ cập nhật trong ~1 phút.` };
+  return { text: `✅ ${spec.nhan} = ${b(docSo(spec, n))}\n\nWeb sẽ cập nhật trong ~1 phút.`, nut: nutNhich(cmd) };
 }
 
 async function datTT(env, st) {
@@ -409,9 +418,10 @@ async function lenhBatTat(env, cmd, args) {
   if (['on', 'bat', 'bật', '1', 'hien', 'hiện'].includes(a)) on = true;
   else if (['off', 'tat', 'tắt', '0', 'an', 'ẩn'].includes(a)) on = false;
   else {
+    // Bật/tắt thì một cái nút là đủ, không cần hỏi han gì.
     const dang = lay(await docCauHinh(env.DB), spec.duong);
-    return goiY(`${spec.nhan} đang ${b(dang ? 'hiện' : 'ẩn')} trên web`, `/${cmd} ${dang ? 'off' : 'on'}`, '',
-      [[{ text: dang ? '🙈 Ẩn đi' : '👁 Hiện lên', callback_data: `tog:${cmd}` }]]);
+    return { text: `⚙️ ${spec.nhan} đang ${b(dang ? 'hiện' : 'ẩn')} trên web.`,
+      nut: [[{ text: dang ? '🙈 Ẩn đi' : '👁 Hiện lên', callback_data: `tog:${cmd}` }]] };
   }
   return datBatTat(env, cmd, on);
 }
@@ -508,9 +518,82 @@ async function xuLyNut(env, q, { api, gui }) {
   return dap('');
 }
 
-/** Bot elevaTO: trang khoá học + trang link. Token riêng (TG_EL_TOKEN), webhook riêng (/tg/el). */
-export const BOT_EL = taoBot({
-  ten: 'el', bien: 'TG_EL_TOKEN', nhan: 'elevaTO', menu: MENU, lenh: chayLenh, nut: xuLyNut,
+// ─── Hỏi từng bước ──────────────────────────────────────────
+//
+// Gõ lệnh trơn thì bot hỏi, mình trả lời — khỏi phải nhớ cú pháp. Gõ kèm giá trị
+// (/slot 12) vẫn chạy thẳng như cũ, nhanh hơn khi đã quen tay.
+
+const hoiSo = (cmd) => ({
+  buoc: [{
+    hoi: `${SO_LENH[cmd].nhan} là bao nhiêu?`,
+    vd: SO_LENH[cmd].vd.split(' ').slice(1).join(' '),
+    goi: async (env) => {
+      const spec = SO_LENH[cmd];
+      return `Đang là ${b(docSo(spec, lay(await docCauHinh(env.DB), spec.duong)))}.`
+        + (spec.tien ? `\n${ng('Gõ tắt cũng được: 3tr · 3M · 2tr5 · 3,5tr · 500k')}` : '');
+    },
+  }],
 });
 
-export { MENU as MENU_EL, chayLenh as chayLenhEl };
+const dangLa = (lay1) => async (env) => `Đang là ${b(lay1(await docCauHinh(env.DB)))}.`;
+
+const HOI = {
+  ...Object.fromEntries(Object.keys(SO_LENH).map((c) => [`/${c}`, hoiSo(c)])),
+  '/slots': hoiSo('slot'),
+  '/lich': {
+    buoc: [
+      { hoi: 'Học vào những ngày nào?', vd: 'Thứ 3 & 5', goi: dangLa((c) => c.schedule.days) },
+      { hoi: 'Mấy giờ?', vd: '20h–22h', goi: dangLa((c) => c.schedule.time) },
+    ],
+    ghep: (d) => `${d[0]} | ${d[1]}`,          // lenhLich tách ngày với giờ bằng dấu gạch đứng
+  },
+  '/buoi': {
+    buoc: [
+      { hoi: 'Tổng cộng bao nhiêu buổi?', vd: '8', goi: dangLa((c) => `${c.schedule.sessions} buổi`) },
+      { hoi: 'Trong đó mấy buổi lý thuyết?', vd: '5' },
+      { hoi: 'Mấy buổi thực hành?', vd: '3' },
+    ],
+  },
+  '/kinhnghiem': { buoc: [{ hoi: 'Số năm kinh nghiệm hiện trên trang?', vd: '3+', goi: dangLa((c) => `${c.stats.years} năm`) }] },
+  '/thongbao': {
+    buoc: [{
+      hoi: 'Banner đầu trang ghi gì?',
+      vd: 'Khai giảng 15/09',
+      goi: async (env) => {
+        const a = (await docCauHinh(env.DB)).announcement;
+        return a.show ? `Đang hiện: ${ng(a.text)}` : ng('Web đang không có banner nào.');
+      },
+    }],
+  },
+  '/video': {
+    buoc: [{
+      hoi: 'Dán link video học thử (YouTube hoặc Google Drive).',
+      vd: 'https://youtu.be/abc123',
+      goi: async (env) => {
+        const u = (await docCauHinh(env.DB)).media.videoUrl;
+        return u ? `Đang dùng: ${ma(u)}` : ng('Web chưa có video học thử.');
+      },
+    }],
+  },
+  '/duyet': { buoc: [{ hoi: 'Duyệt ai? Gõ id hoặc số điện thoại.', vd: '0901234567', goi: (env) => goiCho(env) }] },
+  '/tuchoi': { buoc: [{ hoi: 'Từ chối ai? Gõ id hoặc số điện thoại.', vd: '0901234567', goi: (env) => goiCho(env) }] },
+  '/nhapdangky': {
+    buoc: [
+      { hoi: 'Dán link /exec của bản Apps Script cũ.', vd: 'https://script.google.com/macros/s/…/exec' },
+      { hoi: 'ADMIN_KEY của bản cũ?', vd: 'AKxxxxxxxx', goi: ng('Lấy bằng cách chạy hàm xemAdminKey trong trình soạn thảo Apps Script.') },
+    ],
+  },
+};
+
+/** Gợi ý kèm câu hỏi /duyet · /tuchoi: liệt kê luôn những ai đang chờ, khỏi phải gõ /ds trước. */
+async function goiCho(env) {
+  const ds = await lenhDS(env, 'cho');
+  return ds.text;
+}
+
+/** Bot elevaTO: trang khoá học + trang link. Token riêng (TG_EL_TOKEN), webhook riêng (/tg/el). */
+export const BOT_EL = taoBot({
+  ten: 'el', bien: 'TG_EL_TOKEN', nhan: 'elevaTO', menu: MENU, lenh: chayLenh, nut: xuLyNut, hoi: HOI,
+});
+
+export { MENU as MENU_EL, chayLenh as chayLenhEl, HOI as HOI_EL };

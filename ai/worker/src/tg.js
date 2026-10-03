@@ -5,7 +5,7 @@
 // Mọi thứ còn lại — gửi tin, đăng ký webhook, menu lệnh, lời chào, chặn người lạ — giống hệt
 // nhau nên gom hết vào đây, mỗi bot chỉ khai phần việc của mình.
 
-import { docCaiDat, ghiCaiDat } from './db.js';
+import { docCaiDat, ghiCaiDat, xoaCaiDat } from './db.js';
 
 export const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -20,9 +20,13 @@ export const laChatQuanTri = (env, id) => tgAdmins(env).includes(String(id));
  * @param menu  [{ command, description }] — menu lệnh Telegram
  * @param lenh  async (env, lenh, arg, tin) → { text, nut } | null (null = im lặng)
  * @param nut   async (env, callbackQuery) → void, cho nút bấm (tuỳ chọn)
+ * @param hoi   { '/lenh': { buoc: [...], ghep?, khi? } } — lệnh nào hỏi từng bước (xem HOI_HAN)
  */
-export function taoBot({ ten, bien, nhan, menu, lenh, nut }) {
+export function taoBot({ ten, bien, nhan, menu: menu0, lenh, nut, hoi = {} }) {
   const duong = `/tg/${ten}`;
+  // Có hỏi đáp thì phải có đường thoát, nên /huy tự gắn vào menu — bot không tự khai.
+  const menu = Object.keys(hoi).length
+    ? [...menu0, { command: 'huy', description: '✖️ Bỏ câu đang hỏi dở' }] : menu0;
 
   const token = (env) => String(env[bien] || '');
   const coCai = (env) => !!(token(env) && env.TG_SECRET && tgAdmins(env).length);
@@ -123,23 +127,106 @@ export function taoBot({ ten, bien, nhan, menu, lenh, nut }) {
     if (xong) await ghiCaiDat(env.DB, `tg_menu_${ten}`, dau);
   }
 
+  // ─── Hỏi từng bước ────────────────────────────────────────
+  //
+  // Gõ "/giasom" trơn thì bot HỎI "Giá Early Bird là bao nhiêu?" rồi chờ trả lời, chứ không bắt
+  // người dùng tự nhớ cú pháp "/giasom <số tiền>". Việc đang hỏi dở nhớ trong D1 (Worker không
+  // giữ trí nhớ giữa hai yêu cầu), tự hết hạn sau HOI_HAN giây.
+  const HOI_HAN = 900;
+  const khoaCho = (chatId) => `cho_${ten}_${chatId}`;
+
+  async function docCho(env, chatId) {
+    try {
+      const o = JSON.parse((await docCaiDat(env.DB, khoaCho(chatId))) || 'null');
+      return o && hoi[o.lenh] && Array.isArray(o.da) ? o : null;
+    } catch { return null; }
+  }
+  const xoaCho = (env, chatId) => xoaCaiDat(env.DB, khoaCho(chatId));
+
+  /** Hỏi bước thứ `i`. force_reply để Telegram mở sẵn bàn phím và trích dẫn câu hỏi. */
+  async function hoiBuoc(env, chatId, ten0, i, da) {
+    const spec = hoi[ten0];
+    const b = spec.buoc[i];
+    const dem = spec.buoc.length > 1 ? ` <i>(bước ${i + 1}/${spec.buoc.length})</i>` : '';
+    const goi = typeof b.goi === 'function' ? await b.goi(env) : b.goi;
+    await ghiCaiDat(env.DB, khoaCho(chatId), JSON.stringify({ lenh: ten0, da, luc: Date.now() }), HOI_HAN);
+    return api(env, 'sendMessage', {
+      chat_id: String(chatId),
+      text: `❓ ${esc(b.hoi)}${dem}${goi ? `\n${goi}` : ''}\n\n<i>Trả lời thẳng vào ô chat, hoặc /huy để bỏ.</i>`,
+      parse_mode: 'HTML',
+      reply_markup: { force_reply: true, input_field_placeholder: String(b.vd || '').slice(0, 64) },
+    });
+  }
+
+  /** Bắt đầu hỏi lệnh `ten0` từ bước đầu. Dùng cho cả nút bấm (ctx.hoiTu). */
+  const hoiTu = (env, chatId, ten0) => (hoi[ten0] ? hoiBuoc(env, chatId, ten0, 0, []) : null);
+
+  /** Nhận câu trả lời; đủ bước thì chạy lệnh thật. */
+  async function tiepCho(env, m, dang) {
+    const spec = hoi[dang.lenh];
+    const b = spec.buoc[dang.da.length];
+    // Bước nhạy cảm (mật khẩu) thì xoá tin trả lời khỏi lịch sử Telegram ngay.
+    if (b.xoa) await api(env, 'deleteMessage', { chat_id: String(m.chat.id), message_id: m.message_id });
+    const da = [...dang.da, m.text.trim()];
+    if (da.length < spec.buoc.length) return hoiBuoc(env, m.chat.id, dang.lenh, da.length, da);
+    await xoaCho(env, m.chat.id);
+    const chuoi = spec.ghep ? spec.ghep(da) : da.join(' ');
+    const kq = await lenh(env, dang.lenh, chuoi.split(/\s+/).filter(Boolean),
+      { tin: m, api, gui, bao, guiFile, dap: da });
+    if (kq && kq.text) await gui(env, m.chat.id, kq.text, kq.nut);
+    return null;
+  }
+
   /**
    * Một tin Telegram gửi tới. Chỉ nhận NHẮN RIÊNG do đúng chat quản trị gõ — không nhận nhóm,
    * không nhận tin chuyển tiếp; người lạ nhắn thì im lặng, không tốn lượt gọi ra Telegram.
    */
   async function nhanTin(env, u) {
     try {
-      if (u.callback_query) { if (nut) await nut(env, u.callback_query, { api, gui, bao }); return; }
+      if (u.callback_query) {
+        const q = u.callback_query;
+        const chat = q.message && q.message.chat && q.message.chat.id;
+        const d = String(q.data || '');
+        // Nút "✏️ Đổi" trên các thẻ thông tin: mở đúng cuộc hỏi của lệnh đó.
+        if (d.startsWith('hoi:') && laChatQuanTri(env, chat) && laChatQuanTri(env, q.from && q.from.id)
+            && hoi[`/${d.slice(4)}`]) {
+          await api(env, 'answerCallbackQuery', { callback_query_id: q.id });
+          await hoiTu(env, chat, `/${d.slice(4)}`);
+          return;
+        }
+        if (nut) await nut(env, q, { api, gui, bao, hoiTu });
+        return;
+      }
       const m = u.message;
       if (!m || !m.chat || !m.from || typeof m.text !== 'string') return;
       if (m.chat.type !== 'private' || !laChatQuanTri(env, m.chat.id) || !laChatQuanTri(env, m.from.id)
           || m.forward_origin || m.forward_date) return;
       const phan = m.text.trim().split(/\s+/);
       const ten0 = phan[0].replace(/@.*$/, '').toLowerCase();
+
+      if (ten0.startsWith('/')) {
+        if (ten0 === '/huy' || ten0 === '/thoi') {
+          const dang = await docCho(env, m.chat.id);
+          await xoaCho(env, m.chat.id);
+          await gui(env, m.chat.id, dang ? `✖️ Đã bỏ <code>${esc(dang.lenh)}</code>.` : 'Không có câu nào đang hỏi dở.');
+          return;
+        }
+        await xoaCho(env, m.chat.id);                 // gõ lệnh mới là bỏ việc đang hỏi dở
+        const spec = hoi[ten0];
+        // Chỉ hỏi khi người dùng gõ lệnh trơn — gõ kèm giá trị thì cứ chạy thẳng như cũ.
+        if (spec && phan.length === 1 && (!spec.khi || await spec.khi(env))) {
+          await hoiTu(env, m.chat.id, ten0);
+          return;
+        }
+      } else {
+        const dang = await docCho(env, m.chat.id);
+        if (dang) { await tiepCho(env, m, dang); return; }
+      }
+
       const kq = await lenh(env, ten0, phan.slice(1), { tin: m, api, gui, bao, guiFile });
       if (kq && kq.text) await gui(env, m.chat.id, kq.text, kq.nut);
     } catch (e) { console.error(`nhanTin ${ten}: ${e}`); }
   }
 
-  return { ten, duong, nhan, menu, token, coCai, api, gui, guiFile, bao, taoBao, ngo, nhanTin };
+  return { ten, duong, nhan, menu, token, coCai, api, gui, guiFile, bao, taoBao, ngo, nhanTin, hoiTu };
 }
