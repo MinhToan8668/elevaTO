@@ -293,7 +293,7 @@ export const EN = {
   'au.codeSent': 'A code is on its way to your inbox \u2014 it lasts {phut} minutes. Check your spam folder if it is not there.',
   'ug.btn': 'Support',
   'ug.btn.hint': 'Chip in so the tool keeps running',
-  'ug.title': 'Buy elevaTO a coffee \u2615',
+  'ug.title': 'Buy Minh Toan a coffee \u2615',
   'ug.sub': 'This tool is free and always will be. Every statement it reads costs server money, so if it saved you an afternoon of typing numbers, one coffee keeps it running for the next person.',
   'ug.loading': 'Loading\u2026',
   'ug.none': 'Donations are paused right now. Thank you for thinking of elevaTO \u2014 a message on Zalo already makes my day!',

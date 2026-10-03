@@ -293,7 +293,7 @@ export const VI = {
   'au.codeSent': 'Đã gửi mã về email của bạn — mã sống {phut} phút. Không thấy thì xem cả thư rác nhé.',
   'ug.btn': 'Ủng hộ',
   'ug.btn.hint': 'Ủng hộ để tool chạy tiếp',
-  'ug.title': 'Mời elevaTO một ly cà phê ☕',
+  'ug.title': 'Mời Minh Toàn một ly cà phê ☕',
   'ug.sub': 'Tool này miễn phí và sẽ luôn miễn phí. Mỗi lượt đọc BCTC đều tốn tiền máy chủ, nên nếu nó giúp bạn tiết kiệm được một buổi gõ số, một ly cà phê là đủ để nó chạy tiếp cho người sau.',
   'ug.loading': 'Đang lấy thông tin…',
   'ug.none': 'Phần ủng hộ đang tạm đóng. Cảm ơn bạn đã nghĩ tới elevaTO — nhắn Zalo cho mình cũng vui rồi!',
