@@ -638,6 +638,21 @@ test('ủng hộ: nút ở góc mở hộp có số tài khoản và mã QR dự
     return h === cu;
   }, truoc.h);
 
+  // Nút tải mã QR: ảnh phải vẽ lại ở cỡ lớn chứ không chụp lại canvas 240px đang hiện —
+  // ảnh tải về hay bị phóng to, gửi qua chat hay in ra, lấy bản nhỏ là máy quét đọc trượt.
+  const tep = await download(page, () => page.click('#ugDlg .ug-tai'));
+  assert.equal(tep.name, 'elevato-qr.png');
+  const png = await readFile(tep.path);
+  assert.deepEqual([...png.subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47], 'không phải file PNG');
+  const rong = png.readUInt32BE(16), cao = png.readUInt32BE(20);   // IHDR: rộng ở byte 16, cao ở 20
+  assert.equal(rong, cao, 'ảnh QR phải vuông');
+  assert.ok(rong >= 900, `ảnh tải về mới ${rong}px, quá nhỏ để in hay phóng to`);
+
+  // Chọn mức tiền rồi tải lại: tên file mang theo số tiền để khỏi lẫn giữa mấy bản.
+  await page.click('#ugDlg .ug-amt button >> nth=0');
+  const tep2 = await download(page, () => page.click('#ugDlg .ug-tai'));
+  assert.equal(tep2.name, 'elevato-qr-50k.png');
+
   // Không phải đăng nhập mới xem được, và không có yêu cầu nào ra miền lạ.
   assert.equal(await page.locator('#acct button').count(), 1);
   assert.deepEqual(errors, []);

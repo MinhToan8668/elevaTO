@@ -308,6 +308,8 @@ export const EN = {
   'ug.qr.hint': 'Scan with your banking app \u00b7 bank code {bin}',
   'ug.qr.bad': 'The account details are not valid, so no QR could be built \u2014 please transfer manually using the number beside it.',
   'ug.qr.fail': 'The QR could not be drawn (flaky network) \u2014 please transfer manually using the number beside it.',
+  'ug.qr.save': 'Save QR',
+  'ug.qr.saveFail': 'Could not save the image \u2014 a screenshot of the QR works too.',
   'ug.amount': 'Amount',
   'ug.free': 'Everything works the same whether or not you chip in \u2014 this is just here for anyone who wants to help. Every dong goes to server bills and new features.',
   'ug.contact': 'Feedback, or want to work together?',

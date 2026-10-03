@@ -308,6 +308,8 @@ export const VI = {
   'ug.qr.hint': 'Quét bằng app ngân hàng · mã ngân hàng {bin}',
   'ug.qr.bad': 'Thông tin tài khoản chưa hợp lệ nên chưa dựng được mã QR — bạn chuyển khoản tay theo số bên cạnh nhé.',
   'ug.qr.fail': 'Chưa vẽ được mã QR (mạng chập chờn) — bạn chuyển khoản tay theo số bên cạnh nhé.',
+  'ug.qr.save': 'Tải mã QR',
+  'ug.qr.saveFail': 'Chưa tải được ảnh — bạn chụp màn hình mã QR cũng được nhé.',
   'ug.amount': 'Số tiền',
   'ug.free': 'Không ủng hộ cũng dùng đủ tính năng như thường — đây chỉ là chỗ cho ai muốn tiếp sức. Mọi đồng nhận được đều để trả tiền máy chủ và làm thêm tính năng.',
   'ug.contact': 'Có góp ý hay muốn hợp tác?',

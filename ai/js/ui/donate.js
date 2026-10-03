@@ -4,7 +4,7 @@
 // Mã QR dựng bằng thư viện trong vendor/qrcode nên không gọi dịch vụ sinh QR bên ngoài.
 // Chưa đặt số tài khoản thì hộp vẫn mở, chỉ hiện lời cảm ơn và cách liên hệ.
 
-import { h, mount, $, toast } from './dom.js';
+import { h, mount, $, toast, download } from './dom.js';
 import { callApi } from '../ai.js';
 import { API } from '../config.js';
 import { loadQR } from '../libs.js';
@@ -14,6 +14,7 @@ import { t, locale } from '../i18n.js';
 const MUC = [50000, 100000, 200000, 500000];        // mức gợi ý; bấm lại mức đang chọn là bỏ số tiền
 const QR_CANH = 240;                                 // cạnh canvas (px) — KHÔNG lấy từ cv.width, không thì
                                                      // mỗi lần vẽ lại ô QR nhỏ dần đi và mờ
+const QR_TAI = 1024;                                 // cạnh ảnh lúc tải về: in ra giấy hay phóng to vẫn nét
 const NHO_GIAY = 60;                                 // nhớ thông tin ủng hộ bấy nhiêu giây
 let nho = null;                                      // { luc, cho: Promise }
 
@@ -91,6 +92,24 @@ async function veHop(tt) {
     ve();
   } }, `${new Intl.NumberFormat(locale()).format(v / 1000)}k`);
 
+  /**
+   * Tải mã QR về máy. Vẽ lại ở 1024px chứ không chụp canvas 240px đang hiện: ảnh tải về hay
+   * được phóng to, gửi qua chat hay in ra giấy, lấy đúng bản nhỏ là vỡ nét và máy quét đọc trượt.
+   * Số tiền đang chọn nằm luôn trong tên file để khỏi lẫn giữa mấy bản.
+   */
+  const tai = async () => {
+    const payload = vietQrPayload({ bin: tt.bin, stk: tt.stk, soTien, loiNhan });
+    if (!payload) { toast(t('ug.qr.bad')); return; }
+    try {
+      const to = document.createElement('canvas');
+      veQR(to, await loadQR(), payload, QR_TAI);
+      const blob = await new Promise((ok, hong) => to.toBlob((b) => (b ? ok(b) : hong(new Error('toBlob'))), 'image/png'));
+      download(blob, `elevato-qr${soTien ? `-${soTien / 1000}k` : ''}.png`, 'image/png');
+    } catch (e) { toast(t('ug.qr.saveFail')); }
+  };
+  const nutTai = h('button', { type: 'button', class: 'btn ghost sm ug-tai', onclick: tai },
+    h('span', { 'aria-hidden': 'true' }, '⤓'), ' ', h('span', {}, t('ug.qr.save')));
+
   await ve();
   return h('div', {},
     h('div', { class: 'ug-grid' },
@@ -99,18 +118,19 @@ async function veHop(tt) {
         dongChep(t('ug.stk'), tt.stk),
         dongChep(t('ug.owner'), tt.chu_tk),
         dongChep(t('ug.msg'), loiNhan)),
-      h('div', { class: 'ug-qrbox' }, cv, loi, h('p', { class: 'fine' }, t('ug.qr.hint', { bin: tt.bin })))),
+      h('div', { class: 'ug-qrbox' }, cv, loi, nutTai,
+        h('p', { class: 'fine' }, t('ug.qr.hint', { bin: tt.bin })))),
     h('div', { class: 'ug-amt' }, h('span', { class: 'ug-lb' }, t('ug.amount')), ...MUC.map(nutMuc)),
     h('p', { class: 'fine ug-free' }, t('ug.free')));
 }
 
-/** Vẽ mã QR lên canvas, màu theo giao diện đang dùng (nền luôn sáng để máy quét đọc chắc). */
-function veQR(cv, qrcode, payload) {
+/** Vẽ mã QR lên canvas; nền luôn trắng để máy quét đọc chắc dù giao diện đang sáng hay tối. */
+function veQR(cv, qrcode, payload, canhDich = QR_CANH) {
   const q = qrcode(0, 'M');
   q.addData(payload);
   q.make();
   const n = q.getModuleCount(), le = 4;              // viền trắng 4 ô theo chuẩn QR
-  const o = Math.max(2, Math.floor(QR_CANH / (n + le * 2)));
+  const o = Math.max(2, Math.floor(canhDich / (n + le * 2)));
   const canh = o * (n + le * 2);
   cv.width = canh; cv.height = canh;
   const g = cv.getContext('2d');
