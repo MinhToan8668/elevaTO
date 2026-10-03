@@ -69,31 +69,29 @@ export async function baoTaiKhoanMoi(env, tk) {
 // ─── Lệnh ───────────────────────────────────────────────────
 
 const HELP = [`⚙️ ${b('elevaTO AI BCTC — Bảng điều khiển')}`,
-  ng('Bấm chữ lệnh để Telegram điền sẵn, rồi gõ tham số phía sau.'), '',
+  ng('Bấm lệnh là bot hỏi, mình trả lời thẳng vào ô chat. Đang hỏi dở mà đổi ý thì /huy.'), '',
 
   `📊 ${b('Xem')}`,
   '/thongke — số tài khoản, lượt AI hôm nay, key',
   '/cho — tài khoản đang chờ duyệt',
   '/moi — 15 tài khoản đăng ký gần nhất',
-  '/tim &lt;email hoặc tên&gt; — tra cứu (kèm nút xếp vai trò)', '',
+  '/tim — tra cứu theo email hoặc tên (kèm nút xếp vai trò)', '',
 
   `👥 ${b('Vai trò & lượt')}`,
-  '/hocvien &lt;email&gt; — xếp học viên (điền được model)',
-  '/giangvien &lt;email&gt; — xếp giảng viên (không giới hạn lượt)',
-  '/free &lt;email&gt; — về tài khoản thường',
-  '/luot &lt;email&gt; &lt;số&gt; — số lượt AI mỗi ngày (0 = theo vai trò)', '',
+  '/hocvien — xếp học viên (điền được model)',
+  '/giangvien — xếp giảng viên (không giới hạn lượt)',
+  '/free — về tài khoản thường',
+  '/luot — số lượt AI mỗi ngày (0 = theo vai trò)', '',
 
   `🔑 ${b('Tài khoản & mật khẩu')}`,
-  '/mo &lt;email&gt; — duyệt / mở tài khoản',
-  '/khoa &lt;email&gt; — khoá tài khoản',
-  '/mkmoi &lt;email&gt; — bot tự sinh mật khẩu mạnh rồi đọc cho bạn',
-  '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt mật khẩu bạn tự chọn',
+  '/mo — duyệt / mở tài khoản',
+  '/khoa — khoá tài khoản',
+  '/mkmoi — bot tự sinh mật khẩu mạnh rồi đọc cho bạn',
+  '/matkhau — đặt mật khẩu bạn tự chọn',
   ng('Tin có mật khẩu bot tự xoá khỏi lịch sử Telegram ngay.'), '',
 
   `💚 ${b('Ủng hộ trên trang')}`,
-  '/ungho — xem thông tin đang hiện',
-  '/ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt; — đặt lại (vcb, tcb, mb… hoặc 6 số BIN)',
-  '/ungho off — tạm ẩn phần ủng hộ'].join('\n');
+  '/ungho — xem số tài khoản đang hiện, kèm nút đổi và nút ẩn'].join('\n');
 
 const VT = { '/hocvien': 'hv', '/giangvien': 'gv', '/free': 'free' };
 const TT = { '/khoa': 'off', '/mo': 'active', '/duyet': 'active' };
@@ -104,8 +102,10 @@ async function timMot(env, email) {
 }
 
 export async function chayLenh(env, lenh, arg, ctx = {}) {
-  if (lenh === '/matkhau' && ctx.tin && ctx.api) {
-    // Tin chứa mật khẩu: xoá khỏi lịch sử Telegram ngay; mật khẩu giữ nguyên khoảng trắng bên trong.
+  if (lenh === '/matkhau' && ctx.dap) {
+    arg = [ctx.dap[0], ctx.dap[1]];               // giữ nguyên khoảng trắng bên trong mật khẩu
+  } else if (lenh === '/matkhau' && ctx.tin && ctx.api) {
+    // Gõ liền một dòng: xoá tin chứa mật khẩu khỏi lịch sử Telegram ngay.
     await ctx.api(env, 'deleteMessage', { chat_id: String(ctx.tin.chat.id), message_id: ctx.tin.message_id });
     arg = [arg[0], ctx.tin.text.trim().replace(/^\S+\s+\S+\s+/, '')];
   }
@@ -209,16 +209,16 @@ async function lenhMkMoi(env, email) {
     + 'Gửi cho họ rồi XOÁ tin này (Telegram lưu lịch sử chat). Các máy đang đăng nhập đã bị đăng xuất.' };
 }
 
+const NUT_UNG_HO = [[{ text: '✏️ Đổi số tài khoản', callback_data: 'hoi:ungho' },
+  { text: '🙈 Ẩn khỏi trang', callback_data: 'an:ungho' }]];
+
 async function lenhUngHo(env, arg) {
   if (!arg.length) {
     const o = await thongTinUngHo(env.DB);
-    if (!o) {
-      return { text: 'Chưa đặt số tài khoản nhận ủng hộ — trang đang ẩn phần đó.\n'
-        + 'Đặt bằng: /ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt;\nVí dụ: /ungho vcb 1012345678 NGUYEN VAN A' };
-    }
+    // Chưa đặt gì thì tg.js đã mở cuộc hỏi (xem HOI['/ungho'].khi) — tới đây là đã có số rồi.
+    if (!o) return { text: 'Chưa đặt số tài khoản nhận ủng hộ — trang đang ẩn phần đó.', nut: [[{ text: '✏️ Đặt ngay', callback_data: 'hoi:ungho' }]] };
     return { text: `💛 <b>Thông tin ủng hộ đang hiện trên trang</b>\n🏦 ${esc(o.bank)} (BIN ${esc(o.bin)})`
-      + `\n🔢 <code>${esc(o.stk)}</code>\n👤 ${esc(o.chu_tk || '—')}\n📝 ${esc(o.loi_nhan)}`
-      + '\n\nĐổi: /ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt; · Ẩn: /ungho off' };
+      + `\n🔢 <code>${esc(o.stk)}</code>\n👤 ${esc(o.chu_tk || '—')}\n📝 ${esc(o.loi_nhan)}`, nut: NUT_UNG_HO };
   }
   if (/^(off|tat|an)$/i.test(arg[0])) {
     await anUngHo(env.DB);
@@ -236,6 +236,15 @@ async function xuLyNut(env, q, { api }) {
   if (!laChatQuanTri(env, chat) || !laChatQuanTri(env, q.from && q.from.id)) {
     await api(env, 'answerCallbackQuery', { callback_query_id: q.id, text: 'Không có quyền' });
     return;
+  }
+  if (q.data === 'an:ungho') {
+    await anUngHo(env.DB);
+    await api(env, 'answerCallbackQuery', { callback_query_id: q.id, text: '✔ Đã ẩn' });
+    return api(env, 'editMessageText', {
+      chat_id: String(chat), message_id: q.message.message_id, parse_mode: 'HTML',
+      text: '🙈 Đã ẩn phần ủng hộ trên trang.',
+      reply_markup: { inline_keyboard: [[{ text: '✏️ Đặt lại', callback_data: 'hoi:ungho' }]] },
+    });
   }
   const p = String(q.data || '').split('|');
   const tk = /^E[A-Z0-9]{5}$/.test(p[2] || '') ? await tkTheoMa(env.DB, p[2]) : null;
@@ -255,10 +264,48 @@ async function xuLyNut(env, q, { api }) {
 }
 
 
+// ─── Hỏi từng bước ──────────────────────────────────────────
+//
+// Gõ lệnh trơn thì bot hỏi, mình trả lời — khỏi phải nhớ cú pháp. Gõ kèm giá trị
+// (/hocvien an@gmail.com) vẫn chạy thẳng như cũ.
+
+const hoiEmail = (cau) => ({ buoc: [{ hoi: cau, vd: 'an@gmail.com' }] });
+
+const HOI = {
+  '/tim': { buoc: [{ hoi: 'Tìm tài khoản nào? Gõ email hoặc tên.', vd: 'an@gmail.com' }] },
+  '/hocvien': hoiEmail('Xếp ai thành học viên? Gõ email.'),
+  '/giangvien': hoiEmail('Xếp ai thành giảng viên? Gõ email.'),
+  '/free': hoiEmail('Đưa ai về tài khoản thường? Gõ email.'),
+  '/mo': hoiEmail('Mở (duyệt) tài khoản nào? Gõ email.'),
+  '/khoa': hoiEmail('Khoá tài khoản nào? Gõ email.'),
+  '/mkmoi': hoiEmail('Sinh mật khẩu mới cho email nào?'),
+  '/luot': {
+    buoc: [
+      { hoi: 'Đặt lượt AI cho email nào?', vd: 'an@gmail.com' },
+      { hoi: 'Mỗi ngày bao nhiêu lượt? Gõ 0 để theo vai trò.', vd: '50' },
+    ],
+  },
+  '/matkhau': {
+    buoc: [
+      { hoi: 'Đổi mật khẩu cho email nào?', vd: 'an@gmail.com' },
+      { hoi: 'Mật khẩu mới là gì?', vd: 'ít nhất 8 ký tự', xoa: true },
+    ],
+  },
+  // Đã có số tài khoản thì /ungho là lệnh XEM, nên chỉ hỏi khi chưa đặt gì.
+  '/ungho': {
+    khi: async (env) => !(await thongTinUngHo(env.DB)),
+    buoc: [
+      { hoi: 'Ngân hàng nào? Gõ mã ngắn (vcb, tcb, mb…) hoặc 6 chữ số BIN của NAPAS.', vd: 'vcb' },
+      { hoi: 'Số tài khoản là bao nhiêu?', vd: '1012345678' },
+      { hoi: 'Tên chủ tài khoản? Viết in hoa không dấu như trên thẻ.', vd: 'NGUYEN VAN A' },
+    ],
+  },
+};
+
 /** Bot AI BCTC. Token riêng (TG_AI_TOKEN), webhook riêng (/tg/ai). */
 export const BOT_AI = taoBot({
   ten: 'ai', bien: 'TG_AI_TOKEN', nhan: 'elevaTO AI BCTC',
-  menu: MENU_LENH, lenh: chayLenh, nut: xuLyNut,
+  menu: MENU_LENH, lenh: chayLenh, nut: xuLyNut, hoi: HOI,
 });
 
-export { MENU_LENH };
+export { MENU_LENH, HOI as HOI_AI };

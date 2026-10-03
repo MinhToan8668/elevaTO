@@ -354,3 +354,99 @@ test('mọi lệnh trong menu đều là lệnh bot chạy thật, và đúng kh
     }
   } finally { f.thoi(); }
 });
+
+// ─── Hỏi từng bước ──────────────────────────────────────────
+
+/** Giả lập quản trị bấm một nút trên tin của bot. */
+async function nut(env, data) {
+  const ctx = moCtx();
+  await worker.fetch(new Request(`${API}tg/ai`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': 'bimat' },
+    body: JSON.stringify({ update_id: 2, callback_query: { id: 'cb1', from: { id: ADMIN }, data,
+      message: { message_id: 5, chat: { id: ADMIN, type: 'private' } } } }),
+  }), env, ctx);
+  await ctx.xong();
+}
+const cuoiTin = (f) => f.tg.filter((x) => x.method === 'sendMessage').at(-1);
+
+test('/ungho chưa đặt gì thì bot hỏi từng câu thay vì bắt gõ cú pháp', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await lenh(env, '/ungho');
+    const h = cuoiTin(f);
+    assert.match(h.text, /Ngân hàng nào\?.*bước 1\/3/s);
+    assert.equal(h.reply_markup.force_reply, true);
+    assert.doesNotMatch(h.text, /&lt;/, 'không được hiện cú pháp &lt;ngân hàng&gt; nữa');
+
+    await lenh(env, 'vcb');
+    assert.match(cuoiTin(f).text, /Số tài khoản là bao nhiêu\?.*bước 2\/3/s);
+    await lenh(env, '1012345678');
+    assert.match(cuoiTin(f).text, /Tên chủ tài khoản\?.*bước 3\/3/s);
+    await lenh(env, 'NGUYEN VAN A');
+
+    const { thongTinUngHo } = await import('../worker/src/ungho.js');
+    const o = await thongTinUngHo(env.DB);
+    assert.deepEqual([o.bin, o.bank, o.stk, o.chu_tk], ['970436', 'Vietcombank', '1012345678', 'NGUYEN VAN A']);
+
+    // Đã có số rồi thì /ungho là lệnh XEM — hiện thẻ kèm nút, không hỏi lại.
+    await lenh(env, '/ungho');
+    const the = cuoiTin(f);
+    assert.match(the.text, /Thông tin ủng hộ đang hiện trên trang/);
+    assert.ok(!the.reply_markup.force_reply, 'đã có số rồi mà vẫn hỏi lại');
+    assert.deepEqual(the.reply_markup.inline_keyboard[0].map((x) => x.callback_data), ['hoi:ungho', 'an:ungho']);
+  } finally { f.thoi(); }
+});
+
+test('nút ✏️ mở lại cuộc hỏi, nút 🙈 ẩn phần ủng hộ', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    const { datUngHo, thongTinUngHo } = await import('../worker/src/ungho.js');
+    await datUngHo(env.DB, 'vcb', '1012345678', 'NGUYEN VAN A');
+
+    await nut(env, 'hoi:ungho');
+    assert.match(cuoiTin(f).text, /Ngân hàng nào\?/);
+    await lenh(env, 'tcb'); await lenh(env, '9988776655'); await lenh(env, 'TRAN THI B');
+    const o = await thongTinUngHo(env.DB);
+    assert.deepEqual([o.bank, o.stk, o.chu_tk], ['Techcombank', '9988776655', 'TRAN THI B']);
+
+    await nut(env, 'an:ungho');
+    assert.equal(await thongTinUngHo(env.DB), null);
+    assert.ok(f.tg.some((x) => x.method === 'editMessageText' && /Đã ẩn/.test(x.text)));
+  } finally { f.thoi(); }
+});
+
+test('/matkhau hỏi hai bước và xoá tin chứa mật khẩu khỏi lịch sử', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await goi(env, NGUOI);
+    await lenh(env, '/matkhau');
+    assert.match(cuoiTin(f).text, /Đổi mật khẩu cho email nào\?/);
+    await lenh(env, NGUOI.email);
+    await lenh(env, 'mat khau co dau cach');
+    assert.ok(f.tg.some((x) => x.method === 'deleteMessage'), 'tin chứa mật khẩu phải bị xoá');
+    assert.match(cuoiTin(f).text, /Đã đặt mật khẩu mới/);
+    // Khoảng trắng bên trong mật khẩu phải giữ nguyên thì mới đăng nhập được.
+    assert.equal((await goi(env, { action: 'dangnhap', email: NGUOI.email, mk: 'mat khau co dau cach' })).ok, true);
+  } finally { f.thoi(); }
+});
+
+test('bảng câu hỏi bot AI: lệnh nào cũng có thật, câu nào cũng đủ chữ', async () => {
+  const { HOI_AI, MENU_LENH, chayLenh } = await import('../worker/src/telegram.js');
+  const f = moFetch();
+  try {
+    const env = env0();
+    for (const [lenh, spec] of Object.entries(HOI_AI)) {
+      assert.match(lenh, /^\/[a-z0-9_]+$/, `khoá "${lenh}" phải là tên lệnh`);
+      for (const b of spec.buoc) assert.ok(b.hoi && b.hoi.length >= 5, `${lenh}: thiếu câu hỏi`);
+      assert.ok(MENU_LENH.some((x) => `/${x.command}` === lenh), `${lenh} có câu hỏi mà thiếu trong menu`);
+      assert.doesNotMatch((await chayLenh(env, lenh, ['x'])).text || '', /Không rõ lệnh/, `${lenh} không có trong chayLenh`);
+    }
+    for (const c of ['tim', 'hocvien', 'giangvien', 'free', 'luot', 'mo', 'khoa', 'mkmoi', 'matkhau', 'ungho']) {
+      assert.ok(HOI_AI[`/${c}`], `/${c} cần giá trị mà chưa có câu hỏi`);
+    }
+  } finally { f.thoi(); }
+});

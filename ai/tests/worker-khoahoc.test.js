@@ -149,13 +149,13 @@ test('/slot, /giasom đổi cấu hình và trang thấy ngay; giá gõ tắt 3t
   assert.equal((await docCauHinh(env.DB)).pricing.regular, 4000000);
 });
 
-test('bấm lệnh trơn thì hiện giá trị đang dùng kèm dòng mẫu, KHÔNG xoá mất gì', async () => {
+// Bình thường lệnh trơn được tg.js giữ lại để hỏi, không xuống tới đây. Vẫn canh nhánh này:
+// "/video" trơn từng rơi vào nhánh xoá và làm mất mục học thử trên web.
+test('lệnh trơn lọt xuống bộ định tuyến thì KHÔNG được xoá mất gì', async () => {
   const env = env0();
   const r = await chayLenhEl(env, '/giasom', []);
-  assert.match(r.text, /Giá Early Bird đang là/);
-  assert.match(r.text, /\/giasom 3000000/);
+  assert.match(r.text, /Không đọc được/);
   assert.equal((await docCauHinh(env.DB)).pricing.earlyBird, 3000000, 'không được đổi gì');
-  // /video trơn từng làm mất mục học thử trên web — nay chỉ hiện hướng dẫn.
   const v = await chayLenhEl(env, '/video', []);
   assert.match(v.text, /Video học thử đang dùng/);
   assert.ok((await docCauHinh(env.DB)).media.videoUrl, 'không được xoá video');
@@ -395,6 +395,133 @@ test('menu bot elevaTO: đúng khuôn Telegram, lệnh nào cũng chạy, và kh
     }
     for (const c of trongBang) {
       assert.ok(MENU_EL.some((x) => x.command === c), `/${c} có trong bảng điều khiển mà thiếu trong menu Telegram`);
+    }
+  } finally { f.thoi(); }
+});
+
+// ─── Hỏi từng bước ──────────────────────────────────────────
+
+/** Giả lập Telegram đẩy một tin của quản trị sang webhook bot elevaTO. */
+async function tin(env, text, id = 9) {
+  const ctx = moCtx();
+  await worker.fetch(new Request(`${API}tg/el`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': 'bimat' },
+    body: JSON.stringify({ update_id: id, message: { message_id: id, chat: { id: ADMIN, type: 'private' }, from: { id: ADMIN }, text } }),
+  }), env, ctx);
+  await ctx.xong();
+}
+const cuoi = (f) => f.tg.filter((x) => x.method === 'sendMessage').at(-1);
+
+test('gõ lệnh trơn thì bot hỏi rồi chờ trả lời, không bắt nhớ cú pháp', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await tin(env, '/giasom');
+    const hoi = cuoi(f);
+    assert.match(hoi.text, /Giá Early Bird là bao nhiêu\?/);
+    assert.match(hoi.text, /Đang là <b>3\.000\.000đ<\/b>/, 'câu hỏi phải kèm giá trị đang chạy');
+    assert.equal(hoi.reply_markup.force_reply, true, 'thiếu force_reply nên Telegram không mở sẵn ô trả lời');
+    assert.equal((await docCauHinh(env.DB)).pricing.earlyBird, 3000000, 'mới hỏi thôi, chưa được đổi gì');
+
+    await tin(env, '2tr5', 10);
+    assert.equal((await docCauHinh(env.DB)).pricing.earlyBird, 2500000);
+    assert.match(cuoi(f).text, /Giá Early Bird = <b>2\.500\.000đ<\/b>/);
+    // Trả lời xong là xong — gõ tiếp một số nữa không được tính là câu trả lời lần hai.
+    await tin(env, '9tr', 11);
+    assert.equal((await docCauHinh(env.DB)).pricing.earlyBird, 2500000, 'việc đã xong mà vẫn còn nuốt tin');
+  } finally { f.thoi(); }
+});
+
+test('lệnh nhiều bước hỏi lần lượt, có đánh số bước', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await tin(env, '/lich');
+    assert.match(cuoi(f).text, /Học vào những ngày nào\?.*bước 1\/2/s);
+    await tin(env, 'Thứ 3 & 5', 10);
+    assert.match(cuoi(f).text, /Mấy giờ\?.*bước 2\/2/s);
+    await tin(env, '20h–22h', 11);
+    const c = await docCauHinh(env.DB);
+    assert.equal(c.schedule.days, 'Thứ 3 & 5');
+    assert.equal(c.schedule.time, '20h–22h');
+    assert.match(c.schedule.detail, /^Thứ 3 & 5, 20h–22h/);
+  } finally { f.thoi(); }
+});
+
+test('/huy bỏ câu đang hỏi dở, và lệnh mới cũng bỏ', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await tin(env, '/giasom');
+    await tin(env, '/huy', 10);
+    assert.match(cuoi(f).text, /Đã bỏ/);
+    await tin(env, '2tr5', 11);
+    assert.equal((await docCauHinh(env.DB)).pricing.earlyBird, 3000000, 'huỷ rồi mà vẫn nhận câu trả lời');
+    assert.match(cuoi(f).text, /Không hiểu lệnh/);
+
+    // Đang hỏi giá mà gõ lệnh khác: bỏ câu cũ, hỏi câu mới.
+    await tin(env, '/giasom', 12);
+    await tin(env, '/slot', 13);
+    assert.match(cuoi(f).text, /Tổng số chỗ là bao nhiêu\?/);
+    await tin(env, '20', 14);
+    const c = await docCauHinh(env.DB);
+    assert.equal(c.slots.max, 20);
+    assert.equal(c.pricing.earlyBird, 3000000, 'câu trả lời chạy nhầm sang lệnh đã bỏ');
+  } finally { f.thoi(); }
+});
+
+test('gõ liền một dòng vẫn chạy thẳng, không hỏi lại', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await tin(env, '/giasom 2tr5');
+    assert.equal((await docCauHinh(env.DB)).pricing.earlyBird, 2500000);
+    assert.ok(!f.tg.some((x) => x.reply_markup && x.reply_markup.force_reply), 'đã có giá trị rồi còn hỏi');
+  } finally { f.thoi(); }
+});
+
+test('việc hỏi dở tự hết hạn, không nằm lại trong cơ sở dữ liệu mãi', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await tin(env, '/slot');
+    const r = await env.DB.prepare("SELECT khoa, het_luc FROM cai_dat WHERE khoa LIKE 'cho_%'").first();
+    assert.equal(r.khoa, `cho_el_${ADMIN}`);
+    assert.ok(Number(r.het_luc) > 0, 'thiếu hạn nên việc dở nằm lại mãi');
+    await tin(env, '12', 10);
+    assert.equal(await env.DB.prepare("SELECT COUNT(*) AS n FROM cai_dat WHERE khoa LIKE 'cho_%'").first().then((x) => Number(x.n)), 0,
+      'trả lời xong phải dọn');
+  } finally { f.thoi(); }
+});
+
+test('/huy có trong menu Telegram dù bot không tự khai', async () => {
+  const { BOT_EL } = await import('../worker/src/botel.js');
+  const { MENU_EL } = await import('../worker/src/botel.js');
+  assert.ok(!MENU_EL.some((x) => x.command === 'huy'), 'bot không cần tự khai /huy');
+  assert.ok(BOT_EL.menu.some((x) => x.command === 'huy'), 'lớp vận chuyển phải tự gắn /huy vào menu');
+});
+
+test('bảng câu hỏi: lệnh nào cũng có thật, câu nào cũng đủ chữ, và phủ hết lệnh cần giá trị', async () => {
+  const { HOI_EL, MENU_EL } = await import('../worker/src/botel.js');
+  const f = moFetch();
+  try {
+    const env = env0();
+    for (const [lenh, spec] of Object.entries(HOI_EL)) {
+      assert.match(lenh, /^\/[a-z0-9_]+$/, `khoá "${lenh}" phải là tên lệnh`);
+      assert.ok(spec.buoc.length >= 1 && spec.buoc.length <= 5, `${lenh}: số bước lạ`);
+      for (const b of spec.buoc) assert.ok(b.hoi && b.hoi.length >= 5, `${lenh}: thiếu câu hỏi`);
+      if (spec.buoc.length > 1 && !spec.ghep) {
+        assert.ok(spec.buoc.every((b) => !/ /.test(b.vd || '')), `${lenh}: nhiều bước mà không có ghep thì mỗi câu chỉ được một từ`);
+      }
+      assert.doesNotMatch((await chayLenhEl(env, lenh, ['x'])).text || '', /Không hiểu lệnh/, `${lenh} không có trong bộ định tuyến`);
+    }
+    // Lệnh nào cần giá trị mà không có trong bảng thì người dùng lại phải tự nhớ cú pháp.
+    const CAN_GIA_TRI = ['cohort', 'slot', 'base', 'giasom', 'giagoc', 'giatuhoc',
+      'lich', 'buoi', 'kinhnghiem', 'thongbao', 'video', 'duyet', 'tuchoi'];
+    for (const c of CAN_GIA_TRI) {
+      assert.ok(HOI_EL[`/${c}`], `/${c} cần giá trị mà chưa có câu hỏi`);
+      assert.ok(MENU_EL.some((x) => x.command === c), `/${c} có câu hỏi mà thiếu trong menu`);
     }
   } finally { f.thoi(); }
 });
