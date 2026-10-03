@@ -371,8 +371,13 @@ test('menu bot elevaTO: đúng khuôn Telegram, lệnh nào cũng chạy, và kh
   for (const { command, description } of MENU_EL) {
     assert.match(command, /^[a-z0-9_]{1,32}$/, `tên lệnh "${command}" sai khuôn Telegram`);
     assert.ok(description.length >= 3 && description.length <= 256, `mô tả "${command}" dài sai`);
+    // Tên lệnh chỉ được dùng a–z nên icon phải nằm ở đầu mô tả — đó là chỗ duy nhất
+    // danh sách gợi ý "/" của Telegram hiện ra.
+    assert.match(description, /^\p{Extended_Pictographic}/u, `/${command} thiếu icon đầu mô tả`);
   }
   assert.equal(new Set(MENU_EL.map((x) => x.command)).size, MENU_EL.length, 'không được trùng lệnh');
+  const icon = MENU_EL.map((x) => x.description.match(/^\S+/)[0]);
+  assert.equal(new Set(icon).size, icon.length, `icon bị trùng: ${icon.filter((x, i) => icon.indexOf(x) !== i)}`);
 
   const f = moFetch();
   try {

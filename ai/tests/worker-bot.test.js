@@ -338,8 +338,11 @@ test('mọi lệnh trong menu đều là lệnh bot chạy thật, và đúng kh
   for (const { command, description } of MENU_LENH) {
     assert.match(command, /^[a-z0-9_]{1,32}$/, `tên lệnh "${command}" sai khuôn Telegram`);
     assert.ok(description.length >= 3 && description.length <= 256, `mô tả "${command}" dài sai`);
+    assert.match(description, /^\p{Extended_Pictographic}/u, `/${command} thiếu icon đầu mô tả`);
   }
   assert.equal(new Set(MENU_LENH.map((x) => x.command)).size, MENU_LENH.length, 'không được trùng lệnh');
+  const icon = MENU_LENH.map((x) => x.description.match(/^\S+/)[0]);
+  assert.equal(new Set(icon).size, icon.length, `icon bị trùng: ${icon.filter((x, i) => icon.indexOf(x) !== i)}`);
 
   // Gõ lệnh trong menu mà bot trả "Không rõ lệnh" là menu nói dối.
   const env = env0();
