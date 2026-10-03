@@ -33,11 +33,14 @@ export const ICON3D = {
   [I3('party-popper')]: 'Ăn mừng', [I3('link')]: 'Liên kết', [I3('pushpin')]: 'Ghim', [I3('magnifying-glass-tilted-right')]: 'Tìm kiếm',
   [I3('gear')]: 'Cài đặt', [I3('key')]: 'Chìa khoá', [I3('locked')]: 'Khoá', [I3('compass')]: 'La bàn',
 };
+// Logo Zalo chính chủ (ảnh thật của Zalo, không vẽ lại) — dùng chung cho mọi bộ icon.
+const ZALO = 'art/zalo.png';
+
 // Bộ icon elevaTO kiểu Liquid Glass (vẽ riêng, art/glass/) — mỗi icon là một ô vuông bo góc hoàn chỉnh → kiểu "photo".
 const G = (slug) => 'art/glass/' + slug + '.svg';
 export const GLASS = {
   [G('course')]: 'Khoá học', [G('ai')]: 'AI', [G('slides')]: 'Slide', [G('trial')]: 'Video học thử',
-  [G('model')]: 'Model', [G('zalo')]: 'Zalo', [G('cv')]: 'CV', [G('coffee')]: 'Coffee',
+  [G('model')]: 'Model', [ZALO]: 'Zalo', [G('cv')]: 'CV', [G('coffee')]: 'Coffee',
   [G('calendar')]: 'Lịch', [G('chat')]: 'Tin nhắn', [G('mail')]: 'Email', [G('money')]: 'Tiền',
   [G('book')]: 'Sách', [G('rocket')]: 'Tên lửa', [G('star')]: 'Ngôi sao', [G('phone')]: 'Điện thoại',
 };
@@ -45,7 +48,7 @@ export const GLASS = {
 const C = (slug) => 'art/classic/' + slug + '.svg';
 export const CLASSIC = {
   [C('course')]: 'Khoá học', [C('ai')]: 'AI', [C('slides')]: 'Slide', [C('trial')]: 'Video',
-  [C('model')]: 'Model', 'art/zalo.svg': 'Zalo', [C('cv')]: 'CV', [C('coffee')]: 'Coffee',
+  [C('model')]: 'Model', [C('cv')]: 'CV', [C('coffee')]: 'Coffee',
 };
 // Ô nào hợp với icon nào trong bộ elevaTO: theo id ô trước, rồi theo chữ trong tiêu đề / link.
 const GLASS_HINTS = [
@@ -58,10 +61,12 @@ const GLASS_HINTS = [
 /** Icon bộ elevaTO phù hợp với ô (đường dẫn art/glass/…), hoặc '' nếu không đoán được. */
 export function glassIconFor(link) {
   const id = String(link.id || '');
+  if (id === 'zalo') return ZALO;
   if (has(GLASS, G(id))) return G(id);
   const text = (String(link.title || '') + ' ' + String(link.url || '')).toLowerCase();
   const hit = GLASS_HINTS.find(([, re]) => re.test(text));
-  return hit ? G(hit[0]) : '';
+  if (!hit) return '';
+  return hit[0] === 'zalo' ? ZALO : G(hit[0]);
 }
 
 /** Các bộ icon có sẵn, theo thứ tự hiện trong trình chỉnh sửa. style: kiểu hiển thị khi chọn icon của bộ đó. */
@@ -76,6 +81,8 @@ const LEGACY_ART = {
   'art/course.svg': I3('chart-increasing'), 'art/ai.svg': I3('robot'), 'art/slides.svg': I3('bar-chart'),
   'art/trial.svg': I3('clapper-board'), 'art/model.svg': I3('laptop'), 'art/cv.svg': I3('page-facing-up'),
   'art/coffee.svg': I3('hot-beverage'),
+  // Hai bản Zalo vẽ tay trước đây đã bỏ; dữ liệu cũ tự chuyển sang logo chính chủ.
+  'art/zalo.svg': ZALO, 'art/glass/zalo.svg': ZALO,
 };
 export const ACCENTS = {
   emerald: '#18cb96',

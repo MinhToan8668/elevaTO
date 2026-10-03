@@ -5,19 +5,20 @@
   --blur:0px; --tint:.05;          /* trùng theme trong data.json → nhịp vẽ đầu đã đúng, không nháy */
   --em:#18cb96; --em-ink:#03261a; --em-text:#067a56;
   --text:#14201b; --strong:#06110d; --muted:#3b4a44;
-  --base:#eef4f1;
   /* kính */
   /* Độ đục trên thanh kéo được nhân hệ số < 1 → cùng một con số nhưng kính trong hơn bản trước.
      Kéo về 0 thì mặt kính trong suốt hoàn toàn; tấm kính vẫn "thấy" được nhờ vành mép bẻ sáng
      (--len) và vệt sáng mép (--glass-hi), chứ không nhờ một lớp màu đục đè lên nền như cách cũ. */
   --glass:rgb(255 255 255 / calc(var(--tint) * .58));
   --glass-2:rgb(255 255 255 / calc(var(--tint) * .26));
-  --len:brightness(1.22) saturate(1.55);     /* mép kính bẻ sáng thứ phía sau — dấu hiệu của kính thật */
-  --len-w:2.2px;                             /* bề dày vành bẻ sáng */
+  /* Vành mép chỉ BẺ SÁNG rất nhẹ thứ phía sau. Đẩy mạnh tay là thành một sợi dây phát sáng
+     viền quanh thẻ — kính thật không tự phát sáng, nên nhìn giả ngay. Mỏng và nhạt mới thật. */
+  --len:brightness(1.06) saturate(1.16);
+  --len-w:1.4px;
   --glass-strong:rgb(255 255 255 / .86); --glass-soft:rgb(255 255 255 / .32);
   --glass-line:rgb(255 255 255 / .7);
-  --rim-a:rgb(255 255 255 / .95); --rim-b:rgb(255 255 255 / .12); --rim-c:rgb(255 255 255 / .55);
-  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .95), inset 0 -1px 0 rgb(255 255 255 / .3), inset 0 12px 20px -16px rgb(255 255 255 / .65), inset 0 -12px 18px -18px rgb(10 30 22 / .18);
+  --rim-a:rgb(255 255 255 / .6); --rim-b:rgb(255 255 255 / .05); --rim-c:rgb(255 255 255 / .26);
+  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .5), inset 0 -1px 0 rgb(255 255 255 / .14), inset 0 12px 20px -16px rgb(255 255 255 / .28), inset 0 -12px 18px -18px rgb(10 30 22 / .1);
   --glass-shadow:0 1px 2px rgb(10 30 22 / .05), 0 10px 30px -6px rgb(10 30 22 / .16);
   --sk:rgb(10 30 22 / .08);
   --ease:cubic-bezier(.22,1,.36,1);
@@ -31,13 +32,12 @@
     color-scheme:dark;
     --em-text:#4ee6b6; --text:#e2ebe7; --strong:#ffffff; --muted:#b3c2bc;
     --brand-grad:linear-gradient(100deg,#3ee0b4,#5eead4 50%,#7dd3fc);
-    --base:#05090b;
     --glass:rgb(30 38 42 / calc(var(--tint) * .7)); --glass-2:rgb(20 26 30 / calc(var(--tint) * .42));
     --glass-strong:rgb(24 30 34 / .9); --glass-soft:rgb(255 255 255 / .06);
     --glass-line:rgb(255 255 255 / .14);
-    --rim-a:rgb(255 255 255 / .45); --rim-b:rgb(255 255 255 / .04); --rim-c:rgb(255 255 255 / .22);
-    --glass-hi:inset 0 1px 0 rgb(255 255 255 / .22), inset 0 -1px 0 rgb(255 255 255 / .05), inset 0 14px 24px -16px rgb(255 255 255 / .18), inset 0 -14px 22px -18px rgb(0 0 0 / .5);
-    --len:brightness(1.35) saturate(1.4);   /* nền tối: bẻ sáng mạnh tay hơn, nhưng vành mỏng nên không chói */
+    --rim-a:rgb(255 255 255 / .24); --rim-b:rgb(255 255 255 / .025); --rim-c:rgb(255 255 255 / .1);
+    --glass-hi:inset 0 1px 0 rgb(255 255 255 / .11), inset 0 -1px 0 rgb(255 255 255 / .03), inset 0 14px 24px -16px rgb(255 255 255 / .07), inset 0 -14px 22px -18px rgb(0 0 0 / .38);
+    --len:brightness(1.1) saturate(1.12);   /* nền tối chỉ cần nhỉnh hơn một chút, quá tay là loá thành viền neon */
     --glass-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
     --sk:rgb(255 255 255 / .07);
   }
@@ -46,13 +46,12 @@
   color-scheme:dark;
   --em-text:#4ee6b6; --text:#e2ebe7; --strong:#ffffff; --muted:#b3c2bc;
   --brand-grad:linear-gradient(100deg,#3ee0b4,#5eead4 50%,#7dd3fc);
-  --base:#05090b;
   --glass:rgb(30 38 42 / calc(var(--tint) * .7)); --glass-2:rgb(20 26 30 / calc(var(--tint) * .42));
   --glass-strong:rgb(24 30 34 / .9); --glass-soft:rgb(255 255 255 / .06);
   --glass-line:rgb(255 255 255 / .14);
-  --rim-a:rgb(255 255 255 / .45); --rim-b:rgb(255 255 255 / .04); --rim-c:rgb(255 255 255 / .22);
-  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .22), inset 0 -1px 0 rgb(255 255 255 / .05), inset 0 14px 24px -16px rgb(255 255 255 / .18), inset 0 -14px 22px -18px rgb(0 0 0 / .5);
-  --len:brightness(1.35) saturate(1.4);   /* nền tối: bẻ sáng mạnh tay hơn, nhưng vành mỏng nên không chói */
+  --rim-a:rgb(255 255 255 / .24); --rim-b:rgb(255 255 255 / .025); --rim-c:rgb(255 255 255 / .1);
+  --glass-hi:inset 0 1px 0 rgb(255 255 255 / .11), inset 0 -1px 0 rgb(255 255 255 / .03), inset 0 14px 24px -16px rgb(255 255 255 / .07), inset 0 -14px 22px -18px rgb(0 0 0 / .38);
+  --len:brightness(1.1) saturate(1.12);   /* nền tối chỉ cần nhỉnh hơn một chút, quá tay là loá thành viền neon */
   --glass-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
   --sk:rgb(255 255 255 / .07);
 }
@@ -68,28 +67,36 @@ img{display:block;max-width:100%}
 :focus-visible{outline:2px solid var(--em);outline-offset:3px}
 .offscreen{position:fixed;left:-9999px;top:0;opacity:0}
 
-/* Màu thật ở đỉnh trang: chụp dải 3px sát mép trên ở ba khổ điện thoại (390x750, 430x880, 360x700)
-   rồi lấy trung bình — ba khổ chỉ lệch nhau 1–5 đơn vị nên một giá trị dùng chung là đủ.
-   boot-theme.js chép vào <meta name="theme-color">. Lệch nhiều là iPhone hở một dải đen ở vùng
-   thanh trạng thái, nhìn như trang bị đóng khung. Nền ảnh tự chọn thì không đoán được, dùng mặc định. */
-:root{--chrome:#bdebdc}
-:root[data-bg="ocean"]{--chrome:#bbe1ef}
-:root[data-bg="sunset"]{--chrome:#f0d8d9}
-:root[data-bg="midnight"]{--chrome:#cfd4f1}
-:root[data-theme="dark"]{--chrome:#094537}
-:root[data-theme="dark"][data-bg="ocean"]{--chrome:#073850}
-:root[data-theme="dark"][data-bg="sunset"]{--chrome:#4b272b}
-:root[data-theme="dark"][data-bg="midnight"]{--chrome:#21244f}
+/* --base là màu trơn của CẢ khung trình duyệt (nền body lan ra canvas), --chrome là màu đổ vào
+   <meta name="theme-color">. Cả hai phải đi theo nền chủ trang chọn: trước đây --base là một màu
+   gần đen dùng chung, nên hai mảng màu trôi (chúng tan hết trước khi tới mép) để hở dải đen ở
+   thanh trạng thái và trên thanh công cụ Safari — đúng chỗ người xem nhìn đầu tiên.
+
+   --chrome: chụp dải 3px sát mép trên ở ba khổ điện thoại (390x750, 430x880, 360x700) rồi lấy
+   trung bình — ba khổ chỉ lệch nhau 1–5 đơn vị nên một giá trị dùng chung là đủ.
+   Nền ảnh tự chọn thì không đoán được, dùng mặc định. */
+:root{--chrome:#89e1c7;--base:#e7f4ee}
+:root[data-bg="ocean"]{--chrome:#84cdf0;--base:#e5f0f8}
+:root[data-bg="sunset"]{--chrome:#f8b9bf;--base:#f8eeec}
+:root[data-bg="midnight"]{--chrome:#b0b2f5;--base:#ecedf9}
+:root[data-theme="dark"]{--chrome:#0c7559;--base:#04211b}
+:root[data-theme="dark"][data-bg="ocean"]{--chrome:#075f88;--base:#041c29}
+:root[data-theme="dark"][data-bg="sunset"]{--chrome:#8a3e47;--base:#291416}
+:root[data-theme="dark"][data-bg="midnight"]{--chrome:#383a90;--base:#121336}
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){--chrome:#094537}
-  :root:not([data-theme="light"])[data-bg="ocean"]{--chrome:#073850}
-  :root:not([data-theme="light"])[data-bg="sunset"]{--chrome:#4b272b}
-  :root:not([data-theme="light"])[data-bg="midnight"]{--chrome:#21244f}
+  :root:not([data-theme="light"]){--chrome:#0c7559;--base:#04211b}
+  :root:not([data-theme="light"])[data-bg="ocean"]{--chrome:#075f88;--base:#041c29}
+  :root:not([data-theme="light"])[data-bg="sunset"]{--chrome:#8a3e47;--base:#291416}
+  :root:not([data-theme="light"])[data-bg="midnight"]{--chrome:#383a90;--base:#121336}
 }
 
 /* ═══ NỀN: các mảng màu trôi chậm, hoặc ảnh nền tự chọn ═══ */
-.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
-  --b1:rgba(24,203,150,.46); --b2:rgba(34,211,238,.36); --b3:rgba(99,102,241,.28); --b4:rgba(250,204,21,.24)}
+.bg{position:fixed;inset:0;height:100lvh;z-index:-1;overflow:hidden;pointer-events:none;
+  --b1:rgba(24,203,150,.46); --b2:rgba(34,211,238,.36); --b3:rgba(99,102,241,.28); --b4:rgba(250,204,21,.24);
+  /* Hai quầng này trải hết bề ngang và ôm sát hai mép trên/dưới — đúng chỗ mấy mảng màu tròn
+     bên dưới tan hết trước khi tới nơi, trước đây để hở nền trơn gần đen. */
+  background:radial-gradient(135% 42% at 50% -8%,var(--b1) 0,transparent 72%),
+             radial-gradient(135% 38% at 50% 108%,var(--b3) 0,transparent 72%)}
 :root[data-bg="ocean"] .bg{--b1:rgba(14,165,233,.46); --b2:rgba(37,99,235,.37); --b3:rgba(20,184,166,.33); --b4:rgba(165,180,252,.3)}
 :root[data-bg="sunset"] .bg{--b1:rgba(251,113,133,.42); --b2:rgba(245,158,11,.37); --b3:rgba(168,85,247,.29); --b4:rgba(249,115,22,.28)}
 :root[data-bg="midnight"] .bg{--b1:rgba(99,102,241,.44); --b2:rgba(139,92,246,.36); --b3:rgba(14,165,233,.3); --b4:rgba(236,72,153,.25)}

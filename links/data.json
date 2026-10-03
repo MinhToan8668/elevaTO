@@ -146,7 +146,7 @@
       "size": "half",
       "icon": "zalo",
       "accent": "blue",
-      "image": "art/zalo.svg",
+      "image": "art/zalo.png",
       "imageStyle": "photo",
       "badge": "",
       "hidden": false,

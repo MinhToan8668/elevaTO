@@ -142,20 +142,41 @@ test('mặc định --blur/--tint trong CSS trùng theme của data.json (khỏi
   assert.match(root, new RegExp('--tint:' + String(d.theme.tint / 100).replace(/^0/, '').replace('.', '\\.')));
 });
 
-// Màu thanh trạng thái của trình duyệt phải có cho mọi nền, không thì iPhone hở dải đen ở đỉnh.
-test('nền nào cũng có --chrome, và thẻ theme-color dự phòng trùng nền mặc định', async () => {
+// Mọi nền × sáng/tối phải có CẢ --chrome (màu thanh trạng thái) lẫn --base (màu trơn của khung
+// trình duyệt). Thiếu --base là iPhone hở dải gần đen ở thanh trạng thái và trên thanh công cụ.
+test('nền nào cũng có --chrome và --base, và thẻ theme-color dự phòng trùng nền mặc định', async () => {
   const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const khoi = '\\{--chrome:#[0-9a-f]{6};--base:#[0-9a-f]{6}\\}';
   for (const bg of Object.keys(BACKGROUNDS)) {
     if (bg === 'image') continue;               // nền ảnh tự chọn: không đoán trước được màu
-    const re = bg === 'aurora' ? /:root\{--chrome:#[0-9a-f]{6}\}/ : new RegExp('\\[data-bg="' + bg + '"\\]\\{--chrome:#[0-9a-f]{6}\\}');
-    assert.match(css, re, 'thiếu --chrome cho nền ' + bg);
-    assert.match(css, new RegExp('\\[data-theme="dark"\\]' + (bg === 'aurora' ? '' : '\\[data-bg="' + bg + '"\\]') + '\\{--chrome:'), 'thiếu --chrome nền tối cho ' + bg);
+    const chon = bg === 'aurora' ? '' : '\\[data-bg="' + bg + '"\\]';
+    assert.match(css, new RegExp(':root' + chon + khoi), 'thiếu --chrome/--base cho nền ' + bg);
+    assert.match(css, new RegExp('\\[data-theme="dark"\\]' + chon + khoi), 'thiếu --chrome/--base nền tối cho ' + bg);
   }
-  const sang = css.match(/:root\{--chrome:(#[0-9a-f]{6})\}/)[1];
-  const toi = css.match(/:root\[data-theme="dark"\]\{--chrome:(#[0-9a-f]{6})\}/)[1];
+  const sang = css.match(/:root\{--chrome:(#[0-9a-f]{6})/)[1];
+  const toi = css.match(/:root\[data-theme="dark"\]\{--chrome:(#[0-9a-f]{6})/)[1];
   assert.ok(html.includes('content="' + sang + '" media="(prefers-color-scheme: light)"'), 'thẻ theme-color sáng lệch --chrome');
   assert.ok(html.includes('content="' + toi + '" media="(prefers-color-scheme: dark)"'), 'thẻ theme-color tối lệch --chrome');
+});
+
+// iPhone vẽ trang ra sau thanh trạng thái và dưới thanh công cụ Safari, nhưng hai vùng đó nằm
+// NGOÀI khung mà position:fixed phủ tới — chúng lấy màu nền của canvas, tức --base. Nên --base
+// phải cùng tông với --chrome của chính nền ấy. Trước đây mọi nền dùng chung một --base gần đen,
+// thành ra iPhone hở hai dải đen trên/dưới, nhìn như trang bị đóng khung.
+test('--base của mỗi nền cùng tông với --chrome của nền đó, không phải một màu xám dùng chung', async () => {
+  const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
+  const doc = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const troi = (c) => c.indexOf(Math.max(...c));          // kênh màu trội
+  let n = 0;
+  for (const m of css.matchAll(/(:root[^{]*)\{--chrome:(#[0-9a-f]{6});--base:(#[0-9a-f]{6})\}/g)) {
+    const [, sel, chrome, base] = m;
+    const c = doc(chrome); const b = doc(base);
+    assert.equal(troi(b), troi(c), sel + ': --base lệch tông so với --chrome');
+    assert.ok(Math.max(...b) - Math.min(...b) >= 8, sel + ': --base gần như xám, nhìn ra dải đen/trắng ở mép');
+    n += 1;
+  }
+  assert.equal(n, 12, 'phải đủ 4 nền × (sáng + tối theo thuộc tính + tối theo máy)');
 });
 
 test('lỗi GitHub ra câu dễ hiểu', () => {
@@ -216,12 +237,24 @@ test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụ
 
 test('bộ icon elevaTO và bộ icon cũ: mọi file đều có, là SVG 120×120 không chứa script', async () => {
   assert.equal(Object.keys(GLASS).length, 16);
-  assert.ok(Object.keys(CLASSIC).length >= 8);
+  assert.ok(Object.keys(CLASSIC).length >= 7);
   assert.deepEqual(ICON_LIBRARY.map((s) => [s.key, s.style]), [['glass', 'photo'], ['3d', 'icon'], ['classic', 'photo']]);
   for (const src of [...Object.keys(GLASS), ...Object.keys(CLASSIC)]) {
+    if (!src.endsWith('.svg')) continue;
     const svgText = await readFile(new URL('../' + src, import.meta.url), 'utf8');
     assert.match(svgText, /^<svg [^>]*viewBox="0 0 120 120"/, src);
     assert.doesNotMatch(svgText, /<script|on\w+=/i, src);
+  }
+});
+
+// Logo Zalo là ảnh chính chủ, không vẽ lại: hai bản SVG vẽ tay trước đây đã bỏ hẳn.
+test('logo Zalo: dùng ảnh thật, và dữ liệu cũ tự trỏ sang ảnh đó', async () => {
+  assert.equal(GLASS['art/zalo.png'], 'Zalo');
+  const buf = await readFile(new URL('../art/zalo.png', import.meta.url));
+  assert.equal(buf.subarray(1, 4).toString(), 'PNG');
+  for (const cu of ['art/zalo.svg', 'art/glass/zalo.svg']) {
+    assert.equal(normalize({ links: [{ image: cu }] }).links[0].image, 'art/zalo.png', cu);
+    await assert.rejects(readFile(new URL('../' + cu, import.meta.url)), 'file vẽ tay cũ phải xoá hẳn');
   }
 });
 
@@ -241,14 +274,15 @@ test('ảnh minh hoạ đời trước tự đổi sang icon 3D; kiểu hiển t
     { image: 'art/3d/robot.webp' }, { image: 'data:image/webp;base64,AAAA', imageStyle: 'icon' },
   ] }).links;
   assert.deepEqual([a.image, a.imageStyle], ['art/3d/chart-increasing.webp', 'icon']);
-  assert.deepEqual([b.image, b.imageStyle], ['art/zalo.svg', 'photo']);
+  assert.deepEqual([b.image, b.imageStyle], ['art/zalo.png', 'photo']);
   assert.equal(c.imageStyle, 'icon');
   assert.equal(d.imageStyle, 'icon');
 });
 
 test('glassIconFor: theo id ô, rồi theo tiêu đề / link; không đoán được thì để trống', () => {
   assert.equal(glassIconFor({ id: 'course', title: 'bất kỳ' }), 'art/glass/course.svg');
-  assert.equal(glassIconFor({ id: 'x1', title: 'Zalo Minh nhé' }), 'art/glass/zalo.svg');
+  assert.equal(glassIconFor({ id: 'x1', title: 'Zalo Minh nhé' }), 'art/zalo.png');
+  assert.equal(glassIconFor({ id: 'zalo', title: 'bất kỳ' }), 'art/zalo.png');
   assert.equal(glassIconFor({ id: 'x2', title: 'My CV' }), 'art/glass/cv.svg');
   assert.equal(glassIconFor({ id: 'x3', title: 'Liên hệ', url: 'mailto:a@b.vn' }), 'art/glass/mail.svg');
   assert.equal(glassIconFor({ id: 'x4', title: 'Đặt lịch tư vấn' }), 'art/glass/calendar.svg');
