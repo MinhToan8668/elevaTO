@@ -110,7 +110,7 @@ test('GET trả tên dịch vụ và số bản, OPTIONS trả tiêu đề CORS'
   const env = env0();
   const g = await worker.fetch(new Request(API), env, moCtx());
   const d = await g.json();
-  assert.equal(d.service, 'elevaTO AI');
+  assert.equal(d.service, 'elevaTO');
   assert.match(d.ban, /^\d{4}-\d{2}-\d{2}$/);
   const o = await worker.fetch(new Request(API, { method: 'OPTIONS' }), env, moCtx());
   assert.equal(o.status, 204);

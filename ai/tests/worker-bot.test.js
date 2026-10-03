@@ -27,7 +27,7 @@ function moFetch() {
 }
 
 const env0 = (them) => moEnv(SCHEMA, {
-  TG_TOKEN: 'token-bot', TG_ADMIN: ADMIN, TG_SECRET: 'bimat', BREVO_KEY: 'brevo', MAIL_TU: 'gui@gmail.com', ...them,
+  TG_AI_TOKEN: 'token-ai', TG_EL_TOKEN: 'token-el', TG_ADMIN: ADMIN, TG_SECRET: 'bimat', BREVO_KEY: 'brevo', MAIL_TU: 'gui@gmail.com', ...them,
 });
 
 async function goi(env, body) {
@@ -40,7 +40,7 @@ async function goi(env, body) {
 /** Giả lập Telegram đẩy một tin của quản trị sang webhook. */
 async function lenh(env, text, from = ADMIN) {
   const ctx = moCtx();
-  const res = await worker.fetch(new Request(`${API}tg`, {
+  const res = await worker.fetch(new Request(`${API}tg/ai`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': 'bimat' },
     body: JSON.stringify({ update_id: 1, message: { message_id: 9, chat: { id: from, type: 'private' }, from: { id: from }, text } }),
@@ -55,7 +55,7 @@ test('webhook Telegram: sai mã bí mật thì từ chối, đúng thì nhận',
   const f = moFetch();
   try {
     const env = env0();
-    const xau = await worker.fetch(new Request(`${API}tg`, { method: 'POST', headers: { 'x-telegram-bot-api-secret-token': 'sai' }, body: '{}' }), env, moCtx());
+    const xau = await worker.fetch(new Request(`${API}tg/ai`, { method: 'POST', headers: { 'x-telegram-bot-api-secret-token': 'sai' }, body: '{}' }), env, moCtx());
     assert.equal(xau.status, 401);
     assert.equal((await lenh(env, '/help')).status, 200);
     assert.match(f.nhan().join('\n'), /Bot quản trị elevaTO/);
@@ -77,9 +77,8 @@ test('bot tự nối webhook một lần rồi thôi', async () => {
     await goi(env, { action: 'ungho' });
     await goi(env, { action: 'ungho' });
     const dat = f.tg.filter((x) => x.method === 'setWebhook');
-    assert.equal(dat.length, 1, 'chỉ gọi setWebhook lần đầu');
-    assert.equal(dat[0].url, `${API}tg`);
-    assert.equal(dat[0].secret_token, 'bimat');
+    assert.deepEqual(dat.map((x) => x.url).sort(), [`${API}tg/ai`, `${API}tg/el`], 'mỗi bot một đường riêng');
+    assert.ok(dat.every((x) => x.secret_token === 'bimat'));
   } finally { f.thoi(); }
 });
 
@@ -262,16 +261,17 @@ test('Brevo lỗi thì báo quản trị chứ không im lặng', async () => {
 
 test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò', async () => {
   const xem = async (env) => (await (await worker.fetch(new Request(API), env, moCtx())).json()).cai;
-  assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot: false, mail: false });
-  assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot: true, mail: true });
+  assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot_ai: false, bot_el: false, mail: false });
+  assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot_ai: true, bot_el: true, mail: true });
   // Thiếu đúng một mảnh của bot thì vẫn phải báo bot: false.
-  assert.equal((await xem(env0({ TG_SECRET: '' }))).bot, false, 'thiếu TG_SECRET');
-  assert.equal((await xem(env0({ TG_TOKEN: '' }))).bot, false, 'thiếu TG_TOKEN');
-  assert.equal((await xem(env0({ TG_ADMIN: '' }))).bot, false, 'thiếu TG_ADMIN');
+  assert.equal((await xem(env0({ TG_SECRET: '' }))).bot_ai, false, 'thiếu TG_SECRET');
+  assert.equal((await xem(env0({ TG_AI_TOKEN: '' }))).bot_ai, false, 'thiếu token bot AI');
+  assert.equal((await xem(env0({ TG_EL_TOKEN: '' }))).bot_el, false, 'thiếu token bot elevaTO');
+  assert.equal((await xem(env0({ TG_ADMIN: '' }))).bot_ai, false, 'thiếu TG_ADMIN');
   assert.equal((await xem(env0({ BREVO_KEY: '' }))).mail, false);
   // Không được lộ giá trị nào ra ngoài.
   const than = await (await worker.fetch(new Request(API), env0({ GEMINI_KEYS: 'key-that' }), moCtx())).text();
-  assert.doesNotMatch(than, /key-that|token-bot|bimat|brevo/);
+  assert.doesNotMatch(than, /key-that|token-ai|token-el|bimat|brevo/);
 });
 
 test('thiếu TG_SECRET thì không đăng ký webhook (im lặng như đang gặp), có đủ thì đăng ký', async () => {
@@ -280,7 +280,7 @@ test('thiếu TG_SECRET thì không đăng ký webhook (im lặng như đang g�
     await goi(env0({ TG_SECRET: '' }), { action: 'ungho' });
     assert.deepEqual(f.tg.filter((x) => x.method === 'setWebhook'), []);
     await goi(env0(), { action: 'ungho' });
-    assert.equal(f.tg.filter((x) => x.method === 'setWebhook').length, 1);
+    assert.equal(f.tg.filter((x) => x.method === 'setWebhook').length, 2, 'hai bot');
   } finally { f.thoi(); }
 });
 
@@ -307,11 +307,11 @@ test('chưa bấm Start với bot: webhook vẫn đăng ký, và lời chào t�
 
     choPhep = true;                                   // người dùng vừa bấm Start
     await goi(env, { action: 'ungho' });
-    assert.equal(tin.length, 1, 'lời chào phải tới nơi ở lượt truy cập sau');
-    assert.match(tin[0], /đã kết nối/);
+    assert.equal(tin.length, 2, 'cả hai bot chào ở lượt truy cập sau');
+    assert.ok(tin.every((x) => /đã kết nối/.test(x)));
 
     await goi(env, { action: 'ungho' });
-    assert.equal(tin.length, 1, 'đã chào rồi thì thôi, không nhắc lại mỗi lượt');
+    assert.equal(tin.length, 2, 'đã chào rồi thì thôi, không nhắc lại mỗi lượt');
   } finally { globalThis.fetch = that; }
 });
 
@@ -323,11 +323,13 @@ test('menu lệnh: đăng ký cho riêng chat quản trị, một lần rồi th
     const env = env0();
     await goi(env, { action: 'ungho' });
     const dat = f.tg.filter((x) => x.method === 'setMyCommands');
-    assert.equal(dat.length, 1);
-    assert.deepEqual(dat[0].scope, { type: 'chat', chat_id: ADMIN }, 'người lạ không thấy menu lệnh của quản trị');
-    assert.ok(dat[0].commands.length >= 10);
+    assert.equal(dat.length, 2, 'mỗi bot một menu riêng');
+    for (const d of dat) {
+      assert.deepEqual(d.scope, { type: 'chat', chat_id: ADMIN }, 'người lạ không thấy menu lệnh của quản trị');
+      assert.ok(d.commands.length >= 10);
+    }
     await goi(env, { action: 'ungho' });
-    assert.equal(f.tg.filter((x) => x.method === 'setMyCommands').length, 1, 'đăng ký rồi thì thôi');
+    assert.equal(f.tg.filter((x) => x.method === 'setMyCommands').length, 2, 'đăng ký rồi thì thôi');
   } finally { f.thoi(); }
 });
 

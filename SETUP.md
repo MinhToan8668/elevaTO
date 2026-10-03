@@ -1,5 +1,9 @@
 # elevaTO — Hướng dẫn cài đặt
 
+> ⚠️ **Tài liệu này mô tả bản Apps Script cũ.** Trang khoá học và trang link nay chạy trên
+> Cloudflare Worker — xem **[ai/worker/README.md](ai/worker/README.md)**. Giữ lại để tham khảo
+> trong lúc chuyển và để kéo đăng ký cũ sang.
+
 Sau khi làm xong 4 bước dưới đây, bạn **không bao giờ phải mở file code nữa**.
 Đổi cohort, giá, số chỗ, lịch học, thông báo — tất cả làm bằng tin nhắn Telegram.
 

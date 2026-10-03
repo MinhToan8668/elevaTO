@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/src/index.js';
 import { linksKey } from '../worker/src/links.js';
-import { chayLenh } from '../worker/src/telegram.js';
+import { chayLenhEl } from '../worker/src/botel.js';
 import { moCtx, moEnv } from './helpers/d1.js';
 
 const SCHEMA = new URL('../worker/schema.sql', import.meta.url);
@@ -84,13 +84,13 @@ test('dữ liệu không đúng dạng trang link, hoặc quá lớn → từ ch
   assert.equal((await gui(env, { action: 'saveLinks', key, data: khong })).code, 'qua_lon');
 });
 
-test('bot /linkkey đưa key cho quản trị, và hỏi lại vẫn ra đúng key đó', async () => {
+test('bot elevaTO: /linkkey đưa key cho quản trị, và hỏi lại vẫn ra đúng key đó', async () => {
   const env = env0();
-  const r = await chayLenh(env, '/linkkey', []);
+  const r = await chayLenhEl(env, '/linkkey', []);
   const key = await linksKey(env.DB);
   assert.ok(r.text.includes(key), 'bot không gửi key');
-  assert.ok((await chayLenh(env, '/linkkey', [])).text.includes(key), 'mỗi lần hỏi lại sinh key mới');
-  assert.ok((await chayLenh(env, '/help', [])).text.includes('/linkkey'), 'thiếu dòng trong /help');
+  assert.ok((await chayLenhEl(env, '/linkkey', [])).text.includes(key), 'mỗi lần hỏi lại sinh key mới');
+  assert.ok((await chayLenhEl(env, '/menu', [])).text.includes('/linkkey'), 'thiếu dòng trong /menu');
 });
 
 test('dùng được cả đường POST action:links (phòng khi trang gọi kiểu cũ)', async () => {

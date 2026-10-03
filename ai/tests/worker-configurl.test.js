@@ -25,10 +25,11 @@ function chay(diaChi, config, them = {}) {
   writeFileSync(join(thu, 'links/js/backend.js'), them.backend ?? doc('links/js/backend.js'));
   writeFileSync(join(thu, 'links/index.html'), them.trang ?? doc('links/index.html'));
   writeFileSync(join(thu, 'links/edit.html'), them.sua ?? doc('links/edit.html'));
+  writeFileSync(join(thu, 'index.html'), them.khoaHoc ?? doc('index.html'));
   const ra = execFileSync(process.execPath, [join(thu, 'ai/worker/tools/config-url.mjs'), diaChi], { encoding: 'utf8' });
   const lay = (d) => readFileSync(join(thu, d), 'utf8');
   return { ra: ra.trim(), config: lay('ai/js/config.js'), backend: lay('links/js/backend.js'),
-    trang: lay('links/index.html'), sua: lay('links/edit.html') };
+    trang: lay('links/index.html'), sua: lay('links/edit.html'), khoaHoc: lay('index.html') };
 }
 
 test('lọc địa chỉ từ đúng khối chữ wrangler in ra khi triển khai', () => {
@@ -62,12 +63,13 @@ test('chỉ sửa đúng dòng API, giữ nguyên phần chú thích phía trên
   assert.doesNotMatch(r.config, /script\.google\.com/);
 });
 
-test('địa chỉ đã đúng sẵn ở cả bốn file thì báo GIU để workflow khỏi commit thừa', () => {
+test('địa chỉ đã đúng sẵn ở mọi file thì báo GIU để workflow khỏi commit thừa', () => {
   const dc = 'https://elevato.minhtoan.workers.dev';
   const r = chay(dc, `// chú thích\nexport const API = '${dc}';\n`, {
     backend: `export const BACKEND_URL = '${dc}';\n`,
     trang: `<meta content="connect-src 'self' ${dc}">\n`,
     sua: `<meta content="connect-src 'self' ${dc}">\n`,
+    khoaHoc: `  var API = '${dc}';\n`,
   });
   assert.equal(r.ra, `GIU ${dc}`);
   assert.equal(r.config, `// chú thích\nexport const API = '${dc}';\n`);
@@ -75,7 +77,7 @@ test('địa chỉ đã đúng sẵn ở cả bốn file thì báo GIU để wor
 
 // Trang link gọi Worker nên địa chỉ phải đổi đồng thời ở nơi gọi lẫn CSP — lệch một chỗ là trình
 // duyệt chặn, trang lặng lẽ quay về bản dự phòng.
-test('đổi địa chỉ: sửa luôn links/js/backend.js và connect-src trong CSP của hai trang', () => {
+test('đổi địa chỉ: sửa luôn links/js/backend.js, index.html và connect-src trong CSP của hai trang', () => {
   const dc = 'https://elevato-ai-moi.minhtoan.workers.dev';
   const r = chay(dc);
   assert.equal(r.ra, `DOI ${dc}`);
@@ -112,8 +114,10 @@ test('mọi chỗ trỏ tới máy chủ đều cùng một địa chỉ', () =>
   const doc = (f) => readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');
   const API = /^export const API = '([^']+)';$/m.exec(doc('ai/js/config.js'));
   const LINKS = /^export const BACKEND_URL = '([^']+)';$/m.exec(doc('links/js/backend.js'));
-  assert.ok(API && LINKS, 'thiếu dòng khai báo địa chỉ');
+  const KH = /^\s*var API = '([^']+)';/m.exec(doc('index.html'));
+  assert.ok(API && LINKS && KH, 'thiếu dòng khai báo địa chỉ');
   assert.equal(LINKS[1], API[1], 'links/js/backend.js lệch với ai/js/config.js');
+  assert.equal(KH[1], API[1], 'index.html (trang khoá học) lệch với ai/js/config.js');
 
   for (const f of ['links/index.html', 'links/edit.html']) {
     const dc = [...doc(f).matchAll(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/g)].map((m) => m[0]);
@@ -127,7 +131,7 @@ test('workflow commit đủ mọi file config-url.mjs sửa tới', () => {
   const yml = readFileSync(new URL('../../.github/workflows/worker.yml', import.meta.url), 'utf8');
   const add = /^\s*git add (.+)$/m.exec(yml);        // dòng lệnh thật, không phải chữ trong chú thích
   assert.ok(add, 'workflow không có bước git add');
-  for (const f of ['ai/js/config.js', 'links/js/backend.js', 'links/index.html', 'links/edit.html']) {
+  for (const f of ['ai/js/config.js', 'links/js/backend.js', 'links/index.html', 'links/edit.html', 'index.html']) {
     assert.ok(add[1].includes(f), `workflow quên git add ${f}`);
   }
   assert.doesNotMatch(add[1], /^-A|\s-A(\s|$)/, 'git add -A sẽ commit nhầm database_id vào wrangler.toml');

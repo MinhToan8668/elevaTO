@@ -4,8 +4,13 @@
 // trả { ok:true, data } hoặc { ok:false, code, error, retryAfter? }. Trang web chỉ phải đổi
 // địa chỉ trong js/config.js, không phải sửa gì khác.
 //
-//   dangky · dangnhap · toi · dangxuat · generate · ungho · quenmk · datlaimk
-//   links · checkKey · saveLinks  (trang link-in-bio — xem src/links.js)
+//   dangky · dangnhap · toi · dangxuat · generate · ungho · quenmk · datlaimk   (trang AI BCTC)
+//   links · checkKey · saveLinks                                                (trang link-in-bio)
+//   register + GET ?action=config                                               (trang khoá học)
+//
+// Hai bot Telegram, mỗi bot một đường webhook riêng vì Telegram chỉ cho một webhook mỗi token:
+//   /tg/ai  bot AI BCTC            (TG_AI_TOKEN)
+//   /tg/el  bot khoá học + link    (TG_EL_TOKEN)
 //   code: auth · sai · khoa_tam · cho_duyet · bi_khoa · thieu · email_sai · sdt_sai · mk_ngan
 //         · da_ton_tai · quota · busy · timeout · blocked · bad · upstream · setup · ma_sai · cho
 
@@ -13,7 +18,10 @@ import { PHIEN_BAN, so } from './caidat.js';
 import { boPhien, dangKy, dangNhap, hoSo, loi, ok, tkTuToken } from './auth.js';
 import { don, giay, ghiCaiDat, docCaiDat } from './db.js';
 import { goiGemini } from './gemini.js';
-import { baoQuanTri, baoTaiKhoanMoi, ngoWebhook, nhanTin, taoBao, tinhTrang } from './telegram.js';
+import { BOT_AI, baoTaiKhoanMoi } from './telegram.js';
+import { BOT_EL, baoDangKyMoi } from './botel.js';
+import { cauHinhChoWeb, cauHinhDayDu, nhanDangKy } from './khoahoc.js';
+import { tgAdmins } from './tg.js';
 import { quenMK, datLaiMKBangMa } from './quenmk.js';
 import { thongTinUngHo } from './ungho.js';
 import { linksChoWeb, linksKiemKey, linksLuu } from './links.js';
@@ -31,7 +39,7 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-    if (url.pathname === '/tg' && req.method === 'POST') return tgWebhook(req, env, ctx);
+    for (const bot of BOT) if (url.pathname === bot.duong && req.method === 'POST') return tgWebhook(bot, req, env, ctx);
     // Nội dung trang link-in-bio: đọc công khai, không nhớ đệm — chủ trang bấm Đăng là đổi ngay.
     if (url.pathname === '/links' && req.method === 'GET') {
       if (!env.DB) return json(loi('setup', 'Máy chủ chưa nối cơ sở dữ liệu D1 (xem README của worker)'));
@@ -39,9 +47,14 @@ export default {
     }
     if (req.method === 'GET') {
       ctx.waitUntil(nen(env, url));
+      // Trang khoá học vẫn gọi đúng kiểu cũ của Apps Script: GET ?action=config
+      if (url.searchParams.get('action') === 'config') {
+        if (!env.DB) return json({ ok: false, error: 'setup' });
+        return json({ ok: true, config: await cauHinhChoWeb(env.DB) }, 200, { 'cache-control': 'no-store' });
+      }
       // `cai` chỉ nói phần nào ĐÃ cài, không bao giờ lộ giá trị — để lúc cài biết ngay thiếu gì
       // (bot im lặng vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò).
-      return json({ ok: true, service: 'elevaTO AI', ban: PHIEN_BAN, cai: tinhTrang(env) });
+      return json({ ok: true, service: 'elevaTO', ban: PHIEN_BAN, cai: tinhTrang(env) });
     }
     if (req.method !== 'POST') return json(loi('bad', 'Không rõ yêu cầu'), 405);
     ctx.waitUntil(nen(env, url));
@@ -49,10 +62,23 @@ export default {
   },
 };
 
-/** Việc chạy ngầm sau khi đã trả lời: nối webhook Telegram và dọn dòng hết hạn. */
+const BOT = [BOT_AI, BOT_EL];
+
+/** Phần nào đã cài. Chỉ nói CÓ hay CHƯA, không bao giờ lộ giá trị. */
+function tinhTrang(env) {
+  const coAdmin = !!(env.TG_SECRET && tgAdmins(env).length);
+  return {
+    ai: !!String(env.GEMINI_KEYS || '').trim(),
+    bot_ai: coAdmin && !!env.TG_AI_TOKEN,
+    bot_el: coAdmin && !!env.TG_EL_TOKEN,
+    mail: !!(env.BREVO_KEY && env.MAIL_TU),
+  };
+}
+
+/** Việc chạy ngầm sau khi đã trả lời: nối webhook từng bot và dọn dòng hết hạn. */
 async function nen(env, url) {
   try {
-    await ngoWebhook(env, `${url.origin}/tg`);
+    for (const bot of BOT) await bot.ngo(env, url.origin);
     const lan = Number(await docCaiDat(env.DB, 'don_luc') || 0);
     if (giay() - lan > 3600) { await ghiCaiDat(env.DB, 'don_luc', String(giay())); await don(env.DB); }
   } catch (e) { console.error(`nen: ${e}`); }
@@ -65,7 +91,7 @@ async function xuLy(req, env, ctx) {
   let b;
   try { b = JSON.parse(raw); } catch { return loi('bad', 'Yêu cầu không đọc được'); }
   if (!b || typeof b !== 'object') return loi('bad', 'Yêu cầu không đọc được');
-  const bao = taoBao(env);
+  const bao = BOT_AI.taoBao(env);
   try {
     const a = String(b.action || '');
     if (a === 'dangky') {
@@ -80,7 +106,16 @@ async function xuLy(req, env, ctx) {
     if (a === 'checkKey') return await linksKiemKey(env, b);
     if (a === 'saveLinks') return await linksLuu(env, b);
     if (a === 'quenmk') return await quenMK(env, b, bao);
-    if (a === 'datlaimk') return await datLaiMKBangMa(env, b, (t) => baoQuanTri(env, t));
+    if (a === 'datlaimk') return await datLaiMKBangMa(env, b, (t) => BOT_AI.bao(env, t));
+    // Trang khoá học: giữ nguyên giao thức cũ (ok/id/config ở ngoài cùng), xem src/khoahoc.js.
+    if (a === 'register') {
+      const r = await nhanDangKy(env, b);
+      if (r.moi) ctx.waitUntil(baoDangKyMoi(env, r.moi, await cauHinhDayDu(env.DB)));
+      if (r.day_du) ctx.waitUntil(BOT_EL.bao(env, `🎉 <b>${r.day_du.computed.cohortLabel} ĐÃ ĐỦ ${r.day_du.slots.max} NGƯỜI!</b>\n\n`
+        + `Web đã tự chuyển sang trạng thái đã đủ chỗ — người vào sau sẽ đăng ký waitlist ${r.day_du.computed.nextCohortLabel}.\n\n`
+        + 'Khi muốn mở cohort mới, gõ /cohortmoi.'));
+      return r.kq;
+    }
     if (a === 'toi' || a === 'dangxuat' || a === 'generate') {
       if (a === 'dangxuat') { await boPhien(env.DB, b.token); return ok({}); }
       const tk = await tkTuToken(env.DB, b.token);
@@ -96,12 +131,12 @@ async function xuLy(req, env, ctx) {
 }
 
 /** Telegram đẩy tin sang. Trả 200 ngay, xử lý sau — Telegram gửi lại nếu chờ quá lâu. */
-async function tgWebhook(req, env, ctx) {
+async function tgWebhook(bot, req, env, ctx) {
   if (!env.TG_SECRET || req.headers.get('x-telegram-bot-api-secret-token') !== env.TG_SECRET) {
     return new Response('no', { status: 401 });
   }
   let u;
   try { u = await req.json(); } catch { return new Response('ok'); }
-  ctx.waitUntil(nhanTin(env, u));
+  ctx.waitUntil(bot.nhanTin(env, u));
   return new Response('ok');
 }
