@@ -20,20 +20,20 @@ const TEN_TT = { active: 'đang dùng', cho: 'chờ duyệt', off: 'đã khoá' 
  * Tên lệnh phải khớp chayLenh bên dưới — có bài kiểm tra đối chiếu hai chỗ này.
  */
 const MENU_LENH = [
-  { command: 'thongke', description: 'Số tài khoản, lượt AI hôm nay, key Gemini' },
-  { command: 'cho', description: 'Tài khoản đang chờ duyệt' },
-  { command: 'moi', description: '15 tài khoản đăng ký gần nhất' },
-  { command: 'tim', description: 'Tra cứu tài khoản theo email hoặc tên' },
-  { command: 'hocvien', description: 'Xếp học viên — điền được model elevaTO' },
-  { command: 'giangvien', description: 'Xếp giảng viên — không giới hạn lượt' },
-  { command: 'free', description: 'Về tài khoản thường' },
-  { command: 'luot', description: 'Đặt số lượt AI mỗi ngày (0 = theo vai trò)' },
-  { command: 'mo', description: 'Mở / duyệt tài khoản' },
-  { command: 'khoa', description: 'Khoá tài khoản' },
-  { command: 'mkmoi', description: 'Sinh mật khẩu mới rồi đọc cho bạn' },
-  { command: 'matkhau', description: 'Đặt lại mật khẩu bạn tự chọn' },
-  { command: 'ungho', description: 'Xem / đặt số tài khoản nhận ủng hộ' },
-  { command: 'help', description: 'Danh sách lệnh đầy đủ' },
+  { command: 'thongke', description: '📊 Số tài khoản, lượt AI hôm nay, key Gemini' },
+  { command: 'cho', description: '⏳ Tài khoản đang chờ duyệt' },
+  { command: 'moi', description: '🆕 15 tài khoản đăng ký gần nhất' },
+  { command: 'tim', description: '🔍 Tra cứu tài khoản theo email hoặc tên' },
+  { command: 'hocvien', description: '🎓 Xếp học viên — điền được model elevaTO' },
+  { command: 'giangvien', description: '👨‍🏫 Xếp giảng viên — không giới hạn lượt' },
+  { command: 'free', description: '👤 Về tài khoản thường' },
+  { command: 'luot', description: '🎚️ Đặt số lượt AI mỗi ngày (0 = theo vai trò)' },
+  { command: 'mo', description: '🟢 Mở / duyệt tài khoản' },
+  { command: 'khoa', description: '🔒 Khoá tài khoản' },
+  { command: 'mkmoi', description: '🎲 Sinh mật khẩu mới rồi đọc cho bạn' },
+  { command: 'matkhau', description: '🔑 Đặt lại mật khẩu bạn tự chọn' },
+  { command: 'ungho', description: '💚 Xem / đặt số tài khoản nhận ủng hộ' },
+  { command: 'help', description: '⚙️ Danh sách lệnh đầy đủ' },
 ];
 
 // ─── Mô tả & nút ────────────────────────────────────────────
