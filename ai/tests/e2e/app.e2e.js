@@ -1,6 +1,7 @@
 // E2E: chạy trang thật trong Chromium, máy chủ AI được giả lập (không tốn lượt, không cần key).
 //   cd ai && npm run e2e
 // Tuỳ chọn: E2E_SHOTS=/thư/mục để chụp màn hình từng bước.
+//           E2E_CHROME=/đường/dẫn/chrome để dùng Chromium có sẵn trên máy.
 // Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
 // máy chủ AI được giả lập, phông chữ nằm sẵn trong vendor/fonts.
 
@@ -16,7 +17,14 @@ import { CHART } from '../../js/chart2026.js';
 import { computeTotals } from '../../js/core/statements.js';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));   // gốc repo (trang nằm ở /ai/)
-const API = 'https://script.google.com/macros/s/AKfycbE2E_TEST_DEPLOYMENT_ID_0123456789/exec';   // máy chủ giả
+// Máy chủ giả phải đứng ở ĐÚNG địa chỉ trang được phép gọi: CSP trong ai/index.html chỉ mở
+// connect-src tới địa chỉ khai trong js/config.js. Lấy thẳng từ đó nên hai bên không lệch được —
+// bài kiểm tra vì thế canh luôn cả CSP, chứ trước đây nó trỏ sang một địa chỉ bịa và lặng lẽ
+// hỏng khi trang đổi máy chủ.
+const API = /export const API = '([^']+)';/.exec(
+  await readFile(new URL('../../js/config.js', import.meta.url), 'utf8'),
+)[1];
+const API_GOC = new URL(API).origin;
 
 async function loadPlaywright() {
   try { return await import('playwright'); } catch (e) {
@@ -128,7 +136,12 @@ before(async () => {
   base = `http://127.0.0.1:${server.address().port}`;
   pw = await loadPlaywright();
   // Không có locale UTF-8 thì Chromium trên Linux đổi tên file tải về có dấu thành "download".
-  browser = await pw.chromium.launch({ env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' } });
+  // E2E_CHROME=/đường/dẫn/chrome khi máy đã có sẵn Chromium nhưng không đúng bản Playwright
+  // muốn tải (hay máy không được ra mạng để tải). Bỏ trống thì dùng bản Playwright tự quản.
+  browser = await pw.chromium.launch({
+    ...(process.env.E2E_CHROME ? { executablePath: process.env.E2E_CHROME } : {}),
+    env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' },
+  });
   tmp = await mkdtemp(join(tmpdir(), 'elevato-e2e-'));
 });
 after(async () => { await browser?.close(); server?.close(); });
@@ -141,7 +154,7 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.route('https://script.google.com/**', async (route) => {
+  await page.route((u) => u.origin === API_GOC, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
@@ -445,7 +458,7 @@ test('file Excel có cột Mã số: đọc không cần AI, thiếu ngày thì 
 test('thương hiệu: phông Be Vietnam Pro nằm trong repo, logo lớn căn giữa thanh đầu trang, đổi theo giao diện sáng/tối', { timeout: 60_000 }, async () => {
   const { page, errors } = await newPage();
   // Chặn mọi lời gọi ra ngoài: trang phải tự đủ phông chữ.
-  await page.route((u) => !u.href.startsWith(base) && !u.href.startsWith('https://script.google.com'), (r) => r.abort());
+  await page.route((u) => !u.href.startsWith(base) && u.origin !== API_GOC, (r) => r.abort());
   await page.goto(`${base}/ai/`);
   await page.waitForSelector('#app .step');
   await page.evaluate(() => document.fonts.ready);
@@ -628,6 +641,38 @@ test('ủng hộ: nút ở góc mở hộp có số tài khoản và mã QR dự
   // Không phải đăng nhập mới xem được, và không có yêu cầu nào ra miền lạ.
   assert.equal(await page.locator('#acct button').count(), 1);
   assert.deepEqual(errors, []);
+});
+
+// Đa số người xem vào bằng điện thoại. Thanh đầu trang AI từng nhồi logo + sáng/tối + ngôn ngữ
+// + ủng hộ + đăng nhập thành 441px trên màn 390px: trang cuộn ngang được và nút đăng nhập bị đẩy
+// lòi ra ngoài mép. Bài này canh cả BỐN trang, ở ba khổ máy hay gặp nhất.
+test('điện thoại: không trang nào cuộn ngang, và nút bấm đủ to cho ngón tay', { timeout: 120_000 }, async () => {
+  const KHO = [[390, 844, 'iPhone 12'], [375, 667, 'iPhone SE'], [360, 740, 'Android nhỏ']];
+  const TRANG = ['/ai/', '/', '/links/', '/links/edit.html'];
+  const { page } = await newPage();
+  for (const [w, h, may] of KHO) {
+    await page.setViewportSize({ width: w, height: h });
+    for (const duong of TRANG) {
+      await page.goto(base + duong);
+      await page.waitForLoadState('networkidle');
+      const r = await page.evaluate(() => {
+        const de = document.documentElement;
+        const be = [];
+        for (const el of document.querySelectorAll('button,a,select,[role="button"]')) {
+          const b = el.getBoundingClientRect();
+          // Bỏ qua phần tử ẩn, và link nằm GIỮA CÂU CHỮ — WCAG 2.5.8 miễn cho loại đó vì
+          // kích thước bị chiều cao dòng quyết định, nới ra là vỡ đoạn văn.
+          if (!b.width || !b.height) continue;
+          if (el.tagName === 'A' && getComputedStyle(el).display.startsWith('inline')
+              && el.parentElement && el.parentElement.textContent.trim() !== el.textContent.trim()) continue;
+          if (b.height < 24 || b.width < 24) be.push(`${el.tagName.toLowerCase()}.${el.className || '—'} ${Math.round(b.width)}×${Math.round(b.height)}`);
+        }
+        return { tran: de.scrollWidth - de.clientWidth, be: [...new Set(be)] };
+      });
+      assert.equal(r.tran, 0, `${duong} @ ${may} ${w}px: cuộn ngang ${r.tran}px`);
+      assert.deepEqual(r.be, [], `${duong} @ ${may} ${w}px: nút nhỏ hơn 24px`);
+    }
+  }
 });
 
 test('quên mật khẩu: xin mã qua email, nhập mã là đổi được mật khẩu và vào luôn', { timeout: 90_000 }, async () => {

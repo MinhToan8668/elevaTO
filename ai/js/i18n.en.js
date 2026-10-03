@@ -556,6 +556,7 @@ export const EN = {
   'md.tag.uoc': 'E',
   'md.tag.md': 'D',
   'au.signinUp': 'Sign in / Sign up',
+  'au.signinUp.ngan': 'Sign in',            // narrow top bar on phones
   'au.hello': 'Hello {name}!',
   'au.age': 'Age',
   'au.purpose': 'What will you use the tool for?',

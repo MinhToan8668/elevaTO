@@ -9,7 +9,8 @@ import { EN } from './i18n.en.js';
 import { CHART_EN } from './chart2026.en.js';
 import { MODEL_EN } from './targets/model.en.js';
 
-export const LANGS = [['vi', 'Tiếng Việt'], ['en', 'English']];
+// [mã, tên đầy đủ, nhãn ngắn dùng khi thanh đầu trang hẹp]
+export const LANGS = [['vi', 'Tiếng Việt', 'VI'], ['en', 'English', 'EN']];
 const BANG = { vi: VI, en: EN };
 const LS = 'elevato-ai-lang';
 

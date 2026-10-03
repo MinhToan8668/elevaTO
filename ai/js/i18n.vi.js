@@ -556,6 +556,7 @@ export const VI = {
   'md.tag.uoc': 'Ư',
   'md.tag.md': 'M',
   'au.signinUp': 'Đăng nhập / Đăng ký',
+  'au.signinUp.ngan': 'Đăng nhập',          // thanh đầu trang trên điện thoại
   'au.hello': 'Chào {name}!',
   'au.age': 'Tuổi',
   'au.purpose': 'Bạn định dùng công cụ để làm gì?',

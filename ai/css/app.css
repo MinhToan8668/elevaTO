@@ -73,6 +73,8 @@ a{color:var(--em-text)}
 .product b{font-size:15px;font-weight:800;color:var(--strong);letter-spacing:-.01em}
 .product small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-r{justify-self:end;display:flex;align-items:center;gap:10px}
+.acct-in{white-space:nowrap}
+.acct-in-ngan{display:none}
 .icon-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--field);background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:border-color .2s,transform .2s var(--ease)}
 .icon-btn:hover{border-color:var(--em)}
 .icon-btn:active{transform:scale(.94)}
@@ -146,7 +148,10 @@ main{display:flex;flex-direction:column;gap:20px;min-width:0;outline:none}
 .foot{text-align:center;color:var(--muted2);font-size:12.5px;padding:20px}
 .foot p{margin:0}
 .foot-ct{margin-top:6px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px}
-.foot-ct a{color:var(--em-text);text-decoration:none;border-bottom:1px solid transparent}
+/* min-height 24px: đích bấm tối thiểu cho ngón tay (WCAG 2.5.8). Hai link này trước đây chỉ
+   cao 20px — trên điện thoại bấm hay trượt. */
+.foot-ct a{display:inline-flex;align-items:center;min-height:24px;
+  color:var(--em-text);text-decoration:none;border-bottom:1px solid transparent}
 .foot-ct a:hover{border-bottom-color:currentColor}
 
 /* ── Nút, ô nhập ──────────────────────── */
@@ -344,12 +349,33 @@ table.k td .tag{white-space:normal}
   .acct summary{padding:3px}
   input.inp,select.inp{font-size:16px}           /* iPhone không tự phóng to khi gõ */
 }
-/* Màn hẹp: không đủ chỗ cho ba cột — logo về bên trái, các nút bên phải. */
+/* Màn hẹp: không đủ chỗ cho ba cột — logo về bên trái, các nút bên phải.
+   Trước đây chỉ bỏ cột giữa là xong, nhưng hàng nút bên phải (sáng/tối + ngôn ngữ + ủng hộ +
+   tài khoản) vẫn rộng ~300px, cộng logo thành 441px — tràn khỏi màn 390px và nút đăng nhập bị
+   đẩy lòi ra ngoài. Nay mỗi nút co lại thành một ô vuông 40px, chỉ còn chữ ở chỗ thật sự cần. */
 @media (max-width:560px){
-  .top{grid-template-columns:auto 1fr}
+  .top{grid-template-columns:auto 1fr;gap:8px;
+    padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left))}
   .product{display:none}
   .brand{justify-self:start}
-  .logo{height:36px}
+  .logo{height:34px}
+  .top-r{gap:6px}
+  /* Ô ngôn ngữ chỉ còn mã hai chữ (VI / EN) — tên đầy đủ do chính <option> giữ. */
+  .lang-sel{width:56px;height:40px;padding:0 17px 0 8px;font-size:12px;
+    background-position:right 5px center;text-indent:0}
+  /* Nút ủng hộ còn mỗi hạt cà phê; chữ ẩn nhưng vẫn đọc được bằng trình đọc màn hình. */
+  .donate{width:40px;height:40px;padding:0;border-radius:50%;justify-content:center;gap:0}
+  .donate .donate-t{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+    clip-path:inset(50%);white-space:nowrap;border:0}
+  .acct summary{padding:3px}
+  .acct-in-dai{display:none}
+  .acct-in-ngan{display:inline}
+  .acct-in{padding:9px 13px}
+}
+/* Màn rất hẹp (≤360px): logo nhỏ thêm một nấc cho đủ chỗ bốn nút bên phải. */
+@media (max-width:360px){
+  .logo{height:30px}
+  .top-r{gap:5px}
 }
 
 
