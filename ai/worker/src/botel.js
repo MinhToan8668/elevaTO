@@ -5,8 +5,8 @@
 // (tg.js) đặt parse_mode HTML cho cả hai bot.
 
 import {
-  cauHinhDayDu, cohortLabel, datTrangThai, docCauHinh,
-  ghiCauHinh, soDienThoai, tien, tienNgan, timDangKy,
+  cauHinhDayDu, cohortLabel, datTrangThai, docCauHinh, ghiCauHinh,
+  gioVN, maDangKy, soDienThoai, tien, tienNgan, timDangKy,
 } from './khoahoc.js';
 import { linksKey } from './links.js';
 import { esc, laChatQuanTri, taoBot } from './tg.js';
@@ -68,6 +68,7 @@ export function docTien(s) {
 const MENU = [
   { command: 'status', description: 'Bảng tình hình cohort đang chạy' },
   { command: 'ds', description: 'Danh sách đăng ký của cohort này' },
+  { command: 'xuat', description: 'Tải toàn bộ đăng ký về dạng file CSV' },
   { command: 'duyet', description: 'Duyệt một đăng ký (id hoặc số điện thoại)' },
   { command: 'tuchoi', description: 'Từ chối một đăng ký' },
   { command: 'cohort', description: 'Đổi số cohort' },
@@ -86,34 +87,72 @@ const MENU = [
   { command: 'thongbao', description: 'Bật banner thông báo trên trang' },
   { command: 'xoathongbao', description: 'Tắt banner thông báo' },
   { command: 'video', description: 'Đặt link video học thử' },
+  { command: 'xoavideo', description: 'Ẩn video học thử' },
   { command: 'slide', description: 'Hiện / ẩn mục slide bài giảng' },
   { command: 'model', description: 'Hiện / ẩn mục model bàn giao' },
   { command: 'linkkey', description: 'Key để sửa trang link-in-bio' },
   { command: 'menu', description: 'Danh sách lệnh đầy đủ' },
 ];
 
-const HUONG_DAN = ['⚙️ ' + b('elevaTO — Bảng điều khiển'),
-  ng('Mọi thay đổi ở đây tự động hiện lên web trong ~1 phút.'), '',
-  `👉 Lệnh không có số phía sau (${ma('/status')}, ${ma('/mo')}, ${ma('/cohortmoi')}…) thì bấm là chạy.`,
-  'Lệnh có số phía sau thì phải gõ cả số — bấm lệnh trơn, bot sẽ hiện giá trị đang dùng kèm dòng mẫu để copy.',
-  '', b('Tình hình & đăng ký'),
-  '/status — bảng tình hình cohort đang chạy',
-  '/ds · /ds cho · /ds duyet — danh sách đăng ký',
-  '/duyet &lt;id hoặc sđt&gt; · /tuchoi &lt;id hoặc sđt&gt;',
-  '', b('Cohort & chỗ'),
-  '/cohort &lt;số&gt; · /cohortmoi — mở cohort mới, đếm lại từ 0',
-  '/slot &lt;số&gt; · /base &lt;số&gt;',
-  '/mo · /day · /dong — mở / đủ chỗ / đóng đăng ký',
-  '', b('Giá & lịch'),
-  '/giasom · /giagoc · /giatuhoc &lt;số&gt;',
-  '/lich &lt;ngày | giờ&gt; · /buoi &lt;tổng&gt; &lt;lý thuyết&gt; &lt;thực hành&gt;',
-  '/kinhnghiem &lt;số năm&gt;',
-  '', b('Nội dung trang'),
-  '/thongbao &lt;nội dung&gt; · /xoathongbao',
-  '/video &lt;link&gt; · /xoavideo · /slide on|off · /model on|off',
-  '', b('Trang link-in-bio'),
-  '/linkkey — key để lưu trang link từ trình chỉnh sửa',
-].join('\n');
+/**
+ * Bảng điều khiển. Mỗi lệnh có giá trị thì in kèm GIÁ TRỊ ĐANG CHẠY THẬT, không phải số ví dụ:
+ * bấm chữ lệnh (Telegram tự tô xanh) để bot hiện thẻ gợi ý, hoặc chạm con số để copy rồi sửa.
+ */
+async function huongDan(env) {
+  const c = await cauHinhDayDu(env.DB);
+  const s = c.schedule;
+  return [
+    `⚙️ ${b('elevaTO — Bảng điều khiển')}`,
+    ng('Mọi thay đổi ở đây tự động hiện lên web trong ~1 phút.'), '',
+    `👉 Lệnh ${b('không')} có giá trị phía sau (/status, /mo, /cohortmoi…) thì bấm là chạy.`,
+    `Lệnh ${b('có')} giá trị thì chạm con số để copy, dán vào ô chat rồi sửa — hoặc bấm chữ lệnh để bot hiện thẻ gợi ý kèm nút ➕➖.`, '',
+
+    `📊 ${b('Xem')}`,
+    `/status — tình trạng hiện tại (${esc(c.computed.cohortLabel)}, ${c.computed.totalRegistered}/${c.slots.max} chỗ)`,
+    '/ds — danh sách đăng ký (/ds cho để lọc chờ duyệt)',
+    '/xuat — tải toàn bộ đăng ký về dạng file CSV', '',
+
+    `✅ ${b('Duyệt đăng ký')}`,
+    '/duyet &lt;id hoặc sđt&gt; · /tuchoi &lt;id hoặc sđt&gt;',
+    ng('Có người đăng ký là bot nhắn ngay kèm nút Duyệt / Từ chối — thường khỏi gõ lệnh.'), '',
+
+    `🔢 ${b('Cohort & chỗ')}`,
+    `/cohort ${ma(c.cohort.number)} — đổi sang ${esc(cohortLabel(Number(c.cohort.number) + 1))} khi gõ số kế tiếp`,
+    `/slot ${ma(c.slots.max)} — tổng số chỗ mỗi cohort`,
+    `/base ${ma(c.slots.base)} — số người đăng ký ngoài hệ thống`,
+    '/cohortmoi — mở cohort kế tiếp (tự +1, đếm lại từ 0)',
+    ng('Số cohort đã hoàn thành tự bằng số cohort hiện tại trừ 1.'), '',
+
+    `💰 ${b('Học phí')}`,
+    `/giasom ${ma(c.pricing.earlyBird)} — giá Early Bird`,
+    `/giagoc ${ma(c.pricing.regular)} — giá gốc (giá gạch)`,
+    `/giatuhoc ${ma(c.pricing.selfPaced)} — giá Self-paced`,
+    ng('Gõ tắt đều hiểu: 3tr · 3M · 2tr5 · 3,5tr · 500k'), '',
+
+    `📅 ${b('Lịch học & hồ sơ')}`,
+    `/lich ${ma(`${s.days} | ${s.time}`)}`,
+    `/buoi ${ma(`${s.sessions} ${s.theory} ${s.practice}`)} — tổng buổi, lý thuyết, thực hành`,
+    `/kinhnghiem ${ma(c.stats.years)} — số năm kinh nghiệm hiện đầu trang`, '',
+
+    `🚦 ${b('Trạng thái')}`,
+    `/mo — đang mở đăng ký${c.cohort.status === 'open' ? ' ⬅️' : ''}`,
+    `/day — đã đủ chỗ, chuyển sang waitlist${c.cohort.status === 'full' ? ' ⬅️' : ''}`,
+    `/dong — đóng đăng ký${c.cohort.status === 'closed' ? ' ⬅️' : ''}`, '',
+
+    `🎬 ${b('Nội dung trên web')}`,
+    '/video &lt;link YouTube hoặc Drive&gt; — bật video học thử',
+    `/xoavideo — ẩn video${c.media.videoUrl ? '' : ' (đang ẩn sẵn)'}`,
+    `/slide ${ma(c.media.showSlides ? 'off' : 'on')} — mục slide bài giảng (đang ${c.media.showSlides ? 'hiện' : 'ẩn'})`,
+    `/model ${ma(c.media.showModel ? 'off' : 'on')} — mục model bàn giao (đang ${c.media.showModel ? 'hiện' : 'ẩn'})`, '',
+
+    `📢 ${b('Thông báo trên web')}`,
+    '/thongbao &lt;nội dung&gt; — hiện banner đầu trang',
+    `/xoathongbao — tắt banner${c.announcement.show ? `\n${ng(`Đang hiện: ${c.announcement.text}`)}` : ' (đang tắt)'}`, '',
+
+    `🔗 ${b('Trang link-in-bio')}`,
+    '/linkkey — key để lưu trang link từ trình chỉnh sửa',
+  ].join('\n');
+}
 
 async function lenhStatus(env) {
   const c = await cauHinhDayDu(env.DB);
@@ -189,6 +228,45 @@ async function lenhDS(env, loc) {
     `${i + 1}. ${icon[r.trang_thai] || '•'} ${b(r.ten)} · ${ma(r.sdt)}\n   ${esc(r.nghe || '—')} · ${ma(r.id)}`)].join('\n') };
 }
 
+// ─── Xuất CSV ───────────────────────────────────────────────
+
+// Bản Apps Script ghi thẳng vào Google Sheet; Worker không có Sheet nên gửi hẳn file CSV.
+const COT_XUAT = [
+  ['id', 'Mã'], ['tao_luc', 'Thời điểm'], ['cohort', 'Cohort'], ['ten', 'Họ tên'],
+  ['sdt', 'Điện thoại'], ['nam', 'Năm kinh nghiệm'], ['email', 'Email'], ['nghe', 'Công việc'],
+  ['muc_tieu', 'Mục tiêu'], ['nguon', 'Nguồn'], ['trang_thai', 'Trạng thái'], ['ghi_chu', 'Ghi chú'],
+];
+
+/**
+ * Một ô CSV. Bọc ngoặc kép khi có dấu phẩy / ngoặc kép / xuống dòng, và cả khi chuỗi mở đầu bằng
+ * = + - @ — Excel coi những ký tự đó là công thức, nên thêm dấu nháy đơn chặn trước.
+ */
+export function oCsv(v) {
+  const s = v == null ? '' : String(v);
+  const an = /^[=+\-@]/.test(s) ? `'${s}` : s;
+  return /[",\n\r]/.test(an) ? `"${an.replace(/"/g, '""')}"` : an;
+}
+
+/** Toàn bộ bảng đăng ký thành CSV. Dấu BOM ở đầu để Excel mở ra đúng tiếng Việt. */
+export function lamCsv(ds) {
+  const dong = [COT_XUAT.map((c) => c[1]).join(',')];
+  for (const r of ds) dong.push(COT_XUAT.map((c) => oCsv(r[c[0]])).join(','));
+  return `﻿${dong.join('\r\n')}\r\n`;
+}
+
+async function lenhXuat(env, ctx) {
+  const { results } = await env.DB.prepare('SELECT * FROM dang_ky ORDER BY id').all();
+  const ds = results || [];
+  if (!ds.length) return { text: 'Chưa có đăng ký nào để xuất.' };
+  if (!ctx.guiFile || !ctx.tin) return { text: `Có ${b(ds.length)} đăng ký, nhưng không gửi được file từ đây.` };
+  const dem = ds.reduce((a, r) => ({ ...a, [r.trang_thai]: (a[r.trang_thai] || 0) + 1 }), {});
+  const gui = await ctx.guiFile(env, ctx.tin.chat.id, `dangky-elevato-${maDangKy()}.csv`, lamCsv(ds),
+    [`📦 ${b(`${ds.length} đăng ký`)} · xuất lúc ${esc(gioVN())}`,
+      `⏳ chờ ${dem.pending || 0} · ✅ duyệt ${dem.approved || 0} · ❌ từ chối ${dem.rejected || 0}`,
+      '', ng('Mở bằng Excel hoặc Google Sheets đều được.')].join('\n'));
+  return gui ? {} : { text: 'Gửi file không thành công, thử lại giúp t nha.' };
+}
+
 async function duyet(env, args, tt, cmd) {
   if (!args) {
     const ds = await lenhDS(env, 'cho');
@@ -213,10 +291,10 @@ export async function baoDangKyMoi(env, r, c) {
     { text: '✅ Duyệt', callback_data: `ok:${r.id}` }, { text: '❌ Từ chối', callback_data: `no:${r.id}` }]]);
 }
 
-async function chayLenh(env, lenh, arg) {
+async function chayLenh(env, lenh, arg, ctx = {}) {
   const args = arg.join(' ').trim();
   const c = lenh.replace(/^\//, '');
-  if (['start', 'menu', 'help'].includes(c)) return { text: HUONG_DAN };
+  if (['start', 'menu', 'help'].includes(c)) return { text: await huongDan(env) };
   if (['status', 'trangthai'].includes(c)) return lenhStatus(env);
   if (c === 'slots' || SO_LENH[c]) return datSo(env, c === 'slots' ? 'slot' : c, args);
   if (['kinhnghiem', 'nam'].includes(c)) return lenhNam(env, args);
@@ -232,6 +310,7 @@ async function chayLenh(env, lenh, arg) {
   if (c === 'xoavideo') return lenhVideo(env, '', true);
   if (BAT_TAT[c]) return lenhBatTat(env, c, args);
   if (['ds', 'dsdangky'].includes(c)) return lenhDS(env, args);
+  if (['xuat', 'sheet'].includes(c)) return lenhXuat(env, ctx);
   if (c === 'duyet') return duyet(env, args, 'approved', '/duyet');
   if (c === 'tuchoi') return duyet(env, args, 'rejected', '/tuchoi');
   if (['linkkey', 'trangsua'].includes(c)) return lenhLinkKey(env);

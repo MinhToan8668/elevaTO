@@ -9,6 +9,9 @@ import { anUngHo, datUngHo, thongTinUngHo } from './ungho.js';
 
 export { esc, tgAdmins };
 
+const b = (s) => `<b>${esc(s)}</b>`;
+const ng = (s) => `<i>${esc(s)}</i>`;
+
 const TEN_VT = { free: 'Tài khoản thường', hv: 'Học viên', gv: 'Giảng viên' };
 const TEN_TT = { active: 'đang dùng', cho: 'chờ duyệt', off: 'đã khoá' };
 
@@ -65,21 +68,32 @@ export async function baoTaiKhoanMoi(env, tk) {
 
 // ─── Lệnh ───────────────────────────────────────────────────
 
-const HELP = ['<b>Bot quản trị elevaTO AI BCTC</b>',
+const HELP = [`⚙️ ${b('elevaTO AI BCTC — Bảng điều khiển')}`,
+  ng('Bấm chữ lệnh để Telegram điền sẵn, rồi gõ tham số phía sau.'), '',
+
+  `📊 ${b('Xem')}`,
   '/thongke — số tài khoản, lượt AI hôm nay, key',
   '/cho — tài khoản đang chờ duyệt',
-  '/tim &lt;email hoặc tên&gt; — tra cứu (kèm nút xếp vai trò)',
+  '/moi — 15 tài khoản đăng ký gần nhất',
+  '/tim &lt;email hoặc tên&gt; — tra cứu (kèm nút xếp vai trò)', '',
+
+  `👥 ${b('Vai trò & lượt')}`,
   '/hocvien &lt;email&gt; — xếp học viên (điền được model)',
   '/giangvien &lt;email&gt; — xếp giảng viên (không giới hạn lượt)',
   '/free &lt;email&gt; — về tài khoản thường',
-  '/luot &lt;email&gt; &lt;số&gt; — số lượt AI mỗi ngày (0 = theo vai trò)',
-  '/khoa &lt;email&gt; · /mo &lt;email&gt; — khoá / mở (duyệt) tài khoản',
-  '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt lại mật khẩu (bot tự xoá tin có mật khẩu)',
+  '/luot &lt;email&gt; &lt;số&gt; — số lượt AI mỗi ngày (0 = theo vai trò)', '',
+
+  `🔑 ${b('Tài khoản & mật khẩu')}`,
+  '/mo &lt;email&gt; — duyệt / mở tài khoản',
+  '/khoa &lt;email&gt; — khoá tài khoản',
   '/mkmoi &lt;email&gt; — bot tự sinh mật khẩu mạnh rồi đọc cho bạn',
-  '/moi — 15 tài khoản đăng ký gần nhất',
-  '/ungho — xem thông tin ủng hộ đang hiện trên trang',
-  '/ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt; — đặt số tài khoản nhận ủng hộ (vcb, tcb, mb… hoặc 6 số BIN)',
-  '/ungho off — tạm ẩn phần ủng hộ trên trang'].join('\n');
+  '/matkhau &lt;email&gt; &lt;mật khẩu mới&gt; — đặt mật khẩu bạn tự chọn',
+  ng('Tin có mật khẩu bot tự xoá khỏi lịch sử Telegram ngay.'), '',
+
+  `💚 ${b('Ủng hộ trên trang')}`,
+  '/ungho — xem thông tin đang hiện',
+  '/ungho &lt;ngân hàng&gt; &lt;số tk&gt; &lt;tên chủ tk&gt; — đặt lại (vcb, tcb, mb… hoặc 6 số BIN)',
+  '/ungho off — tạm ẩn phần ủng hộ'].join('\n');
 
 const VT = { '/hocvien': 'hv', '/giangvien': 'gv', '/free': 'free' };
 const TT = { '/khoa': 'off', '/mo': 'active', '/duyet': 'active' };

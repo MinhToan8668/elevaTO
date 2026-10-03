@@ -58,7 +58,7 @@ test('webhook Telegram: sai mã bí mật thì từ chối, đúng thì nhận',
     const xau = await worker.fetch(new Request(`${API}tg/ai`, { method: 'POST', headers: { 'x-telegram-bot-api-secret-token': 'sai' }, body: '{}' }), env, moCtx());
     assert.equal(xau.status, 401);
     assert.equal((await lenh(env, '/help')).status, 200);
-    assert.match(f.nhan().join('\n'), /Bot quản trị elevaTO/);
+    assert.match(f.nhan().join('\n'), /elevaTO AI BCTC — Bảng điều khiển/);
   } finally { f.thoi(); }
 });
 

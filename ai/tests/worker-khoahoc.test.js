@@ -287,3 +287,109 @@ test('/nhapdangky: thiếu tham số, link lạ, hay key sai đều báo rõ ch�
     assert.match(r.text, /Bản cũ từ chối.*unauthorized/s);
   } finally { globalThis.fetch = that; }
 });
+
+// ─── Bảng điều khiển & xuất CSV ─────────────────────────────
+
+test('/menu in giá trị đang chạy thật, không phải số ví dụ', async () => {
+  const env = env0();
+  await chayLenhEl(env, '/slot', ['20']);
+  await chayLenhEl(env, '/giasom', ['2tr5']);
+  await chayLenhEl(env, '/lich', ['Thứ', '3', '&', '5', '|', '20h–22h']);
+  await chayLenhEl(env, '/slide', ['off']);
+  await chayLenhEl(env, '/dong', []);
+  const t = (await chayLenhEl(env, '/menu', [])).text;
+  for (const muc of ['📊 <b>Xem</b>', '✅ <b>Duyệt đăng ký</b>', '🔢 <b>Cohort &amp; chỗ</b>',
+    '💰 <b>Học phí</b>', '📅 <b>Lịch học &amp; hồ sơ</b>', '🚦 <b>Trạng thái</b>',
+    '🎬 <b>Nội dung trên web</b>', '📢 <b>Thông báo trên web</b>', '🔗 <b>Trang link-in-bio</b>']) {
+    assert.ok(t.includes(muc), `menu thiếu mục ${muc}`);
+  }
+  assert.ok(t.includes('/slot <code>20</code>'), 'số chỗ phải là giá trị thật');
+  assert.ok(t.includes('/giasom <code>2500000</code>'));
+  assert.ok(t.includes('/lich <code>Thứ 3 &amp; 5 | 20h–22h</code>'));
+  assert.ok(t.includes('/slide <code>on</code>'), 'đang ẩn thì gợi ý bật lại');
+  assert.match(t, /\/dong — đóng đăng ký ⬅️/);
+  assert.ok(!/\/mo — đang mở đăng ký ⬅️/.test(t), 'chỉ một trạng thái được đánh dấu');
+  // Telegram cắt tin ở 4096 ký tự; lớp gửi tin cắt ở 4000.
+  assert.ok(t.length < 4000, `menu dài ${t.length} ký tự, sẽ bị cắt`);
+});
+
+/** Bắt sendDocument: thân tin là multipart nên không parse JSON như các lệnh khác. */
+function moFile() {
+  const got = [];
+  const that = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if (u.endsWith('/sendDocument')) {
+      const fd = init.body;
+      const f = fd.get('document');
+      // Blob.text() theo chuẩn tự bỏ BOM, mà BOM chính là thứ cần kiểm — nên giải mã thủ công.
+      const noiDung = new TextDecoder('utf-8', { ignoreBOM: true }).decode(await f.arrayBuffer());
+      got.push({ ten: f.name, noiDung, chuThich: fd.get('caption'), chat: fd.get('chat_id') });
+      return new Response('{"ok":true,"result":{}}');
+    }
+    return new Response('{"ok":true,"result":{}}');
+  };
+  return { got, thoi: () => { globalThis.fetch = that; } };
+}
+
+test('/xuat gửi file CSV đủ đăng ký, mở bằng Excel không lỗi tiếng Việt', async () => {
+  const f = moFile();
+  try {
+    const env = env0();
+    const { BOT_EL } = await import('../worker/src/botel.js');
+    await worker.fetch(new Request(API, { method: 'POST', body: JSON.stringify(NGUOI) }), env, moCtx());
+    await env.DB.prepare('UPDATE dang_ky SET muc_tieu = ?1, nghe = ?2').bind('Muốn "lên senior", đổi nghề', '=2+5').run();
+    const ctx = { tin: { chat: { id: Number(ADMIN) } }, guiFile: BOT_EL.guiFile };
+    const r = await chayLenhEl(env, '/xuat', [], ctx);
+    assert.equal(r.text, undefined, 'gửi file xong thì không nhắn thêm');
+    assert.equal(f.got.length, 1);
+    const { ten, noiDung, chuThich, chat } = f.got[0];
+    assert.equal(chat, ADMIN);
+    assert.match(ten, /^dangky-elevato-R\d{12}\.csv$/);
+    assert.ok(noiDung.startsWith('﻿Mã,Thời điểm,Cohort,Họ tên,'), 'thiếu BOM hoặc dòng tiêu đề');
+    const dong = noiDung.replace(/﻿/, '').trim().split('\r\n');
+    assert.equal(dong.length, 2);
+    assert.ok(dong[1].includes('Nguyễn Văn A'));
+    assert.ok(dong[1].includes('"Muốn ""lên senior"", đổi nghề"'), 'chưa thoát dấu ngoặc kép và dấu phẩy');
+    assert.ok(dong[1].includes("'=2+5"), 'chuỗi mở đầu bằng = phải chặn để Excel không tính như công thức');
+    assert.match(chuThich, /1 đăng ký/);
+    assert.match(chuThich, /⏳ chờ 1 · ✅ duyệt 0 · ❌ từ chối 0/);
+  } finally { f.thoi(); }
+});
+
+test('/xuat lúc chưa có ai thì nói thẳng, không gửi file rỗng', async () => {
+  const f = moFile();
+  try {
+    const r = await chayLenhEl(env0(), '/xuat', [], { tin: { chat: { id: 1 } }, guiFile: async () => ({ ok: true }) });
+    assert.match(r.text, /Chưa có đăng ký nào/);
+    assert.equal(f.got.length, 0);
+  } finally { f.thoi(); }
+});
+
+test('menu bot elevaTO: đúng khuôn Telegram, lệnh nào cũng chạy, và khớp bảng điều khiển', async () => {
+  const { MENU_EL } = await import('../worker/src/botel.js');
+  for (const { command, description } of MENU_EL) {
+    assert.match(command, /^[a-z0-9_]{1,32}$/, `tên lệnh "${command}" sai khuôn Telegram`);
+    assert.ok(description.length >= 3 && description.length <= 256, `mô tả "${command}" dài sai`);
+  }
+  assert.equal(new Set(MENU_EL.map((x) => x.command)).size, MENU_EL.length, 'không được trùng lệnh');
+
+  const f = moFetch();
+  try {
+    const env = env0();
+    for (const { command } of MENU_EL) {
+      const kq = await chayLenhEl(env, `/${command}`, [], { tin: { chat: { id: Number(ADMIN) } }, guiFile: async () => ({ ok: true }) });
+      assert.doesNotMatch(kq.text || '', /Không hiểu lệnh/, `/${command} không có trong bộ định tuyến`);
+    }
+    // Menu Telegram và bảng điều khiển phải kể cùng một bộ lệnh — sửa một chỗ là lộ ngay.
+    const t = (await chayLenhEl(env, '/menu', [])).text;
+    const trongBang = new Set((t.match(/(?<=^|\s)\/[a-z0-9_]+/g) || []).map((x) => x.slice(1)));
+    for (const { command } of MENU_EL) {
+      if (command === 'menu') continue;
+      assert.ok(trongBang.has(command), `/${command} có trong menu Telegram mà thiếu trong bảng điều khiển`);
+    }
+    for (const c of trongBang) {
+      assert.ok(MENU_EL.some((x) => x.command === c), `/${c} có trong bảng điều khiển mà thiếu trong menu Telegram`);
+    }
+  } finally { f.thoi(); }
+});
