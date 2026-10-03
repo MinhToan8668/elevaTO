@@ -454,3 +454,27 @@ test('bảng câu hỏi bot AI: lệnh nào cũng có thật, câu nào cũng đ
     }
   } finally { f.thoi(); }
 });
+
+test('điền nhầm số thẻ Visa thay vì số tài khoản thì bot cảnh báo, chứ không lặng lẽ dựng QR chết', async () => {
+  const { giongSoThe } = await import('../worker/src/ungho.js');
+  // Số thẻ thử nghiệm công khai của Visa / Mastercard.
+  assert.equal(giongSoThe('4111111111111111'), 'Visa');
+  assert.equal(giongSoThe('5555555555554444'), 'Mastercard');
+  // Không được bắt nhầm: số tài khoản thường, và thẻ nội địa NAPAS thì nằm ngoài phạm vi.
+  assert.equal(giongSoThe('1012345678'), '');
+  assert.equal(giongSoThe('1234567890123456'), '', '16 chữ số nhưng trượt Luhn thì là số tài khoản');
+  assert.equal(giongSoThe('9704000000000018'), '');
+
+  const f = moFetch();
+  try {
+    const env = env0();
+    await lenh(env, '/ungho vcb 4111111111111111 NGUYEN VAN A');
+    assert.match(cuoiTin(f).text, /trông giống <b>số thẻ Visa<\/b>/);
+    // Vẫn lưu — có ngân hàng cấp số tài khoản 16 chữ số thật, chặn nhầm còn tệ hơn.
+    const { thongTinUngHo } = await import('../worker/src/ungho.js');
+    assert.equal((await thongTinUngHo(env.DB)).stk, '4111111111111111');
+
+    await lenh(env, '/ungho vcb 1012345678 NGUYEN VAN A');
+    assert.doesNotMatch(cuoiTin(f).text, /số thẻ/, 'số tài khoản bình thường mà cũng kêu');
+  } finally { f.thoi(); }
+});
