@@ -211,6 +211,28 @@ test('quên mật khẩu: email chưa đăng ký vẫn trả "đã gửi" nhưng
     const r = await goi(env, { action: 'quenmk', email: 'khong-co@gmail.com' });
     assert.equal(r.data.daGui, true);
     assert.equal(f.thu.length, 0);
+    // Người xin không được biết, nhưng quản trị thì phải biết — nếu không, "bấm gửi, báo thành
+    // công, chờ mãi không thư" là hộp đen không ai gỡ được.
+    assert.match(f.nhan().join('\n'), /xin mã đặt lại mật khẩu cho <code>khong-co@gmail\.com<\/code> nhưng không có tài khoản/);
+  } finally { f.thoi(); }
+});
+
+test('quên mật khẩu: tài khoản chờ duyệt / bị khoá thì báo quản trị đúng lý do', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await goi(env, NGUOI);
+    await env.DB.prepare("UPDATE tai_khoan SET trangthai = 'cho'").run();
+    await goi(env, { action: 'quenmk', email: NGUOI.email });
+    assert.match(f.nhan().at(-1), /CHỜ DUYỆT/);
+    assert.equal(f.thu.length, 0);
+
+    // Mốc nhớ chặn báo trùng trong 30 phút — xoá đi để thử tiếp ca bị khoá.
+    await env.DB.prepare("DELETE FROM cai_dat WHERE khoa LIKE 'bao_%'").run();
+    await env.DB.prepare("UPDATE tai_khoan SET trangthai = 'off'").run();
+    await goi(env, { action: 'quenmk', email: NGUOI.email });
+    assert.match(f.nhan().at(-1), /KHOÁ/);
+    assert.equal(f.thu.length, 0);
   } finally { f.thoi(); }
 });
 

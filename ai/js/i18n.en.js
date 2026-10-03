@@ -282,7 +282,7 @@ export const EN = {
   'au.hide': 'Hide',
   'au.show.aria': 'Show password',
   'au.forgot': 'Forgot your password?',
-  'au.forgot.sub': 'Enter the email you registered with and we will send you a 6-digit code to set a new password.',
+  'au.forgot.sub': 'Enter the email you registered with and we will send you an 8-digit code to set a new password.',
   'au.code': 'Code from the email (8 digits)',
   'au.resend': 'Send a new code',
   'au.sendCode': 'Email me a code',
