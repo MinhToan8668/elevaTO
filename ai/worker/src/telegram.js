@@ -5,7 +5,7 @@ import { bamSHA, boMoiPhien, doiMK, hanNgay, khoaLuot, laGV, vaiTro } from './au
 import { demTK, docDem, suaTK, timTK, tkChoDuyet, tkMoiNhat, tkTheoMa } from './db.js';
 import { thongKeAI } from './gemini.js';
 import { esc, laChatQuanTri, taoBot, tgAdmins } from './tg.js';
-import { anUngHo, datUngHo, thongTinUngHo } from './ungho.js';
+import { anUngHo, datUngHo, giongSoThe, thongTinUngHo } from './ungho.js';
 
 export { esc, tgAdmins };
 
@@ -226,8 +226,13 @@ async function lenhUngHo(env, arg) {
   }
   try {
     const d = await datUngHo(env.DB, arg[0], arg[1], arg.slice(2).join(' '));
+    const the = giongSoThe(d.stk);
     return { text: `✔ Trang sẽ hiện: <b>${esc(d.bank)}</b> (BIN ${esc(d.bin)})\n🔢 <code>${esc(d.stk)}</code>`
-      + `\n👤 ${esc(d.chu_tk || '—')}\n\nXem lại tên ngân hàng xem có đúng không nhé — sai BIN là người ủng hộ quét QR không được.` };
+      + `\n👤 ${esc(d.chu_tk || '—')}\n\nXem lại tên ngân hàng xem có đúng không nhé — sai BIN là người ủng hộ quét QR không được.`
+      + (the ? `\n\n⚠️ Dãy số này trông giống <b>số thẻ ${esc(the)}</b> chứ không phải số tài khoản. `
+        + 'Chuyển khoản trong nước không tới được số thẻ quốc tế, mã QR sẽ chẳng ai trả được. '
+        + 'Số cần điền là <b>số tài khoản</b> ngân hàng — xem trong app ngân hàng, mục Tài khoản thanh toán.' : ''),
+      nut: NUT_UNG_HO };
   } catch (e) { return { text: `✘ ${esc(e.message)}` }; }
 }
 
@@ -295,8 +300,10 @@ const HOI = {
   '/ungho': {
     khi: async (env) => !(await thongTinUngHo(env.DB)),
     buoc: [
-      { hoi: 'Ngân hàng nào? Gõ mã ngắn (vcb, tcb, mb…) hoặc 6 chữ số BIN của NAPAS.', vd: 'vcb' },
-      { hoi: 'Số tài khoản là bao nhiêu?', vd: '1012345678' },
+      { hoi: 'Ngân hàng nào? Gõ mã ngắn: vcb, tcb, mb, acb…', vd: 'vcb',
+        goi: ng('Là ngân hàng mở tài khoản — không liên quan thẻ Visa hay thẻ nội địa. Ngân hàng lạ thì gõ 6 chữ số BIN.') },
+      { hoi: 'Số tài khoản là bao nhiêu?', vd: '1012345678',
+        goi: ng('Số TÀI KHOẢN ngân hàng, không phải dãy 16 số in trên thẻ.') },
       { hoi: 'Tên chủ tài khoản? Viết in hoa không dấu như trên thẻ.', vd: 'NGUYEN VAN A' },
     ],
   },

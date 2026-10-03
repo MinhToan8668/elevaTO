@@ -60,3 +60,31 @@ export async function datUngHo(db, nganHang, stk, chuTK, loiNhan) {
 }
 
 export const anUngHo = (db) => xoaCaiDat(db, 'UNG_HO');
+
+/** Luhn — phép kiểm tra số thẻ ngân hàng nào cũng dùng. */
+function luhn(s) {
+  let tong = 0;
+  for (let i = s.length - 1, n = 0; i >= 0; i -= 1, n += 1) {
+    let d = Number(s[i]);
+    if (n % 2) { d *= 2; if (d > 9) d -= 9; }
+    tong += d;
+  }
+  return tong % 10 === 0;
+}
+
+/**
+ * Đoán xem người dùng có điền nhầm SỐ THẺ thay vì số tài khoản không.
+ *
+ * Số thẻ dài 16 chữ số nên lọt qua mọi kiểm tra độ dài, mà chuyển khoản trong nước KHÔNG tới
+ * được số thẻ quốc tế — mã QR dựng ra vẫn hợp lệ về mặt kỹ thuật nhưng không ai trả được, và
+ * chẳng có gì báo cho mình biết. Chỉ CẢNH BÁO chứ không chặn: vài ngân hàng cấp số tài khoản 16
+ * chữ số thật, chặn nhầm thì còn tệ hơn.
+ *
+ * @returns tên loại thẻ đoán được, hoặc '' nếu trông như số tài khoản bình thường.
+ */
+export function giongSoThe(stk) {
+  const s = String(stk || '').replace(/\D/g, '');
+  if (s.length !== 16 || !luhn(s)) return '';
+  if (s.startsWith('9704')) return '';                 // thẻ nội địa NAPAS — nằm ngoài phạm vi ở đây
+  return { 2: 'Mastercard', 3: 'JCB', 4: 'Visa', 5: 'Mastercard' }[s[0]] || '';
+}
