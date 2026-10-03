@@ -261,8 +261,12 @@ test('Brevo lỗi thì báo quản trị chứ không im lặng', async () => {
 
 test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò', async () => {
   const xem = async (env) => (await (await worker.fetch(new Request(API), env, moCtx())).json()).cai;
-  assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot_ai: false, bot_el: false, mail: false });
-  assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot_ai: true, bot_el: true, mail: true });
+  assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot_ai: false, bot_el: false, mail: false,
+    thieu: ['GEMINI_KEYS', 'TG_SECRET', 'TG_ADMIN', 'TG_AI_TOKEN', 'TG_EL_TOKEN', 'BREVO_KEY', 'MAIL_TU'] });
+  assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot_ai: true, bot_el: true, mail: true, thieu: [] });
+  // "mail: false" một mình không nói thiếu cái nào trong hai — phải kể tên ra.
+  assert.deepEqual((await xem(env0({ GEMINI_KEYS: 'k', BREVO_KEY: '' }))).thieu, ['BREVO_KEY']);
+  assert.deepEqual((await xem(env0({ GEMINI_KEYS: 'k', MAIL_TU: '' }))).thieu, ['MAIL_TU']);
   // Thiếu đúng một mảnh của bot thì vẫn phải báo bot: false.
   assert.equal((await xem(env0({ TG_SECRET: '' }))).bot_ai, false, 'thiếu TG_SECRET');
   assert.equal((await xem(env0({ TG_AI_TOKEN: '' }))).bot_ai, false, 'thiếu token bot AI');

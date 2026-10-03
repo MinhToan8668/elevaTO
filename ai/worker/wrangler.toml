@@ -22,6 +22,11 @@ MAIL_TEN = "elevaTO AI BCTC"
 # băm tự ghi kèm số vòng của chính nó.
 BAM_VONG = "15000"
 
+# QUAN TRỌNG: mỗi lần deploy, Cloudflare lấy đúng danh sách [vars] ở trên làm chuẩn. Biến nào
+# thêm tay trong bảng điều khiển ở mục "Variables" (dạng chữ thường) mà không có ở đây thì lần
+# deploy sau bị XOÁ. Muốn thêm biến thì hoặc viết vào đây, hoặc đặt dạng Secret — Secret không bị
+# deploy đụng tới.
+#
 # ─────────────────────────────────────────────────────────────
 # Các giá trị BÍ MẬT không đặt ở đây (file này nằm trong repo).
 # Đặt bằng lệnh, mỗi lệnh hỏi giá trị rồi cất kín trong Cloudflare:

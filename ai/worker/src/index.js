@@ -64,14 +64,26 @@ export default {
 
 const BOT = [BOT_AI, BOT_EL];
 
-/** Phần nào đã cài. Chỉ nói CÓ hay CHƯA, không bao giờ lộ giá trị. */
+/**
+ * Phần nào đã cài. Chỉ nói CÓ hay CHƯA, không bao giờ lộ giá trị.
+ *
+ * `thieu` kể tên những biến còn trống, vì "mail: false" một mình không cho biết thiếu cái nào —
+ * mà mail cần tới hai biến. Chỉ là TÊN biến, không phải giá trị.
+ */
 function tinhTrang(env) {
   const coAdmin = !!(env.TG_SECRET && tgAdmins(env).length);
+  const can = {
+    GEMINI_KEYS: !!String(env.GEMINI_KEYS || '').trim(),
+    TG_SECRET: !!env.TG_SECRET, TG_ADMIN: !!tgAdmins(env).length,
+    TG_AI_TOKEN: !!env.TG_AI_TOKEN, TG_EL_TOKEN: !!env.TG_EL_TOKEN,
+    BREVO_KEY: !!env.BREVO_KEY, MAIL_TU: !!env.MAIL_TU,
+  };
   return {
-    ai: !!String(env.GEMINI_KEYS || '').trim(),
-    bot_ai: coAdmin && !!env.TG_AI_TOKEN,
-    bot_el: coAdmin && !!env.TG_EL_TOKEN,
-    mail: !!(env.BREVO_KEY && env.MAIL_TU),
+    ai: can.GEMINI_KEYS,
+    bot_ai: coAdmin && can.TG_AI_TOKEN,
+    bot_el: coAdmin && can.TG_EL_TOKEN,
+    mail: can.BREVO_KEY && can.MAIL_TU,
+    thieu: Object.keys(can).filter((k) => !can[k]),
   };
 }
 
