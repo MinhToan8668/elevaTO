@@ -50,6 +50,20 @@ export function taoBot({ ten, bien, nhan, menu, lenh, nut }) {
     return api(env, 'sendMessage', p);
   }
 
+  /** Gửi một file (Telegram đòi multipart, không nhận JSON như các lệnh khác). */
+  async function guiFile(env, chatId, ten, noiDung, chuThich) {
+    const t = token(env);
+    if (!t) return null;
+    const fd = new FormData();
+    fd.append('chat_id', String(chatId));
+    if (chuThich) { fd.append('caption', String(chuThich).slice(0, 1000)); fd.append('parse_mode', 'HTML'); }
+    fd.append('document', new Blob([noiDung], { type: 'text/csv;charset=utf-8' }), ten);
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${t}/sendDocument`, { method: 'POST', body: fd });
+      return await r.json();
+    } catch (e) { console.error(`Telegram ${ten}/sendDocument: ${String(e).split(t).join('***')}`); return null; }
+  }
+
   /** @returns true nếu ít nhất một người nhận được — chưa bấm Start với bot thì Telegram từ chối. */
   async function bao(env, text, banPhim) {
     let den = false;
@@ -122,10 +136,10 @@ export function taoBot({ ten, bien, nhan, menu, lenh, nut }) {
           || m.forward_origin || m.forward_date) return;
       const phan = m.text.trim().split(/\s+/);
       const ten0 = phan[0].replace(/@.*$/, '').toLowerCase();
-      const kq = await lenh(env, ten0, phan.slice(1), { tin: m, api, gui, bao });
+      const kq = await lenh(env, ten0, phan.slice(1), { tin: m, api, gui, bao, guiFile });
       if (kq && kq.text) await gui(env, m.chat.id, kq.text, kq.nut);
     } catch (e) { console.error(`nhanTin ${ten}: ${e}`); }
   }
 
-  return { ten, duong, nhan, menu, token, coCai, api, gui, bao, taoBao, ngo, nhanTin };
+  return { ten, duong, nhan, menu, token, coCai, api, gui, guiFile, bao, taoBao, ngo, nhanTin };
 }
