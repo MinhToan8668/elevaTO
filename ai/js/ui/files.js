@@ -12,6 +12,12 @@ import { openZip, loadXLSX } from '../libs.js';
 import { t } from '../i18n.js';
 
 const MAX_FILE = 200 * 1024 * 1024;
+/**
+ * Mở tối đa bao nhiêu BCTC một lúc. Một BCTC đã kiểm toán in sẵn HAI năm (năm nay + năm trước),
+ * nên hai file là vừa đủ bốn năm model cần. Người dùng hay kéo cả chục file nhiều năm vào một
+ * lượt — mỗi file tốn một lượt AI và làm trang nặng, mà mấy năm thừa ra cũng không dùng tới.
+ */
+const MAX_JOB = 2;
 const SHORT = (k) => (['BS', 'IS', 'CF', 'NOTES'].includes(k) ? t(`st.${k}`) : k === 'OTHER' ? '·' : '?');
 
 export function initFiles(store, ctx) {
@@ -28,14 +34,23 @@ export function initFiles(store, ctx) {
 
   async function addFiles(files) {
     const imgs = files.filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type));
+    // Đếm chỗ còn trống tại chỗ chứ không đọc lại store sau mỗi file: addPdf chạy bất đồng bộ,
+    // thả một lúc năm file thì cả năm cùng thấy store còn trống và lọt hết.
+    let con = MAX_JOB - store.get().jobs.length;
+    let bo = 0;
     for (const f of files) {
       if (imgs.includes(f)) continue;
       if (f.size > MAX_FILE) { toast(t('file.tooBig', { name: f.name })); continue; }
-      if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') await addPdf(f);
-      else if (/\.(xlsx|xlsm|xls|csv)$/i.test(f.name)) await addExcel(f);
-      else toast(t('file.skip', { name: f.name }));
+      const laPdf = /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+      const laExcel = /\.(xlsx|xlsm|xls|csv)$/i.test(f.name);
+      if (!laPdf && !laExcel) { toast(t('file.skip', { name: f.name })); continue; }
+      if (con <= 0) { bo += 1; continue; }
+      con -= 1;
+      if (laPdf) await addPdf(f); else await addExcel(f);
     }
-    if (imgs.length) addImages(imgs);
+    // Cả xấp ảnh chụp gộp thành MỘT báo cáo, nên chỉ tốn một chỗ.
+    if (imgs.length) { if (con > 0) { con -= 1; addImages(imgs); } else bo += 1; }
+    if (bo) toast(t('file.tooMany', { max: MAX_JOB, n: bo }));
   }
 
   async function addPdf(file) {
@@ -100,6 +115,20 @@ export function initFiles(store, ctx) {
     store.set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id), sources: s.sources.filter((x) => x.jobId !== id) }));
   };
 
+  /** Xoá sạch mọi thứ đang có để nhập báo cáo công ty khác. */
+  ctx.xoaHet = () => {
+    for (const j of store.get().jobs) {
+      const m = ctx.media.get(j.id);
+      m?.urls?.forEach((u) => URL.revokeObjectURL(u));
+      m?.pdf?.doc?.destroy?.();
+      ctx.forgetThumbs?.(j.id);
+    }
+    ctx.media.clear();
+    // Bỏ cả phiên đã lưu: không thì tải lại trang là công ty cũ hiện về ở dải "mở lại phiên".
+    ctx.quenPhien?.();
+    store.set({ jobs: [], sources: [], edits: [], ticks: null, segmentMap: {}, segmentNames: ['', '', '', '', ''] });
+  };
+
   watch(store, ['jobs', 'running', 'lang'], (s) => renderList(s, ctx));
 }
 
@@ -137,6 +166,13 @@ function renderList(s, ctx) {
       h('div', { class: 'nm', title: j.name }, j.name),
       h('div', { class: 'st' }, statusLine(j))),
     h('button', { class: 'btn ghost sm', 'aria-label': t('file.drop.aria', { name: j.name }), onclick: () => ctx.removeJob(j.id), disabled: s.running }, t('file.drop'))))));
+  mount($('#fileBar'), s.jobs.length ? h('div', { class: 'file-bar' },
+    h('span', { class: 'fine' }, t('file.slots', { n: Math.max(0, MAX_JOB - s.jobs.length), max: MAX_JOB })),
+    h('button', { class: 'btn ghost sm', disabled: s.running, onclick: () => {
+      if (!confirm(t('file.clearAsk'))) return;
+      ctx.xoaHet();
+      toast(t('file.cleared'));
+    } }, t('file.clear'))) : null);
   document.querySelector('.rail a[data-step="2"]').classList.toggle('done', s.jobs.some((j) => j.status !== 'error'));
 }
 

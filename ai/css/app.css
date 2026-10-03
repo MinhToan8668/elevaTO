@@ -538,6 +538,9 @@ dialog.viewer::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur
 .ug-vl { font-variant-numeric: tabular-nums; overflow-wrap: anywhere }
 .ug-qrbox { text-align: center; display: grid; gap: 6px; justify-items: center; min-width: 0 }
 .ug-tai { gap: 6px }
+
+/* Thanh dưới danh sách file: còn mấy chỗ, và nút xoá hết để nhập công ty khác */
+.file-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px}
 .ug-qr { width: 190px; height: 190px; border-radius: 10px; background: #fff; padding: 6px; box-shadow: 0 1px 4px rgb(0 0 0 / 12%) }
 .ug-amt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 16px }
 .ug-amt [aria-pressed='true'] { background: var(--em-soft); border-color: var(--em-line); color: var(--em-text); font-weight: 600 }
