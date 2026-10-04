@@ -62,7 +62,7 @@ a{color:var(--em-text)}
 :root[data-theme="dark"] .logo-light{display:none} :root[data-theme="dark"] .logo-dark{display:block}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-light{display:none} :root:not([data-theme="light"]) .logo-dark{display:block}}
 /* Chọn ngôn ngữ: cùng khối với nút sáng/tối trên đầu trang */
-.lang-sel{height:38px;padding:0 28px 0 11px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--text);
+.lang-sel{height:38px;padding:0 28px 0 11px;border:1px solid var(--line);border-radius:11px;background-color:var(--surface);color:var(--text);
   font:600 13px/1 var(--font);cursor:pointer;appearance:none;
   background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%235d6b65' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 9px center;background-size:12px}
@@ -409,7 +409,14 @@ table.k td .tag{white-space:normal}
   --chrome:#89e1c7; --deep:#e7f4ee;
   --base:var(--chrome);                      /* vẫn giữ tên cũ cho chỗ nào còn dùng tới */
   --blob1:rgba(24,203,150,.46); --blob2:rgba(34,211,238,.36); --blob3:rgba(99,102,241,.28); --blob4:rgba(250,204,21,.24);
-  --glass:rgba(255,255,255,.58); --glass-strong:rgba(255,255,255,.78); --glass-soft:rgba(255,255,255,.38);
+  --glass:rgba(255,255,255,.52); --glass-strong:rgba(255,255,255,.78); --glass-soft:rgba(255,255,255,.38);
+  /* Ba nấc kính, đục dần theo việc phải làm:
+       --glass      thẻ nội dung — chữ nhỏ, số liệu dày, cần nền đủ để đọc
+       --glass-nut  nút và ô chọn — chỉ có icon hay vài chữ to, tha hồ trong
+       --glass-top  thanh đầu trang KHI ĐÃ CUỘN — ở đỉnh trang nó trong suốt hẳn (xem .top)
+     Trang link-in-bio trong tới mức gần như không màu (tint ~3%) vì nó chỉ đứng yên cho người ta
+     ngắm; ở đây chữ phải đọc được nên thẻ nội dung giữ lại một chút nền. */
+  --glass-nut:rgba(255,255,255,.20); --glass-top:rgba(255,255,255,.82);
   --glass-line:rgba(255,255,255,.75); --glass-edge:rgba(16,40,30,.08);
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(255,255,255,.25);
   --glass-shadow:0 1px 1px rgba(16,40,30,.04), 0 12px 40px rgba(16,40,30,.10);
@@ -419,7 +426,8 @@ table.k td .tag{white-space:normal}
   :root:not([data-theme="light"]){
     --chrome:#0c7559; --deep:#04211b; --base:var(--chrome);
     --blob1:rgba(24,203,150,.42); --blob2:rgba(37,99,235,.34); --blob3:rgba(124,58,237,.30); --blob4:rgba(14,165,233,.22);
-    --glass:rgba(20,28,26,.55); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
+    --glass:rgba(20,28,26,.48); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
+    --glass-nut:rgba(255,255,255,.07); --glass-top:rgba(7,26,21,.86);
     --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
     --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
     --glass-shadow:0 1px 1px rgba(0,0,0,.3), 0 18px 50px rgba(0,0,0,.45);
@@ -428,7 +436,8 @@ table.k td .tag{white-space:normal}
 :root[data-theme="dark"]{
   --chrome:#0c7559; --deep:#04211b; --base:var(--chrome);
   --blob1:rgba(24,203,150,.42); --blob2:rgba(37,99,235,.34); --blob3:rgba(124,58,237,.30); --blob4:rgba(14,165,233,.22);
-  --glass:rgba(20,28,26,.55); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
+  --glass:rgba(20,28,26,.48); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
+  --glass-nut:rgba(255,255,255,.07); --glass-top:rgba(7,26,21,.86);
   --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
   --glass-shadow:0 1px 1px rgba(0,0,0,.3), 0 18px 50px rgba(0,0,0,.45);
@@ -479,7 +488,21 @@ body{background:var(--chrome);background-image:none}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .step::before,:root:not([data-theme="light"]) .auth-card::before,:root:not([data-theme="light"]) .cardx::before{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,0) 40%)}}
 .step{border-radius:24px}
 .auth-card{border-radius:28px;background:var(--glass-strong)}
-.top{border:0;border-bottom:1px solid var(--glass-line);box-shadow:var(--glass-hi);border-radius:0}
+/* Nút, ô chọn, thẻ nhỏ: chỉ có icon hay vài chữ to nên để trong hẳn — đây là chỗ nhìn ra
+   "kính" rõ nhất, đục quá thì thành mấy viên kẹo trắng dán lên nền.
+   Dùng background-COLOR chứ không phải lối rút gọn: ô chọn ngôn ngữ vẽ mũi tên bằng
+   background-image, viết rút gọn là xoá mất mũi tên. */
+.icon-btn,.acct summary,.btn.ghost,.lang-sel,.tabs,.sum .pc{background-color:var(--glass-nut)}
+.lang-sel{border-color:var(--glass-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+/* Thanh đầu trang có HAI trạng thái:
+     ở đỉnh trang — trong suốt hẳn, không viền không bóng, chìm vào nền gradient;
+     đã cuộn (.dinh, do app.js gắn) — hiện nền mờ để chữ bên dưới không xuyên qua đè lên logo.
+   Nền lúc cuộn đủ đục để đọc được NGAY CẢ KHI máy không vẽ nổi backdrop-filter — không đặt
+   cược chữ nghĩa vào một hiệu ứng có máy làm có máy không. */
+.top{border:0;box-shadow:none;border-radius:0;background:transparent;
+  -webkit-backdrop-filter:none;backdrop-filter:none;transition:background-color .25s var(--ease)}
+.top.dinh{background:var(--glass-top);
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 1px 0 var(--glass-line)}
 .rail a.active{box-shadow:var(--glass-hi),var(--glass-shadow)}
 .rail .hint{border-style:solid}
 .toast{background:var(--glass-strong);color:var(--strong);border-radius:16px}

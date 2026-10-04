@@ -30,6 +30,7 @@ initExtract(store, ctx);
 initReview(store, ctx);
 initExporter(store, ctx);
 railSpy();
+thanhDinh();
 initAuth(store, ctx, { onLogin: (me) => {
   offerRestore(me);
   autosave(me);
@@ -82,6 +83,22 @@ function autosave(user) {
       try { localStorage.setItem(LS_SESSION, serializeSession(store.get())); } catch (e) { /* hết chỗ / bị chặn: vẫn còn nút "Lưu phiên" */ }
     }, 800);
   });
+}
+
+/**
+ * Thanh đầu trang: ở ĐỈNH trang thì trong suốt hẳn, chìm vào nền; cuộn xuống mới hiện nền mờ.
+ *
+ * Để nó trong suốt cả lúc cuộn thì chữ bên dưới xuyên thẳng qua, đè lên logo. Mà để nền đục
+ * sẵn thì nó thành một dải dán đè lên trang, đúng chỗ nhìn gai mắt nhất — chính là màn hình
+ * người dùng hay chụp. Chia hai trạng thái là xong cả hai.
+ *
+ * Dùng mốc 1px + IntersectionObserver chứ không gắn trình nghe sự kiện cuộn: trình nghe cuộn
+ * chạy mỗi khung hình, mà trang này còn phải bóc PDF và vẽ bảng số.
+ */
+function thanhDinh() {
+  const moc = $('#topMoc'), thanh = document.querySelector('.top');
+  if (!moc || !thanh) return;
+  new IntersectionObserver(([e]) => thanh.classList.toggle('dinh', !e.isIntersecting)).observe(moc);
 }
 
 // Tô bước đang xem trên thanh bên trái.
