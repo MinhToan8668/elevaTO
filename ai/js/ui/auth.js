@@ -330,12 +330,20 @@ function renderAccount(ctx) {
     const prev = last;
     last = s.user;
     const box = $('#acct');
-    // Hai nhãn, CSS giấu bớt một: màn hẹp chỉ vừa "Đăng nhập", để nguyên "Đăng nhập / Đăng ký"
-    // là nút xuống hai dòng và đẩy vỡ cả thanh đầu trang.
+    // Ba hình dạng, CSS chọn cái vừa khổ màn: "Đăng nhập / Đăng ký" trên màn rộng, "Đăng nhập"
+    // trên màn vừa, và chỉ một hình người tròn 40px trên điện thoại. Giữ nguyên chữ ở điện
+    // thoại thì cụm phải rộng hơn cụm trái, logo căn giữa màn sẽ chồm lên nút. Vẫn bấm được
+    // bình thường, và aria-label giữ nguyên câu đầy đủ cho trình đọc màn hình.
     if (!s.user) {
-      mount(box, h('button', { class: 'btn sm acct-in', type: 'button', onclick: () => openAuth('') },
-        h('span', { class: 'acct-in-dai' }, t('au.signinUp')),
-        h('span', { class: 'acct-in-ngan' }, t('au.signinUp.ngan'))));
+      mount(box, h('button', {
+        class: 'btn sm acct-in', type: 'button', 'aria-label': t('au.signinUp'), title: t('au.signinUp'),
+        onclick: () => openAuth(''),
+      },
+      h('svg', { class: 'acct-in-ic', viewBox: '0 0 24 24', 'aria-hidden': 'true' },
+        h('circle', { cx: '12', cy: '8', r: '3.6' }),
+        h('path', { d: 'M4.8 20a7.2 7.2 0 0 1 14.4 0' })),
+      h('span', { class: 'acct-in-dai' }, t('au.signinUp')),
+      h('span', { class: 'acct-in-ngan' }, t('au.signinUp.ngan'))));
       return;
     }
     const me = s.user;

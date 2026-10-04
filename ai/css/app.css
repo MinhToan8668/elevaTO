@@ -51,8 +51,9 @@ a{color:var(--em-text)}
 /* ── Đầu trang ───────────────────────── */
 /* Ba cột: tên công cụ bên trái · logo elevaTO cỡ lớn chính giữa · nút điều khiển bên phải.
    Hai cột ngoài cùng rộng bằng nhau nên logo nằm đúng giữa thanh dù hai bên dài ngắn khác nhau. */
+html{background:var(--base)}
 .top{position:sticky;top:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:16px;
-  padding:10px max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left));
+  padding:max(10px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left));
   background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
 .brand{justify-self:center;display:block;text-decoration:none;color:inherit;border-radius:10px}
 .brand:focus-visible{outline:2px solid var(--em);outline-offset:4px}
@@ -73,8 +74,10 @@ a{color:var(--em-text)}
 .product b{font-size:15px;font-weight:800;color:var(--strong);letter-spacing:-.01em}
 .product small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-r{justify-self:end;display:flex;align-items:center;gap:10px}
+.top-g{display:flex;align-items:center;gap:10px}
 .acct-in{white-space:nowrap}
-.acct-in-ngan{display:none}
+.acct-in-ngan,.acct-in-ic{display:none}
+.acct-in-ic{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 .icon-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--field);background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:border-color .2s,transform .2s var(--ease)}
 .icon-btn:hover{border-color:var(--em)}
 .icon-btn:active{transform:scale(.94)}
@@ -235,12 +238,14 @@ details.pmap[open] > summary{margin-bottom:12px}
 .cardx h3 .tag{margin-left:8px;vertical-align:2px}
 
 /* Hai thẻ form ở bước 3 */
-.presets.forms{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+/* min(300px,100%): màn hẹp hơn 300px thì cột co theo khung chứ không chồm ra ngoài —
+   thiếu min() là hai thẻ form đẩy cả trang cuộn ngang ở máy 320px. */
+.presets.forms{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}
 .form-card b{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px}
 .form-card .tag{margin:0}
 .form-card.locked{cursor:not-allowed}
 .form-card.locked b{color:var(--muted)}
-.notes-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px 18px;padding:16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2)}
+.notes-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:10px 18px;padding:16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2)}
 
 /* ── Biểu đồ & chỉ số ─────────────────── */
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:14px;margin:14px 0}
@@ -310,7 +315,7 @@ table.g td input.ed{width:130px;text-align:right;background:var(--surface);borde
 .legend li i{margin-right:0;flex:0 0 auto}
 
 /* ── Thẻ thuyết minh & xuất ───────────── */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:14px}
 .cardx{border:1px solid var(--line);border-radius:var(--r-sm);padding:18px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
 .cardx h3{color:var(--strong);font-size:16px;font-weight:700}
 .cardx p{color:var(--muted);font-size:13.5px}
@@ -354,12 +359,23 @@ table.k td .tag{white-space:normal}
    tài khoản) vẫn rộng ~300px, cộng logo thành 441px — tràn khỏi màn 390px và nút đăng nhập bị
    đẩy lòi ra ngoài. Nay mỗi nút co lại thành một ô vuông 40px, chỉ còn chữ ở chỗ thật sự cần. */
 @media (max-width:560px){
+  /* Ba cột: sáng/tối + ngôn ngữ bên trái, LOGO Ở GIỮA, ủng hộ + tài khoản bên phải.
+     display:contents bỏ cái hộp .top-r đi để hai cụm con tự nhận cột của mình — không thì cả
+     bốn nút dính một cục bên phải và logo bị đẩy lệch hẳn sang trái. */
   .top{grid-template-columns:auto 1fr;gap:8px;
-    padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left))}
+    padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left))}
   .product{display:none}
-  .brand{justify-self:start}
+  .top-r{display:contents}
+  .top-g{gap:6px}
+  .top-g-l{grid-column:1;grid-row:1;justify-self:start}
+  .top-g-r{grid-column:2;grid-row:1;justify-self:end}
+  /* Logo nằm ĐÈ lên cả hàng rồi căn giữa, chứ không chiếm một cột riêng: hai cụm nút hai bên
+     rộng không bằng nhau (bên phải còn nút đăng nhập), để nó thành cột thì logo lệch hẳn sang
+     trái. Nằm chung một dòng lưới nên vẫn tự căn giữa theo chiều dọc như trước. */
+  .brand{grid-column:1/-1;grid-row:1;justify-self:center}
   .logo{height:34px}
-  .top-r{gap:6px}
+  /* Màn quá hẹp thì logo tự nhỏ lại thay vì chồm lên hai cụm nút. */
+  .logo{max-width:calc(100vw - 270px)}
   /* Ô ngôn ngữ chỉ còn mã hai chữ (VI / EN) — tên đầy đủ do chính <option> giữ. */
   .lang-sel{width:56px;height:40px;padding:0 17px 0 8px;font-size:12px;
     background-position:right 5px center;text-indent:0}
@@ -368,14 +384,15 @@ table.k td .tag{white-space:normal}
   .donate .donate-t{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
     clip-path:inset(50%);white-space:nowrap;border:0}
   .acct summary{padding:3px}
-  .acct-in-dai{display:none}
-  .acct-in-ngan{display:inline}
-  .acct-in{padding:9px 13px}
+  .acct-in-dai,.acct-in-ngan{display:none}
+  .acct-in-ic{display:block}
+  .acct-in{width:40px;height:40px;padding:0;border-radius:50%;justify-content:center;gap:0}
 }
 /* Màn rất hẹp (≤360px): logo nhỏ thêm một nấc cho đủ chỗ bốn nút bên phải. */
 @media (max-width:360px){
   .logo{height:30px}
-  .top-r{gap:5px}
+  .top-g{gap:5px}
+  .lang-sel{width:50px;padding-right:15px}
 }
 
 

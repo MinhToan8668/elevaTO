@@ -105,6 +105,7 @@ function initTheme() {
     const next = cur() === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem('elevato-theme', next); } catch (e) { /* bỏ qua */ }
+    window.datMauThanh?.();                  // dải trạng thái đổi theo, khỏi còn vệt đen trên đầu
     paint();
   });
   paint();

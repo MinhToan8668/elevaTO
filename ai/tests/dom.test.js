@@ -24,3 +24,4 @@ test('tên file an toàn', () => {
   assert.equal(safeName('CTCP A/B: "Q2"'), 'CTCP A B Q2');
   assert.equal(safeName(''), 'elevaTO');
 });
+

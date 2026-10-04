@@ -6,14 +6,20 @@
  * attrs: class, text, dataset {…}, on<event>, các thuộc tính DOM (value, checked, disabled, hidden, selected…) hoặc attribute thường.
  */
 export function h(tag, attrs = {}, ...children) {
-  const el = document.createElement(tag);
+  // Thẻ SVG phải dựng bằng createElementNS: createElement('svg') ra một thẻ HTML lạ, trình duyệt
+  // không vẽ gì cả — icon lặng lẽ biến mất mà chẳng có lỗi nào.
+  const svg = SVG_TAG.has(tag);
+  const el = svg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v === undefined || v === null || v === false) continue;
-    if (k === 'class') el.className = v;
-    else if (k === 'text') el.textContent = v;
+    if (k === 'text') el.textContent = v;
     else if (k === 'dataset') Object.assign(el.dataset, v);
     else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+    // SVGElement không có mấy thuộc tính DOM của HTML (className của nó còn chỉ đọc), nên
+    // bên SVG cái gì cũng đặt bằng setAttribute.
+    else if (svg) el.setAttribute(k, v === true ? '' : String(v));
+    else if (k === 'class') el.className = v;
     else if (k in PROPS) el[k] = v;
     else el.setAttribute(k, v === true ? '' : String(v));
   }
@@ -21,6 +27,8 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 const PROPS = { value: 1, checked: 1, disabled: 1, hidden: 1, selected: 1, multiple: 1, htmlFor: 1, title: 1 };
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const SVG_TAG = new Set(['svg', 'g', 'path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon', 'defs', 'use', 'text', 'tspan']);
 
 function append(el, children) {
   for (const c of children.flat(Infinity)) {
