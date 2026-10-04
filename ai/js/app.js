@@ -98,7 +98,20 @@ function autosave(user) {
 function thanhDinh() {
   const moc = $('#topMoc'), thanh = document.querySelector('.top');
   if (!moc || !thanh) return;
-  new IntersectionObserver(([e]) => thanh.classList.toggle('dinh', !e.isIntersecting)).observe(moc);
+  new IntersectionObserver(([e]) => {
+    const cuon = !e.isIntersecting;
+    thanh.classList.toggle('dinh', cuon);
+    // Gắn luôn lên thẻ gốc để CSS bật lớp nền .bg-top — nó là anh em ĐỨNG TRƯỚC .top nên không
+    // có bộ chọn nào với ngược lên được, trừ :has(); gắn một lớp ở gốc chắc ăn hơn và rẻ hơn.
+    document.documentElement.classList.toggle('da-cuon', cuon);
+  }).observe(moc);
+
+  // Nền lúc cuộn là lớp .bg-top — bản sao của nền trang, cắt lấy đúng dải cao bằng thanh này.
+  // Chiều cao ấy thay đổi theo bề ngang màn và cỡ chữ người dùng đặt, nên đo chứ không ghi cứng.
+  const doCao = () => document.documentElement.style.setProperty('--top-h', `${thanh.offsetHeight}px`);
+  doCao();
+  if (window.ResizeObserver) new ResizeObserver(doCao).observe(thanh);
+  else window.addEventListener('resize', doCao);
 }
 
 // Tô bước đang xem trên thanh bên trái.

@@ -410,13 +410,16 @@ table.k td .tag{white-space:normal}
   --base:var(--chrome);                      /* vẫn giữ tên cũ cho chỗ nào còn dùng tới */
   --blob1:rgba(24,203,150,.46); --blob2:rgba(34,211,238,.36); --blob3:rgba(99,102,241,.28); --blob4:rgba(250,204,21,.24);
   --glass:rgba(255,255,255,.52); --glass-strong:rgba(255,255,255,.78); --glass-soft:rgba(255,255,255,.38);
-  /* Ba nấc kính, đục dần theo việc phải làm:
+  /* Hai nấc kính, đục dần theo việc phải làm:
        --glass      thẻ nội dung — chữ nhỏ, số liệu dày, cần nền đủ để đọc
        --glass-nut  nút và ô chọn — chỉ có icon hay vài chữ to, tha hồ trong
-       --glass-top  thanh đầu trang KHI ĐÃ CUỘN — ở đỉnh trang nó trong suốt hẳn (xem .top)
      Trang link-in-bio trong tới mức gần như không màu (tint ~3%) vì nó chỉ đứng yên cho người ta
-     ngắm; ở đây chữ phải đọc được nên thẻ nội dung giữ lại một chút nền. */
-  --glass-nut:rgba(255,255,255,.20); --glass-top:rgba(255,255,255,.82);
+     ngắm; ở đây chữ phải đọc được nên thẻ nội dung giữ lại một chút nền.
+     Thanh đầu trang lúc đã cuộn không nằm trong bảng này — nó dùng hẳn một bản sao của lớp nền,
+     xem .bg-top. */
+  --glass-nut:rgba(255,255,255,.18);
+  --len:brightness(1.06) saturate(1.16); --len-w:1.4px;
+  --rim-a:rgba(255,255,255,.6); --rim-b:rgba(255,255,255,.05); --rim-c:rgba(255,255,255,.26);
   --glass-line:rgba(255,255,255,.75); --glass-edge:rgba(16,40,30,.08);
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(255,255,255,.25);
   --glass-shadow:0 1px 1px rgba(16,40,30,.04), 0 12px 40px rgba(16,40,30,.10);
@@ -427,7 +430,9 @@ table.k td .tag{white-space:normal}
     --chrome:#0c7559; --deep:#04211b; --base:var(--chrome);
     --blob1:rgba(24,203,150,.42); --blob2:rgba(37,99,235,.34); --blob3:rgba(124,58,237,.30); --blob4:rgba(14,165,233,.22);
     --glass:rgba(20,28,26,.48); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
-    --glass-nut:rgba(255,255,255,.07); --glass-top:rgba(7,26,21,.86);
+    --glass-nut:rgba(255,255,255,.06);
+    --len:brightness(1.22) saturate(1.2); --len-w:1.2px;
+    --rim-a:rgba(255,255,255,.34); --rim-b:rgba(255,255,255,.04); --rim-c:rgba(255,255,255,.16);
     --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
     --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
     --glass-shadow:0 1px 1px rgba(0,0,0,.3), 0 18px 50px rgba(0,0,0,.45);
@@ -437,7 +442,9 @@ table.k td .tag{white-space:normal}
   --chrome:#0c7559; --deep:#04211b; --base:var(--chrome);
   --blob1:rgba(24,203,150,.42); --blob2:rgba(37,99,235,.34); --blob3:rgba(124,58,237,.30); --blob4:rgba(14,165,233,.22);
   --glass:rgba(20,28,26,.48); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
-  --glass-nut:rgba(255,255,255,.07); --glass-top:rgba(7,26,21,.86);
+  --glass-nut:rgba(255,255,255,.06);
+  --len:brightness(1.22) saturate(1.2); --len-w:1.2px;
+  --rim-a:rgba(255,255,255,.34); --rim-b:rgba(255,255,255,.04); --rim-c:rgba(255,255,255,.16);
   --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
   --glass-shadow:0 1px 1px rgba(0,0,0,.3), 0 18px 50px rgba(0,0,0,.45);
@@ -475,6 +482,37 @@ body{background:var(--chrome);background-image:none}
 /* Máy yếu / màn nhỏ: nền đứng yên, bỏ lớp hạt (đỡ tốn pin, cuộn mượt) */
 @media (max-width:900px){.bg i{filter:blur(56px)} .bg::after{display:none}}
 
+/*
+ * NỀN CHO THANH ĐẦU TRANG KHI ĐÃ CUỘN — bản sao y hệt lớp .bg, cắt lấy đúng dải cao bằng thanh
+ * và đặt ngay dưới thanh (z-index 29 so với 30).
+ *
+ * Vì sao phải làm vòng vèo thế thay vì tô cho thanh một màu mờ:
+ *   • Tô màu mờ thì chữ bên dưới cuộn lên vẫn lòi qua, đè lên logo — đúng chỗ người dùng kêu.
+ *     Phải đục tới ~97% mới hết, mà đục thế thì không còn là kính nữa.
+ *   • Để backdrop-filter lo việc che thì không chắc ăn: đo trong hộp kiểm thử ở đây, lớp mờ của
+ *     THANH không vẽ (cùng trang đó một thẻ position:fixed chèn vào lại mờ bình thường), nên
+ *     không đặt cược chữ nghĩa vào nó.
+ *   • Tô một màu đặc duy nhất thì thành vệt cắt ngang: đo nền thật ở dải này, mép phải lệch tới
+ *     46/255 so với --chrome (sáng 182,235,218 — tối 7,71,56).
+ * Bản sao thì khớp từng điểm ảnh vì nó CHÍNH LÀ lớp nền ấy: cùng class, cùng position:fixed nên
+ * cùng hệ toạ độ theo khung nhìn, cùng bảng màu. Đặc 100% mà nhìn như trong suốt hoàn toàn.
+ *
+ * isolation:isolate cho cả hai: lớp hạt .bg::after trộn kiểu overlay, phải trộn với đúng phần
+ * nền của chính nó thì bản sao mới giống bản gốc. Với .bg gốc thì thêm dòng này không đổi gì
+ * (thứ nằm dưới nó cũng chính là nền ấy), với bản sao thì cần — không có nó, hạt sẽ trộn vào
+ * nội dung trang đang cuộn phía dưới.
+ *
+ * --top-h do app.js đo thanh rồi đặt (thanh cao bao nhiêu còn tuỳ bề ngang màn và cỡ chữ),
+ * .da-cuon cũng do app.js gắn lên thẻ gốc cùng lúc với .dinh của thanh.
+ */
+.bg,.bg-top{isolation:isolate}
+.bg-top{z-index:29;clip-path:inset(0 0 calc(100% - var(--top-h,56px)) 0);
+  opacity:0;transition:opacity .25s var(--ease)}
+/* Hai mảng màu neo ở chân trang không với tới dải trên cùng — so từng điểm ảnh giữa bản sao và
+   nền thật, bỏ chúng đi vẫn lệch nhiều nhất 2/255. Giữ bản sao gọn đúng phần nó thật sự vẽ. */
+.bg-top .b3,.bg-top .b4{display:none}
+.da-cuon .bg-top{opacity:1}
+
 /* Khung kính: nền trong mờ + viền sáng + ánh phản chiếu phía trên */
 .glass,.step,.auth-card,.top,.rail a.active,.rail .hint,.acct-pop,.viewer,.toast,.cardx,.pmap,.preset,.notes-pick,.banner,.seg,.tabs,.sum .pc,.icon-btn,.acct summary{
   background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
@@ -494,15 +532,35 @@ body{background:var(--chrome);background-image:none}
    background-image, viết rút gọn là xoá mất mũi tên. */
 .icon-btn,.acct summary,.btn.ghost,.lang-sel,.tabs,.sum .pc{background-color:var(--glass-nut)}
 .lang-sel{border-color:var(--glass-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
+/*
+ * Vành mép bẻ sáng — đây mới là thứ làm ra cảm giác "kính thật" kiểu iOS, bê từ trang
+ * link-in-bio sang (xem .lg::before trong links/css/links.css).
+ *
+ * Vành chỉ rộng hơn một pixel nhưng LÀM SÁNG thứ nằm phía sau nó, đúng cách kính bẻ ánh sáng ở
+ * rìa. Nhờ vậy kéo độ đục xuống gần 0 vẫn thấy rõ ranh giới tấm kính — không cần tô một lớp
+ * màu đục đè lên nền, vốn là lý do mấy cái nút trước đây nhìn như kẹo trắng.
+ *
+ * Vẽ bằng mask xor nên chỉ còn đúng một đường viền rỗng ruột; vệt sáng chéo chồng lên trên.
+ */
+.top-g .icon-btn,.top-g .btn,.top-g .lang-sel,.top-g .acct summary{position:relative;isolation:isolate}
+.top-g .icon-btn::after,.top-g .btn::after,.top-g .acct summary::after{
+  content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;padding:var(--len-w);pointer-events:none;
+  -webkit-backdrop-filter:var(--len);backdrop-filter:var(--len);
+  background:linear-gradient(135deg,var(--rim-a),var(--rim-b) 32%,transparent 50%,var(--rim-b) 68%,var(--rim-c));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
 /* Thanh đầu trang có HAI trạng thái:
      ở đỉnh trang — trong suốt hẳn, không viền không bóng, chìm vào nền gradient;
-     đã cuộn (.dinh, do app.js gắn) — hiện nền mờ để chữ bên dưới không xuyên qua đè lên logo.
-   Nền lúc cuộn đủ đục để đọc được NGAY CẢ KHI máy không vẽ nổi backdrop-filter — không đặt
-   cược chữ nghĩa vào một hiệu ứng có máy làm có máy không. */
+     đã cuộn (.dinh, do app.js gắn) — thêm đường kẻ chân, còn phần nền là lớp .bg-top phía trên.
+   Bản thân thanh KHÔNG bao giờ có nền riêng: tô mờ thì chữ lòi qua, tô đặc thì thành vệt cắt
+   ngang — xem phần .bg-top để biết vì sao chọn cách bản sao nền. */
+/* Mốc phải CÓ CHIỀU CAO THẬT. Để div rỗng (cao 0px) thì Safari không báo giao cắt bao giờ —
+   Chromium vẫn báo nên lỗi lọt qua hết bài kiểm thử, chỉ lòi ra trên iPhone thật: thanh đầu
+   trang không bao giờ chuyển sang trạng thái đã cuộn, chữ xuyên qua đè lên logo. */
+#topMoc{height:1px;pointer-events:none}
 .top{border:0;box-shadow:none;border-radius:0;background:transparent;
-  -webkit-backdrop-filter:none;backdrop-filter:none;transition:background-color .25s var(--ease)}
-.top.dinh{background:var(--glass-top);
-  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 1px 0 var(--glass-line)}
+  -webkit-backdrop-filter:none;backdrop-filter:none;transition:box-shadow .25s var(--ease)}
+.top.dinh{box-shadow:0 1px 0 var(--glass-line)}
 .rail a.active{box-shadow:var(--glass-hi),var(--glass-shadow)}
 .rail .hint{border-style:solid}
 .toast{background:var(--glass-strong);color:var(--strong);border-radius:16px}
@@ -589,9 +647,17 @@ dialog.viewer::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur
 }
 /* Nút phụ: viền đủ đậm trên nền sáng; nút bị khoá mờ hẳn */
 .btn.ghost{border-color:var(--field)}
-/* Nút ủng hộ đứng ngay cạnh nút sáng/tối nên phải cùng kiểu viền: viền đậm của nút phụ ở đây
-   trông như một vòng đen hở, lạc hẳn khỏi hàng nút. */
-.donate{border-color:var(--glass-line)}
+
+/*
+ * Nút trên thanh đầu trang: kính trong hẳn + viền bắt sáng, cùng một kiểu cho cả bốn nút.
+ *
+ * Phải viết SAU mấy quy tắc .btn.ghost phía trên VÀ lồng trong .top-g cho đủ sức ghi đè. Lần
+ * trước tôi viết ".donate{border-color:…}" — chỉ một lớp (0,1,0) nên thua ".btn.ghost" (0,2,0)
+ * và chẳng đổi được gì, nhìn ảnh chụp lại tưởng đã xong. Đo computed style mới lòi ra.
+ */
+.top-g .icon-btn,.top-g .btn.ghost,.top-g .lang-sel,.top-g .acct summary{
+  background-color:var(--glass-nut);border-color:var(--glass-line);
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 .btn:disabled,.btn.ghost:disabled{opacity:.42;cursor:not-allowed;filter:none;box-shadow:none;transform:none}
 
 /* ─── Ủng hộ ───────────────────────────────────────────── */

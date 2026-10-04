@@ -8,6 +8,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import zlib from 'node:zlib';
 import { readFile, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, extname, normalize } from 'node:path';
@@ -748,6 +749,107 @@ test('điện thoại: không trang nào cuộn ngang, và nút bấm đủ to c
       assert.ok(dau.icVe, `${may}: nút đăng nhập ra hình tròn rỗng, icon không vẽ được`);
       assert.ok(dau.mau >= 1, 'thiếu thẻ theme-color nên iOS để vệt đen trên đầu trang');
     }
+  }
+});
+
+/*
+ * Giải mã PNG thô (Playwright chỉ trả về PNG) rồi trả về độ lệch lớn nhất giữa hai tấm ảnh.
+ * Chỉ cần đủ cho ảnh Playwright chụp: màu thật 8 bit, có kênh alpha, một khối IDAT.
+ */
+function giaiPng(buf) {
+  let i = 8, w = 0, h = 0, kieu = 6, nen = [];
+  while (i < buf.length) {
+    const n = buf.readUInt32BE(i), loai = buf.toString('latin1', i + 4, i + 8);
+    if (loai === 'IHDR') { w = buf.readUInt32BE(i + 8); h = buf.readUInt32BE(i + 12); kieu = buf[i + 17]; }
+    else if (loai === 'IDAT') nen.push(buf.subarray(i + 8, i + 8 + n));
+    i += 12 + n;
+  }
+  const tho = zlib.inflateSync(Buffer.concat(nen));
+  const bpp = kieu === 6 ? 4 : 3, buoc = w * bpp, ra = Buffer.alloc(h * buoc);
+  let p = 0;
+  for (let y = 0; y < h; y++) {
+    const loc = tho[p++], dong = tho.subarray(p, p + buoc); p += buoc;
+    for (let x = 0; x < buoc; x++) {
+      const a = x >= bpp ? ra[y * buoc + x - bpp] : 0, b = y ? ra[(y - 1) * buoc + x] : 0;
+      const c = x >= bpp && y ? ra[(y - 1) * buoc + x - bpp] : 0;
+      let v = dong[x];
+      if (loc === 1) v += a; else if (loc === 2) v += b; else if (loc === 3) v += (a + b) >> 1;
+      else if (loc === 4) { const q = a + b - c, pa = Math.abs(q - a), pb = Math.abs(q - b), pc = Math.abs(q - c);
+        v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c); }
+      ra[y * buoc + x] = v & 255;
+    }
+  }
+  return { ra, w, h, bpp, buoc };
+}
+function soAnh(m, n) {
+  const A = giaiPng(m), B = giaiPng(n);
+  assert.equal(A.w, B.w); assert.equal(A.h, B.h);
+  let lech = 0, oDau = null;
+  for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) {
+    const q = y * A.buoc + x * A.bpp;
+    for (let k = 0; k < 3; k++) {
+      const d = Math.abs(A.ra[q + k] - B.ra[q + k]);
+      if (d > lech) { lech = d; oDau = `(${x},${y})`; }
+    }
+  }
+  return { lech, oDau };
+}
+
+/*
+ * Thanh đầu trang khi đã cuộn phải ĐẶC: chữ của trang cuộn lên không được lòi qua đè vào logo.
+ *
+ * Cách đo: chụp đúng dải thanh ở HAI vị trí cuộn khác nhau. Nền trang là lớp position:fixed nên
+ * không nhúc nhích, thanh cũng vậy — hai tấm phải giống nhau. Hễ có mẩu chữ nào của trang lọt
+ * qua thì nó đã trôi 140px giữa hai lần chụp, lệch ra ngay.
+ *
+ * So hai vị trí CÙNG đã cuộn chứ không so với lúc ở đỉnh trang: lúc ở đỉnh, thanh còn nằm trong
+ * dòng chảy nên nội dung của nó vẽ lệch đúng 1px so với lúc đã dính — đo ra rồi, không phải lỗi.
+ *
+ * Hai lỗi thật mà bài này canh:
+ *   • mốc #topMoc để rỗng (cao 0px): Safari không bao giờ báo giao cắt nên thanh không bao giờ
+ *     chuyển trạng thái — Chromium vẫn báo nên lỗi lọt hết bài kiểm thử, chỉ lòi trên iPhone.
+ *   • tô thanh bằng một lớp màu mờ: chữ vẫn xuyên qua, mà chính người dùng đã kêu.
+ */
+test('đã cuộn: thanh đầu trang đặc hẳn, chữ bên dưới không lòi lên đè vào logo', { timeout: 60_000 }, async () => {
+  const { page } = await newPage();
+  for (const [w, h, may] of [[390, 844, 'iPhone 12'], [1280, 800, 'máy bàn']]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto(`${base}/ai/`);
+    await page.waitForSelector('#app .step');
+
+    const moc = await page.evaluate(() => document.querySelector('#topMoc').getBoundingClientRect().height);
+    assert.ok(moc > 0, `${may}: mốc #topMoc cao 0px — Safari sẽ không bao giờ báo giao cắt`);
+
+    // Chờ thanh vẽ xong hẳn (ô ngôn ngữ và nút tài khoản dựng bằng JS sau khi trang hiện),
+    // không thì tấm chụp đầu bắt được lúc thanh còn dở dang và khác tấm sau vì lý do chẳng liên quan.
+    await page.waitForFunction(() => document.querySelector('#langSel')?.options.length > 0
+      && document.querySelector('#acct')?.children.length > 0);
+    await page.evaluate(() => document.fonts.ready);   // phông về muộn là chữ nhảy, hai tấm khác nhau
+    await page.waitForTimeout(300);
+    const cao = await page.evaluate(() => document.querySelector('.top').offsetHeight);
+    const dai = { x: 0, y: 0, width: w, height: cao };
+
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await page.waitForFunction(() => document.documentElement.classList.contains('da-cuon'));
+    await page.waitForTimeout(500);                   // chờ lớp nền hiện hết (chuyển trong .25s)
+
+    const sau = await page.evaluate(() => ({
+      topH: getComputedStyle(document.documentElement).getPropertyValue('--top-h').trim(),
+      cao: document.querySelector('.top').offsetHeight,
+      mo: getComputedStyle(document.querySelector('.bg-top')).opacity,
+    }));
+    assert.equal(sau.topH, `${sau.cao}px`, `${may}: --top-h không khớp chiều cao thanh`);
+    assert.equal(sau.mo, '1', `${may}: lớp nền .bg-top chưa hiện`);
+
+    const trenDinh = await page.screenshot({ clip: dai });
+    await page.evaluate(() => window.scrollTo(0, 740));
+    await page.waitForTimeout(300);
+    const daCuon = await page.screenshot({ clip: dai });
+    const { lech, oDau } = soAnh(trenDinh, daCuon);
+    // Ngưỡng 4/255: bản sao nền không khớp tuyệt đối tới từng bit (đo được lệch nhiều nhất 2),
+    // còn chữ lọt qua thì lệch hàng chục — khoảng cách giữa hai thứ rất rộng, không sợ nhầm.
+    assert.ok(lech <= 4,
+      `${may}: dải thanh đổi ${lech}/255 tại ${oDau} khi cuộn tiếp — có nội dung lọt vào sau lưng thanh`);
   }
 });
 
