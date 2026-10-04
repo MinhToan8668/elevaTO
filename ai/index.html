@@ -7,6 +7,11 @@
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="light dark">
+<!-- Tô dải trạng thái và thanh địa chỉ cùng màu nền trang, không thì iOS để một vệt đen
+     ngay trên đầu. Hai thẻ này lo lúc người dùng chưa chọn gì; bấm nút sáng/tối thì
+     theme.js thay bằng MỘT thẻ đúng giao diện đang chọn. Màu lấy từ --base trong CSS. -->
+<meta name="theme-color" content="#e9f1ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#04080a" media="(prefers-color-scheme: dark)">
 <title data-t="app.title">AI BCTC · elevaTO</title>
 <meta name="description" data-t-attr="content:app.desc" content="Công cụ AI của elevaTO: trích xuất báo cáo tài chính theo mẫu Thông tư 99/2025 và điền vào model forecast.">
 <link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
@@ -27,13 +32,17 @@
     <img class="logo logo-dark" src="../assets/logo-on-dark.svg" alt="elevaTO — Fuel Your Financial Journey" width="260" height="97">
   </a>
   <div class="top-r">
+    <div class="top-g top-g-l">
     <button class="icon-btn" id="themeBtn" type="button" data-t-attr="aria-label:app.theme.aria" aria-label="Đổi giao diện sáng / tối">
       <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
       <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8Z"/></svg>
     </button>
     <select class="lang-sel" id="langSel" data-t-attr="aria-label:app.lang.aria" aria-label="Ngôn ngữ"></select>
+    </div>
+    <div class="top-g top-g-r">
     <button class="btn ghost sm donate" id="donateBtn" type="button" data-t-attr="title:ug.btn.hint" title="Ủng hộ để tool chạy tiếp"><span aria-hidden="true">☕</span> <span class="donate-t" data-t="ug.btn">Ủng hộ</span></button>
     <div id="acct"></div>
+    </div>
   </div>
 </header>
 

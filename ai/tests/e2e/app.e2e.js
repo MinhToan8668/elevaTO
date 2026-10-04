@@ -695,7 +695,7 @@ test('mở tối đa 2 báo cáo một lúc, và nút xoá hết để nhập c�
 // + ủng hộ + đăng nhập thành 441px trên màn 390px: trang cuộn ngang được và nút đăng nhập bị đẩy
 // lòi ra ngoài mép. Bài này canh cả BỐN trang, ở ba khổ máy hay gặp nhất.
 test('điện thoại: không trang nào cuộn ngang, và nút bấm đủ to cho ngón tay', { timeout: 120_000 }, async () => {
-  const KHO = [[390, 844, 'iPhone 12'], [375, 667, 'iPhone SE'], [360, 740, 'Android nhỏ']];
+  const KHO = [[390, 844, 'iPhone 12'], [375, 667, 'iPhone SE'], [360, 740, 'Android nhỏ'], [320, 568, 'máy cũ hẹp nhất']];
   const TRANG = ['/ai/', '/', '/links/', '/links/edit.html'];
   const { page } = await newPage();
   for (const [w, h, may] of KHO) {
@@ -719,6 +719,26 @@ test('điện thoại: không trang nào cuộn ngang, và nút bấm đủ to c
       });
       assert.equal(r.tran, 0, `${duong} @ ${may} ${w}px: cuộn ngang ${r.tran}px`);
       assert.deepEqual(r.be, [], `${duong} @ ${may} ${w}px: nút nhỏ hơn 24px`);
+
+      // Thanh đầu trang AI: hai nút gọn bên trái, LOGO ĐÚNG GIỮA màn, không chồm lên nhau.
+      if (duong !== '/ai/') continue;
+      const dau = await page.evaluate(() => {
+        const o = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return [b.left, b.right]; };
+        const l = o('.top-g-l'), br = o('.brand'), rr = o('.top-g-r');
+        const ic = document.querySelector('.acct-in-ic');
+        return { lech: Math.round((br[0] + br[1]) / 2 - innerWidth / 2),
+          de: Math.round(Math.max(0, l[1] - br[0], br[1] - rr[0])),
+          traiTruocLogo: l[1] <= br[0], icVe: !!ic && ic.namespaceURI === 'http://www.w3.org/2000/svg'
+            && ic.getBoundingClientRect().width > 8,
+          mau: [...document.querySelectorAll('meta[name="theme-color"]')].length };
+      });
+      assert.ok(Math.abs(dau.lech) <= 1, `${may}: logo lệch ${dau.lech}px so với giữa màn`);
+      assert.equal(dau.de, 0, `${may}: logo chồm lên cụm nút ${dau.de}px`);
+      assert.ok(dau.traiTruocLogo, `${may}: cụm sáng/tối + ngôn ngữ phải nằm bên trái logo`);
+      // h('svg') bằng createElement ra thẻ HTML lạ, trình duyệt không vẽ gì — icon biến mất
+      // lặng lẽ, chẳng có lỗi nào. Đã dính đúng lỗi này một lần.
+      assert.ok(dau.icVe, `${may}: nút đăng nhập ra hình tròn rỗng, icon không vẽ được`);
+      assert.ok(dau.mau >= 1, 'thiếu thẻ theme-color nên iOS để vệt đen trên đầu trang');
     }
   }
 });
