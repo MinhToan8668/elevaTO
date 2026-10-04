@@ -59,15 +59,25 @@ async function moHop() {
   mount(than, tt ? await veHop(tt) : h('p', { class: 'msg warn' }, t('ug.none')));
 }
 
-/** Một dòng "nhãn — giá trị" kèm nút chép. */
+/**
+ * Một dòng "nhãn — giá trị" kèm nút chép. Trên điện thoại nút rút còn mỗi cái icon (CSS lo):
+ * để nguyên chữ "Chép" thì nó ăn hết bề ngang và "HUYNH MINH TOAN" phải xuống hai dòng.
+ */
 function dongChep(nhan, gt) {
   if (!gt) return null;
   return h('div', { class: 'ug-row' },
     h('span', { class: 'ug-lb' }, nhan),
     h('b', { class: 'ug-vl' }, gt),
-    h('button', { type: 'button', class: 'btn ghost sm', onclick: async () => {
-      try { await navigator.clipboard.writeText(gt); toast(t('ug.copied')); } catch (e) { toast(t('ug.copyFail')); }
-    } }, t('ug.copy')));
+    h('button', {
+      type: 'button', class: 'btn ghost sm ug-chep', title: t('ug.copy'), 'aria-label': `${t('ug.copy')} ${nhan}`,
+      onclick: async () => {
+        try { await navigator.clipboard.writeText(gt); toast(t('ug.copied')); } catch (e) { toast(t('ug.copyFail')); }
+      },
+    },
+    h('svg', { class: 'ug-chep-ic', viewBox: '0 0 24 24', 'aria-hidden': 'true' },
+      h('rect', { x: '9', y: '9', width: '11.5', height: '11.5', rx: '2.6' }),
+      h('path', { d: 'M15 5.6A2.6 2.6 0 0 0 12.4 3H6.6A3.6 3.6 0 0 0 3 6.6v5.8A2.6 2.6 0 0 0 5.6 15' })),
+    h('span', { class: 'ug-chep-t' }, t('ug.copy'))));
 }
 
 async function veHop(tt) {

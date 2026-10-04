@@ -542,6 +542,9 @@ dialog.viewer::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur
 }
 /* Nút phụ: viền đủ đậm trên nền sáng; nút bị khoá mờ hẳn */
 .btn.ghost{border-color:var(--field)}
+/* Nút ủng hộ đứng ngay cạnh nút sáng/tối nên phải cùng kiểu viền: viền đậm của nút phụ ở đây
+   trông như một vòng đen hở, lạc hẳn khỏi hàng nút. */
+.donate{border-color:var(--glass-line)}
 .btn:disabled,.btn.ghost:disabled{opacity:.42;cursor:not-allowed;filter:none;box-shadow:none;transform:none}
 
 /* ─── Ủng hộ ───────────────────────────────────────────── */
@@ -555,6 +558,8 @@ dialog.viewer::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur
 .ug-vl { font-variant-numeric: tabular-nums; overflow-wrap: anywhere }
 .ug-qrbox { text-align: center; display: grid; gap: 6px; justify-items: center; min-width: 0 }
 .ug-tai { gap: 6px }
+.ug-chep-ic { display: none; width: 16px; height: 16px; fill: none; stroke: currentColor;
+  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round }
 
 /* Thanh dưới danh sách file: còn mấy chỗ, và nút xoá hết để nhập công ty khác */
 .file-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px}
@@ -563,10 +568,24 @@ dialog.viewer::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur
 .ug-amt [aria-pressed='true'] { background: var(--em-soft); border-color: var(--em-line); color: var(--em-text); font-weight: 600 }
 .ug-free { margin-top: 14px }
 .ug-ct { margin-top: 10px }
+/* Điện thoại: hộp cao 860px trong khi màn chỉ còn 741px — phải cuộn mới thấy hết mức tiền và
+   dòng cuối. Thu gọn từng chỗ một để vừa trọn một màn. */
 @media (max-width: 560px) {
-  .ug-grid { grid-template-columns: minmax(0, 1fr) }
-  .ug-qrbox { max-width: 100% }
-  .ug-qrbox { justify-self: center }
+  .ug-grid { grid-template-columns: minmax(0, 1fr); gap: 14px }
+  .ug-qrbox { max-width: 100%; justify-self: center }
+  /* Chừa chỗ cho nút ✕ ở góc, không thì dòng tiêu đề chạy thẳng vào nó. */
+  .ugdlg h2 { font-size: 19px; line-height: 1.3; padding-right: 38px }
+  .ugdlg .auth-sub { font-size: 13px; margin: 6px 0 14px }
+  .ug-body { margin: 8px 0 }
+  .ug-lb { font-size: 12.5px }
+  /* Màn hẹp: "HUYNH MINH TOAN" không đủ chỗ nên xuống hai dòng — nhỏ một nấc là vừa một dòng. */
+  .ug-vl { font-size: 13.5px }
+  .ug-chep { width: 36px; height: 36px; padding: 0; border-radius: 50%; justify-content: center; gap: 0 }
+  .ug-chep-ic { display: block }
+  .ug-chep-t { display: none }
+  .ug-qr { width: 152px; height: 152px; padding: 5px }
+  .ug-amt { margin-top: 12px; gap: 6px }
+  .ug-free, .ug-ct { font-size: 12px; margin-top: 10px }
 }
 
 /* ─── Quên mật khẩu ────────────────────────────────────── */
