@@ -51,7 +51,6 @@ a{color:var(--em-text)}
 /* ── Đầu trang ───────────────────────── */
 /* Ba cột: tên công cụ bên trái · logo elevaTO cỡ lớn chính giữa · nút điều khiển bên phải.
    Hai cột ngoài cùng rộng bằng nhau nên logo nằm đúng giữa thanh dù hai bên dài ngắn khác nhau. */
-html{background:var(--base)}
 .top{position:sticky;top:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:16px;
   padding:max(10px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 10px max(20px,env(safe-area-inset-left));
   background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
@@ -399,9 +398,17 @@ table.k td .tag{white-space:normal}
 /* ════════════════════════════════════════════════════════════
    LIQUID GLASS — nền chuyển màu + khung kính mờ (kiểu iOS)
    ════════════════════════════════════════════════════════════ */
+/* Nền lấy đúng công thức của trang link-in-bio (links/css/links.css) — ở đó nhìn "liquid glass"
+   hơn hẳn vì hai lẽ:
+     --chrome  màu THẬT ở đỉnh trang. Dùng cho cả <html>/<body> (→ Safari tô dải trạng thái theo)
+               lẫn mép trên, nên trang không còn bắt đầu bằng một mảng xám phẳng.
+     --deep    màu đục nằm DƯỚI hai quầng sáng trong .bg. Không bao giờ lộ ra ngoài khung nhìn
+               nên cứ việc tối cho chữ nổi, mép trên vẫn mang màu sáng của --chrome.
+   Bản cũ thiếu cả hai: nền chỉ là một màu phẳng (--base) với mấy mảng màu nhỏ, nhạt. */
 :root{
-  --base:#e9f1ee;
-  --blob1:rgba(24,203,150,.42); --blob2:rgba(34,211,238,.30); --blob3:rgba(99,102,241,.22); --blob4:rgba(250,204,21,.18);
+  --chrome:#89e1c7; --deep:#e7f4ee;
+  --base:var(--chrome);                      /* vẫn giữ tên cũ cho chỗ nào còn dùng tới */
+  --blob1:rgba(24,203,150,.46); --blob2:rgba(34,211,238,.36); --blob3:rgba(99,102,241,.28); --blob4:rgba(250,204,21,.24);
   --glass:rgba(255,255,255,.58); --glass-strong:rgba(255,255,255,.78); --glass-soft:rgba(255,255,255,.38);
   --glass-line:rgba(255,255,255,.75); --glass-edge:rgba(16,40,30,.08);
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(255,255,255,.25);
@@ -410,8 +417,8 @@ table.k td .tag{white-space:normal}
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --base:#04080a;
-    --blob1:rgba(24,203,150,.30); --blob2:rgba(37,99,235,.26); --blob3:rgba(124,58,237,.24); --blob4:rgba(14,165,233,.14);
+    --chrome:#0c7559; --deep:#04211b; --base:var(--chrome);
+    --blob1:rgba(24,203,150,.42); --blob2:rgba(37,99,235,.34); --blob3:rgba(124,58,237,.30); --blob4:rgba(14,165,233,.22);
     --glass:rgba(20,28,26,.55); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
     --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
     --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
@@ -419,28 +426,45 @@ table.k td .tag{white-space:normal}
   }
 }
 :root[data-theme="dark"]{
-  --base:#04080a;
-  --blob1:rgba(24,203,150,.30); --blob2:rgba(37,99,235,.26); --blob3:rgba(124,58,237,.24); --blob4:rgba(14,165,233,.14);
+  --chrome:#0c7559; --deep:#04211b; --base:var(--chrome);
+  --blob1:rgba(24,203,150,.42); --blob2:rgba(37,99,235,.34); --blob3:rgba(124,58,237,.30); --blob4:rgba(14,165,233,.22);
   --glass:rgba(20,28,26,.55); --glass-strong:rgba(22,31,28,.78); --glass-soft:rgba(255,255,255,.05);
   --glass-line:rgba(255,255,255,.12); --glass-edge:rgba(0,0,0,.4);
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.03);
   --glass-shadow:0 1px 1px rgba(0,0,0,.3), 0 18px 50px rgba(0,0,0,.45);
 }
 
-body{background:var(--base);background-image:none}
-/* Nền: các mảng màu mờ trôi chậm + lớp hạt nhẹ cho đỡ phẳng */
-.bg{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
-.bg i{position:absolute;border-radius:50%;filter:blur(70px);will-change:transform;animation:drift 28s ease-in-out infinite alternate}
-.bg .b1{width:52vmax;height:52vmax;left:-12vmax;top:-18vmax;background:radial-gradient(circle,var(--blob1),transparent 65%)}
-.bg .b2{width:46vmax;height:46vmax;right:-14vmax;top:8vmax;background:radial-gradient(circle,var(--blob2),transparent 65%);animation-duration:34s;animation-delay:-8s}
-.bg .b3{width:50vmax;height:50vmax;left:18vmax;bottom:-26vmax;background:radial-gradient(circle,var(--blob3),transparent 65%);animation-duration:40s;animation-delay:-16s}
-.bg .b4{width:30vmax;height:30vmax;right:18vmax;bottom:6vmax;background:radial-gradient(circle,var(--blob4),transparent 65%);animation-duration:30s;animation-delay:-4s}
+/* KHÔNG đặt background cho <html>. Để trống thì nền của <body> được "đề bạt" lên thành nền của
+   cả khung vẽ — vừa phủ luôn vùng kéo quá đà, vừa để lớp .bg (z-index âm) nằm ĐÈ lên nó. Đặt nền
+   cho <html> là nền của <body> tụt xuống thành nền của một thẻ bình thường, phủ kín .bg, và cả
+   trang trở lại phẳng lì một màu — đã dính đúng lỗi này. */
+body{background:var(--chrome);background-image:none}
+/* Nền: hai quầng sáng ôm mép trên/dưới + các mảng màu mờ trôi chậm + lớp hạt cho đỡ phẳng.
+   Hai quầng trải hết bề ngang, đúng chỗ mấy mảng màu tròn đã tan hết trước khi tới nơi —
+   thiếu chúng là hở ra một dải nền trơn ở trên đầu và dưới chân trang. */
+.bg{position:fixed;inset:0;height:100lvh;z-index:-2;overflow:hidden;pointer-events:none;
+  background:radial-gradient(135% 42% at 50% -8%,var(--blob1) 0,transparent 72%),
+             radial-gradient(135% 38% at 50% 108%,var(--blob3) 0,transparent 72%),
+             var(--deep)}
+/* Nhoè rất mạnh + chỉ hai nấc màu: dải chuyển nhiều nấc trên mảng lớn sinh ra vệt lốm đốm
+   (banding) mà mắt đọc thành "nhiễu hạt". Nhoè đủ to thì nấc nào cũng tan hết.
+ *
+ * KHÔNG cho mấy mảng này trôi, dù trang link-in-bio có. Đo được: bốn mảng 70vmax nhoè 72px mà
+ * còn chạy animation thì trang tụt xuống 4,5 khung hình/giây; để tĩnh là 61,5. Trang link chỉ
+ * có mỗi việc đứng yên cho người ta ngắm nên gánh được, còn trang này vừa bóc PDF vừa vẽ ảnh
+ * thu nhỏ vừa dựng bảng số — luồng vẽ nhường cho công việc thật. Nhìn vẫn y hệt vì dải màu
+ * đứng yên trông không khác gì lúc đang trôi rất chậm. */
+.bg i{position:absolute;border-radius:50%;filter:blur(72px);opacity:.72}
+.bg .b1{width:70vmax;height:70vmax;left:-24vmax;top:-28vmax;background:radial-gradient(circle,var(--blob1) 0 34%,transparent 72%)}
+.bg .b2{width:58vmax;height:58vmax;right:-20vmax;top:6vmax;background:radial-gradient(circle,var(--blob2) 0 34%,transparent 72%);animation-duration:32s;animation-delay:-8s}
+.bg .b3{width:64vmax;height:64vmax;left:0;bottom:-32vmax;background:radial-gradient(circle,var(--blob3) 0 34%,transparent 72%);animation-duration:38s;animation-delay:-14s}
+.bg .b4{width:34vmax;height:34vmax;right:12vmax;bottom:2vmax;background:radial-gradient(circle,var(--blob4) 0 36%,transparent 74%);animation-duration:28s;animation-delay:-4s}
+:root[data-theme="dark"] .bg i{opacity:1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bg i{opacity:1}}
 .bg::after{content:'';position:absolute;inset:0;opacity:.35;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-@keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
-@media (prefers-reduced-motion:reduce){.bg i{animation:none}}
 /* Máy yếu / màn nhỏ: nền đứng yên, bỏ lớp hạt (đỡ tốn pin, cuộn mượt) */
-@media (max-width:900px){.bg i{animation:none;will-change:auto;filter:blur(56px)} .bg::after{display:none}}
+@media (max-width:900px){.bg i{filter:blur(56px)} .bg::after{display:none}}
 
 /* Khung kính: nền trong mờ + viền sáng + ánh phản chiếu phía trên */
 .glass,.step,.auth-card,.top,.rail a.active,.rail .hint,.acct-pop,.viewer,.toast,.cardx,.pmap,.preset,.notes-pick,.banner,.seg,.tabs,.sum .pc,.icon-btn,.acct summary{

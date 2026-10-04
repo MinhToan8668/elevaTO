@@ -12,12 +12,12 @@
    * chưa chọn gì. Nhưng bấm nút sáng/tối là sở thích của máy hết quyết định, nên lúc đó phải
    * gom về MỘT thẻ đúng giao diện đang chọn.
    *
-   * Màu đọc thẳng từ biến --base trong CSS (app.css nạp trước file này) nên không có mã màu nào
+   * Màu đọc thẳng từ biến --chrome trong CSS (app.css nạp trước file này) nên không có mã màu nào
    * chép lại ở đây — đổi bảng màu là dải trạng thái đổi theo.
    */
   window.datMauThanh = function (giaoDien) {
     var goc = document.documentElement;
-    var mau = getComputedStyle(goc).getPropertyValue('--base').trim();
+    var mau = getComputedStyle(goc).getPropertyValue('--chrome').trim();
     if (!mau) return;                       // CSS chưa sẵn sàng: để hai thẻ sẵn có lo
     var ds = document.querySelectorAll('meta[name="theme-color"]');
     for (var i = 1; i < ds.length; i++) ds[i].remove();

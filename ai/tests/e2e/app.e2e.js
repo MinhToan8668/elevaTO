@@ -668,11 +668,19 @@ test('mở tối đa 2 báo cáo một lúc, và nút xoá hết để nhập c�
 
   // Thả ba file một lượt: chỉ hai cái đầu vào, cái thứ ba phải báo rõ là bị bỏ chứ không im.
   await page.setInputFiles('#fileInput', [pdf, pdf, pdf]);
-  await page.waitForFunction(() => document.querySelectorAll('#fileList li').length === 2);
+  // Đợi ĐỌC XONG chứ không chỉ đợi dòng hiện ra: dòng hiện ngay lúc còn đang đọc, chốt ở đó là
+  // mấy phép kiểm bên dưới chạy trên trạng thái nửa chừng.
+  await page.waitForFunction(() => {
+    const ds = [...document.querySelectorAll('#fileList li')];
+    return ds.length === 2 && ds.every((li) => /\d+ trang/.test(li.textContent));
+  });
   await page.locator('#toast:has-text("bỏ qua 1 file")').waitFor();
   assert.match(await page.locator('#fileBar .fine').innerText(), /Còn 0 chỗ/);
 
-  // Đã đầy thì thêm nữa cũng không vào.
+  // Đã đầy thì thêm nữa cũng không vào. Đợi lời nhắn cũ TẮT HẲN rồi mới thả tiếp: hai lần thả
+  // cho ra đúng một câu chữ, nên nếu lời nhắn cũ còn trên màn thì phép chờ bên dưới đậu ngay
+  // mà chẳng chứng minh được gì.
+  await page.locator('#toast').waitFor({ state: 'hidden' });
   await page.setInputFiles('#fileInput', pdf);
   await page.locator('#toast:has-text("bỏ qua 1 file")').waitFor();
   assert.equal(await page.locator('#fileList li').count(), 2, 'đã đầy mà vẫn nhận thêm file');
