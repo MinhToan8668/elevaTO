@@ -144,15 +144,15 @@ test('mặc định --blur/--tint trong CSS trùng theme của data.json (khỏi
 
 // Mọi nền × sáng/tối phải có CẢ --chrome (màu thanh trạng thái) lẫn --base (màu trơn của khung
 // trình duyệt). Thiếu --base là iPhone hở dải gần đen ở thanh trạng thái và trên thanh công cụ.
-test('nền nào cũng có --chrome và --base, và thẻ theme-color dự phòng trùng nền mặc định', async () => {
+test('nền nào cũng có --chrome và --deep, và thẻ theme-color dự phòng trùng nền mặc định', async () => {
   const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-  const khoi = '\\{--chrome:#[0-9a-f]{6};--base:#[0-9a-f]{6}\\}';
+  const khoi = '\\{--chrome:#[0-9a-f]{6};--deep:#[0-9a-f]{6}\\}';
   for (const bg of Object.keys(BACKGROUNDS)) {
     if (bg === 'image') continue;               // nền ảnh tự chọn: không đoán trước được màu
     const chon = bg === 'aurora' ? '' : '\\[data-bg="' + bg + '"\\]';
-    assert.match(css, new RegExp(':root' + chon + khoi), 'thiếu --chrome/--base cho nền ' + bg);
-    assert.match(css, new RegExp('\\[data-theme="dark"\\]' + chon + khoi), 'thiếu --chrome/--base nền tối cho ' + bg);
+    assert.match(css, new RegExp(':root' + chon + khoi), 'thiếu --chrome/--deep cho nền ' + bg);
+    assert.match(css, new RegExp('\\[data-theme="dark"\\]' + chon + khoi), 'thiếu --chrome/--deep nền tối cho ' + bg);
   }
   const sang = css.match(/:root\{--chrome:(#[0-9a-f]{6})/)[1];
   const toi = css.match(/:root\[data-theme="dark"\]\{--chrome:(#[0-9a-f]{6})/)[1];
@@ -160,20 +160,26 @@ test('nền nào cũng có --chrome và --base, và thẻ theme-color dự phòn
   assert.ok(html.includes('content="' + toi + '" media="(prefers-color-scheme: dark)"'), 'thẻ theme-color tối lệch --chrome');
 });
 
-// iPhone vẽ trang ra sau thanh trạng thái và dưới thanh công cụ Safari, nhưng hai vùng đó nằm
-// NGOÀI khung mà position:fixed phủ tới — chúng lấy màu nền của canvas, tức --base. Nên --base
-// phải cùng tông với --chrome của chính nền ấy. Trước đây mọi nền dùng chung một --base gần đen,
-// thành ra iPhone hở hai dải đen trên/dưới, nhìn như trang bị đóng khung.
-test('--base của mỗi nền cùng tông với --chrome của nền đó, không phải một màu xám dùng chung', async () => {
+// iPhone tô thanh trạng thái theo MÀU NỀN CỦA BODY, không theo <meta name="theme-color">
+// (đo ảnh chụp máy thật: dải đó ra đúng #05090b của --base đời trước, sai lệch 1–4 đơn vị).
+// Nên nền body phải là --chrome — màu thật ở đỉnh trang — chứ không phải màu đục --deep.
+test('nền body là --chrome, và --deep luôn tối/nhạt hơn để nằm dưới hai quầng sáng', async () => {
   const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
+  assert.match(css, /\bbody\{[^}]*background:var\(--chrome\)/, 'nền body phải là --chrome, không thì iPhone hở dải lạc màu ở đỉnh');
+  assert.match(css, /\.bg\{[^}]*var\(--deep\)\}/s, '--deep phải là lớp đục cuối cùng của .bg');
+  assert.doesNotMatch(css, /var\(--base\)/, 'còn sót --base: hai vai trò đã tách thành --chrome và --deep');
+
   const doc = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   const troi = (c) => c.indexOf(Math.max(...c));          // kênh màu trội
+  const sang = (c) => c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114;
   let n = 0;
-  for (const m of css.matchAll(/(:root[^{]*)\{--chrome:(#[0-9a-f]{6});--base:(#[0-9a-f]{6})\}/g)) {
-    const [, sel, chrome, base] = m;
-    const c = doc(chrome); const b = doc(base);
-    assert.equal(troi(b), troi(c), sel + ': --base lệch tông so với --chrome');
-    assert.ok(Math.max(...b) - Math.min(...b) >= 8, sel + ': --base gần như xám, nhìn ra dải đen/trắng ở mép');
+  for (const m of css.matchAll(/(:root[^{]*)\{--chrome:(#[0-9a-f]{6});--deep:(#[0-9a-f]{6})\}/g)) {
+    const [, sel, chrome, deep] = m;
+    const c = doc(chrome); const d = doc(deep);
+    assert.equal(troi(d), troi(c), sel + ': --deep lệch tông so với --chrome');
+    assert.ok(Math.max(...c) - Math.min(...c) >= 8, sel + ': --chrome gần như xám, mép trên sẽ ra dải đen/trắng');
+    const toi = sel.includes('dark') || sel.includes('not([data-theme="light"])');
+    assert.ok(toi ? sang(d) < sang(c) : sang(d) > sang(c), sel + ': --deep phải tối hơn --chrome ở nền tối, sáng hơn ở nền sáng');
     n += 1;
   }
   assert.equal(n, 12, 'phải đủ 4 nền × (sáng + tối theo thuộc tính + tối theo máy)');

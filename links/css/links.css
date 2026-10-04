@@ -58,7 +58,7 @@
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
-body{min-height:100vh;min-height:100dvh;background:var(--base);color:var(--text);font:15px/1.5 var(--font);
+body{min-height:100vh;min-height:100dvh;background:var(--chrome);color:var(--text);font:15px/1.5 var(--font);
   -webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
@@ -67,27 +67,31 @@ img{display:block;max-width:100%}
 :focus-visible{outline:2px solid var(--em);outline-offset:3px}
 .offscreen{position:fixed;left:-9999px;top:0;opacity:0}
 
-/* --base là màu trơn của CẢ khung trình duyệt (nền body lan ra canvas), --chrome là màu đổ vào
-   <meta name="theme-color">. Cả hai phải đi theo nền chủ trang chọn: trước đây --base là một màu
-   gần đen dùng chung, nên hai mảng màu trôi (chúng tan hết trước khi tới mép) để hở dải đen ở
-   thanh trạng thái và trên thanh công cụ Safari — đúng chỗ người xem nhìn đầu tiên.
+/* iPhone KHÔNG tô thanh trạng thái theo <meta name="theme-color"> như tài liệu nói: đo lại ảnh
+   chụp máy thật thì dải đó ra đúng màu nền của body (sai lệch 1–4 đơn vị), không phải màu trong
+   thẻ meta. Nên nền body phải chính là màu thật ở đỉnh trang, không thì hở một dải lạc màu ngay
+   chỗ người xem nhìn đầu tiên — trước đây nền body là #05090b nên dải đó đen sì.
 
-   --chrome: chụp dải 3px sát mép trên ở ba khổ điện thoại (390x750, 430x880, 360x700) rồi lấy
-   trung bình — ba khổ chỉ lệch nhau 1–5 đơn vị nên một giá trị dùng chung là đủ.
-   Nền ảnh tự chọn thì không đoán được, dùng mặc định. */
-:root{--chrome:#89e1c7;--base:#e7f4ee}
-:root[data-bg="ocean"]{--chrome:#84cdf0;--base:#e5f0f8}
-:root[data-bg="sunset"]{--chrome:#f8b9bf;--base:#f8eeec}
-:root[data-bg="midnight"]{--chrome:#b0b2f5;--base:#ecedf9}
-:root[data-theme="dark"]{--chrome:#0c7559;--base:#04211b}
-:root[data-theme="dark"][data-bg="ocean"]{--chrome:#075f88;--base:#041c29}
-:root[data-theme="dark"][data-bg="sunset"]{--chrome:#8a3e47;--base:#291416}
-:root[data-theme="dark"][data-bg="midnight"]{--chrome:#383a90;--base:#121336}
+   Vì vậy ở đây mỗi nền × sáng/tối có hai màu, và chúng có vai trò khác hẳn nhau:
+     --chrome  màu thật ở đỉnh trang. Dùng cho CẢ nền body (→ Safari tô thanh trạng thái) lẫn thẻ
+               theme-color. Đo bằng cách chụp dải 3px sát mép trên ở ba khổ điện thoại
+               (390x750, 430x880, 360x700) rồi lấy trung bình — ba khổ chỉ lệch nhau 1–5 đơn vị.
+     --deep    màu đục nằm DƯỚI hai quầng sáng trong .bg. Không bao giờ lộ ra ngoài khung nhìn,
+               nên nó cứ việc tối để chữ nổi, còn mép trên vẫn mang màu sáng của --chrome.
+   Nền ảnh tự chọn thì không đoán trước được màu, dùng mặc định. */
+:root{--chrome:#89e1c7;--deep:#e7f4ee}
+:root[data-bg="ocean"]{--chrome:#84cdf0;--deep:#e5f0f8}
+:root[data-bg="sunset"]{--chrome:#f8b9bf;--deep:#f8eeec}
+:root[data-bg="midnight"]{--chrome:#b0b2f5;--deep:#ecedf9}
+:root[data-theme="dark"]{--chrome:#0c7559;--deep:#04211b}
+:root[data-theme="dark"][data-bg="ocean"]{--chrome:#075f88;--deep:#041c29}
+:root[data-theme="dark"][data-bg="sunset"]{--chrome:#8a3e47;--deep:#291416}
+:root[data-theme="dark"][data-bg="midnight"]{--chrome:#383a90;--deep:#121336}
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){--chrome:#0c7559;--base:#04211b}
-  :root:not([data-theme="light"])[data-bg="ocean"]{--chrome:#075f88;--base:#041c29}
-  :root:not([data-theme="light"])[data-bg="sunset"]{--chrome:#8a3e47;--base:#291416}
-  :root:not([data-theme="light"])[data-bg="midnight"]{--chrome:#383a90;--base:#121336}
+  :root:not([data-theme="light"]){--chrome:#0c7559;--deep:#04211b}
+  :root:not([data-theme="light"])[data-bg="ocean"]{--chrome:#075f88;--deep:#041c29}
+  :root:not([data-theme="light"])[data-bg="sunset"]{--chrome:#8a3e47;--deep:#291416}
+  :root:not([data-theme="light"])[data-bg="midnight"]{--chrome:#383a90;--deep:#121336}
 }
 
 /* ═══ NỀN: các mảng màu trôi chậm, hoặc ảnh nền tự chọn ═══ */
@@ -96,7 +100,8 @@ img{display:block;max-width:100%}
   /* Hai quầng này trải hết bề ngang và ôm sát hai mép trên/dưới — đúng chỗ mấy mảng màu tròn
      bên dưới tan hết trước khi tới nơi, trước đây để hở nền trơn gần đen. */
   background:radial-gradient(135% 42% at 50% -8%,var(--b1) 0,transparent 72%),
-             radial-gradient(135% 38% at 50% 108%,var(--b3) 0,transparent 72%)}
+             radial-gradient(135% 38% at 50% 108%,var(--b3) 0,transparent 72%),
+             var(--deep)}
 :root[data-bg="ocean"] .bg{--b1:rgba(14,165,233,.46); --b2:rgba(37,99,235,.37); --b3:rgba(20,184,166,.33); --b4:rgba(165,180,252,.3)}
 :root[data-bg="sunset"] .bg{--b1:rgba(251,113,133,.42); --b2:rgba(245,158,11,.37); --b3:rgba(168,85,247,.29); --b4:rgba(249,115,22,.28)}
 :root[data-bg="midnight"] .bg{--b1:rgba(99,102,241,.44); --b2:rgba(139,92,246,.36); --b3:rgba(14,165,233,.3); --b4:rgba(236,72,153,.25)}
