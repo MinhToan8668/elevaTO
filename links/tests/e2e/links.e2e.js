@@ -112,22 +112,34 @@ test('panel trang sửa vẫn đọc được dù chủ trang kéo kính trong s
   await p.context().close();
 });
 
+// Khổ thật của iPhone/Android trong Safari/Chrome SAU KHI thanh công cụ thu lại — tức là khổ
+// người xem thấy ngay từ cú vuốt đầu tiên. Lúc thanh công cụ còn mở, khung nhìn hụt gần 90px nên
+// máy nhỏ vẫn phải vuốt một cái; đó là giới hạn của trình duyệt, không phải của trang.
+// Đa số người xem vào từ bio TikTok nên khổ nào cũng phải vừa.
 test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
-  // Khổ thật của iPhone trong Safari sau khi trừ thanh công cụ. Đa số người xem vào từ bio TikTok.
-  const p = await page({ viewport: { width: 390, height: 750 } });
-  await p.goto(base + '/links/');
-  await p.waitForSelector('.tile.feature .live');
-  await p.waitForTimeout(400);
-  const d = await p.evaluate(() => ({
-    caTrang: Math.round(document.documentElement.scrollHeight), manHinh: innerHeight,
-    dayChanTrang: Math.round(document.querySelector('.foot').getBoundingClientRect().bottom),
-    soO: document.querySelectorAll('#grid .tile').length,
-  }));
-  assert.equal(d.soO, 5);
-  assert.ok(d.dayChanTrang <= d.manHinh, `chân trang rơi khỏi màn: ${d.dayChanTrang} > ${d.manHinh}`);
-  assert.ok(d.caTrang <= d.manHinh + 8, `trang tràn ${d.caTrang - d.manHinh}px so với màn`);
-  assert.deepEqual(p.errors, []);
-  await p.context().close();
+  // Mỗi máy đo hai trạng thái: thanh công cụ đang mở (khung nhìn hụt gần 90px, là lúc vừa mở
+  // trang) và đã thu (sau cú vuốt đầu). Trạng thái "đang mở" mới là cái bắt được lỗi chật chỗ.
+  const KHO = [['iPhone 13/14', 390, 664], ['iPhone 13/14 · đã thu', 390, 750],
+    ['iPhone 15/16 Pro', 393, 671], ['iPhone 15/16 Pro · đã thu', 393, 759],
+    ['iPhone 14 Plus', 428, 745], ['iPhone 14 Plus · đã thu', 428, 840],
+    ['iPhone 16 Pro Max', 430, 790], ['iPhone 16 Pro Max · đã thu', 430, 880],
+    ['Android · đã thu', 412, 732]];
+  for (const [ten, width, height] of KHO) {
+    const p = await page({ viewport: { width, height } });
+    await p.goto(base + '/links/');
+    await p.waitForSelector('.tile.feature .live');
+    await p.waitForTimeout(400);
+    const d = await p.evaluate(() => ({
+      caTrang: Math.round(document.documentElement.scrollHeight), manHinh: innerHeight,
+      dayChanTrang: Math.round(document.querySelector('.foot').getBoundingClientRect().bottom),
+      soO: document.querySelectorAll('#grid .tile').length,
+    }));
+    assert.equal(d.soO, 5, ten);
+    assert.ok(d.dayChanTrang <= d.manHinh, `${ten}: chân trang rơi khỏi màn: ${d.dayChanTrang} > ${d.manHinh}`);
+    assert.ok(d.caTrang <= d.manHinh + 8, `${ten}: trang tràn ${d.caTrang - d.manHinh}px so với màn`);
+    assert.deepEqual(p.errors, [], ten);
+    await p.context().close();
+  }
 });
 
 test('vào lại trang: không để data.json đè lên nội dung chủ trang đã đăng trong lúc chờ máy chủ', async () => {
