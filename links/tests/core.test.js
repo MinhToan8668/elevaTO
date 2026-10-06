@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, safeImg, socialUrl, normalize, brandDoc, mergeDraft, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, TMXK, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, brandDoc, mergeDraft, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, TMXK, TMXK_EMOJI, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError, ACCENTS, ACCENT_LABELS, BACKGROUNDS,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
@@ -269,8 +269,19 @@ test('bộ icon elevaTO và bộ icon cũ: mọi file đều có, là SVG 120×1
   assert.equal(Object.keys(GLASS).length, 16);
   assert.ok(Object.keys(CLASSIC).length >= 7);
   assert.deepEqual(ICON_LIBRARY.map((s) => [s.key, s.style]),
-    [['glass', 'photo'], ['tmxk', 'photo'], ['3d', 'icon'], ['classic', 'photo']]);
-  assert.equal(Object.keys(TMXK).length, 6);
+    [['glass', 'photo'], ['tmxk', 'photo'], ['tmxk-emoji', 'icon'], ['3d', 'icon'], ['classic', 'photo']]);
+  assert.deepEqual(Object.keys(TMXK), ['art/tmxk/mark.svg']);
+  // Emoji của TMXK phải là file WebP thật, đúng bộ Fluent 3D như mọi icon 3D khác.
+  for (const src of Object.keys(TMXK_EMOJI)) {
+    const buf = await readFile(new URL('../' + src, import.meta.url));
+    assert.equal(buf.subarray(8, 12).toString(), 'WEBP', src);
+    assert.ok(ICON3D[src], src + ' phải có trong bộ icon 3D chung');
+  }
+  // Bộ vẽ tay bản đầu đã bỏ: dữ liệu cũ trỏ vào chúng phải tự đổi sang logo thật / emoji.
+  for (const cu of ['lop', 'studio', 'teams', 'bot', 'kenh', 'kichban']) {
+    const img = mot({ links: [{ image: 'art/tmxk/' + cu + '.svg' }] }).links[0].image;
+    assert.ok(img === 'art/tmxk/mark.svg' || img.startsWith('art/3d/'), cu + ' → ' + img);
+  }
   for (const src of [...Object.keys(GLASS), ...Object.keys(TMXK), ...Object.keys(CLASSIC)]) {
     if (!src.endsWith('.svg')) continue;
     const svgText = await readFile(new URL('../' + src, import.meta.url), 'utf8');

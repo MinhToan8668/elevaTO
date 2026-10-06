@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120"><title>Tự Mình Xây Kênh</title><rect width="120" height="120" rx="36" fill="#26210f"/><g transform="translate(21 22) scale(1.22)"><g transform="rotate(-9 32 17)">
+    <rect x="19" y="11" width="26" height="12" rx="3" fill="#99df00"/>
+    <path d="M30 14.4v5.2a1 1 0 0 0 1.52.86l4.6-2.6a1 1 0 0 0 0-1.72l-4.6-2.6A1 1 0 0 0 30 14.4z" fill="#fdfdf6"/>
+  </g>
+  <rect x="19" y="28" width="26" height="12" rx="3" fill="#fdfdf6"/>
+  <rect x="4"  y="44" width="26" height="12" rx="3" fill="#fdfdf6"/>
+  <rect x="34" y="44" width="26" height="12" rx="3" fill="#fdfdf6"/></g></svg>

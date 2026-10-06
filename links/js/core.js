@@ -41,6 +41,7 @@ export const ICON3D = {
   [I3('spiral-calendar')]: 'Lịch', [I3('calendar')]: 'Lịch ngày', [I3('hot-beverage')]: 'Cà phê', [I3('wrapped-gift')]: 'Quà',
   [I3('party-popper')]: 'Ăn mừng', [I3('link')]: 'Liên kết', [I3('pushpin')]: 'Ghim', [I3('magnifying-glass-tilted-right')]: 'Tìm kiếm',
   [I3('gear')]: 'Cài đặt', [I3('key')]: 'Chìa khoá', [I3('locked')]: 'Khoá', [I3('compass')]: 'La bàn',
+  [I3('high-voltage')]: 'Tia sét', [I3('down-arrow')]: 'Mũi tên xuống',
 };
 // Logo Zalo chính chủ (ảnh thật của Zalo, không vẽ lại) — dùng chung cho mọi bộ icon.
 const ZALO = 'art/zalo.png';
@@ -53,11 +54,15 @@ export const GLASS = {
   [G('calendar')]: 'Lịch', [G('chat')]: 'Tin nhắn', [G('mail')]: 'Email', [G('money')]: 'Tiền',
   [G('book')]: 'Sách', [G('rocket')]: 'Tên lửa', [G('star')]: 'Ngôi sao', [G('phone')]: 'Điện thoại',
 };
-// Bộ icon của Tự Mình Xây Kênh (art/tmxk/) — nền màu đặc, viền mực dày, đúng tông giấy & lime.
-const K = (slug) => 'art/tmxk/' + slug + '.svg';
-export const TMXK = {
-  [K('lop')]: 'Lớp học', [K('studio')]: 'Viral Studio', [K('kichban')]: 'Kịch bản',
-  [K('teams')]: 'Nền Teams', [K('bot')]: 'Bot tải video', [K('kenh')]: 'Kênh TikTok',
+// Tự Mình Xây Kênh: dấu hiệu thương hiệu (ô mực, chồng gạch kem, viên lime mang nút play trên đỉnh)
+// và đúng bộ emoji mà trang TMXK dùng cho từng công cụ: ✨ Viral Studio, ⬇️ Tải video, 🎬 Soi video,
+// ⚡ Hook viral, 📝 Kịch bản, 🎯 Chấm video… Emoji lấy bản Fluent 3D cho mọi máy nhìn như nhau.
+export const TMXK = { 'art/tmxk/mark.svg': 'Logo Tự Mình Xây Kênh' };
+export const TMXK_EMOJI = {
+  [I3('sparkles')]: '✨ Viral Studio', [I3('down-arrow')]: '⬇️ Tải video', [I3('clapper-board')]: '🎬 Soi video',
+  [I3('high-voltage')]: '⚡ Hook viral', [I3('memo')]: '📝 Kịch bản', [I3('bullseye')]: '🎯 Chấm video',
+  [I3('magnifying-glass-tilted-right')]: '🔎 Soi kênh', [I3('speech-balloon')]: '💬 Cộng đồng',
+  [I3('graduation-cap')]: '🎓 Buổi live', [I3('desktop-computer')]: '🖥️ Nền Teams', [I3('video-camera')]: '🎥 Quay video',
 };
 
 // Bộ icon vẽ ở bản trước (art/classic/) — giữ lại để vẫn chọn được.
@@ -88,7 +93,8 @@ export function glassIconFor(link) {
 /** Các bộ icon có sẵn, theo thứ tự hiện trong trình chỉnh sửa. style: kiểu hiển thị khi chọn icon của bộ đó. */
 export const ICON_LIBRARY = [
   { key: 'glass', label: 'Bộ icon elevaTO', style: 'photo', items: GLASS },
-  { key: 'tmxk', label: 'Bộ icon Tự Mình Xây Kênh', style: 'photo', items: TMXK },
+  { key: 'tmxk', label: 'Logo Tự Mình Xây Kênh', style: 'photo', items: TMXK },
+  { key: 'tmxk-emoji', label: 'Emoji của TMXK', style: 'icon', items: TMXK_EMOJI },
   { key: '3d', label: 'Icon 3D', style: 'icon', items: ICON3D },
   { key: 'classic', label: 'Bộ icon cũ', style: 'photo', items: CLASSIC },
 ];
@@ -100,6 +106,10 @@ const LEGACY_ART = {
   'art/coffee.svg': I3('hot-beverage'),
   // Hai bản Zalo vẽ tay trước đây đã bỏ; dữ liệu cũ tự chuyển sang logo chính chủ.
   'art/zalo.svg': ZALO, 'art/glass/zalo.svg': ZALO,
+  // Bộ icon TMXK vẽ tay bản đầu đã bỏ (nhìn không ra TMXK) → logo thật và emoji của trang TMXK.
+  'art/tmxk/lop.svg': 'art/tmxk/mark.svg', 'art/tmxk/studio.svg': I3('sparkles'),
+  'art/tmxk/teams.svg': I3('desktop-computer'), 'art/tmxk/bot.svg': I3('down-arrow'),
+  'art/tmxk/kenh.svg': I3('clapper-board'), 'art/tmxk/kichban.svg': I3('memo'),
 };
 export const ACCENTS = {
   emerald: '#18cb96',
