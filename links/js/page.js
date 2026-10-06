@@ -83,6 +83,7 @@ function initials(name) {
 /* ── các ô link ───────────────────────────────── */
 function chip(l) {
   const img = safeImg(l.image);
+  if (!img && l.emoji) return h('span', { class: 'chip emo', 'aria-hidden': 'true' }, l.emoji);
   if (!img) return h('span', { class: 'chip', html: svg(l.icon) });
   // "icon": hình trong suốt đặt giữa ô màu nhấn; "photo": ảnh lấp kín ô.
   return h('span', { class: l.imageStyle === 'icon' ? 'chip ico' : 'chip img' },
@@ -102,6 +103,16 @@ function liveBlock(l) {
     h('div', { class: 'live-row small' }, h('span', {}, left), cohort.schedule ? h('span', {}, cohort.schedule) : null));
 }
 
+/** Lưới nút công cụ trong một ô. Nằm TRÊN lớp link phủ cả ô, nên bấm nút nào đi đúng công cụ đó. */
+function toolsBlock(l) {
+  const tools = l.tools.filter((t) => safeUrl(t.url));
+  if (!tools.length) return null;
+  return h('div', { class: 'tools' }, ...tools.map((t) => h('a', { class: 'tool', ...linkAttrs(t.url) },
+    t.emoji ? h('i', { 'aria-hidden': 'true' }, t.emoji) : null,
+    h('span', {}, t.label),
+    t.badge ? h('b', {}, t.badge) : null)));
+}
+
 function tile(l, i) {
   const sheet = opensSheet(l);
   const text = h('span', { class: 'txt' }, h('b', { class: 'ttl' }, l.title), l.subtitle ? h('small', { class: 'sub' }, l.subtitle) : null);
@@ -110,12 +121,14 @@ function tile(l, i) {
 
   if (l.size === 'feature') {
     // Ô nổi bật có 2 đích (cả ô + nút CTA) → không lồng <a> trong <a>: một lớp link phủ cả ô, nút CTA nằm trên nó.
-    el = h('article', { class: 'tile lg feature' },
+    const tools = toolsBlock(l);
+    el = h('article', { class: 'tile lg feature' + (tools ? ' has-tools' : '') },
       sheet
         ? h('button', { class: 'cover', type: 'button', 'aria-label': l.title })
         : h('a', { class: 'cover', ...linkAttrs(l.url), 'aria-label': l.title }),
       h('div', { class: 'f-top' }, chip(l), text, badge(l)),
       liveBlock(l),
+      tools,
       l.cta ? h('a', { class: 'cta', ...linkAttrs(safeUrl(l.ctaUrl) || l.url) }, l.cta, h('span', { html: svg('arrow') })) : null);
   } else {
     const attrs = { class: `tile lg ${l.size}` };

@@ -163,7 +163,17 @@ function linkCard(l, i, ds) {
           ['Icons8', 'https://icons8.com/icons'], ['Fluent Emoji 3D', 'https://github.com/microsoft/fluentui-emoji']] }),
     // Đổi icon nét / màu nhấn chỉ ảnh hưởng chip ở đầu thẻ → sửa tại chỗ, không vẽ lại cả form
     // (vẽ lại sẽ đóng mất ngăn chọn icon đang mở).
-    l.image ? null : iconPicker(l.icon, TILE_ICONS, (v) => { set('icon')(v); chip.innerHTML = svg(v); }),
+    field('Emoji', l.emoji, setRe('emoji'), { max: 8, placeholder: '✨',
+      hint: 'Không có ảnh thì ô hiện emoji này (kiểu icon của trang TMXK). Để trống thì dùng icon nét.' }),
+    l.image || l.emoji ? null : iconPicker(l.icon, TILE_ICONS, (v) => { set('icon')(v); chip.innerHTML = svg(v); }),
+    isFeature ? field('Bộ công cụ (mỗi dòng: emoji | tên | link | nhãn)',
+      l.tools.map((t) => [t.emoji, t.label, t.url, t.badge].join(' | ').replace(/( \| )+$/, '')).join('\n'),
+      (v) => update((d) => {
+        ds.lay(d)[i].tools = v.split('\n').map((r) => r.split('|').map((x) => x.trim()))
+          .filter((c) => c[1]).map(([emoji = '', label = '', url = '', badge = '']) => ({ emoji, label, url, badge }));
+      }),
+      { multiline: true, rows: 4, wide: true,
+        hint: 'Hiện thành lưới nút ngay trong ô, mỗi nút một link — như thẻ Viral Studio. Ví dụ: ⚡ | Hook viral | https://… | Mới' }) : null,
     swatches(l.accent, ACCENTS, ACCENT_LABELS, (v) => { set('accent')(v); chip.style.setProperty('--ac', ACCENTS[v]); }),
     isFeature ? h('div', { class: 'cols' },
       field('Chữ trên nút', l.cta, set('cta'), { max: 30, placeholder: 'Giữ chỗ' }),

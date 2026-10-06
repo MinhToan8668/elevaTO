@@ -366,3 +366,26 @@ test('nháp đời 1 ghép vào bản trên web: giữ chữ đã sửa, có đ�
   // Nháp đã đủ thương hiệu thì ghép lại không đổi gì.
   assert.equal(serialize(mergeDraft(ra, pub)), serialize(ra));
 });
+
+// Trang TMXK nằm ở /TikTok/ (T hoa). GitHub Pages phân biệt hoa thường: /tiktok/ là 404 — đã từng
+// lọt một lần, mọi nút bên Content đều dẫn vào trang lỗi.
+test('link TMXK trong data.json đều trỏ đúng /TikTok/, ô công cụ đủ nút và nút nào cũng có link', async () => {
+  const site = normalize(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
+  const tmxk = site.brands.find((b) => b.skin === 'paper');
+  const urls = tmxk.links.flatMap((l) => [l.url, l.ctaUrl, ...l.tools.map((t) => t.url)]).filter(Boolean);
+  assert.ok(urls.length >= 8);
+  for (const u of urls) assert.match(u, /^https:\/\/minhtoan8668\.github\.io\/TikTok\//, 'sai đường dẫn TMXK: ' + u);
+  const kit = tmxk.links.find((l) => l.tools.length);
+  assert.ok(kit, 'phải có ô bộ công cụ (Viral Studio)');
+  assert.ok(kit.tools.length >= 6);
+  for (const t of kit.tools) { assert.ok(t.emoji && t.label, JSON.stringify(t)); assert.ok(safeUrl(t.url), t.label); }
+});
+
+test('emoji và bộ công cụ: cắt độ dài, bỏ nút không tên, tối đa 8 nút', () => {
+  const [l] = mot({ links: [{ title: 'x', url: 'https://a.vn', emoji: '✨✨✨✨✨✨✨✨✨✨',
+    tools: [...Array(12)].map((_, i) => ({ label: 'Nút ' + i, url: 'https://a.vn/' + i })).concat([{ url: 'https://a.vn' }]) }] }).links;
+  assert.ok(l.emoji.length <= 8);
+  assert.equal(l.tools.length, 8);
+  assert.ok(l.tools.every((t) => t.label));
+  assert.deepEqual(mot({ links: [{ title: 'y' }] }).links[0].tools, []);
+});
