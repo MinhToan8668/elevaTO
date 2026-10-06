@@ -24,6 +24,8 @@
   --em-grad:linear-gradient(180deg,#3ee0b4,#16c08e);
   --em-glow:0 10px 24px -6px rgb(24 203 150 / .55), inset 0 1px 0 rgb(255 255 255 / .6), inset 0 -2px 0 rgb(0 0 0 / .08);
   --meter-grad:linear-gradient(90deg,#0f9e74,#18cb96,#5eead4);
+  --lens-a:rgb(255 255 255 / .82); --lens-b:rgb(255 255 255 / .42);
+  --lens-hi:rgb(255 255 255 / .95); --lens-lo:rgb(255 255 255 / .35);
   --sk:rgb(10 30 22 / .08);
   --ease:cubic-bezier(.22,1,.36,1);
   --spring:cubic-bezier(.34,1.56,.64,1);
@@ -44,6 +46,7 @@
     --len:brightness(1.1) saturate(1.12);   /* nền tối chỉ cần nhỉnh hơn một chút, quá tay là loá thành viền neon */
     --glass-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
     --sk:rgb(255 255 255 / .07);
+    --lens-a:rgb(255 255 255 / .2); --lens-b:rgb(255 255 255 / .07); --lens-hi:rgb(255 255 255 / .38); --lens-lo:rgb(255 255 255 / .08);
   }
 }
 :root[data-theme="dark"]{
@@ -58,6 +61,7 @@
   --len:brightness(1.1) saturate(1.12);   /* nền tối chỉ cần nhỉnh hơn một chút, quá tay là loá thành viền neon */
   --glass-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
   --sk:rgb(255 255 255 / .07);
+  --lens-a:rgb(255 255 255 / .2); --lens-b:rgb(255 255 255 / .07); --lens-hi:rgb(255 255 255 / .38); --lens-lo:rgb(255 255 255 / .08);
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -370,12 +374,18 @@ img{display:block;max-width:100%}
   border-radius:16px;background:linear-gradient(160deg,var(--glass),var(--glass-2));
   -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);backdrop-filter:blur(var(--blur)) saturate(150%);
   box-shadow:var(--glass-hi),var(--glass-shadow)}
-.sw-thumb{position:absolute;z-index:0;top:3px;bottom:3px;left:3px;border-radius:13px;background:var(--em);
-  box-shadow:0 4px 12px -3px rgb(10 30 22 / .35);transition:transform .42s var(--ease),background .3s}
+/* Con trượt là một thấu kính kính nổi trên rãnh — kiểu nút chọn của iOS 26 — chứ không phải một tấm
+   màu đặc: mép trên bắt sáng, nhoè và đậm màu thứ nằm dưới, chữ đang chọn mang màu thương hiệu. */
+.sw-thumb{position:absolute;z-index:0;top:3px;bottom:3px;left:3px;border-radius:13px;
+  background:linear-gradient(180deg,var(--lens-a),var(--lens-b));
+  -webkit-backdrop-filter:blur(10px) saturate(180%);backdrop-filter:blur(10px) saturate(180%);
+  box-shadow:inset 0 1px 0 var(--lens-hi),inset 0 -1px 0 var(--lens-lo),0 0 0 .5px var(--lens-hi),
+    0 6px 16px -6px rgb(10 30 22 / .35);
+  transition:transform .42s var(--ease),background .3s}
 .sw button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:7px;
   padding:9px 6px;border-radius:13px;font-family:var(--display);font-size:13.5px;font-weight:800;
   color:var(--muted);transition:color .3s,transform .2s var(--spring)}
-.sw button[aria-selected="true"]{color:var(--em-ink)}
+.sw button[aria-selected="true"]{color:var(--em-text)}
 .sw button:active{transform:scale(.96)}
 .sw .ic{width:15px;height:15px;flex:none}
 
@@ -404,8 +414,8 @@ img{display:block;max-width:100%}
   --glass-shadow:0 10px 26px -14px rgba(80,60,35,.5);
   --sk:rgba(28,38,0,.1);
   --brand-grad:linear-gradient(100deg,#4f7500,#2f4a00);
-  --em-grad:#99df00;
-  --em-glow:0 4px 0 rgb(95 140 0 / .45);
+  --em-grad:#26210f;
+  --em-glow:0 5px 0 rgb(38 33 15 / .25);
   --meter-grad:#99df00;
   --ranh:#f1d9c6;            /* giấy đậm — rãnh thanh tiến độ, để lime chạy trên nó thấy rõ */
 }
@@ -457,17 +467,50 @@ img{display:block;max-width:100%}
 :root[data-skin="paper"] .card{border-radius:16px}
 :root[data-skin="paper"] .tile{border-radius:12px}
 :root[data-skin="paper"] .tile::after{display:none}      /* vệt sáng quét ngang là ngôn ngữ của kính */
+/* Nút trên trang TMXK: viên thuốc kem, viền mực 2px, bóng cứng đổ thẳng xuống — bấm là lún. */
+:root[data-skin="paper"]{--nut-bg:#fffaf4; --nut-bd:#1c2600; --nut-sh:0 3px 0 #1c2600}
+:root[data-skin="paper"][data-theme="dark"]{--nut-bg:#272f14; --nut-bd:#99df00; --nut-sh:0 3px 0 rgb(0 0 0 / .55)}
+@media (prefers-color-scheme:dark){
+  :root[data-skin="paper"]:not([data-theme="light"]){--nut-bg:#272f14; --nut-bd:#99df00; --nut-sh:0 3px 0 rgb(0 0 0 / .55)}}
 :root[data-skin="paper"] .bar-r,
-:root[data-skin="paper"] .sw{border-radius:999px}
-:root[data-skin="paper"] .sw{background:var(--giay);border:1.5px solid var(--duong);
-  -webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 3px 0 var(--duong)}
+:root[data-skin="paper"] .soc{background:var(--nut-bg);border:2px solid var(--nut-bd);box-shadow:var(--nut-sh)}
+:root[data-skin="paper"] .bar-r{border-radius:999px}
+:root[data-skin="paper"] .soc{border-radius:14px;transition:transform .15s,box-shadow .15s}
+:root[data-skin="paper"] .soc:hover{transform:translateY(-2px);box-shadow:0 5px 0 var(--nut-bd)}
+:root[data-skin="paper"] .soc:active{transform:translateY(2px);box-shadow:0 1px 0 var(--nut-bd)}
+:root[data-skin="paper"] .bar-div{background:var(--nut-bd);opacity:.3}
+
+/* Công tắc: rãnh kem viền mực, con trượt là viên mực chữ lime — đúng viên nhãn "LỚP TIKTOK 30 NGÀY". */
+:root[data-skin="paper"] .sw{border-radius:999px;background:var(--nut-bg);border:2px solid var(--nut-bd);
+  -webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--nut-sh)}
 :root[data-skin="paper"] .sw button,
 :root[data-skin="paper"] .sw-thumb{border-radius:999px}
-:root[data-skin="paper"] .sw button{text-transform:uppercase;letter-spacing:.07em;font-size:12px}
-:root[data-skin="paper"] .sw-thumb{background:var(--strong);box-shadow:none}
-:root[data-skin="paper"] .sw button[aria-selected="true"]{color:var(--giay)}
+:root[data-skin="paper"] .sw button{text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+:root[data-skin="paper"] .sw-thumb{background:#26210f;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
+:root[data-skin="paper"] .sw button[aria-selected="true"]{color:#99df00}
 
-/* ảnh đại diện: vuông bo góc, viền mực, bóng lime lệch — không phải vòng sáng tròn */
+/* Thẻ nổi bật = "phiếu ghi danh": băng keo lime dán trên mép, như phiếu trên trang TMXK. */
+:root[data-skin="paper"] .tile.feature{overflow:visible;margin-top:10px}
+:root[data-skin="paper"] .tile.feature::before{content:'';display:block;position:absolute;z-index:6;inset:auto;
+  top:-11px;right:26px;left:auto;
+  width:78px;height:22px;transform:rotate(4deg);border-radius:2px;pointer-events:none;
+  background:rgb(153 223 0 / .55);border:1px solid rgb(95 140 0 / .3);-webkit-mask:none;mask:none;padding:0}
+/* ô logo trên phiếu: ô mực nghiêng có bóng cứng, y như dấu hiệu ở đầu trang TMXK */
+:root[data-skin="paper"] .tile.feature .chip.img{border-radius:30%;transform:rotate(-6deg);
+  box-shadow:0 5px 0 rgb(28 38 0 / .28),0 12px 20px -10px rgb(28 38 0 / .45)}
+/* nền tối: ô mực chìm vào thẻ rêu → viền lime mảnh cho nổi lên */
+:root[data-skin="paper"][data-theme="dark"] .tile.feature .chip.img{box-shadow:0 0 0 1.5px #99df00,0 5px 0 rgb(0 0 0 / .5)}
+@media (prefers-color-scheme:dark){
+  :root[data-skin="paper"]:not([data-theme="light"]) .tile.feature .chip.img{box-shadow:0 0 0 1.5px #99df00,0 5px 0 rgb(0 0 0 / .5)}}
+
+/* Ô emoji: giấy hồng nhạt viền mực, bóng cứng lệch — như mấy ô công cụ trên trang TMXK. */
+:root[data-skin="paper"] .chip.ico{background:#f9e8dd;border:1.5px solid var(--nut-bd);box-shadow:2px 2px 0 var(--nut-bd);
+  border-radius:12px}
+:root[data-skin="paper"] .chip.ico::before{display:none}
+:root[data-skin="paper"][data-theme="dark"] .chip.ico{background:rgb(255 255 255 / .07)}
+@media (prefers-color-scheme:dark){
+  :root[data-skin="paper"]:not([data-theme="light"]) .chip.ico{background:rgb(255 255 255 / .07)}}
+
 :root[data-skin="paper"] .ava-wrap{border-radius:14px;background:var(--em);padding:2px}
 :root[data-skin="paper"] .ava{border-radius:12px;box-shadow:0 0 0 1.5px var(--duong)}
 :root[data-skin="paper"] .ava-dot{border-color:var(--giay)}
@@ -478,11 +521,14 @@ img{display:block;max-width:100%}
 :root[data-skin="paper"] .stat+.stat{box-shadow:-1.5px 0 0 var(--duong-mo)}
 
 /* nhãn góc: pill viền rỗng, không phải viên màu đặc */
-:root[data-skin="paper"] .badge{background:none;border:1.5px solid var(--em-text);color:var(--em-text);
-  font-family:var(--display)}
+:root[data-skin="paper"] .badge{background:#ff4d1f;border:0;color:#fff;box-shadow:none;
+  font-family:var(--display);font-weight:800;letter-spacing:.08em;transform:rotate(-4deg)}
 /* nút chính: bóng cứng, nhấn xuống là lún — kiểu nút dán giấy của TMXK */
-:root[data-skin="paper"] .cta{border-radius:999px}
-:root[data-skin="paper"] .cta:active{transform:translateY(3px);box-shadow:0 1px 0 rgb(95 140 0 / .45)}
+:root[data-skin="paper"] .cta{border-radius:999px;color:#fdf3ea}
+:root[data-skin="paper"][data-theme="dark"] .cta{background:#99df00;color:#1c2600;box-shadow:0 5px 0 #4f7500}
+@media (prefers-color-scheme:dark){
+  :root[data-skin="paper"]:not([data-theme="light"]) .cta{background:#99df00;color:#1c2600;box-shadow:0 5px 0 #4f7500}}
+:root[data-skin="paper"] .cta:active{transform:translateY(3px);box-shadow:0 1px 0 rgb(38 33 15 / .25)}
 :root[data-skin="paper"] .meter{height:9px;border:1.5px solid var(--duong);background:var(--ranh);box-shadow:none}
 /* mấy dòng nhỏ viết tay: chữ ký của bộ nhận diện */
 :root[data-skin="paper"] .handle,
