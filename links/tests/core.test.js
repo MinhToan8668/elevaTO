@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, safeImg, socialUrl, normalize, brandDoc, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, TMXK, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, brandDoc, mergeDraft, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, TMXK, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError, ACCENTS, ACCENT_LABELS, BACKGROUNDS,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
@@ -332,4 +332,26 @@ test('token: dọn chuỗi dán vào và nhận ra ngay thứ chắc chắn khô
   assert.match(tokenProblem('MatKhauCuaToi@123'), /không phải token/);
   assert.match(tokenProblem('minhtoan@gmail.com'), /không phải token/);
   assert.equal(tokenProblem(''), 'Chưa có token.');
+});
+
+// Nháp soạn trước khi có nhiều thương hiệu: nạp thẳng thì trang sửa mất tab Content, chủ trang
+// muốn xem TMXK chỉ còn cách đổi lớp sơn của elevaTO → ra trang lai nhìn như lỗi.
+test('nháp đời 1 ghép vào bản trên web: giữ chữ đã sửa, có đủ thương hiệu, Zalo/CV về ô ghim', async () => {
+  const pub = normalize(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
+  const b0 = pub.brands[0];
+  const cu = { profile: { ...pub.profile, handle: b0.handle, tagline: 'Chữ chủ trang đã sửa trong nháp' },
+    stats: b0.stats, socials: pub.socials, theme: b0.theme, live: b0.live,
+    links: [...b0.links, ...pub.pinned.map((l) => ({ ...l, subtitle: l.subtitle + ' (đã sửa)' }))] };
+
+  const ra = mergeDraft(normalize(cu), pub);
+  assert.deepEqual(ra.brands.map((b) => b.id), pub.brands.map((b) => b.id), 'phải có đủ thương hiệu của bản trên web');
+  assert.equal(ra.brands[0].tagline, 'Chữ chủ trang đã sửa trong nháp', 'không được mất chữ đã sửa');
+  assert.equal(ra.brands[0].skin, 'glass', 'elevaTO giữ kính mờ');
+  assert.deepEqual(ra.pinned.map((l) => l.id), pub.pinned.map((l) => l.id), 'ô ghim đúng thứ tự trên web');
+  assert.ok(ra.pinned.every((l) => l.subtitle.endsWith('(đã sửa)')), 'ô ghim phải dùng bản đã sửa trong nháp');
+  const ghim = new Set(ra.pinned.map((l) => l.id));
+  assert.ok(!ra.brands[0].links.some((l) => ghim.has(l.id)), 'Zalo/CV không được nằm hai chỗ');
+
+  // Nháp đã đủ thương hiệu thì ghép lại không đổi gì.
+  assert.equal(serialize(mergeDraft(ra, pub)), serialize(ra));
 });

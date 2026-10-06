@@ -279,6 +279,27 @@ export function brandDoc(site, i) {
   };
 }
 
+/** Nháp soạn trước khi trang có nhiều thương hiệu chỉ biết MỘT thương hiệu. Nạp thẳng nó thì trang
+ *  sửa mất luôn tab Content (nháp luôn thắng bản trên web), và chủ trang muốn xem TMXK chỉ còn cách
+ *  đổi lớp sơn của chính elevaTO — ra một trang lai nhìn như lỗi. Ghép vào bản trên web: giữ nguyên
+ *  mọi chữ đã sửa trong nháp, bổ sung thương hiệu và ô ghim mà nháp chưa biết. */
+export function mergeDraft(draft, pub) {
+  const out = structuredClone(draft);
+  const ids = new Set(out.brands.map((b) => b.id));
+  for (const b of pub.brands) if (!ids.has(b.id)) out.brands.push(structuredClone(b));
+  out.brands = out.brands.slice(0, BRAND_MAX);
+  // Nháp đời 1 để Zalo / CV lẫn trong danh sách ô; bản trên web đã dời chúng sang ô ghim.
+  // Chuyển theo, dùng bản đã sửa trong nháp nếu có, giữ đúng thứ tự ghim trên web.
+  if (!out.pinned.length && pub.pinned.length) {
+    const ghim = new Set(pub.pinned.map((l) => l.id));
+    const b0 = out.brands[0];
+    const doi = b0.links.filter((l) => ghim.has(l.id));
+    b0.links = b0.links.filter((l) => !ghim.has(l.id));
+    out.pinned = pub.pinned.map((g) => doi.find((l) => l.id === g.id) || structuredClone(g));
+  }
+  return out;
+}
+
 /** Vị trí của thương hiệu mang id này; không có thì về thương hiệu đầu tiên. */
 export function brandIndex(site, id) {
   const i = site.brands.findIndex((b) => b.id === id);
