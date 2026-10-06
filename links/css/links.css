@@ -407,6 +407,7 @@ img{display:block;max-width:100%}
   --em-grad:#99df00;
   --em-glow:0 4px 0 rgb(95 140 0 / .45);
   --meter-grad:#99df00;
+  --ranh:#f1d9c6;            /* giấy đậm — rãnh thanh tiến độ, để lime chạy trên nó thấy rõ */
 }
 /* Nền lime phủ mọi lựa chọn "nền chủ trang": TMXK chỉ có một nền, đó là nhận diện của nó.
    Chọn lọc đủ 4 hạng để thắng mấy dòng --chrome/--deep theo từng nền ở đầu file. */
@@ -422,6 +423,7 @@ img{display:block;max-width:100%}
   --glass-shadow:0 10px 26px -14px rgb(0 0 0 / .7);
   --brand-grad:linear-gradient(100deg,#b6e84a,#8fd400);
   --em-glow:0 4px 0 rgb(20 30 0 / .6);
+  --ranh:#12170a;
 }
 @media (prefers-color-scheme:dark){
   :root[data-skin="paper"]:not([data-theme="light"]),
@@ -433,6 +435,7 @@ img{display:block;max-width:100%}
     --glass-shadow:0 10px 26px -14px rgb(0 0 0 / .7);
     --brand-grad:linear-gradient(100deg,#b6e84a,#8fd400);
     --em-glow:0 4px 0 rgb(20 30 0 / .6);
+    --ranh:#12170a;
   }
 }
 
@@ -480,7 +483,7 @@ img{display:block;max-width:100%}
 /* nút chính: bóng cứng, nhấn xuống là lún — kiểu nút dán giấy của TMXK */
 :root[data-skin="paper"] .cta{border-radius:999px}
 :root[data-skin="paper"] .cta:active{transform:translateY(3px);box-shadow:0 1px 0 rgb(95 140 0 / .45)}
-:root[data-skin="paper"] .meter{border:1.5px solid var(--duong);background:var(--deep)}
+:root[data-skin="paper"] .meter{height:9px;border:1.5px solid var(--duong);background:var(--ranh);box-shadow:none}
 /* mấy dòng nhỏ viết tay: chữ ký của bộ nhận diện */
 :root[data-skin="paper"] .handle,
 :root[data-skin="paper"] .pin-nh,
