@@ -67,8 +67,17 @@
       </div>
     </section>
 
+    <!-- Công tắc thương hiệu: JS chỉ dựng khi trang có từ hai thương hiệu trở lên. -->
+    <div class="sw" id="brands" role="tablist" aria-label="Chọn lĩnh vực" hidden></div>
+
     <section class="grid" id="grid" aria-label="Liên kết">
       <div class="tile lg sk-tile feature"></div><div class="tile lg sk-tile"></div><div class="tile lg sk-tile"></div>
+    </section>
+
+    <!-- Ô ghim: hiện ở mọi thương hiệu nên tách riêng, có vạch nhãn để thấy nó không đổi theo công tắc. -->
+    <section class="pinned" id="pinned" aria-labelledby="pinNh" hidden>
+      <p class="pin-nh" id="pinNh">Liên hệ</p>
+      <div class="grid" id="pinGrid"></div>
     </section>
 
     <p class="err" id="err" role="alert" hidden></p>

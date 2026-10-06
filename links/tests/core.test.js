@@ -2,10 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
-  safeUrl, safeImg, socialUrl, normalize, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
+  safeUrl, safeImg, socialUrl, normalize, brandDoc, glassIconFor, cleanToken, tokenProblem, THEME_DEFAULT, ICON3D, GLASS, TMXK, CLASSIC, ICON_LIBRARY, visibleLinks, visibleSocials, hiddenReason, opensSheet,
   cohortInfo, utf8ToBase64, serialize, githubError, ACCENTS, ACCENT_LABELS, BACKGROUNDS,
 } from '../js/core.js';
 import { ICONS, TILE_ICONS, svg } from '../js/icons.js';
+
+// Từ đời 2, normalize() trả về CẢ TRANG (nhiều thương hiệu). Phần lớn bài kiểm dưới đây quan tâm
+// một thương hiệu, nên đi qua helper này cho gọn: dữ liệu đời 1 → bản phẳng của thương hiệu đầu tiên.
+const mot = (raw) => brandDoc(normalize(raw), 0);
 
 test('safeUrl chỉ cho qua http(s), mailto, tel, sms và đường dẫn tương đối', () => {
   assert.equal(safeUrl('https://zalo.me/0901234567'), 'https://zalo.me/0901234567');
@@ -36,7 +40,7 @@ test('socialUrl đổi handle / số điện thoại thành link đầy đủ', 
 test('normalize điền đủ trường, chặn giá trị lạ, không sửa object gốc', () => {
   const raw = { profile: { name: '  Toàn ' }, links: [{ title: 'A', url: 'x', size: 'huge', accent: 'neon' }], stats: [{}, { value: '1' }] };
   const frozen = JSON.stringify(raw);
-  const d = normalize(raw);
+  const d = mot(raw);
   assert.equal(JSON.stringify(raw), frozen);
   assert.equal(d.profile.name, 'Toàn');
   assert.equal(d.profile.verified, true);
@@ -44,12 +48,12 @@ test('normalize điền đủ trường, chặn giá trị lạ, không sửa ob
   assert.equal(d.links[0].accent, 'emerald');
   assert.ok(d.links[0].id);
   assert.deepEqual(d.stats, [{ value: '1', label: '' }]);
-  assert.deepEqual(normalize(null).links, []);
-  assert.equal(normalize({ stats: Array(9).fill({ value: '1' }) }).stats.length, 4);
+  assert.deepEqual(mot(null).links, []);
+  assert.equal(mot({ stats: Array(9).fill({ value: '1' }) }).stats.length, 4);
 });
 
 test('ô thiếu link, bị tắt hoặc link độc hại không hiện ra — và trình chỉnh sửa nói rõ vì sao', () => {
-  const d = normalize({ links: [
+  const d = mot({ links: [
     { id: 'ok', title: 'Hiện', url: 'https://a.vn' },
     { id: 'empty', title: 'Trống', url: '' },
     { id: 'off', title: 'Tắt', url: 'https://a.vn', hidden: true },
@@ -61,12 +65,12 @@ test('ô thiếu link, bị tắt hoặc link độc hại không hiện ra — 
 });
 
 test('mạng xã hội để trống thì ẩn', () => {
-  const d = normalize({ socials: [{ type: 'tiktok', url: '@a' }, { type: 'facebook', url: '' }, { type: 'lạ', url: 'https://x.vn' }] });
+  const d = mot({ socials: [{ type: 'tiktok', url: '@a' }, { type: 'facebook', url: '' }, { type: 'lạ', url: 'https://x.vn' }] });
   assert.deepEqual(visibleSocials(d).map((s) => [s.type, s.href]), [['tiktok', 'https://www.tiktok.com/@a'], ['website', 'https://x.vn']]);
 });
 
 test('thẻ chi tiết chỉ mở khi đã bật và có nội dung', () => {
-  const [a, b, c] = normalize({ links: [
+  const [a, b, c] = mot({ links: [
     { details: { enabled: true, text: 'x' } },
     { details: { enabled: true } },
     { details: { enabled: false, bullets: ['y'] } },
@@ -107,13 +111,24 @@ test('serialize ổn định: chạy lại không đổi nội dung (để biế
   assert.equal(once, serialize(normalize(raw)));
 });
 
-test('data.json trong repo hợp lệ: icon có thật, ô nổi bật có số chỗ trực tiếp', async () => {
-  const d = normalize(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
-  for (const l of d.links) assert.ok(TILE_ICONS[l.icon], 'icon lạ: ' + l.icon);
-  for (const s of d.socials) assert.ok(s.type);
-  assert.ok(d.links.some((l) => l.size === 'feature' && l.live));
-  assert.match(d.live.api, /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/);
-  assert.ok(visibleLinks(d).length >= 4);
+test('data.json trong repo hợp lệ: mọi thương hiệu đủ ô, mã ?v= không trùng', async () => {
+  const site = normalize(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
+  assert.ok(site.brands.length >= 2, 'phải có ít nhất hai thương hiệu');
+  assert.deepEqual([...new Set(site.brands.map((b) => b.id))].length, site.brands.length, 'mã ?v= bị trùng');
+  for (const s of site.socials) assert.ok(s.type);
+  for (const l of site.pinned) assert.ok(TILE_ICONS[l.icon], 'icon lạ ở ô ghim: ' + l.icon);
+  assert.ok(visibleLinks({ links: site.pinned }).length >= 1, 'phải có ô ghim nào đó hiện được');
+
+  for (let i = 0; i < site.brands.length; i += 1) {
+    const d = brandDoc(site, i);
+    for (const l of d.links) assert.ok(TILE_ICONS[l.icon], d.id + ': icon lạ: ' + l.icon);
+    assert.ok(visibleLinks(d).length >= 3, d.id + ': ít ô quá, trang nhìn trống');
+    assert.ok(d.links.some((l) => l.size === 'feature'), d.id + ': thiếu ô nổi bật');
+  }
+  // Riêng thương hiệu tài chính mới nối số chỗ cohort trực tiếp từ Apps Script.
+  const fin = brandDoc(site, 0);
+  assert.ok(fin.links.some((l) => l.size === 'feature' && l.live));
+  assert.match(fin.live.api, /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/);
 });
 
 test('mọi icon chọn được đều có hình, svg() không bao giờ trả chuỗi rỗng', () => {
@@ -136,7 +151,7 @@ test('icon và màu nhấn nào cũng có nhãn tiếng Việt cho trình đọc
 // Hai bên lệch nhau là người xem thấy "giao diện cũ" rồi mới nhảy sang bản đúng.
 test('mặc định --blur/--tint trong CSS trùng theme của data.json (khỏi nháy lúc mới mở)', async () => {
   const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
-  const d = normalize(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
+  const d = mot(JSON.parse(await readFile(new URL('../data.json', import.meta.url), 'utf8')));
   const root = css.slice(css.indexOf(':root{'), css.indexOf('}', css.indexOf(':root{')));
   assert.match(root, new RegExp('--blur:' + d.theme.blur + 'px'), 'đổi theme trong data.json thì sửa cả mặc định trong CSS');
   assert.match(root, new RegExp('--tint:' + String(d.theme.tint / 100).replace(/^0/, '').replace('.', '\\.')));
@@ -173,16 +188,25 @@ test('nền body là --chrome, và --deep luôn tối/nhạt hơn để nằm d�
   const troi = (c) => c.indexOf(Math.max(...c));          // kênh màu trội
   const sang = (c) => c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114;
   let n = 0;
-  for (const m of css.matchAll(/(:root[^{]*)\{--chrome:(#[0-9a-f]{6});--deep:(#[0-9a-f]{6})\}/g)) {
+  let giay = 0;
+  for (const m of css.matchAll(/(:root[^{]*)\{\s*--chrome:(#[0-9a-f]{6});\s*--deep:(#[0-9a-f]{6})/g)) {
     const [, sel, chrome, deep] = m;
     const c = doc(chrome); const d = doc(deep);
     assert.equal(troi(d), troi(c), sel + ': --deep lệch tông so với --chrome');
     assert.ok(Math.max(...c) - Math.min(...c) >= 8, sel + ': --chrome gần như xám, mép trên sẽ ra dải đen/trắng');
+    // Lớp sơn "giấy" của TMXK phủ MỘT màu phẳng từ mép trên xuống mép dưới, không có quầng sáng
+    // nào nằm trên nền — nên ở đó --deep phải GẦN BẰNG --chrome, chứ không tối/sáng hơn.
+    if (sel.includes('data-skin="paper"')) {
+      assert.ok(Math.abs(sang(d) - sang(c)) < 30, sel + ': nền giấy phải phẳng một màu, --deep lệch --chrome quá xa');
+      giay += 1;
+      continue;
+    }
     const toi = sel.includes('dark') || sel.includes('not([data-theme="light"])');
     assert.ok(toi ? sang(d) < sang(c) : sang(d) > sang(c), sel + ': --deep phải tối hơn --chrome ở nền tối, sáng hơn ở nền sáng');
     n += 1;
   }
   assert.equal(n, 12, 'phải đủ 4 nền × (sáng + tối theo thuộc tính + tối theo máy)');
+  assert.ok(giay >= 2, 'lớp sơn giấy phải khai --chrome/--deep cho cả sáng lẫn tối');
 });
 
 test('lỗi GitHub ra câu dễ hiểu', () => {
@@ -205,7 +229,7 @@ test('link gõ thiếu https:// được tự thêm; link sang trang khác giả
 });
 
 test('tên kiểu prototype trong data.json không làm sập trang', () => {
-  const d = normalize({ socials: [{ type: 'constructor', url: 'https://x.vn' }, { type: 'toString', url: '@a' }],
+  const d = mot({ socials: [{ type: 'constructor', url: 'https://x.vn' }, { type: 'toString', url: '@a' }],
     links: [{ title: 'A', url: 'https://a.vn', accent: 'constructor', icon: '__proto__' }] });
   assert.deepEqual(d.socials.map((s) => s.type), ['website', 'website']);
   assert.equal(visibleSocials(d).length, 2);
@@ -215,22 +239,22 @@ test('tên kiểu prototype trong data.json không làm sập trang', () => {
 });
 
 test('nút CTA có link độc hại thì trình chỉnh sửa báo', () => {
-  const [l] = normalize({ links: [{ title: 'A', url: 'https://a.vn', size: 'feature', ctaUrl: 'javascript:alert(1)' }] }).links;
+  const [l] = mot({ links: [{ title: 'A', url: 'https://a.vn', size: 'feature', ctaUrl: 'javascript:alert(1)' }] }).links;
   assert.equal(hiddenReason(l), 'Link của nút không hợp lệ');
 });
 
 test('theme: độ mờ, độ đục bị kẹp trong khoảng cho phép; nền lạ quay về mặc định', () => {
-  assert.deepEqual(normalize({}).theme, THEME_DEFAULT);
-  const t = normalize({ theme: { blur: 999, tint: -5, background: 'neon' } }).theme;
+  assert.deepEqual(mot({}).theme, THEME_DEFAULT);
+  const t = mot({ theme: { blur: 999, tint: -5, background: 'neon' } }).theme;
   assert.equal(t.blur, 48);
   assert.equal(t.tint, 0);     // 0 = kính trong suốt hẳn, vẫn thấy tấm kính nhờ vành mép bẻ sáng
   assert.equal(t.background, 'aurora');
-  assert.equal(normalize({ theme: { blur: '12.6' } }).theme.blur, 13);
+  assert.equal(mot({ theme: { blur: '12.6' } }).theme.blur, 13);
 });
 
 test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụt; HTML nhúng và script bị chặn', () => {
   const big = 'data:image/webp;base64,' + 'A'.repeat(120000);
-  const d = normalize({ profile: { avatar: big }, links: [{ title: 'x', url: 'https://a.vn', image: big }] });
+  const d = mot({ profile: { avatar: big }, links: [{ title: 'x', url: 'https://a.vn', image: big }] });
   assert.equal(d.profile.avatar, big);
   assert.equal(d.links[0].image, big);
   assert.equal(safeImg(big), big);
@@ -244,8 +268,10 @@ test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụ
 test('bộ icon elevaTO và bộ icon cũ: mọi file đều có, là SVG 120×120 không chứa script', async () => {
   assert.equal(Object.keys(GLASS).length, 16);
   assert.ok(Object.keys(CLASSIC).length >= 7);
-  assert.deepEqual(ICON_LIBRARY.map((s) => [s.key, s.style]), [['glass', 'photo'], ['3d', 'icon'], ['classic', 'photo']]);
-  for (const src of [...Object.keys(GLASS), ...Object.keys(CLASSIC)]) {
+  assert.deepEqual(ICON_LIBRARY.map((s) => [s.key, s.style]),
+    [['glass', 'photo'], ['tmxk', 'photo'], ['3d', 'icon'], ['classic', 'photo']]);
+  assert.equal(Object.keys(TMXK).length, 6);
+  for (const src of [...Object.keys(GLASS), ...Object.keys(TMXK), ...Object.keys(CLASSIC)]) {
     if (!src.endsWith('.svg')) continue;
     const svgText = await readFile(new URL('../' + src, import.meta.url), 'utf8');
     assert.match(svgText, /^<svg [^>]*viewBox="0 0 120 120"/, src);
@@ -259,7 +285,7 @@ test('logo Zalo: dùng ảnh thật, và dữ liệu cũ tự trỏ sang ảnh �
   const buf = await readFile(new URL('../art/zalo.png', import.meta.url));
   assert.equal(buf.subarray(1, 4).toString(), 'PNG');
   for (const cu of ['art/zalo.svg', 'art/glass/zalo.svg']) {
-    assert.equal(normalize({ links: [{ image: cu }] }).links[0].image, 'art/zalo.png', cu);
+    assert.equal(mot({ links: [{ image: cu }] }).links[0].image, 'art/zalo.png', cu);
     await assert.rejects(readFile(new URL('../' + cu, import.meta.url)), 'file vẽ tay cũ phải xoá hẳn');
   }
 });
@@ -275,7 +301,7 @@ test('icon 3D có sẵn: đủ file WebP thật, có ghi giấy phép', async ()
 });
 
 test('ảnh minh hoạ đời trước tự đổi sang icon 3D; kiểu hiển thị suy ra từ ảnh', () => {
-  const [a, b, c, d] = normalize({ links: [
+  const [a, b, c, d] = mot({ links: [
     { image: 'art/course.svg', imageStyle: 'photo' }, { image: 'art/zalo.svg' },
     { image: 'art/3d/robot.webp' }, { image: 'data:image/webp;base64,AAAA', imageStyle: 'icon' },
   ] }).links;

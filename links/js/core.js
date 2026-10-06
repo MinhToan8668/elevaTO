@@ -12,6 +12,15 @@ export const BACKGROUNDS = {
   image: 'Ảnh tự chọn',
 };
 export const THEME_DEFAULT = { blur: 18, tint: 40, background: 'aurora', bgImage: '' };
+
+// Mỗi thương hiệu mặc một "lớp sơn" riêng: cùng bố cục nhưng khác hẳn chất liệu, bo góc và chữ.
+// Người xem gạt công tắc là thấy đổi hẳn thế giới, không phải cùng một trang đổi mỗi màu nhấn.
+export const SKINS = {
+  glass: 'Kính mờ — elevaTO',
+  paper: 'Giấy & lime — Tự Mình Xây Kênh',
+};
+const BRAND_MAX = 4;
+const PINNED_MAX = 6;
 // Ảnh tải lên được lưu thẳng trong data.json dưới dạng data URL (đã thu nhỏ) → cần giới hạn dài hơn link thường.
 const IMG_MAX = 300000;
 const BG_MAX = 900000;
@@ -44,6 +53,13 @@ export const GLASS = {
   [G('calendar')]: 'Lịch', [G('chat')]: 'Tin nhắn', [G('mail')]: 'Email', [G('money')]: 'Tiền',
   [G('book')]: 'Sách', [G('rocket')]: 'Tên lửa', [G('star')]: 'Ngôi sao', [G('phone')]: 'Điện thoại',
 };
+// Bộ icon của Tự Mình Xây Kênh (art/tmxk/) — nền màu đặc, viền mực dày, đúng tông giấy & lime.
+const K = (slug) => 'art/tmxk/' + slug + '.svg';
+export const TMXK = {
+  [K('lop')]: 'Lớp học', [K('studio')]: 'Viral Studio', [K('kichban')]: 'Kịch bản',
+  [K('teams')]: 'Nền Teams', [K('bot')]: 'Bot tải video', [K('kenh')]: 'Kênh TikTok',
+};
+
 // Bộ icon vẽ ở bản trước (art/classic/) — giữ lại để vẫn chọn được.
 const C = (slug) => 'art/classic/' + slug + '.svg';
 export const CLASSIC = {
@@ -72,6 +88,7 @@ export function glassIconFor(link) {
 /** Các bộ icon có sẵn, theo thứ tự hiện trong trình chỉnh sửa. style: kiểu hiển thị khi chọn icon của bộ đó. */
 export const ICON_LIBRARY = [
   { key: 'glass', label: 'Bộ icon elevaTO', style: 'photo', items: GLASS },
+  { key: 'tmxk', label: 'Bộ icon Tự Mình Xây Kênh', style: 'photo', items: TMXK },
   { key: '3d', label: 'Icon 3D', style: 'icon', items: ICON3D },
   { key: 'classic', label: 'Bộ icon cũ', style: 'photo', items: CLASSIC },
 ];
@@ -180,32 +197,53 @@ export function newId() {
   return 'l' + Date.now().toString(36) + seq.toString(36);
 }
 
-/** Dữ liệu từ data.json (hoặc từ trình chỉnh sửa) → dạng chuẩn, đủ mọi trường, kiểu đúng. Không làm đổi object gốc. */
+/** Dữ liệu từ data.json (hoặc từ trình chỉnh sửa) → dạng chuẩn, đủ mọi trường, kiểu đúng. Không làm đổi object gốc.
+ *
+ * Đời 2 có nhiều thương hiệu trong một trang: ảnh / tên / mạng xã hội và mấy ô ghim dùng chung, còn
+ * @handle, dòng mô tả, số liệu, danh sách ô và cả lớp sơn thì mỗi thương hiệu một bộ. Dữ liệu đời 1
+ * chỉ có một thương hiệu, mọi thứ nằm thẳng ở gốc → gói nguyên vào thương hiệu đầu tiên. */
 export function normalize(raw) {
   const d = raw && typeof raw === 'object' ? raw : {};
   const p = d.profile || {};
-  const live = d.live || {};
   const meta = d.meta || {};
-  const th = d.theme || {};
+  const brands = Array.isArray(d.brands) && d.brands.length ? d.brands : [d];
   return {
-    version: 1,
+    version: 2,
     meta: { title: str(meta.title, 120), description: str(meta.description, 300) },
     profile: {
       name: str(p.name, 80),
-      handle: str(p.handle, 60),
-      tagline: str(p.tagline, 200),
       avatar: str(p.avatar, IMG_MAX),
       verified: bool(p.verified, true),
-      status: str(p.status, 80),
     },
-    stats: (Array.isArray(d.stats) ? d.stats : [])
-      .map((s) => ({ value: str(s && s.value, 16), label: str(s && s.label, 40) }))
-      .filter((s) => s.value || s.label)
-      .slice(0, 4),
     socials: (Array.isArray(d.socials) ? d.socials : [])
       .map((s) => ({ type: s && has(SOCIALS, s.type) ? s.type : 'website', url: str(s && s.url, 500) }))
       .slice(0, 10),
-    links: (Array.isArray(d.links) ? d.links : []).map(normalizeLink).slice(0, 40),
+    // Ô ghim hiện ở MỌI thương hiệu: người muốn liên hệ không phải đoán đang đứng ở tab nào.
+    pinned: (Array.isArray(d.pinned) ? d.pinned : []).map(normalizeLink).slice(0, PINNED_MAX),
+    brands: brands.map(normalizeBrand).slice(0, BRAND_MAX),
+  };
+}
+
+function normalizeBrand(b, i) {
+  const x = b && typeof b === 'object' ? b : {};
+  const p = x.profile || {};        // đời 1: handle / tagline / status nằm trong profile
+  const live = x.live || {};
+  const th = x.theme || {};
+  return {
+    id: slug(str(x.id, 20)) || (i === 0 ? 'finance' : 'brand' + (i + 1)),
+    label: str(x.label, 16) || (i === 0 ? 'Finance' : 'Brand ' + (i + 1)),
+    skin: has(SKINS, x.skin) ? x.skin : 'glass',
+    handle: str(x.handle || p.handle, 60),
+    tagline: str(x.tagline || p.tagline, 200),
+    status: str(x.status || p.status, 80),
+    // Để trống = giữ nguyên logo elevaTO đang nằm sẵn trong index.html.
+    logo: { light: str((x.logo || {}).light, 300), dark: str((x.logo || {}).dark, 300) },
+    footTag: str(x.footTag, 60),
+    stats: (Array.isArray(x.stats) ? x.stats : [])
+      .map((s) => ({ value: str(s && s.value, 16), label: str(s && s.label, 40) }))
+      .filter((s) => s.value || s.label)
+      .slice(0, 4),
+    links: (Array.isArray(x.links) ? x.links : []).map(normalizeLink).slice(0, 40),
     live: { enabled: bool(live.enabled, false), api: str(live.api, 500) },
     theme: {
       blur: clamp(th.blur, 0, 48, THEME_DEFAULT.blur),
@@ -214,6 +252,37 @@ export function normalize(raw) {
       bgImage: str(th.bgImage, BG_MAX),
     },
   };
+}
+
+/** Id thương hiệu đi vào ?v= nên chỉ cho chữ thường, số và gạch nối. */
+const slug = (v) => String(v).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20);
+
+/** Một thương hiệu + phần dùng chung → đúng dạng phẳng mà trang và trình chỉnh sửa vẫn đang vẽ. */
+export function brandDoc(site, i) {
+  const n = site.brands.length;
+  const b = site.brands[Math.min(Math.max(0, Math.trunc(i) || 0), n - 1)];
+  return {
+    version: site.version,
+    meta: site.meta,
+    profile: { ...site.profile, handle: b.handle, tagline: b.tagline, status: b.status },
+    stats: b.stats,
+    socials: site.socials,
+    logo: b.logo,
+    footTag: b.footTag,
+    links: b.links,
+    pinned: site.pinned,
+    live: b.live,
+    theme: b.theme,
+    id: b.id,
+    label: b.label,
+    skin: b.skin,
+  };
+}
+
+/** Vị trí của thương hiệu mang id này; không có thì về thương hiệu đầu tiên. */
+export function brandIndex(site, id) {
+  const i = site.brands.findIndex((b) => b.id === id);
+  return i < 0 ? 0 : i;
 }
 
 function normalizeLink(l) {

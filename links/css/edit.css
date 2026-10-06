@@ -205,3 +205,16 @@ details.sub>summary::-webkit-details-marker{display:none}
 details.sub>summary::before{content:'▸ ';color:var(--muted)}
 details.sub[open]>summary::before{content:'▾ '}
 details.sub>.p-body{padding:0 14px 14px}
+
+/* ── chọn thương hiệu đang sửa ─────────────────────────────────────────────
+   Nằm trên cùng form vì nó quyết định mọi panel bên dưới đang sửa cho ai. */
+.bbar{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
+.bb{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:9px 12px;border-radius:13px;
+  background:var(--glass-soft);box-shadow:inset 0 0 0 1px var(--glass-line);text-align:left;
+  transition:background .18s,box-shadow .18s}
+.bb b{font-family:var(--display);font-size:14px;font-weight:800;color:var(--strong)}
+.bb small{font-size:11px;color:var(--muted)}
+.bb:hover{background:var(--glass-strong)}
+.bb.on{background:color-mix(in srgb,var(--em) 18%,transparent);box-shadow:inset 0 0 0 1.5px var(--em)}
+.bb.on b{color:var(--em-text)}
+@media (max-width:560px){ .bbar{grid-auto-flow:row} }

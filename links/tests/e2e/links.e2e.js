@@ -17,6 +17,10 @@ const MAU = join(ROOT, 'links/tests/fixtures/data.json');
 // Lấy địa chỉ từ chính mã nguồn để bài kiểm tra không lệch khi lần triển khai sau đổi địa chỉ.
 const WORKER = /BACKEND_URL = '([^']+)'/.exec(readFileSync(join(ROOT, 'links/js/backend.js'), 'utf8'))[1];
 const CHUA_LUU = { ok: true, data: null, updatedAt: '' };
+// Từ đời 2, cả nháp lẫn data.json là CẢ TRANG (nhiều thương hiệu). Phần lớn bài kiểm dưới đây
+// quan tâm thương hiệu đầu tiên; bản mẫu trong fixtures vẫn để đời 1 để bài kiểm luôn đi qua
+// đường nâng cấp dữ liệu cũ.
+const b0 = (d) => (d && d.brands ? d.brands[0] : d);
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
   '.webp': 'image/webp', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 const COHORT = { ok: true, config: { cohort: { number: 7, status: 'open', openText: 'Sắp mở' }, slots: { max: 10, base: 4, registered: 1 },
@@ -116,6 +120,45 @@ test('panel trang sửa vẫn đọc được dù chủ trang kéo kính trong s
 // người xem thấy ngay từ cú vuốt đầu tiên. Lúc thanh công cụ còn mở, khung nhìn hụt gần 90px nên
 // máy nhỏ vẫn phải vuốt một cái; đó là giới hạn của trình duyệt, không phải của trang.
 // Đa số người xem vào từ bio TikTok nên khổ nào cũng phải vừa.
+// Một trang phục vụ hai kênh TikTok: mỗi bio dán một link ?v= riêng nên trang mở ra đã đúng
+// thương hiệu, công tắc chỉ để bắc cầu. Hai bên phải khác hẳn chất liệu chứ không chỉ khác màu.
+test('hai thương hiệu: ?v= mở đúng bên, công tắc đổi cả lớp sơn, ô ghim hiện ở cả hai', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const tmxk = site.brands.find((b) => b.skin === 'paper');
+  assert.ok(tmxk, 'data.json phải có một thương hiệu dùng lớp sơn giấy');
+
+  const p = await page();
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.goto(base + '/links/?v=' + tmxk.id);
+  await p.waitForSelector('#grid .tile:not(.sk-tile)');
+  await p.waitForTimeout(300);
+
+  // Mở thẳng bằng ?v= → đã đúng lớp sơn ngay, không phải bấm gì.
+  assert.equal(await p.evaluate(() => document.documentElement.dataset.skin), 'paper');
+  assert.equal(await p.getAttribute('.logo-light', 'src'), tmxk.logo.light, 'logo phải đổi theo thương hiệu');
+  assert.equal(await p.textContent('.foot-tag'), tmxk.footTag);
+
+  const ghim = () => p.locator('#pinGrid .tile').count();
+  const soGhim = await ghim();
+  assert.ok(soGhim >= 1, 'ô ghim phải hiện');
+
+  // Chất liệu phải khác hẳn, không chỉ khác màu nhấn: giấy thì không nhoè nền phía sau.
+  const nhoeGiay = await p.evaluate(() => getComputedStyle(document.querySelector('#card')).backdropFilter);
+  assert.match(nhoeGiay, /^none$/, 'lớp sơn giấy không được mượn kính mờ của elevaTO');
+
+  // Gạt công tắc sang Finance: đổi lớp sơn, đổi link, ô ghim vẫn nguyên.
+  await p.click('#brands button >> nth=0');
+  await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => document.documentElement.dataset.skin), 'glass');
+  assert.ok(!new URL(p.url()).searchParams.get('v'), 'về thương hiệu đầu thì bỏ ?v= cho link gọn: ' + p.url());
+  assert.equal(await ghim(), soGhim, 'ô ghim phải hiện ở MỌI thương hiệu');
+  const nhoeKinh = await p.evaluate(() => getComputedStyle(document.querySelector('#card')).backdropFilter);
+  assert.match(nhoeKinh, /blur/, 'elevaTO phải giữ nguyên kính mờ như cũ');
+
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
   // Mỗi máy đo hai trạng thái: thanh công cụ đang mở (khung nhìn hụt gần 90px, là lúc vừa mở
   // trang) và đã thu (sau cú vuốt đầu). Trạng thái "đang mở" mới là cái bắt được lỗi chật chỗ.
@@ -178,9 +221,9 @@ test('mới mở trang là kính đã đúng ngay, không hiện mặc định r
   // CSS mặc định phản chiếu data.json THẬT trong repo, không phải bản mẫu của test.
   const d = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   // CSS ghi ".4", JS ghi "0.4" — cùng một số, so bằng số.
-  assert.equal(cssTheme[0], d.theme.blur + 'px',
+  assert.equal(cssTheme[0], b0(d).theme.blur + 'px',
     'nhịp vẽ đầu dùng độ mờ khác data.json → người xem thấy giao diện nhảy sau 1-2 giây');
-  assert.equal(Number(cssTheme[1]), d.theme.tint / 100,
+  assert.equal(Number(cssTheme[1]), b0(d).theme.tint / 100,
     'nhịp vẽ đầu dùng độ đục khác data.json → người xem thấy giao diện nhảy sau 1-2 giây');
   await p.context().close();
 });
@@ -259,7 +302,7 @@ test('trình chỉnh sửa: sửa → xem trước đổi theo → Đăng lên w
   assert.equal(put.sha, 'sha1');
   assert.equal(put.branch, 'main');
   const sent = JSON.parse(Buffer.from(put.content, 'base64').toString('utf8'));
-  assert.equal(sent.links.find((l) => l.id === 'zalo').url, 'https://zalo.me/0901234567');
+  assert.equal(b0(sent).links.find((l) => l.id === 'zalo').url, 'https://zalo.me/0901234567');
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });
@@ -317,7 +360,7 @@ test('trình chỉnh sửa: chọn icon 3D có sẵn và tìm icon Iconify cho m
   await p.keyboard.press('Enter');
   await p.click('.lc.open .im-search button[title="noto:coin"]');
   await frame.waitForSelector('.tile .chip.ico img[src^="data:image/svg+xml;base64,"]');
-  const ai = (await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')))).links.find((l) => l.id === 'ai');
+  const ai = b0(await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')))).links.find((l) => l.id === 'ai');
   assert.equal(ai.imageStyle, 'icon');
   assert.deepEqual(p.errors, []);
   await p.context().close();
@@ -337,10 +380,10 @@ test('nháp cũ (trước khi có ảnh minh hoạ) được điền ảnh mới
   await p.goto(base + '/links/edit.html');
   await p.waitForSelector('.lc');
   const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
-  assert.equal(draft.profile.status, 'Minhtoantowork@gmail.com');
-  assert.equal(draft.links.find((l) => l.id === 'course').image, 'art/glass/course.svg');
-  assert.equal(draft.links.find((l) => l.id === 'ai').image, 'art/glass/ai.svg');
-  assert.equal(draft.theme.blur, 18);
+  assert.equal(b0(draft).status, 'Minhtoantowork@gmail.com');
+  assert.equal(b0(draft).links.find((l) => l.id === 'course').image, 'art/glass/course.svg');
+  assert.equal(b0(draft).links.find((l) => l.id === 'ai').image, 'art/glass/ai.svg');
+  assert.equal(b0(draft).theme.blur, 18);
   await p.context().close();
 });
 
@@ -360,9 +403,9 @@ test('trình chỉnh sửa: nháp khác web thì báo rõ; một nút đổi m�
   const frame = p.frames().find((f) => f.url().includes('preview'));
   await frame.waitForSelector('.tile .chip.img img[src="art/glass/ai.svg"]');
   const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
-  assert.equal(saved.links[0].image, 'art/glass/course.svg');
-  assert.equal(saved.links[1].title, 'AI đọc BCTC siêu nhanh');
-  assert.ok(saved.links.every((l) => l.imageStyle === 'photo'));
+  assert.equal(b0(saved).links[0].image, 'art/glass/course.svg');
+  assert.equal(b0(saved).links[1].title, 'AI đọc BCTC siêu nhanh');
+  assert.ok(b0(saved).links.every((l) => l.imageStyle === 'photo'));
   await p.context().close();
 });
 
@@ -437,7 +480,7 @@ test('trình chỉnh sửa: lưu bằng ADMIN_KEY lên máy chủ elevaTO, khôn
   const save = posts.find((x) => x.body.action === 'saveLinks');
   assert.equal(save.body.key, 'dung-key');
   assert.match(save.type, /^text\/plain/);
-  assert.equal(save.body.data.links.find((l) => l.id === 'zalo').url, 'https://zalo.me/0901234567');
+  assert.equal(b0(save.body.data).links.find((l) => l.id === 'zalo').url, 'https://zalo.me/0901234567');
   assert.equal(githubCalled, false);
   assert.deepEqual(p.errors, []);
   await p.context().close();
@@ -464,7 +507,10 @@ test('trình chỉnh sửa dùng được bằng bàn phím: mũi tên chọn tr
   await p.locator('.lc.open .swatches button[aria-checked="true"]').focus();
   await p.keyboard.press('End');
   assert.equal(await p.evaluate(() => document.activeElement.dataset.fk), 'Màu nhấn|slate');
-  await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft')).links.find((l) => l.id === 'ai').accent === 'slate');
+  await p.waitForFunction(() => {
+    const d = JSON.parse(localStorage.getItem('elevato-links-draft'));
+    return (d.brands ? d.brands[0] : d).links.find((l) => l.id === 'ai').accent === 'slate';
+  });
 
   // Nút mở bộ icon nói rõ đang mở hay đóng; mở bộ khác thì bộ cũ đóng lại.
   const tools = p.locator('.lc.open .im-tools');
@@ -492,7 +538,7 @@ test('gõ xong đóng/tải lại trang ngay: nháp vẫn còn (lưu nháp đư�
   await p.reload();
   await p.waitForSelector('.lc');
   assert.equal(await p.inputValue('textarea.inp >> nth=0'), 'Giới thiệu vừa gõ xong thì tải lại');
-  assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')).profile.tagline),
+  assert.equal(b0(await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')))).tagline,
     'Giới thiệu vừa gõ xong thì tải lại');
   assert.match(await p.textContent('#dirty'), /chưa đăng/);
   assert.deepEqual(p.errors, []);

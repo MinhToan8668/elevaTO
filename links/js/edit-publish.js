@@ -147,7 +147,9 @@ export async function doPublish() {
     return;
   }
   // Chặn lỡ tay đăng một trang trống đè lên trang thật (ví dụ khi data.json không tải được).
-  if (!ed.draft.links.length && !confirm('Trang đang không có ô link nào. Vẫn đăng lên web?')) return;
+  // Đếm cả ô của mọi thương hiệu lẫn ô ghim: trang chỉ thật sự trống khi không còn ô nào.
+  const soO = ed.draft.brands.reduce((n, b) => n + b.links.length, 0) + ed.draft.pinned.length;
+  if (!soO && !confirm('Trang đang không có ô link nào. Vẫn đăng lên web?')) return;
   const btn = $('#publishBtn');
   btn.disabled = true;
   btn.textContent = 'Đang đăng…';

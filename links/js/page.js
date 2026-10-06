@@ -1,7 +1,8 @@
 // Trang link-in-bio công khai: đọc data.json → vẽ danh thiếp + lưới ô link.
 // ?preview: chạy trong khung xem trước của trình chỉnh sửa, nhận bản nháp qua postMessage và không mở link thật.
 
-import { normalize, serialize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo, ACCENTS } from './core.js';
+import { normalize, serialize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo,
+  brandDoc, brandIndex, ACCENTS } from './core.js';
 import { $, h, store, toast, toggleTheme } from './dom.js';
 import { svg } from './icons.js';
 import { fetchLinks } from './backend.js';
@@ -11,8 +12,14 @@ const CFG_CACHE = 'elevato_cfg_v2';   // trang khoá học lưu cấu hình coho
 const PREVIEW = new URLSearchParams(location.search).has('preview');
 const LIVE_TIMEOUT_MS = 8000;
 
-let data = null;
+let site = null;        // cả trang: phần dùng chung + mọi thương hiệu
+let data = null;        // thương hiệu đang mở, ở dạng phẳng mà phần vẽ bên dưới quen dùng
+let cur = 0;
 let cohort = null;
+
+// Mỗi kênh TikTok dán một link riêng (…/links/?v=finance, ?v=content) nên trang mở ra đã đúng
+// thương hiệu — công tắc chỉ để người tò mò bắc cầu sang bên kia, không ai mất thêm một cú bấm.
+const BRAND_PARAM = 'v';
 
 /* ── link ─────────────────────────────────────── */
 const absUrl = (u) => { try { return new URL(u, location.href).href; } catch (e) { return u; } };
@@ -140,6 +147,77 @@ function renderGrid(d) {
   if (!links.length) $('#err').textContent = 'Chưa có link nào được bật.';
 }
 
+/* ── công tắc thương hiệu ─────────────────────── */
+/** Thương hiệu mở sẵn: lấy theo ?v= trong link, không có thì cái đầu tiên. */
+function pickBrand() {
+  const v = new URLSearchParams(location.search).get(BRAND_PARAM);
+  return v ? brandIndex(site, v) : 0;
+}
+
+function renderBrands() {
+  const box = $('#brands');
+  box.hidden = site.brands.length < 2;
+  if (box.hidden) { box.replaceChildren(); return; }
+  // CSP của trang là style-src 'self' → KHÔNG gán được thuộc tính style="...".
+  // Đặt qua CSSOM thì được, và cũng là cách duy nhất chạy trong khung xem trước.
+  const thumb = h('span', { class: 'sw-thumb', 'aria-hidden': 'true' });
+  thumb.style.setProperty('width', 'calc(' + (100 / site.brands.length) + '% - 4px)');
+  thumb.style.setProperty('transform', 'translateX(calc(' + (cur * 100) + '% + ' + (cur * 2) + 'px))');
+  box.replaceChildren(
+    thumb,
+    ...site.brands.map((b, i) => h('button', {
+      type: 'button', role: 'tab', 'aria-selected': String(i === cur), id: 'brand-' + b.id,
+      onclick: () => setBrand(i),
+    }, h('span', { html: svg(b.skin === 'paper' ? 'play' : 'chart') }), b.label)));
+  box.style.setProperty('--n', String(site.brands.length));
+}
+
+function setBrand(i) {
+  if (i === cur || !site.brands[i]) return;
+  cur = i;
+  data = brandDoc(site, cur);
+  // Link đổi theo để ai copy thanh địa chỉ cũng ra đúng thương hiệu đang xem.
+  const u = new URL(location.href);
+  if (cur === 0) u.searchParams.delete(BRAND_PARAM); else u.searchParams.set(BRAND_PARAM, site.brands[cur].id);
+  if (!PREVIEW) history.replaceState(null, '', u);
+  render();
+  $('#brands').querySelector('[aria-selected="true"]').focus();
+}
+
+/** Ô ghim: hiện ở MỌI thương hiệu, nên nằm riêng một khu dưới lưới chính. */
+function renderPinned(d) {
+  const links = visibleLinks({ links: d.pinned });
+  const sec = $('#pinned');
+  sec.hidden = !links.length;
+  $('#pinGrid').replaceChildren(...links.map(tile));
+}
+
+/** Logo và dòng chân trang theo thương hiệu. Để trống thì GIỮ NGUYÊN thứ có sẵn trong index.html
+ *  (logo elevaTO) — thương hiệu nào không khai logo riêng thì không bị đụng tới. */
+const GOC = new Map();
+function renderMark(d) {
+  const dat = (sel) => {
+    const el = $(sel);
+    if (el && !GOC.has(sel)) GOC.set(sel, el.getAttribute('src') || '');
+    return el;
+  };
+  const dat2 = (sel, src) => {
+    const el = dat(sel);
+    if (el) el.src = safeImg(src) || GOC.get(sel);
+  };
+  dat2('.logo-light', d.logo.light);
+  dat2('.logo-dark', d.logo.dark);
+  dat2('.wm-light', d.logo.light);
+  dat2('.wm-dark', d.logo.dark);
+  const tag = $('.foot-tag');
+  if (tag) {
+    if (!GOC.has('.foot-tag')) GOC.set('.foot-tag', tag.textContent);
+    tag.textContent = d.footTag || GOC.get('.foot-tag');
+  }
+  const brand = $('.brand');
+  if (brand) brand.setAttribute('aria-label', d.label + ' — trang chủ');
+}
+
 /** Màu thanh trạng thái của trình duyệt = màu thật ở đỉnh trang (--chrome trong links.css). */
 function syncChrome() {
   const mau = getComputedStyle(document.documentElement).getPropertyValue('--chrome').trim();
@@ -147,8 +225,19 @@ function syncChrome() {
 }
 
 /** Độ mờ, độ trong của kính và nền trang — lấy từ data.theme. */
-function applyTheme(t) {
+// Phông riêng của TMXK nặng ~190KB nên chỉ nạp khi người xem thật sự mở thương hiệu dùng lớp
+// sơn "giấy" — mở thẳng tab Finance thì không tải gì thêm.
+let fontPaper = false;
+function loadSkinFonts(skin) {
+  if (skin !== 'paper' || fontPaper) return;
+  fontPaper = true;
+  document.head.append(h('link', { rel: 'stylesheet', href: 'fonts/tmxk-fonts.css' }));
+}
+
+function applyTheme(t, skin) {
   const root = document.documentElement;
+  root.dataset.skin = skin;
+  loadSkinFonts(skin);
   root.style.setProperty('--blur', t.blur + 'px');
   root.style.setProperty('--tint', String(t.tint / 100));
   root.dataset.bg = t.background;
@@ -161,12 +250,15 @@ function applyTheme(t) {
 
 function render() {
   if (!data) return;
-  applyTheme(data.theme);
+  applyTheme(data.theme, data.skin);
   if (data.meta.title) document.title = data.meta.title;
   const desc = document.querySelector('meta[name="description"]');
   if (desc && data.meta.description) desc.setAttribute('content', data.meta.description);
+  renderBrands();
+  renderMark(data);
   renderCard(data);
   renderGrid(data);
+  renderPinned(data);
   $('#main').removeAttribute('aria-busy');
   document.body.classList.add('ready');
 }
@@ -232,7 +324,9 @@ function apply(raw) {
   if (json === daVe) return;         // y hệt thứ đang hiện → khỏi vẽ lại, khỏi nháy
   daVe = json;
   if (!PREVIEW) store.set(DATA_CACHE, raw);
-  data = normalize(raw);
+  site = normalize(raw);
+  cur = Math.min(cur || pickBrand(), site.brands.length - 1);
+  data = brandDoc(site, cur);
   render();
   if (!cohortStarted) { cohortStarted = true; loadCohort(); }
 }
@@ -328,7 +422,9 @@ function boot() {
       const m = e.data || {};
       if (m.type !== 'elevato-links:data') return;
       const firstLive = !data || !data.live.enabled;
-      data = normalize(m.data);
+      site = normalize(m.data);
+      cur = Math.min(Math.max(0, Math.trunc(m.brand) || 0), site.brands.length - 1);
+      data = brandDoc(site, cur);
       render();
       if (firstLive) loadCohort();
     });

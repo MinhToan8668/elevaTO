@@ -1,31 +1,14 @@
 {
-  "version": 1,
+  "version": 2,
   "meta": {
     "title": "Minh Toàn · elevaTO",
     "description": "Khóa Financial Modeling thực chiến, công cụ AI đọc BCTC, slide miễn phí và thông tin liên hệ Minh Toàn"
   },
   "profile": {
     "name": "Minh Toàn",
-    "handle": "@financewithto",
-    "tagline": "1 anh bạn làm Corporate Banking & M&A · Founder elevaTO",
     "avatar": "../assets/instructor-sm.webp",
-    "verified": false,
-    "status": "Minhtoantowork@gmail.com"
+    "verified": false
   },
-  "stats": [
-    {
-      "value": "2.5+",
-      "label": "năm M&A"
-    },
-    {
-      "value": "50+",
-      "label": "học viên"
-    },
-    {
-      "value": "Top 10%",
-      "label": "CFA Level 1"
-    }
-  ],
   "socials": [
     {
       "type": "tiktok",
@@ -44,100 +27,7 @@
       "url": "0376292148"
     }
   ],
-  "links": [
-    {
-      "id": "course",
-      "title": "Financial Modeling + PT BCTC",
-      "subtitle": "8 buổi live — tự build 3-Statement, DCF, Comps trên BCTC công ty niêm yết",
-      "url": "../",
-      "size": "feature",
-      "icon": "book",
-      "accent": "violet",
-      "image": "art/glass/model.svg",
-      "imageStyle": "photo",
-      "badge": "",
-      "hidden": false,
-      "live": true,
-      "cta": "Đăng Ký",
-      "ctaUrl": "https://minhtoan8668.github.io/elevaTO/",
-      "details": {
-        "enabled": false,
-        "text": "",
-        "bullets": [],
-        "button": ""
-      }
-    },
-    {
-      "id": "ai",
-      "title": "AI đọc BCTC",
-      "subtitle": "Trích xuất PDF BCTC, nhận về file Excel Data",
-      "url": "https://minhtoan8668.github.io/elevaTO/ai/",
-      "size": "feature",
-      "icon": "sparkles",
-      "accent": "blue",
-      "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxZW0iIGhlaWdodD0iMWVtIiB2aWV3Qm94PSIwIDAgMTQgMTQiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIj48cGF0aCBmaWxsPSIjOGZiZmZhIiBkPSJNOC4zNDIgMS4yMDJjLS4xOC4xNy0uNDEuMjg3LS42NjQuMzMyYy0yLjA3Mi4zNi0yLjA3MiAzLjMzNCAwIDMuNjk1Yy41MTguMDkuOTMuNDg0IDEuMDQyLjk5OGwuMDIuMDg3Yy40MyAxLjk3MSAzLjIzNyAxLjk4NCAzLjY4NS4wMTZsLjAyNC0uMTAyYy4wNTMtLjIzMy4xNjctLjQ0MS4zMjUtLjYwOGE2LjUwMSA2LjUwMSAwIDEgMS00LjQzMi00LjQxOCIvPjxwYXRoIGZpbGw9IiMyODU5YzUiIGQ9Ik04LjM0MiAxLjIwMmE2LjUgNi41IDAgMCAwLTEuNTcxLS4yNXEuMjI4LjM1NS40MzIuNzIzcS4yMTYtLjA5NS40NzUtLjE0MWMuMjU1LS4wNDUuNDg0LS4xNjMuNjY0LS4zMzJtLjQwOSA1LjE2M2MuNDI0IDEuNzQyIDIuNzM3IDEuOSAzLjQ5NS40NThoLjc1OWE2LjYgNi42IDAgMCAxIDAgMS4yNUgxMC4wNmExNC42IDE0LjYgMCAwIDEtMS42ODYgNS42MTJjLS41MTEuMTUtMS4wNDguMjQtMS42MDMuMjZhMTMuMyAxMy4zIDAgMCAwIDIuMDMzLTUuODcySDQuMjYyYTEzLjMgMTMuMyAwIDAgMCAyLjAzNCA1Ljg3MmE2LjUgNi41IDAgMCAxLTEuNjAzLS4yNmExNC42IDE0LjYgMCAwIDEtMS42ODYtNS42MTJILjA2MmE2LjYgNi42IDAgMCAxIDAtMS4yNWgyLjk0NWExNC42IDE0LjYgMCAwIDEgMS42ODYtNS42MTJhNi41IDYuNSAwIDAgMSAxLjYwMy0uMjZhMTMuMyAxMy4zIDAgMCAwLTIuMDM0IDUuODcyaDQuNTQyYTE0IDE0IDAgMCAwLS4wNTMtLjQ1OCIvPjxwYXRoIGZpbGw9IiMyODU5YzUiIGQ9Ik0xMS4zNjYuNjc0Yy0uMTktLjgzNS0xLjM4Mi0uODMtMS41NjUuMDA3bC0uMDA3LjAzM2wtLjAxNC4wNjRhMi4zOCAyLjM4IDAgMCAxLTEuOTE2IDEuODI3Yy0uODcuMTUxLS44NyAxLjQwMSAwIDEuNTUzYTIuMzggMi4zOCAwIDAgMSAxLjkxOCAxLjgzNmwuMDIuMDg4Yy4xODIuODM2IDEuMzczLjg0MSAxLjU2NC4wMDdsLjAyMy0uMTAyYTIuNCAyLjQgMCAwIDEgMS45MjUtMS44MjhjLjg3Mi0uMTUyLjg3Mi0xLjQwNCAwLTEuNTU2QTIuNCAyLjQgMCAwIDEgMTEuMzkyLjc5MWwtLjAxOC0uMDc4bC0uMDA4LS4wNFoiLz48L2c+PC9zdmc+",
-      "imageStyle": "icon",
-      "badge": "Free",
-      "hidden": false,
-      "live": false,
-      "cta": "",
-      "ctaUrl": "",
-      "details": {
-        "enabled": false,
-        "text": "",
-        "bullets": [],
-        "button": ""
-      }
-    },
-    {
-      "id": "slides",
-      "title": "Modeling Slides",
-      "subtitle": "Slides Modeling Chi Tiết",
-      "url": "../#slides",
-      "size": "wide",
-      "icon": "slides",
-      "accent": "amber",
-      "image": "art/glass/slides.svg",
-      "imageStyle": "photo",
-      "badge": "Free",
-      "hidden": false,
-      "live": false,
-      "cta": "",
-      "ctaUrl": "",
-      "details": {
-        "enabled": false,
-        "text": "Bộ slide mình dùng để dạy, dành cho các bạn muốn hiểu hơn về Modeling.",
-        "bullets": [
-          "Vì sao doanh nghiệp đáng giá ngần đó tiền",
-          "NOPAT, dòng tiền tự do (UFCF), vốn lưu động",
-          "WACC, chiết khấu, cầu nối EV → giá cổ phiếu",
-          "Bài tập thực hành có đáp án"
-        ],
-        "button": "Xem slide"
-      }
-    },
-    {
-      "id": "model",
-      "title": "Model mẫu DGW",
-      "subtitle": "Dashboard, driver, DCF & bảng độ nhạy",
-      "url": "../#model",
-      "size": "half",
-      "icon": "chart",
-      "accent": "blue",
-      "image": "art/3d/laptop.webp",
-      "imageStyle": "icon",
-      "badge": "",
-      "hidden": true,
-      "live": false,
-      "cta": "",
-      "ctaUrl": "",
-      "details": {
-        "enabled": false,
-        "text": "",
-        "bullets": [],
-        "button": ""
-      }
-    },
+  "pinned": [
     {
       "id": "zalo",
       "title": "Zalo Mình nhé",
@@ -150,28 +40,6 @@
       "imageStyle": "photo",
       "badge": "",
       "hidden": false,
-      "live": false,
-      "cta": "",
-      "ctaUrl": "",
-      "details": {
-        "enabled": false,
-        "text": "",
-        "bullets": [],
-        "button": ""
-      }
-    },
-    {
-      "id": "trial",
-      "title": "Học thử buổi 1",
-      "subtitle": "Video buổi Phân tích Bảng cân đối kế toán",
-      "url": "../#demo",
-      "size": "half",
-      "icon": "play",
-      "accent": "cyan",
-      "image": "art/3d/clapper-board.webp",
-      "imageStyle": "icon",
-      "badge": "",
-      "hidden": true,
       "live": false,
       "cta": "",
       "ctaUrl": "",
@@ -205,14 +73,304 @@
       }
     }
   ],
-  "live": {
-    "enabled": true,
-    "api": "https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec"
-  },
-  "theme": {
-    "blur": 0,
-    "tint": 5,
-    "background": "aurora",
-    "bgImage": ""
-  }
+  "brands": [
+    {
+      "id": "finance",
+      "label": "Finance",
+      "skin": "glass",
+      "handle": "@financewithto",
+      "tagline": "1 anh bạn làm Corporate Banking & M&A · Founder elevaTO",
+      "status": "Minhtoantowork@gmail.com",
+      "stats": [
+        {
+          "value": "2.5+",
+          "label": "năm M&A"
+        },
+        {
+          "value": "50+",
+          "label": "học viên"
+        },
+        {
+          "value": "Top 10%",
+          "label": "CFA Level 1"
+        }
+      ],
+      "links": [
+        {
+          "id": "course",
+          "title": "Financial Modeling + PT BCTC",
+          "subtitle": "8 buổi live — tự build 3-Statement, DCF, Comps trên BCTC công ty niêm yết",
+          "url": "../",
+          "size": "feature",
+          "icon": "book",
+          "accent": "violet",
+          "image": "art/glass/model.svg",
+          "imageStyle": "photo",
+          "badge": "",
+          "hidden": false,
+          "live": true,
+          "cta": "Đăng Ký",
+          "ctaUrl": "https://minhtoan8668.github.io/elevaTO/",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        },
+        {
+          "id": "ai",
+          "title": "AI đọc BCTC",
+          "subtitle": "Trích xuất PDF BCTC, nhận về file Excel Data",
+          "url": "https://minhtoan8668.github.io/elevaTO/ai/",
+          "size": "feature",
+          "icon": "sparkles",
+          "accent": "blue",
+          "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxZW0iIGhlaWdodD0iMWVtIiB2aWV3Qm94PSIwIDAgMTQgMTQiPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIj48cGF0aCBmaWxsPSIjOGZiZmZhIiBkPSJNOC4zNDIgMS4yMDJjLS4xOC4xNy0uNDEuMjg3LS42NjQuMzMyYy0yLjA3Mi4zNi0yLjA3MiAzLjMzNCAwIDMuNjk1Yy41MTguMDkuOTMuNDg0IDEuMDQyLjk5OGwuMDIuMDg3Yy40MyAxLjk3MSAzLjIzNyAxLjk4NCAzLjY4NS4wMTZsLjAyNC0uMTAyYy4wNTMtLjIzMy4xNjctLjQ0MS4zMjUtLjYwOGE2LjUwMSA2LjUwMSAwIDEgMS00LjQzMi00LjQxOCIvPjxwYXRoIGZpbGw9IiMyODU5YzUiIGQ9Ik04LjM0MiAxLjIwMmE2LjUgNi41IDAgMCAwLTEuNTcxLS4yNXEuMjI4LjM1NS40MzIuNzIzcS4yMTYtLjA5NS40NzUtLjE0MWMuMjU1LS4wNDUuNDg0LS4xNjMuNjY0LS4zMzJtLjQwOSA1LjE2M2MuNDI0IDEuNzQyIDIuNzM3IDEuOSAzLjQ5NS40NThoLjc1OWE2LjYgNi42IDAgMCAxIDAgMS4yNUgxMC4wNmExNC42IDE0LjYgMCAwIDEtMS42ODYgNS42MTJjLS41MTEuMTUtMS4wNDguMjQtMS42MDMuMjZhMTMuMyAxMy4zIDAgMCAwIDIuMDMzLTUuODcySDQuMjYyYTEzLjMgMTMuMyAwIDAgMCAyLjAzNCA1Ljg3MmE2LjUgNi41IDAgMCAxLTEuNjAzLS4yNmExNC42IDE0LjYgMCAwIDEtMS42ODYtNS42MTJILjA2MmE2LjYgNi42IDAgMCAxIDAtMS4yNWgyLjk0NWExNC42IDE0LjYgMCAwIDEgMS42ODYtNS42MTJhNi41IDYuNSAwIDAgMSAxLjYwMy0uMjZhMTMuMyAxMy4zIDAgMCAwLTIuMDM0IDUuODcyaDQuNTQyYTE0IDE0IDAgMCAwLS4wNTMtLjQ1OCIvPjxwYXRoIGZpbGw9IiMyODU5YzUiIGQ9Ik0xMS4zNjYuNjc0Yy0uMTktLjgzNS0xLjM4Mi0uODMtMS41NjUuMDA3bC0uMDA3LjAzM2wtLjAxNC4wNjRhMi4zOCAyLjM4IDAgMCAxLTEuOTE2IDEuODI3Yy0uODcuMTUxLS44NyAxLjQwMSAwIDEuNTUzYTIuMzggMi4zOCAwIDAgMSAxLjkxOCAxLjgzNmwuMDIuMDg4Yy4xODIuODM2IDEuMzczLjg0MSAxLjU2NC4wMDdsLjAyMy0uMTAyYTIuNCAyLjQgMCAwIDEgMS45MjUtMS44MjhjLjg3Mi0uMTUyLjg3Mi0xLjQwNCAwLTEuNTU2QTIuNCAyLjQgMCAwIDEgMTEuMzkyLjc5MWwtLjAxOC0uMDc4bC0uMDA4LS4wNFoiLz48L2c+PC9zdmc+",
+          "imageStyle": "icon",
+          "badge": "Free",
+          "hidden": false,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        },
+        {
+          "id": "slides",
+          "title": "Modeling Slides",
+          "subtitle": "Slides Modeling Chi Tiết",
+          "url": "../#slides",
+          "size": "wide",
+          "icon": "slides",
+          "accent": "amber",
+          "image": "art/glass/slides.svg",
+          "imageStyle": "photo",
+          "badge": "Free",
+          "hidden": false,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "Bộ slide mình dùng để dạy, dành cho các bạn muốn hiểu hơn về Modeling.",
+            "bullets": [
+              "Vì sao doanh nghiệp đáng giá ngần đó tiền",
+              "NOPAT, dòng tiền tự do (UFCF), vốn lưu động",
+              "WACC, chiết khấu, cầu nối EV → giá cổ phiếu",
+              "Bài tập thực hành có đáp án"
+            ],
+            "button": "Xem slide"
+          }
+        },
+        {
+          "id": "model",
+          "title": "Model mẫu DGW",
+          "subtitle": "Dashboard, driver, DCF & bảng độ nhạy",
+          "url": "../#model",
+          "size": "half",
+          "icon": "chart",
+          "accent": "blue",
+          "image": "art/3d/laptop.webp",
+          "imageStyle": "icon",
+          "badge": "",
+          "hidden": true,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        },
+        {
+          "id": "trial",
+          "title": "Học thử buổi 1",
+          "subtitle": "Video buổi Phân tích Bảng cân đối kế toán",
+          "url": "../#demo",
+          "size": "half",
+          "icon": "play",
+          "accent": "cyan",
+          "image": "art/3d/clapper-board.webp",
+          "imageStyle": "icon",
+          "badge": "",
+          "hidden": true,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        }
+      ],
+      "live": {
+        "enabled": true,
+        "api": "https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec"
+      },
+      "theme": {
+        "blur": 0,
+        "tint": 5,
+        "background": "aurora",
+        "bgImage": ""
+      }
+    },
+    {
+      "id": "content",
+      "label": "Content",
+      "skin": "paper",
+      "handle": "",
+      "tagline": "Tự Mình Xây Kênh · Lớp TikTok 30 ngày",
+      "status": "",
+      "logo": {
+        "light": "art/tmxk/lockup-sang.svg",
+        "dark": "art/tmxk/lockup-toi.svg"
+      },
+      "footTag": "người thật, kênh thật, số thật",
+      "stats": [
+        {
+          "value": "30",
+          "label": "ngày"
+        },
+        {
+          "value": "4",
+          "label": "chặng"
+        },
+        {
+          "value": "Thứ 5",
+          "label": "live hàng tuần"
+        }
+      ],
+      "links": [
+        {
+          "id": "tmxk-lop",
+          "title": "Lớp TikTok 30 ngày",
+          "subtitle": "Bốn chặng — live tối Thứ 5, các tối còn lại mentor ngồi edit cùng bạn tới khi ra video",
+          "url": "https://minhtoan8668.github.io/tiktok/",
+          "size": "feature",
+          "icon": "link",
+          "accent": "emerald",
+          "image": "art/tmxk/lop.svg",
+          "imageStyle": "photo",
+          "badge": "",
+          "hidden": false,
+          "live": false,
+          "cta": "Đăng ký",
+          "ctaUrl": "https://minhtoan8668.github.io/tiktok/#dang-ky",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        },
+        {
+          "id": "tmxk-studio",
+          "title": "Viral Studio",
+          "subtitle": "Hook viral · Soi video · Chấm video · Kịch bản",
+          "url": "https://minhtoan8668.github.io/tiktok/tools/hook-text.html",
+          "size": "wide",
+          "icon": "link",
+          "accent": "emerald",
+          "image": "art/tmxk/studio.svg",
+          "imageStyle": "photo",
+          "badge": "FREE",
+          "hidden": false,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        },
+        {
+          "id": "tmxk-teams",
+          "title": "Tạo nền Teams",
+          "subtitle": "Nền họp có thương hiệu, không cần cài gì",
+          "url": "https://minhtoan8668.github.io/tiktok/tools/tao-nen-teams.html",
+          "size": "wide",
+          "icon": "link",
+          "accent": "emerald",
+          "image": "art/tmxk/teams.svg",
+          "imageStyle": "photo",
+          "badge": "FREE",
+          "hidden": false,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        },
+        {
+          "id": "tmxk-bot",
+          "title": "Bot tải video",
+          "subtitle": "Tải video TikTok, không logo",
+          "url": "",
+          "size": "half",
+          "icon": "link",
+          "accent": "emerald",
+          "image": "art/tmxk/bot.svg",
+          "imageStyle": "photo",
+          "badge": "",
+          "hidden": false,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        },
+        {
+          "id": "tmxk-kenh",
+          "title": "Kênh TMXK",
+          "subtitle": "Video xây kênh mỗi tuần",
+          "url": "",
+          "size": "half",
+          "icon": "link",
+          "accent": "emerald",
+          "image": "art/tmxk/kenh.svg",
+          "imageStyle": "photo",
+          "badge": "",
+          "hidden": false,
+          "live": false,
+          "cta": "",
+          "ctaUrl": "",
+          "details": {
+            "enabled": false,
+            "text": "",
+            "bullets": [],
+            "button": ""
+          }
+        }
+      ],
+      "live": {
+        "enabled": false,
+        "api": ""
+      },
+      "theme": {
+        "blur": 0,
+        "tint": 5,
+        "background": "aurora",
+        "bgImage": ""
+      }
+    }
+  ]
 }
