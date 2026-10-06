@@ -561,7 +561,13 @@ img{display:block;max-width:100%}
   .bar{padding-bottom:20px}
   .logo{height:64px}
   .ibtn{width:44px;height:44px}
-  .main{display:grid;grid-template-columns:350px minmax(0,1fr);align-items:stretch;gap:18px;flex:none;margin-block:auto}
+  .main{display:grid;grid-template-columns:350px minmax(0,1fr);grid-template-rows:auto auto 1fr;
+    align-items:stretch;gap:18px;flex:none;margin-block:auto}
+  /* Danh thiếp chiếm trọn cột trái; công tắc, lưới ô và ô ghim xếp dọc ở cột phải. Không khai rõ
+     thì lưới tự xếp công tắc vào một ô bên cạnh danh thiếp và kéo cao bằng nó — hai nút to tướng. */
+  .card{grid-column:1;grid-row:1 / span 3}
+  .sw,.grid,.pinned,.err{grid-column:2}
+  .sw,.pinned{align-self:start}
   .card{display:flex;flex-direction:column;justify-content:center;padding:30px 24px 24px;border-radius:34px}
   .who{flex-direction:column;text-align:center;gap:14px}
   .ava-wrap{width:132px;height:132px;padding:5px}

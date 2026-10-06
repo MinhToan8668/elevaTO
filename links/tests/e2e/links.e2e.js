@@ -234,6 +234,49 @@ test('số chỗ trực tiếp lấy riêng cho từng thương hiệu, không d
   await p.context().close();
 });
 
+// Màn rộng xếp thành lưới hai cột. Thêm công tắc mà không khai cột thì lưới tự nhét nó cạnh danh
+// thiếp và kéo cao bằng danh thiếp — thành hai nút to bằng nửa màn hình.
+test('màn rộng: công tắc thấp gọn, nằm cùng cột với lưới ô, danh thiếp chiếm trọn cột trái', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const p = await page({ viewport: { width: 1240, height: 920 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.goto(base + '/links/');
+  await p.waitForSelector('#brands button');
+  await p.waitForTimeout(300);
+  const o = await p.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    return { sw: r('#brands'), grid: r('#grid'), pin: r('#pinned'), card: r('#card') };
+  });
+  assert.ok(o.sw.height < 70, 'công tắc cao ' + Math.round(o.sw.height) + 'px — bị lưới kéo giãn');
+  assert.equal(Math.round(o.sw.left), Math.round(o.grid.left), 'công tắc phải cùng cột với lưới ô');
+  assert.equal(Math.round(o.pin.left), Math.round(o.grid.left), 'ô ghim phải cùng cột với lưới ô');
+  assert.ok(o.sw.top < o.grid.top && o.grid.top < o.pin.top, 'thứ tự cột phải: công tắc → ô → ghim');
+  assert.ok(o.card.right < o.grid.left, 'danh thiếp phải ở cột trái');
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('trang sửa với nháp soạn trước khi có nhiều thương hiệu: vẫn thấy đủ thương hiệu, không mất chữ', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const cu = JSON.parse(await readFile(MAU, 'utf8'));          // bản mẫu là đời 1
+  cu.profile.tagline = 'Chữ chủ trang đã sửa trong nháp';
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.addInitScript((d) => {
+    if (window.top !== window || sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+  }, cu);
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.bbar .bb');
+  const ten = await p.$$eval('.bbar .bb b', (e) => e.map((x) => x.textContent));
+  assert.deepEqual(ten, site.brands.map((b) => b.label), 'thanh thương hiệu thiếu bên: ' + ten.join(', '));
+  const draft = await p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')));
+  assert.equal(draft.brands[0].tagline, 'Chữ chủ trang đã sửa trong nháp');
+  assert.equal(draft.brands[0].skin, 'glass');
+  await p.context().close();
+});
+
 test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
   // Mỗi máy đo hai trạng thái: thanh công cụ đang mở (khung nhìn hụt gần 90px, là lúc vừa mở
   // trang) và đã thu (sau cú vuốt đầu). Trạng thái "đang mở" mới là cái bắt được lỗi chật chỗ.

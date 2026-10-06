@@ -2,7 +2,7 @@
 // Nội dung form nằm trong edit-panels.js · trạng thái nháp trong edit-state.js · đăng lên web trong edit-publish.js.
 
 import { $, store, toast, toggleTheme } from './dom.js';
-import { normalize } from './core.js';
+import { normalize, mergeDraft } from './core.js';
 import { svg } from './icons.js';
 import { ed, DRAFT_KEY, loadPublished, markDirty, sendPreview, syncNow } from './edit-state.js';
 import { renderForm, importJson } from './edit-panels.js';
@@ -78,6 +78,7 @@ async function boot() {
   const saved = store.get(DRAFT_KEY);
   if (!ok) toast(saved ? 'Không tải được bản trên web — đang sửa tiếp bản nháp trên máy.' : 'Không tải được data.json. Tải lại trang để thử lại.');
   ed.draft = normalize(upgradeDraft(saved, ed.published) || JSON.parse(ed.published || '{}'));
+  if (saved && ed.published) ed.draft = mergeDraft(ed.draft, normalize(JSON.parse(ed.published)));
   if (saved) syncNow();          // nháp đời cũ vừa được nâng cấp → lưu lại bản đã chuẩn hoá
   renderForm();
   markDirty();
