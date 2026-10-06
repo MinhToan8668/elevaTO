@@ -332,6 +332,13 @@ function normalizeLink(l) {
     image,
     imageStyle: IMAGE_STYLES.includes(x.imageStyle) && !has(LEGACY_ART, rawImg) ? x.imageStyle : (image.startsWith('art/3d/') ? 'icon' : 'photo'),
     badge: str(x.badge, 12),
+    // Emoji thay cho icon nét — đúng cách trang TMXK gắn icon cho từng thứ (✨ ⬇️ 🎬 ⚡…).
+    emoji: str(x.emoji, 8),
+    // Bộ công cụ hiện thành lưới nút ngay trong ô (như thẻ Viral Studio của TMXK), mỗi nút một link riêng.
+    tools: (Array.isArray(x.tools) ? x.tools : []).map((t) => ({
+      label: str(t && t.label, 24), emoji: str(t && t.emoji, 8),
+      url: str(t && t.url, 1000), badge: str(t && t.badge, 8),
+    })).filter((t) => t.label).slice(0, 8),
     hidden: bool(x.hidden, false),
     live: bool(x.live, false),
     cta: str(x.cta, 30),

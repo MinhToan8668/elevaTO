@@ -366,6 +366,22 @@ img{display:block;max-width:100%}
    Số đo lấy từ khổ thật của iPhone trong Safari (390x750, đã trừ thanh công cụ).
    Chỉ xét BỀ NGANG, không xét chiều cao: Safari thu/giãn thanh công cụ khi cuộn làm chiều cao
    màn đổi liên tục, khoá theo chiều cao thì bố cục nhảy qua nhảy lại giữa chừng. */
+/* ═══ EMOJI & BỘ CÔNG CỤ TRONG MỘT Ô ═════════════════════════════════════
+   Emoji thay cho icon nét (cách trang TMXK gắn icon). Bộ công cụ là lưới nút nằm TRÊN lớp link phủ
+   cả ô (.cover, z-index 4) — bấm nút nào đi đúng công cụ đó, bấm chỗ khác thì đi link của ô. */
+.chip.emo{font-size:22px;line-height:1;font-style:normal}
+.f-top .chip.emo{font-size:30px}
+.tile>.tools{z-index:5;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tool{position:relative;display:flex;align-items:center;gap:8px;min-width:0;padding:9px 11px;border-radius:12px;
+  font-size:13px;font-weight:700;color:var(--strong);background:var(--glass-soft);box-shadow:inset 0 0 0 1px var(--glass-line);
+  transition:transform .15s var(--spring),background .2s}
+.tool:hover{background:var(--glass-strong)}
+.tool:active{transform:scale(.96)}
+.tool i{font-style:normal;font-size:15px;line-height:1;flex:none}
+.tool span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool b{position:absolute;top:-7px;right:-3px;padding:2px 6px;border-radius:999px;font-family:var(--display);
+  font-size:8.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:var(--em);color:var(--em-ink)}
+
 /* ═══ CÔNG TẮC THƯƠNG HIỆU ═══════════════════════════════════════════════
    Một trang phục vụ hai kênh TikTok. Chọn MỘT tại một thời điểm chứ không lọc nhiều mục:
    hai thương hiệu có màu và chất liệu khác hẳn nhau, trộn lẫn thì người xem không biết đang
@@ -511,6 +527,28 @@ img{display:block;max-width:100%}
 @media (prefers-color-scheme:dark){
   :root[data-skin="paper"]:not([data-theme="light"]) .chip.ico{background:rgb(255 255 255 / .07)}}
 
+/* Ô emoji trên giấy: cùng kiểu ô emoji (giấy hồng nhạt, viền mực, bóng cứng lệch). */
+:root[data-skin="paper"] .chip.emo{background:#f9e8dd;border:1.5px solid var(--nut-bd);box-shadow:2px 2px 0 var(--nut-bd);border-radius:12px}
+:root[data-skin="paper"][data-theme="dark"] .chip.emo{background:rgb(255 255 255 / .07)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-skin="paper"] .chip.emo{background:rgb(255 255 255 / .07)}}
+
+/* Ô có bộ công cụ = thẻ "Viral Studio" của TMXK: nền mực, tiêu đề kem, nút công cụ trong suốt viền
+   lime, nhãn MỚI lime, nút chính lime bóng cứng, băng keo kem dán góc phải. */
+:root[data-skin="paper"] .tile.has-tools{background:#26210f;border-color:#26210f;color:#fdf3ea}
+:root[data-skin="paper"] .tile.has-tools::before{background:rgb(253 243 234 / .75);border-color:rgb(28 38 0 / .2);
+  left:30px;right:auto;transform:rotate(-4deg)}     /* góc trái: góc phải đã có nhãn FREE */
+:root[data-skin="paper"] .tile.has-tools .ttl{color:#fdf3ea}
+:root[data-skin="paper"] .tile.has-tools .sub{color:#c8cfb4}
+:root[data-skin="paper"] .tile.has-tools .chip.emo{background:rgb(255 255 255 / .07);border-color:rgb(153 223 0 / .45);box-shadow:none}
+:root[data-skin="paper"] .tool{background:rgb(255 255 255 / .07);box-shadow:none;border:1px solid rgb(153 223 0 / .28);
+  border-radius:10px;color:#fdf3ea}
+:root[data-skin="paper"] .tool:hover{background:rgb(153 223 0 / .14)}
+:root[data-skin="paper"] .tool b{background:#99df00;color:#1c2600}
+:root[data-skin="paper"] .tile.has-tools .cta{background:#99df00;color:#1c2600;box-shadow:0 5px 0 #4f7500}
+:root[data-skin="paper"] .tile.has-tools .cta:active{box-shadow:0 1px 0 #4f7500}
+:root[data-skin="paper"][data-theme="dark"] .tile.has-tools{background:#12170a;border-color:#414f26}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-skin="paper"] .tile.has-tools{background:#12170a;border-color:#414f26}}
+
 :root[data-skin="paper"] .ava-wrap{border-radius:14px;background:var(--em);padding:2px}
 :root[data-skin="paper"] .ava{border-radius:12px;box-shadow:0 0 0 1.5px var(--duong)}
 :root[data-skin="paper"] .ava-dot{border-color:var(--giay)}
@@ -568,6 +606,9 @@ img{display:block;max-width:100%}
   .sw-thumb{border-radius:12px}
   .pinned{gap:4px}
   .pin-nh{font-size:9.5px}
+  .tile>.tools{gap:5px}
+  .tool{padding:7px 9px;font-size:12.5px;gap:7px;border-radius:10px}
+  .tool i{font-size:14px}
   .grid{gap:4px}
   .tile{padding:8px;border-radius:19px}
   .tile.half{min-height:88px;gap:7px}

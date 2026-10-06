@@ -277,6 +277,55 @@ test('trang sửa với nháp soạn trước khi có nhiều thương hiệu: v
   await p.context().close();
 });
 
+// Nút công cụ nằm trong một ô vốn đã có lớp link phủ cả ô. Nếu lớp phủ đè lên, bấm "Hook viral"
+// lại mở trang chung của ô — nên kiểm đúng phần tử nằm dưới ngón tay.
+test('ô Viral Studio: mỗi nút công cụ bấm được và đi đúng công cụ', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const tmxk = site.brands.find((b) => b.skin === 'paper');
+  const kit = tmxk.links.find((l) => l.tools && l.tools.length);
+  const p = await page();
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.goto(base + '/links/?v=' + tmxk.id);
+  await p.waitForSelector('.tile.has-tools .tool');
+  const thuc = await p.$$eval('.tile.has-tools .tool', (as) => as.map((a) => {
+    const r = a.getBoundingClientRect();
+    const duoiNgonTay = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { href: a.getAttribute('href'), trung: a.contains(duoiNgonTay) };
+  }));
+  assert.deepEqual(thuc.map((t) => t.href), kit.tools.map((t) => t.url));
+  assert.ok(thuc.every((t) => t.trung), 'có nút công cụ bị lớp link của ô đè lên');
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('trang sửa: Finance lỡ bị đổi sang lớp sơn giấy trong nháp thì được trả về kính mờ, một lần', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const nhap = JSON.parse(JSON.stringify(site));
+  nhap.brands[0].skin = 'paper';
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.addInitScript((d) => {
+    if (window.top !== window || sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+  }, nhap);
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.bbar .bb');
+  const skin = () => p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')).brands[0].skin);
+  assert.equal(await skin(), 'glass');
+
+  // Sau lần dọn đó, chủ trang đổi lớp sơn có chủ ý thì phải được giữ nguyên.
+  await p.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('elevato-links-draft'));
+    d.brands[0].skin = 'paper';
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+  });
+  await p.reload();
+  await p.waitForSelector('.bbar .bb');
+  assert.equal(await skin(), 'paper');
+  await p.context().close();
+});
+
 test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
   // Mỗi máy đo hai trạng thái: thanh công cụ đang mở (khung nhìn hụt gần 90px, là lúc vừa mở
   // trang) và đã thu (sau cú vuốt đầu). Trạng thái "đang mở" mới là cái bắt được lỗi chật chỗ.

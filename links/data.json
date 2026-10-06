@@ -241,30 +241,32 @@
           "label": "ngày"
         },
         {
-          "value": "4",
-          "label": "chặng"
+          "value": "1:1",
+          "label": "edit kèm"
         },
         {
-          "value": "Thứ 5",
-          "label": "live hàng tuần"
+          "value": "10",
+          "label": "người / lớp"
         }
       ],
       "links": [
         {
           "id": "tmxk-lop",
           "title": "Lớp TikTok 30 ngày",
-          "subtitle": "Bốn chặng — live tối Thứ 5, các tối còn lại mentor ngồi edit cùng bạn tới khi ra video",
-          "url": "https://minhtoan8668.github.io/tiktok/",
+          "subtitle": "Live tối Thứ 5 · edit kèm 1:1 · tối đa 10 người",
+          "url": "https://minhtoan8668.github.io/TikTok/",
           "size": "feature",
           "icon": "link",
           "accent": "emerald",
           "image": "art/tmxk/mark.svg",
           "imageStyle": "photo",
           "badge": "",
+          "emoji": "",
+          "tools": [],
           "hidden": false,
           "live": true,
-          "cta": "Đăng ký",
-          "ctaUrl": "https://minhtoan8668.github.io/tiktok/#dang-ky",
+          "cta": "Đăng ký học",
+          "ctaUrl": "https://minhtoan8668.github.io/TikTok/#dangky",
           "details": {
             "enabled": false,
             "text": "",
@@ -275,18 +277,57 @@
         {
           "id": "tmxk-studio",
           "title": "Viral Studio",
-          "subtitle": "Hook viral · Soi video · Chấm video · Kịch bản",
-          "url": "https://minhtoan8668.github.io/tiktok/tools/hook-text.html",
-          "size": "wide",
+          "subtitle": "6 tool AI làm video viral, không cần tài khoản",
+          "url": "https://minhtoan8668.github.io/TikTok/tools/soi-video.html",
+          "size": "feature",
           "icon": "link",
           "accent": "emerald",
-          "image": "art/3d/sparkles.webp",
-          "imageStyle": "icon",
+          "image": "",
+          "imageStyle": "photo",
           "badge": "FREE",
+          "emoji": "✨",
+          "tools": [
+            {
+              "emoji": "⬇️",
+              "label": "Tải video",
+              "url": "https://minhtoan8668.github.io/TikTok/tools/tai-ve.html",
+              "badge": ""
+            },
+            {
+              "emoji": "🎬",
+              "label": "Soi video",
+              "url": "https://minhtoan8668.github.io/TikTok/tools/soi-video.html",
+              "badge": ""
+            },
+            {
+              "emoji": "⚡",
+              "label": "Hook viral",
+              "url": "https://minhtoan8668.github.io/TikTok/tools/hook-text.html",
+              "badge": ""
+            },
+            {
+              "emoji": "📝",
+              "label": "Kịch bản",
+              "url": "https://minhtoan8668.github.io/TikTok/tools/kich-ban.html",
+              "badge": ""
+            },
+            {
+              "emoji": "🎞️",
+              "label": "Dựng video",
+              "url": "https://minhtoan8668.github.io/TikTok/tools/dung-video.html",
+              "badge": "Mới"
+            },
+            {
+              "emoji": "🎯",
+              "label": "Chấm video",
+              "url": "https://minhtoan8668.github.io/TikTok/tools/cham-video.html",
+              "badge": "Mới"
+            }
+          ],
           "hidden": false,
           "live": false,
-          "cta": "",
-          "ctaUrl": "",
+          "cta": "Dùng thử Viral Studio",
+          "ctaUrl": "https://minhtoan8668.github.io/TikTok/tools/soi-video.html",
           "details": {
             "enabled": false,
             "text": "",
@@ -295,38 +336,18 @@
           }
         },
         {
-          "id": "tmxk-teams",
-          "title": "Tạo nền Teams",
-          "subtitle": "Nền họp có thương hiệu, không cần cài gì",
-          "url": "https://minhtoan8668.github.io/tiktok/tools/tao-nen-teams.html",
-          "size": "wide",
-          "icon": "link",
-          "accent": "emerald",
-          "image": "art/3d/desktop-computer.webp",
-          "imageStyle": "icon",
-          "badge": "FREE",
-          "hidden": false,
-          "live": false,
-          "cta": "",
-          "ctaUrl": "",
-          "details": {
-            "enabled": false,
-            "text": "",
-            "bullets": [],
-            "button": ""
-          }
-        },
-        {
-          "id": "tmxk-bot",
-          "title": "Bot tải video",
-          "subtitle": "Tải video TikTok, không logo",
-          "url": "",
+          "id": "tmxk-soikenh",
+          "title": "Soi kênh miễn phí",
+          "subtitle": "Gửi link, tụi mình soi",
+          "url": "https://minhtoan8668.github.io/TikTok/#soikenh",
           "size": "half",
           "icon": "link",
           "accent": "emerald",
-          "image": "art/3d/down-arrow.webp",
-          "imageStyle": "icon",
-          "badge": "",
+          "image": "",
+          "imageStyle": "photo",
+          "badge": "FREE",
+          "emoji": "🔎",
+          "tools": [],
           "hidden": false,
           "live": false,
           "cta": "",
@@ -339,16 +360,18 @@
           }
         },
         {
-          "id": "tmxk-kenh",
-          "title": "Kênh TMXK",
-          "subtitle": "Video xây kênh mỗi tuần",
-          "url": "",
+          "id": "tmxk-congdong",
+          "title": "Cộng đồng",
+          "subtitle": "Group Zalo xây kênh",
+          "url": "https://minhtoan8668.github.io/TikTok/#congdong",
           "size": "half",
           "icon": "link",
           "accent": "emerald",
-          "image": "art/3d/clapper-board.webp",
-          "imageStyle": "icon",
-          "badge": "",
+          "image": "",
+          "imageStyle": "photo",
+          "badge": "FREE",
+          "emoji": "💬",
+          "tools": [],
           "hidden": false,
           "live": false,
           "cta": "",

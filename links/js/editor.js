@@ -71,6 +71,8 @@ function bindChrome() {
   });
 }
 
+const SKIN_FIX = 'elevato-links-skinfix-1';
+
 async function boot() {
   bindChrome();
   loadPreview();
@@ -78,7 +80,22 @@ async function boot() {
   const saved = store.get(DRAFT_KEY);
   if (!ok) toast(saved ? 'Không tải được bản trên web — đang sửa tiếp bản nháp trên máy.' : 'Không tải được data.json. Tải lại trang để thử lại.');
   ed.draft = normalize(upgradeDraft(saved, ed.published) || JSON.parse(ed.published || '{}'));
-  if (saved && ed.published) ed.draft = mergeDraft(ed.draft, normalize(JSON.parse(ed.published)));
+  if (saved && ed.published) {
+    const pub = normalize(JSON.parse(ed.published));
+    ed.draft = mergeDraft(ed.draft, pub);
+    // Trang sửa bản trước không có tab Content, nên muốn xem TMXK chỉ còn cách đổi lớp sơn của chính
+    // elevaTO sang "giấy & lime" — và nó ở lại trong nháp. Trả mỗi thương hiệu về đúng lớp sơn đang
+    // chạy trên web, chỉ MỘT lần (cờ dưới); về sau chủ trang đổi lớp sơn có chủ ý thì không đụng nữa.
+    if (!store.get(SKIN_FIX)) {
+      let n = 0;
+      for (const b of ed.draft.brands) {
+        const goc = pub.brands.find((x) => x.id === b.id);
+        if (goc && goc.skin !== b.skin) { b.skin = goc.skin; n += 1; }
+      }
+      store.set(SKIN_FIX, true);
+      if (n) toast('Đã trả lớp sơn của từng thương hiệu về đúng bản trên web.');
+    }
+  }
   if (saved) syncNow();          // nháp đời cũ vừa được nâng cấp → lưu lại bản đã chuẩn hoá
   renderForm();
   markDirty();
