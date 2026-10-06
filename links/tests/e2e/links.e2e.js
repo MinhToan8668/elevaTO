@@ -159,6 +159,81 @@ test('hai thương hiệu: ?v= mở đúng bên, công tắc đổi cả lớp s
   await p.context().close();
 });
 
+// Máy người xem giữ bản lưu của lần mở trước để vẽ ngay từ nhịp đầu. Nhưng khi máy chủ chưa có gì
+// (chủ trang chưa bấm "Đăng lên web"), bản lưu đó KHÔNG được phép che mất data.json — không thì ai
+// từng mở trang một lần sẽ thấy bản cũ mãi mãi, dù repo đã đổi.
+test('máy chủ trống thì data.json vẫn thắng bản lưu cũ trên máy người xem', async () => {
+  const p = await page();
+  const cu = JSON.parse(await readFile(MAU, 'utf8'));
+  cu.links = cu.links.map((l) => ({ ...l, title: l.title === 'AI đọc BCTC' ? 'TIÊU ĐỀ CŨ TRÊN MÁY' : l.title }));
+  await p.addInitScript((d) => {
+    if (window.top !== window) return;
+    localStorage.setItem('elevato-links-v1', JSON.stringify(d));
+  }, cu);
+  await p.goto(base + '/links/');
+  await p.waitForSelector('#grid .tile:not(.sk-tile)');
+  await p.waitForFunction(() => !document.body.textContent.includes('TIÊU ĐỀ CŨ TRÊN MÁY'),
+    null, { timeout: 5000 }).catch(() => {});
+  const tua = await p.$$eval('#grid .ttl', (e) => e.map((x) => x.textContent));
+  assert.ok(!tua.includes('TIÊU ĐỀ CŨ TRÊN MÁY'), 'bản lưu cũ vẫn che mất data.json: ' + tua.join(' | '));
+  assert.ok(tua.includes('AI đọc BCTC'), 'phải hiện nội dung của data.json: ' + tua.join(' | '));
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+// Hai thương hiệu, hai máy chủ cấu hình khác nhau → số chỗ phải tách bạch. Dùng chung một khoá lưu
+// là số chỗ của lớp này hiện trên ô của lớp kia.
+test('số chỗ trực tiếp lấy riêng cho từng thương hiệu, không dùng chung bộ nhớ đệm', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const tmxk = site.brands.find((b) => b.skin === 'paper');
+  assert.ok(tmxk.live.enabled && /script\.google\.com/.test(tmxk.live.api), 'lớp TMXK phải nối vào Apps Script riêng');
+  assert.notEqual(tmxk.live.api, site.brands[0].live.api, 'hai thương hiệu phải dùng hai máy chủ khác nhau');
+
+  const cfg = (soCho, max) => ({ ok: true, config: {
+    cohort: { number: soCho, status: 'open', openText: 'Đang mở' },
+    slots: { max, base: 0, registered: 1 }, pricing: { earlyBird: 2000000 },
+    schedule: { days: 'Tối Thứ 5', time: '20:00–22:00' } } });
+
+  const p = await page();
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  // Mỗi API trả một con số khác hẳn để thấy ngay nếu bị lẫn.
+  await p.route((u) => u.href.startsWith(site.brands[0].live.api), (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(cfg(7, 10)) }));
+  await p.route((u) => u.href.startsWith(tmxk.live.api), (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(cfg(3, 15)) }));
+
+  await p.goto(base + '/links/');
+  await p.waitForFunction(() => {
+    const el = document.querySelector('.tile.feature .live');
+    return el && /Cohort 07/.test(el.textContent);
+  }, null, { timeout: 8000 });
+  assert.match(await p.textContent('.tile.feature .live'), /còn 9\/10 suất/);
+
+  await p.click('#brands button >> nth=1');
+  await p.waitForFunction(() => {
+    const el = document.querySelector('.tile.feature .live');
+    return el && /Cohort 03/.test(el.textContent);
+  }, null, { timeout: 8000 });
+  const tmxkLive = await p.textContent('.tile.feature .live');
+  assert.match(tmxkLive, /còn 14\/15 suất/, 'số chỗ TMXK bị lẫn với elevaTO: ' + tmxkLive);
+
+  // Quay lại Finance: vẫn là số của elevaTO, không bị bên kia ghi đè.
+  await p.click('#brands button >> nth=0');
+  await p.waitForFunction(() => {
+    const el = document.querySelector('.tile.feature .live');
+    return el && /Cohort 07/.test(el.textContent);
+  }, null, { timeout: 8000 });
+  assert.match(await p.textContent('.tile.feature .live'), /Cohort 07[\s\S]*còn 9\/10 suất/);
+
+  // Và quan trọng nhất: hai cấu hình phải nằm ở HAI khoá lưu khác nhau. Dùng chung một khoá thì
+  // lượt mở trang sau sẽ vẽ số chỗ của thương hiệu kia ngay từ nhịp đầu, trước khi máy chủ trả lời.
+  const luu = await p.evaluate(() => Object.fromEntries(Object.keys(localStorage)
+    .filter((k) => k.startsWith('elevato_cfg_v2'))
+    .map((k) => [k, JSON.parse(localStorage.getItem(k)).slots.max])));
+  assert.deepEqual(luu, { elevato_cfg_v2: 10, 'elevato_cfg_v2:content': 15 },
+    'cấu hình hai thương hiệu phải lưu riêng, nhận được: ' + JSON.stringify(luu));
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
   // Mỗi máy đo hai trạng thái: thanh công cụ đang mở (khung nhìn hụt gần 90px, là lúc vừa mở
   // trang) và đã thu (sau cú vuốt đầu). Trạng thái "đang mở" mới là cái bắt được lỗi chật chỗ.

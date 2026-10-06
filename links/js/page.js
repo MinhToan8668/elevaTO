@@ -15,7 +15,8 @@ const LIVE_TIMEOUT_MS = 8000;
 let site = null;        // cả trang: phần dùng chung + mọi thương hiệu
 let data = null;        // thương hiệu đang mở, ở dạng phẳng mà phần vẽ bên dưới quen dùng
 let cur = 0;
-let cohort = null;
+let cohort = null;                   // cohort của thương hiệu đang mở
+const cohorts = new Map();           // id thương hiệu → cohort đã lấy, đổi tab qua lại không gọi lại
 
 // Mỗi kênh TikTok dán một link riêng (…/links/?v=finance, ?v=content) nên trang mở ra đã đúng
 // thương hiệu — công tắc chỉ để người tò mò bắc cầu sang bên kia, không ai mất thêm một cú bấm.
@@ -176,11 +177,13 @@ function setBrand(i) {
   if (i === cur || !site.brands[i]) return;
   cur = i;
   data = brandDoc(site, cur);
+  cohort = cohorts.get(data.id) || null;
   // Link đổi theo để ai copy thanh địa chỉ cũng ra đúng thương hiệu đang xem.
   const u = new URL(location.href);
   if (cur === 0) u.searchParams.delete(BRAND_PARAM); else u.searchParams.set(BRAND_PARAM, site.brands[cur].id);
   if (!PREVIEW) history.replaceState(null, '', u);
   render();
+  loadCohort();
   $('#brands').querySelector('[aria-selected="true"]').focus();
 }
 
@@ -317,7 +320,7 @@ async function share() {
 /* ── tải dữ liệu ──────────────────────────────── */
 // Nội dung trang: ưu tiên bản lưu trên máy chủ Apps Script (trình chỉnh sửa lưu vào đó, đổi ngay),
 // data.json trong repo là bản dự phòng khi máy chủ chưa có gì hoặc không trả lời.
-let cohortStarted = false;
+const daGoiCohort = new Set();       // thương hiệu nào đã hỏi máy chủ cấu hình rồi
 let daVe = '';                       // nội dung đang hiện, dạng chuẩn
 function apply(raw) {
   const json = serialize(raw);
@@ -328,7 +331,7 @@ function apply(raw) {
   cur = Math.min(cur || pickBrand(), site.brands.length - 1);
   data = brandDoc(site, cur);
   render();
-  if (!cohortStarted) { cohortStarted = true; loadCohort(); }
+  loadCohort();
 }
 
 async function loadFile() {
@@ -354,6 +357,11 @@ async function loadData() {
   const backend = fetchLinks().then((raw) => { if (raw) { fromBackend = true; apply(raw); } return raw; });
   const file = loadFile().then((raw) => { if (!fromBackend && !cached) apply(raw); return raw; }).catch(() => null);
   const [b, f] = await Promise.all([backend, file]);
+  // Máy chủ KHÔNG có gì → data.json mới là nguồn đúng, kể cả khi máy người xem đã có bản lưu cũ.
+  // Thiếu dòng này thì ai từng mở trang một lần sẽ thấy bản cũ mãi mãi: bản lưu vẽ trước, data.json
+  // bị chặn vì "đã có bản lưu rồi", mà máy chủ thì chẳng trả về gì để sửa lại.
+  // apply() tự bỏ qua khi nội dung y hệt, nên không gây vẽ lại thừa.
+  if (!b && f) apply(f);
   if (b || f || data) return;
   $('#grid').replaceChildren();
   const err = $('#err');
@@ -362,21 +370,31 @@ async function loadData() {
   $('#main').removeAttribute('aria-busy');
 }
 
+/** Mỗi thương hiệu một máy chủ cấu hình riêng → một khoá lưu riêng, không thì số chỗ của lớp này
+ *  hiện trên ô của lớp kia. Thương hiệu đầu tiên (elevaTO) vẫn mượn được khoá chung mà trang khoá
+ *  học ghi sẵn cùng origin, nên số chỗ có ngay từ nhịp vẽ đầu. */
+const cfgKey = (d, i) => (i === 0 ? CFG_CACHE : CFG_CACHE + ':' + d.id);
+
 async function loadCohort() {
   if (!data || !data.live.enabled) return;
-  const cached = store.get(CFG_CACHE);
-  if (cached && !cohort) { cohort = cohortInfo(cached); render(); }
+  const khoa = cfgKey(data, cur);
+  const id = data.id;
+  const cached = store.get(khoa);
+  if (cached && !cohort) { cohort = cohortInfo(cached); cohorts.set(id, cohort); render(); }
   const api = safeUrl(data.live.api);
   if (!/^https:\/\/script\.google\.com\//.test(api)) return;
+  if (daGoiCohort.has(id)) return;     // mỗi thương hiệu chỉ hỏi máy chủ một lần cho mỗi lượt mở trang
+  daGoiCohort.add(id);
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), LIVE_TIMEOUT_MS);
   try {
     const r = await fetch(api + '?action=config&t=' + Date.now(), { cache: 'no-store', signal: ctl.signal });
     const d = await r.json();
     if (!d || !d.ok || !d.config) return;
-    store.set(CFG_CACHE, d.config);
-    cohort = cohortInfo(d.config);
-    render();
+    store.set(khoa, d.config);
+    const info = cohortInfo(d.config);
+    cohorts.set(id, info);
+    if (data && data.id === id) { cohort = info; render(); }   // đổi tab giữa chừng thì khỏi vẽ đè
   } catch (e) {
     /* mạng lỗi → giữ số đã lưu, hoặc dùng dòng trạng thái tĩnh */
   } finally {

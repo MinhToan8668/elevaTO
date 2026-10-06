@@ -262,7 +262,7 @@
           "imageStyle": "photo",
           "badge": "",
           "hidden": false,
-          "live": false,
+          "live": true,
           "cta": "Đăng ký",
           "ctaUrl": "https://minhtoan8668.github.io/tiktok/#dang-ky",
           "details": {
@@ -362,8 +362,8 @@
         }
       ],
       "live": {
-        "enabled": false,
-        "api": ""
+        "enabled": true,
+        "api": "https://script.google.com/macros/s/AKfycbyxe1nWupAl6VheDZHaU3Ojm-d6c8F_khhUMtkehNCLh5OnGW6f2uF0PKPYZ4eYUqyGjQ/exec"
       },
       "theme": {
         "blur": 0,
