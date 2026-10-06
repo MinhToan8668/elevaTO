@@ -11,7 +11,17 @@ export const DRAFT_KEY = 'elevato-links-draft';
 const SYNC_MS = 150;
 
 /** Trạng thái của trình chỉnh sửa. `draft` luôn là bản mới nhất; chỉ việc lưu / gửi đi mới bị hoãn. */
-export const ed = { draft: null, published: '', openLink: '' };
+export const ed = { draft: null, published: '', openLink: '', brand: 0 };
+
+/** Thương hiệu đang sửa. Mọi panel thuộc về một thương hiệu đều đi qua đây. */
+export function B() {
+  return ed.draft.brands[Math.min(ed.brand, ed.draft.brands.length - 1)];
+}
+
+/** Sửa riêng thương hiệu đang mở (phần dùng chung thì cứ setDraft như cũ). */
+export function setBrandField(fn) {
+  setDraft((d) => { fn(d.brands[Math.min(ed.brand, d.brands.length - 1)]); });
+}
 
 /** Sửa bản nháp. Mỗi thay đổi tạo bản sao mới, không sửa đè object cũ. */
 export function setDraft(fn) {
@@ -68,7 +78,8 @@ function setText(el, text, on) {
 
 export function sendPreview() {
   const w = $('#frame').contentWindow;
-  if (w && ed.draft) w.postMessage({ type: 'elevato-links:data', data: ed.draft }, location.origin);
+  // Khung xem trước phải mở đúng thương hiệu đang sửa, không thì sửa một bên mà nhìn bên kia.
+  if (w && ed.draft) w.postMessage({ type: 'elevato-links:data', data: ed.draft, brand: ed.brand }, location.origin);
 }
 
 /** Tải bản đang chạy trên web (máy chủ elevaTO trước, data.json dự phòng). Lỗi thì giữ `published` cũ. */

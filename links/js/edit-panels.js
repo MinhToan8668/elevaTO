@@ -3,12 +3,12 @@
 
 import { $, h, store, toast } from './dom.js';
 import { normalize, serialize, newId, hiddenReason, safeImg, glassIconFor,
-  ACCENTS, ACCENT_LABELS, SOCIALS, ICON_LIBRARY, BACKGROUNDS } from './core.js';
+  ACCENTS, ACCENT_LABELS, SOCIALS, ICON_LIBRARY, BACKGROUNDS, SKINS } from './core.js';
 import * as iconify from './iconify.js';
 import { svg, TILE_ICONS } from './icons.js';
 import { field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
 import { fileToDataUrl, pickFile, dataUrlKb } from './image.js';
-import { ed, setDraft, replaceDraft, loadPublished, DRAFT_KEY } from './edit-state.js';
+import { ed, setDraft, setBrandField, replaceDraft, loadPublished, sendPreview, B, DRAFT_KEY } from './edit-state.js';
 import { publishPanel } from './edit-publish.js';
 
 /** Sửa bản nháp; rerender khi thay đổi làm form đổi cấu trúc (thêm / xoá dòng, bật tắt mục con…). */
@@ -16,6 +16,16 @@ function update(fn, { rerender = false } = {}) {
   setDraft(fn);
   if (rerender) renderForm();
 }
+
+/** Sửa thứ thuộc về RIÊNG thương hiệu đang mở (ô link, số liệu, giao diện, dòng giới thiệu…). */
+function updateB(fn, { rerender = false } = {}) {
+  setBrandField(fn);
+  if (rerender) renderForm();
+}
+
+// Hai danh sách ô dùng chung một bộ thẻ: ô của thương hiệu đang mở, và ô ghim hiện ở mọi thương hiệu.
+const DS_BRAND = { ten: 'links', doc: () => B().links, lay: (d) => d.brands[Math.min(ed.brand, d.brands.length - 1)].links };
+const DS_GHIM = { ten: 'pinned', doc: () => ed.draft.pinned, lay: (d) => d.pinned };
 
 /* ── ảnh từ máy ───────────────────────────────── */
 const BIG_IMAGE_KB = 250;
@@ -36,29 +46,34 @@ async function pick(opts) {
 /* ── hồ sơ, số liệu, mạng xã hội ──────────────── */
 function profilePanel() {
   const p = ed.draft.profile;
+  const b = B();
   const set = (k) => (v) => update((d) => { d.profile[k] = v; });
-  return panel('Hồ sơ', 'Ảnh, tên, một dòng giới thiệu', true,
+  const setB = (k) => (v) => updateB((x) => { x[k] = v; });
+  return panel('Hồ sơ', 'Ảnh và tên dùng chung; handle với dòng giới thiệu theo từng thương hiệu', true,
     h('div', { class: 'cols' },
-      field('Tên hiển thị', p.name, set('name'), { max: 80 }),
-      field('Handle', p.handle, set('handle'), { placeholder: '@toanelevato', max: 60 })),
-    field('Giới thiệu ngắn', p.tagline, set('tagline'), { multiline: true, rows: 2, max: 200, wide: true }),
+      field('Tên hiển thị', p.name, set('name'), { max: 80, hint: 'Dùng chung cho mọi thương hiệu' }),
+      field('Handle', b.handle, setB('handle'), { placeholder: '@toanelevato', max: 60,
+        hint: 'Riêng ' + b.label + ' — mỗi kênh một @handle' })),
+    field('Giới thiệu ngắn', b.tagline, setB('tagline'), { multiline: true, rows: 2, max: 200, wide: true,
+      hint: 'Riêng ' + b.label }),
     imageField('Ảnh đại diện', p.avatar, (v, re) => update((d) => { d.profile.avatar = v; }, { rerender: re }),
       { round: true, onPick: () => pick({ maxSide: 420, square: true }), sets: [{ label: 'Ảnh có sẵn', style: 'photo', items: { '../assets/instructor-sm.webp': 'Ảnh hiện tại' } }] }),
-    field('Dòng trạng thái', p.status, set('status'), { max: 80, placeholder: 'Ví dụ: Đang mở lịch Coffee Connect',
+    field('Dòng trạng thái', b.status, setB('status'), { max: 80, placeholder: 'Ví dụ: Đang mở lịch Coffee Connect',
       hint: 'Để trống: tự hiện trạng thái cohort (nếu không có ô nổi bật nào đang hiện số chỗ).', wide: true }),
     toggle('Hiện dấu tích xanh cạnh tên', p.verified, set('verified')));
 }
 
 function statsPanel() {
-  const rows = ed.draft.stats.map((s, i) => h('div', { class: 'row' },
-    field('Số', s.value, (v) => update((d) => { d.stats[i].value = v; }), { max: 16, placeholder: '2.5+' }),
-    field('Nhãn', s.label, (v) => update((d) => { d.stats[i].label = v; }), { max: 40, placeholder: 'năm M&A' }),
-    iconBtn('trash', 'Xoá dòng này', () => update((d) => { d.stats.splice(i, 1); }, { rerender: true }), 'danger')));
-  const add = ed.draft.stats.length < 4
+  const st = B().stats;
+  const rows = st.map((s, i) => h('div', { class: 'row' },
+    field('Số', s.value, (v) => updateB((x) => { x.stats[i].value = v; }), { max: 16, placeholder: '2.5+' }),
+    field('Nhãn', s.label, (v) => updateB((x) => { x.stats[i].label = v; }), { max: 40, placeholder: 'năm M&A' }),
+    iconBtn('trash', 'Xoá dòng này', () => updateB((x) => { x.stats.splice(i, 1); }, { rerender: true }), 'danger')));
+  const add = st.length < 4
     ? h('button', { type: 'button', class: 'add', html: svg('plus') + '<span>Thêm số liệu</span>',
-      onclick: () => update((d) => { d.stats.push({ value: '', label: '' }); }, { rerender: true }) })
+      onclick: () => updateB((x) => { x.stats.push({ value: '', label: '' }); }, { rerender: true }) })
     : null;
-  return panel('Số liệu nổi bật', 'Tối đa 4 ô, hiện ngay dưới tên', false, ...rows, add);
+  return panel('Số liệu nổi bật', 'Tối đa 4 ô, riêng ' + B().label, false, ...rows, add);
 }
 
 function socialsPanel() {
@@ -84,18 +99,20 @@ function placeholderFor(type) {
     email: 'ban@email.com', phone: '09xx xxx xxx', telegram: '@ten' }[type] || 'https://…';
 }
 
-/** Đổi chỗ một dòng trong danh sách (links / socials) lên hoặc xuống. */
-function move(key, i, dir) {
+/** Đổi chỗ một dòng lên hoặc xuống. `ds` là một trong DS_BRAND / DS_GHIM, hoặc 'socials'. */
+function move(ds, i, dir) {
+  const lay = ds === 'socials' ? (d) => d.socials : ds.lay;
+  const doc = ds === 'socials' ? ed.draft.socials : ds.doc();
   const j = i + dir;
-  if (j < 0 || j >= ed.draft[key].length) return;
-  update((d) => { const a = d[key]; [a[i], a[j]] = [a[j], a[i]]; }, { rerender: true });
+  if (j < 0 || j >= doc.length) return;
+  update((d) => { const a = lay(d); [a[i], a[j]] = [a[j], a[i]]; }, { rerender: true });
 }
 
 /* ── từng ô link ──────────────────────────────── */
 const SIZE_LABEL = { feature: 'Nổi bật', wide: 'Ngang', half: 'Nửa ô' };
 
 /** Dòng đầu của thẻ: chip icon, tên, cảnh báo ô đang ẩn, và các nút sắp xếp / nhân bản / xoá. */
-function linkHead(l, i, open) {
+function linkHead(l, i, open, ds) {
   const chip = safeImg(l.image)
     ? h('span', { class: 'chip sm ' + (l.imageStyle === 'icon' ? 'ico' : 'img') }, h('img', { src: safeImg(l.image), alt: '' }))
     : h('span', { class: 'chip sm', html: svg(l.icon) });
@@ -109,21 +126,21 @@ function linkHead(l, i, open) {
         h('small', {}, SIZE_LABEL[l.size] + (l.url ? ' · ' + l.url : ''))),
       reason ? h('span', { class: 'warn' }, reason) : null),
     h('div', { class: 'lc-tools' },
-      iconBtn('up', 'Lên trên', () => move('links', i, -1), i === 0 ? 'ghosted' : '', 'up|' + l.id),
-      iconBtn('down', 'Xuống dưới', () => move('links', i, 1), i === ed.draft.links.length - 1 ? 'ghosted' : '', 'down|' + l.id),
-      iconBtn('copy', 'Nhân bản', () => update((d) => { d.links.splice(i + 1, 0, { ...structuredClone(l), id: newId(), title: l.title + ' (bản sao)' }); }, { rerender: true }), '', 'copy|' + l.id),
-      iconBtn('trash', 'Xoá ô', () => { if (confirm('Xoá ô "' + (l.title || 'chưa đặt tên') + '"?')) update((d) => { d.links.splice(i, 1); }, { rerender: true }); }, 'danger')));
+      iconBtn('up', 'Lên trên', () => move(ds, i, -1), i === 0 ? 'ghosted' : '', 'up|' + l.id),
+      iconBtn('down', 'Xuống dưới', () => move(ds, i, 1), i === ds.doc().length - 1 ? 'ghosted' : '', 'down|' + l.id),
+      iconBtn('copy', 'Nhân bản', () => update((d) => { ds.lay(d).splice(i + 1, 0, { ...structuredClone(l), id: newId(), title: l.title + ' (bản sao)' }); }, { rerender: true }), '', 'copy|' + l.id),
+      iconBtn('trash', 'Xoá ô', () => { if (confirm('Xoá ô "' + (l.title || 'chưa đặt tên') + '"?')) update((d) => { ds.lay(d).splice(i, 1); }, { rerender: true }); }, 'danger')));
 }
 
-function linkCard(l, i) {
+function linkCard(l, i, ds) {
   const open = ed.openLink === l.id;
-  const head = linkHead(l, i, open);
+  const head = linkHead(l, i, open, ds);
   const card = h('div', { class: 'lc' + (open ? ' open' : '') + (hiddenReason(l) ? ' off' : '') }, head);
   if (!open) return card;
 
-  const set = (k) => (v) => update((d) => { d.links[i][k] = v; });
-  const setRe = (k) => (v) => update((d) => { d.links[i][k] = v; }, { rerender: true });
-  const setDet = (k) => (v) => update((d) => { d.links[i].details[k] = v; });
+  const set = (k) => (v) => update((d) => { ds.lay(d)[i][k] = v; });
+  const setRe = (k) => (v) => update((d) => { ds.lay(d)[i][k] = v; }, { rerender: true });
+  const setDet = (k) => (v) => update((d) => { ds.lay(d)[i].details[k] = v; });
   const chip = head.querySelector('.chip');
   const isFeature = l.size === 'feature';
   const sheet = l.details.enabled;
@@ -137,7 +154,7 @@ function linkCard(l, i) {
       hint: 'Link bất kỳ: Google Drive, Zalo (https://zalo.me/09…), form, trang khác… Để trống thì ô tự ẩn.' }),
     segmented('Kiểu ô', l.size, [['feature', 'Nổi bật (to nhất)'], ['wide', 'Ngang cả hàng'], ['half', 'Nửa hàng']], setRe('size')),
     imageField('Icon / ảnh của ô', l.image,
-      (v, re, style) => update((d) => { d.links[i].image = v; if (style) d.links[i].imageStyle = style; }, { rerender: re }),
+      (v, re, style) => update((d) => { const x = ds.lay(d)[i]; x.image = v; if (style) x.imageStyle = style; }, { rerender: re }),
       { sets: ICON_LIBRARY, iconify, style: l.imageStyle,
         onStyle: setRe('imageStyle'),
         onPick: () => pick({ maxSide: 256, square: true }),
@@ -153,34 +170,35 @@ function linkCard(l, i) {
       field('Link của nút', l.ctaUrl, set('ctaUrl'), { type: 'url', placeholder: 'Để trống = giống link ô', hint: '../#dang-ky mở thẳng form đăng ký' })) : null,
     isFeature ? toggle('Hiện số chỗ cohort trực tiếp', l.live, set('live'), 'Lấy từ bot Telegram, giống trang khoá học.') : null,
     segmented('Khi bấm vào ô', sheet ? 'sheet' : 'link', [['link', 'Mở link ngay'], ['sheet', 'Hiện thẻ chi tiết trước']],
-      (v) => update((d) => { d.links[i].details.enabled = v === 'sheet'; }, { rerender: true })),
+      (v) => update((d) => { ds.lay(d)[i].details.enabled = v === 'sheet'; }, { rerender: true })),
     sheet ? field('Đoạn giới thiệu', l.details.text, setDet('text'), { multiline: true, rows: 3, max: 600, wide: true }) : null,
     sheet ? field('Gạch đầu dòng (mỗi dòng một ý)', l.details.bullets.join('\n'),
-      (v) => update((d) => { d.links[i].details.bullets = v.split('\n').map((x) => x.trim()).filter(Boolean); }),
+      (v) => update((d) => { ds.lay(d)[i].details.bullets = v.split('\n').map((x) => x.trim()).filter(Boolean); }),
       { multiline: true, rows: 4, wide: true }) : null,
     sheet ? field('Chữ trên nút trong thẻ', l.details.button, setDet('button'), { max: 30, placeholder: 'Mở link' }) : null,
     toggle('Tạm ẩn ô này', l.hidden, setRe('hidden'))));
   return card;
 }
 
-function linksPanel() {
-  const list = h('div', { class: 'lcs' }, ...ed.draft.links.map(linkCard));
+function linksPanel(ds, tieuDe, phu, moSan) {
+  const list = h('div', { class: 'lcs' }, ...ds.doc().map((l, i) => linkCard(l, i, ds)));
   const add = h('button', { type: 'button', class: 'add', html: svg('plus') + '<span>Thêm ô link</span>', onclick: () => {
     const id = newId();
     ed.openLink = id;
-    update((d) => { d.links.push({ ...normalize({ links: [{}] }).links[0], id, title: 'Ô mới', size: 'half', icon: 'link' }); }, { rerender: true });
+    update((d) => { ds.lay(d).push({ ...normalize({ brands: [{ links: [{}] }] }).brands[0].links[0], id, title: 'Ô mới', size: 'half', icon: 'link' }); }, { rerender: true });
   } });
-  const sync = h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: useGlassIcons },
-    'Dùng bộ icon elevaTO cho tất cả ô');
-  return panel('Các ô link', 'Thứ tự trong danh sách = thứ tự trên trang', true,
-    h('div', { class: 'gh-row' }, sync, h('small', { class: 'hint' }, 'Đổi icon của mọi ô sang bộ elevaTO; chữ và link giữ nguyên.')),
-    list, add);
+  const sync = ds === DS_BRAND
+    ? h('div', { class: 'gh-row' },
+      h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: useGlassIcons }, 'Dùng bộ icon elevaTO cho tất cả ô'),
+      h('small', { class: 'hint' }, 'Đổi icon của mọi ô sang bộ elevaTO; chữ và link giữ nguyên.'))
+    : null;
+  return panel(tieuDe, phu, moSan, sync, list, add);
 }
 
 function useGlassIcons() {
   let n = 0;
-  update((d) => {
-    d.links.forEach((l) => {
+  updateB((x) => {
+    x.links.forEach((l) => {
       const icon = glassIconFor(l);
       if (icon && (l.image !== icon || l.imageStyle !== 'photo')) { l.image = icon; l.imageStyle = 'photo'; n += 1; }
     });
@@ -190,22 +208,22 @@ function useGlassIcons() {
 
 /* ── giao diện, cohort, chia sẻ ────────────────── */
 function themePanel() {
-  const t = ed.draft.theme;
-  const setT = (k, re = false) => (v) => update((d) => { d.theme[k] = v; }, { rerender: re });
+  const t = B().theme;
+  const setT = (k, re = false) => (v) => updateB((x) => { x.theme[k] = v; }, { rerender: re });
   return panel('Giao diện kính', 'Độ mờ, độ trong, hình nền', true,
     slider('Độ mờ của kính (blur)', t.blur, 0, 48, 'px', setT('blur'), '0 = kính trong suốt hẳn, càng lớn càng mờ như kính mờ iPhone.'),
     slider('Độ đục của kính', t.tint, 0, 95, '%', setT('tint'), '0 = trong suốt hẳn, chỉ còn vành mép bẻ sáng như kính thật. Cao = trắng/đen đặc hơn, chữ dễ đọc hơn.'),
     segmented('Hình nền', t.background, Object.entries(BACKGROUNDS), setT('background', true)),
     t.background === 'image'
-      ? imageField('Ảnh nền', t.bgImage, (v, re) => update((d) => { d.theme.bgImage = v; }, { rerender: re }),
+      ? imageField('Ảnh nền', t.bgImage, (v, re) => updateB((x) => { x.theme.bgImage = v; }, { rerender: re }),
         { onPick: () => pick({ maxSide: 1600, quality: 0.78 }), hint: 'Ảnh phong cảnh, ảnh thành phố… kính trông đẹp nhất trên ảnh nhiều chi tiết.' })
       : null);
 }
 
 function livePanel() {
   return panel('Số chỗ cohort trực tiếp', 'Đọc từ backend Apps Script của trang khoá học', false,
-    toggle('Bật', ed.draft.live.enabled, (v) => update((d) => { d.live.enabled = v; })),
-    field('URL Web App (/exec)', ed.draft.live.api, (v) => update((d) => { d.live.api = v; }), { type: 'url', wide: true,
+    toggle('Bật', B().live.enabled, (v) => updateB((x) => { x.live.enabled = v; })),
+    field('URL Web App (/exec)', B().live.api, (v) => updateB((x) => { x.live.api = v; }), { type: 'url', wide: true,
       hint: 'Giống URL trong index.html của trang khoá học. Đổi cohort, số chỗ bằng bot Telegram như cũ.' }));
 }
 
@@ -251,6 +269,36 @@ async function resetDraft() {
   renderForm();
 }
 
+/* ── chọn thương hiệu đang sửa ────────────────── */
+/** Thanh chọn thương hiệu, luôn nằm trên cùng form. Đổi thương hiệu thì khung xem trước nhảy theo. */
+function brandBar() {
+  const bs = ed.draft.brands;
+  const tabs = h('div', { class: 'bbar' }, ...bs.map((b, i) => h('button', {
+    type: 'button', class: 'bb' + (i === ed.brand ? ' on' : ''), 'aria-pressed': String(i === ed.brand),
+    'data-fk': 'brand|' + b.id,
+    onclick: () => { if (i === ed.brand) return; ed.brand = i; ed.openLink = ''; renderForm(); sendPreview(); },
+  }, h('b', {}, b.label), h('small', {}, SKINS[b.skin].split('—')[0].trim()))));
+  const cur = B();
+  return panel('Thương hiệu', 'Mỗi kênh TikTok một link bio riêng (…/links/?v=' + cur.id + ')', true,
+    tabs,
+    h('div', { class: 'cols' },
+      field('Tên trên công tắc', cur.label, (v) => updateB((x) => { x.label = v; }, { rerender: true }),
+        { max: 16, hint: 'Chữ người xem thấy trên công tắc' }),
+      field('Mã trong link (?v=…)', cur.id, (v) => updateB((x) => { x.id = v; }, { rerender: true }),
+        { max: 20, hint: 'Chỉ chữ thường, số và gạch nối' })),
+    segmented('Lớp sơn', cur.skin, Object.entries(SKINS), (v) => updateB((x) => { x.skin = v; }, { rerender: true })),
+    h('div', { class: 'cols' },
+      field('Logo cho nền sáng', cur.logo.light, (v) => updateB((x) => { x.logo.light = v; }),
+        { max: 300, placeholder: 'art/tmxk/lockup-sang.svg', hint: 'Để trống = dùng logo elevaTO' }),
+      field('Logo cho nền tối', cur.logo.dark, (v) => updateB((x) => { x.logo.dark = v; }),
+        { max: 300, placeholder: 'art/tmxk/lockup-toi.svg', hint: 'Để trống = dùng logo elevaTO' })),
+    field('Dòng chân trang', cur.footTag, (v) => updateB((x) => { x.footTag = v; }),
+      { max: 60, wide: true, placeholder: 'Fuel Your Financial Journey' }),
+    h('small', { class: 'hint' }, 'Lớp sơn đổi cả chất liệu, bo góc và phông chữ — không chỉ màu nhấn. '
+      + 'Dán link này vào bio kênh tương ứng: ' + location.origin + location.pathname.replace(/edit\.html$/, '')
+      + (ed.brand === 0 ? '' : '?v=' + cur.id)));
+}
+
 /* ── vẽ lại cả form ───────────────────────────── */
 export function renderForm() {
   const form = $('#form');
@@ -260,8 +308,10 @@ export function renderForm() {
   // bàn phím về, không thì mỗi lần bấm là phải Tab lại từ đầu form.
   const focused = document.activeElement;
   const fk = focused && focused.dataset ? focused.dataset.fk || '' : '';
-  form.replaceChildren(profilePanel(), themePanel(), linksPanel(), socialsPanel(), statsPanel(),
-    livePanel(), metaPanel(), publishPanel(), backupPanel());
+  form.replaceChildren(brandBar(), profilePanel(), themePanel(),
+    linksPanel(DS_BRAND, 'Các ô của ' + B().label, 'Thứ tự trong danh sách = thứ tự trên trang', true),
+    linksPanel(DS_GHIM, 'Ô ghim', 'Hiện ở MỌI thương hiệu — để liên hệ khỏi nằm sau một cú bấm', false),
+    socialsPanel(), statsPanel(), livePanel(), metaPanel(), publishPanel(), backupPanel());
   // Giữ nguyên phần nào đang mở / đang đóng sau khi vẽ lại.
   if (openState.length) form.querySelectorAll('details.panel').forEach((d, i) => { d.open = openState[i]; });
   if (fk) {

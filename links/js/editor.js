@@ -21,12 +21,17 @@ function setTab(prev) {
  */
 const OLD_DEFAULT_IMAGES = ['', '../assets/model/dashboard-thumb.webp', '../assets/slides/course-map-thumb.webp'];
 export function upgradeDraft(saved, publishedText) {
-  if (!saved || saved.theme || !publishedText) return saved;
+  if (!saved || saved.version >= 2 || saved.theme || !publishedText) return saved;
   const pub = JSON.parse(publishedText);
-  const imgById = new Map((pub.links || []).map((l) => [l.id, l.image]));
+  // Bản trên web có thể đã là đời 2 (nhiều thương hiệu) trong khi nháp còn đời 1: gom ảnh của
+  // MỌI thương hiệu và cả ô ghim, không thì nháp cũ không được điền ảnh và ô hiện ra trống trơn.
+  const bs = pub.brands && pub.brands.length ? pub.brands : [pub];
+  const imgById = new Map();
+  for (const b of bs) for (const l of b.links || []) imgById.set(l.id, l.image);
+  for (const l of pub.pinned || []) imgById.set(l.id, l.image);
   return {
     ...saved,
-    theme: pub.theme,
+    theme: bs[0].theme,
     links: (saved.links || []).map((l) =>
       OLD_DEFAULT_IMAGES.includes(l.image || '') && imgById.get(l.id) ? { ...l, image: imgById.get(l.id) } : l),
   };
