@@ -71,7 +71,9 @@ function bindChrome() {
   });
 }
 
-const SKIN_FIX = 'elevato-links-skinfix-1';
+// Đổi tên cờ = cho bước dọn chạy lại thêm một lần trên máy đã chạy bản trước: vẫn có nháp mang
+// Finance ở lớp sơn giấy sau lần dọn đầu. Từ giờ lệch lớp sơn còn được báo ngay trong phần Thương hiệu.
+const SKIN_FIX = 'elevato-links-skinfix-2';
 
 async function boot() {
   bindChrome();

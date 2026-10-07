@@ -289,6 +289,17 @@ function brandBar() {
     onclick: () => { if (i === ed.brand) return; ed.brand = i; ed.openLink = ''; renderForm(); sendPreview(); },
   }, h('b', {}, b.label), h('small', {}, SKINS[b.skin].split('—')[0].trim()))));
   const cur = B();
+  // Lớp sơn trong nháp khác bản đang chạy trên web → nói rõ và cho trả về bằng một nút. Lớp sơn đổi cả
+  // giao diện, lỡ tay bấm nhầm (nhất là Finance sang "giấy & lime") thì khung xem trước sai hẳn.
+  let goc = null;
+  try { goc = normalize(JSON.parse(ed.published || '{}')).brands.find((b) => b.id === cur.id) || null; } catch { goc = null; }
+  const lechSon = goc && goc.skin !== cur.skin
+    ? h('div', { class: 'warn-row' },
+      h('span', {}, 'Lớp sơn của ' + cur.label + ' đang khác bản trên web (' + SKINS[goc.skin].split('—')[0].trim() + ').'),
+      h('button', { type: 'button', class: 'btn btn-ghost sm', 'data-fk': 'skin-back',
+        onclick: () => updateB((x) => { x.skin = goc.skin; }, { rerender: true }) }, 'Trả về như trên web'))
+    : null;
+  const paper = cur.skin === 'paper';
   return panel('Thương hiệu', 'Mỗi kênh TikTok một link bio riêng (…/links/?v=' + cur.id + ')', true,
     tabs,
     h('div', { class: 'cols' },
@@ -297,11 +308,12 @@ function brandBar() {
       field('Mã trong link (?v=…)', cur.id, (v) => updateB((x) => { x.id = v; }, { rerender: true }),
         { max: 20, hint: 'Chỉ chữ thường, số và gạch nối' })),
     segmented('Lớp sơn', cur.skin, Object.entries(SKINS), (v) => updateB((x) => { x.skin = v; }, { rerender: true })),
+    lechSon,
     h('div', { class: 'cols' },
       field('Logo cho nền sáng', cur.logo.light, (v) => updateB((x) => { x.logo.light = v; }),
-        { max: 300, placeholder: 'art/tmxk/lockup-sang.svg', hint: 'Để trống = dùng logo elevaTO' }),
+        { max: 300, placeholder: paper ? 'art/tmxk/lockup-sang.svg' : '', hint: 'Để trống = dùng logo elevaTO' }),
       field('Logo cho nền tối', cur.logo.dark, (v) => updateB((x) => { x.logo.dark = v; }),
-        { max: 300, placeholder: 'art/tmxk/lockup-toi.svg', hint: 'Để trống = dùng logo elevaTO' })),
+        { max: 300, placeholder: paper ? 'art/tmxk/lockup-toi.svg' : '', hint: 'Để trống = dùng logo elevaTO' })),
     field('Dòng chân trang', cur.footTag, (v) => updateB((x) => { x.footTag = v; }),
       { max: 60, wide: true, placeholder: 'Fuel Your Financial Journey' }),
     h('small', { class: 'hint' }, 'Lớp sơn đổi cả chất liệu, bo góc và phông chữ — không chỉ màu nhấn. '

@@ -118,6 +118,13 @@ select.inp{appearance:none;cursor:pointer;padding-right:28px;
 .warn{flex:none;margin-left:auto;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;color:#b45309;background:rgba(245,158,11,.14)}
 :root[data-theme="dark"] .warn{color:#fbbf24}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn{color:#fbbf24}}
+/* lớp sơn trong nháp khác bản trên web: một dòng cảnh báo cam + nút trả về */
+.warn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border-radius:12px;
+  font-size:13px;font-weight:600;color:#b45309;background:rgba(245,158,11,.14)}
+.warn-row span{flex:1 1 220px}
+.warn-row .btn{flex:none;padding:7px 12px;font-size:13px}
+:root[data-theme="dark"] .warn-row{color:#fbbf24}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn-row{color:#fbbf24}}
 .lc-tools{display:flex;gap:2px}
 .lc-body{display:flex;flex-direction:column;gap:12px;padding:6px 14px 16px;border-top:1px solid var(--glass-line)}
 
