@@ -359,6 +359,27 @@ test('trang sửa: ô ghim bật tắt theo từng thương hiệu, nháp cũ l�
   await p.context().close();
 });
 
+// Ảnh bị xoay (transform: rotate) thì trình duyệt nội suy điểm ảnh → logo / ảnh đại diện nhoè trên màn 1x.
+test('TMXK: logo trên ô khoá học và ảnh đại diện không bị xoay nghiêng (giữ nét trên màn máy tính)', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  const p = await page({ viewport: { width: 1366, height: 900 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+  await p.goto(base + '/links/?v=content');
+  await p.waitForSelector('.tile.feature .chip.img img');
+  await p.waitForTimeout(1200);       // chờ hết hiệu ứng hiện ô
+  const xoay = await p.evaluate(() => ['.tile.feature .chip.img', '.ava-wrap'].map((s) => {
+    let el = document.querySelector(s); const out = [];
+    for (; el && el !== document.body; el = el.parentElement) {
+      const t = getComputedStyle(el).transform;
+      if (t && t !== 'none') { const [a, b] = t.slice(7, -1).split(',').map(Number); if (Math.abs(b) > 1e-3 || a < 0) out.push(el.className); }
+    }
+    return out;
+  }));
+  assert.deepEqual(xoay, [[], []], 'còn phần tử bị xoay: ' + JSON.stringify(xoay));
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 test('trang sửa với nháp soạn trước khi có nhiều thương hiệu: vẫn thấy đủ thương hiệu, không mất chữ', async () => {
   const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   const cu = JSON.parse(await readFile(MAU, 'utf8'));          // bản mẫu là đời 1
