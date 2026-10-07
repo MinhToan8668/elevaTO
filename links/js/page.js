@@ -112,10 +112,14 @@ function liveBlock(l) {
 function toolsBlock(l) {
   const tools = l.tools.filter((t) => safeUrl(t.url));
   if (!tools.length) return null;
-  return h('div', { class: 'tools' }, ...tools.map((t) => h('a', { class: 'tool', ...linkAttrs(t.url) },
+  const box = h('div', { class: 'tools' }, ...tools.map((t) => h('a', { class: 'tool', ...linkAttrs(t.url) },
     t.emoji ? h('i', { 'aria-hidden': 'true' }, emoji3d(t.emoji) ? anh(emoji3d(t.emoji)) : t.emoji) : null,
     h('span', {}, t.label),
     t.badge ? h('b', {}, t.badge) : null)));
+  // Số cột chia hết cho số nút để hàng cuối không lẻ một nút: tối đa 3 cột trên điện thoại, 6 trên máy tính.
+  box.style.setProperty('--cot', String(Math.min(tools.length, 3)));
+  box.style.setProperty('--cot-rong', String(Math.min(tools.length, 6)));
+  return box;
 }
 
 function tile(l, i) {
@@ -244,6 +248,8 @@ function renderMark(d) {
   if (tag) {
     if (!GOC.has('.foot-tag')) GOC.set('.foot-tag', tag.textContent);
     tag.textContent = d.footTag || GOC.get('.foot-tag');
+    // Câu chữ ký này cũng được viết tay lên danh thiếp TMXK ở màn rộng (links.css, .who::after).
+    $('.who').dataset.note = tag.textContent;
   }
   const brand = $('.brand');
   if (brand) brand.setAttribute('aria-label', d.label + ' — trang chủ');

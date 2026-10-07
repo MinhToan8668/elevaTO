@@ -256,6 +256,33 @@ test('màn rộng: công tắc thấp gọn, nằm cùng cột với lưới ô,
   await p.context().close();
 });
 
+// TMXK nhiều ô hơn elevaTO: ô ghim sang cột trái để hai cột cao bằng nhau, danh thiếp kéo cao hết chỗ
+// còn lại (không để thẻ lùn rồi một khoảng trống dưới), và có câu chữ ký viết tay lấp phần giữa thẻ.
+test('màn rộng TMXK: hai cột cao bằng nhau, Liên hệ nằm dưới danh thiếp, thẻ có câu viết tay', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  for (const width of [1024, 1366]) {
+    const p = await page({ viewport: { width, height: 900 } });
+    await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+    await p.goto(base + '/links/?v=content');
+    await p.waitForSelector('#pinGrid .tile');
+    const d = await p.evaluate(() => {
+      const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const tools = [...document.querySelectorAll('.tool')].map((t) => Math.round(t.getBoundingClientRect().top));
+      return { card: r('#card'), pin: r('#pinned'), grid: r('#grid'), sw: r('#brands'),
+        note: getComputedStyle(document.querySelector('.who'), '::after').content,
+        hang: [...new Set(tools)].map((y) => tools.filter((t) => t === y).length) };
+    });
+    assert.ok(d.pin.left < d.grid.left, width + ': Liên hệ phải ở cột trái');
+    assert.ok(d.pin.top > d.card.bottom, width + ': Liên hệ phải ở dưới danh thiếp');
+    assert.ok(Math.abs(d.pin.bottom - d.grid.bottom) <= 2, `${width}: hai cột lệch đáy ${d.pin.bottom} vs ${d.grid.bottom}`);
+    assert.ok(Math.abs(d.card.top - d.sw.top) <= 2, width + ': danh thiếp phải bắt đầu ngang công tắc');
+    assert.match(d.note, /người thật/, width);
+    assert.ok(d.hang.every((n) => n === d.hang[0]), `${width}: hàng công cụ lẻ: ${d.hang}`);
+    assert.deepEqual(p.errors, [], String(width));
+    await p.context().close();
+  }
+});
+
 test('trang sửa với nháp soạn trước khi có nhiều thương hiệu: vẫn thấy đủ thương hiệu, không mất chữ', async () => {
   const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   const cu = JSON.parse(await readFile(MAU, 'utf8'));          // bản mẫu là đời 1
