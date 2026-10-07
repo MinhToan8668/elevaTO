@@ -728,9 +728,9 @@ img{display:block;max-width:100%}
   .sw button{padding:11px 8px;font-size:15px;gap:9px}
   .sw-mk{width:24px;height:24px}
   /* TMXK có nhiều ô hơn → ô ghim "Liên hệ" sang cột trái, dưới danh thiếp, cho hai cột cao bằng nhau.
-     Danh thiếp vẫn kéo cao hết phần còn lại như bên elevaTO; chỗ dư lấp bằng câu viết tay giữa thẻ. */
+     Danh thiếp vẫn kéo cao hết phần còn lại như bên elevaTO, nội dung gom ở giữa. */
   :root[data-skin="paper"] .main{grid-template-rows:auto 1fr auto}
-  :root[data-skin="paper"] .card{grid-row:1 / 3;justify-content:flex-start;padding-top:40px}
+  :root[data-skin="paper"] .card{grid-row:1 / 3}   /* nội dung gom giữa thẻ như bên elevaTO */
   :root[data-skin="paper"] .main>.grid{grid-row:2 / 4}
   :root[data-skin="paper"] .pinned{grid-column:1;grid-row:3;align-self:end}
   :root[data-skin="paper"] .main.no-pin .card{grid-row:1 / 4}   /* thương hiệu không có ô ghim nào */
@@ -743,10 +743,9 @@ img{display:block;max-width:100%}
     transform:translateX(-50%) rotate(5deg);border-radius:2px;background:rgb(253 243 234 / .82);border:1px solid rgb(28 38 0 / .18)}
   :root[data-skin="paper"] .who{gap:18px}
   :root[data-skin="paper"] .name{font-size:34px}
-  /* khoảng giữa ảnh và số liệu: câu chữ ký của thương hiệu viết tay, tô dạ quang lime — y như mấy
-     dòng ghi chú trên trang TMXK. Thẻ tên (who) giãn hết chỗ dư, câu nằm giữa phần đó. */
-  :root[data-skin="paper"] .who{flex:1}
-  :root[data-skin="paper"] .who::after{content:'✦ ' attr(data-note);content:'✦ ' attr(data-note) / '';margin-block:auto;
+  /* dưới dòng giới thiệu: câu chữ ký của thương hiệu viết tay, tô dạ quang lime — y như mấy dòng ghi
+     chú trên trang TMXK */
+  :root[data-skin="paper"] .who::after{content:'✦ ' attr(data-note);content:'✦ ' attr(data-note) / '';margin-top:4px;
     align-self:center;max-width:100%;padding:0 8px;transform:rotate(-3deg);
     font-family:var(--tay);font-style:italic;font-weight:600;font-size:21px;line-height:1.45;color:var(--strong);
     text-align:center;text-wrap:balance;
