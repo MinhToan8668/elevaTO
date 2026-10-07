@@ -283,6 +283,31 @@ test('màn rộng TMXK: hai cột cao bằng nhau, Liên hệ nằm dưới danh
   }
 });
 
+// Nút đăng ký đứng riêng một hàng thì chừa trống cả góc phải ô (nhất là trên máy tính, nút chỉ rộng
+// bằng chữ). Nó phải đứng ngang hàng với dòng "còn x/y suất", sát mép phải ô.
+test('ô khoá học: nút đăng ký đứng chung hàng với số suất còn lại, sát mép phải, cả điện thoại lẫn máy tính', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  for (const [w, h, v] of [[390, 750, ''], [390, 750, '?v=content'], [1366, 900, ''], [1366, 900, '?v=content']]) {
+    const p = await page({ viewport: { width: w, height: h } });
+    await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+    await p.goto(base + '/links/' + v);
+    await p.waitForSelector('.tile.feature .live-row.small');
+    const d = await p.evaluate(() => {
+      const o = document.querySelector('.tile.feature .live').closest('.tile');
+      const r = (e) => e.getBoundingClientRect();
+      return { o: r(o), cta: r(o.querySelector('.cta')), con: r(o.querySelector('.live-row.small')),
+        pad: parseFloat(getComputedStyle(o).paddingRight) };
+    });
+    const ten = `${w}${v}`;
+    assert.ok(d.cta.top < d.con.bottom && d.con.top < d.cta.bottom, ten + ': nút không cùng hàng với số suất');
+    assert.ok(d.con.right <= d.cta.left, ten + ': số suất đè lên nút');
+    assert.ok(Math.abs(d.o.right - d.pad - d.cta.right) <= 3, ten + ': nút không sát mép phải ô');
+    assert.ok(d.o.bottom - d.cta.bottom <= d.pad + 8, ten + ': còn khoảng trống dưới nút');
+    assert.deepEqual(p.errors, [], ten);
+    await p.context().close();
+  }
+});
+
 test('trang sửa với nháp soạn trước khi có nhiều thương hiệu: vẫn thấy đủ thương hiệu, không mất chữ', async () => {
   const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   const cu = JSON.parse(await readFile(MAU, 'utf8'));          // bản mẫu là đời 1

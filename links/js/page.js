@@ -131,12 +131,15 @@ function tile(l, i) {
   if (l.size === 'feature') {
     // Ô nổi bật có 2 đích (cả ô + nút CTA) → không lồng <a> trong <a>: một lớp link phủ cả ô, nút CTA nằm trên nó.
     const tools = toolsBlock(l);
-    el = h('article', { class: 'tile lg feature' + (tools ? ' has-tools' : '') },
+    const live = liveBlock(l);
+    // Có cả số chỗ lẫn nút CTA → dòng "còn x suất · lịch học" và nút đứng chung một hàng cuối (links.css,
+    // .with-meta), không để nút nằm riêng một hàng chừa trống cả góc phải.
+    el = h('article', { class: 'tile lg feature' + (tools ? ' has-tools' : '') + (live && l.cta ? ' with-meta' : '') },
       sheet
         ? h('button', { class: 'cover', type: 'button', 'aria-label': l.title })
         : h('a', { class: 'cover', ...linkAttrs(l.url), 'aria-label': l.title }),
       h('div', { class: 'f-top' }, chip(l), text, badge(l)),
-      liveBlock(l),
+      live,
       tools,
       l.cta ? h('a', { class: 'cta', ...linkAttrs(safeUrl(l.ctaUrl) || l.url) }, l.cta, h('span', { html: svg('arrow') })) : null);
   } else {
