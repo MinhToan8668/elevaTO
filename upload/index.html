@@ -64,8 +64,10 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
 .item.done .item-st{color:var(--emerald)}
 .item.err{border-color:rgba(224,82,82,.45)}
 .item.err .item-st{color:#ffb4b4}
-.item-links{display:flex;gap:8px;margin-top:8px}
-.item-links a,.item-links button{flex:1;text-align:center;font:inherit;font-size:13px;font-weight:600;
+/* Có lúc một hàng tới ba nút (Tải thẳng · Tải từ Drive · Chép link) — màn điện thoại không
+   đủ chỗ, mà chữ thì white-space:nowrap nên không co được. Cho xuống dòng. */
+.item-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.item-links a,.item-links button{flex:1 1 7.5rem;text-align:center;font:inherit;font-size:13px;font-weight:600;
   padding:7px 8px;border-radius:8px;border:1px solid var(--border3);background:none;color:var(--white);
   text-decoration:none;cursor:pointer;white-space:nowrap}
 .item-links a:hover,.item-links button:hover{border-color:var(--emerald)}
@@ -127,13 +129,19 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
       <h2>Kho file trên Telegram</h2>
       <button class="btn-sm" id="khoLoad" type="button">Làm mới</button>
     </div>
-    <p class="note" style="margin-top:6px">File bot đã gửi vào Telegram. Bấm <b>Lấy về</b>: bot kéo các phần từ
-      Telegram, ghép thành file gốc đặt tạm trên Drive để bạn tải — không cần vào Telegram, không phải ghép tay.
-      Bản tạm tự xoá sau 24 giờ.</p>
+    <p class="note" style="margin-top:6px">File bot đã gửi vào Telegram, tải về được hai đường — đường nào cũng
+      không cần vào Telegram và không phải ghép tay.<br>
+      <b>Tải thẳng</b>: file đi từ Telegram về máy luôn, không đặt bản nào trên Drive, bấm là tải ngay.<br>
+      <b>Lấy về Drive</b>: bot ghép file đặt tạm trên Drive (chờ 1–2 phút, bản tạm tự xoá sau 24 giờ).
+      Chậm hơn nhưng không giới hạn dung lượng — file lớn thì dùng đường này.</p>
     <ul class="list" id="khoList"></ul>
     <div class="msg" id="khoMsg"></div>
   </section>
 </main>
+
+<!-- Đích của form "Tải thẳng". Worker trả Content-Disposition: attachment nên trình duyệt
+     ghi thẳng ra ổ đĩa, iframe này không bao giờ hiện gì. Xem khoTaiThang(). -->
+<iframe name="taiThangFrame" title="Tải thẳng" hidden style="display:none;width:0;height:0;border:0"></iframe>
 
 <script>
 // URL /exec của dự án Apps Script upload (riêng, không phải backend landing page).
@@ -472,26 +480,67 @@ function khoRender() {
     st.textContent =
       it.st === 'dang' ? 'Đang lấy về… ' + (it.done || 0) + '/' + it.parts + ' phần (bot chạy mỗi phút)' :
       it.st === 'san'  ? '✓ Sẵn sàng tải · tự xoá lúc ' + ngayGio(it.until) :
-      it.st === 'loi'  ? 'Lỗi: ' + it.err + ' — bấm Lấy về để thử lại' :
+      it.st === 'loi'  ? 'Lỗi: ' + it.err + ' — bấm Lấy về Drive để thử lại' :
       'Gửi lúc ' + ngayGio(it.date) + (it.parts > 1 ? ' · ' + it.parts + ' phần' : '');
     li.appendChild(st);
 
     var act = document.createElement('div');
     act.className = 'item-links';
+    // Tải thẳng chạy được cả khi đã có bản tạm trên Drive — người dùng chọn đường nào tuỳ ý.
+    if (it.thang) {
+      var t = document.createElement('button');
+      t.type = 'button'; t.className = 'main'; t.textContent = 'Tải thẳng';
+      t.onclick = function () { khoTaiThang(it, t); };
+      act.appendChild(t);
+    }
     if (it.st === 'san') {
       var a = document.createElement('a');
-      a.className = 'main'; a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Tải về';
+      a.className = it.thang ? '' : 'main';
+      a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Tải từ Drive';
       act.appendChild(a);
-      act.appendChild(copyBtn('Chép link tải', it.url));
+      act.appendChild(copyBtn('Chép link Drive', it.url));
     } else if (it.st !== 'dang') {
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'main'; b.textContent = 'Lấy về';
+      b.type = 'button'; b.className = it.thang ? '' : 'main'; b.textContent = 'Lấy về Drive';
       b.onclick = function () { khoLayFile(it, b); };
       act.appendChild(b);
     }
     if (act.childNodes.length) li.appendChild(act);
     ul.appendChild(li);
   });
+}
+
+/**
+ * Tải thẳng: xin Apps Script một vé đã ký rồi POST sang Worker, Worker nối các phần từ
+ * Telegram thành một luồng về máy. Không qua Drive.
+ *
+ * Gửi bằng form trong iframe ẩn chứ không phải fetch(): fetch thì cả file phải nằm trong
+ * bộ nhớ trình duyệt trước khi lưu — 800MB là treo máy. Form thì trình duyệt tự nhận ra
+ * Content-Disposition: attachment và ghi thẳng xuống ổ đĩa, có luôn thanh tiến trình.
+ *
+ * Iframe chứ không phải target="_blank": vé xin xong mới gửi được, lúc ấy cú bấm chuột đã
+ * trôi qua nên cửa sổ bật lên bị chặn. Iframe không bị chặn và cũng không để lại tab trắng.
+ */
+async function khoTaiThang(it, btn) {
+  btn.disabled = true;
+  var cu = btn.textContent;
+  btn.textContent = 'Đang xin…';
+  try {
+    var r = await call('lib_direct', { key: $('key').value.trim(), id: it.id });
+    var f = document.createElement('form');
+    f.method = 'POST'; f.action = r.url; f.target = 'taiThangFrame';
+    [['d', r.d], ['s', r.s]].forEach(function (kv) {
+      var i = document.createElement('input');
+      i.type = 'hidden'; i.name = kv[0]; i.value = kv[1];
+      f.appendChild(i);
+    });
+    document.body.appendChild(f);
+    f.submit();
+    f.remove();
+    khoShow('ok', 'Đang tải "' + it.name + '" thẳng từ Telegram về máy. Trình duyệt sẽ hiện thanh tải sau vài giây.');
+  } catch (e) { khoShow('err', errText(e)); }
+  btn.textContent = cu;
+  btn.disabled = false;
 }
 
 async function khoLayFile(it, btn) {
