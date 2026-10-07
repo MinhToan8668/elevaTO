@@ -345,16 +345,15 @@ test('trang sửa: ô ghim bật tắt theo từng thương hiệu, nháp cũ l�
   const an = () => p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')).pinned.map((l) => l.hideIn));
   await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft') || '{}').pinned?.[0].hideIn?.length);
   assert.deepEqual(await an(), site.pinned.map((l) => l.hideIn));
-  assert.match(await p.textContent('#form'), /chỉ Finance/);
 
-  // Mở mục Ô ghim (đóng sẵn), mở thẻ Zalo, bật lại cho Content.
+  // Nút bật/tắt từng thương hiệu nằm ngay trên dòng đầu thẻ, KHÔNG phải mở thẻ mới thấy.
   const muc = p.locator('details.panel', { hasText: 'Dùng chung giữa các thương hiệu' });
   await muc.locator('summary').click();
-  await muc.locator('.lc', { hasText: 'Zalo' }).locator('.lc-name').click();
-  // Hai công tắc phải đứng cạnh nhau — CSS bố cục của trang công khai (.sw) từng lấn sang làm chúng chồng lên nhau.
-  const o = await p.$$eval('.lc.open .sw-lbl', (ls) => ls.slice(0, 2).map((l) => Math.round(l.getBoundingClientRect().left)));
-  assert.notEqual(o[0], o[1], 'hai công tắc thương hiệu chồng lên nhau');
-  await p.locator('.lc.open label', { hasText: /^Content$/ }).click();
+  const zalo = muc.locator('.lc', { hasText: 'Zalo' });
+  assert.deepEqual(await zalo.locator('.bpill').evaluateAll((bs) => bs.map((b) => [b.textContent, b.getAttribute('aria-pressed')])),
+    [['Finance', 'true'], ['Content', 'false']]);
+  assert.equal(await zalo.locator('.lc-body').count(), 0, 'thẻ chưa mở');
+  await zalo.locator('.bpill', { hasText: 'Content' }).click();
   await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft')).pinned[0].hideIn.length === 0);
   assert.deepEqual(p.errors, []);
   await p.context().close();
