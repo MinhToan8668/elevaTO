@@ -109,6 +109,19 @@ select.inp{appearance:none;cursor:pointer;padding-right:28px;
 .lc.open{border-color:rgba(24,203,150,.45);background:var(--glass-strong)}
 .lc.off .lc-name b{opacity:.55}
 .lc-head{display:flex;align-items:center;gap:4px;padding:6px 6px 6px 8px}
+/* ô ghim: bật / tắt theo từng thương hiệu ngay trên dòng đầu thẻ */
+.lc-brands{display:flex;gap:5px;flex:none;margin-right:6px}
+.bpill{display:inline-flex;align-items:center;gap:5px;padding:5px 10px 5px 8px;border-radius:999px;font-size:12px;font-weight:700;
+  color:var(--muted);background:var(--glass-soft);box-shadow:inset 0 0 0 1px var(--glass-line);text-decoration:line-through;
+  transition:background .2s,color .2s}
+.bpill .ic{width:13px;height:13px}
+.bpill.on{color:#065f46;background:rgba(16,185,129,.16);box-shadow:inset 0 0 0 1px rgba(16,185,129,.45);text-decoration:none}
+:root[data-theme="dark"] .bpill.on{color:#6ee7b7}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bpill.on{color:#6ee7b7}}
+@media (max-width:560px){
+  .lc-head{flex-wrap:wrap}
+  .lc-brands{order:3;width:100%;margin:2px 0 4px 44px}
+}
 .lc-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:4px;text-align:left;border-radius:12px}
 .chip.sm{width:34px;height:34px;border-radius:11px}
 .chip.sm .ic{width:17px;height:17px}
