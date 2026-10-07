@@ -443,6 +443,35 @@ test('trang sửa: Finance lỡ bị đổi sang lớp sơn giấy trong nháp t
   await p.reload();
   await p.waitForSelector('.bbar .bb');
   assert.equal(await skin(), 'paper');
+
+  // …nhưng vẫn được báo là lệch bản trên web, kèm nút trả về một chạm.
+  const nut = p.getByRole('button', { name: 'Trả về như trên web' });
+  await nut.waitFor();
+  assert.match(await p.textContent('.warn-row'), /Finance đang khác bản trên web/);
+  await nut.click();
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft') || '{}').brands?.[0].skin === 'glass');
+  assert.equal(await p.locator('.warn-row').count(), 0);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+test('trang sửa: máy đã chạy bước dọn lớp sơn bản trước vẫn được dọn thêm một lần', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const nhap = JSON.parse(JSON.stringify(site));
+  nhap.brands[0].skin = 'paper';
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.addInitScript((d) => {
+    if (window.top !== window || sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+    localStorage.setItem('elevato-links-skinfix-1', 'true');
+  }, nhap);
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.bbar .bb');
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft') || '{}').brands?.[0].skin === 'glass');
+  assert.deepEqual(await p.$$eval('.bbar .bb small', (e) => e.map((x) => x.textContent)), ['Kính mờ', 'Giấy & lime']);
+  assert.deepEqual(p.errors, []);
   await p.context().close();
 });
 
