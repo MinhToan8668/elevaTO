@@ -418,7 +418,7 @@ img{display:block;max-width:100%}
 .sw button[aria-selected="false"] .sw-mk{opacity:.8;filter:saturate(.75)}
 .sw button[aria-selected="true"] .sw-mk{transform:scale(1.08)}
 .sw .m-a{fill:#18cb96}
-.sw .m-top{fill:#99df00}
+.sw .m-top{fill:var(--mk-top,#99df00)}
 .sw .m-play{fill:#1c2600}
 .sw .m-b{fill:var(--mk-b,#26210f)}
 :root[data-theme="dark"] .sw{--mk-b:#eef3ea}
@@ -523,10 +523,10 @@ img{display:block;max-width:100%}
 :root[data-skin="paper"] .sw-thumb{background:#26210f;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
 :root[data-skin="paper"] .sw button[aria-selected="true"]{color:#99df00;--mk-b:#fdf3ea}
 :root[data-skin="paper"][data-theme="dark"] .sw-thumb{background:#99df00}
-:root[data-skin="paper"][data-theme="dark"] .sw button[aria-selected="true"]{color:#1c2600;--mk-b:#1c2600}
+:root[data-skin="paper"][data-theme="dark"] .sw button[aria-selected="true"]{color:#1c2600;--mk-b:#1c2600;--mk-top:#fdfdf6}
 @media (prefers-color-scheme:dark){
   :root[data-skin="paper"]:not([data-theme="light"]) .sw-thumb{background:#99df00}
-  :root[data-skin="paper"]:not([data-theme="light"]) .sw button[aria-selected="true"]{color:#1c2600;--mk-b:#1c2600}}
+  :root[data-skin="paper"]:not([data-theme="light"]) .sw button[aria-selected="true"]{color:#1c2600;--mk-b:#1c2600;--mk-top:#fdfdf6}}
 
 /* Thẻ nổi bật = "phiếu ghi danh": băng keo lime dán trên mép, như phiếu trên trang TMXK. */
 :root[data-skin="paper"] .tile.feature{overflow:visible;margin-top:10px}
