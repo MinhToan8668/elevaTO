@@ -313,17 +313,26 @@ test('ô khoá học: nút đăng ký đứng chung hàng với số suất còn
   }
 });
 
-test('màn rộng TMXK không có ô ghim: danh thiếp kéo cao bằng cả cột phải', async () => {
+test('màn rộng TMXK không có ô ghim: danh thiếp kéo cao bằng cả cột phải, nội dung gom giữa thẻ', async () => {
   const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
   const p = await page({ viewport: { width: 1366, height: 900 } });
   await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
   await p.goto(base + '/links/?v=content');
   await p.waitForSelector('#grid .tile:not(.sk-tile)');
-  const d = await p.evaluate(() => ({ an: document.querySelector('#pinned').hidden,
-    card: document.querySelector('#card').getBoundingClientRect().bottom,
-    grid: document.querySelector('#grid').getBoundingClientRect().bottom }));
+  const d = await p.evaluate(() => {
+    const c = document.querySelector('#card').getBoundingClientRect();
+    const tren = document.querySelector('#card .ava-wrap').getBoundingClientRect().top - c.top;
+    const giua = document.querySelector('#card .stats').getBoundingClientRect().top
+      - document.querySelector('#card .who-txt').getBoundingClientRect().bottom;
+    const duoi = c.bottom - document.querySelector('#card .row2').getBoundingClientRect().bottom;
+    return { an: document.querySelector('#pinned').hidden, card: c.bottom, tren, duoi, giua,
+      grid: document.querySelector('#grid').getBoundingClientRect().bottom };
+  });
   assert.ok(d.an, 'TMXK không có ô ghim nào');
   assert.ok(Math.abs(d.card - d.grid) <= 2, `đáy danh thiếp ${d.card} lệch đáy lưới ${d.grid}`);
+  // Nội dung gom ở giữa thẻ như bên elevaTO, không dồn lên trên để trống một khoảng lớn giữa thẻ.
+  assert.ok(Math.abs(d.tren - d.duoi) <= 24, `nội dung không nằm giữa thẻ: trên ${d.tren}, dưới ${d.duoi}`);
+  assert.ok(d.giua <= 120, `khoảng trống giữa dòng giới thiệu và số liệu quá lớn: ${d.giua}px`);
   assert.deepEqual(p.errors, []);
   await p.context().close();
 });
