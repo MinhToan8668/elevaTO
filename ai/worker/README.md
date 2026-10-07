@@ -133,6 +133,14 @@ Mỗi dòng dưới đây là một lần bấm **Add**, chọn **Type: Secret**
 | `BREVO_KEY` | API key gửi thư | bước 6 |
 | `MAIL_TU` | địa chỉ gửi thư đã xác minh | bước 6 |
 
+Hai secret dưới đây **chỉ cần nếu dùng "Tải thẳng"** của trang upload (`upload/README.md`) —
+không cài thì mọi thứ khác vẫn chạy, chỉ riêng đường `/taive` trả về "chưa cài":
+
+| Variable name | Value | Lấy ở đâu |
+|---|---|---|
+| `UPLOAD_TG_TOKEN` | token bot mà **trang upload** dùng để gửi file | chính là `TG_TOKEN` trong `upload/backend/Code.gs` |
+| `TAIVE_SECRET` | chuỗi ngẫu nhiên 24+ ký tự | gõ bừa, **phải giống hệt** `WORKER_SECRET` trong `upload/backend/Code.gs` |
+
 **Điền xong hết phải bấm `Deploy` ở cuối trang** — không bấm thì secret chưa có hiệu lực, và
 máy chủ chạy y như chưa cài gì.
 
@@ -194,8 +202,10 @@ Xem nhật ký máy chủ: **Workers & Pages → elevato → Logs → Begin log 
 | Link-in-bio | `/links/` | `GET /links` · `saveLinks` · `checkKey` — `src/links.js` |
 | AI BCTC | `/ai/` | `dangky` · `dangnhap` · `generate` … — `src/auth.js`, `src/gemini.js` |
 
-Trang upload (`/upload/`) vẫn chạy trên Apps Script: nó đẩy file lên Google Drive bằng quyền sẵn
-có của Apps Script, bê sang đây phải dựng OAuth service account — rắc rối hơn hẳn phần còn lại.
+Trang upload (`/upload/`) vẫn chạy trên Apps Script ở **chiều lên**: nó đẩy file lên Google Drive
+bằng quyền sẵn có của Apps Script, bê sang đây phải dựng OAuth service account — rắc rối hơn hẳn
+phần còn lại. Riêng **chiều tải xuống** thì Worker lo: `POST /taive` (`src/taive.js`) kéo các phần
+từ Telegram nối thành một luồng về máy, nên file không phải đi vòng qua Drive nữa.
 
 ### Hai bot Telegram
 
@@ -310,5 +320,6 @@ worker/
     ├── khoahoc.js     cấu hình trang khoá học + nhận đăng ký
     ├── quenmk.js      mã đặt lại mật khẩu
     ├── mail.js        gửi thư qua Brevo
+    ├── taive.js       POST /taive — nối các phần từ Telegram về máy, bỏ qua Drive
     └── ungho.js       số tài khoản nhận ủng hộ + bảng BIN ngân hàng
 ```
