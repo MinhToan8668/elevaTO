@@ -48,7 +48,10 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "hideIn": [
+        "content"
+      ]
     },
     {
       "id": "cv",
@@ -70,7 +73,10 @@
         "text": "",
         "bullets": [],
         "button": ""
-      }
+      },
+      "hideIn": [
+        "content"
+      ]
     }
   ],
   "brands": [

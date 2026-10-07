@@ -224,9 +224,11 @@ function setBrand(i) {
 
 /** Ô ghim: hiện ở MỌI thương hiệu, nên nằm riêng một khu dưới lưới chính. */
 function renderPinned(d) {
-  const links = visibleLinks({ links: d.pinned });
+  // Mỗi ô ghim tự chọn thương hiệu nào hiện nó (hideIn) — vd. CV chỉ hợp với Finance.
+  const links = visibleLinks({ links: d.pinned.filter((l) => !l.hideIn.includes(d.id)) });
   const sec = $('#pinned');
   sec.hidden = !links.length;
+  $('#main').classList.toggle('no-pin', !links.length);
   $('#pinGrid').replaceChildren(...links.map(tile));
 }
 

@@ -389,3 +389,17 @@ test('emoji và bộ công cụ: cắt độ dài, bỏ nút không tên, tối 
   assert.ok(l.tools.every((t) => t.label));
   assert.deepEqual(mot({ links: [{ title: 'y' }] }).links[0].tools, []);
 });
+
+test('ô ghim: hideIn chỉ giữ mã thương hiệu hợp lệ, không trùng; nháp đời 1 dời sang ô ghim lấy hideIn của bản trên web', () => {
+  const s = normalize({ brands: [{ id: 'finance' }, { id: 'content' }],
+    pinned: [{ id: 'cv', title: 'CV', url: 'https://x.y', hideIn: ['Content', 'content', '', 7, 'Nội dung!'] }, { id: 'zalo', title: 'Zalo' }] });
+  assert.deepEqual(s.pinned[0].hideIn, ['content', '7', 'n-i-dung']);
+  assert.deepEqual(s.pinned[1].hideIn, []);
+
+  const pub = normalize({ brands: [{ id: 'finance' }, { id: 'content' }],
+    pinned: [{ id: 'cv', title: 'CV', url: 'https://x.y', hideIn: ['content'] }] });
+  const nhap = normalize({ links: [{ id: 'cv', title: 'CV của tôi', url: 'https://x.y' }, { id: 'a', title: 'A' }] });
+  const gop = mergeDraft(nhap, pub);
+  assert.equal(gop.pinned[0].title, 'CV của tôi', 'giữ chữ đã sửa trong nháp');
+  assert.deepEqual(gop.pinned[0].hideIn, ['content']);
+});

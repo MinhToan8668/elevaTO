@@ -123,13 +123,33 @@ function linkHead(l, i, open, ds) {
       onclick: () => { ed.openLink = open ? '' : l.id; renderForm(); } },
       chip,
       h('span', { class: 'lc-name' }, h('b', {}, l.title || 'Ô chưa đặt tên'),
-        h('small', {}, SIZE_LABEL[l.size] + (l.url ? ' · ' + l.url : ''))),
+        h('small', {}, SIZE_LABEL[l.size] + noiHien(l, ds) + (l.url ? ' · ' + l.url : ''))),
       reason ? h('span', { class: 'warn' }, reason) : null),
     h('div', { class: 'lc-tools' },
       iconBtn('up', 'Lên trên', () => move(ds, i, -1), i === 0 ? 'ghosted' : '', 'up|' + l.id),
       iconBtn('down', 'Xuống dưới', () => move(ds, i, 1), i === ds.doc().length - 1 ? 'ghosted' : '', 'down|' + l.id),
       iconBtn('copy', 'Nhân bản', () => update((d) => { ds.lay(d).splice(i + 1, 0, { ...structuredClone(l), id: newId(), title: l.title + ' (bản sao)' }); }, { rerender: true }), '', 'copy|' + l.id),
       iconBtn('trash', 'Xoá ô', () => { if (confirm('Xoá ô "' + (l.title || 'chưa đặt tên') + '"?')) update((d) => { ds.lay(d).splice(i, 1); }, { rerender: true }); }, 'danger')));
+}
+
+/** Ô ghim không hiện ở mọi thương hiệu → ghi rõ ở dòng tóm tắt, khỏi phải mở thẻ mới biết. */
+function noiHien(l, ds) {
+  if (ds !== DS_GHIM || !l.hideIn.length) return '';
+  const con = ed.draft.brands.filter((b) => !l.hideIn.includes(b.id)).map((b) => b.label);
+  return con.length ? ' · chỉ ' + con.join(', ') : ' · không hiện ở đâu';
+}
+
+/** Ô ghim: mỗi thương hiệu một công tắc "hiện ô này". Lưu ngược thành danh sách nơi ẨN (hideIn), để
+ *  thương hiệu thêm sau này mặc định vẫn thấy ô ghim. */
+function ghimNoiHien(l, i) {
+  if (ed.draft.brands.length < 2) return null;
+  return h('div', { class: 'fld wide' }, h('span', { class: 'lbl' }, 'Hiện ở thương hiệu'),
+    h('div', { class: 'cols' }, ...ed.draft.brands.map((b) => toggle(b.label, !l.hideIn.includes(b.id), (v) =>
+      update((d) => {
+        const x = d.pinned[i];
+        x.hideIn = v ? x.hideIn.filter((id) => id !== b.id) : [...new Set([...x.hideIn, b.id])];
+      }, { rerender: true })))),
+    h('small', { class: 'hint' }, 'Tắt ở thương hiệu nào thì ô này không hiện ở trang của thương hiệu đó (vd. CV chỉ để ở Finance).'));
 }
 
 function linkCard(l, i, ds) {
@@ -186,6 +206,7 @@ function linkCard(l, i, ds) {
       (v) => update((d) => { ds.lay(d)[i].details.bullets = v.split('\n').map((x) => x.trim()).filter(Boolean); }),
       { multiline: true, rows: 4, wide: true }) : null,
     sheet ? field('Chữ trên nút trong thẻ', l.details.button, setDet('button'), { max: 30, placeholder: 'Mở link' }) : null,
+    ds === DS_GHIM ? ghimNoiHien(l, i) : null,
     toggle('Tạm ẩn ô này', l.hidden, setRe('hidden'))));
   return card;
 }
@@ -305,7 +326,13 @@ function brandBar() {
     h('div', { class: 'cols' },
       field('Tên trên công tắc', cur.label, (v) => updateB((x) => { x.label = v; }, { rerender: true }),
         { max: 16, hint: 'Chữ người xem thấy trên công tắc' }),
-      field('Mã trong link (?v=…)', cur.id, (v) => updateB((x) => { x.id = v; }, { rerender: true }),
+      // Đổi mã thì mang theo cả các ô ghim đang ẩn ở thương hiệu này, không thì chúng hiện lại.
+      field('Mã trong link (?v=…)', cur.id, (v) => update((d) => {
+        const b = d.brands[ed.brand];
+        const cu = b.id;
+        b.id = v;
+        for (const l of d.pinned) l.hideIn = l.hideIn.map((x) => (x === cu ? v : x));
+      }, { rerender: true }),
         { max: 20, hint: 'Chỉ chữ thường, số và gạch nối' })),
     segmented('Lớp sơn', cur.skin, Object.entries(SKINS), (v) => updateB((x) => { x.skin = v; }, { rerender: true })),
     lechSon,
@@ -332,7 +359,7 @@ export function renderForm() {
   const fk = focused && focused.dataset ? focused.dataset.fk || '' : '';
   form.replaceChildren(brandBar(), profilePanel(), themePanel(),
     linksPanel(DS_BRAND, 'Các ô của ' + B().label, 'Thứ tự trong danh sách = thứ tự trên trang', true),
-    linksPanel(DS_GHIM, 'Ô ghim', 'Hiện ở MỌI thương hiệu — để liên hệ khỏi nằm sau một cú bấm', false),
+    linksPanel(DS_GHIM, 'Ô ghim', 'Dùng chung giữa các thương hiệu — mỗi ô chọn được hiện ở bên nào', false),
     socialsPanel(), statsPanel(), livePanel(), metaPanel(), publishPanel(), backupPanel());
   // Giữ nguyên phần nào đang mở / đang đóng sau khi vẽ lại.
   if (openState.length) form.querySelectorAll('details.panel').forEach((d, i) => { d.open = openState[i]; });
