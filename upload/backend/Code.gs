@@ -15,30 +15,41 @@
  * được file tối đa 50MB — file lớn hơn được cắt thành các phần .001, .002…
  * (ghép lại bằng upload/ghep.html). Gửi xong thì bỏ bản trên Drive vào thùng rác.
  *
- * Kho: file đã vào Telegram được ghi lại (mã file_id từng phần). Trên trang bấm
- * "Lấy về" → bot kéo các phần từ Telegram, ghép thành file gốc đặt tạm trên Drive
- * để tải về, 24 giờ sau tự bỏ vào thùng rác.
+ * Kho: file đã vào Telegram được ghi lại (mã file_id từng phần), tải về được hai đường:
+ *   • "Tải thẳng" — script ký một vé rồi trang đưa thẳng cho Cloudflare Worker; Worker kéo
+ *     các phần từ Telegram nối thành một luồng về máy. Không đụng Drive, không phải chờ.
+ *     Giới hạn 44 phần (~836MB) vì Worker gói Free chỉ được 50 subrequest mỗi lần gọi.
+ *   • "Lấy về Drive" — đường cũ, không giới hạn dung lượng: bot kéo các phần từ Telegram,
+ *     ghép thành file gốc đặt tạm trên Drive để tải, 24 giờ sau tự bỏ vào thùng rác.
  *
  * Vì sao trang KHÔNG phục vụ bằng HtmlService: mọi trang HtmlService đều cho
  * người mở nó gọi BẤT KỲ hàm nào trong script qua google.script.run. Trang
- * tĩnh + doPost chỉ mở đúng ba action upload_start / upload_chunk / upload_status.
+ * tĩnh + doPost chỉ mở đúng mấy action liệt kê trong doPost, không hơn.
  *
  * Cài đặt: xem upload/README.md
  * ============================================================
  */
 
-// ═════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 //  ĐIỀN 3 GIÁ TRỊ NÀY RỒI CHẠY HÀM  caiDat
-// ═════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 var TG_TOKEN   = 'DAN_TOKEN_BOT';          // token bot từ @BotFather (dùng chung bot cũ được)
 var TG_CHAT    = 'DAN_CHAT_ID';            // chat id nhận link, từ @userinfobot
 var WEBAPP_URL = 'DAN_URL_EXEC';           // URL Web App của DỰ ÁN NÀY, kết thúc bằng /exec
-// ═════════════════════════════════════════════════════════════
+
+// Tải thẳng (không bắt buộc): để trống thì trang chỉ có nút "Lấy về Drive" như cũ.
+// Điền vào là có thêm nút "Tải thẳng" — file đi từ Telegram về máy qua Cloudflare Worker,
+// không đặt bản tạm trên Drive nữa. Xem upload/README.md mục "Tải thẳng".
+var WORKER_URL    = '';                    // vd https://elevato.minhtoantowork.workers.dev/taive
+var WORKER_SECRET = '';                    // chuỗi ngẫu nhiên dài, PHẢI khớp secret TAIVE_SECRET của Worker
+// ════════════════════════════════════════════════════════════
 
 var PROP_TOKEN     = 'TG_BOT_TOKEN';
 var PROP_CHAT      = 'TG_CHAT_ID';
 var PROP_KEY       = 'UPLOAD_KEY';
 var PROP_FOLDER    = 'UPLOAD_FOLDER_ID';
+var PROP_WORKER    = 'TAIVE_WORKER_URL';
+var PROP_SECRET    = 'TAIVE_SECRET';
 var FOLDER_NAME    = 'elevaTO Uploads';
 var UP_MAX_BYTES   = 2 * 1024 * 1024 * 1024;   // 2GB mỗi file
 var UP_MAX_SAI_KEY = 20;                        // số lần sai key trước khi khoá tạm
@@ -64,6 +75,12 @@ var TAM_PREFIX     = 'TGTAM_';              // bản lấy về đang nằm tạ
 var GIU_BAN_TAM_GIO = 24;                   // bản tạm tự vào thùng rác sau 24 giờ
 var WORKER_GIAY    = 240;                   // mỗi lượt chạy dừng sau ~4 phút (giới hạn 6 phút)
 var JOB_MAX_LOI    = 5;                     // lỗi liên tiếp quá số này thì bỏ, giữ file trên Drive
+
+// Tải thẳng: Cloudflare gói Free cho 50 subrequest mỗi lần gọi, mỗi phần tốn 1 lượt tải.
+// Chừa 6 lượt để Worker còn xin lại được đường dẫn Telegram hết hạn giữa chừng (mỗi lần
+// xin tốn 2). PHẢI khớp MAX_PHAN trong ai/worker/src/taive.js — lệch là Worker từ chối vé.
+var TAI_THANG_PHAN = 44;                    // 44 × 19MB ≈ 836MB
+var VE_SONG_PHUT   = 50;                    // vé hết hạn sau 50 phút (đường dẫn Telegram sống ≥1 giờ)
 
 function props() { return PropertiesService.getScriptProperties(); }
 
@@ -96,6 +113,7 @@ function doPost(e) {
     else if (b.action === 'upload_status') data = uploadTrangThai(b.key, b.session, b.total, b.share, b.tele);
     else if (b.action === 'lib_list') data = khoDanhSach(b.key);
     else if (b.action === 'lib_restore') data = khoLayVe(b.key, b.id);
+    else if (b.action === 'lib_direct') data = khoVeTaiThang(b.key, b.id);
     else if (b.action === 'lib_forget') data = khoBo(b.key, b.id);
     else return json({ ok: false, error: 'unknown action', code: 'session' });
     return json({ ok: true, data: data });
@@ -108,9 +126,9 @@ function doPost(e) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Tải lên: ba việc trang làm được. Việc nào cũng kiểm key trước.
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
 /** Mở phiên tải lên Drive. Trả về URL phiên để trang gửi từng mảnh. */
 function uploadBatDau(key, info) {
@@ -177,9 +195,9 @@ function uploadTrangThai(key, session, total, share, tele) {
   return ketQuaPhien(res, share, tele);
 }
 
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Nội bộ
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
 function ketQuaPhien(res, share, tele) {
   var code = res.getResponseCode();
@@ -231,11 +249,11 @@ function hoanTat(fileId, share, tele) {
     return kq;
   }
   guiTelegram([
-    '📥 File mới đã lên Google Drive',
+    '\u{1F4E5} File mới đã lên Google Drive',
     '',
-    '🎞 ' + kq.name + ' (' + mbText(kq.size) + ')',
-    '👁 Xem: ' + kq.viewUrl,
-    '⬇️ Tải về: ' + kq.downloadUrl,
+    '\u{1F39E} ' + kq.name + ' (' + mbText(kq.size) + ')',
+    '\u{1F441} Xem: ' + kq.viewUrl,
+    '\u2B07\uFE0F Tải về: ' + kq.downloadUrl,
     share ? '' : '(Chỉ tài khoản Google của bạn mở được — chưa bật chia sẻ theo link.)'
   ].join('\n'));
   return kq;
@@ -243,9 +261,9 @@ function hoanTat(fileId, share, tele) {
 
 function mbText(n) { return (Number(n) / 1048576).toFixed(1) + 'MB'; }
 
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Chuyển file từ Drive vào Telegram (chạy nền)
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
 /**
  * Lịch chạy mỗi phút (caiDat tự đặt). Không có file chờ thì thoát ngay.
@@ -292,7 +310,7 @@ function chuyenMotFile(job, batDau) {
     if (ok === 'mat' || job.loi >= JOB_MAX_LOI) {
       props().deleteProperty(key);
       xoaFid(job.id, job.parts);
-      guiTelegram('⚠️ Không chuyển được ' + job.name + ' vào Telegram' +
+      guiTelegram('\u26A0\uFE0F Không chuyển được ' + job.name + ' vào Telegram' +
         (ok === 'mat' ? ' — file đã không còn trên Drive.' :
          ' (lỗi: ' + ok + ').\nFile vẫn nằm trên Google Drive: https://drive.google.com/file/d/' + job.id + '/view'));
       return true;
@@ -353,16 +371,16 @@ function xongMotFile(job) {
   }
   var dong = [];
   if (job.parts > 1) {
-    dong.push('✅ ' + job.name + ' (' + mbText(job.size) + ') đã vào Telegram thành ' + job.parts + ' phần.');
+    dong.push('\u2705 ' + job.name + ' (' + mbText(job.size) + ') đã vào Telegram thành ' + job.parts + ' phần.');
     dong.push('');
     dong.push('Ghép lại sau khi tải đủ ' + job.parts + ' phần về máy:');
     dong.push('• Mở ' + GHEP_URL + ' → chọn cả ' + job.parts + ' phần → Ghép');
     dong.push("• Hoặc trên Mac, mở Terminal ở thư mục chứa các phần: cat '" + job.name + "'.0* > '" + job.name + "'");
     dong.push('');
   }
-  dong.push(xoa.code === 200 ? '🗑 Đã bỏ ' + job.name + ' khỏi Google Drive (còn trong Thùng rác 30 ngày).'
-                             : '⚠️ Chưa xoá được ' + job.name + ' khỏi Drive (lỗi ' + xoa.code + '), xoá tay giúp nhé.');
-  if (kho) dong.push('📦 Cần lấy lại trên máy không vào được Telegram: mục "Kho file trên Telegram" ở trang tải lên.');
+  dong.push(xoa.code === 200 ? '\u{1F5D1} Đã bỏ ' + job.name + ' khỏi Google Drive (còn trong Thùng rác 30 ngày).'
+                             : '\u26A0\uFE0F Chưa xoá được ' + job.name + ' khỏi Drive (lỗi ' + xoa.code + '), xoá tay giúp nhé.');
+  if (kho) dong.push('\u{1F4E6} Cần lấy lại trên máy không vào được Telegram: mục "Kho file trên Telegram" ở trang tải lên.');
   guiTelegram(dong.join('\n'));
 }
 
@@ -385,19 +403,23 @@ function xoaFid(id, parts) {
   for (var c = 0; c * FID_MOI_O < Math.max(1, parts); c++) props().deleteProperty(FID_PREFIX + id + '_' + c);
 }
 
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Kho: lấy file từ Telegram về Drive để tải trên máy không vào được Telegram
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
 /** Danh sách file trong kho, mới nhất trước, kèm trạng thái lấy về. */
 function khoDanhSach(key) {
   kiemKey(key);
   var all = props().getProperties(), now = Date.now(), out = [];
+  // Đọc một lần ngoài vòng lặp: `all` đã có sẵn mọi thuộc tính, hỏi lại dịch vụ cho từng
+  // file trong kho là tốn một lượt gọi mạng cho mỗi dòng mà kết quả không bao giờ khác.
+  var thang = Boolean(all[PROP_WORKER] && all[PROP_SECRET]);
   Object.keys(all).forEach(function (k) {
     if (k.indexOf(LIB_PREFIX) !== 0) return;
     var m;
     try { m = JSON.parse(all[k]); } catch (e) { return; }
-    var it = { id: m.id, name: m.name, size: m.size, parts: m.parts, date: m.date, st: 'none' };
+    var it = { id: m.id, name: m.name, size: m.size, parts: m.parts, date: m.date, st: 'none',
+               thang: thang && m.parts <= TAI_THANG_PHAN };
     var tam = docJson(all[TAM_PREFIX + m.id]), res = docJson(all[RES_PREFIX + m.id]);
     if (tam && tam.until > now) {
       it.st = 'san'; it.until = tam.until;
@@ -425,6 +447,59 @@ function khoLayVe(key, id) {
     id: id, name: m.name, size: m.size, parts: m.parts, ps: m.ps, part: 0, session: '', loi: 0
   }));
   return { st: 'dang', done: 0 };
+}
+
+/**
+ * Vé cho Worker tải thẳng — xem ai/worker/src/taive.js.
+ *
+ * Việc nặng nằm ở đây chứ không ở Worker: Apps Script hỏi Telegram đường dẫn của MỌI phần
+ * (fetchAll nên chạy song song, 44 phần mất vài giây), rồi gói hết vào một vé đã ký. Nhờ
+ * vậy Worker không tốn lượt subrequest nào cho việc hỏi han — mà subrequest là thứ hiếm
+ * nhất bên đó: gói Free chỉ 50 lượt mỗi lần gọi, đúng bằng số phần tải được.
+ *
+ * Mọi thứ có thể hỏng đều hỏng Ở ĐÂY, nơi còn trả về được lỗi tử tế cho trang hiển thị.
+ * Sang tới Worker thì luồng đã mở, hỏng là bản tải đứt giữa chừng.
+ */
+function khoVeTaiThang(key, id) {
+  kiemKey(key);
+  var m = docKho(id);
+  var url = props().getProperty(PROP_WORKER), biMat = props().getProperty(PROP_SECRET);
+  if (!url || !biMat) {
+    throw new Error('PHIEN: Chưa cài tải thẳng — điền WORKER_URL, WORKER_SECRET rồi chạy lại caiDat (xem upload/README.md)');
+  }
+  if (m.parts > TAI_THANG_PHAN) {
+    throw new Error('PHIEN: File này ' + m.parts + ' phần, tải thẳng tối đa ' + TAI_THANG_PHAN +
+                    ' phần (~' + mbText(TAI_THANG_PHAN * TG_PART) + '). Dùng "Lấy về Drive".');
+  }
+  var token = props().getProperty(PROP_TOKEN);
+  if (!token) throw new Error('PHIEN: Chưa chạy caiDat');
+
+  var ids = [], yc = [];
+  for (var i = 0; i < m.parts; i++) {
+    var fid = docFid(id, i);
+    if (!fid) throw new Error('PHIEN: Thiếu mã phần ' + (i + 1) + ' — file này gửi bằng bản cũ, dùng "Lấy về Drive"');
+    ids.push(fid);
+    yc.push({ url: 'https://api.telegram.org/bot' + token + '/getFile', method: 'post',
+              contentType: 'application/json', payload: JSON.stringify({ file_id: fid }),
+              muteHttpExceptions: true });
+  }
+  var res = UrlFetchApp.fetchAll(yc), phan = [];
+  for (var j = 0; j < res.length; j++) {
+    var o = null;
+    try { o = JSON.parse(res[j].getContentText()); } catch (e) { o = null; }
+    if (!o || !o.ok || !o.result || !o.result.file_path) {
+      throw new Error('PHIEN: Telegram không cho đường dẫn phần ' + (j + 1) + ' (' +
+                      (o && o.description ? o.description : res[j].getResponseCode()) + ')');
+    }
+    phan.push([ids[j], o.result.file_path]);
+  }
+
+  // Ký chính chuỗi base64url chứ không phải JSON gốc: hai bên khỏi phải sắp xếp khoá
+  // giống nhau mới ra cùng chữ ký.
+  var ve = { n: m.name, s: Number(m.size), e: Date.now() + VE_SONG_PHUT * 60000, f: phan };
+  var d = Utilities.base64EncodeWebSafe(Utilities.newBlob(JSON.stringify(ve)).getBytes());
+  var s = Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(d, biMat));
+  return { url: url, d: d, s: s, name: m.name, size: m.size };
 }
 
 /** Bỏ file khỏi kho (tin nhắn trong Telegram vẫn còn). Có bản tạm thì bỏ luôn. */
@@ -465,7 +540,7 @@ function layVeMotFile(job, batDau) {
     if (job.loi >= JOB_MAX_LOI) {
       job.fail = ok === 'phien' ? 'Phiên Google Drive hết hạn liên tục' : ok;
       props().setProperty(key, JSON.stringify(job));
-      guiTelegram('⚠️ Không lấy được ' + job.name + ' về Drive (lỗi: ' + job.fail + '). Bấm "Lấy về" trên trang để thử lại.');
+      guiTelegram('\u26A0\uFE0F Không lấy được ' + job.name + ' về Drive (lỗi: ' + job.fail + '). Bấm "Lấy về" trên trang để thử lại.');
       return true;
     }
     props().setProperty(key, JSON.stringify(job));
@@ -475,7 +550,7 @@ function layVeMotFile(job, batDau) {
   driveApi('post', DRIVE_FILES + '/' + fileId + '/permissions', { role: 'reader', type: 'anyone' });
   props().setProperty(TAM_PREFIX + job.id, JSON.stringify({ fileId: fileId, until: Date.now() + GIU_BAN_TAM_GIO * 3600000 }));
   props().deleteProperty(key);
-  guiTelegram('📦 Đã lấy ' + job.name + ' (' + mbText(job.size) + ') về Google Drive:\n' +
+  guiTelegram('\u{1F4E6} Đã lấy ' + job.name + ' (' + mbText(job.size) + ') về Google Drive:\n' +
     'https://drive.google.com/uc?export=download&id=' + fileId +
     '\n\nBản tạm này tự bỏ vào thùng rác sau ' + GIU_BAN_TAM_GIO + ' giờ.');
   return true;
@@ -641,9 +716,9 @@ function linkTrang() {
          '&key=' + encodeURIComponent(props().getProperty(PROP_KEY) || '');
 }
 
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Chạy tay trong trình soạn thảo
-// ─────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
 /**
  * Chạy sau khi điền 3 giá trị ở đầu file và đã Triển khai web app.
@@ -673,14 +748,28 @@ function caiDat() {
   props().setProperty(PROP_CHAT, TG_CHAT.trim());
   if (!props().getProperty(PROP_KEY)) props().setProperty(PROP_KEY, Utilities.getUuid());
 
+  // Tải thẳng là tuỳ chọn: để trống hai dòng đầu file thì bỏ qua, trang chỉ có nút
+  // "Lấy về Drive" như cũ. Điền sai một nửa thì chặn luôn — thiếu một nửa là trang hiện
+  // nút Tải thẳng rồi bấm vào mới báo lỗi, khó hiểu hơn nhiều so với báo ngay ở đây.
+  var wUrl = String(WORKER_URL).trim(), wBiMat = String(WORKER_SECRET).trim();
+  if (!!wUrl !== !!wBiMat) throw new Error('Tải thẳng cần CẢ WORKER_URL lẫn WORKER_SECRET — điền nốt, hoặc xoá cả hai.');
+  if (wUrl) {
+    if (!/^https:\/\/[\w.-]+\/[\w/-]*$/.test(wUrl)) throw new Error('WORKER_URL phải là địa chỉ https của Worker, vd https://....workers.dev/taive');
+    if (wBiMat.length < 24) throw new Error('WORKER_SECRET quá ngắn — đặt chuỗi ngẫu nhiên ít nhất 24 ký tự, giống hệt secret TAIVE_SECRET của Worker.');
+  }
+  props().setProperty(PROP_WORKER, wUrl);
+  props().setProperty(PROP_SECRET, wBiMat);
+
   var folder = thuMucUpload();
   datLichChuyen();
   var link = linkTrang();
-  var tg = guiTelegram('📤 Trang tải file lên Google Drive\n\n' + link +
+  var tg = guiTelegram('\u{1F4E4} Trang tải file lên Google Drive\n\n' + link +
     '\n\nLink đã kèm sẵn key — ĐỪNG gửi cho người khác.\nMở một lần là trang tự nhớ key.');
 
   Logger.log('✔ Thư mục Drive: https://drive.google.com/drive/folders/' + folder);
   Logger.log('✔ Đã đặt lịch chuyển file vào Telegram (mỗi phút)');
+  Logger.log(wUrl ? '✔ Tải thẳng qua Worker: ' + wUrl + ' (tối đa ' + TAI_THANG_PHAN + ' phần ≈ ' + mbText(TAI_THANG_PHAN * TG_PART) + ')'
+                  : '• Tải thẳng: chưa bật — trang chỉ có nút "Lấy về Drive"');
   Logger.log('✔ Trang tải lên (kèm key, đừng chia sẻ):\n' + link);
   Logger.log(tg && tg.ok ? '✔ Đã nhắn link vào Telegram'
                          : '✘ Không nhắn được Telegram — kiểm tra TG_TOKEN / TG_CHAT');
@@ -690,5 +779,5 @@ function caiDat() {
 function doiKey() {
   props().setProperty(PROP_KEY, Utilities.getUuid());
   Logger.log('✔ Key mới. Link trang mới:\n' + linkTrang());
-  guiTelegram('🔑 Đã đổi key trang tải file. Link mới:\n\n' + linkTrang());
+  guiTelegram('\u{1F511} Đã đổi key trang tải file. Link mới:\n\n' + linkTrang());
 }
