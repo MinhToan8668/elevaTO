@@ -2,7 +2,7 @@
 // ?preview: chạy trong khung xem trước của trình chỉnh sửa, nhận bản nháp qua postMessage và không mở link thật.
 
 import { normalize, serialize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo,
-  brandDoc, brandIndex, mergeDraft, ACCENTS } from './core.js';
+  brandDoc, brandIndex, mergeDraft, emoji3d, ACCENTS } from './core.js';
 import { $, h, store, toast, toggleTheme } from './dom.js';
 import { svg } from './icons.js';
 import { fetchLinks } from './backend.js';
@@ -81,13 +81,18 @@ function initials(name) {
 }
 
 /* ── các ô link ───────────────────────────────── */
+const anh = (src) => h('img', { src, alt: '', loading: 'lazy', decoding: 'async' });
+
 function chip(l) {
   const img = safeImg(l.image);
+  // Emoji có sẵn bản 3D trong art/3d → hiện hình đó: emoji gõ tay mỗi máy vẽ một kiểu (Windows ra
+  // hình dẹt xấu), hình 3D thì máy nào cũng y như nhau và cùng bộ với các icon 3D khác trên trang.
+  const e3 = img ? '' : emoji3d(l.emoji);
+  if (e3) return h('span', { class: 'chip ico' }, anh(e3));
   if (!img && l.emoji) return h('span', { class: 'chip emo', 'aria-hidden': 'true' }, l.emoji);
   if (!img) return h('span', { class: 'chip', html: svg(l.icon) });
   // "icon": hình trong suốt đặt giữa ô màu nhấn; "photo": ảnh lấp kín ô.
-  return h('span', { class: l.imageStyle === 'icon' ? 'chip ico' : 'chip img' },
-    h('img', { src: img, alt: '', loading: 'lazy', decoding: 'async' }));
+  return h('span', { class: l.imageStyle === 'icon' ? 'chip ico' : 'chip img' }, anh(img));
 }
 const badge = (l) => (l.badge ? h('span', { class: 'badge' }, l.badge) : null);
 
@@ -108,7 +113,7 @@ function toolsBlock(l) {
   const tools = l.tools.filter((t) => safeUrl(t.url));
   if (!tools.length) return null;
   return h('div', { class: 'tools' }, ...tools.map((t) => h('a', { class: 'tool', ...linkAttrs(t.url) },
-    t.emoji ? h('i', { 'aria-hidden': 'true' }, t.emoji) : null,
+    t.emoji ? h('i', { 'aria-hidden': 'true' }, emoji3d(t.emoji) ? anh(emoji3d(t.emoji)) : t.emoji) : null,
     h('span', {}, t.label),
     t.badge ? h('b', {}, t.badge) : null)));
 }
@@ -168,6 +173,15 @@ function pickBrand() {
   return v ? brandIndex(site, v) : 0;
 }
 
+// Dấu hiệu nhỏ của từng thương hiệu trên công tắc — đúng logo thật, không phải icon minh hoạ:
+// mũi tên đôi của elevaTO (assets/logo-mark.svg) và ba viên gạch + viên đỉnh lime của TMXK.
+// Vẽ thẳng vào trang (không dùng <img>) để CSS đổi màu viên gạch theo nền sáng/tối/đang chọn.
+const MARK = {
+  glass: '<svg viewBox="272.4 149.1 32 31.5" aria-hidden="true"><path class="m-a" d="M293.44 160l-18.03-.8c-3.48-.16-4.07 6.62.06 6.74l11.21.3-.85 11.29c-.26 3.44 6.44 3.8 6.63.31z"/><path class="m-a" d="M304.11 150.14l-18.03-.8c-3.48-.15-4.07 6.63.06 6.74l11.22.3-.86 11.29c-.26 3.44 6.44 3.8 6.63.31z"/></svg>',
+  paper: '<svg viewBox="2 6 60 52" aria-hidden="true"><g transform="rotate(-9 32 17)"><rect class="m-top" x="19" y="11" width="26" height="12" rx="3"/><path class="m-play" d="M30 14.4v5.2a1 1 0 0 0 1.52.86l4.6-2.6a1 1 0 0 0 0-1.72l-4.6-2.6A1 1 0 0 0 30 14.4z"/></g><rect class="m-b" x="19" y="28" width="26" height="12" rx="3"/><rect class="m-b" x="4" y="44" width="26" height="12" rx="3"/><rect class="m-b" x="34" y="44" width="26" height="12" rx="3"/></svg>',
+};
+const brandMark = (b) => MARK[b.skin] || MARK.glass;
+
 function renderBrands() {
   const box = $('#brands');
   box.hidden = site.brands.length < 2;
@@ -182,7 +196,8 @@ function renderBrands() {
     ...site.brands.map((b, i) => h('button', {
       type: 'button', role: 'tab', 'aria-selected': String(i === cur), id: 'brand-' + b.id,
       onclick: () => setBrand(i),
-    }, h('span', { html: svg(b.skin === 'paper' ? 'play' : 'chart') }), b.label)));
+      'data-skin': b.skin,
+    }, h('span', { class: 'sw-mk', html: brandMark(b) }), h('span', { class: 'sw-tx' }, b.label))));
   box.style.setProperty('--n', String(site.brands.length));
 }
 
@@ -245,6 +260,11 @@ function syncChrome() {
 // sơn "giấy" — mở thẳng tab Finance thì không tải gì thêm.
 let fontPaper = false;
 function loadSkinFonts(skin) {
+  // Chữ "Content" trên công tắc luôn viết bằng phông TMXK, kể cả khi đang đứng ở Finance → trang có
+  // thương hiệu "giấy" là nạp. Trình duyệt chỉ tải đúng mặt chữ có dùng (unicode-range), nên lúc đứng
+  // ở Finance chỉ tốn một file Bricolage latin (~77KB, font-display: swap nên không chặn vẽ);
+  // phông viết tay để dành tới khi mở tab Content.
+  if (site?.brands.some((b) => b.skin === 'paper')) skin = 'paper';
   if (skin !== 'paper' || fontPaper) return;
   fontPaper = true;
   document.head.append(h('link', { rel: 'stylesheet', href: 'fonts/tmxk-fonts.css' }));

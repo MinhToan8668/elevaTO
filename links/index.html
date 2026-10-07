@@ -47,6 +47,10 @@
   </header>
 
   <main class="main" id="main" aria-busy="true">
+    <!-- Công tắc thương hiệu đứng ĐẦU: nó quyết định mọi thứ bên dưới, kể cả danh thiếp.
+         Để sẵn (không hidden) cho chỗ của nó có từ nhịp vẽ đầu — JS ẩn đi nếu trang chỉ có một thương hiệu. -->
+    <div class="sw" id="brands" role="tablist" aria-label="Chọn lĩnh vực"></div>
+
     <!-- Danh thiếp: ảnh, tên, số liệu, mạng xã hội -->
     <section class="card lg" id="card" aria-label="Giới thiệu">
       <div class="who">
@@ -66,9 +70,6 @@
         <nav class="socials" id="socials" aria-label="Mạng xã hội"></nav>
       </div>
     </section>
-
-    <!-- Công tắc thương hiệu: JS chỉ dựng khi trang có từ hai thương hiệu trở lên. -->
-    <div class="sw" id="brands" role="tablist" aria-label="Chọn lĩnh vực" hidden></div>
 
     <section class="grid" id="grid" aria-label="Liên kết">
       <div class="tile lg sk-tile feature"></div><div class="tile lg sk-tile"></div><div class="tile lg sk-tile"></div>
