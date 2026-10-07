@@ -326,6 +326,25 @@ test('công tắc: mỗi nút có logo và phông riêng của thương hiệu m
   }
 });
 
+// Logo TMXK nằm trên nền lime (nút đang chọn ở nền tối) thì viên đỉnh phải trắng như logo gốc
+// trên nền lime — để lime thì viên đỉnh chìm mất, chỉ còn cái chấm tam giác.
+test('công tắc nền tối TMXK: viên đỉnh logo trắng trên con trượt lime', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  const p = await page({ colorScheme: 'dark' });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+  await p.goto(base + '/links/?v=content');
+  await p.waitForSelector('#brands button[aria-selected="true"] .m-top');
+  await p.waitForTimeout(500);
+  const m = await p.evaluate(() => ({
+    dinh: getComputedStyle(document.querySelector('#brands button[aria-selected="true"] .m-top')).fill,
+    truot: getComputedStyle(document.querySelector('.sw-thumb')).backgroundColor,
+  }));
+  assert.equal(m.truot, 'rgb(153, 223, 0)');
+  assert.equal(m.dinh, 'rgb(253, 253, 246)');
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 // Emoji gõ tay mỗi máy vẽ một kiểu (Windows ra hình dẹt). Có bản 3D thì phải hiện hình 3D.
 test('TMXK: emoji ở ô và ở nút công cụ hiện bằng icon 3D, máy nào cũng như nhau', async () => {
   const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
