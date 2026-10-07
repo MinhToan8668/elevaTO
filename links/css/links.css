@@ -123,6 +123,15 @@ img{display:block;max-width:100%}
 :root[data-theme="dark"] .bg i{opacity:1}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bg i{opacity:1}}
 @keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
+/* Mép trên / dưới hoà vào --chrome: Safari trên iPhone tô vùng thanh trạng thái và vùng thanh công cụ
+   bằng màu nền body (--chrome), trong khi quầng sáng của .bg ở hai mép lại ra màu khác → hở một dải
+   phẳng lạc màu, nhìn không liền như TMXK (nền phẳng một màu). Phủ hai dải chuyển về đúng --chrome. */
+@media (max-width:919px){
+  .bg::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(180deg,var(--chrome) 0,transparent 130px),linear-gradient(0deg,var(--chrome) 0,transparent 170px)}
+  .has-bgimg .bg::before,
+  :root[data-skin="paper"] .bg::before{display:none}   /* giấy lime: nền đã phẳng một màu, khớp sẵn */
+}
 /* Ảnh nền tự chọn */
 .bg-img{position:absolute;inset:-2%;background-size:cover;background-position:center;display:none}
 .bg-img::after{content:'';position:absolute;inset:0;background:rgb(255 255 255 / .12)}
@@ -629,16 +638,21 @@ img{display:block;max-width:100%}
         max(4px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left))}
   .logo{height:34px}
   .bar{padding:0 0 4px}
-  .main{gap:5px}
+  /* Khoảng cách theo lựa chọn của từng thương hiệu (theme.density, data-density trên <html>).
+     Không có thuộc tính = "vừa". "Gọn" là bộ số bóp sát cũ — cả trang vừa một màn. */
+  :root{--d-main:9px;--d-grid:8px;--d-tile:10px;--d-feat:12px;--d-fgap:8px;--d-card:11px 14px;--d-row:8px;--d-live:5px}
+  :root[data-density="gon"]{--d-main:5px;--d-grid:4px;--d-tile:8px;--d-feat:9px;--d-fgap:6px;--d-card:7px 12px;--d-row:5px;--d-live:3px}
+  :root[data-density="thoang"]{--d-main:13px;--d-grid:11px;--d-tile:12px;--d-feat:14px;--d-fgap:10px;--d-card:14px 16px;--d-row:10px;--d-live:6px}
+  .main{gap:var(--d-main)}
 
-  .card{padding:7px 12px 7px;border-radius:24px}
+  .card{padding:var(--d-card);border-radius:24px}
   .who{gap:12px}
   .ava-wrap{width:54px;height:54px}
   .name{font-size:20px}.ver{width:18px;height:18px}
   .handle{font-size:12.5px}
   .tagline{font-size:12.5px;line-height:1.38;-webkit-line-clamp:2;line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
-  .stats{margin-top:5px;border-radius:14px}.stat{padding:3px 4px}.stat dd{font-size:15.5px}.stat dt{font-size:10.5px}
-  .row2{margin-top:5px;gap:4px}
+  .stats{margin-top:var(--d-row);border-radius:14px}.stat{padding:3px 4px}.stat dd{font-size:15.5px}.stat dt{font-size:10.5px}
+  .row2{margin-top:var(--d-row);gap:4px}
   .status{padding:5px 12px;font-size:12px}
   .soc{height:31px;border-radius:11px}.soc .ic{width:17.5px;height:17.5px}
 
@@ -647,37 +661,39 @@ img{display:block;max-width:100%}
   .sw-mk{width:19px;height:19px}
   .sw:empty{height:40px}
   .sw-thumb{border-radius:12px}
-  .pinned{gap:4px}
+  .pinned{gap:var(--d-live)}
   .pin-nh{font-size:9.5px}
-  .tile>.tools{gap:5px}
+  .tile>.tools{gap:var(--d-live)}
   .tool{padding:8px 4px 7px;font-size:12px;gap:4px}
   .tool i{width:26px;height:26px;font-size:20px}
-  .grid{gap:4px}
-  .tile{padding:8px;border-radius:19px}
-  .tile.half{min-height:88px;gap:7px}
+  .grid{gap:var(--d-grid)}
+  .tile{padding:var(--d-tile);border-radius:19px}
+  .tile.half{min-height:88px;gap:calc(var(--d-fgap) + 1px)}
   .chip{width:38px;height:38px;border-radius:11px}.chip .ic{width:18px;height:18px}
   .ttl{font-size:13.5px}
   .sub{font-size:11.5px;-webkit-line-clamp:2;line-clamp:2}
 
-  .tile.feature{gap:6px;padding:9px;border-radius:22px}
+  .tile.feature{gap:var(--d-fgap);padding:var(--d-feat);border-radius:22px}
   .f-top{gap:11px}
   .f-top .chip{width:54px;height:54px}.f-top .chip .ic{width:24px;height:24px}
   .f-top .ttl{font-size:16.5px}
   .f-top .sub{font-size:12px;-webkit-line-clamp:2;line-clamp:2}
-  .live{gap:3px}
+  .live{gap:var(--d-live)}
   .cta{padding:7px 16px;font-size:14.5px;border-radius:13px}
-  .tile.feature.with-meta{row-gap:4px;column-gap:10px}
+  .tile.feature.with-meta{row-gap:calc(var(--d-fgap) - 2px);column-gap:10px}
   .tile.feature.with-meta .f-top{margin-bottom:3px}
   .tile.feature.with-meta>.cta{padding:10px 18px}
 
   .foot{gap:8px;padding:0}.wm{height:15px}.foot-tag{font-size:11px}
 
   /* Nút công cụ trên điện thoại: icon cạnh chữ, 3 nút một hàng — thấp bằng nửa kiểu icon trên chữ dưới. */
-  .tool{flex-direction:row;justify-content:flex-start;gap:6px;padding:8px 7px;text-align:left;font-size:12px}
+  .tool{flex-direction:row;justify-content:flex-start;gap:5px;padding:8px 6px;text-align:left;font-size:12px}
+  /* ô có bộ công cụ giữ lề ngang vừa phải ở mọi mức khoảng cách, không thì chữ trên nút bị cắt */
+  .tile.has-tools{padding-inline:min(var(--d-feat),11px)}
   .tool i{width:20px;height:20px;font-size:16px}
 
   /* TMXK trên điện thoại: bóp lại cho gần vừa một màn như bên elevaTO */
-  :root[data-skin="paper"] .tile.feature{margin-top:7px}
+  :root[data-skin="paper"] .tile.feature{margin-top:calc(var(--d-grid) + 3px)}
   :root[data-skin="paper"] .tile.feature::before{top:-9px;width:62px;height:18px}
   :root[data-skin="paper"] .tile.has-tools .ttl{font-size:10.5px;letter-spacing:.12em}
   :root[data-skin="paper"] .tile.has-tools .sub{margin-top:1px;font-size:15.5px;line-height:1.22;text-wrap:balance}
@@ -727,7 +743,11 @@ img{display:block;max-width:100%}
   .stats{margin-top:20px}
   .row2{margin-top:18px;gap:12px}
   .soc{flex:0 0 auto;width:46px;height:46px;max-width:none;border-radius:16px}
-  .grid{gap:14px;align-content:start}
+  :root{--d-main:18px;--d-grid:14px}
+  :root[data-density="gon"]{--d-main:14px;--d-grid:10px}
+  :root[data-density="thoang"]{--d-main:24px;--d-grid:20px}
+  .main{gap:var(--d-main)}
+  .grid{gap:var(--d-grid);align-content:start}
   .tile{border-radius:26px}
   .tile.half{min-height:0;padding:18px;gap:14px}
   .tile.half .chip{width:52px;height:52px}
