@@ -371,9 +371,10 @@ img{display:block;max-width:100%}
    cả ô (.cover, z-index 4) — bấm nút nào đi đúng công cụ đó, bấm chỗ khác thì đi link của ô. */
 .chip.emo{font-size:22px;line-height:1;font-style:normal}
 .f-top .chip.emo{font-size:30px}
-.tile>.tools{z-index:5;display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:7px}
+.tile>.tools{z-index:5;display:grid;grid-template-columns:repeat(var(--cot,3),minmax(0,1fr));gap:7px}
+@media (min-width:1040px){.tile>.tools{grid-template-columns:repeat(var(--cot-rong,6),minmax(0,1fr))}}
 /* Mỗi công cụ là một ô nhỏ icon trên, chữ dưới — kiểu màn hình ứng dụng: 3 ô một hàng trên điện
-   thoại, cả 6 nằm một hàng trên máy tính, gọn hơn hẳn danh sách 2 cột. */
+   thoại, cả 6 nằm một hàng trên máy tính rộng, gọn hơn hẳn danh sách 2 cột. */
 .tool{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;
   padding:10px 6px 8px;border-radius:12px;text-align:center;
   font-size:12.5px;font-weight:700;color:var(--strong);background:var(--glass-soft);box-shadow:inset 0 0 0 1px var(--glass-line);
@@ -710,9 +711,42 @@ img{display:block;max-width:100%}
   .err{grid-column:2}
   .sw button{padding:11px 8px;font-size:15px;gap:9px}
   .sw-mk{width:24px;height:24px}
-  /* TMXK: lưới bên phải dài hơn danh thiếp → danh thiếp đứng sát trên và bám theo khi cuộn, thay
-     vì kéo cao bằng lưới rồi để một khoảng trống to giữa thẻ */
-  :root[data-skin="paper"] .card{align-self:start;justify-content:flex-start;position:sticky;top:22px}
+  /* TMXK có nhiều ô hơn → ô ghim "Liên hệ" sang cột trái, dưới danh thiếp, cho hai cột cao bằng nhau.
+     Danh thiếp vẫn kéo cao hết phần còn lại như bên elevaTO; chỗ dư lấp bằng dải lime đầu thẻ. */
+  :root[data-skin="paper"] .main{grid-template-rows:auto 1fr auto}
+  :root[data-skin="paper"] .card{grid-row:1 / 3;justify-content:flex-start;overflow:hidden;padding-top:70px}
+  :root[data-skin="paper"] .main>.grid{grid-row:2 / 4}
+  :root[data-skin="paper"] .pinned{grid-column:1;grid-row:3;align-self:end}
+  :root[data-skin="paper"] .pinned .tile.half{padding:16px;gap:12px}
+  :root[data-skin="paper"] .pinned .tile.half .chip{width:44px;height:44px}
+  /* đầu thẻ: tấm lime lưới mực như nền trang TMXK, ảnh đại diện đè lên mép dưới, có băng keo dán */
+  :root[data-skin="paper"] .card::after{content:'';position:absolute;z-index:0;inset:0 0 auto;height:150px;
+    background-color:var(--band);border-bottom:1.5px solid var(--duong);
+    background-image:linear-gradient(var(--band-luoi) 1.5px,transparent 1.5px),linear-gradient(90deg,var(--band-luoi) 1.5px,transparent 1.5px);
+    background-size:100% 31px,31px 100%;background-position:0 -1px,-1px 0}
+  :root[data-skin="paper"] .card{--band:#99df00;--band-luoi:rgb(28 38 0 / .13)}
+  :root[data-skin="paper"][data-theme="dark"] .card{--band:#36450f;--band-luoi:rgb(153 223 0 / .16)}
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"])[data-skin="paper"] .card{--band:#36450f;--band-luoi:rgb(153 223 0 / .16)}}
+  :root[data-skin="paper"] .ava-wrap{width:150px;height:150px;padding:4px;transform:rotate(-3deg);
+    box-shadow:0 0 0 1.5px var(--duong),5px 5px 0 var(--duong)}
+  :root[data-skin="paper"] .ava-wrap::before{content:'';position:absolute;z-index:2;top:-12px;left:50%;width:74px;height:22px;
+    transform:translateX(-50%) rotate(5deg);border-radius:2px;background:rgb(253 243 234 / .82);border:1px solid rgb(28 38 0 / .18)}
+  :root[data-skin="paper"] .who{gap:18px}
+  :root[data-skin="paper"] .name{font-size:34px}
+  /* khoảng giữa ảnh và số liệu: câu chữ ký của thương hiệu viết tay, tô dạ quang lime — y như mấy
+     dòng ghi chú trên trang TMXK. Thẻ tên (who) giãn hết chỗ dư, câu nằm giữa phần đó. */
+  :root[data-skin="paper"] .who{flex:1}
+  :root[data-skin="paper"] .who::after{content:'✦ ' attr(data-note);content:'✦ ' attr(data-note) / '';margin-block:auto;
+    align-self:center;max-width:100%;padding:0 8px;transform:rotate(-3deg);
+    font-family:var(--tay);font-style:italic;font-weight:600;font-size:21px;line-height:1.45;color:var(--strong);
+    text-align:center;text-wrap:balance;
+    /* nét dạ quang = gạch chân dày kéo lên sau chữ: bám đúng bề ngang từng dòng khi câu xuống dòng */
+    text-decoration:underline;text-decoration-color:var(--da-quang);text-decoration-thickness:.5em;
+    text-underline-offset:-.3em;text-decoration-skip-ink:none;--da-quang:rgb(153 223 0 / .6)}
+  :root[data-skin="paper"][data-theme="dark"] .who::after{color:#b6e84a;--da-quang:rgb(153 223 0 / .2)}
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"])[data-skin="paper"] .who::after{color:#b6e84a;--da-quang:rgb(153 223 0 / .2)}}
   :root[data-skin="paper"] .tile.has-tools .sub{font-size:23px}
   .foot{padding-top:28px}
   .wm{height:26px}
