@@ -358,7 +358,11 @@ export function mergeDraft(draft, pub) {
     const b0 = out.brands[0];
     const doi = b0.links.filter((l) => ghim.has(l.id));
     b0.links = b0.links.filter((l) => !ghim.has(l.id));
-    out.pinned = pub.pinned.map((g) => doi.find((l) => l.id === g.id) || structuredClone(g));
+    // Ô dời từ nháp đời 1 chưa biết hiện ở thương hiệu nào → theo bản trên web.
+    out.pinned = pub.pinned.map((g) => {
+      const l = doi.find((x) => x.id === g.id);
+      return l ? { ...l, hideIn: l.hideIn.length ? l.hideIn : [...g.hideIn] } : structuredClone(g);
+    });
   }
   return out;
 }
@@ -393,6 +397,8 @@ function normalizeLink(l) {
       url: str(t && t.url, 1000), badge: str(t && t.badge, 8),
     })).filter((t) => t.label).slice(0, 8),
     hidden: bool(x.hidden, false),
+    // Ô ghim: những thương hiệu KHÔNG hiện ô này (theo id). Trống = hiện ở mọi thương hiệu.
+    hideIn: [...new Set((Array.isArray(x.hideIn) ? x.hideIn : []).map((v) => slug(str(v, 20))).filter(Boolean))].slice(0, BRAND_MAX),
     live: bool(x.live, false),
     cta: str(x.cta, 30),
     ctaUrl: str(x.ctaUrl, 1000),

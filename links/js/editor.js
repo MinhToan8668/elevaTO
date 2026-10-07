@@ -74,6 +74,7 @@ function bindChrome() {
 // Đổi tên cờ = cho bước dọn chạy lại thêm một lần trên máy đã chạy bản trước: vẫn có nháp mang
 // Finance ở lớp sơn giấy sau lần dọn đầu. Từ giờ lệch lớp sơn còn được báo ngay trong phần Thương hiệu.
 const SKIN_FIX = 'elevato-links-skinfix-2';
+const PIN_FIX = 'elevato-links-pinfix-1';
 
 async function boot() {
   bindChrome();
@@ -96,6 +97,15 @@ async function boot() {
       }
       store.set(SKIN_FIX, true);
       if (n) toast('Đã trả lớp sơn của từng thương hiệu về đúng bản trên web.');
+    }
+    // Ô ghim có thêm lựa chọn hiện ở thương hiệu nào. Nháp soạn trước đó chưa có → lấy theo bản trên
+    // web (vd. Zalo, CV chỉ hiện ở Finance), một lần; về sau chủ trang tự bật tắt.
+    if (!store.get(PIN_FIX)) {
+      for (const l of ed.draft.pinned) {
+        const goc = pub.pinned.find((x) => x.id === l.id);
+        if (goc && !l.hideIn.length && goc.hideIn.length) l.hideIn = [...goc.hideIn];
+      }
+      store.set(PIN_FIX, true);
     }
   }
   if (saved) syncNow();          // nháp đời cũ vừa được nâng cấp → lưu lại bản đã chuẩn hoá

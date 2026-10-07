@@ -698,9 +698,10 @@ img{display:block;max-width:100%}
   /* Danh thiếp chiếm trọn cột trái; công tắc, lưới ô và ô ghim xếp dọc ở cột phải. Không khai rõ
      thì lưới tự xếp công tắc vào một ô bên cạnh danh thiếp và kéo cao bằng nó — hai nút to tướng. */
   .card{grid-column:1;grid-row:1 / span 3}
-  .sw,.grid,.pinned,.err{grid-column:2}
-  .sw{grid-row:1}
-  .sw,.pinned{align-self:start}
+  /* chỉ con trực tiếp của .main: trang sửa cũng nạp file này và có công tắc bật/tắt tên .sw nằm trong lưới .cols */
+  .main>.sw,.main>.grid,.main>.pinned,.main>.err{grid-column:2}
+  .main>.sw{grid-row:1}
+  .main>.sw,.main>.pinned{align-self:start}
   .card{display:flex;flex-direction:column;justify-content:center;padding:30px 24px 24px;border-radius:34px}
   .who{flex-direction:column;text-align:center;gap:14px}
   .ava-wrap{width:132px;height:132px;padding:5px}
@@ -731,6 +732,7 @@ img{display:block;max-width:100%}
   :root[data-skin="paper"] .card{grid-row:1 / 3;justify-content:flex-start;padding-top:40px}
   :root[data-skin="paper"] .main>.grid{grid-row:2 / 4}
   :root[data-skin="paper"] .pinned{grid-column:1;grid-row:3;align-self:end}
+  :root[data-skin="paper"] .main.no-pin .card{grid-row:1 / 4}   /* thương hiệu không có ô ghim nào */
   :root[data-skin="paper"] .pinned .tile.half{padding:16px;gap:12px}
   :root[data-skin="paper"] .pinned .tile.half .chip{width:44px;height:44px}
   /* ảnh đại diện: khung vuông nghiêng viền mực bóng cứng, có băng keo dán — kiểu ảnh dán trên trang TMXK */

@@ -122,7 +122,7 @@ test('panel trang sửa vẫn đọc được dù chủ trang kéo kính trong s
 // Đa số người xem vào từ bio TikTok nên khổ nào cũng phải vừa.
 // Một trang phục vụ hai kênh TikTok: mỗi bio dán một link ?v= riêng nên trang mở ra đã đúng
 // thương hiệu, công tắc chỉ để bắc cầu. Hai bên phải khác hẳn chất liệu chứ không chỉ khác màu.
-test('hai thương hiệu: ?v= mở đúng bên, công tắc đổi cả lớp sơn, ô ghim hiện ở cả hai', async () => {
+test('hai thương hiệu: ?v= mở đúng bên, công tắc đổi cả lớp sơn, ô ghim hiện theo từng bên', async () => {
   const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   const tmxk = site.brands.find((b) => b.skin === 'paper');
   assert.ok(tmxk, 'data.json phải có một thương hiệu dùng lớp sơn giấy');
@@ -138,9 +138,11 @@ test('hai thương hiệu: ?v= mở đúng bên, công tắc đổi cả lớp s
   assert.equal(await p.getAttribute('.logo-light', 'src'), tmxk.logo.light, 'logo phải đổi theo thương hiệu');
   assert.equal(await p.textContent('.foot-tag'), tmxk.footTag);
 
+  // Mỗi ô ghim tự chọn bên nào hiện nó (hideIn): data.json để Zalo + CV chỉ ở Finance.
   const ghim = () => p.locator('#pinGrid .tile').count();
-  const soGhim = await ghim();
-  assert.ok(soGhim >= 1, 'ô ghim phải hiện');
+  const bao = (id) => site.pinned.filter((l) => !l.hideIn?.includes(id) && l.url).length;
+  assert.equal(await ghim(), bao(tmxk.id), 'số ô ghim ở ' + tmxk.label);
+  assert.equal(await p.locator('#pinned').isHidden(), bao(tmxk.id) === 0, 'không còn ô ghim nào thì giấu cả mục Liên hệ');
 
   // Chất liệu phải khác hẳn, không chỉ khác màu nhấn: giấy thì không nhoè nền phía sau.
   const nhoeGiay = await p.evaluate(() => getComputedStyle(document.querySelector('#card')).backdropFilter);
@@ -151,7 +153,8 @@ test('hai thương hiệu: ?v= mở đúng bên, công tắc đổi cả lớp s
   await p.waitForTimeout(300);
   assert.equal(await p.evaluate(() => document.documentElement.dataset.skin), 'glass');
   assert.ok(!new URL(p.url()).searchParams.get('v'), 'về thương hiệu đầu thì bỏ ?v= cho link gọn: ' + p.url());
-  assert.equal(await ghim(), soGhim, 'ô ghim phải hiện ở MỌI thương hiệu');
+  assert.equal(await ghim(), bao(site.brands[0].id), 'số ô ghim ở ' + site.brands[0].label);
+  assert.ok(await ghim() >= 1, 'Finance phải có ô ghim');
   const nhoeKinh = await p.evaluate(() => getComputedStyle(document.querySelector('#card')).backdropFilter);
   assert.match(nhoeKinh, /blur/, 'elevaTO phải giữ nguyên kính mờ như cũ');
 
@@ -259,7 +262,9 @@ test('màn rộng: công tắc thấp gọn, nằm cùng cột với lưới ô,
 // TMXK nhiều ô hơn elevaTO: ô ghim sang cột trái để hai cột cao bằng nhau, danh thiếp kéo cao hết chỗ
 // còn lại (không để thẻ lùn rồi một khoảng trống dưới), và có câu chữ ký viết tay lấp phần giữa thẻ.
 test('màn rộng TMXK: hai cột cao bằng nhau, Liên hệ nằm dưới danh thiếp, thẻ có câu viết tay', async () => {
-  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  const goc = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  for (const l of goc.pinned) l.hideIn = [];          // ca có ô ghim ở TMXK
+  const site = JSON.stringify(goc);
   for (const width of [1024, 1366]) {
     const p = await page({ viewport: { width, height: 900 } });
     await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
@@ -306,6 +311,53 @@ test('ô khoá học: nút đăng ký đứng chung hàng với số suất còn
     assert.deepEqual(p.errors, [], ten);
     await p.context().close();
   }
+});
+
+test('màn rộng TMXK không có ô ghim: danh thiếp kéo cao bằng cả cột phải', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  const p = await page({ viewport: { width: 1366, height: 900 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+  await p.goto(base + '/links/?v=content');
+  await p.waitForSelector('#grid .tile:not(.sk-tile)');
+  const d = await p.evaluate(() => ({ an: document.querySelector('#pinned').hidden,
+    card: document.querySelector('#card').getBoundingClientRect().bottom,
+    grid: document.querySelector('#grid').getBoundingClientRect().bottom }));
+  assert.ok(d.an, 'TMXK không có ô ghim nào');
+  assert.ok(Math.abs(d.card - d.grid) <= 2, `đáy danh thiếp ${d.card} lệch đáy lưới ${d.grid}`);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
+// Ô ghim dùng chung nhưng mỗi ô chọn được bên nào hiện nó; tắt ở trang sửa thì xem trước đổi theo.
+test('trang sửa: ô ghim bật tắt theo từng thương hiệu, nháp cũ lấy theo bản trên web', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const nhap = JSON.parse(JSON.stringify(site));
+  for (const l of nhap.pinned) delete l.hideIn;      // nháp soạn trước khi có lựa chọn này
+  const p = await page({ viewport: { width: 1400, height: 900 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.addInitScript((d) => {
+    if (window.top !== window || sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('elevato-links-draft', JSON.stringify(d));
+  }, nhap);
+  await p.goto(base + '/links/edit.html');
+  await p.waitForSelector('.bbar .bb');
+  const an = () => p.evaluate(() => JSON.parse(localStorage.getItem('elevato-links-draft')).pinned.map((l) => l.hideIn));
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft') || '{}').pinned?.[0].hideIn?.length);
+  assert.deepEqual(await an(), site.pinned.map((l) => l.hideIn));
+  assert.match(await p.textContent('#form'), /chỉ Finance/);
+
+  // Mở mục Ô ghim (đóng sẵn), mở thẻ Zalo, bật lại cho Content.
+  const muc = p.locator('details.panel', { hasText: 'Dùng chung giữa các thương hiệu' });
+  await muc.locator('summary').click();
+  await muc.locator('.lc', { hasText: 'Zalo' }).locator('.lc-name').click();
+  // Hai công tắc phải đứng cạnh nhau — CSS bố cục của trang công khai (.sw) từng lấn sang làm chúng chồng lên nhau.
+  const o = await p.$$eval('.lc.open .sw-lbl', (ls) => ls.slice(0, 2).map((l) => Math.round(l.getBoundingClientRect().left)));
+  assert.notEqual(o[0], o[1], 'hai công tắc thương hiệu chồng lên nhau');
+  await p.locator('.lc.open label', { hasText: /^Content$/ }).click();
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft')).pinned[0].hideIn.length === 0);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
 });
 
 test('trang sửa với nháp soạn trước khi có nhiều thương hiệu: vẫn thấy đủ thương hiệu, không mất chữ', async () => {
