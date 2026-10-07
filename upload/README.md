@@ -43,9 +43,11 @@ Cài 3 bước (Worker `elevato` đã dựng sẵn — xem `ai/worker/README.md`
 2. Cloudflare → Worker `elevato` → **Settings → Variables and Secrets**, thêm hai **Secret**:
    `UPLOAD_TG_TOKEN` = token bot của trang upload, `TAIVE_SECRET` = chuỗi vừa nghĩ → **Deploy**.
 3. Trong `backend/Code.gs` điền `WORKER_URL` = `https://<worker của bạn>/taive` và
-   `WORKER_SECRET` = đúng chuỗi ấy → chạy lại `caiDat`.
+   `WORKER_SECRET` = đúng chuỗi ấy → chạy lại `caiDat` (hoặc thêm `TAIVE_WORKER_URL`,
+   `TAIVE_SECRET` vào **Thuộc tính tập lệnh** rồi chạy `caiDat`). Cũng chỉ điền một lần.
 
 Kiểm tra: mở địa chỉ Worker, trong `cai` phải thấy `tai_thang: true`.
+Muốn tắt: chạy hàm `tatTaiThang` (để trống hai dòng đầu file không tắt — nó giữ bản đã cất).
 
 | Vì sao tối đa 44 phần | |
 |---|---|
@@ -90,18 +92,24 @@ Trên Mac cũng được bằng Terminal: `cat 'ten-file.mp4'.0* > 'ten-file.mp4
 4. Điền 3 dòng đầu `Code.gs`: `TG_TOKEN` (token bot, dùng chung bot cũ được),
    `TG_CHAT` (chat id của bạn), `WEBAPP_URL` (URL vừa chép) → 💾.
    (`WORKER_URL` / `WORKER_SECRET` để trống cũng được — xem mục **Tải thẳng**.)
+   Không muốn đụng file thì vào **⚙️ Cài đặt dự án → Thuộc tính tập lệnh → Thêm thuộc tính**,
+   điền `TG_BOT_TOKEN`, `TG_CHAT_ID`, `WEBAPP_URL` — `caiDat` đọc được cả hai chỗ.
 5. Chọn hàm `caiDat` → **Run** → cho phép quyền Google Drive. Bot nhắn cho bạn
    link trang **kèm sẵn key** — mở link đó một lần trên máy cần tải, trang tự nhớ.
    `caiDat` cũng đặt lịch `chuyenTelegram` chạy mỗi phút để chuyển file vào chat
    (xem ở **⏰ Trình kích hoạt**). Chạy lại bao nhiêu lần cũng chỉ còn một lịch.
+   **Chỉ điền một lần**: `caiDat` cất hết vào Thuộc tính tập lệnh. Về sau dán `Code.gs` bản
+   mới cứ để nguyên chữ `DAN_…` ở đầu file rồi chạy `caiDat` — nó lấy bản đã cất. Dòng nào
+   điền lại thì ghi đè bản cũ.
 
    Báo `403 … Google Drive API has not been used in project …`: Drive API chưa
    bật. Kiểm tra cột **Dịch vụ** bên trái đã có **Drive** chưa — chưa thì bấm
    **+ → Drive API → Thêm** (bản `appsscript.json` ở đây đã khai sẵn, dán đúng là
    có). Vẫn lỗi thì mở link trong thông báo → **Bật**, đợi 2–3 phút rồi chạy lại.
 
-Sửa code sau này: **Triển khai → Quản lý bản triển khai → bút chì → Phiên bản
-mới**. Sửa bản cũ, đừng tạo bản mới — tạo mới là đổi URL `/exec`, phải chạy lại
+Sửa code sau này: dán đè `Code.gs` (để nguyên đầu file), chạy `caiDat`, rồi
+**Triển khai → Quản lý bản triển khai → bút chì → Phiên bản mới**. Sửa bản cũ, đừng
+tạo bản mới — tạo mới là đổi URL `/exec`, phải điền `WEBAPP_URL` mới và chạy lại
 `caiDat` để lấy link mới.
 
 ## Ghi chú
