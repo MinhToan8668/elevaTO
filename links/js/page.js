@@ -2,7 +2,7 @@
 // ?preview: chạy trong khung xem trước của trình chỉnh sửa, nhận bản nháp qua postMessage và không mở link thật.
 
 import { normalize, serialize, visibleLinks, visibleSocials, safeUrl, safeImg, opensSheet, cohortInfo,
-  brandDoc, brandIndex, ACCENTS } from './core.js';
+  brandDoc, brandIndex, mergeDraft, ACCENTS } from './core.js';
 import { $, h, store, toast, toggleTheme } from './dom.js';
 import { svg } from './icons.js';
 import { fetchLinks } from './backend.js';
@@ -367,8 +367,19 @@ async function loadData() {
   // data.json vẽ đè lên bản đã lưu lần trước thì người xem quen thấy: đúng → nội dung cũ (vài giây)
   // → đúng trở lại. Bản lưu luôn mới bằng hoặc hơn data.json, nên chỉ dùng data.json khi chưa có gì.
   let fromBackend = false;
-  const backend = fetchLinks().then((raw) => { if (raw) { fromBackend = true; apply(raw); } return raw; });
-  const file = loadFile().then((raw) => { if (!fromBackend && !cached) apply(raw); return raw; }).catch(() => null);
+  const fileP = loadFile().catch(() => null);
+  // Bản trên máy chủ có thể soạn từ trước khi trang có nhiều thương hiệu (chỉ một thương hiệu, chưa có
+  // ô ghim). Đem vẽ thẳng thì tab Content biến mất dù repo đã có. Ghép thêm những thương hiệu / ô ghim
+  // mà máy chủ chưa biết từ data.json — chữ chủ trang đã đăng giữ nguyên. data.json về rất nhanh (cùng
+  // máy chủ với trang) nên chờ nó không làm chậm gì.
+  const backend = fetchLinks().then(async (raw) => {
+    if (!raw) return raw;
+    const f = await fileP;
+    fromBackend = true;
+    apply(f ? mergeDraft(normalize(raw), normalize(f)) : raw);
+    return raw;
+  });
+  const file = fileP.then((raw) => { if (raw && !fromBackend && !cached) apply(raw); return raw; });
   const [b, f] = await Promise.all([backend, file]);
   // Máy chủ KHÔNG có gì → data.json mới là nguồn đúng, kể cả khi máy người xem đã có bản lưu cũ.
   // Thiếu dòng này thì ai từng mở trang một lần sẽ thấy bản cũ mãi mãi: bản lưu vẽ trước, data.json

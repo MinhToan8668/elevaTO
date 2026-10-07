@@ -2,7 +2,7 @@
 // trên web để biết còn gì chưa đăng.
 
 import { $, store } from './dom.js';
-import { normalize, serialize } from './core.js';
+import { normalize, serialize, mergeDraft } from './core.js';
 import { fetchLinks } from './backend.js';
 
 export const DRAFT_KEY = 'elevato-links-draft';
@@ -85,7 +85,14 @@ export function sendPreview() {
 /** Tải bản đang chạy trên web (máy chủ elevaTO trước, data.json dự phòng). Lỗi thì giữ `published` cũ. */
 export async function loadPublished() {
   const live = await fetchLinks();
-  if (live) { ed.published = serialize(live); return true; }
+  if (live) {
+    // Giống trang công khai: bản trên máy chủ thiếu thương hiệu nào thì ghép từ data.json, để trang sửa
+    // có đủ tab (nếu không, ai từng đăng bản một-thương-hiệu sẽ không bao giờ thấy tab Content để sửa).
+    let file = null;
+    try { const r = await fetch('data.json', { cache: 'no-cache' }); if (r.ok) file = await r.json(); } catch (e) { /* bỏ qua */ }
+    ed.published = serialize(file ? mergeDraft(normalize(live), normalize(file)) : live);
+    return true;
+  }
   try {
     const r = await fetch('data.json', { cache: 'no-cache' });
     if (!r.ok) throw new Error('HTTP ' + r.status);

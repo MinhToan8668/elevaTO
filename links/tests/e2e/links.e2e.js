@@ -326,6 +326,36 @@ test('trang sửa: Finance lỡ bị đổi sang lớp sơn giấy trong nháp t
   await p.context().close();
 });
 
+// Đúng tình huống thật: chủ trang đã bấm "Đăng lên web" một bản soạn từ trước khi có nhiều thương
+// hiệu. Máy chủ luôn thắng data.json, nên nếu vẽ thẳng thì tab Content không bao giờ hiện.
+test('máy chủ giữ bản một thương hiệu: vẫn có đủ thương hiệu, chữ đã đăng giữ nguyên, Zalo/CV về ô ghim', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  const daDang = JSON.parse(await readFile(MAU, 'utf8'));          // đời 1, một thương hiệu
+  daDang.profile.tagline = 'Chữ chủ trang đã đăng lên máy chủ';
+  daDang.links = daDang.links.map((l) => (l.id === 'zalo' ? { ...l, url: 'https://zalo.me/0901234567' } : l));
+  for (const [ten, url] of [['trang', '/links/'], ['trang sửa', '/links/edit.html']]) {
+    const p = await page({ viewport: { width: 1400, height: 900 } });
+    await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+    await p.route(WORKER + '/**', (r) => r.fulfill({ contentType: 'application/json',
+      body: JSON.stringify({ ok: true, data: daDang, updatedAt: '05/10/2026 10:35' }) }));
+    await p.goto(base + url);
+    if (ten === 'trang') {
+      await p.waitForSelector('#brands button');
+      await p.waitForFunction(() => /đã đăng lên máy chủ/.test(document.querySelector('#tagline').textContent));
+      assert.equal(await p.locator('#brands button').count(), site.brands.length, ten + ': thiếu tab');
+      const luoi = await p.$$eval('#grid .ttl', (e) => e.map((x) => x.textContent));
+      const ghim = await p.$$eval('#pinGrid .ttl', (e) => e.map((x) => x.textContent));
+      assert.ok(!luoi.some((t) => /Zalo/.test(t)), ten + ': Zalo còn nằm trong lưới ô');
+      assert.ok(ghim.some((t) => /Zalo/.test(t)), ten + ': Zalo phải nằm ở ô ghim');
+    } else {
+      await p.waitForSelector('.bbar .bb');
+      assert.deepEqual(await p.$$eval('.bbar .bb b', (e) => e.map((x) => x.textContent)), site.brands.map((b) => b.label));
+    }
+    assert.deepEqual(p.errors, [], ten);
+    await p.context().close();
+  }
+});
+
 test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
   // Mỗi máy đo hai trạng thái: thanh công cụ đang mở (khung nhìn hụt gần 90px, là lúc vừa mở
   // trang) và đã thu (sau cú vuốt đầu). Trạng thái "đang mở" mới là cái bắt được lỗi chật chỗ.
