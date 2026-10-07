@@ -612,6 +612,32 @@ test('trên điện thoại: cả trang vừa một màn, không phải lướt'
   }
 });
 
+// TMXK có nhiều ô hơn elevaTO (Viral Studio 6 công cụ, Kết quả học viên…) nên phải bóp chặt hơn trên
+// điện thoại: nút công cụ icon cạnh chữ (thấp), trang không dài quá một màn quá nhiều.
+test('TMXK trên điện thoại: gọn gần một màn, nút công cụ một dòng, không tràn ngang', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  for (const [w, h, max] of [[390, 750, 810], [360, 700, 815], [430, 880, 880]]) {
+    const p = await page({ viewport: { width: w, height: h } });
+    await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+    await p.goto(base + '/links/?v=content');
+    await p.waitForSelector('.tile.feature .live');
+    await p.waitForTimeout(400);
+    const d = await p.evaluate(() => ({
+      cao: document.documentElement.scrollHeight, rong: document.documentElement.scrollWidth,
+      nut: [...document.querySelectorAll('.tool')].map((t) => {
+        const r = t.getBoundingClientRect(), s = t.querySelector('span');
+        return { h: Math.round(r.height), cut: s.scrollWidth > s.clientWidth + 1 };
+      }),
+    }));
+    assert.ok(d.cao <= max, `${w}px: trang TMXK dài ${d.cao}px (tối đa ${max})`);
+    assert.ok(d.rong <= w, `${w}px: tràn ngang ${d.rong}`);
+    assert.ok(d.nut.every((n) => n.h <= 44), `${w}px: nút công cụ cao quá: ${d.nut.map((n) => n.h)}`);
+    assert.ok(d.nut.every((n) => !n.cut), `${w}px: chữ trên nút công cụ bị cắt`);
+    assert.deepEqual(p.errors, [], String(w));
+    await p.context().close();
+  }
+});
+
 test('vào lại trang: không để data.json đè lên nội dung chủ trang đã đăng trong lúc chờ máy chủ', async () => {
   // Apps Script mất vài giây, còn data.json nằm cùng máy chủ với trang nên về sau ~50ms. Nếu data.json
   // được vẽ đè lên bản đã lưu lần trước thì người xem quen thấy: đúng → nội dung cũ vài giây → đúng lại.

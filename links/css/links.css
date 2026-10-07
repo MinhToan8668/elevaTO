@@ -671,6 +671,19 @@ img{display:block;max-width:100%}
   .tile.feature.with-meta>.cta{padding:10px 18px}
 
   .foot{gap:8px;padding:0}.wm{height:15px}.foot-tag{font-size:11px}
+
+  /* Nút công cụ trên điện thoại: icon cạnh chữ, 3 nút một hàng — thấp bằng nửa kiểu icon trên chữ dưới. */
+  .tool{flex-direction:row;justify-content:flex-start;gap:6px;padding:8px 7px;text-align:left;font-size:12px}
+  .tool i{width:20px;height:20px;font-size:16px}
+
+  /* TMXK trên điện thoại: bóp lại cho gần vừa một màn như bên elevaTO */
+  :root[data-skin="paper"] .tile.feature{margin-top:7px}
+  :root[data-skin="paper"] .tile.feature::before{top:-9px;width:62px;height:18px}
+  :root[data-skin="paper"] .tile.has-tools .ttl{font-size:10.5px;letter-spacing:.12em}
+  :root[data-skin="paper"] .tile.has-tools .sub{margin-top:1px;font-size:15.5px;line-height:1.22;text-wrap:balance}
+  :root[data-skin="paper"] .stats{padding-top:5px}
+  :root[data-skin="paper"] .soc{height:33px}
+  :root[data-skin="paper"] .tile.half{min-height:0}
 }
 @media (max-width:360px){
   .logo{height:38px}                      /* màn 320px: logo và viên nút sát nhau quá */
@@ -686,6 +699,7 @@ img{display:block;max-width:100%}
   .f-top .ttl{font-size:15.5px}
   .ttl{font-size:13.5px}
   .foot{gap:8px}.wm{height:18px}.foot-tag{font-size:11px}
+  .tool{gap:4px;padding:7px 5px;font-size:11px}.tool i{width:17px;height:17px}
 }
 
 /* ═══ máy tính: danh thiếp trái cao bằng lưới phải, cả khối nằm giữa màn ═══ */
