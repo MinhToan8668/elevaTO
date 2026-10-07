@@ -27,7 +27,8 @@ function moFetch() {
 }
 
 const env0 = (them) => moEnv(SCHEMA, {
-  TG_AI_TOKEN: 'token-ai', TG_EL_TOKEN: 'token-el', TG_ADMIN: ADMIN, TG_SECRET: 'bimat', BREVO_KEY: 'brevo', MAIL_TU: 'gui@gmail.com', ...them,
+  TG_AI_TOKEN: 'token-ai', TG_EL_TOKEN: 'token-el', TG_ADMIN: ADMIN, TG_SECRET: 'bimat', BREVO_KEY: 'brevo', MAIL_TU: 'gui@gmail.com',
+  UPLOAD_TG_TOKEN: 'token-upload', TAIVE_SECRET: 'taive-bimat', ...them,
 });
 
 async function goi(env, body) {
@@ -283,9 +284,12 @@ test('Brevo lỗi thì báo quản trị chứ không im lặng', async () => {
 
 test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò', async () => {
   const xem = async (env) => (await (await worker.fetch(new Request(API), env, moCtx())).json()).cai;
-  assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot_ai: false, bot_el: false, mail: false,
-    thieu: ['GEMINI_KEYS', 'TG_SECRET', 'TG_ADMIN', 'TG_AI_TOKEN', 'TG_EL_TOKEN', 'BREVO_KEY', 'MAIL_TU'] });
-  assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot_ai: true, bot_el: true, mail: true, thieu: [] });
+  assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot_ai: false, bot_el: false, mail: false, tai_thang: false,
+    thieu: ['GEMINI_KEYS', 'TG_SECRET', 'TG_ADMIN', 'TG_AI_TOKEN', 'TG_EL_TOKEN', 'BREVO_KEY', 'MAIL_TU', 'UPLOAD_TG_TOKEN', 'TAIVE_SECRET'] });
+  assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot_ai: true, bot_el: true, mail: true, tai_thang: true, thieu: [] });
+  // Tải thẳng cần đủ cả hai: token bot upload và khóa ký vé.
+  assert.equal((await xem(env0({ UPLOAD_TG_TOKEN: '' }))).tai_thang, false, 'thiếu UPLOAD_TG_TOKEN');
+  assert.equal((await xem(env0({ TAIVE_SECRET: '' }))).tai_thang, false, 'thiếu TAIVE_SECRET');
   // "mail: false" một mình không nói thiếu cái nào trong hai — phải kể tên ra.
   assert.deepEqual((await xem(env0({ GEMINI_KEYS: 'k', BREVO_KEY: '' }))).thieu, ['BREVO_KEY']);
   assert.deepEqual((await xem(env0({ GEMINI_KEYS: 'k', MAIL_TU: '' }))).thieu, ['MAIL_TU']);
@@ -297,7 +301,7 @@ test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca r�
   assert.equal((await xem(env0({ BREVO_KEY: '' }))).mail, false);
   // Không được lộ giá trị nào ra ngoài.
   const than = await (await worker.fetch(new Request(API), env0({ GEMINI_KEYS: 'key-that' }), moCtx())).text();
-  assert.doesNotMatch(than, /key-that|token-ai|token-el|bimat|brevo/);
+  assert.doesNotMatch(than, /key-that|token-ai|token-el|token-upload|bimat|brevo/);
 });
 
 test('thiếu TG_SECRET thì không đăng ký webhook (im lặng như đang gặp), có đủ thì đăng ký', async () => {

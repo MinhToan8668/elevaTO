@@ -17,10 +17,47 @@ Sau đó, tuỳ ô **"Gửi file vào chat Telegram rồi xoá khỏi Drive"** t
   rác (Drive tự xoá hẳn sau 30 ngày) và file vào **Kho** (xem dưới).
 - **Tắt**: file ở lại Drive, bot chỉ nhắn link xem và link tải về.
 
-**Kho file trên Telegram** (cuối trang upload): liệt kê file bot đã gửi. Bấm **Lấy về**
-→ trong 1–2 phút bot kéo các phần từ Telegram, ghép thành file gốc đặt tạm trên Drive
-→ nút **Tải về** hiện ra. Không cần vào Telegram, không phải ghép tay. Bản tạm tự vào
-Thùng rác sau 24 giờ (`GIU_BAN_TAM_GIO`). Nút × bỏ file khỏi kho (tin nhắn Telegram vẫn còn).
+**Kho file trên Telegram** (cuối trang upload): liệt kê file bot đã gửi, tải về được hai
+đường — đường nào cũng không cần vào Telegram và không phải ghép tay.
+
+- **Tải thẳng** — file đi từ Telegram về máy luôn, **không đặt bản nào trên Drive**, bấm là
+  tải ngay. Cần cài Cloudflare Worker (mục **Tải thẳng** dưới đây); chưa cài thì nút không hiện.
+  Tối đa **44 phần ≈ 836MB** mỗi file.
+- **Lấy về Drive** — đường cũ, chậm hơn nhưng **không giới hạn dung lượng**: trong 1–2 phút
+  bot kéo các phần từ Telegram, ghép thành file gốc đặt tạm trên Drive → nút **Tải từ Drive**
+  hiện ra. Bản tạm tự vào Thùng rác sau 24 giờ (`GIU_BAN_TAM_GIO`).
+
+Nút × bỏ file khỏi kho (tin nhắn Telegram vẫn còn).
+
+## Tải thẳng — không qua Drive
+
+Lý do chiều về phải vòng qua Drive: ở Việt Nam trình duyệt không gọi được
+`api.telegram.org`. Cloudflare thì gọi được, mà Cloudflare ở Việt Nam vào bình thường — nên
+Worker thay được chỗ của Drive: nó tải lần lượt từng phần rồi **nối thẳng vào một luồng**
+trả về máy. Trình duyệt thấy đúng một file đang tải, có thanh tiến trình, không có bản tạm
+nào trên Drive, không phải chờ ghép, không tốn dung lượng Drive.
+
+Cài 3 bước (Worker `elevato` đã dựng sẵn — xem `ai/worker/README.md`):
+
+1. Nghĩ một chuỗi ngẫu nhiên dài ≥24 ký tự làm bí mật dùng chung.
+2. Cloudflare → Worker `elevato` → **Settings → Variables and Secrets**, thêm hai **Secret**:
+   `UPLOAD_TG_TOKEN` = token bot của trang upload, `TAIVE_SECRET` = chuỗi vừa nghĩ → **Deploy**.
+3. Trong `backend/Code.gs` điền `WORKER_URL` = `https://<worker của bạn>/taive` và
+   `WORKER_SECRET` = đúng chuỗi ấy → chạy lại `caiDat`.
+
+Kiểm tra: mở địa chỉ Worker, trong `cai` phải thấy `tai_thang: true`.
+
+| Vì sao tối đa 44 phần | |
+|---|---|
+| Cloudflare gói Free cho **50 subrequest** mỗi lần gọi, mỗi phần 19MB tốn 1 lượt tải | trần cứng 50 phần |
+| Chừa 6 lượt để Worker xin lại được đường dẫn Telegram hết hạn giữa chừng (mỗi lần tốn 2) | còn **44 phần ≈ 836MB** |
+
+Lên gói Paid ($5/tháng) là 10.000 subrequest: sửa `CF_SUBREQ` trong `ai/worker/src/taive.js`
+và `TAI_THANG_PHAN` trong `backend/Code.gs` cho khớp nhau là tải thẳng được file 2GB.
+
+Đường dẫn file của Telegram chỉ bảo đảm sống **1 giờ**, nên vé tải hết hạn sau 50 phút
+(`VE_SONG_PHUT`). Tải quá lâu mà đứt thì bấm **Tải thẳng** lại — vé mới, đường dẫn mới.
+Rớt mạng giữa chừng phải tải lại từ đầu (Worker chưa làm `Range`).
 
 Vì sao phần 19MB: bot gửi được file tới 50MB nhưng chỉ **tải về** được file tới 20MB.
 File gửi bằng bản cũ (phần 45MB) và file gửi trước khi có kho **không lấy về được** —
@@ -52,6 +89,7 @@ Trên Mac cũng được bằng Terminal: `cat 'ten-file.mp4'.0* > 'ten-file.mp4
    Chép **URL ứng dụng web** (kết thúc bằng `/exec`).
 4. Điền 3 dòng đầu `Code.gs`: `TG_TOKEN` (token bot, dùng chung bot cũ được),
    `TG_CHAT` (chat id của bạn), `WEBAPP_URL` (URL vừa chép) → 💾.
+   (`WORKER_URL` / `WORKER_SECRET` để trống cũng được — xem mục **Tải thẳng**.)
 5. Chọn hàm `caiDat` → **Run** → cho phép quyền Google Drive. Bot nhắn cho bạn
    link trang **kèm sẵn key** — mở link đó một lần trên máy cần tải, trang tự nhớ.
    `caiDat` cũng đặt lịch `chuyenTelegram` chạy mỗi phút để chuyển file vào chat
@@ -69,7 +107,8 @@ mới**. Sửa bản cũ, đừng tạo bản mới — tạo mới là đổi U
 ## Ghi chú
 
 - Vì sao file phải lên Drive trước: trình duyệt ở Việt Nam không gọi được Telegram,
-  máy chủ Google thì gọi được — cả lúc gửi đi lẫn lúc lấy về.
+  máy chủ Google thì gọi được. Chiều về thì **Tải thẳng** đi qua Cloudflare nên bỏ được
+  Drive, còn chiều lên vẫn phải vòng — Worker không nhận nổi file 2GB đẩy lên.
 - Kho lưu trong Script Properties: mỗi file một ô `TGLIB_<id>`, mã file_id các phần
   40 mã một ô `TGFID_<id>_<n>` (mỗi ô tối đa 9KB).
 - Chuyển vào Telegram chạy nền: mỗi lượt ~4 phút, nhớ chỗ dừng, lượt sau làm tiếp —
@@ -84,4 +123,4 @@ mới**. Sửa bản cũ, đừng tạo bản mới — tạo mới là đổi U
   file khác trong Drive của bạn.
 - **Đừng chuyển trang sang HtmlService.** Trang HtmlService nào cũng cho người mở
   nó gọi *bất kỳ* hàm nào trong script qua `google.script.run`. Trang tĩnh gọi
-  `doPost` thì chỉ mở đúng ba action `upload_start` / `upload_chunk` / `upload_status`.
+  `doPost` thì chỉ mở đúng mấy action liệt kê trong `doPost`, không hơn.
