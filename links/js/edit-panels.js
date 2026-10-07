@@ -3,7 +3,7 @@
 
 import { $, h, store, toast } from './dom.js';
 import { normalize, serialize, newId, hiddenReason, safeImg, glassIconFor,
-  ACCENTS, ACCENT_LABELS, SOCIALS, ICON_LIBRARY, BACKGROUNDS, SKINS } from './core.js';
+  ACCENTS, ACCENT_LABELS, SOCIALS, ICON_LIBRARY, BACKGROUNDS, SKINS, DENSITIES } from './core.js';
 import * as iconify from './iconify.js';
 import { svg, TILE_ICONS } from './icons.js';
 import { field, toggle, segmented, iconPicker, swatches, iconBtn, panel, slider, imageField } from './edit-ui.js';
@@ -239,7 +239,9 @@ function useGlassIcons() {
 function themePanel() {
   const t = B().theme;
   const setT = (k, re = false) => (v) => updateB((x) => { x.theme[k] = v; }, { rerender: re });
-  return panel('Giao diện kính', 'Độ mờ, độ trong, hình nền', true,
+  return panel('Giao diện', 'Khoảng cách giữa các ô, độ mờ, độ trong, hình nền', true,
+    segmented('Khoảng cách giữa các ô', t.density, Object.entries(DENSITIES), setT('density')),
+    h('small', { class: 'hint' }, 'Gọn: cả trang vừa một màn điện thoại. Vừa: thoáng hơn chút (mặc định). Thoáng: các ô cách xa nhau, dễ bấm. Mỗi thương hiệu chọn riêng.'),
     slider('Độ mờ của kính (blur)', t.blur, 0, 48, 'px', setT('blur'), '0 = kính trong suốt hẳn, càng lớn càng mờ như kính mờ iPhone.'),
     slider('Độ đục của kính', t.tint, 0, 95, '%', setT('tint'), '0 = trong suốt hẳn, chỉ còn vành mép bẻ sáng như kính thật. Cao = trắng/đen đặc hơn, chữ dễ đọc hơn.'),
     segmented('Hình nền', t.background, Object.entries(BACKGROUNDS), setT('background', true)),

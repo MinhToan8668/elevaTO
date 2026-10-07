@@ -389,6 +389,48 @@ test('TMXK: logo trên ô khoá học và ảnh đại diện không bị xoay n
   await p.context().close();
 });
 
+// Mỗi thương hiệu tự chọn độ thoáng: Gọn / Vừa / Thoáng. Mặc định Vừa.
+test('khoảng cách giữa các ô: mặc định Vừa, mỗi thương hiệu chọn riêng, trang sửa đổi được và xem trước theo', async () => {
+  const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  site.brands[0].theme.density = 'thoang';
+  site.brands[1].theme.density = 'gon';
+  const p = await page({ viewport: { width: 390, height: 750 } });
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
+  await p.goto(base + '/links/');
+  await p.waitForSelector('#grid .tile:not(.sk-tile)');
+  const doc = () => p.evaluate(() => ({ d: document.documentElement.dataset.density,
+    gap: parseFloat(getComputedStyle(document.querySelector('#grid')).rowGap) }));
+  const fin = await doc();
+  assert.equal(fin.d, 'thoang');
+  await p.click('#brands button >> nth=1');
+  await p.waitForTimeout(200);
+  const con = await doc();
+  assert.equal(con.d, 'gon');
+  assert.ok(fin.gap > con.gap, `Thoáng phải cách xa hơn Gọn: ${fin.gap} vs ${con.gap}`);
+  await p.context().close();
+
+  // Trang sửa: chọn "Thoáng" cho Finance → nháp lưu, khung xem trước đổi theo.
+  const e = await page({ viewport: { width: 1400, height: 900 } });
+  await e.goto(base + '/links/edit.html');
+  await e.waitForSelector('.bbar .bb');
+  const nhom = e.getByRole('radiogroup', { name: 'Khoảng cách giữa các ô' });
+  assert.equal(await nhom.getByRole('radio', { checked: true }).textContent(), 'Vừa', 'mặc định phải là Vừa');
+  await nhom.getByRole('radio', { name: 'Thoáng' }).click();
+  await e.waitForFunction(() => JSON.parse(localStorage.getItem('elevato-links-draft') || '{}').brands?.[0].theme.density === 'thoang');
+  const khung = e.frameLocator('#frame');
+  await expectAttr(khung.locator('html'), 'data-density', 'thoang');
+  assert.deepEqual(e.errors, []);
+  await e.context().close();
+});
+
+async function expectAttr(loc, name, want) {
+  for (let i = 0; i < 40; i += 1) {
+    if (await loc.getAttribute(name) === want) return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.equal(await loc.getAttribute(name), want);
+}
+
 test('trang sửa với nháp soạn trước khi có nhiều thương hiệu: vẫn thấy đủ thương hiệu, không mất chữ', async () => {
   const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   const cu = JSON.parse(await readFile(MAU, 'utf8'));          // bản mẫu là đời 1
@@ -586,7 +628,10 @@ test('máy chủ giữ bản một thương hiệu: vẫn có đủ thương hi�
   }
 });
 
-test('trên điện thoại: cả trang vừa một màn, không phải lướt', async () => {
+test('trên điện thoại, khoảng cách "Gọn": cả trang vừa một màn, không phải lướt', async () => {
+  // "Gọn" là lựa chọn bóp sát (theme.density); mặc định "Vừa" thoáng hơn nên được phép dài hơn một màn.
+  const gon = JSON.parse(await readFile(MAU, 'utf8'));
+  gon.theme.density = 'gon';
   // Mỗi máy đo hai trạng thái: thanh công cụ đang mở (khung nhìn hụt gần 90px, là lúc vừa mở
   // trang) và đã thu (sau cú vuốt đầu). Trạng thái "đang mở" mới là cái bắt được lỗi chật chỗ.
   const KHO = [['iPhone 13/14', 390, 664], ['iPhone 13/14 · đã thu', 390, 750],
@@ -596,6 +641,7 @@ test('trên điện thoại: cả trang vừa một màn, không phải lướt'
     ['Android · đã thu', 412, 732]];
   for (const [ten, width, height] of KHO) {
     const p = await page({ viewport: { width, height } });
+    await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(gon) }));
     await p.goto(base + '/links/');
     await p.waitForSelector('.tile.feature .live');
     await p.waitForTimeout(400);
@@ -614,9 +660,12 @@ test('trên điện thoại: cả trang vừa một màn, không phải lướt'
 
 // TMXK có nhiều ô hơn elevaTO (Viral Studio 6 công cụ, Kết quả học viên…) nên phải bóp chặt hơn trên
 // điện thoại: nút công cụ icon cạnh chữ (thấp), trang không dài quá một màn quá nhiều.
-test('TMXK trên điện thoại: gọn gần một màn, nút công cụ một dòng, không tràn ngang', async () => {
-  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
-  for (const [w, h, max] of [[390, 750, 810], [360, 700, 815], [430, 880, 880]]) {
+test('TMXK trên điện thoại: nút công cụ một dòng, không cắt chữ, không tràn ngang ở mọi mức khoảng cách', async () => {
+  const goc = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
+  for (const [den, w, h, max] of [['gon', 390, 750, 810], ['gon', 360, 700, 815], ['vua', 390, 750, 880], ['vua', 360, 700, 900],
+    ['thoang', 360, 700, 960], ['thoang', 430, 880, 960]]) {
+    for (const b of goc.brands) b.theme.density = den;
+    const site = JSON.stringify(goc);
     const p = await page({ viewport: { width: w, height: h } });
     await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
     await p.goto(base + '/links/?v=content');
@@ -629,7 +678,7 @@ test('TMXK trên điện thoại: gọn gần một màn, nút công cụ một 
         return { h: Math.round(r.height), cut: s.scrollWidth > s.clientWidth + 1 };
       }),
     }));
-    assert.ok(d.cao <= max, `${w}px: trang TMXK dài ${d.cao}px (tối đa ${max})`);
+    assert.ok(d.cao <= max, `${den} ${w}px: trang TMXK dài ${d.cao}px (tối đa ${max})`);
     assert.ok(d.rong <= w, `${w}px: tràn ngang ${d.rong}`);
     assert.ok(d.nut.every((n) => n.h <= 44), `${w}px: nút công cụ cao quá: ${d.nut.map((n) => n.h)}`);
     assert.ok(d.nut.every((n) => !n.cut), `${w}px: chữ trên nút công cụ bị cắt`);
@@ -691,6 +740,19 @@ test('màu thanh trạng thái khớp màu đỉnh trang, và đổi theo nền 
   }));
   const a1 = await doc();
   assert.ok(a1.meta.every((m) => m === a1.chrome), 'thẻ theme-color không khớp --chrome: ' + JSON.stringify(a1));
+  // Hai mép trên / dưới của nền phải ra đúng --chrome: Safari tô vùng thanh trạng thái và thanh công cụ
+  // bằng màu nền body, lệch là hở một dải phẳng lạc màu ở hai mép (iPhone thật).
+  const mep = await p.evaluate(() => {
+    const st = getComputedStyle(document.querySelector('.bg'), '::before');
+    const o = document.createElement('i');
+    o.style.color = getComputedStyle(document.documentElement).getPropertyValue('--chrome');
+    document.body.append(o);
+    const mau = getComputedStyle(o).color;
+    o.remove();
+    return { content: st.content, bg: st.backgroundImage, mau };
+  });
+  assert.notEqual(mep.content, 'none', 'thiếu lớp hoà mép nền vào --chrome');
+  assert.equal(mep.bg.split(mep.mau).length - 1, 2, 'cả mép trên lẫn mép dưới phải chuyển về đúng --chrome: ' + JSON.stringify(mep));
   assert.match(a1.chrome, /^#[0-9a-f]{6}$/);
 
   // Đổi nền (chủ trang chọn trong trình sửa) thì màu thanh trạng thái phải đổi theo.

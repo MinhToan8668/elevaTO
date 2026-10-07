@@ -250,6 +250,9 @@ test('theme: độ mờ, độ đục bị kẹp trong khoảng cho phép; nền
   assert.equal(t.tint, 0);     // 0 = kính trong suốt hẳn, vẫn thấy tấm kính nhờ vành mép bẻ sáng
   assert.equal(t.background, 'aurora');
   assert.equal(mot({ theme: { blur: '12.6' } }).theme.blur, 13);
+  assert.equal(t.density, 'vua', 'không khai khoảng cách = Vừa');
+  assert.equal(mot({ theme: { density: 'thoang' } }).theme.density, 'thoang');
+  assert.equal(mot({ theme: { density: 'rộng' } }).theme.density, 'vua');
 });
 
 test('ảnh tải lên (data URL) được giữ nguyên, không bị cắt cụt; HTML nhúng và script bị chặn', () => {

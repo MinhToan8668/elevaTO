@@ -288,6 +288,7 @@ function applyTheme(t, skin) {
   root.style.setProperty('--blur', t.blur + 'px');
   root.style.setProperty('--tint', String(t.tint / 100));
   root.dataset.bg = t.background;
+  root.dataset.density = t.density;
   const img = t.background === 'image' ? safeImg(t.bgImage) : '';
   document.body.classList.toggle('has-bgimg', Boolean(img));
   // url("…") trong CSS: chặn dấu nháy / xuống dòng để chuỗi không thoát khỏi url().

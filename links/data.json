@@ -226,7 +226,8 @@
         "blur": 0,
         "tint": 5,
         "background": "aurora",
-        "bgImage": ""
+        "bgImage": "",
+        "density": "vua"
       }
     },
     {
@@ -422,7 +423,8 @@
         "blur": 0,
         "tint": 5,
         "background": "aurora",
-        "bgImage": ""
+        "bgImage": "",
+        "density": "vua"
       }
     }
   ]

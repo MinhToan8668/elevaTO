@@ -4,6 +4,9 @@
 export const SIZES = ['feature', 'wide', 'half'];
 
 // Nền trang: dải màu dựng sẵn (định nghĩa trong links.css) hoặc ảnh tự chọn.
+/** Khoảng cách giữa các ô (từng thương hiệu chọn riêng). "Vừa" là mặc định. */
+export const DENSITIES = { gon: 'Gọn', vua: 'Vừa', thoang: 'Thoáng' };
+
 export const BACKGROUNDS = {
   aurora: 'Ngọc lục bảo',
   ocean: 'Đại dương',
@@ -11,7 +14,7 @@ export const BACKGROUNDS = {
   midnight: 'Đêm',
   image: 'Ảnh tự chọn',
 };
-export const THEME_DEFAULT = { blur: 18, tint: 40, background: 'aurora', bgImage: '' };
+export const THEME_DEFAULT = { blur: 18, tint: 40, background: 'aurora', bgImage: '', density: 'vua' };
 
 // Mỗi thương hiệu mặc một "lớp sơn" riêng: cùng bố cục nhưng khác hẳn chất liệu, bo góc và chữ.
 // Người xem gạt công tắc là thấy đổi hẳn thế giới, không phải cùng một trang đổi mỗi màu nhấn.
@@ -313,6 +316,7 @@ function normalizeBrand(b, i) {
       tint: clamp(th.tint, 0, 95, THEME_DEFAULT.tint),   // 0 = kính trong suốt hẳn, chỉ còn vành mép
       background: has(BACKGROUNDS, th.background) ? th.background : THEME_DEFAULT.background,
       bgImage: str(th.bgImage, BG_MAX),
+      density: has(DENSITIES, th.density) ? th.density : THEME_DEFAULT.density,
     },
   };
 }
