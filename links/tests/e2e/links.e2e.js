@@ -298,6 +298,55 @@ test('ô Viral Studio: mỗi nút công cụ bấm được và đi đúng công
   await p.context().close();
 });
 
+// Mỗi nút trên công tắc mang đúng dấu hiệu và phông của thương hiệu nó dẫn tới, ở CẢ hai giao diện —
+// không phải icon minh hoạ chung chung, không đổi phông theo bên đang mở.
+test('công tắc: mỗi nút có logo và phông riêng của thương hiệu mình, đứng đầu trang', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  for (const v of ['', '?v=content']) {
+    const p = await page();
+    await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+    await p.goto(base + '/links/' + v);
+    await p.waitForSelector('#brands button .sw-mk svg');
+    await p.waitForFunction(() => document.fonts.status === 'loaded');
+    const d = await p.evaluate(() => ({
+      nut: [...document.querySelectorAll('#brands button')].map((b) => ({
+        skin: b.dataset.skin, font: getComputedStyle(b).fontFamily,
+        mk: b.querySelector('.m-a') ? 'elevato' : b.querySelector('.m-top') ? 'tmxk' : '' })),
+      truocDanhThiep: Boolean(document.querySelector('#brands').compareDocumentPosition(document.querySelector('#card'))
+        & Node.DOCUMENT_POSITION_FOLLOWING),
+      bricolage: document.fonts.check('800 14px "Bricolage Grotesque"', 'Content'),
+    }));
+    assert.deepEqual(d.nut.map((n) => n.mk), ['elevato', 'tmxk'], v);
+    assert.match(d.nut[0].font, /^"?Plus Jakarta Sans/, v);
+    assert.match(d.nut[1].font, /^"?Bricolage Grotesque/, v);
+    assert.ok(d.truocDanhThiep, v + ': công tắc phải đứng trước danh thiếp');
+    assert.ok(d.bricolage, v + ': chưa nạp phông TMXK cho chữ Content');
+    assert.deepEqual(p.errors, [], v);
+    await p.context().close();
+  }
+});
+
+// Emoji gõ tay mỗi máy vẽ một kiểu (Windows ra hình dẹt). Có bản 3D thì phải hiện hình 3D.
+test('TMXK: emoji ở ô và ở nút công cụ hiện bằng icon 3D, máy nào cũng như nhau', async () => {
+  const site = await readFile(join(ROOT, 'links/data.json'), 'utf8');
+  const p = await page();
+  await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: site }));
+  await p.goto(base + '/links/?v=content');
+  await p.waitForSelector('.tile.has-tools .tool');
+  const d = await p.evaluate(() => ({
+    tool: [...document.querySelectorAll('.tool i')].map((i) => i.querySelector('img')?.getAttribute('src') || 'chữ:' + i.textContent),
+    chu: document.querySelectorAll('#grid .chip.emo').length,
+    o: [...document.querySelectorAll('#grid .chip.ico img')].map((i) => i.getAttribute('src')),
+  }));
+  assert.ok(d.tool.length && d.tool.every((s) => /^art\/3d\/.+\.webp$/.test(s)), JSON.stringify(d.tool));
+  assert.equal(d.chu, 0, 'còn ô hiện emoji dạng chữ');
+  assert.ok(d.o.length >= 3, JSON.stringify(d.o));
+  const hong = await p.evaluate(() => [...document.querySelectorAll('#grid img, .tool img')].filter((i) => i.complete && !i.naturalWidth).map((i) => i.src));
+  assert.deepEqual(hong, []);
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 test('trang sửa: Finance lỡ bị đổi sang lớp sơn giấy trong nháp thì được trả về kính mờ, một lần', async () => {
   const site = JSON.parse(await readFile(join(ROOT, 'links/data.json'), 'utf8'));
   const nhap = JSON.parse(JSON.stringify(site));

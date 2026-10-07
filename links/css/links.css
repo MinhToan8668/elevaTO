@@ -371,14 +371,18 @@ img{display:block;max-width:100%}
    cả ô (.cover, z-index 4) — bấm nút nào đi đúng công cụ đó, bấm chỗ khác thì đi link của ô. */
 .chip.emo{font-size:22px;line-height:1;font-style:normal}
 .f-top .chip.emo{font-size:30px}
-.tile>.tools{z-index:5;display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.tool{position:relative;display:flex;align-items:center;gap:8px;min-width:0;padding:9px 11px;border-radius:12px;
-  font-size:13px;font-weight:700;color:var(--strong);background:var(--glass-soft);box-shadow:inset 0 0 0 1px var(--glass-line);
+.tile>.tools{z-index:5;display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:7px}
+/* Mỗi công cụ là một ô nhỏ icon trên, chữ dưới — kiểu màn hình ứng dụng: 3 ô một hàng trên điện
+   thoại, cả 6 nằm một hàng trên máy tính, gọn hơn hẳn danh sách 2 cột. */
+.tool{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;
+  padding:10px 6px 8px;border-radius:12px;text-align:center;
+  font-size:12.5px;font-weight:700;color:var(--strong);background:var(--glass-soft);box-shadow:inset 0 0 0 1px var(--glass-line);
   transition:transform .15s var(--spring),background .2s}
 .tool:hover{background:var(--glass-strong)}
 .tool:active{transform:scale(.96)}
-.tool i{font-style:normal;font-size:15px;line-height:1;flex:none}
-.tool span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool i{display:grid;place-items:center;width:30px;height:30px;font-style:normal;font-size:22px;line-height:1;flex:none}
+.tool i img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 4px rgb(0 0 0 / .25))}
+.tool span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tool b{position:absolute;top:-7px;right:-3px;padding:2px 6px;border-radius:999px;font-family:var(--display);
   font-size:8.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:var(--em);color:var(--em-ink)}
 
@@ -403,7 +407,22 @@ img{display:block;max-width:100%}
   color:var(--muted);transition:color .3s,transform .2s var(--spring)}
 .sw button[aria-selected="true"]{color:var(--em-text)}
 .sw button:active{transform:scale(.96)}
-.sw .ic{width:15px;height:15px;flex:none}
+.sw:empty{height:48px}        /* giữ chỗ trước khi JS dựng nút — khỏi đẩy danh thiếp xuống giữa chừng */
+/* Mỗi nút mang đúng chữ và dấu hiệu của thương hiệu nó dẫn tới, ở cả hai giao diện: Finance là
+   Plus Jakarta Sans + mũi tên đôi elevaTO, Content là Bricolage Grotesque + ba viên gạch TMXK.
+   Nhìn công tắc là biết bên kia trông thế nào, chưa cần bấm. */
+.sw button[data-skin="glass"]{font-family:'Plus Jakarta Sans','Be Vietnam Pro',system-ui,sans-serif;letter-spacing:-.01em}
+.sw button[data-skin="paper"]{font-family:'Bricolage Grotesque','Be Vietnam Pro',system-ui,sans-serif;letter-spacing:0}
+.sw-mk{display:grid;place-items:center;width:21px;height:21px;flex:none;transition:opacity .3s,filter .3s,transform .3s var(--spring)}
+.sw-mk svg{display:block;width:100%;height:100%;overflow:visible}
+.sw button[aria-selected="false"] .sw-mk{opacity:.8;filter:saturate(.75)}
+.sw button[aria-selected="true"] .sw-mk{transform:scale(1.08)}
+.sw .m-a{fill:#18cb96}
+.sw .m-top{fill:#99df00}
+.sw .m-play{fill:#1c2600}
+.sw .m-b{fill:var(--mk-b,#26210f)}
+:root[data-theme="dark"] .sw{--mk-b:#eef3ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sw{--mk-b:#eef3ea}}
 
 /* ═══ Ô GHIM ════════════════════════════════════════════════════════════
    Hiện ở MỌI thương hiệu nên tách hẳn khỏi lưới chính, có vạch nhãn để người xem thấy
@@ -501,9 +520,13 @@ img{display:block;max-width:100%}
   -webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--nut-sh)}
 :root[data-skin="paper"] .sw button,
 :root[data-skin="paper"] .sw-thumb{border-radius:999px}
-:root[data-skin="paper"] .sw button{text-transform:uppercase;letter-spacing:.08em;font-size:12px}
 :root[data-skin="paper"] .sw-thumb{background:#26210f;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
-:root[data-skin="paper"] .sw button[aria-selected="true"]{color:#99df00}
+:root[data-skin="paper"] .sw button[aria-selected="true"]{color:#99df00;--mk-b:#fdf3ea}
+:root[data-skin="paper"][data-theme="dark"] .sw-thumb{background:#99df00}
+:root[data-skin="paper"][data-theme="dark"] .sw button[aria-selected="true"]{color:#1c2600;--mk-b:#1c2600}
+@media (prefers-color-scheme:dark){
+  :root[data-skin="paper"]:not([data-theme="light"]) .sw-thumb{background:#99df00}
+  :root[data-skin="paper"]:not([data-theme="light"]) .sw button[aria-selected="true"]{color:#1c2600;--mk-b:#1c2600}}
 
 /* Thẻ nổi bật = "phiếu ghi danh": băng keo lime dán trên mép, như phiếu trên trang TMXK. */
 :root[data-skin="paper"] .tile.feature{overflow:visible;margin-top:10px}
@@ -536,12 +559,17 @@ img{display:block;max-width:100%}
    lime, nhãn MỚI lime, nút chính lime bóng cứng, băng keo kem dán góc phải. */
 :root[data-skin="paper"] .tile.has-tools{background:#26210f;border-color:#26210f;color:#fdf3ea}
 :root[data-skin="paper"] .tile.has-tools::before{background:rgb(253 243 234 / .75);border-color:rgb(28 38 0 / .2);
-  left:30px;right:auto;transform:rotate(-4deg)}     /* góc trái: góc phải đã có nhãn FREE */
-:root[data-skin="paper"] .tile.has-tools .ttl{color:#fdf3ea}
-:root[data-skin="paper"] .tile.has-tools .sub{color:#c8cfb4}
-:root[data-skin="paper"] .tile.has-tools .chip.emo{background:rgb(255 255 255 / .07);border-color:rgb(153 223 0 / .45);box-shadow:none}
+  left:50%;right:auto;transform:translateX(-50%) rotate(-3deg)}  /* giữa mép: trái có nhãn lime, phải có nhãn FREE */
+/* đầu thẻ đúng kiểu hero "Viral Studio" bên TMXK: nhãn lime nhỏ in hoa, câu chính kem to — bỏ ô
+   icon cho câu chính đủ rộng, phần hình ảnh đã có 6 icon công cụ bên dưới lo */
+:root[data-skin="paper"] .tile.has-tools .chip{display:none}
+:root[data-skin="paper"] .tile.has-tools .ttl{font-size:11.5px;line-height:1.4;letter-spacing:.14em;text-transform:uppercase;color:#99df00}
+:root[data-skin="paper"] .tile.has-tools .ttl::before{content:'✦ '}
+:root[data-skin="paper"] .tile.has-tools .sub{margin-top:3px;font-family:var(--display);font-size:18px;line-height:1.22;
+  font-weight:800;letter-spacing:-.01em;color:#fdf3ea}
 :root[data-skin="paper"] .tool{background:rgb(255 255 255 / .07);box-shadow:none;border:1px solid rgb(153 223 0 / .28);
-  border-radius:10px;color:#fdf3ea}
+  border-radius:12px;color:#fdf3ea}
+:root[data-skin="paper"] .tool i img{filter:drop-shadow(0 3px 0 rgb(0 0 0 / .35))}
 :root[data-skin="paper"] .tool:hover{background:rgb(153 223 0 / .14)}
 :root[data-skin="paper"] .tool b{background:#99df00;color:#1c2600}
 :root[data-skin="paper"] .tile.has-tools .cta{background:#99df00;color:#1c2600;box-shadow:0 5px 0 #4f7500}
@@ -602,13 +630,15 @@ img{display:block;max-width:100%}
   .soc{height:31px;border-radius:11px}.soc .ic{width:17.5px;height:17.5px}
 
   .sw{border-radius:14px;padding:2.5px}
-  .sw button{padding:7px 4px;font-size:12.5px;gap:6px}
+  .sw button{padding:7px 4px;font-size:13.5px;gap:7px}
+  .sw-mk{width:19px;height:19px}
+  .sw:empty{height:40px}
   .sw-thumb{border-radius:12px}
   .pinned{gap:4px}
   .pin-nh{font-size:9.5px}
   .tile>.tools{gap:5px}
-  .tool{padding:7px 9px;font-size:12.5px;gap:7px;border-radius:10px}
-  .tool i{font-size:14px}
+  .tool{padding:8px 4px 7px;font-size:12px;gap:4px}
+  .tool i{width:26px;height:26px;font-size:20px}
   .grid{gap:4px}
   .tile{padding:8px;border-radius:19px}
   .tile.half{min-height:88px;gap:7px}
@@ -654,6 +684,7 @@ img{display:block;max-width:100%}
      thì lưới tự xếp công tắc vào một ô bên cạnh danh thiếp và kéo cao bằng nó — hai nút to tướng. */
   .card{grid-column:1;grid-row:1 / span 3}
   .sw,.grid,.pinned,.err{grid-column:2}
+  .sw{grid-row:1}
   .sw,.pinned{align-self:start}
   .card{display:flex;flex-direction:column;justify-content:center;padding:30px 24px 24px;border-radius:34px}
   .who{flex-direction:column;text-align:center;gap:14px}
@@ -677,6 +708,12 @@ img{display:block;max-width:100%}
   .f-top .sub{font-size:13.5px}
   .cta{align-self:flex-start;padding:12px 28px}
   .err{grid-column:2}
+  .sw button{padding:11px 8px;font-size:15px;gap:9px}
+  .sw-mk{width:24px;height:24px}
+  /* TMXK: lưới bên phải dài hơn danh thiếp → danh thiếp đứng sát trên và bám theo khi cuộn, thay
+     vì kéo cao bằng lưới rồi để một khoảng trống to giữa thẻ */
+  :root[data-skin="paper"] .card{align-self:start;justify-content:flex-start;position:sticky;top:22px}
+  :root[data-skin="paper"] .tile.has-tools .sub{font-size:23px}
   .foot{padding-top:28px}
   .wm{height:26px}
   .foot-tag{font-size:14.5px}

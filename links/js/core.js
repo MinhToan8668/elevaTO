@@ -42,6 +42,17 @@ export const ICON3D = {
   [I3('party-popper')]: 'Ăn mừng', [I3('link')]: 'Liên kết', [I3('pushpin')]: 'Ghim', [I3('magnifying-glass-tilted-right')]: 'Tìm kiếm',
   [I3('gear')]: 'Cài đặt', [I3('key')]: 'Chìa khoá', [I3('locked')]: 'Khoá', [I3('compass')]: 'La bàn',
   [I3('high-voltage')]: 'Tia sét', [I3('down-arrow')]: 'Mũi tên xuống',
+  [I3('film-frames')]: 'Cuộn phim', [I3('movie-camera')]: 'Máy quay phim', [I3('camera')]: 'Máy ảnh',
+  [I3('camera-with-flash')]: 'Chụp ảnh', [I3('microphone')]: 'Micro hát', [I3('headphone')]: 'Tai nghe',
+  [I3('musical-note')]: 'Nhạc', [I3('television')]: 'TV', [I3('film-projector')]: 'Máy chiếu',
+  [I3('play-button')]: 'Nút play', [I3('scissors')]: 'Cắt / edit', [I3('pencil')]: 'Bút chì',
+  [I3('hundred-points')]: '100 điểm', [I3('eyes')]: 'Lượt xem', [I3('bell')]: 'Thông báo',
+  [I3('red-heart')]: 'Tim', [I3('crown')]: 'Vương miện', [I3('alarm-clock')]: 'Báo thức',
+  [I3('hourglass')]: 'Đồng hồ cát', [I3('artist-palette')]: 'Thiết kế', [I3('framed-picture')]: 'Thumbnail',
+  [I3('check-mark-button')]: 'Dấu tích', [I3('busts')]: 'Học viên', [I3('thought-balloon')]: 'Ý tưởng',
+  [I3('speaking-head')]: 'Lồng tiếng', [I3('inbox-tray')]: 'Tải về', [I3('hammer-and-wrench')]: 'Công cụ',
+  [I3('brick')]: 'Viên gạch', [I3('building-construction')]: 'Xây kênh', [I3('collision')]: 'Bùng nổ',
+  [I3('seedling')]: 'Từ số 0', [I3('mobile-phone-arrow')]: 'Đăng video',
 };
 // Logo Zalo chính chủ (ảnh thật của Zalo, không vẽ lại) — dùng chung cho mọi bộ icon.
 const ZALO = 'art/zalo.png';
@@ -59,11 +70,53 @@ export const GLASS = {
 // ⚡ Hook viral, 📝 Kịch bản, 🎯 Chấm video… Emoji lấy bản Fluent 3D cho mọi máy nhìn như nhau.
 export const TMXK = { 'art/tmxk/mark.svg': 'Logo Tự Mình Xây Kênh' };
 export const TMXK_EMOJI = {
+  // công cụ trên trang TMXK
   [I3('sparkles')]: '✨ Viral Studio', [I3('down-arrow')]: '⬇️ Tải video', [I3('clapper-board')]: '🎬 Soi video',
-  [I3('high-voltage')]: '⚡ Hook viral', [I3('memo')]: '📝 Kịch bản', [I3('bullseye')]: '🎯 Chấm video',
-  [I3('magnifying-glass-tilted-right')]: '🔎 Soi kênh', [I3('speech-balloon')]: '💬 Cộng đồng',
-  [I3('graduation-cap')]: '🎓 Buổi live', [I3('desktop-computer')]: '🖥️ Nền Teams', [I3('video-camera')]: '🎥 Quay video',
+  [I3('high-voltage')]: '⚡ Hook viral', [I3('memo')]: '📝 Kịch bản', [I3('film-frames')]: '🎞️ Dựng video',
+  [I3('bullseye')]: '🎯 Chấm video', [I3('magnifying-glass-tilted-right')]: '🔎 Soi kênh',
+  [I3('speech-balloon')]: '💬 Cộng đồng', [I3('graduation-cap')]: '🎓 Buổi live', [I3('scissors')]: '✂️ Edit kèm 1:1',
+  // quay & dựng
+  [I3('movie-camera')]: '🎥 Quay video', [I3('video-camera')]: '📹 Máy quay', [I3('camera')]: '📷 Máy ảnh',
+  [I3('camera-with-flash')]: '📸 Chụp ảnh', [I3('mobile-phone')]: '📱 Quay điện thoại',
+  [I3('mobile-phone-arrow')]: '📲 Đăng video', [I3('film-projector')]: '📽️ Chiếu phim', [I3('television')]: '📺 Xem video',
+  [I3('play-button')]: '▶️ Phát', [I3('framed-picture')]: '🖼️ Thumbnail', [I3('artist-palette')]: '🎨 Thiết kế',
+  // âm thanh & lời
+  [I3('studio-microphone')]: '🎙️ Thu âm', [I3('microphone')]: '🎤 Micro', [I3('headphone')]: '🎧 Âm thanh',
+  [I3('musical-note')]: '🎵 Nhạc nền', [I3('speaking-head')]: '🗣️ Lồng tiếng', [I3('megaphone')]: '📣 Thông báo',
+  [I3('pencil')]: '✏️ Viết caption', [I3('thought-balloon')]: '💭 Ý tưởng', [I3('light-bulb')]: '💡 Mẹo',
+  // tăng trưởng & số liệu
+  [I3('chart-increasing')]: '📈 Tăng trưởng', [I3('bar-chart')]: '📊 Số liệu', [I3('eyes')]: '👀 Lượt xem',
+  [I3('red-heart')]: '❤️ Lượt thích', [I3('fire')]: '🔥 Viral', [I3('hundred-points')]: '💯 Chuẩn',
+  [I3('rocket')]: '🚀 Bứt phá', [I3('collision')]: '💥 Bùng nổ', [I3('seedling')]: '🌱 Từ số 0',
+  [I3('brick')]: '🧱 Viên gạch', [I3('building-construction')]: '🏗️ Xây kênh',
+  // lớp học & cộng đồng
+  [I3('busts')]: '👥 Học viên', [I3('trophy')]: '🏆 Thành tích', [I3('crown')]: '👑 Top', [I3('glowing-star')]: '🌟 Nổi bật',
+  [I3('spiral-calendar')]: '🗓️ Lịch học', [I3('alarm-clock')]: '⏰ Nhắc lịch', [I3('hourglass')]: '⏳ Sắp hết chỗ',
+  [I3('bell')]: '🔔 Thông báo', [I3('check-mark-button')]: '✅ Đã xong', [I3('wrapped-gift')]: '🎁 Quà',
+  [I3('party-popper')]: '🎉 Khai giảng', [I3('hammer-and-wrench')]: '🛠️ Công cụ', [I3('robot')]: '🤖 AI',
+  [I3('inbox-tray')]: '📥 Tải về', [I3('link')]: '🔗 Liên kết',
 };
+
+/** Emoji gõ tay (ô "Emoji", nút công cụ) → bản Fluent 3D. Emoji hệ thống mỗi máy một kiểu — trên
+ *  Windows nhìn rất thô — còn bản 3D thì máy nào cũng như nhau. Không có trong bảng thì hiện emoji gốc. */
+export const EMOJI_3D = {
+  '✨': 'sparkles', '⬇️': 'down-arrow', '⬇': 'down-arrow', '🎬': 'clapper-board', '⚡': 'high-voltage',
+  '📝': 'memo', '🎞️': 'film-frames', '🎞': 'film-frames', '🎯': 'bullseye', '🔎': 'magnifying-glass-tilted-right',
+  '🔍': 'magnifying-glass-tilted-right', '💬': 'speech-balloon', '🎓': 'graduation-cap', '✂️': 'scissors', '✂': 'scissors',
+  '🎥': 'movie-camera', '📹': 'video-camera', '📷': 'camera', '📸': 'camera-with-flash', '📱': 'mobile-phone',
+  '📲': 'mobile-phone-arrow', '📽️': 'film-projector', '📺': 'television', '▶️': 'play-button', '🖼️': 'framed-picture',
+  '🎨': 'artist-palette', '🎙️': 'studio-microphone', '🎤': 'microphone', '🎧': 'headphone', '🎵': 'musical-note',
+  '🗣️': 'speaking-head', '📣': 'megaphone', '📢': 'megaphone', '✏️': 'pencil', '💭': 'thought-balloon', '💡': 'light-bulb',
+  '📈': 'chart-increasing', '📊': 'bar-chart', '👀': 'eyes', '❤️': 'red-heart', '🔥': 'fire', '💯': 'hundred-points',
+  '🚀': 'rocket', '💥': 'collision', '🌱': 'seedling', '🧱': 'brick', '🏗️': 'building-construction', '👥': 'busts',
+  '🏆': 'trophy', '👑': 'crown', '🌟': 'glowing-star', '🗓️': 'spiral-calendar', '📅': 'calendar', '⏰': 'alarm-clock',
+  '⏳': 'hourglass', '🔔': 'bell', '✅': 'check-mark-button', '🎁': 'wrapped-gift', '🎉': 'party-popper',
+  '🛠️': 'hammer-and-wrench', '🤖': 'robot', '📥': 'inbox-tray', '🔗': 'link', '💰': 'money-bag', '📚': 'books',
+  '💻': 'laptop', '🖥️': 'desktop-computer', '☕': 'hot-beverage', '📞': 'telephone-receiver', '✉️': 'envelope',
+  '💎': 'gem-stone', '🧠': 'brain', '📌': 'pushpin', '📋': 'clipboard', '💼': 'briefcase',
+};
+/** Đường dẫn icon 3D của một emoji, hoặc '' nếu bộ chưa có. */
+export const emoji3d = (e) => (EMOJI_3D[String(e || '').trim()] ? I3(EMOJI_3D[String(e).trim()]) : '');
 
 // Bộ icon vẽ ở bản trước (art/classic/) — giữ lại để vẫn chọn được.
 const C = (slug) => 'art/classic/' + slug + '.svg';
