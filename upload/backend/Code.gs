@@ -31,7 +31,13 @@
  */
 
 // ════════════════════════════════════════════════════════════
-//  ĐIỀN 3 GIÁ TRỊ NÀY RỒI CHẠY HÀM  caiDat
+//  ĐIỀN 3 GIÁ TRỊ NÀY RỒI CHẠY HÀM  caiDat  — CHỈ LẦN ĐẦU
+//
+//  caiDat cất mọi giá trị vào Thuộc tính tập lệnh (⚙️ Cài đặt dự án → Thuộc tính tập lệnh).
+//  Từ đó về sau dán Code.gs bản mới cứ ĐỂ NGUYÊN mấy dòng này rồi chạy caiDat: dòng nào còn
+//  chữ DAN_… hoặc để trống thì lấy bản đã cất. Hoặc khỏi đụng file: điền thẳng vào Thuộc tính
+//  tập lệnh với tên TG_BOT_TOKEN · TG_CHAT_ID · WEBAPP_URL · TAIVE_WORKER_URL · TAIVE_SECRET.
+//  Dòng nào điền ở đây thì ghi đè bản đã cất.
 // ════════════════════════════════════════════════════════════
 var TG_TOKEN   = 'DAN_TOKEN_BOT';          // token bot từ @BotFather (dùng chung bot cũ được)
 var TG_CHAT    = 'DAN_CHAT_ID';            // chat id nhận link, từ @userinfobot
@@ -40,12 +46,14 @@ var WEBAPP_URL = 'DAN_URL_EXEC';           // URL Web App của DỰ ÁN NÀY, k
 // Tải thẳng (không bắt buộc): để trống thì trang chỉ có nút "Lấy về Drive" như cũ.
 // Điền vào là có thêm nút "Tải thẳng" — file đi từ Telegram về máy qua Cloudflare Worker,
 // không đặt bản tạm trên Drive nữa. Xem upload/README.md mục "Tải thẳng".
+// Đã bật rồi muốn tắt: chạy hàm tatTaiThang (để trống hai dòng này không tắt — nó giữ bản đã cất).
 var WORKER_URL    = '';                    // vd https://elevato.minhtoantowork.workers.dev/taive
 var WORKER_SECRET = '';                    // chuỗi ngẫu nhiên dài, PHẢI khớp secret TAIVE_SECRET của Worker
 // ════════════════════════════════════════════════════════════
 
 var PROP_TOKEN     = 'TG_BOT_TOKEN';
 var PROP_CHAT      = 'TG_CHAT_ID';
+var PROP_WEBAPP    = 'WEBAPP_URL';
 var PROP_KEY       = 'UPLOAD_KEY';
 var PROP_FOLDER    = 'UPLOAD_FOLDER_ID';
 var PROP_WORKER    = 'TAIVE_WORKER_URL';
@@ -83,6 +91,16 @@ var TAI_THANG_PHAN = 44;                    // 44 × 19MB ≈ 836MB
 var VE_SONG_PHUT   = 50;                    // vé hết hạn sau 50 phút (đường dẫn Telegram sống ≥1 giờ)
 
 function props() { return PropertiesService.getScriptProperties(); }
+
+/**
+ * Một giá trị cấu hình: dòng đầu file nếu đã điền, không thì bản đã cất trong Thuộc tính tập lệnh.
+ * Nhờ vậy dán Code.gs bản mới không phải điền lại token — để nguyên DAN_… / trống là giữ bản cũ.
+ */
+function cauHinh(dong, prop) {
+  var v = String(dong == null ? '' : dong).trim();
+  if (v && v.indexOf('DAN_') !== 0) return v;
+  return String(props().getProperty(prop) || '').trim();
+}
 
 function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
@@ -712,7 +730,7 @@ function kiemSession(session) {
 
 /** Link mở trang: API và key đi sau dấu # — phần đó trình duyệt không gửi lên máy chủ nào. */
 function linkTrang() {
-  return PAGE_URL + '#api=' + encodeURIComponent(String(WEBAPP_URL).trim()) +
+  return PAGE_URL + '#api=' + encodeURIComponent(cauHinh(WEBAPP_URL, PROP_WEBAPP)) +
          '&key=' + encodeURIComponent(props().getProperty(PROP_KEY) || '');
 }
 
@@ -737,21 +755,28 @@ function caiDat() {
     throw new Error('Đây là dự án backend TRANG KHOÁ HỌC (gắn Sheet đăng ký) — đừng cài công cụ upload ở đây. ' +
                     'Dán lại backend/Code.gs vào dự án này, rồi tạo DỰ ÁN MỚI riêng cho upload (xem upload/README.md).');
   }
-  if (TG_TOKEN.indexOf('DAN_') === 0 || TG_CHAT.indexOf('DAN_') === 0) {
-    throw new Error('Chưa điền TG_TOKEN và TG_CHAT ở đầu file.');
+  // Mỗi giá trị: dòng đầu file nếu đã điền, không thì bản đã cất lần trước (hoặc gõ tay vào
+  // Thuộc tính tập lệnh). Dán code mới mà để nguyên DAN_… vẫn chạy được, khỏi điền lại.
+  var token = cauHinh(TG_TOKEN, PROP_TOKEN), chat = cauHinh(TG_CHAT, PROP_CHAT),
+      webapp = cauHinh(WEBAPP_URL, PROP_WEBAPP);
+  var tuCat = TG_TOKEN.indexOf('DAN_') === 0 && token;   // chạy bằng bản đã cất, không phải lần đầu
+  if (!token || !chat) {
+    throw new Error('Chưa điền TG_TOKEN và TG_CHAT — điền ở đầu file, hoặc vào ⚙️ Cài đặt dự án → ' +
+                    'Thuộc tính tập lệnh thêm TG_BOT_TOKEN và TG_CHAT_ID.');
   }
-  if (String(WEBAPP_URL).trim().slice(-5) !== '/exec') {
+  if (webapp.slice(-5) !== '/exec') {
     throw new Error('WEBAPP_URL phải là URL Web App của dự án này, kết thúc bằng /exec ' +
                     '(Triển khai → Quản lý bản triển khai → cột URL ứng dụng web).');
   }
-  props().setProperty(PROP_TOKEN, TG_TOKEN.trim());
-  props().setProperty(PROP_CHAT, TG_CHAT.trim());
+  props().setProperty(PROP_TOKEN, token);
+  props().setProperty(PROP_CHAT, chat);
+  props().setProperty(PROP_WEBAPP, webapp);
   if (!props().getProperty(PROP_KEY)) props().setProperty(PROP_KEY, Utilities.getUuid());
 
-  // Tải thẳng là tuỳ chọn: để trống hai dòng đầu file thì bỏ qua, trang chỉ có nút
-  // "Lấy về Drive" như cũ. Điền sai một nửa thì chặn luôn — thiếu một nửa là trang hiện
+  // Tải thẳng là tuỳ chọn: chưa cất gì và để trống hai dòng đầu file thì bỏ qua, trang chỉ có
+  // nút "Lấy về Drive" như cũ. Điền sai một nửa thì chặn luôn — thiếu một nửa là trang hiện
   // nút Tải thẳng rồi bấm vào mới báo lỗi, khó hiểu hơn nhiều so với báo ngay ở đây.
-  var wUrl = String(WORKER_URL).trim(), wBiMat = String(WORKER_SECRET).trim();
+  var wUrl = cauHinh(WORKER_URL, PROP_WORKER), wBiMat = cauHinh(WORKER_SECRET, PROP_SECRET);
   if (!!wUrl !== !!wBiMat) throw new Error('Tải thẳng cần CẢ WORKER_URL lẫn WORKER_SECRET — điền nốt, hoặc xoá cả hai.');
   if (wUrl) {
     if (!/^https:\/\/[\w.-]+\/[\w/-]*$/.test(wUrl)) throw new Error('WORKER_URL phải là địa chỉ https của Worker, vd https://....workers.dev/taive');
@@ -766,6 +791,8 @@ function caiDat() {
   var tg = guiTelegram('\u{1F4E4} Trang tải file lên Google Drive\n\n' + link +
     '\n\nLink đã kèm sẵn key — ĐỪNG gửi cho người khác.\nMở một lần là trang tự nhớ key.');
 
+  Logger.log(tuCat ? '✔ Dùng cấu hình đã cất trong Thuộc tính tập lệnh — đầu file để nguyên là đúng'
+                   : '✔ Đã cất cấu hình vào Thuộc tính tập lệnh — lần sau dán code mới khỏi điền lại');
   Logger.log('✔ Thư mục Drive: https://drive.google.com/drive/folders/' + folder);
   Logger.log('✔ Đã đặt lịch chuyển file vào Telegram (mỗi phút)');
   Logger.log(wUrl ? '✔ Tải thẳng qua Worker: ' + wUrl + ' (tối đa ' + TAI_THANG_PHAN + ' phần ≈ ' + mbText(TAI_THANG_PHAN * TG_PART) + ')'
@@ -773,6 +800,13 @@ function caiDat() {
   Logger.log('✔ Trang tải lên (kèm key, đừng chia sẻ):\n' + link);
   Logger.log(tg && tg.ok ? '✔ Đã nhắn link vào Telegram'
                          : '✘ Không nhắn được Telegram — kiểm tra TG_TOKEN / TG_CHAT');
+}
+
+/** Tắt Tải thẳng: xoá địa chỉ Worker và bí mật đã cất. Trang quay về chỉ có nút "Lấy về Drive". */
+function tatTaiThang() {
+  props().deleteProperty(PROP_WORKER);
+  props().deleteProperty(PROP_SECRET);
+  Logger.log('✔ Đã tắt Tải thẳng. Bật lại: điền WORKER_URL / WORKER_SECRET rồi chạy caiDat.');
 }
 
 /** Đổi key mới (vd. lỡ để lộ link). Link cũ hết dùng được. */
