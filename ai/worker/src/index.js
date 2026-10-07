@@ -11,6 +11,10 @@
 // Hai bot Telegram, mỗi bot một đường webhook riêng vì Telegram chỉ cho một webhook mỗi token:
 //   /tg/ai  bot AI BCTC            (TG_AI_TOKEN)
 //   /tg/el  bot khoá học + link    (TG_EL_TOKEN)
+//
+// Một đường nữa không theo giao thức JSON ở trên — POST /taive (xem src/taive.js): trang
+// upload gửi một "vé" đã ký sang, Worker kéo các phần từ Telegram nối thành một luồng trả
+// về máy, để file khỏi phải đi vòng qua Google Drive ở chiều tải xuống.
 //   code: auth · sai · khoa_tam · cho_duyet · bi_khoa · thieu · email_sai · sdt_sai · mk_ngan
 //         · da_ton_tai · quota · busy · timeout · blocked · bad · upstream · setup · ma_sai · cho
 
@@ -25,6 +29,7 @@ import { tgAdmins } from './tg.js';
 import { quenMK, datLaiMKBangMa } from './quenmk.js';
 import { thongTinUngHo } from './ungho.js';
 import { linksChoWeb, linksKiemKey, linksLuu } from './links.js';
+import { taiThang } from './taive.js';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -40,6 +45,10 @@ export default {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     for (const bot of BOT) if (url.pathname === bot.duong && req.method === 'POST') return tgWebhook(bot, req, env, ctx);
+    // Tải thẳng file từ Telegram về máy, không qua Drive (trang upload). Đứng NGOÀI xuLy:
+    // thân là form chứ không phải JSON, trả về luồng nhị phân chứ không phải {ok,data},
+    // và không đụng tới D1 nên Worker chưa nối cơ sở dữ liệu vẫn chạy được.
+    if (url.pathname === '/taive' && req.method === 'POST') return taiThang(req, env);
     // Nội dung trang link-in-bio: đọc công khai, không nhớ đệm — chủ trang bấm Đăng là đổi ngay.
     if (url.pathname === '/links' && req.method === 'GET') {
       if (!env.DB) return json(loi('setup', 'Máy chủ chưa nối cơ sở dữ liệu D1 (xem README của worker)'));
@@ -77,12 +86,14 @@ function tinhTrang(env) {
     TG_SECRET: !!env.TG_SECRET, TG_ADMIN: !!tgAdmins(env).length,
     TG_AI_TOKEN: !!env.TG_AI_TOKEN, TG_EL_TOKEN: !!env.TG_EL_TOKEN,
     BREVO_KEY: !!env.BREVO_KEY, MAIL_TU: !!env.MAIL_TU,
+    UPLOAD_TG_TOKEN: !!env.UPLOAD_TG_TOKEN, TAIVE_SECRET: !!env.TAIVE_SECRET,
   };
   return {
     ai: can.GEMINI_KEYS,
     bot_ai: coAdmin && can.TG_AI_TOKEN,
     bot_el: coAdmin && can.TG_EL_TOKEN,
     mail: can.BREVO_KEY && can.MAIL_TU,
+    tai_thang: can.UPLOAD_TG_TOKEN && can.TAIVE_SECRET,
     thieu: Object.keys(can).filter((k) => !can[k]),
   };
 }
@@ -123,7 +134,7 @@ async function xuLy(req, env, ctx) {
     if (a === 'register') {
       const r = await nhanDangKy(env, b);
       if (r.moi) ctx.waitUntil(baoDangKyMoi(env, r.moi, await cauHinhDayDu(env.DB)));
-      if (r.day_du) ctx.waitUntil(BOT_EL.bao(env, `🎉 <b>${r.day_du.computed.cohortLabel} ĐÃ ĐỦ ${r.day_du.slots.max} NGƯỜI!</b>\n\n`
+      if (r.day_du) ctx.waitUntil(BOT_EL.bao(env, `\u{1F389} <b>${r.day_du.computed.cohortLabel} ĐÃ ĐỦ ${r.day_du.slots.max} NGƯỜI!</b>\n\n`
         + `Web đã tự chuyển sang trạng thái đã đủ chỗ — người vào sau sẽ đăng ký waitlist ${r.day_du.computed.nextCohortLabel}.\n\n`
         + 'Khi muốn mở cohort mới, gõ /cohortmoi.'));
       return r.kq;
