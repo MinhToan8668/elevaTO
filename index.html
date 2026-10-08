@@ -2202,6 +2202,15 @@ function initAdmin(){
 
 /* ══════════════ 12. BOOT ══════════════ */
 loadConfig();
+/* Tab để mở lâu (nhất là trên máy tính) chỉ vẽ cấu hình đúng một lần lúc mở trang → đổi lịch học, số
+   suất bằng bot rồi mà người xem quay lại tab vẫn thấy bản cũ. Quay lại tab (hoặc trang được khôi phục
+   từ bộ nhớ đệm lùi/tiến) thì lấy lại, cách nhau ít nhất 30 giây. */
+(function(){
+  var lan=Date.now();
+  function lamMoi(){ if(Date.now()-lan<30000) return; lan=Date.now(); loadConfig(); }
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') lamMoi(); });
+  window.addEventListener('pageshow',function(e){ if(e.persisted){ lan=0; lamMoi(); } });
+})();
 buildGalleries();
 initLb();
 initTabs();
