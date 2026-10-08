@@ -127,8 +127,15 @@ img{display:block;max-width:100%}
    bằng màu nền body (--chrome), trong khi quầng sáng của .bg ở hai mép lại ra màu khác → hở một dải
    phẳng lạc màu, nhìn không liền như TMXK (nền phẳng một màu). Phủ hai dải chuyển về đúng --chrome. */
 @media (max-width:919px){
-  .bg::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(180deg,var(--chrome) 0,transparent 130px),linear-gradient(0deg,var(--chrome) 0,transparent 170px)}
+  /* Vùng nằm dưới thanh trạng thái / thanh công cụ phải ĐẶC đúng --chrome rồi mới tan dần: chỉ tan dần
+     thì quầng xanh dương (b2, b3) vẫn lọt vào đó và Safari tô thanh bằng vệt xanh. isolation + z-index
+     rõ ràng để lớp phủ chắc chắn nằm trên các quầng (chúng có filter/animation, WebKit hay tách lớp). */
+  .bg{isolation:isolate}
+  .bg i{z-index:0}
+  .bg::before{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:
+      linear-gradient(180deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-top,0px) + 14px),transparent calc(env(safe-area-inset-top,0px) + 190px)),
+      linear-gradient(0deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-bottom,0px) + 80px),transparent calc(env(safe-area-inset-bottom,0px) + 260px))}
   .has-bgimg .bg::before,
   :root[data-skin="paper"] .bg::before{display:none}   /* giấy lime: nền đã phẳng một màu, khớp sẵn */
 }

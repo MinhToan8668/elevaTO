@@ -752,7 +752,22 @@ test('màu thanh trạng thái khớp màu đỉnh trang, và đổi theo nền 
     return { content: st.content, bg: st.backgroundImage, mau };
   });
   assert.notEqual(mep.content, 'none', 'thiếu lớp hoà mép nền vào --chrome');
-  assert.equal(mep.bg.split(mep.mau).length - 1, 2, 'cả mép trên lẫn mép dưới phải chuyển về đúng --chrome: ' + JSON.stringify(mep));
+  assert.equal((mep.bg.match(/linear-gradient/g) || []).length, 2, 'phải phủ cả mép trên lẫn mép dưới: ' + mep.bg);
+  assert.ok(mep.bg.split('linear-gradient').slice(1).every((g) => g.split(mep.mau).length - 1 >= 2),
+    'mỗi mép phải có một dải ĐẶC đúng --chrome rồi mới tan: ' + JSON.stringify(mep));
+  // Đo điểm ảnh thật ở hàng trên cùng và dưới cùng: phải đúng --chrome (lệch ≤ 3 đơn vị mỗi kênh).
+  const anh = await p.screenshot();
+  const px = await p.evaluate(async (b64) => {
+    const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+    const lay = (y) => [0.1, 0.5, 0.9].map((f) => [...x.getImageData(Math.floor(img.width * f), y, 1, 1).data.slice(0, 3)]);
+    return { tren: lay(1), duoi: lay(img.height - 2) };
+  }, anh.toString('base64'));
+  const want = mep.mau.match(/\d+/g).map(Number);
+  for (const c of [...px.tren, ...px.duoi]) {
+    assert.ok(c.every((v, i) => Math.abs(v - want[i]) <= 3), `mép nền lệch màu --chrome: ${c} vs ${want}`);
+  }
   assert.match(a1.chrome, /^#[0-9a-f]{6}$/);
 
   // Đổi nền (chủ trang chọn trong trình sửa) thì màu thanh trạng thái phải đổi theo.
