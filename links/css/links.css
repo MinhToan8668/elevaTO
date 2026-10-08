@@ -87,19 +87,22 @@ img{display:block;max-width:100%}
      --deep    màu đục nằm DƯỚI hai quầng sáng trong .bg. Không bao giờ lộ ra ngoài khung nhìn,
                nên nó cứ việc tối để chữ nổi, còn mép trên vẫn mang màu sáng của --chrome.
    Nền ảnh tự chọn thì không đoán trước được màu, dùng mặc định. */
-:root{--chrome:#89e1c7;--deep:#e7f4ee}
-:root[data-bg="ocean"]{--chrome:#84cdf0;--deep:#e5f0f8}
-:root[data-bg="sunset"]{--chrome:#f8b9bf;--deep:#f8eeec}
-:root[data-bg="midnight"]{--chrome:#b0b2f5;--deep:#ecedf9}
-:root[data-theme="dark"]{--chrome:#0c7559;--deep:#04211b}
-:root[data-theme="dark"][data-bg="ocean"]{--chrome:#075f88;--deep:#041c29}
-:root[data-theme="dark"][data-bg="sunset"]{--chrome:#8a3e47;--deep:#291416}
-:root[data-theme="dark"][data-bg="midnight"]{--chrome:#383a90;--deep:#121336}
+/* Từ bản này --chrome = --deep (màu nền sáng/tối thật của trang), không còn là màu quầng sáng ở đỉnh:
+   lấy màu quầng (xanh bạc hà đậm) thì hai mép trên/dưới phải phủ cả dải màu đậm đó lên → nền sáng bị
+   xanh hết. Mép trên/dưới giờ tan về đúng màu nền, quầng sáng vẫn hiện ngay bên dưới. */
+:root{--chrome:#e7f4ee;--deep:#e7f4ee}
+:root[data-bg="ocean"]{--chrome:#e5f0f8;--deep:#e5f0f8}
+:root[data-bg="sunset"]{--chrome:#f8eeec;--deep:#f8eeec}
+:root[data-bg="midnight"]{--chrome:#ecedf9;--deep:#ecedf9}
+:root[data-theme="dark"]{--chrome:#04211b;--deep:#04211b}
+:root[data-theme="dark"][data-bg="ocean"]{--chrome:#041c29;--deep:#041c29}
+:root[data-theme="dark"][data-bg="sunset"]{--chrome:#291416;--deep:#291416}
+:root[data-theme="dark"][data-bg="midnight"]{--chrome:#121336;--deep:#121336}
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){--chrome:#0c7559;--deep:#04211b}
-  :root:not([data-theme="light"])[data-bg="ocean"]{--chrome:#075f88;--deep:#041c29}
-  :root:not([data-theme="light"])[data-bg="sunset"]{--chrome:#8a3e47;--deep:#291416}
-  :root:not([data-theme="light"])[data-bg="midnight"]{--chrome:#383a90;--deep:#121336}
+  :root:not([data-theme="light"]){--chrome:#04211b;--deep:#04211b}
+  :root:not([data-theme="light"])[data-bg="ocean"]{--chrome:#041c29;--deep:#041c29}
+  :root:not([data-theme="light"])[data-bg="sunset"]{--chrome:#291416;--deep:#291416}
+  :root:not([data-theme="light"])[data-bg="midnight"]{--chrome:#121336;--deep:#121336}
 }
 
 /* ═══ NỀN: các mảng màu trôi chậm, hoặc ảnh nền tự chọn ═══ */
@@ -134,8 +137,8 @@ img{display:block;max-width:100%}
   .bg i{z-index:0}
   .bg::before{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
     background:
-      linear-gradient(180deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-top,0px) + 14px),transparent calc(env(safe-area-inset-top,0px) + 190px)),
-      linear-gradient(0deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-bottom,0px) + 80px),transparent calc(env(safe-area-inset-bottom,0px) + 260px))}
+      linear-gradient(180deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-top,0px) + 4px),transparent calc(env(safe-area-inset-top,0px) + 120px)),
+      linear-gradient(0deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-bottom,0px) + 40px),transparent calc(env(safe-area-inset-bottom,0px) + 190px))}
   .has-bgimg .bg::before,
   :root[data-skin="paper"] .bg::before{display:none}   /* giấy lime: nền đã phẳng một màu, khớp sẵn */
 }

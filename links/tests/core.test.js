@@ -178,7 +178,7 @@ test('nền nào cũng có --chrome và --deep, và thẻ theme-color dự phòn
 // iPhone tô thanh trạng thái theo MÀU NỀN CỦA BODY, không theo <meta name="theme-color">
 // (đo ảnh chụp máy thật: dải đó ra đúng #05090b của --base đời trước, sai lệch 1–4 đơn vị).
 // Nên nền body phải là --chrome — màu thật ở đỉnh trang — chứ không phải màu đục --deep.
-test('nền body là --chrome, và --deep luôn tối/nhạt hơn để nằm dưới hai quầng sáng', async () => {
+test('nền body là --chrome; nền kính: --chrome = --deep để hai mép tan về đúng màu nền sáng/tối', async () => {
   const css = await readFile(new URL('../css/links.css', import.meta.url), 'utf8');
   assert.match(css, /\bbody\{[^}]*background:var\(--chrome\)/, 'nền body phải là --chrome, không thì iPhone hở dải lạc màu ở đỉnh');
   assert.match(css, /\.bg\{[^}]*var\(--deep\)\}/s, '--deep phải là lớp đục cuối cùng của .bg');
@@ -201,8 +201,9 @@ test('nền body là --chrome, và --deep luôn tối/nhạt hơn để nằm d�
       giay += 1;
       continue;
     }
-    const toi = sel.includes('dark') || sel.includes('not([data-theme="light"])');
-    assert.ok(toi ? sang(d) < sang(c) : sang(d) > sang(c), sel + ': --deep phải tối hơn --chrome ở nền tối, sáng hơn ở nền sáng');
+    // Mép trên/dưới (thanh trạng thái, thanh công cụ Safari) tan về --chrome. Lấy màu quầng sáng đậm làm
+    // --chrome thì cả hai mép bị phủ một dải xanh bạc hà, nền sáng xanh hết → phải đúng màu nền.
+    assert.equal(chrome, deep, sel + ': nền kính phải có --chrome trùng --deep');
     n += 1;
   }
   assert.equal(n, 12, 'phải đủ 4 nền × (sáng + tối theo thuộc tính + tối theo máy)');
