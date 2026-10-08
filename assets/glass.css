@@ -86,7 +86,9 @@ h1,h2,h3,h4,.display{letter-spacing:-.025em}
 .bgx{position:fixed;inset:0;height:100lvh;z-index:0;overflow:hidden;pointer-events:none;isolation:isolate;
   background:radial-gradient(130% 40% at 50% -8%,var(--b1) 0,transparent 72%),
              radial-gradient(130% 36% at 50% 108%,var(--b3) 0,transparent 72%),var(--black)}
-.bgx i{position:absolute;z-index:0;border-radius:50%;filter:blur(72px);opacity:.75;animation:gdrift 30s ease-in-out infinite alternate}
+/* Không dùng filter:blur cho quầng: trên một số máy (Chrome/Edge Windows, card đồ hoạ yếu) blur lớn bị cắt
+   theo từng ô vẽ của GPU → hiện mảng tối hình chữ nhật sau hero. Dải radial-gradient tự đã đủ mềm. */
+.bgx i{position:absolute;z-index:0;border-radius:50%;opacity:.8;animation:gdrift 30s ease-in-out infinite alternate}
 .bgx .b1{width:70vmax;height:70vmax;left:-24vmax;top:-28vmax;background:radial-gradient(circle,var(--b1) 0 34%,transparent 72%)}
 .bgx .b2{width:58vmax;height:58vmax;right:-20vmax;top:18vmax;background:radial-gradient(circle,var(--b2) 0 34%,transparent 72%);animation-duration:36s}
 .bgx .b3{width:64vmax;height:64vmax;left:0;bottom:-32vmax;background:radial-gradient(circle,var(--b3) 0 34%,transparent 72%);animation-duration:40s}
@@ -237,3 +239,22 @@ nav.stuck{background:color-mix(in srgb,var(--black) 72%,transparent);border-bott
 .faq-q{font-weight:700;letter-spacing:-.01em}
 h1 em,h2 em,h3 em,.h2 em{background:var(--head-grad);-webkit-background-clip:text;background-clip:text;
   -webkit-text-fill-color:transparent;color:var(--emerald);padding-right:.04em}
+
+/* ═══ PHÔNG TIÊU ĐỀ: Syne — phông tiêu đề nguyên bản của trang khoá học (chữ rộng, cá tính) ═══
+   Nhúng sẵn trong repo (assets/fonts, SIL OFL 1.1 — xem OFL-syne.txt). Syne không có bộ dấu tiếng Việt
+   đầy đủ: các chữ có dấu thanh (ạ, ố, ử…) tự lấy từ Plus Jakarta Sans đứng ngay sau — cùng độ đậm,
+   nét hình học gần nhau, như trang gốc trước đây. Nút, nhãn nhỏ, FAQ vẫn dùng Plus Jakarta Sans. */
+@font-face{font-family:'Syne';font-style:normal;font-weight:600 800;font-display:swap;
+  src:url('fonts/syne-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Syne';font-style:normal;font-weight:600 800;font-display:swap;
+  src:url('fonts/syne-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+:root{--ff-title:'Syne','Plus Jakarta Sans','Be Vietnam Pro',system-ui,sans-serif}
+h1,h2,h3,h4,.display,.slot-num,.trust-num,.mod-n,.core-txt h3,.core-foot h4,.price-amt,.inst-name,
+.vid-face b,.modal h2,#doneView h3,.adm-stat b,.reg-nm,.plan-opt .pp{font-family:var(--ff-title)}
+/* Syne càng đậm càng bè ngang (nét 800 là bản "extended") → tiêu đề lớn dùng 700 cho hero giữ 2 dòng */
+.hero h1,.h2,.cta h2,.core-txt h3,.inst-name,.modal h2{font-weight:700}
+.hero h1{font-size:clamp(38px,6.2vw,80px);letter-spacing:-.04em;line-height:1}
+.h2,.cta h2{letter-spacing:-.035em;line-height:1.08}
+.pain-card h3,.mod h4,.feat h4,.mfeat-card h4,.perk h4,.core-foot h4{font-weight:700;letter-spacing:-.01em}
