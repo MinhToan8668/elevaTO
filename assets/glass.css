@@ -220,3 +220,20 @@ nav.stuck{background:color-mix(in srgb,var(--black) 72%,transparent);border-bott
   :root{--card:rgb(255 255 255 / .86);--card2:rgb(255 255 255 / .92);--card3:#fff}
 }
 @media (prefers-reduced-motion:reduce){.bgx i{animation:none}}
+
+/* ═══ TIÊU ĐỀ: Plus Jakarta Sans, đậm và khít để tách hẳn khỏi chữ thường (Be Vietnam Pro) ═══
+   Mọi thứ đóng vai "tiêu đề / nhãn" đều dùng phông tiêu đề; chữ nhấn (<em>) trong tiêu đề mang dải
+   màu emerald chuyển sắc — đúng kiểu @handle trên trang link-bio. */
+:root{--head-grad:linear-gradient(100deg,#0a8f69,#18cb96 48%,#0ea5a4)}
+:root[data-theme="dark"]{--head-grad:linear-gradient(100deg,#3ee0b4,#5eead4 50%,#7dd3fc)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--head-grad:linear-gradient(100deg,#3ee0b4,#5eead4 50%,#7dd3fc)}}
+.inst-name,.faq-q,.eyebrow,.tab,.price-type,.pill,.core-kind,.mod-en,.mod-kind,#doneView h3,.slot-lbl b{
+  font-family:var(--ff-head)}
+.hero h1,.h2,.cta h2,.core-txt h3,.inst-name{font-weight:800}
+.h2,.cta h2{letter-spacing:-.04em;line-height:1.04}
+.core-txt h3{letter-spacing:-.03em}
+.pain-card h3,.mod h4,.feat h4,.mfeat-card h4,.perk h4,.core-foot h4{font-weight:800;letter-spacing:-.02em}
+.eyebrow{font-weight:700;letter-spacing:.16em}
+.faq-q{font-weight:700;letter-spacing:-.01em}
+h1 em,h2 em,h3 em,.h2 em{background:var(--head-grad);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:var(--emerald);padding-right:.04em}
