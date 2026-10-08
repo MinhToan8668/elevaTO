@@ -3,6 +3,9 @@ export const EN = {
   // ── Page frame ──
   'app.title': 'AI Financial Statements · elevaTO',
   'app.desc': "elevaTO's AI tool: read financial statements into the Circular 99/2025 format and feed the forecast model.",
+  'hop.aria': 'See the Financial Modeling course',
+  'hop.sub': 'Course',
+  'hop.title': 'Financial Modeling',
   'app.skip': 'Skip to content',
   'app.brand.aria': 'elevaTO AI Financial Statements — home',
   'app.product': 'AI Statements',

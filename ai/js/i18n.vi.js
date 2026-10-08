@@ -3,6 +3,9 @@ export const VI = {
   // ── Khung trang ──
   'app.title': 'AI BCTC · elevaTO',
   'app.desc': 'Công cụ AI của elevaTO: trích xuất báo cáo tài chính theo mẫu Thông tư 99/2025 và điền vào model forecast.',
+  'hop.aria': 'Xem khoá học Financial Modeling',
+  'hop.sub': 'Khoá học',
+  'hop.title': 'Financial Modeling',
   'app.skip': 'Bỏ qua, tới nội dung',
   'app.brand.aria': 'elevaTO AI BCTC — trang đầu',
   'app.product': 'AI BCTC',
