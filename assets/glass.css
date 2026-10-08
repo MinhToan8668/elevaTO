@@ -327,3 +327,9 @@ h1,h2,h3,h4,.display,.slot-num,.trust-num,.mod-n,.core-txt h3,.core-foot h4,.pri
   #sticky.on{transform:none}
   body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 }
+
+/* Thanh "Giữ chỗ" lúc chưa hiện phải TẮT HẲN, không chỉ đẩy ra ngoài màn hình: Safari iOS 26 thấy một
+   phần tử position:fixed sát đáy là coi như thanh công cụ của trang → ngừng vẽ nội dung dưới thanh
+   địa chỉ và tô một dải màu phẳng ở đó (link-bio không có phần tử ghim nào nên trong suốt). */
+#sticky{visibility:hidden;transition:transform .35s var(--ease),visibility 0s linear .35s}
+#sticky.on{visibility:visible;transition:transform .35s var(--ease),visibility 0s}
