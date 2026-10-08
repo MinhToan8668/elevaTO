@@ -86,7 +86,9 @@ h1,h2,h3,h4,.display{letter-spacing:-.025em}
 .bgx{position:fixed;inset:0;height:100lvh;z-index:0;overflow:hidden;pointer-events:none;isolation:isolate;
   background:radial-gradient(130% 40% at 50% -8%,var(--b1) 0,transparent 72%),
              radial-gradient(130% 36% at 50% 108%,var(--b3) 0,transparent 72%),var(--black)}
-.bgx i{position:absolute;z-index:0;border-radius:50%;filter:blur(72px);opacity:.75;animation:gdrift 30s ease-in-out infinite alternate}
+/* Không dùng filter:blur cho quầng: trên một số máy (Chrome/Edge Windows, card đồ hoạ yếu) blur lớn bị cắt
+   theo từng ô vẽ của GPU → hiện mảng tối hình chữ nhật sau hero. Dải radial-gradient tự đã đủ mềm. */
+.bgx i{position:absolute;z-index:0;border-radius:50%;opacity:.8;animation:gdrift 30s ease-in-out infinite alternate}
 .bgx .b1{width:70vmax;height:70vmax;left:-24vmax;top:-28vmax;background:radial-gradient(circle,var(--b1) 0 34%,transparent 72%)}
 .bgx .b2{width:58vmax;height:58vmax;right:-20vmax;top:18vmax;background:radial-gradient(circle,var(--b2) 0 34%,transparent 72%);animation-duration:36s}
 .bgx .b3{width:64vmax;height:64vmax;left:0;bottom:-32vmax;background:radial-gradient(circle,var(--b3) 0 34%,transparent 72%);animation-duration:40s}
