@@ -407,3 +407,12 @@ test('ô ghim: hideIn chỉ giữ mã thương hiệu hợp lệ, không trùng;
   assert.equal(gop.pinned[0].title, 'CV của tôi', 'giữ chữ đã sửa trong nháp');
   assert.deepEqual(gop.pinned[0].hideIn, ['content']);
 });
+
+test('index.html / edit.html gắn số phiên bản vào CSS và JS chính (Safari giữ bản cũ rất lâu)', async () => {
+  for (const f of ['../index.html', '../edit.html']) {
+    const html = await readFile(new URL(f, import.meta.url), 'utf8');
+    const refs = [...html.matchAll(/(?:href|src)="((?:css|js)\/[^"]+)"/g)].map((m) => m[1]);
+    assert.ok(refs.length >= 3, f);
+    for (const r of refs) assert.match(r, /\?v=\d{8}/, `${f}: ${r} thiếu ?v= — đổi file mà điện thoại vẫn dùng bản cũ`);
+  }
+});
