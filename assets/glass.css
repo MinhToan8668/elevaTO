@@ -1,0 +1,222 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   LỚP GIAO DIỆN "LIQUID GLASS" cho trang khoá học — cùng ngôn ngữ với trang link-in-bio (links/).
+   Nạp SAU khối <style> trong index.html: chỉ đổi màu, chất liệu và phông, không đụng bố cục hay
+   chức năng (form, số suất, admin…).
+
+   - Phông: Plus Jakarta Sans (tiêu đề) + Be Vietnam Pro (chữ thường) — đúng cặp phông của link-bio,
+     nhúng sẵn trong repo, không gọi Google Fonts.
+   - Sáng / tối: theo máy, hoặc theo lựa chọn đã lưu ở khoá 'elevato-theme' (dùng chung với link-bio
+     và trang AI) — nút mặt trời / mặt trăng trên thanh điều hướng.
+   - Các biến cũ (--black, --white, --card…) được đổi nghĩa: --white là "chữ đậm nhất", --black là màu
+     nền trang. Nhờ vậy cả trăm quy tắc cũ tự đổi theo mà không phải viết lại từng cái.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── bảng màu: sáng ─────────────────────────────────────────────────────── */
+:root{
+  color-scheme:light;
+  --black:#e7f4ee;              /* nền trang (cũng là --chrome: thanh trạng thái iPhone tô theo nó) */
+  --chrome:#e7f4ee;
+  --white:#0b1d17;              /* chữ đậm nhất: tiêu đề, số */
+  --text:#22352e; --muted:#4f645c; --muted2:#6f837b;
+  --emerald:#0b9b74; --emerald-lt:#18cb96; --emerald-dk:#087a5c;
+  --emerald-glow:rgba(24,203,150,.16); --emerald-soft:rgba(24,203,150,.12);
+  --gold:#a8730a; --gold-soft:rgba(214,158,24,.14);
+  --red:#d33f3f;
+  --card:rgb(255 255 255 / .52); --card2:rgb(255 255 255 / .64); --card3:rgb(255 255 255 / .8);
+  --border:rgb(15 60 45 / .09); --border2:rgb(15 60 45 / .13); --border3:rgb(15 60 45 / .2);
+  --r:22px; --r-sm:15px;
+  --g-blur:22px;
+  --g-hi:inset 0 1px 0 rgb(255 255 255 / .9), inset 0 -1px 0 rgb(255 255 255 / .35);
+  --g-shadow:0 1px 2px rgb(10 40 30 / .06), 0 14px 34px -14px rgb(10 50 38 / .22);
+  --g-rim:rgb(255 255 255 / .75);
+  --btn-ink:#04241a;
+  --ov:rgb(220 236 230 / .62);
+  --b1:rgba(24,203,150,.42); --b2:rgba(34,211,238,.30); --b3:rgba(99,102,241,.22); --b4:rgba(250,204,21,.20);
+  --ff-body:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --ff-head:'Plus Jakarta Sans','Be Vietnam Pro',system-ui,sans-serif;
+}
+/* ── bảng màu: tối (theo máy, trừ khi đã chọn sáng) ─────────────────────── */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --black:#04211b; --chrome:#04211b;
+    --white:#ffffff; --text:#dce8e3; --muted:#a9bbb4; --muted2:#83968f;
+    --emerald:#3ee0b4; --emerald-lt:#6aeccb; --emerald-dk:#18cb96;
+    --emerald-glow:rgba(62,224,180,.14); --emerald-soft:rgba(62,224,180,.10);
+    --gold:#f0c86a; --gold-soft:rgba(240,200,106,.12);
+    --red:#f07a7a;
+    --card:rgb(30 44 42 / .48); --card2:rgb(36 52 50 / .58); --card3:rgb(44 62 60 / .72);
+    --border:rgb(255 255 255 / .08); --border2:rgb(255 255 255 / .12); --border3:rgb(255 255 255 / .2);
+    --g-hi:inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -1px 0 rgb(255 255 255 / .03);
+    --g-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -10px rgb(0 0 0 / .55);
+    --g-rim:rgb(255 255 255 / .16);
+    --ov:rgb(2 20 16 / .72);
+    --b1:rgba(24,203,150,.40); --b2:rgba(34,211,238,.26); --b3:rgba(99,102,241,.26); --b4:rgba(250,204,21,.12);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --black:#04211b; --chrome:#04211b;
+  --white:#ffffff; --text:#dce8e3; --muted:#a9bbb4; --muted2:#83968f;
+  --emerald:#3ee0b4; --emerald-lt:#6aeccb; --emerald-dk:#18cb96;
+  --emerald-glow:rgba(62,224,180,.14); --emerald-soft:rgba(62,224,180,.10);
+  --gold:#f0c86a; --gold-soft:rgba(240,200,106,.12);
+  --red:#f07a7a;
+  --card:rgb(30 44 42 / .48); --card2:rgb(36 52 50 / .58); --card3:rgb(44 62 60 / .72);
+  --border:rgb(255 255 255 / .08); --border2:rgb(255 255 255 / .12); --border3:rgb(255 255 255 / .2);
+  --g-hi:inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -1px 0 rgb(255 255 255 / .03);
+  --g-shadow:0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -10px rgb(0 0 0 / .55);
+  --g-rim:rgb(255 255 255 / .16);
+  --ov:rgb(2 20 16 / .72);
+  --b1:rgba(24,203,150,.40); --b2:rgba(34,211,238,.26); --b3:rgba(99,102,241,.26); --b4:rgba(250,204,21,.12);
+}
+
+/* ── phông ──────────────────────────────────────────────────────────────── */
+body{font-family:var(--ff-body);font-weight:400;background:var(--chrome)}
+h1,h2,h3,h4,.display,.btn,.slot-num,.trust-num,.mod-n,.core-num,.core-txt h3,.core-foot h4,.lb-cap b,
+.spec b,.vid-face b,.price-badge,.price-amt,.sticky-txt b,.plan-opt b,.plan-opt .pp,.adm-stat b,.reg-nm{
+  font-family:var(--ff-head)}
+h1,h2,h3,h4,.display{letter-spacing:-.025em}
+.hero h1{font-weight:800;letter-spacing:-.04em;line-height:1.02}
+.inp{font-weight:400}
+.hero .lead strong,.inst-body strong,.faq-a strong,#doneView p strong{font-weight:600}
+
+/* ── nền: các quầng màu trôi chậm như link-bio ─────────────────────────── */
+.grain{display:none}
+.bgx{position:fixed;inset:0;height:100lvh;z-index:0;overflow:hidden;pointer-events:none;isolation:isolate;
+  background:radial-gradient(130% 40% at 50% -8%,var(--b1) 0,transparent 72%),
+             radial-gradient(130% 36% at 50% 108%,var(--b3) 0,transparent 72%),var(--black)}
+.bgx i{position:absolute;z-index:0;border-radius:50%;filter:blur(72px);opacity:.75;animation:gdrift 30s ease-in-out infinite alternate}
+.bgx .b1{width:70vmax;height:70vmax;left:-24vmax;top:-28vmax;background:radial-gradient(circle,var(--b1) 0 34%,transparent 72%)}
+.bgx .b2{width:58vmax;height:58vmax;right:-20vmax;top:18vmax;background:radial-gradient(circle,var(--b2) 0 34%,transparent 72%);animation-duration:36s}
+.bgx .b3{width:64vmax;height:64vmax;left:0;bottom:-32vmax;background:radial-gradient(circle,var(--b3) 0 34%,transparent 72%);animation-duration:40s}
+.bgx .b4{width:34vmax;height:34vmax;right:12vmax;bottom:2vmax;background:radial-gradient(circle,var(--b4) 0 36%,transparent 74%);animation-duration:28s}
+@keyframes gdrift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
+/* mép trên / dưới tan về đúng màu nền: iPhone tô thanh trạng thái và thanh công cụ bằng màu nền body */
+@media (max-width:919px){
+  .bgx i{animation:none}
+  .bgx::before{content:'';position:absolute;inset:0;z-index:2;
+    background:linear-gradient(180deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-top,0px) + 4px),transparent calc(env(safe-area-inset-top,0px) + 120px)),
+               linear-gradient(0deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-bottom,0px) + 40px),transparent calc(env(safe-area-inset-bottom,0px) + 190px))}
+}
+.hero-glow,.hero-glow2,.cta-glow{display:none}
+
+/* ── các dải nền đen cũ → trong suốt, để quầng màu phía sau lộ ra ──────── */
+.trust,.cur,.model-sec,.pricing,.demo-sec{background:transparent;border-color:transparent}
+
+/* ── chất liệu kính ─────────────────────────────────────────────────────── */
+.slotcard,.pain-card,.mod,.feat,.spec-list,.mfeat-card,.disclaimer,.perk,.inst-card,.inst-box,.price-card,
+.faq-item,.cta-live,.tabs,.modal,.adm-stat,.reg,.adm-note,.gal-item,.win-card,.trust-grid,.vid-frame,
+.tryout-frame,.lb-imgwrap{
+  background:linear-gradient(160deg,var(--card2),var(--card));
+  -webkit-backdrop-filter:blur(var(--g-blur)) saturate(160%);backdrop-filter:blur(var(--g-blur)) saturate(160%);
+  border:1px solid var(--g-rim);
+  box-shadow:var(--g-hi),var(--g-shadow)}
+.pain-card:hover,.mod:hover,.feat:hover,.mfeat-card:hover,.perk:hover,.gal-item:hover,.win-card:hover{
+  background:linear-gradient(160deg,var(--card3),var(--card2));border-color:var(--g-rim)}
+.slotcard::before{background:linear-gradient(160deg,rgba(24,203,150,.55),transparent 45%)}
+.price-card.hero-plan{background:linear-gradient(165deg,rgba(24,203,150,.14),var(--card2) 50%);
+  border-color:rgba(24,203,150,.45)}
+.mod{border-left:3px solid var(--emerald)}
+.mod.p{border-left-color:var(--gold)}
+.feat:hover{border-color:var(--emerald)}
+
+/* bảng chỉ số trong một khối kính: các ô bên trong trong suốt, ngăn cách bằng vạch mảnh */
+.trust{padding:clamp(18px,3vw,30px) 0}
+.trust-grid{border-radius:var(--r);overflow:hidden;gap:0}
+.trust-item{background:transparent}
+.trust > .shell{padding-left:var(--pad)!important;padding-right:var(--pad)!important}  /* thẻ kính nằm trong lề như mọi khối khác */
+.trust-item + .trust-item{box-shadow:-1px 0 0 var(--border2)}
+@media (max-width:1000px){.trust-item:nth-child(3){box-shadow:none}.trust-item:nth-child(n+3){border-top:1px solid var(--border2)}}
+@media (max-width:600px){
+  .trust-grid{grid-template-columns:1fr 1fr}           /* 2×2 gọn hơn 4 hàng dọc */
+  .trust-item{padding:18px 16px}
+  .trust-num{font-size:30px}
+}
+.spec-list{gap:0}
+.spec{background:transparent}
+.spec + .spec{box-shadow:0 -1px 0 var(--border)}
+.gal-cap,.win-cap{background:transparent}
+
+/* thanh tab chương trình: viên kính nổi kiểu nút chọn iOS */
+.tabs{border-radius:16px}
+.tab.on{background:var(--card3);color:var(--white);box-shadow:inset 0 1px 0 rgb(255 255 255 / .6),0 4px 14px -6px rgb(10 50 38 / .3)}
+
+/* ── nút ────────────────────────────────────────────────────────────────── */
+.btn{border-radius:14px;font-weight:800}
+.btn-em{background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .55),0 6px 20px -6px rgba(16,180,130,.55)}
+.btn-em:hover{background:linear-gradient(180deg,#45e8ba,#18cb96);box-shadow:inset 0 1px 0 rgb(255 255 255 / .6),0 12px 30px -8px rgba(16,180,130,.6)}
+.btn-ghost{background:var(--card);border:1px solid var(--g-rim);color:var(--white);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--g-hi)}
+.btn-ghost:hover{border-color:var(--emerald);color:var(--emerald);background:var(--card2)}
+.play{background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink)}
+.price-badge{background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink)}
+.spin{border-color:rgba(0,0,0,.2);border-top-color:var(--btn-ink)}
+.pill{background:var(--card);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.pill.em{background:var(--emerald-soft)}
+
+/* ── thanh điều hướng, thanh dính đáy, ngăn kéo: kính mờ ─────────────── */
+nav{background:color-mix(in srgb,var(--black) 55%,transparent);
+  -webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+nav.stuck{background:color-mix(in srgb,var(--black) 72%,transparent);border-bottom-color:var(--border2)}
+.nav-link:hover{background:var(--card2)}
+#drawer{background:color-mix(in srgb,var(--black) 88%,transparent);border-top-color:var(--border2)}
+#sticky{background:color-mix(in srgb,var(--black) 70%,transparent);border-top:1px solid var(--g-rim);
+  -webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+.burger{border-color:var(--g-rim);background:var(--card)}
+#announce{background:linear-gradient(90deg,#14c08f,#2ee0ad);color:var(--btn-ink)}
+
+/* nút sáng / tối */
+.thm{width:40px;height:40px;border-radius:12px;border:1px solid var(--g-rim);background:var(--card);
+  display:inline-flex;align-items:center;justify-content:center;color:var(--white);flex-shrink:0;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--g-hi)}
+.thm svg{width:18px;height:18px}
+.thm .i-moon{display:none}
+:root[data-theme="dark"] .thm .i-sun{display:none}
+:root[data-theme="dark"] .thm .i-moon{display:block}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .thm .i-sun{display:none}
+  :root:not([data-theme="light"]) .thm .i-moon{display:block}
+}
+
+/* logo: bản chữ tối trên nền sáng, bản chữ sáng trên nền tối */
+.logo-dk{display:none}
+:root[data-theme="dark"] .logo-lt{display:none}
+:root[data-theme="dark"] .logo-dk{display:block}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .logo-lt{display:none}
+  :root:not([data-theme="light"]) .logo-dk{display:block}
+}
+
+/* ── ô nhập, thanh tiến độ, hộp thoại ───────────────────────────────────── */
+.prog{background:rgb(15 60 45 / .1)}
+:root[data-theme="dark"] .prog{background:rgb(255 255 255 / .1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .prog{background:rgb(255 255 255 / .1)}}
+.prog i{background:linear-gradient(90deg,#0ea5a4,#18cb96,#5eead4)}
+.inp{background:var(--card2);border:1px solid var(--border2);color:var(--white)}
+.inp:focus{background:var(--card3);border-color:var(--emerald);box-shadow:0 0 0 3px var(--emerald-soft)}
+.plan-opt{background:var(--card)}
+.ov{background:var(--ov)}
+#lb{background:var(--ov)}
+#admin{background:var(--black)}
+.form-msg.bad{background:rgba(211,63,63,.1);border-color:rgba(211,63,63,.3);color:var(--red)}
+.modal-x,.lb-btn{background:var(--card);border-color:var(--g-rim)}
+
+/* ── khối video / vọc thử: nền kính thay vì khối đen ─────────────────── */
+.vid-face{background:radial-gradient(ellipse at 50% 45%,rgba(24,203,150,.22),transparent 62%),
+  linear-gradient(165deg,var(--card3),var(--card))}
+.vid-face:hover{background:radial-gradient(ellipse at 50% 45%,rgba(24,203,150,.32),transparent 62%),
+  linear-gradient(165deg,var(--card3),var(--card))}
+
+/* ảnh người dạy: lớp chuyển ở đáy ảnh theo màu thẻ, không còn đen */
+.inst-photo{background:var(--card3);border-bottom-color:var(--g-rim)}
+.inst-photo::after{background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--black) 40%,transparent))}
+.core-fig,.map-btn{border:1px solid var(--g-rim);box-shadow:var(--g-shadow)}
+.core-fig .zoom,.gal-zoom{background:rgb(10 30 24 / .66);color:#fff}
+
+/* trình duyệt cũ không có backdrop-filter: thẻ đặc hơn cho chữ vẫn đọc được */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root{--card:rgb(255 255 255 / .86);--card2:rgb(255 255 255 / .92);--card3:#fff}
+}
+@media (prefers-reduced-motion:reduce){.bgx i{animation:none}}
