@@ -97,9 +97,23 @@ h1,h2,h3,h4,.display{letter-spacing:-.025em}
 /* mép trên / dưới tan về đúng màu nền: iPhone tô thanh trạng thái và thanh công cụ bằng màu nền body */
 @media (max-width:919px){
   .bgx i{animation:none}
+  /* Chuyển rất dài và mềm (nhiều nấc, không có dải đặc): chuyển ngắn thì chỗ màu nền phẳng gặp quầng
+     màu thành một vạch rõ, nhìn như dải đục dán ngang mép. Quầng trên cùng dời xuống thấp hơn cho
+     vùng thanh trạng thái gần màu nền sẵn. */
+  .bgx{background:radial-gradient(130% 40% at 50% 14%,var(--b1) 0,transparent 72%),
+                  radial-gradient(130% 36% at 50% 90%,var(--b3) 0,transparent 72%),var(--black)}
+  .bgx .b1{top:-12vmax}
   .bgx::before{content:'';position:absolute;inset:0;z-index:2;
-    background:linear-gradient(180deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-top,0px) + 4px),transparent calc(env(safe-area-inset-top,0px) + 120px)),
-               linear-gradient(0deg,var(--chrome) 0,var(--chrome) calc(env(safe-area-inset-bottom,0px) + 40px),transparent calc(env(safe-area-inset-bottom,0px) + 190px))}
+    background:linear-gradient(180deg,var(--chrome) 0,
+        color-mix(in srgb,var(--chrome) 80%,transparent) calc(env(safe-area-inset-top,0px) + 30px),
+        color-mix(in srgb,var(--chrome) 45%,transparent) calc(env(safe-area-inset-top,0px) + 120px),
+        color-mix(in srgb,var(--chrome) 15%,transparent) calc(env(safe-area-inset-top,0px) + 210px),
+        transparent calc(env(safe-area-inset-top,0px) + 290px)),
+      linear-gradient(0deg,var(--chrome) 0,
+        color-mix(in srgb,var(--chrome) 80%,transparent) calc(env(safe-area-inset-bottom,0px) + 40px),
+        color-mix(in srgb,var(--chrome) 45%,transparent) calc(env(safe-area-inset-bottom,0px) + 140px),
+        color-mix(in srgb,var(--chrome) 15%,transparent) calc(env(safe-area-inset-bottom,0px) + 240px),
+        transparent calc(env(safe-area-inset-bottom,0px) + 320px))}
 }
 .hero-glow,.hero-glow2,.cta-glow{display:none}
 
