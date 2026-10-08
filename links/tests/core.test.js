@@ -128,7 +128,7 @@ test('data.json trong repo hợp lệ: mọi thương hiệu đủ ô, mã ?v= k
   // Riêng thương hiệu tài chính mới nối số chỗ cohort trực tiếp từ Apps Script.
   const fin = brandDoc(site, 0);
   assert.ok(fin.links.some((l) => l.size === 'feature' && l.live));
-  assert.match(fin.live.api, /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/);
+  assert.equal(fin.live.api, 'https://elevato.minhtoantowork.workers.dev', 'số chỗ Financial Modeling lấy từ máy chủ elevaTO (bot chỉ cập nhật ở đó)');
 });
 
 test('mọi icon chọn được đều có hình, svg() không bao giờ trả chuỗi rỗng', () => {
@@ -415,4 +415,11 @@ test('index.html / edit.html gắn số phiên bản vào CSS và JS chính (Saf
     assert.ok(refs.length >= 3, f);
     for (const r of refs) assert.match(r, /\?v=\d{8}/, `${f}: ${r} thiếu ?v= — đổi file mà điện thoại vẫn dùng bản cũ`);
   }
+});
+
+test('số chỗ Financial Modeling: Apps Script cũ tự đổi sang máy chủ elevaTO, URL khác giữ nguyên', () => {
+  const cu = 'https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec';
+  assert.equal(mot({ live: { enabled: true, api: cu } }).live.api, 'https://elevato.minhtoantowork.workers.dev');
+  const tmxk = 'https://script.google.com/macros/s/AKfycbyxe1nWupAl6VheDZHaU3Ojm-d6c8F_khhUMtkehNCLh5OnGW6f2uF0PKPYZ4eYUqyGjQ/exec';
+  assert.equal(mot({ live: { enabled: true, api: tmxk } }).live.api, tmxk);
 });

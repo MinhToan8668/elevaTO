@@ -438,7 +438,8 @@ async function loadCohort() {
   const cached = store.get(khoa);
   if (cached && !cohort) { cohort = cohortInfo(cached); cohorts.set(id, cohort); render(); }
   const api = safeUrl(data.live.api);
-  if (!/^https:\/\/script\.google\.com\//.test(api)) return;
+  // Chỉ hỏi hai loại máy chủ quen: Apps Script (TMXK) và máy chủ elevaTO (khoá Financial Modeling).
+  if (!/^https:\/\/(script\.google\.com\/|elevato\.minhtoantowork\.workers\.dev(\/|$))/.test(api)) return;
   if (daGoiCohort.has(id)) return;     // mỗi thương hiệu chỉ hỏi máy chủ một lần cho mỗi lượt mở trang
   daGoiCohort.add(id);
   const ctl = new AbortController();

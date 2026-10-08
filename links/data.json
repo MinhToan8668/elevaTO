@@ -220,7 +220,7 @@
       ],
       "live": {
         "enabled": true,
-        "api": "https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec"
+        "api": "https://elevato.minhtoantowork.workers.dev"
       },
       "theme": {
         "blur": 0,
