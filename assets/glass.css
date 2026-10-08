@@ -107,11 +107,14 @@ h1,h2,h3,h4,.display{letter-spacing:-.025em}
 .trust,.cur,.model-sec,.pricing,.demo-sec{background:transparent;border-color:transparent}
 
 /* ── chất liệu kính ─────────────────────────────────────────────────────── */
+/* Chỉ blur, KHÔNG saturate(): trên Chrome/Edge Windows vùng lọc nền bị vẽ tràn ra ngoài viền thẻ cỡ
+   vài chục px — với saturate thì phần tràn đổi màu thành mảng hình chữ nhật quanh thẻ; chỉ blur thì
+   phần tràn trùng màu nền, không thấy. */
 .slotcard,.pain-card,.mod,.feat,.spec-list,.mfeat-card,.disclaimer,.perk,.inst-card,.inst-box,.price-card,
 .faq-item,.cta-live,.tabs,.modal,.adm-stat,.reg,.adm-note,.gal-item,.win-card,.trust-grid,.vid-frame,
 .tryout-frame,.lb-imgwrap{
   background:linear-gradient(160deg,var(--card2),var(--card));
-  -webkit-backdrop-filter:blur(var(--g-blur)) saturate(160%);backdrop-filter:blur(var(--g-blur)) saturate(160%);
+  -webkit-backdrop-filter:blur(var(--g-blur));backdrop-filter:blur(var(--g-blur));
   border:1px solid var(--g-rim);
   box-shadow:var(--g-hi),var(--g-shadow)}
 .pain-card:hover,.mod:hover,.feat:hover,.mfeat-card:hover,.perk:hover,.gal-item:hover,.win-card:hover{
@@ -160,12 +163,12 @@ h1,h2,h3,h4,.display{letter-spacing:-.025em}
 
 /* ── thanh điều hướng, thanh dính đáy, ngăn kéo: kính mờ ─────────────── */
 nav{background:color-mix(in srgb,var(--black) 55%,transparent);
-  -webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
 nav.stuck{background:color-mix(in srgb,var(--black) 72%,transparent);border-bottom-color:var(--border2)}
 .nav-link:hover{background:var(--card2)}
 #drawer{background:color-mix(in srgb,var(--black) 88%,transparent);border-top-color:var(--border2)}
 #sticky{background:color-mix(in srgb,var(--black) 70%,transparent);border-top:1px solid var(--g-rim);
-  -webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
 .burger{border-color:var(--g-rim);background:var(--card)}
 #announce{background:linear-gradient(90deg,#14c08f,#2ee0ad);color:var(--btn-ink)}
 
@@ -266,11 +269,14 @@ h1,h2,h3,h4,.display,.slot-num,.trust-num,.mod-n,.core-txt h3,.core-foot h4,.pri
 .hero h1{font-weight:760;letter-spacing:-.045em;line-height:.98}
 @media (min-width:1001px){
   /* hàng cuối 1fr hút phần cao dư của thẻ số suất, không thì các dòng bên trái bị giãn cách */
-  .hero-in{grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);grid-template-rows:repeat(6,auto) 1fr;row-gap:0;align-items:start}
+  /* khối chữ bên trái nằm giữa theo chiều dọc so với thẻ số suất: hai hàng 1fr kẹp trên/dưới */
+  .hero-in{grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);grid-template-rows:auto auto 1fr auto auto auto auto 1fr;row-gap:0;align-items:start}
+  .hero-in .lead{grid-row:4}.hero-actions{grid-row:5}.hero-alt{grid-row:6}.hero-meta{grid-row:7}
   .hero-in > div:first-child{display:contents}
   .hero-in .eyebrow,.hero h1{grid-column:1 / -1}
   .hero-in .lead,.hero-actions,.hero-alt,.hero-meta{grid-column:1}
-  .hero-in .slotcard{grid-column:2;grid-row:3 / 8;align-self:start;margin-top:4px}
+  .hero-in .slotcard{grid-column:2;grid-row:3 / 9;align-self:start;margin-top:4px}
+  .hero-meta{margin-bottom:0}
   .hero h1{font-size:clamp(64px,9vw,118px);margin-bottom:30px}
 }
 @media (min-width:601px) and (max-width:1000px){.hero h1{font-size:clamp(52px,9.4vw,90px)}}
@@ -281,7 +287,7 @@ h1,h2,h3,h4,.display,.slot-num,.trust-num,.mod-n,.core-txt h3,.core-foot h4,.pri
    trong suốt, cuộn đi theo trang; logo giữa, nút sáng/tối bên trái, nút menu bên phải — hai nút là
    kính trong. Thanh "Giữ chỗ" dưới đáy thành viên kính nổi, không còn dải nền kín mép. */
 .thm,.burger{background:rgb(255 255 255 / .26);border:1px solid rgb(255 255 255 / .7);
-  -webkit-backdrop-filter:blur(16px) saturate(180%);backdrop-filter:blur(16px) saturate(180%);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
   box-shadow:inset 0 1px 0 rgb(255 255 255 / .85),inset 0 -1px 0 rgb(255 255 255 / .25),0 6px 18px -8px rgb(10 50 38 / .35)}
 :root[data-theme="dark"] .thm,:root[data-theme="dark"] .burger{background:rgb(255 255 255 / .07);border-color:rgb(255 255 255 / .16);
   box-shadow:inset 0 1px 0 rgb(255 255 255 / .16),0 6px 18px -8px rgb(0 0 0 / .5)}
@@ -299,7 +305,7 @@ h1,h2,h3,h4,.display,.slot-num,.trust-num,.mod-n,.core-txt h3,.core-foot h4,.pri
   .logo{height:36px}
   #drawer{margin:4px var(--pad) 0;border:1px solid var(--g-rim);border-radius:20px;padding:6px 18px 18px;
     background:linear-gradient(160deg,var(--card3),var(--card2));
-    -webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);box-shadow:var(--g-hi),var(--g-shadow)}
+    -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);box-shadow:var(--g-hi),var(--g-shadow)}
   #drawer a:last-of-type{border-bottom:0}
   #sticky{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));padding:10px 10px 10px 16px;
     border-radius:22px;border:1px solid var(--g-rim);background:linear-gradient(160deg,var(--card3),var(--card2));
