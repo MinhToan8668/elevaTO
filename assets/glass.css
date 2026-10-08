@@ -258,3 +258,52 @@ h1,h2,h3,h4,.display,.slot-num,.trust-num,.mod-n,.core-txt h3,.core-foot h4,.pri
 .hero h1{font-size:clamp(38px,6.2vw,80px);letter-spacing:-.04em;line-height:1}
 .h2,.cta h2{letter-spacing:-.035em;line-height:1.08}
 .pain-card h3,.mod h4,.feat h4,.mfeat-card h4,.perk h4,.core-foot h4{font-weight:700;letter-spacing:-.01em}
+
+/* ═══ HERO: "Build models. Get hired." to và đậm hơn ═══
+   Nét 760 (Syne càng đậm càng bè). Trên máy tính tiêu đề trải hết chiều ngang trang (khối bên trái
+   tan vào lưới của hero, thẻ số suất nằm cột phải ngay dưới tiêu đề) — đủ chỗ cho cỡ chữ ~110px mà
+   vẫn 2 dòng. Điện thoại: chữ to hơn, tự xuống 3 dòng "Build / models. / Get hired.". */
+.hero h1{font-weight:760;letter-spacing:-.045em;line-height:.98}
+@media (min-width:1001px){
+  /* hàng cuối 1fr hút phần cao dư của thẻ số suất, không thì các dòng bên trái bị giãn cách */
+  .hero-in{grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);grid-template-rows:repeat(6,auto) 1fr;row-gap:0;align-items:start}
+  .hero-in > div:first-child{display:contents}
+  .hero-in .eyebrow,.hero h1{grid-column:1 / -1}
+  .hero-in .lead,.hero-actions,.hero-alt,.hero-meta{grid-column:1}
+  .hero-in .slotcard{grid-column:2;grid-row:3 / 8;align-self:start;margin-top:4px}
+  .hero h1{font-size:clamp(64px,9vw,118px);margin-bottom:30px}
+}
+@media (min-width:601px) and (max-width:1000px){.hero h1{font-size:clamp(52px,9.4vw,90px)}}
+@media (max-width:600px){.hero h1{font-size:clamp(42px,13.4vw,60px);letter-spacing:-.04em;margin-bottom:20px}}
+
+/* ═══ ĐIỆN THOẠI: đầu trang như link-bio ═══
+   Không còn thanh điều hướng có nền riêng (tạo dải màu lạc ngay dưới thanh trạng thái): đầu trang
+   trong suốt, cuộn đi theo trang; logo giữa, nút sáng/tối bên trái, nút menu bên phải — hai nút là
+   kính trong. Thanh "Giữ chỗ" dưới đáy thành viên kính nổi, không còn dải nền kín mép. */
+.thm,.burger{background:rgb(255 255 255 / .26);border:1px solid rgb(255 255 255 / .7);
+  -webkit-backdrop-filter:blur(16px) saturate(180%);backdrop-filter:blur(16px) saturate(180%);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .85),inset 0 -1px 0 rgb(255 255 255 / .25),0 6px 18px -8px rgb(10 50 38 / .35)}
+:root[data-theme="dark"] .thm,:root[data-theme="dark"] .burger{background:rgb(255 255 255 / .07);border-color:rgb(255 255 255 / .16);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .16),0 6px 18px -8px rgb(0 0 0 / .5)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .thm,:root:not([data-theme="light"]) .burger{background:rgb(255 255 255 / .07);border-color:rgb(255 255 255 / .16);
+    box-shadow:inset 0 1px 0 rgb(255 255 255 / .16),0 6px 18px -8px rgb(0 0 0 / .5)}}
+@media (max-width:820px){
+  nav,nav.stuck{position:relative;background:transparent;border-bottom-color:transparent;
+    -webkit-backdrop-filter:none;backdrop-filter:none}
+  .nav-in{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;padding-top:12px;padding-bottom:6px}
+  .nav-in > a{grid-column:2;grid-row:1;justify-self:center}
+  .nav-cta{display:contents}
+  .thm{grid-column:1;grid-row:1;width:46px;height:46px;border-radius:15px}
+  .burger{grid-column:3;grid-row:1;width:46px;height:46px;border-radius:15px}
+  .logo{height:36px}
+  #drawer{margin:4px var(--pad) 0;border:1px solid var(--g-rim);border-radius:20px;padding:6px 18px 18px;
+    background:linear-gradient(160deg,var(--card3),var(--card2));
+    -webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);box-shadow:var(--g-hi),var(--g-shadow)}
+  #drawer a:last-of-type{border-bottom:0}
+  #sticky{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));padding:10px 10px 10px 16px;
+    border-radius:22px;border:1px solid var(--g-rim);background:linear-gradient(160deg,var(--card3),var(--card2));
+    box-shadow:var(--g-hi),var(--g-shadow);transform:translateY(calc(100% + 30px))}
+  #sticky.on{transform:none}
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+}
