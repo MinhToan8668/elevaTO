@@ -310,7 +310,7 @@ function normalizeBrand(b, i) {
       .filter((s) => s.value || s.label)
       .slice(0, 4),
     links: (Array.isArray(x.links) ? x.links : []).map(normalizeLink).slice(0, 40),
-    live: { enabled: bool(live.enabled, false), api: str(live.api, 500) },
+    live: { enabled: bool(live.enabled, false), api: liveApi(str(live.api, 500)) },
     theme: {
       blur: clamp(th.blur, 0, 48, THEME_DEFAULT.blur),
       tint: clamp(th.tint, 0, 95, THEME_DEFAULT.tint),   // 0 = kính trong suốt hẳn, chỉ còn vành mép
@@ -320,6 +320,13 @@ function normalizeBrand(b, i) {
     },
   };
 }
+
+/** Số chỗ của khoá Financial Modeling đã dời từ Apps Script cũ sang máy chủ elevaTO (Worker); bot giờ chỉ
+ *  cập nhật Worker. Bản đã đăng (và nháp cũ) còn trỏ Apps Script thì đổi luôn — không thì trang link
+ *  hiện số suất, lịch học cũ, lại ghi đè vào bộ nhớ đệm dùng chung với trang khoá học. */
+export const LIVE_API = 'https://elevato.minhtoantowork.workers.dev';
+const LIVE_API_CU = { 'https://script.google.com/macros/s/AKfycbwHtZ-rxyJuDxtDRIVaCSDZc-0t6R0Acsx4C16shB0WXXFCgm73smcHUDOhn6GlilPF/exec': LIVE_API };
+const liveApi = (u) => LIVE_API_CU[u.trim()] || u;
 
 /** Id thương hiệu đi vào ?v= nên chỉ cho chữ thường, số và gạch nối. */
 const slug = (v) => String(v).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20);

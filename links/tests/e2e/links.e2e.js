@@ -59,7 +59,9 @@ async function page(opts = {}) {
   p.on('pageerror', (e) => p.errors.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') p.errors.push(m.text()); });
   await p.route(/script\.google\.com/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(COHORT) }));
-  await p.route(WORKER + '/**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(CHUA_LUU) }));
+  // Máy chủ elevaTO trả cả nội dung trang (/links) lẫn số chỗ khoá học (?action=config).
+  await p.route((u) => u.href.startsWith(WORKER), (r) => r.fulfill({ contentType: 'application/json',
+    body: JSON.stringify(/action=config/.test(r.request().url()) ? COHORT : CHUA_LUU) }));
   return p;
 }
 
@@ -608,7 +610,7 @@ test('máy chủ giữ bản một thương hiệu: vẫn có đủ thương hi�
   for (const [ten, url] of [['trang', '/links/'], ['trang sửa', '/links/edit.html']]) {
     const p = await page({ viewport: { width: 1400, height: 900 } });
     await p.route(/\/links\/data\.json/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(site) }));
-    await p.route(WORKER + '/**', (r) => r.fulfill({ contentType: 'application/json',
+    await p.route((u) => u.href.startsWith(WORKER), (r) => r.fulfill({ contentType: 'application/json',
       body: JSON.stringify({ ok: true, data: daDang, updatedAt: '05/10/2026 10:35' }) }));
     await p.goto(base + url);
     if (ten === 'trang') {
