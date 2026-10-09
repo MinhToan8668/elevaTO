@@ -85,6 +85,7 @@ const MENU = [
   { command: 'lich', description: '📅 Lịch học (ngày | giờ)' },
   { command: 'buoi', description: '🕐 Số buổi: tổng, lý thuyết, thực hành' },
   { command: 'kinhnghiem', description: '🎓 Số năm kinh nghiệm hiện trên trang' },
+  { command: 'chiso', description: '🧮 Sửa 4 ô số liệu dưới đầu trang' },
   { command: 'mo', description: '🟢 Mở đăng ký' },
   { command: 'day', description: '🟡 Đánh dấu đã đủ chỗ' },
   { command: 'dong', description: '🔴 Đóng đăng ký' },
@@ -136,7 +137,8 @@ async function huongDan(env) {
     `📅 ${b('Lịch học & hồ sơ')}`,
     `/lich ${ma(`${s.days} | ${s.time}`)}`,
     `/buoi ${ma(`${s.sessions} ${s.theory} ${s.practice}`)} — tổng buổi, lý thuyết, thực hành`,
-    `/kinhnghiem ${ma(c.stats.years)} — số năm kinh nghiệm hiện đầu trang`, '',
+    `/kinhnghiem ${ma(c.stats.years)} — số năm kinh nghiệm hiện đầu trang`,
+    '/chiso — sửa 4 ô số liệu dưới đầu trang (số, tiêu đề, dòng nhỏ từng ô)', '',
 
     `🚦 ${b('Trạng thái')}`,
     `/mo — đang mở đăng ký${c.cohort.status === 'open' ? ' ⬅️' : ''}`,
@@ -309,6 +311,7 @@ async function chayLenh(env, lenh, arg, ctx = {}) {
   if (['kinhnghiem', 'nam'].includes(c)) return lenhNam(env, args);
   if (c === 'lich') return lenhLich(env, args);
   if (c === 'buoi') return lenhBuoi(env, args);
+  if (c === 'chiso') return lenhChiSo(env, args);
   if (c === 'mo') return datTT(env, 'open');
   if (['day', 'dayroi'].includes(c)) return datTT(env, 'full');
   if (c === 'dong') return datTT(env, 'closed');
@@ -361,6 +364,61 @@ async function lenhBuoi(env, args) {
   cfg.schedule.sessions = +n[0]; cfg.schedule.theory = +n[1]; cfg.schedule.practice = +n[2];
   await ghiCauHinh(env.DB, cfg);
   return { text: `✅ ${n[0]} buổi (${n[1]} lý thuyết + ${n[2]} thực hành)` };
+}
+
+// ─── /chiso: 4 ô số liệu dưới đầu trang ─────────────────────
+// Mặc định mỗi ô lấy từ cấu hình khác (năm kinh nghiệm, số cohort, số buổi, giá Early Bird) — đó là
+// chữ hiện khi một trường để trống. Đặt chữ riêng thì ô hiện y vậy, kể cả khi các số kia đổi.
+const O_MAC_DINH = [
+  (c) => [c.stats.years, 'Năm kinh nghiệm', 'M&A thực chiến'],
+  (c) => [String(c.stats.cohortsDone), 'Cohort đã hoàn thành', `${c.stats.students} học viên — IB, PE, Corp Finance, Big4`],
+  (c) => [String(c.schedule.sessions), `Buổi học (${c.schedule.hoursPerSession} tiếng/buổi)`, `${c.schedule.theory} lý thuyết + ${c.schedule.practice} thực hành`],
+  (c) => [c.computed.price.earlyBirdShort, 'Early Bird', 'giá ưu đãi cho waitlist'],
+];
+const GIU = /^[.·\-–—]$/;                        // "." hoặc "-" = giữ nguyên trường này
+const MAC_DINH_CHU = /^(mặc định|mac dinh|macdinh|tự động|tu dong|auto|reset|xoá|xoa)$/i;
+
+/** Danh sách 4 ô như trên trang lúc này — ô tự động ghi (tự động) để biết cái nào đã đặt riêng. */
+async function bangChiSo(env) {
+  const c = await cauHinhDayDu(env.DB);
+  const ds = Array.isArray(c.chiSo) ? c.chiSo : [];
+  return O_MAC_DINH.map((f, i) => {
+    const goc = f(c); const x = ds[i] || {};
+    const tr = (v, g) => (String(v || '').trim() ? b(v) : `${esc(g)} ${ng('(tự động)')}`);
+    return `${b(`Ô ${i + 1}`)}: ${tr(x.so, goc[0])}
+   ${tr(x.tieuDe, goc[1])}
+   ${tr(x.phu, goc[2])}`;
+  }).join('\n');
+}
+
+async function lenhChiSo(env, args) {
+  const vd = '/chiso 2 | 7 | Cohort đã hoàn thành | 60+ học viên — IB, PE, Big4';
+  // "2 | 7 | …" hoặc "2 mặc định": số ô là từ đầu tiên, phần còn lại tách theo dấu gạch đứng.
+  const m = String(args).trim().match(/^(\d+)\s*\|?\s*([\s\S]*)$/);
+  const p = m ? [m[1], ...(m[2] ? m[2].split('|').map((x) => x.trim()) : [])] : [String(args).trim()];
+  const so = Number(p[0]);
+  if (!args || !Number.isInteger(so) || so < 1 || so > 4) {
+    return goiY(`4 ô số liệu dưới đầu trang:\n\n${await bangChiSo(env)}`, vd,
+      'Thứ tự: số ô (1–4) | con số | tiêu đề | dòng nhỏ. Gõ "." để giữ nguyên một phần, "mặc định" để trả về tự động — vd /chiso 2 mặc định');
+  }
+  const cfg = await docCauHinh(env.DB);
+  const ds = (Array.isArray(cfg.chiSo) ? cfg.chiSo : []).slice(0, 4);
+  while (ds.length < 4) ds.push({ so: '', tieuDe: '', phu: '' });
+  const o = { so: '', tieuDe: '', phu: '', ...ds[so - 1] };
+  const sau = p.slice(1);
+  if (sau.length === 1 && MAC_DINH_CHU.test(sau[0])) {
+    ds[so - 1] = { so: '', tieuDe: '', phu: '' };
+  } else {
+    ['so', 'tieuDe', 'phu'].forEach((k, i) => {
+      const v = sau[i];
+      if (v === undefined || v === '' || GIU.test(v)) return;
+      o[k] = MAC_DINH_CHU.test(v) ? '' : v.slice(0, k === 'phu' ? 80 : 40);
+    });
+    ds[so - 1] = o;
+  }
+  cfg.chiSo = ds;
+  await ghiCauHinh(env.DB, cfg);
+  return { text: `✅ Đã sửa ô ${so}.\n\n${await bangChiSo(env)}\n\n${ng('Web sẽ cập nhật trong ~1 phút.')}` };
 }
 
 async function lenhThongBao(env, text, xoa) {
@@ -555,6 +613,15 @@ const HOI = {
     ],
   },
   '/kinhnghiem': { buoc: [{ hoi: 'Số năm kinh nghiệm hiện trên trang?', vd: '3+', goi: dangLa((c) => `${c.stats.years} năm`) }] },
+  '/chiso': {
+    buoc: [
+      { hoi: 'Sửa ô số mấy? (1 → 4, tính từ trái sang)', vd: '2', goi: async (env) => bangChiSo(env) },
+      { hoi: 'Con số hiện to? Gõ "." để giữ, "mặc định" để tự động.', vd: '7' },
+      { hoi: 'Tiêu đề in đậm? Gõ "." để giữ, "mặc định" để tự động.', vd: 'Cohort đã hoàn thành' },
+      { hoi: 'Dòng nhỏ bên dưới? Gõ "." để giữ, "mặc định" để tự động.', vd: '60+ học viên — IB, PE' },
+    ],
+    ghep: (d) => d.join(' | '),
+  },
   '/thongbao': {
     buoc: [{
       hoi: 'Banner đầu trang ghi gì?',

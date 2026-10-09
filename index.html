@@ -823,16 +823,17 @@ footer a:hover{color:var(--emerald)}
 <!-- ════════ TRUST ════════ -->
 <div class="trust">
   <div class="shell" style="padding-left:0;padding-right:0;max-width:var(--shell)">
-    <div class="trust-grid">
+    <!-- 4 ô số liệu: mặc định như dưới, bot đổi được từng ô bằng /chiso (khối chiSo trong cấu hình) -->
+    <div class="trust-grid" id="chiSo">
       <div class="trust-item"><div class="trust-num" data-bind="stats.years">—</div>
-        <div class="trust-lbl"><b>Năm kinh nghiệm</b><br>M&amp;A thực chiến</div></div>
+        <div class="trust-lbl"><b class="cs-t">Năm kinh nghiệm</b><br><span class="cs-p">M&amp;A thực chiến</span></div></div>
       <div class="trust-item"><div class="trust-num" data-bind="stats.cohortsDone">—</div>
-        <div class="trust-lbl"><b>Cohort đã hoàn thành</b><br><span data-tpl="{{stats.students}} học viên"></span> — IB, PE, Corp Finance, Big4</div></div>
+        <div class="trust-lbl"><b class="cs-t">Cohort đã hoàn thành</b><br><span class="cs-p"><span data-tpl="{{stats.students}} học viên"></span> — IB, PE, Corp Finance, Big4</span></div></div>
       <div class="trust-item"><div class="trust-num" data-bind="schedule.sessions">—</div>
-        <div class="trust-lbl"><b data-tpl="Buổi học ({{schedule.hoursPerSession}} tiếng/buổi)"></b><br>
-          <span data-tpl="{{schedule.theory}} lý thuyết + {{schedule.practice}} thực hành"></span></div></div>
+        <div class="trust-lbl"><b class="cs-t" data-tpl="Buổi học ({{schedule.hoursPerSession}} tiếng/buổi)"></b><br>
+          <span class="cs-p" data-tpl="{{schedule.theory}} lý thuyết + {{schedule.practice}} thực hành"></span></div></div>
       <div class="trust-item"><div class="trust-num" data-bind="computed.price.earlyBirdShort">—</div>
-        <div class="trust-lbl"><b>Early Bird</b><br>giá ưu đãi cho waitlist</div></div>
+        <div class="trust-lbl"><b class="cs-t">Early Bird</b><br><span class="cs-p">giá ưu đãi cho waitlist</span></div></div>
     </div>
   </div>
 </div>
@@ -1547,6 +1548,7 @@ var CFG=null, modulesBuilt=false, faqBuilt=false;
 function render(cfg){
   CFG=compute(cfg);
   bindAll(CFG);
+  renderChiSo(CFG);
 
   var C=CFG.computed;
 
@@ -1837,6 +1839,22 @@ function unlockTrial(){
 }
 
 var vidSrc='', vidLocked=null;
+/* 4 ô số liệu dưới hero. Ô nào bot đặt chữ riêng (/chiso → cfg.chiSo[i].so / tieuDe / phu) thì thay;
+   để trống thì giữ nội dung mặc định (lấy từ năm kinh nghiệm, số cohort, số buổi, giá Early Bird). */
+function renderChiSo(cfg){
+  var ds=Array.isArray(cfg.chiSo)?cfg.chiSo:[];
+  $$('#chiSo .trust-item').forEach(function(o,i){
+    var x=ds[i]||{};
+    [['.trust-num','so'],['.cs-t','tieuDe'],['.cs-p','phu']].forEach(function(p){
+      var el=o.querySelector(p[0]); if(!el) return;
+      if(el.__goc===undefined) el.__goc=el.innerHTML;          // nội dung mặc định (đã điền số)
+      var v=String(x[p[1]]||'').trim();
+      if(v) el.textContent=v;
+      else if(el.__goc!==el.innerHTML && !el.hasAttribute('data-bind') && !el.hasAttribute('data-tpl')) el.innerHTML=el.__goc;
+    });
+  });
+}
+
 function renderVideo(cfg){
   var f=$('#vidFrame'); if(!f) return;
   var src=embedUrl(cfg.media && cfg.media.videoUrl);

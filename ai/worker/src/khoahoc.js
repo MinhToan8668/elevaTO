@@ -25,6 +25,9 @@ export function macDinh() {
       platform: 'MS Teams', sessions: 8, theory: 5, practice: 3, hoursPerSession: 2,
     },
     stats: { years: '2.5+', cohortsDone: 6, students: '50+' },
+    // 4 ô số liệu dưới hero, theo thứ tự trên trang. Trường để trống = trang dùng nội dung mặc định
+    // (năm kinh nghiệm · số cohort đã xong · số buổi · giá Early Bird). Bot đổi bằng /chiso.
+    chiSo: [1, 2, 3, 4].map(() => ({ so: '', tieuDe: '', phu: '' })),
     announcement: { show: false, text: '' },
     media: {
       videoUrl: 'https://drive.google.com/file/d/1NW1h_XqO_85XHf_Gl3YDNL5pnr0FNwE7/view',
