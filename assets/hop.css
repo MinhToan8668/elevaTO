@@ -7,21 +7,22 @@
    ngang — đủ để mắt bắt được mà không làm phiền khi đang đọc. Mọi chuyển động chỉ dùng transform /
    opacity (chạy trên GPU, không bắt trình duyệt vẽ lại mỗi khung hình) để máy yếu không bị khựng. */
 .hop{
-  --hop-bg:rgb(255 255 255 / .58); --hop-rim:rgb(255 255 255 / .85); --hop-ink:#0b1d17; --hop-sub:#3f5a50;
-  --hop-sh:0 10px 30px -10px rgb(10 60 45 / .45), 0 2px 6px rgb(10 60 45 / .12);
+  --hop-bg:rgb(240 250 246 / .66); --hop-rim:rgb(255 255 255 / .85); --hop-ink:#0b1d17; --hop-sub:#3f5a50;
+  --hop-sh:0 10px 28px -12px rgb(10 60 45 / .35);
   position:fixed; z-index:150; right:max(16px, env(safe-area-inset-right)); bottom:calc(20px + env(safe-area-inset-bottom));
   display:inline-flex; align-items:center; gap:10px; padding:7px 16px 7px 7px; border-radius:999px;
   font-family:'Plus Jakarta Sans','Be Vietnam Pro',system-ui,sans-serif; text-decoration:none; color:var(--hop-ink);
-  background:linear-gradient(160deg,rgb(255 255 255 / .78),var(--hop-bg));
-  -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
-  box-shadow:inset 0 1px 0 rgb(255 255 255 / .9), var(--hop-sh);
+  background:linear-gradient(160deg,rgb(255 255 255 / .8),var(--hop-bg));
+  -webkit-backdrop-filter:blur(26px); backdrop-filter:blur(26px);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .55), var(--hop-sh);
   isolation:isolate; overflow:hidden;
   transition:transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .3s, bottom .35s cubic-bezier(.22,1,.36,1);
-  animation:hop-in .6s cubic-bezier(.34,1.56,.64,1) .8s both;
+  animation:hop-in .6s cubic-bezier(.34,1.56,.64,1) .8s backwards;  /* backwards, KHÔNG both: giữ hiệu ứng sau khi chạy xong làm Chrome bỏ qua backdrop-filter */
 }
-/* vành sáng: dải emerald → xanh ngọc, khoét giữa bằng mask chỉ còn đường viền 1.5px */
-.hop::before{content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit; padding:1.5px;
-  background:linear-gradient(120deg, #18cb96, #5eead4 35%, rgb(255 255 255 / .25) 55%, #7dd3fc 85%, #18cb96);
+/* vành kính: đường viền 1px rất mảnh, sáng ở mép trên-trái rồi tan dần — như mép kính bắt sáng,
+   không phải một đường viền màu */
+.hop::before{content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit; padding:1px;
+  background:linear-gradient(140deg, rgb(255 255 255 / .75), rgb(255 255 255 / .12) 40%, rgb(255 255 255 / .04) 60%, rgb(94 234 212 / .35));
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
   mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite:exclude}
 /* vệt sáng quét ngang mỗi 5 giây */
@@ -32,12 +33,13 @@
 .hop:active{transform:scale(.96)}
 .hop:focus-visible{outline:2px solid #18cb96; outline-offset:3px}
 
-.hop-ic{position:relative; flex:none; width:38px; height:38px; border-radius:50%; display:grid; place-items:center; color:#03261a;
-  background:linear-gradient(160deg,#3ee8b8,#12b886); box-shadow:inset 0 1px 0 rgb(255 255 255 / .6), 0 4px 12px -4px rgb(18 184 134 / .7);
+.hop-ic{position:relative; flex:none; width:38px; height:38px; border-radius:50%; display:grid; place-items:center; color:#0b9b74;
+  background:radial-gradient(circle at 35% 25%, rgb(255 255 255 / .55), rgb(255 255 255 / .12) 70%);
+  box-shadow:inset 0 0 0 1px rgb(255 255 255 / .45), inset 0 1px 0 rgb(255 255 255 / .7);
   animation:hop-bob 3.2s ease-in-out infinite}
 .hop-ic svg{width:20px; height:20px}
 /* vòng sóng toả ra từ icon */
-.hop-ic::after{content:''; position:absolute; inset:0; border-radius:50%; border:2px solid #18cb96; opacity:0;
+.hop-ic::after{content:''; position:absolute; inset:0; border-radius:50%; border:1.5px solid rgb(24 203 150 / .55); opacity:0;
   animation:hop-ping 2.6s cubic-bezier(.22,1,.36,1) 1.6s infinite}
 .hop-t{display:flex; flex-direction:column; line-height:1.15; white-space:nowrap}
 .hop-t small{font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--hop-sub)}
@@ -46,17 +48,27 @@
 .hop:hover .hop-go{transform:translate(2px,-2px)}
 
 /* nền tối: theo lựa chọn đã lưu, hoặc theo máy khi chưa chọn */
-:root[data-theme="dark"] .hop{--hop-bg:rgb(20 40 36 / .62); --hop-ink:#fff; --hop-sub:#a9c8be;
-  --hop-sh:0 12px 32px -10px rgb(0 0 0 / .7); background:linear-gradient(160deg,rgb(40 64 58 / .7),var(--hop-bg));
-  box-shadow:inset 0 1px 0 rgb(255 255 255 / .14), var(--hop-sh)}
+:root[data-theme="dark"] .hop{--hop-bg:rgb(8 30 26 / .72); --hop-ink:#fff; --hop-sub:#a9c8be;
+  --hop-sh:0 12px 30px -12px rgb(0 0 0 / .55); background:linear-gradient(160deg,rgb(34 62 56 / .78),var(--hop-bg));
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .1), var(--hop-sh)}
 :root[data-theme="dark"] .hop::after{background:linear-gradient(100deg, transparent, rgb(255 255 255 / .16), transparent)}
 :root[data-theme="dark"] .hop-go{color:#5eead4}
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .hop{--hop-bg:rgb(20 40 36 / .62); --hop-ink:#fff; --hop-sub:#a9c8be;
-    --hop-sh:0 12px 32px -10px rgb(0 0 0 / .7); background:linear-gradient(160deg,rgb(40 64 58 / .7),var(--hop-bg));
-    box-shadow:inset 0 1px 0 rgb(255 255 255 / .14), var(--hop-sh)}
+  :root:not([data-theme="light"]) .hop{--hop-bg:rgb(8 30 26 / .72); --hop-ink:#fff; --hop-sub:#a9c8be;
+    --hop-sh:0 12px 30px -12px rgb(0 0 0 / .55); background:linear-gradient(160deg,rgb(34 62 56 / .78),var(--hop-bg));
+    box-shadow:inset 0 1px 0 rgb(255 255 255 / .1), var(--hop-sh)}
   :root:not([data-theme="light"]) .hop::after{background:linear-gradient(100deg, transparent, rgb(255 255 255 / .16), transparent)}
   :root:not([data-theme="light"]) .hop-go{color:#5eead4}
+}
+
+/* nền tối: vành và icon dịu lại, icon chữ xanh ngọc sáng */
+:root[data-theme="dark"] .hop::before{background:linear-gradient(140deg, rgb(255 255 255 / .32), rgb(255 255 255 / .06) 40%, rgb(255 255 255 / .02) 60%, rgb(94 234 212 / .28))}
+:root[data-theme="dark"] .hop-ic{color:#5eead4;background:radial-gradient(circle at 35% 25%, rgb(255 255 255 / .16), rgb(255 255 255 / .03) 70%);
+  box-shadow:inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .22)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .hop::before{background:linear-gradient(140deg, rgb(255 255 255 / .32), rgb(255 255 255 / .06) 40%, rgb(255 255 255 / .02) 60%, rgb(94 234 212 / .28))}
+  :root:not([data-theme="light"]) .hop-ic{color:#5eead4;background:radial-gradient(circle at 35% 25%, rgb(255 255 255 / .16), rgb(255 255 255 / .03) 70%);
+    box-shadow:inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .22)}
 }
 
 /* trang khoá học: thanh "Giữ chỗ" dính đáy hiện ra thì viên nút nhấc lên trên nó. Đặt ngay sau #sticky
