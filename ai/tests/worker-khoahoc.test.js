@@ -221,6 +221,35 @@ test('/lich, /buoi, /kinhnghiem, /thongbao, /slide đổi đúng chỗ', async (
   assert.equal((await docCauHinh(env.DB)).media.showSlides, false);
 });
 
+test('/chiso: sửa từng ô số liệu, "." giữ nguyên, "mặc định" trả về tự động; trang nhận khối chiSo', async () => {
+  const env = env0();
+  // Lệnh trơn / số ô sai → bảng 4 ô hiện tại, ô chưa đặt ghi (tự động)
+  const r0 = await chayLenhEl(env, '/chiso', []);
+  assert.match(r0.text, /Ô 1/);
+  assert.match(r0.text, /Năm kinh nghiệm/);
+  assert.match(r0.text, /tự động/);
+  assert.match((await chayLenhEl(env, '/chiso', ['9'])).text, /4 ô số liệu/);
+
+  await chayLenhEl(env, '/chiso', '2 | 7 | Cohort đã xong | 60+ học viên — IB, PE'.split(' '));
+  let c = await docCauHinh(env.DB);
+  assert.deepEqual(c.chiSo[1], { so: '7', tieuDe: 'Cohort đã xong', phu: '60+ học viên — IB, PE' });
+  assert.deepEqual(c.chiSo[0], { so: '', tieuDe: '', phu: '' }, 'ô khác không đổi');
+
+  await chayLenhEl(env, '/chiso', '2 | . | . | 70+ học viên'.split(' '));
+  c = await docCauHinh(env.DB);
+  assert.deepEqual(c.chiSo[1], { so: '7', tieuDe: 'Cohort đã xong', phu: '70+ học viên' }, '"." giữ nguyên');
+
+  await chayLenhEl(env, '/chiso', '2 | mặc định | . | .'.split(' '));
+  assert.equal((await docCauHinh(env.DB)).chiSo[1].so, '', 'một trường về tự động');
+
+  const web = await cauHinh(env);
+  assert.equal(web.chiSo.length, 4, 'trang nhận đủ 4 ô');
+  assert.equal(web.chiSo[1].phu, '70+ học viên');
+
+  await chayLenhEl(env, '/chiso', ['2', 'mặc', 'định']);
+  assert.deepEqual((await docCauHinh(env.DB)).chiSo[1], { so: '', tieuDe: '', phu: '' }, 'cả ô về tự động');
+});
+
 test('/status vẽ được bảng tình hình trên cơ sở dữ liệu thật', async () => {
   const f = moFetch();
   try {
@@ -518,7 +547,7 @@ test('bảng câu hỏi: lệnh nào cũng có thật, câu nào cũng đủ ch�
     }
     // Lệnh nào cần giá trị mà không có trong bảng thì người dùng lại phải tự nhớ cú pháp.
     const CAN_GIA_TRI = ['cohort', 'slot', 'base', 'giasom', 'giagoc', 'giatuhoc',
-      'lich', 'buoi', 'kinhnghiem', 'thongbao', 'video', 'duyet', 'tuchoi'];
+      'lich', 'buoi', 'kinhnghiem', 'chiso', 'thongbao', 'video', 'duyet', 'tuchoi'];
     for (const c of CAN_GIA_TRI) {
       assert.ok(HOI_EL[`/${c}`], `/${c} cần giá trị mà chưa có câu hỏi`);
       assert.ok(MENU_EL.some((x) => x.command === c), `/${c} có câu hỏi mà thiếu trong menu`);
