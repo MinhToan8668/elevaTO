@@ -312,6 +312,12 @@ async function chayLenh(env, lenh, arg, ctx = {}) {
   if (c === 'lich') return lenhLich(env, args);
   if (c === 'buoi') return lenhBuoi(env, args);
   if (c === 'chiso') return lenhChiSo(env, args);
+  const csm = c.match(/^cs([1-4])(so|td|phu)$/);
+  if (csm) {                                         // một phần của một ô, từ bảng nút /chiso
+    const vi = PHAN_CS.findIndex((x) => x[0] === csm[2]);
+    const phan = ['.', '.', '.']; phan[vi] = args || '.';
+    return lenhChiSo(env, `${csm[1]} | ${phan.join(' | ')}`);
+  }
   if (c === 'mo') return datTT(env, 'open');
   if (['day', 'dayroi'].includes(c)) return datTT(env, 'full');
   if (c === 'dong') return datTT(env, 'closed');
@@ -391,8 +397,36 @@ async function bangChiSo(env) {
   }).join('\n');
 }
 
+// Bảng điền: mỗi ô số liệu một hàng nút [con số] [tiêu đề] [dòng nhỏ] [↺]. Bấm nút nào thì bot hỏi đúng
+// phần đó (cuộc hỏi /csNso · /csNtd · /csNphu, tg.js mở qua callback hoi:…), điền xong bảng hiện lại.
+const PHAN_CS = [['so', 'so', 'Con số'], ['td', 'tieuDe', 'Tiêu đề'], ['phu', 'phu', 'Dòng nhỏ']];
+const ngan = (t, n = 22) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+async function bangNutChiSo(env) {
+  const c = await cauHinhDayDu(env.DB);
+  const ds = Array.isArray(c.chiSo) ? c.chiSo : [];
+  return O_MAC_DINH.map((f, i) => {
+    const goc = f(c); const x = ds[i] || {};
+    return [
+      ...PHAN_CS.map(([ma1, k], j) => {
+        const v = String(x[k] || '').trim();
+        return { text: `${v ? '✍️ ' : ''}${ngan(v || goc[j], j === 0 ? 10 : 22)}`, callback_data: `hoi:cs${i + 1}${ma1}` };
+      }),
+      { text: '↺', callback_data: `csr:${i + 1}` },
+    ];
+  });
+}
+async function theChiSo(env, dau) {
+  return {
+    text: `${dau ? `${dau}\n\n` : ''}📊 ${b('4 ô số liệu dưới đầu trang')}\n\n${await bangChiSo(env)}\n\n`
+      + `👇 ${b('Bấm vào ô muốn sửa')} — mỗi hàng là một ô trên trang, từ trái qua: con số · tiêu đề · dòng nhỏ.\n`
+      + `✍️ = đã đặt chữ riêng · ↺ = trả cả hàng về tự động.\n${ng('Web cập nhật trong ~1 phút sau khi sửa.')}`,
+    nut: await bangNutChiSo(env),
+  };
+}
+
 async function lenhChiSo(env, args) {
   const vd = '/chiso 2 | 7 | Cohort đã hoàn thành | 60+ học viên — IB, PE, Big4';
+  if (!String(args).trim()) return theChiSo(env);
   // "2 | 7 | …" hoặc "2 mặc định": số ô là từ đầu tiên, phần còn lại tách theo dấu gạch đứng.
   const m = String(args).trim().match(/^(\d+)\s*\|?\s*([\s\S]*)$/);
   const p = m ? [m[1], ...(m[2] ? m[2].split('|').map((x) => x.trim()) : [])] : [String(args).trim()];
@@ -418,7 +452,7 @@ async function lenhChiSo(env, args) {
   }
   cfg.chiSo = ds;
   await ghiCauHinh(env.DB, cfg);
-  return { text: `✅ Đã sửa ô ${so}.\n\n${await bangChiSo(env)}\n\n${ng('Web sẽ cập nhật trong ~1 phút.')}` };
+  return theChiSo(env, `✅ Đã sửa ô ${so}.`);
 }
 
 async function lenhThongBao(env, text, xoa) {
@@ -570,6 +604,11 @@ async function xuLyNut(env, q, { api, gui }) {
     const st = await lenhStatus(env);
     return gui(env, chat, st.text, st.nut);
   }
+  if (p[0] === 'csr') {
+    const r = await lenhChiSo(env, `${p[1]} mặc định`);
+    await dap(`Ô ${p[1]} về tự động`);
+    return gui(env, chat, r.text, r.nut);
+  }
   if (p[0] === 'stt') { await datTT(env, p[1]); await dap('Đã đổi'); const st = await lenhStatus(env); return gui(env, chat, st.text, st.nut); }
   if (p[0] === 'st') { await dap('Đã làm mới'); const st = await lenhStatus(env); return gui(env, chat, st.text, st.nut); }
   if (p[0] === 'tog') { const r = await datBatTat(env, p[1], !lay(await docCauHinh(env.DB), BAT_TAT[p[1]].duong)); await dap('Đã đổi'); return gui(env, chat, r.text); }
@@ -613,15 +652,19 @@ const HOI = {
     ],
   },
   '/kinhnghiem': { buoc: [{ hoi: 'Số năm kinh nghiệm hiện trên trang?', vd: '3+', goi: dangLa((c) => `${c.stats.years} năm`) }] },
-  '/chiso': {
-    buoc: [
-      { hoi: 'Sửa ô số mấy? (1 → 4, tính từ trái sang)', vd: '2', goi: async (env) => bangChiSo(env) },
-      { hoi: 'Con số hiện to? Gõ "." để giữ, "mặc định" để tự động.', vd: '7' },
-      { hoi: 'Tiêu đề in đậm? Gõ "." để giữ, "mặc định" để tự động.', vd: 'Cohort đã hoàn thành' },
-      { hoi: 'Dòng nhỏ bên dưới? Gõ "." để giữ, "mặc định" để tự động.', vd: '60+ học viên — IB, PE' },
-    ],
-    ghep: (d) => d.join(' | '),
-  },
+  // Một câu hỏi cho từng phần của từng ô — mở từ bảng nút của /chiso (callback hoi:cs1so …).
+  ...Object.fromEntries([1, 2, 3, 4].flatMap((n) => PHAN_CS.map(([ma1, k, nhan]) => [`/cs${n}${ma1}`, {
+    buoc: [{
+      hoi: `${nhan} của ô ${n}? Gõ "mặc định" để về tự động.`,
+      vd: ma1 === 'so' ? '7' : ma1 === 'td' ? 'Cohort đã hoàn thành' : '60+ học viên — IB, PE',
+      goi: async (env) => {
+        const c = await cauHinhDayDu(env.DB);
+        const v = String(((c.chiSo || [])[n - 1] || {})[k] || '').trim();
+        const goc = O_MAC_DINH[n - 1](c)[PHAN_CS.findIndex((x) => x[0] === ma1)];
+        return v ? `Đang đặt riêng: ${b(v)}` : `Đang tự động: ${b(goc)}`;
+      },
+    }],
+  }]))),
   '/thongbao': {
     buoc: [{
       hoi: 'Banner đầu trang ghi gì?',

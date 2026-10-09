@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/src/index.js';
-import { chayLenhEl } from '../worker/src/botel.js';
+import { chayLenhEl, HOI_EL as HOI_EL0 } from '../worker/src/botel.js';
 import { docCauHinh } from '../worker/src/khoahoc.js';
 import { moCtx, moEnv } from './helpers/d1.js';
 
@@ -248,6 +248,25 @@ test('/chiso: sửa từng ô số liệu, "." giữ nguyên, "mặc định" tr
 
   await chayLenhEl(env, '/chiso', ['2', 'mặc', 'định']);
   assert.deepEqual((await docCauHinh(env.DB)).chiSo[1], { so: '', tieuDe: '', phu: '' }, 'cả ô về tự động');
+});
+
+test('/chiso trơn: bảng nút 4 hàng × (số · tiêu đề · dòng nhỏ · ↺); bấm ô → hỏi đúng phần đó', async () => {
+  const env = env0();
+  const t = await chayLenhEl(env, '/chiso', []);
+  assert.equal(t.nut.length, 4, 'mỗi ô một hàng');
+  assert.deepEqual(t.nut[0].map((x) => x.callback_data), ['hoi:cs1so', 'hoi:cs1td', 'hoi:cs1phu', 'csr:1']);
+  assert.equal(t.nut[0][1].text, 'Năm kinh nghiệm');
+  for (const h of t.nut.flat()) assert.ok(Buffer.byteLength(h.callback_data) <= 64);
+  for (const k of ['/cs1so', '/cs2td', '/cs4phu']) assert.ok(HOI_EL0[k], `${k} phải có câu hỏi`);
+
+  // Trả lời câu hỏi của nút "tiêu đề ô 4" → chỉ phần đó đổi, bảng hiện lại có ✍️
+  const r = await chayLenhEl(env, '/cs4td', ['Giá', 'sớm']);
+  assert.deepEqual((await docCauHinh(env.DB)).chiSo[3], { so: '', tieuDe: 'Giá sớm', phu: '' });
+  assert.equal(r.nut[3][1].text, '✍️ Giá sớm');
+  await chayLenhEl(env, '/cs4so', ['2,5M']);
+  assert.equal((await docCauHinh(env.DB)).chiSo[3].so, '2,5M');
+  await chayLenhEl(env, '/cs4so', ['mặc', 'định']);
+  assert.equal((await docCauHinh(env.DB)).chiSo[3].so, '', '"mặc định" trả phần đó về tự động');
 });
 
 test('/status vẽ được bảng tình hình trên cơ sở dữ liệu thật', async () => {
@@ -547,7 +566,7 @@ test('bảng câu hỏi: lệnh nào cũng có thật, câu nào cũng đủ ch�
     }
     // Lệnh nào cần giá trị mà không có trong bảng thì người dùng lại phải tự nhớ cú pháp.
     const CAN_GIA_TRI = ['cohort', 'slot', 'base', 'giasom', 'giagoc', 'giatuhoc',
-      'lich', 'buoi', 'kinhnghiem', 'chiso', 'thongbao', 'video', 'duyet', 'tuchoi'];
+      'lich', 'buoi', 'kinhnghiem', 'thongbao', 'video', 'duyet', 'tuchoi'];
     for (const c of CAN_GIA_TRI) {
       assert.ok(HOI_EL[`/${c}`], `/${c} cần giá trị mà chưa có câu hỏi`);
       assert.ok(MENU_EL.some((x) => x.command === c), `/${c} có câu hỏi mà thiếu trong menu`);
