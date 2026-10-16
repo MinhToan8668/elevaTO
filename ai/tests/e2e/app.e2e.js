@@ -5,7 +5,7 @@
 // Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
 // máy chủ AI được giả lập, phông chữ nằm sẵn trong vendor/fonts.
 
-import { test, before, after } from 'node:test';
+import { test, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import zlib from 'node:zlib';
@@ -161,8 +161,42 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
   });
   // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
   await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
+  dangMo.push(context);
   return { page, errors, context };
 }
+
+/**
+ * Mỗi test mở ngữ cảnh riêng; KHÔNG đóng thì chúng chồng lên nhau tới hết bộ. Chromium phải chia
+ * khung hình cho cả chục trang còn sống (đo được một requestAnimationFrame mất 450ms), nên chuyển
+ * động CSS 0,25s không kịp xong trong lúc test chờ — ca "đã cuộn" đỏ oan ở cuối bộ mà chạy riêng
+ * lại xanh. Đóng ngay sau mỗi test là hết, và bộ test cũng nhẹ đi nhiều.
+ */
+/** Chờ trình duyệt vẽ xong hai khung hình — thay cho ngủ một khoảng đoán bừa. */
+const khungHinh = (page) => page.evaluate(() => new Promise((xong) => {
+  requestAnimationFrame(() => requestAnimationFrame(xong));
+}));
+
+/**
+ * Cuộn tới chỗ muốn rồi chờ ĐỨNG HẲN: đợi scrollY hai khung hình liền nhau không đổi nữa.
+ * Không so scrollY với đúng con số đã xin — trang có thể cuộn hết cỡ trước đó, hay nhích vài pixel
+ * khi bố cục co lại, nên bắt bằng chính chỗ dừng mới đúng.
+ */
+const cuonToi = (page, y) => page.evaluate((den) => new Promise((xong) => {
+  window.scrollTo(0, den);
+  let truoc = NaN;
+  const dem = () => requestAnimationFrame(() => {
+    const nay = Math.round(window.scrollY);
+    if (nay === truoc) { xong(nay); return; }
+    truoc = nay;
+    dem();
+  });
+  dem();
+}), y);
+
+const dangMo = [];
+afterEach(async () => {
+  await Promise.all(dangMo.splice(0).map((c) => c.close().catch(() => { /* đã đóng tay trong test */ })));
+});
 
 // E2E_SHOTS=thư_mục → chụp màn hình các bước (xem giao diện, không ảnh hưởng kết quả test).
 async function shot(page, name, opts = {}) {
@@ -847,13 +881,15 @@ test('đã cuộn: thanh đầu trang đặc hẳn, chữ bên dưới không l�
     await page.waitForFunction(() => document.querySelector('#langSel')?.options.length > 0
       && document.querySelector('#acct')?.children.length > 0);
     await page.evaluate(() => document.fonts.ready);   // phông về muộn là chữ nhảy, hai tấm khác nhau
-    await page.waitForTimeout(300);
+    await khungHinh(page);
     const cao = await page.evaluate(() => document.querySelector('.top').offsetHeight);
     const dai = { x: 0, y: 0, width: w, height: cao };
 
-    await page.evaluate(() => window.scrollTo(0, 600));
+    await cuonToi(page, 600);
     await page.waitForFunction(() => document.documentElement.classList.contains('da-cuon'));
-    await page.waitForTimeout(500);                   // chờ lớp nền hiện hết (chuyển trong .25s)
+    // Chờ ĐÚNG CÁI CẦN CHỜ: lớp nền hiện hết. Trước đây ngủ 500ms cho "chắc" — chuyển động 0,25s
+    // cần vài khung hình, máy đang tải nặng thì mỗi khung hình tới chậm hơn thế và test đỏ oan.
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.bg-top')).opacity === '1');
 
     const sau = await page.evaluate(() => ({
       topH: getComputedStyle(document.documentElement).getPropertyValue('--top-h').trim(),
@@ -864,8 +900,9 @@ test('đã cuộn: thanh đầu trang đặc hẳn, chữ bên dưới không l�
     assert.equal(sau.mo, '1', `${may}: lớp nền .bg-top chưa hiện`);
 
     const trenDinh = await page.screenshot({ clip: dai });
-    await page.evaluate(() => window.scrollTo(0, 740));
-    await page.waitForTimeout(300);
+    const y2 = await cuonToi(page, 740);
+    assert.ok(y2 > 600, `${may}: trang không cuộn thêm được tới 740 (dừng ở ${y2}) — hai tấm chụp sẽ giống nhau vì chưa cuộn, không phải vì thanh kín`);
+    await khungHinh(page);
     const daCuon = await page.screenshot({ clip: dai });
     const { lech, oDau } = soAnh(trenDinh, daCuon);
     // Ngưỡng 4/255: bản sao nền không khớp tuyệt đối tới từng bit (đo được lệch nhiều nhất 2),
