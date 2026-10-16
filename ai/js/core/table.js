@@ -6,6 +6,9 @@ import { t, chartLabel } from '../i18n.js';
 
 export function periodLabel(p) {
   if (p.months === 12) return t('period.year', { y: p.year });
+  // Ba tháng kết thúc 30/9 là RIÊNG quý 3; chín tháng cùng ngày đó là LŨY KẾ — nhãn phải khác nhau,
+  // nếu không người đọc so một cột doanh thu quý với một cột doanh thu chín tháng mà không biết.
+  if (p.months === 3) return t('period.q', { q: Math.ceil((p.endMonth || 3) / 3), y: p.year });
   return t('period.short', { m: p.months, y: p.year });
 }
 

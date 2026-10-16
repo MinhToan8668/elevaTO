@@ -8,13 +8,16 @@
 
 import { periodsFromMeta } from './extract.js';
 import { validate } from './statements.js';
+import { interimIssues } from './interim.js';
 import { t } from '../i18n.js';
 
 export function emptyDataset() {
   return { company: '', periods: [], values: {}, src: {}, notes: {}, conflicts: [], warnings: [], files: [] };
 }
 
-const order = (p) => p.year * 100 + p.endMonth + (p.months === 12 ? 0.5 : 0);
+// Thứ tự thời gian: theo năm, rồi tháng kết thúc, rồi ĐỘ DÀI kỳ — quý 3 (3 tháng, hết 30/9) đứng
+// trước lũy kế 9 tháng (cùng hết 30/9) vì nó là một phần của kỳ dài hơn.
+const order = (p) => p.year * 10000 + (p.endMonth || 12) * 100 + (p.months || 12);
 
 /**
  * @param ext { file, company, meta: {ngay_ket_thuc, so_thang}, statements: { BS|IS|CF: {cur, prev} }, notes, warnings }
@@ -84,6 +87,8 @@ export function checkDataset(ds, opts = {}) {
     }
     out[p.id] = issues;
   }
+  // Lũy kế quý đi lùi: dấu hiệu một file bị đọc cột quý lẻ thay cột lũy kế (xem interim.js).
+  for (const [id, list] of Object.entries(interimIssues(ds, { unit: opts.unit || 1 }))) (out[id] ||= []).push(...list);
   return out;
 }
 

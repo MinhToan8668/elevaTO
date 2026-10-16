@@ -247,6 +247,13 @@ details.pmap[open] > summary{margin-bottom:12px}
 .notes-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:10px 18px;padding:16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2)}
 
 /* ── Biểu đồ & chỉ số ─────────────────── */
+/* Bộ chọn nhỏ trong thanh công cụ (kỳ / khoảng thời gian), kiểu như trang công ty chứng khoán. */
+.segx{display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+.segx-lbl{font-size:11.5px;font-weight:700;color:var(--muted);padding:0 7px 0 5px;text-transform:uppercase;letter-spacing:.03em}
+.segx button{border:0;background:none;border-radius:7px;padding:5px 11px;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.segx button[aria-pressed="true"]{background:var(--surface);color:var(--strong);box-shadow:var(--shadow)}
+.segx button:disabled{opacity:.4;cursor:not-allowed}
+
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:14px;margin:14px 0}
 .chart{margin:0;padding:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
 .chart figcaption{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
@@ -256,11 +263,73 @@ details.pmap[open] > summary{margin-bottom:12px}
 .chart .ax0{stroke:var(--line-3);stroke-width:1.5}
 .chart .lbl{fill:var(--muted);font-size:11px}
 .chart .msg.warn{margin-top:8px;font-size:12.5px}
+/* Dải chạm chuột: một ô trong suốt cho mỗi kỳ. Bàn phím Tab vào được nên phải thấy viền chọn. */
+.cvwrap{position:relative}
+.chart .hitr{cursor:crosshair}
+.chart .hitr:focus{outline:none}
+.chart .hitr[data-on]{outline:2px solid var(--em);outline-offset:-2px}
+.chart .hitbg{fill:var(--em);opacity:.07;pointer-events:none}
+/* Bảng số nổi theo con trỏ. left / transform do charts.js đặt theo vị trí kỳ đang trỏ. */
+.cvtip{position:absolute;top:6px;z-index:3;min-width:150px;max-width:260px;padding:8px 10px;border:1px solid var(--line-2);border-radius:var(--r-xs);background:var(--surface);box-shadow:var(--shadow);font-size:12px;pointer-events:none}
+.cvtip b{display:block;color:var(--strong);margin-bottom:4px}
+.cvtip table{border-collapse:collapse;width:100%}
+.cvtip td{padding:1px 0;color:var(--muted);white-space:nowrap}
+.cvtip td.num{padding-left:12px;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--strong)}
+.cvtip i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}
+/* Chú giải bấm được: tắt / bật một đường để nhìn rõ phần còn lại. */
+.legend .lgb{display:flex;align-items:center;gap:6px;border:0;background:none;padding:2px 4px;border-radius:7px;font:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+.legend .lgb:hover{background:var(--surface-2);color:var(--strong)}
+.legend .lgb.off{color:var(--line-3);text-decoration:line-through}
+.legend .lgb.off i{opacity:.3}
 .chart-data{margin-top:8px;font-size:12.5px}
 .chart-data summary{cursor:pointer;color:var(--muted)}
 .chart-data .gridwrap{margin-top:8px;max-height:220px}
 table.ratios td small{display:block;font-size:11.5px;margin-top:2px}
 table.ratios td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+table.ratios tr.rgrp th{position:sticky;left:0;background:var(--surface-2);color:var(--strong);font-size:12px;text-transform:uppercase;letter-spacing:.04em;text-align:left}
+
+/* ── Phân tích & đề xuất ──────────────── */
+/* Mọi nhận định ở đây do core/analysis.js tính theo ngưỡng cố định — không phải chữ của AI. */
+.health{display:grid;grid-template-columns:minmax(190px,1fr) 2fr;gap:12px;margin:14px 0}
+.hbox{display:flex;flex-direction:column;justify-content:center;gap:4px;padding:16px 18px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface-2)}
+.hbox .hlbl{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.hbox b{font-size:22px;line-height:1.1;color:var(--strong)}
+.hbox.em{border-color:var(--em-line);background:var(--em-soft)}
+.hbox.em b{color:var(--em-text)}
+.hbox.gold{border-color:color-mix(in srgb,var(--gold) 40%,transparent);background:var(--gold-soft)}
+.hbox.gold b{color:var(--gold)}
+.hbox.red{border-color:color-mix(in srgb,var(--red) 45%,transparent);background:var(--red-soft)}
+.hbox.red b{color:var(--red)}
+.hsubs{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:8px;align-content:start}
+.hsubs li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-xs);background:var(--surface);font-size:13px}
+.hsubs li .tag{margin:0}
+
+.flags,.advice{margin-top:18px}
+.flags h3,.advice h3{color:var(--strong);font-size:15px;font-weight:700;margin-bottom:10px}
+.fgrp{margin-bottom:12px;padding:12px 14px;border:1px solid var(--line);border-left-width:3px;border-radius:var(--r-xs);background:var(--surface)}
+.fgrp h4{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--strong);margin-bottom:8px}
+.fgrp h4 .tag{margin:0}
+.fgrp ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.fgrp li{font-size:13.5px;color:var(--muted)}
+.fgrp li b{display:block;color:var(--strong);font-weight:600}
+.fgrp.sv-cao{border-left-color:var(--red)}
+.fgrp.sv-cao h4{color:var(--red)}
+.fgrp.sv-tb{border-left-color:var(--gold)}
+.fgrp.sv-tb h4{color:var(--gold)}
+.fgrp.sv-thap{border-left-color:var(--line-3)}
+.advice ol{margin-left:20px;display:flex;flex-direction:column;gap:9px}
+.advice li{font-size:13.5px;color:var(--muted)}
+.advice li::marker{color:var(--em-text);font-weight:700}
+.advice li b{display:block;color:var(--strong);font-weight:600}
+/* Dòng lệch thuyết minh gần như chắc là đọc sai → tô cho nhìn ra ngay. */
+table.k tr.bad td{background:var(--red-soft);color:var(--red)}
+table.k tr.bad td:first-child{box-shadow:inset 2px 0 0 var(--red)}
+/* Màn hẹp: khung sức khoẻ xếp dọc, bộ chọn kỳ tự xuống dòng thay vì đẩy trang cuộn ngang. */
+@media (max-width:700px){
+  .health{grid-template-columns:1fr}
+  .segx{flex-wrap:wrap}
+  .cvtip{max-width:min(240px,70vw)}
+}
 
 /* ── Tiến độ ──────────────────────────── */
 .prog{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}

@@ -141,10 +141,25 @@ export function periodsFromMeta(meta = {}) {
   else if ((x = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(d))) { y = +x[3]; m = +x[2]; }
   else return null;
   if (!(m >= 1 && m <= 12) || !(y > 1990 && y < 2100)) return null;
-  const months = Number(meta.so_thang) || (m === 12 ? 12 : m);
-  const mk = (yy, mo) => ({ id: mo === 12 ? `FY${yy}` : `Q${Math.ceil(m / 3)}-${yy}`, year: yy, months: mo, endMonth: m });
-  const cur = mk(y, months);
-  return { cur, prevBS: { id: `FY${y - 1}`, year: y - 1, months: 12, endMonth: 12 }, prevFlow: mk(y - 1, months) };
+  // AI ghi cot_luy_ke = false khi bảng chỉ in cột quý lẻ (xem prompts.js). Thiếu trường → coi là lũy kế,
+  // vì mọi BCTC quý theo mẫu B 02a-DN đều có cột lũy kế và câu lệnh bắt lấy đúng cột ấy.
+  const luyKe = meta.cot_luy_ke !== false;
+  const months = soThang(meta.so_thang) || (luyKe ? (m === 12 ? 12 : m) : 3);
+  // Cột kỳ trước của KQKD/LCTT là CÙNG KỲ năm trước nên cùng số tháng; AI ghi khác thì tin AI.
+  const monthsPrev = soThang(meta.so_thang_p) || months;
+  return { cur: mkPeriod(y, months, m), prevBS: mkPeriod(y - 1, 12, 12), prevFlow: mkPeriod(y - 1, monthsPrev, m) };
+}
+const soThang = (v) => ([3, 6, 9, 12].includes(Number(v)) ? Number(v) : 0);
+
+/**
+ * Một kỳ: mã, năm, số tháng kỳ bao trùm, tháng kết thúc.
+ * Mã phải phân biệt được QUÝ LẺ với LŨY KẾ cùng ngày kết thúc — chín tháng đầu năm và riêng quý 3
+ * đều kết thúc 30/9 nhưng là hai kỳ khác nhau, trộn vào một ô là cộng dồn sai:
+ *   12 tháng → FY2025 · 3 tháng → Q3-2025 (quý lẻ) · còn lại → 9T-2025 (lũy kế từ đầu năm).
+ */
+export function mkPeriod(year, months, endMonth) {
+  const id = months === 12 ? `FY${year}` : months === 3 ? `Q${Math.ceil(endMonth / 3)}-${year}` : `${months}T-${year}`;
+  return { id, year, months, endMonth };
 }
 
 // ─── Nhận diện trang ──────────────────────────────────────
@@ -282,6 +297,8 @@ export function noteToModel(kind, ai) {
       const r = {
         cls, name: String(x.ten || ''), cost: n(x.nguyen_gia_cuoi), accDep: neg(n(x.hao_mon_cuoi)),
         additions: n(x.mua) + n(x.xdcb) + n(x.tang_khac) || 0, depreciation: neg(n(x.khau_hao)),
+        // Model không dùng số giảm, nhưng đối chiếu bảng biến động thì cần (đầu kỳ + tăng − giảm = cuối kỳ).
+        disposals: abs(n(x.thanh_ly)) + abs(n(x.giam_khac)) || 0,
       };
       const mo = opt(x.nguyen_gia_dau);
       if (mo !== undefined) { r.costOpen = mo; r.accDepOpen = neg(n(x.hao_mon_dau)); }
@@ -315,7 +332,13 @@ export function noteToModel(kind, ai) {
   }
   if (kind === 'debt') {
     const st = ai.vay_ngan_han || {}, lt = ai.vay_dai_han || {};
-    return { stProceeds: abs(n(st.vay_trong_ky)), stRepay: abs(n(st.tra_trong_ky)), ltProceeds: abs(n(lt.vay_trong_ky)), ltRepay: abs(n(lt.tra_trong_ky)) };
+    const out = { stProceeds: abs(n(st.vay_trong_ky)), stRepay: abs(n(st.tra_trong_ky)), ltProceeds: abs(n(lt.vay_trong_ky)), ltRepay: abs(n(lt.tra_trong_ky)) };
+    // Số dư đầu / cuối năm: model không cần, nhưng đối chiếu được với mã 321 / 339 trên CĐKT.
+    // Chỉ ghi khi bảng có in, để dạng dữ liệu không mọc thêm khoá rỗng.
+    for (const [khoa, v] of [['stOpen', opt(st.dau_nam)], ['stClose', opt(st.cuoi_nam)], ['ltOpen', opt(lt.dau_nam)], ['ltClose', opt(lt.cuoi_nam)]]) {
+      if (v !== undefined) out[khoa] = v;
+    }
+    return out;
   }
   if (kind === 'equity') {
     const out = equityMove(ai.nam_nay, n);

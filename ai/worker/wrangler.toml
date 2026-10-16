@@ -3,6 +3,12 @@ main = "src/index.js"
 compatibility_date = "2026-01-01"
 workers_dev = true
 
+# Ghi log mỗi yêu cầu, xem bằng `npx wrangler tail` hoặc trong bảng điều khiển → Workers → Logs.
+# Không bật thì lỗi chỉ hiện trong 30 giây đang mở `tail`, sau đó mất hẳn — dò bug là vô vọng.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 # Cơ sở dữ liệu D1. `database_id` lấy khi tạo:
 #   npx wrangler d1 create elevato
 # rồi dán vào dòng dưới và đẩy lược đồ:
@@ -36,4 +42,6 @@ BAM_VONG = "15000"
 #   npx wrangler secret put TG_SECRET     # chuỗi ngẫu nhiên tự nghĩ, để Telegram chứng minh là thật
 #   npx wrangler secret put BREVO_KEY     # API key Brevo để gửi mã đặt lại mật khẩu
 #   npx wrangler secret put MAIL_TU       # địa chỉ gửi thư đã xác minh trên Brevo
+#   npx wrangler secret put UPLOAD_TG_TOKEN  # token bot nhận file của trang upload (để tải thẳng)
+#   npx wrangler secret put TAIVE_SECRET     # chuỗi ngẫu nhiên tự nghĩ, dùng ký vé tải thẳng
 # ─────────────────────────────────────────────────────────────

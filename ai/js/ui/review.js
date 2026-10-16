@@ -7,12 +7,13 @@ import { parseVN } from '../core/numbers.js';
 import { item } from '../core/statements.js';
 import { renderNotes, renderModel } from './notes.js';
 import { renderCharts } from './charts.js';
+import { renderAnalysis, renderReconcile } from './analysis.js';
 import { t, unitLabel, chartLabel } from '../i18n.js';
 
 export const UNITS = [1, 1e3, 1e6, 1e9];
 /** [bội số, nhãn] theo ngôn ngữ đang chọn — gọi lúc vẽ, không giữ sẵn. */
 export const unitOptions = () => UNITS.map((v) => [v, unitLabel(v)]);
-const ALL_TABS = ['BS', 'IS', 'CF', 'CHART', 'TM', 'MODEL'];
+const ALL_TABS = ['BS', 'IS', 'CF', 'CHART', 'PT', 'TM', 'MODEL'];
 // Tab xem trước model chỉ dành cho học viên / giảng viên.
 let TABS = ALL_TABS;
 const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
@@ -106,8 +107,10 @@ function renderReview(store, ctx) {
     unitSel);
 
   let body;
-  if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, unitLabel(s.unit));
-  else if (ui.tab === 'TM') body = renderNotes(store);
+  // renderCharts giữ lựa chọn kỳ / khoảng thời gian trong chính nó; bấm đổi thì nó gọi lại hàm này.
+  if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, unitLabel(s.unit), () => renderReview(store, ctx));
+  else if (ui.tab === 'PT') body = [renderReconcile(ds, s.unit), renderAnalysis(ds, s.unit)];
+  else if (ui.tab === 'TM') body = [renderReconcile(ds, s.unit), renderNotes(store)];
   else if (ui.tab === 'MODEL') body = renderModel(store);
   else body = [crossIssues(ds, checks, ui.tab), grid(store, ui.tab), legend()];
   keepFocus(box, () => mount(box, h('div', { class: 'sum' }, pills), bar,

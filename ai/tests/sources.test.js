@@ -39,7 +39,7 @@ test('ngày / số tháng người dùng nhập đè lên meta của AI', () => 
   const sources = [{ id: 'x', kind: 'ext', meta: { ngay_ket_thuc: '2026-06-30', so_thang: 6 }, ext: ext('scan.pdf', '', 12, { IS: { cur: { 'IS:10': 1 }, prev: {} } }) }];
   const { ds, errors } = buildDataset(sources, []);
   assert.deepEqual(errors, []);
-  assert.deepEqual(ds.periods.map((p) => p.id), ['Q2-2026']);
+  assert.deepEqual(ds.periods.map((p) => p.id), ['6T-2026']);
 });
 
 test('Excel sheet "Lưu trữ" → mỗi kỳ một nguồn', () => {

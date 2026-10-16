@@ -41,9 +41,9 @@ test('BCTC bán niên: CĐKT cột trước là cuối năm trước, KQKD cột
     BS: { cur: { 'BS:111': 3 }, prev: { 'BS:111': 2 } },
     IS: { cur: { 'IS:10': 50 }, prev: { 'IS:10': 40 } },
   }));
-  assert.deepEqual(ds.periods.map((p) => [p.id, p.months]), [['Q2-2025', 6], ['FY2025', 12], ['Q2-2026', 6]]);   // theo ngày kết thúc
+  assert.deepEqual(ds.periods.map((p) => [p.id, p.months]), [['6T-2025', 6], ['FY2025', 12], ['6T-2026', 6]]);   // theo ngày kết thúc
   assert.deepEqual(ds.values.FY2025, { 'BS:111': 2 });
-  assert.deepEqual(ds.values['Q2-2025'], { 'IS:10': 40 });
+  assert.deepEqual(ds.values['6T-2025'], { 'IS:10': 40 });
 });
 
 test('thuyết minh gắn vào kỳ hiện tại của báo cáo; sửa tay một ô được ghi nguồn "sửa tay"', () => {
@@ -75,7 +75,7 @@ test('kiểm tra cả bộ: từng kỳ + tiền đầu kỳ LCTT năm nay = ti�
 
 import { addPeriodValues } from '../js/core/dataset.js';
 test('nạp thẳng kỳ từ file FinLens (đã có mã TT99)', () => {
-  const ds = addPeriodValues(emptyDataset(), { file: 'finlens.xlsx', period: { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 }, values: { 'BS:111': 5, 'IS:10': 7 } });
-  assert.deepEqual(ds.periods.map((p) => p.id), ['Q2-2026']);
-  assert.deepEqual(ds.values['Q2-2026'], { 'BS:111': 5, 'IS:10': 7 });
+  const ds = addPeriodValues(emptyDataset(), { file: 'finlens.xlsx', period: { id: '6T-2026', year: 2026, months: 6, endMonth: 6 }, values: { 'BS:111': 5, 'IS:10': 7 } });
+  assert.deepEqual(ds.periods.map((p) => p.id), ['6T-2026']);
+  assert.deepEqual(ds.values['6T-2026'], { 'BS:111': 5, 'IS:10': 7 });
 });

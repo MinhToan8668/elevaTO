@@ -1,8 +1,9 @@
 # elevaTO AI BCTC — trích xuất BCTC mẫu 2026 cho model forecast
 
 Công cụ **riêng** (không dính landing page, không dính công cụ upload): tải BCTC lên → xem từng trang, tick
-trang cần lấy → AI tự nhận trang thuộc báo cáo nào và đọc số → rà soát, xem biểu đồ & chỉ số → xuất
-**Form chuẩn hóa 2026** (.xlsx) hoặc điền thẳng vào **model elevaTO** (chỉ học viên / giảng viên).
+trang cần lấy → AI tự nhận trang thuộc báo cáo nào và đọc số → rà soát, xem biểu đồ & chỉ số, đọc phân tích
+& đề xuất → xuất **Form chuẩn hóa 2026** (.xlsx) hoặc điền thẳng vào **model elevaTO**
+(chỉ học viên / giảng viên).
 
 Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Việt / English**.
 
@@ -51,10 +52,41 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 
   Form phổ thông **không tốn lượt nhận diện trang**: trang đã tick mà máy chưa rõ loại được gửi kèm luôn
   trong 3 lượt đọc bảng, AI tự tìm bảng cần đọc trong đó.
-- **Biểu đồ & chỉ số**: một tab ở bước rà soát vẽ doanh thu / lợi nhuận, cơ cấu tài sản, cơ cấu nguồn vốn,
-  lưu chuyển tiền tệ, biên lợi nhuận, kèm bảng chỉ số (thanh toán hiện hành / nhanh, nợ trên vốn chủ, ROA,
-  ROE, vòng quay tài sản…). Máy tự tính từ số đã trích, AI không tham gia. Ở bước rà soát tick dòng nào thì
+- **Báo cáo quý / bán niên đọc đúng cột**: mẫu B 02a-DN in BỐN cột số (riêng quý và lũy kế từ đầu năm,
+  mỗi loại hai cột cho năm nay / năm trước). Câu lệnh buộc AI lấy **cặp lũy kế** và ghi lại cờ `cot_luy_ke`
+  cùng số tháng của từng cột, nên bộ dữ liệu có đúng các kỳ 3T / 6T / 9T / FY thay vì lẫn một quý lẻ vào
+  giữa dãy lũy kế. Mã kỳ phân biệt hẳn hai thứ cùng kết thúc một ngày: `Q3-2025` là RIÊNG ba tháng, `9T-2025`
+  là lũy kế chín tháng. Nạp cả báo cáo quý lẫn bán niên vào một phiên cũng không còn kỳ nào đè lên kỳ nào.
+  Nếu lũy kế chín tháng nhỏ hơn lũy kế sáu tháng thì chắc chắn một file bị đọc sai cột — bước rà soát báo ra.
+- **Biểu đồ & chỉ số**: một tab ở bước rà soát vẽ 8 biểu đồ kiểu trang phân tích của công ty chứng khoán —
+  tăng trưởng doanh thu & lợi nhuận (cột tiền + đường tốc độ tăng cùng kỳ năm trước), biên lợi nhuận
+  gộp/EBIT/EBITDA/ròng, ROA & ROE, cơ cấu tài sản và cơ cấu nợ & vốn chủ theo tỷ trọng, vòng quay tiền mặt
+  (số ngày tồn kho / phải thu / phải trả + chu kỳ tiền), khả năng thanh toán ngắn hạn, và dòng tiền thuần
+  cho doanh nghiệp (NOPAT + khấu hao − đầu tư ± thay đổi vốn lưu động). Trỏ chuột vào một kỳ là hiện bảng
+  nhỏ đủ mọi đường của kỳ đó; bấm chú giải để tắt / bật một đường; Tab bằng bàn phím cũng đọc được từng kỳ.
+  Ba cách xem kỳ — **theo kỳ đã trích / chỉ kỳ năm / riêng từng quý** — và bộ chọn 3 năm / 5 năm / tất cả.
+  "Riêng từng quý" do máy suy ra bằng cách **trừ hai kỳ lũy kế liền nhau** (quý 3 = lũy kế 9 tháng − lũy kế
+  6 tháng); số dư trên CĐKT là số tại một thời điểm nên lấy nguyên, không trừ. Kỳ nào do suy ra đều được
+  nói rõ ngay trên tab. Kèm bảng **22 chỉ số** chia bốn nhóm (thanh toán · sinh lời · cơ cấu vốn & đòn bẩy ·
+  hiệu quả sử dụng tài sản), mỗi dòng có cách tính và mức xếp hạng. Kỳ giữa niên độ được quy về mức một năm
+  trước khi so với kỳ năm. Máy tự tính từ số đã trích, AI không tham gia. Ở bước rà soát tick dòng nào thì
   Form chuẩn hóa xuất dòng đó.
+- **Phân tích & đề xuất** (tab mới): chấm **sức khoẻ tài chính** và bốn điểm thành phần (khả năng thanh toán,
+  hiệu quả kinh doanh, cơ cấu vốn & đòn bẩy, chất lượng tài sản), bắt **32 dấu hiệu bất thường** chia ba mức
+  (cần xử lý ngay / cần theo dõi / ghi nhận để biết) — vốn chủ âm, vốn lưu động ròng âm, dòng tiền kinh doanh
+  âm nhiều kỳ liền, nợ trên vốn chủ quá cao, biên gộp tụt, phải thu phình nhanh hơn doanh thu, tài sản dài hạn
+  tài trợ bằng nợ ngắn hạn, lợi nhuận đến từ hoạt động tài chính / thu nhập khác, vay thêm khi dòng tiền âm… —
+  rồi suy ra **việc nên làm**, mỗi mục nêu đúng con số đang có vấn đề. Logic ngưỡng và bộ quy tắc lấy từ bộ
+  phân tích AI FinLens, chuyển sang mã chỉ tiêu TT99 và sang bộ dữ liệu nhiều kỳ của tool.
+  Ngưỡng là mức chung của doanh nghiệp Việt Nam (không theo ngành) và **cố định trong mã**: máy tính, máy xếp
+  hạng, AI không viết chữ nào — nên cùng một kết luận đọc tiếng Việt hay tiếng Anh đều như nhau.
+- **Đối chiếu ngược thuyết minh** (hiện ở cả tab *Thuyết minh* và tab *Phân tích*): thuyết minh là bảng ma trận
+  in nhỏ, hay kéo dài sang trang sau — chỗ AI đọc sai nhiều nhất mà không có gì tự phát hiện. **19 chỗ kiểm
+  tra** cộng số thuyết minh rồi so với đúng dòng trên ba bảng chính: nguyên giá / hao mòn / giá trị còn lại
+  TSCĐ hữu hình & vô hình (mã 221–229), bảng biến động TSCĐ có tự khớp (đầu kỳ + tăng − giảm = cuối kỳ),
+  khấu hao so dòng trên LCTT, dư nợ vay ngắn / dài hạn (mã 321 / 339) và biến động vay, tiền vay nhận & trả
+  gốc, cổ tức và vốn góp thêm so LCTT, doanh thu & lợi nhuận gộp theo mảng, lợi thế thương mại (mã 279).
+  Chỗ gần như chắc chắn đọc sai được tô đậm để sửa trước khi xuất file.
 - **Xuất** — hai file .xlsx, dựng thẳng trong trình duyệt, không cần đưa file mẫu nào vào:
   - **Form chuẩn hóa 2026** (mọi tài khoản): trang *Tổng quan* + *Tình hình tài chính*, *Kết quả kinh doanh*,
     *Lưu chuyển tiền tệ* theo mẫu TT99. Bố cục bám các sheet trình bày của model elevaTO: dòng *Năm*, dòng
@@ -252,7 +284,11 @@ ai/
 ├── js/core/formxlsx.js          Form chuẩn hóa 2026; js/core/notesxlsx.js các sheet thuyết minh
 ├── js/core/fcalc.js             tính sẵn giá trị ô công thức để trình xem không tự tính cũng thấy số
 ├── js/core/metrics.js           chỉ số tài chính + số liệu biểu đồ (máy tính, không qua AI)
+├── js/core/interim.js           kỳ lũy kế → riêng từng quý, và bắt lỗi đọc sai cột báo cáo quý
+├── js/core/reconcile.js         đối chiếu ngược số thuyết minh với ba bảng chính
+├── js/core/analysis.js          ngưỡng xếp hạng, dấu hiệu bất thường, chấm sức khoẻ, đề xuất
 ├── js/ui/charts.js              vẽ biểu đồ SVG (không dùng thư viện ngoài)
+├── js/ui/analysis.js            tab Phân tích & đề xuất + bảng đối chiếu thuyết minh
 ├── js/core/modelxlsx.js         Form chi tiết elevaTO — sao y sheet 03.Input_FS, giữ nguyên số dòng
 ├── js/targets/model.js          quy ba báo cáo + thuyết minh về đúng dòng sheet 03.Input_FS
 ├── js/targets/sheets.js         bố cục 03.Input_FS, SINH TỰ ĐỘNG từ template (đừng sửa tay)

@@ -5,7 +5,7 @@
 // Cần playwright (npm i -D playwright, hoặc bản cài toàn cục). Không cần mạng: thư viện nằm trong vendor/,
 // máy chủ AI được giả lập, phông chữ nằm sẵn trong vendor/fonts.
 
-import { test, before, after } from 'node:test';
+import { test, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import zlib from 'node:zlib';
@@ -161,8 +161,42 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
   });
   // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
   await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
+  dangMo.push(context);
   return { page, errors, context };
 }
+
+/**
+ * Mỗi test mở ngữ cảnh riêng; KHÔNG đóng thì chúng chồng lên nhau tới hết bộ. Chromium phải chia
+ * khung hình cho cả chục trang còn sống (đo được một requestAnimationFrame mất 450ms), nên chuyển
+ * động CSS 0,25s không kịp xong trong lúc test chờ — ca "đã cuộn" đỏ oan ở cuối bộ mà chạy riêng
+ * lại xanh. Đóng ngay sau mỗi test là hết, và bộ test cũng nhẹ đi nhiều.
+ */
+/** Chờ trình duyệt vẽ xong hai khung hình — thay cho ngủ một khoảng đoán bừa. */
+const khungHinh = (page) => page.evaluate(() => new Promise((xong) => {
+  requestAnimationFrame(() => requestAnimationFrame(xong));
+}));
+
+/**
+ * Cuộn tới chỗ muốn rồi chờ ĐỨNG HẲN: đợi scrollY hai khung hình liền nhau không đổi nữa.
+ * Không so scrollY với đúng con số đã xin — trang có thể cuộn hết cỡ trước đó, hay nhích vài pixel
+ * khi bố cục co lại, nên bắt bằng chính chỗ dừng mới đúng.
+ */
+const cuonToi = (page, y) => page.evaluate((den) => new Promise((xong) => {
+  window.scrollTo(0, den);
+  let truoc = NaN;
+  const dem = () => requestAnimationFrame(() => {
+    const nay = Math.round(window.scrollY);
+    if (nay === truoc) { xong(nay); return; }
+    truoc = nay;
+    dem();
+  });
+  dem();
+}), y);
+
+const dangMo = [];
+afterEach(async () => {
+  await Promise.all(dangMo.splice(0).map((c) => c.close().catch(() => { /* đã đóng tay trong test */ })));
+});
 
 // E2E_SHOTS=thư_mục → chụp màn hình các bước (xem giao diện, không ảnh hưởng kết quả test).
 async function shot(page, name, opts = {}) {
@@ -290,14 +324,36 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   const pills = await page.locator('#review .sum .pc').allInnerTexts();
   assert.deepEqual(pills, ['Năm 2024: ✓ khớp', 'Năm 2025: ✓ khớp'], 'số AI chép khớp mọi dòng tổng');
   await shot(page, '2-ra-soat');
-  // Tab Biểu đồ & chỉ số: vẽ SVG từ số đã trích, có bảng chỉ số
+  // Tab Biểu đồ & chỉ số: vẽ SVG từ số đã trích, có bảng chỉ số chia nhóm kèm mức xếp hạng
   await page.click('#review [role=tab]:has-text("Biểu đồ")');
   await page.waitForSelector('#tabpanel .chart svg.cv rect');
   const titles = await page.locator('#tabpanel .chart figcaption b').allInnerTexts();
-  assert.ok(titles.includes('Doanh thu & lợi nhuận') && titles.includes('Cơ cấu tài sản'), titles.join());
+  assert.ok(titles.includes('Tăng trưởng doanh thu & lợi nhuận') && titles.includes('Cơ cấu tài sản'), titles.join());
   assert.ok((await page.locator('#tabpanel table.ratios tbody tr').count()) >= 8);
   assert.match(await page.locator('#tabpanel table.ratios tbody tr:has-text("Nợ / Vốn chủ") td.num').last().innerText(), /lần$/);
+  assert.ok((await page.locator('#tabpanel table.ratios tbody tr.rgrp').count()) >= 2, 'bảng chỉ số chia nhóm');
+  assert.ok((await page.locator('#tabpanel table.ratios tbody .tag').count()) > 0, 'mỗi chỉ số có mức xếp hạng');
+  // Bộ chọn kỳ / khoảng thời gian: chỉ có BCTC năm nên nút "Quý" phải mờ đi chứ không vẽ bừa.
+  assert.equal(await page.locator('#tabpanel .segx button:has-text("Quý")').isDisabled(), true);
+  await page.click('#tabpanel .segx button:has-text("Năm")');
+  await page.waitForSelector('#tabpanel .chart svg.cv rect');
+  // Bấm chú giải để tắt một đường thì chỉ thẻ đó vẽ lại.
+  const lg = page.locator('#tabpanel figure.chart').first().locator('.legend .lgb').first();
+  await lg.click();
+  await page.waitForSelector('#tabpanel figure.chart .legend .lgb.off');
+  await page.locator('#tabpanel figure.chart .legend .lgb.off').first().click();
   await shot(page, '2b-bieu-do');
+
+  // Tab Phân tích & đề xuất: sức khoẻ tài chính + việc nên làm, tất cả do máy tính
+  await page.click('#review [role=tab]:has-text("Phân tích")');
+  await page.waitForSelector('#tabpanel .health .hbox b');
+  assert.ok((await page.locator('#tabpanel .health .hbox b').innerText()).trim().length > 0, 'có mức sức khoẻ');
+  assert.equal(await page.locator('#tabpanel .hsubs li').count(), 4, 'bốn nhóm điểm thành phần');
+  assert.ok((await page.locator('#tabpanel section.advice ol li').count()) >= 1, 'có ít nhất một việc nên làm');
+  // Nhận định phải điền hết chỗ trống — sót một {var} là người dùng đọc thấy đúng chữ "{v}".
+  const chu = await page.locator('#tabpanel').innerText();
+  assert.doesNotMatch(chu, /\{[a-z]\w*\}/, chu.slice(0, 400));
+  await shot(page, '2c-phan-tich');
   await page.click('#review [role=tab]:has-text("Tình hình tài chính")');
 
   const cell = page.locator('td.v[data-k="BS:111"][data-p="FY2025"]');
@@ -825,13 +881,15 @@ test('đã cuộn: thanh đầu trang đặc hẳn, chữ bên dưới không l�
     await page.waitForFunction(() => document.querySelector('#langSel')?.options.length > 0
       && document.querySelector('#acct')?.children.length > 0);
     await page.evaluate(() => document.fonts.ready);   // phông về muộn là chữ nhảy, hai tấm khác nhau
-    await page.waitForTimeout(300);
+    await khungHinh(page);
     const cao = await page.evaluate(() => document.querySelector('.top').offsetHeight);
     const dai = { x: 0, y: 0, width: w, height: cao };
 
-    await page.evaluate(() => window.scrollTo(0, 600));
+    await cuonToi(page, 600);
     await page.waitForFunction(() => document.documentElement.classList.contains('da-cuon'));
-    await page.waitForTimeout(500);                   // chờ lớp nền hiện hết (chuyển trong .25s)
+    // Chờ ĐÚNG CÁI CẦN CHỜ: lớp nền hiện hết. Trước đây ngủ 500ms cho "chắc" — chuyển động 0,25s
+    // cần vài khung hình, máy đang tải nặng thì mỗi khung hình tới chậm hơn thế và test đỏ oan.
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.bg-top')).opacity === '1');
 
     const sau = await page.evaluate(() => ({
       topH: getComputedStyle(document.documentElement).getPropertyValue('--top-h').trim(),
@@ -842,8 +900,9 @@ test('đã cuộn: thanh đầu trang đặc hẳn, chữ bên dưới không l�
     assert.equal(sau.mo, '1', `${may}: lớp nền .bg-top chưa hiện`);
 
     const trenDinh = await page.screenshot({ clip: dai });
-    await page.evaluate(() => window.scrollTo(0, 740));
-    await page.waitForTimeout(300);
+    const y2 = await cuonToi(page, 740);
+    assert.ok(y2 > 600, `${may}: trang không cuộn thêm được tới 740 (dừng ở ${y2}) — hai tấm chụp sẽ giống nhau vì chưa cuộn, không phải vì thanh kín`);
+    await khungHinh(page);
     const daCuon = await page.screenshot({ clip: dai });
     const { lech, oDau } = soAnh(trenDinh, daCuon);
     // Ngưỡng 4/255: bản sao nền không khớp tuyệt đối tới từng bit (đo được lệch nhiều nhất 2),

@@ -108,6 +108,29 @@ test('không còn chuỗi tiếng Việt viết cứng — mọi chữ người 
   assert.deepEqual(xau, [], `chuỗi tiếng Việt chưa qua i18n:\n${xau.join('\n')}`);
 });
 
+test('mọi khoá t(\'…\') viết thẳng trong mã đều có trong từ điển', () => {
+  // Khoá ghép động (`ratio.${r.key}`) do các bài khác canh; ở đây bắt khoá gõ sai / khoá bỏ sót
+  // khi đổi tên — trước đây một khoá sai chỉ lộ ra khi người dùng nhìn thấy chính chữ "ch.foo".
+  const thuMuc = ['js', 'js/core', 'js/ui', 'js/targets'];
+  const thieu = [];
+  for (const dir of thuMuc) {
+    for (const f of readdirSync(new URL(`../${dir}/`, import.meta.url), { withFileTypes: true })) {
+      if (!f.isFile() || !f.name.endsWith('.js')) continue;
+      const src = readFileSync(new URL(`../${dir}/${f.name}`, import.meta.url), 'utf8');
+      for (const re of [/\bt\(\s*'([a-zA-Z0-9_.]+)'/g, /\bt\(\s*`([a-zA-Z0-9_.]+)`/g]) {
+        for (const m of src.matchAll(re)) if (!(m[1] in VI)) thieu.push(`${dir}/${f.name}: ${m[1]}`);
+      }
+    }
+  }
+  assert.deepEqual(thieu, [], `khoá không có trong từ điển:\n${thieu.join('\n')}`);
+});
+
+test('mỗi tab ở bước rà soát có tên ở cả hai ngôn ngữ', () => {
+  for (const k of ['BS', 'IS', 'CF', 'CHART', 'PT', 'TM', 'MODEL', 'aria']) {
+    assert.ok(VI[`tab.${k}`] && EN[`tab.${k}`], `thiếu tab.${k}`);
+  }
+});
+
 test('HTML tĩnh: mọi khoá data-t / data-t-attr đều có trong từ điển', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const keys = [...html.matchAll(/data-t="([^"]+)"/g)].map((m) => m[1])
