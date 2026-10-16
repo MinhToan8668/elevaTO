@@ -290,14 +290,36 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   const pills = await page.locator('#review .sum .pc').allInnerTexts();
   assert.deepEqual(pills, ['Năm 2024: ✓ khớp', 'Năm 2025: ✓ khớp'], 'số AI chép khớp mọi dòng tổng');
   await shot(page, '2-ra-soat');
-  // Tab Biểu đồ & chỉ số: vẽ SVG từ số đã trích, có bảng chỉ số
+  // Tab Biểu đồ & chỉ số: vẽ SVG từ số đã trích, có bảng chỉ số chia nhóm kèm mức xếp hạng
   await page.click('#review [role=tab]:has-text("Biểu đồ")');
   await page.waitForSelector('#tabpanel .chart svg.cv rect');
   const titles = await page.locator('#tabpanel .chart figcaption b').allInnerTexts();
-  assert.ok(titles.includes('Doanh thu & lợi nhuận') && titles.includes('Cơ cấu tài sản'), titles.join());
+  assert.ok(titles.includes('Tăng trưởng doanh thu & lợi nhuận') && titles.includes('Cơ cấu tài sản'), titles.join());
   assert.ok((await page.locator('#tabpanel table.ratios tbody tr').count()) >= 8);
   assert.match(await page.locator('#tabpanel table.ratios tbody tr:has-text("Nợ / Vốn chủ") td.num').last().innerText(), /lần$/);
+  assert.ok((await page.locator('#tabpanel table.ratios tbody tr.rgrp').count()) >= 2, 'bảng chỉ số chia nhóm');
+  assert.ok((await page.locator('#tabpanel table.ratios tbody .tag').count()) > 0, 'mỗi chỉ số có mức xếp hạng');
+  // Bộ chọn kỳ / khoảng thời gian: chỉ có BCTC năm nên nút "Quý" phải mờ đi chứ không vẽ bừa.
+  assert.equal(await page.locator('#tabpanel .segx button:has-text("Quý")').isDisabled(), true);
+  await page.click('#tabpanel .segx button:has-text("Năm")');
+  await page.waitForSelector('#tabpanel .chart svg.cv rect');
+  // Bấm chú giải để tắt một đường thì chỉ thẻ đó vẽ lại.
+  const lg = page.locator('#tabpanel figure.chart').first().locator('.legend .lgb').first();
+  await lg.click();
+  await page.waitForSelector('#tabpanel figure.chart .legend .lgb.off');
+  await page.locator('#tabpanel figure.chart .legend .lgb.off').first().click();
   await shot(page, '2b-bieu-do');
+
+  // Tab Phân tích & đề xuất: sức khoẻ tài chính + việc nên làm, tất cả do máy tính
+  await page.click('#review [role=tab]:has-text("Phân tích")');
+  await page.waitForSelector('#tabpanel .health .hbox b');
+  assert.ok((await page.locator('#tabpanel .health .hbox b').innerText()).trim().length > 0, 'có mức sức khoẻ');
+  assert.equal(await page.locator('#tabpanel .hsubs li').count(), 4, 'bốn nhóm điểm thành phần');
+  assert.ok((await page.locator('#tabpanel section.advice ol li').count()) >= 1, 'có ít nhất một việc nên làm');
+  // Nhận định phải điền hết chỗ trống — sót một {var} là người dùng đọc thấy đúng chữ "{v}".
+  const chu = await page.locator('#tabpanel').innerText();
+  assert.doesNotMatch(chu, /\{[a-z]\w*\}/, chu.slice(0, 400));
+  await shot(page, '2c-phan-tich');
   await page.click('#review [role=tab]:has-text("Tình hình tài chính")');
 
   const cell = page.locator('td.v[data-k="BS:111"][data-p="FY2025"]');

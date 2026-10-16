@@ -117,6 +117,19 @@ test('GET trả tên dịch vụ và số bản, OPTIONS trả tiêu đề CORS'
   assert.equal(o.headers.get('access-control-allow-origin'), '*');
 });
 
+test('mở /taive bằng trình duyệt: nói thẳng là sai cách gọi, không trả về tình trạng máy chủ', async () => {
+  // Dán đường dẫn vào thanh địa chỉ là cách thử đầu tiên ai cũng làm. Trước đây nó rơi xuống nhánh
+  // GET chung và trả {ok:true, service:…} — nhìn như đã chạy xong mà thật ra chẳng tải gì.
+  const r = await worker.fetch(new Request(`${API}taive`), env0(), moCtx());
+  assert.equal(r.status, 405);
+  assert.equal(r.headers.get('allow'), 'POST, OPTIONS');
+  const d = await r.json();
+  assert.equal(d.ok, false);
+  assert.equal(d.code, 'bad');
+  assert.match(d.error, /POST/);
+  assert.equal(d.service, undefined, 'không được lẫn sang câu trả lời của GET chung');
+});
+
 test('chưa nối cơ sở dữ liệu thì báo setup; thân quá dài thì từ chối trước khi đọc', async () => {
   const khongDB = await worker.fetch(new Request(API, { method: 'POST', body: '{"action":"ungho"}' }), {}, moCtx());
   assert.equal((await khongDB.json()).code, 'setup');

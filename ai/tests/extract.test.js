@@ -98,10 +98,15 @@ test('kỳ báo cáo: năm → CĐKT & KQKD kỳ trước đều là năm trư�
     prevFlow: { id: 'FY2024', year: 2024, months: 12, endMonth: 12 },
   });
   const q = periodsFromMeta({ ngay_ket_thuc: '2026-06-30', so_thang: 6 });
-  assert.deepEqual(q.cur, { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 });
+  // Sáu tháng kết thúc 30/06 là LŨY KẾ nửa năm, không phải riêng quý 2 — mã kỳ phải khác
+  // mã của ba tháng cùng ngày đó, nếu không hai kỳ đè lên nhau khi nạp cả báo cáo quý và bán niên.
+  assert.deepEqual(q.cur, { id: '6T-2026', year: 2026, months: 6, endMonth: 6 });
   assert.deepEqual(q.prevBS, { id: 'FY2025', year: 2025, months: 12, endMonth: 12 });
-  assert.deepEqual(q.prevFlow, { id: 'Q2-2025', year: 2025, months: 6, endMonth: 6 });
-  assert.equal(periodsFromMeta({ ngay_ket_thuc: '30/06/2026' }).cur.id, 'Q2-2026');
+  assert.deepEqual(q.prevFlow, { id: '6T-2025', year: 2025, months: 6, endMonth: 6 });
+  assert.equal(periodsFromMeta({ ngay_ket_thuc: '30/06/2026' }).cur.id, '6T-2026');
+  // Ba tháng kết thúc 30/09 là riêng quý 3; chín tháng cùng ngày đó là lũy kế — hai mã khác nhau.
+  assert.equal(periodsFromMeta({ ngay_ket_thuc: '30/09/2026', so_thang: 3 }).cur.id, 'Q3-2026');
+  assert.equal(periodsFromMeta({ ngay_ket_thuc: '30/09/2026', so_thang: 9 }).cur.id, '9T-2026');
   assert.equal(periodsFromMeta({}), null);
 });
 
@@ -136,9 +141,9 @@ test('thuyết minh TSCĐ từ AI → dạng model (nguyên giá, hao mòn âm, 
     { ten: 'Nhà cửa, vật kiến trúc', nhom: 'buildings', nguyen_gia_cuoi: '43.296', mua: '10', xdcb: '5', tang_khac: '-', hao_mon_cuoi: '(15.400)', khau_hao: '1.226' },
     { ten: 'Phương tiện vận tải', nhom: 'xe', nguyen_gia_cuoi: '100', hao_mon_cuoi: '(10)', khau_hao: '(2)' },
   ], intangible: [{ ten: 'Quyền sử dụng đất', nhom: 'land', nguyen_gia_cuoi: '58.926', hao_mon_cuoi: '-' }] });
-  assert.deepEqual(out.tangible[0], { cls: 'buildings', name: 'Nhà cửa, vật kiến trúc', cost: 43296e6, accDep: -15400e6, additions: 15e6, depreciation: -1226e6 });
+  assert.deepEqual(out.tangible[0], { cls: 'buildings', name: 'Nhà cửa, vật kiến trúc', cost: 43296e6, accDep: -15400e6, additions: 15e6, depreciation: -1226e6, disposals: 0 });
   assert.equal(out.tangible[1].cls, 'transport');              // "xe" không hợp lệ → đoán theo tên
-  assert.deepEqual(out.intangible[0], { cls: 'land', name: 'Quyền sử dụng đất', cost: 58926e6, accDep: 0, additions: 0, depreciation: 0 });
+  assert.deepEqual(out.intangible[0], { cls: 'land', name: 'Quyền sử dụng đất', cost: 58926e6, accDep: 0, additions: 0, depreciation: 0, disposals: 0 });
 });
 
 test('thuyết minh mảng, vay, vốn chủ, tham số → dạng model', () => {
@@ -146,6 +151,10 @@ test('thuyết minh mảng, vay, vốn chủ, tham số → dạng model', () =>
   assert.deepEqual(seg, [{ name: 'Dược', revenue: 3000, gross: 600 }, { name: 'Nhựa', revenue: 2000, gross: 300 }]);
   const debt = noteToModel('debt', { meta: { don_vi: 'đồng' }, vay_ngan_han: { vay_trong_ky: '100', tra_trong_ky: '(80)' }, vay_dai_han: { vay_trong_ky: '', tra_trong_ky: '5' } });
   assert.deepEqual(debt, { stProceeds: 100, stRepay: 80, ltProceeds: 0, ltRepay: 5 });
+  // Có in số dư đầu / cuối năm thì giữ lại để đối chiếu với mã 321 / 339 (core/reconcile.js).
+  const debt2 = noteToModel('debt', { meta: { don_vi: 'đồng' }, vay_ngan_han: { dau_nam: '50', vay_trong_ky: '100', tra_trong_ky: '(80)', cuoi_nam: '70' } });
+  assert.equal(debt2.stOpen, 50); assert.equal(debt2.stClose, 70);
+  assert.ok(!('ltOpen' in debt2), 'không in thì không mọc khoá rỗng');
   const eq = noteToModel('equity', { meta: { don_vi: 'đồng' }, nam_nay: [
     { ten: 'Tại ngày 01/01/2025', von_gop: '1.000', lncpp: '500' },
     { ten: '- Phát hành cổ phiếu cho người lao động (ESOP)', von_gop: '20' },

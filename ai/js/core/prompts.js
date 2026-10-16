@@ -20,7 +20,8 @@ const META = obj({
   ten_cong_ty: S,
   don_vi: { type: 'STRING', description: 'Chép nguyên văn dòng đơn vị tính, ví dụ "Đơn vị tính: VND"' },
   ngay_ket_thuc: { type: 'STRING', description: 'Ngày của cột kỳ này, dạng YYYY-MM-DD' },
-  so_thang: { type: 'INTEGER', description: 'Số tháng của kỳ lấy số (năm = 12, bán niên lũy kế = 6)' },
+  so_thang: { type: 'INTEGER', description: 'Số tháng CỘT KỲ NÀY bao trùm: năm = 12, lũy kế 9 tháng = 9, bán niên = 6, lũy kế quý 1 = 3, cột quý lẻ = 3' },
+  so_thang_p: { type: 'INTEGER', description: 'Số tháng cột kỳ trước bao trùm. Cùng kỳ năm trước thì bằng so_thang; cột "Số đầu năm" của CĐKT thì bỏ hẳn trường này' },
   // KHÔNG thêm '' vào enum: Gemini trả 400 "enum: cannot be empty" và bỏ cả yêu cầu.
   // Trường không bắt buộc, không rõ thì để AI bỏ hẳn trường này.
   thong_tu: { type: 'STRING', enum: ['200', '99'], description: 'Thông tư ghi ở góc mẫu biểu: 200/2014 → "200", 99/2025 → "99"; không thấy ghi thì bỏ trường này' },
@@ -38,7 +39,8 @@ const ITEM = obj({
 
 export const STATEMENT_SCHEMA = obj({
   meta: { ...META, properties: { ...META.properties,
-    phuong_phap: { type: 'STRING', enum: ['gian_tiep', 'truc_tiep'], description: 'Chỉ cho Lưu chuyển tiền tệ; không rõ thì bỏ trường này' } } },
+    phuong_phap: { type: 'STRING', enum: ['gian_tiep', 'truc_tiep'], description: 'Chỉ cho Lưu chuyển tiền tệ; không rõ thì bỏ trường này' },
+    cot_luy_ke: { type: 'BOOLEAN', description: 'Chỉ cho KQKD và LCTT: true = cột đã lấy là cột LŨY KẾ TỪ ĐẦU NĂM, false = cột quý lẻ (chỉ riêng quý đó). Báo cáo năm thì true' } } },
   items: arr(ITEM),
 }, ['meta', 'items']);
 
@@ -47,10 +49,26 @@ const TITLE = {
   IS: 'BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH',
   CF: 'BÁO CÁO LƯU CHUYỂN TIỀN TỆ',
 };
+// Chọn cột là chỗ sai nhiều nhất khi đưa BCTC QUÝ vào: mẫu B 02a-DN in BỐN cột số — hai cột "Quý
+// này / Quý trước" và hai cột "Lũy kế từ đầu năm đến cuối quý này". Lấy nhầm cột quý lẻ thì doanh thu
+// 9 tháng hoá ra chỉ bằng một quý, mà CĐKT vẫn là số tại ngày cuối quý → mọi chỉ số lệch 3–4 lần.
+// Nên: luôn ưu tiên cột LŨY KẾ, và BẮT BUỘC ghi lại đã lấy cột nào (cot_luy_ke) + bao nhiêu tháng
+// (so_thang) để code tự biết kỳ này so được với kỳ nào (xem periodsFromMeta trong extract.js).
+const LUY_KE = [
+  'Báo cáo QUÝ hoặc BÁN NIÊN (mẫu B 02a-DN) thường in BỐN cột số, xếp thành hai cặp:',
+  '  · cặp "Quý này" / "Quý … năm trước" — chỉ riêng ba tháng của quý đó;',
+  '  · cặp "Lũy kế từ đầu năm đến cuối quý này" (năm nay) / (năm trước) — từ 01/01 tới cuối quý.',
+  'BẮT BUỘC lấy CẶP LŨY KẾ: v = lũy kế năm nay, p = lũy kế cùng kỳ năm trước, và ghi cot_luy_ke = true.',
+  'CHỈ khi bảng hoàn toàn KHÔNG có cột lũy kế mới lấy cặp cột quý lẻ, và khi đó ghi cot_luy_ke = false.',
+  'Tiêu đề cột đã lấy chép vào cot_v / cot_p để người đọc kiểm lại được.',
+  'so_thang = số tháng cột v bao trùm (quý 1 = 3, bán niên = 6, 9 tháng = 9, cả năm = 12; cột quý lẻ = 3).',
+  'so_thang_p = số tháng cột p bao trùm (cùng kỳ năm trước nên thường bằng so_thang).',
+].join('\n');
 const COLS = {
-  BS: 'v = cột "Số cuối kỳ/cuối năm", p = cột "Số đầu năm".',
-  IS: 'Báo cáo năm: v = năm nay, p = năm trước. Báo cáo quý/bán niên có cả cột "quý này" và cột "lũy kế từ đầu năm": LẤY CỘT LŨY KẾ (v = lũy kế năm nay, p = lũy kế năm trước) và ghi so_thang = số tháng lũy kế.',
-  CF: 'v = kỳ này (lũy kế từ đầu năm), p = cùng kỳ năm trước. Ghi phuong_phap: "gian_tiep" nếu mục I bắt đầu bằng "Lợi nhuận trước thuế", "truc_tiep" nếu bắt đầu bằng "Tiền thu từ bán hàng".',
+  BS: 'v = cột "Số cuối kỳ/cuối năm", p = cột "Số đầu năm" (số tại ngày 31/12 năm trước, KHÔNG phải cùng kỳ năm trước). Bỏ trường so_thang_p.',
+  IS: `Báo cáo NĂM: v = năm nay, p = năm trước, cot_luy_ke = true, so_thang = 12.\n${LUY_KE}`,
+  CF: `Báo cáo NĂM: v = năm nay, p = năm trước, cot_luy_ke = true, so_thang = 12.\n${LUY_KE}\n`
+    + 'Ghi phuong_phap: "gian_tiep" nếu mục I bắt đầu bằng "Lợi nhuận trước thuế", "truc_tiep" nếu bắt đầu bằng "Tiền thu từ bán hàng".',
 };
 // Chia đôi CĐKT khi chạy quá 60 giây / quá dài.
 const PART = {
@@ -63,7 +81,7 @@ const PART = {
 // lúc đó phải tả cấu trúc ngay trong câu lệnh, nếu không AI không biết đặt tên trường thế nào.
 const MO_TA_KHUON = [
   'Trả về đúng một đối tượng JSON, không kèm lời nào khác, theo dạng:',
-  '{"meta":{"ten_cong_ty":"","don_vi":"","ngay_ket_thuc":"YYYY-MM-DD","so_thang":12,"thong_tu":"200"|"99"|"","hop_nhat":true,"cot_v":"","cot_p":""},',
+  '{"meta":{"ten_cong_ty":"","don_vi":"","ngay_ket_thuc":"YYYY-MM-DD","so_thang":12,"so_thang_p":12,"cot_luy_ke":true,"thong_tu":"200"|"99"|"","hop_nhat":true,"cot_v":"","cot_p":""},',
   ' "items":[{"c":"mã số","n":"tên chỉ tiêu","v":"số kỳ này","p":"số kỳ trước"}]}',
   'Mọi số để ở dạng chuỗi, chép nguyên văn như in.',
 ].join('\n');
@@ -99,6 +117,12 @@ const FA_ROW = obj({
 // Cột/dòng tổng của bảng thuyết minh BCTC Việt Nam hay đặt tên này — lấy nhầm là nhân đôi số.
 const BO_COT_TONG = 'KHÔNG lấy cột hay dòng tổng: "Cộng", "Tổng", "Tổng cộng", "Loại trừ", "Điều chỉnh".';
 const DON_VI_BANG = 'meta.don_vi: đơn vị tính của bảng — chép dòng "Đơn vị tính:…" nếu có, nếu không thì lấy đơn vị ghi ở ĐẦU CỘT (ví dụ "VND", "Triệu VND").';
+// Thuyết minh của BCTC GIỮA NIÊN ĐỘ cũng in hai khối kỳ như các bảng chính. Lấy nhầm khối là số thuyết
+// minh không khớp với KQKD/CĐKT đã trích, và phần đối chiếu ngược sẽ báo lệch (xem core/reconcile.js).
+const KY_NAY = 'Báo cáo giữa niên độ (quý, bán niên): bảng in khối "kỳ này / lũy kế từ đầu năm" và khối "cùng kỳ năm trước" — LẤY KHỐI LŨY KẾ TỪ ĐẦU NĂM CỦA NĂM NAY, đúng kỳ với các bảng chính.';
+// Số thuyết minh phải CỘNG LẠI ĐÚNG BẰNG dòng trên bảng chính. Nhắc thẳng trong câu lệnh vì đây là
+// chỗ AI hay bỏ sót dòng cuối trang hoặc lấy lẫn cả dòng tổng.
+const CONG_DU = 'Chép ĐỦ mọi dòng/cột của bảng, kể cả dòng cuối trang và dòng nhỏ: tổng các số bạn chép phải đúng bằng dòng tổng in trên bảng (nhưng KHÔNG chép chính dòng tổng đó).';
 
 // Một DÒNG của bảng biến động vốn chủ: nhãn dòng + số ở từng cột thành phần vốn.
 // Chép theo dòng (không ép AI gộp sẵn) vì một dòng model hay phải cộng nhiều dòng của bảng:
@@ -123,7 +147,10 @@ export const NOTE_TASKS = {
       '  khau_hao = khấu hao trích trong năm — nhiều báo cáo ghi dòng này là "Tăng trong năm" NGAY TRONG KHỐI HAO MÒN, đừng nhầm với "Tăng trong năm" của khối nguyên giá.',
       'Hao mòn lũy kế thường in số DƯƠNG trong bảng này; cứ chép nguyên văn như in.',
       'Bỏ qua khối "Giá trị còn lại" (nó bằng nguyên giá trừ hao mòn).',
-      `TSCĐ vô hình đưa vào intangible, hữu hình vào tangible. ${DON_VI_BANG}`,
+      `TSCĐ vô hình đưa vào intangible, hữu hình vào tangible. ${CONG_DU} ${KY_NAY}`,
+      'Kiểm lại trước khi trả: với MỖI nhóm, nguyen_gia_dau + mua + xdcb + tang_khac − thanh_ly − giam_khac phải bằng nguyen_gia_cuoi,',
+      'và hao_mon_dau + khau_hao (− hao mòn của phần thanh lý) phải bằng hao_mon_cuoi. Lệch nhiều thì xem lại đã đọc đúng dòng/cột chưa.',
+      DON_VI_BANG,
     ].join('\n'),
   },
   segments: {
@@ -138,16 +165,24 @@ export const NOTE_TASKS = {
       'Bảng thường có cả NĂM NAY và NĂM TRƯỚC (hai khối dòng "Năm nay" / "Năm trước", hoặc hai nhóm cột):',
       'lấy luôn số năm trước vào doanh_thu_truoc / gia_von_truoc / loi_nhuan_gop_truoc. Không có năm trước thì để "".',
       `${BO_COT_TONG} Bỏ cả báo cáo bộ phận theo KHU VỰC ĐỊA LÝ, chỉ lấy theo lĩnh vực kinh doanh.`,
+      `${CONG_DU} Tổng doanh_thu các bộ phận phải bằng doanh thu thuần trên KQKD (mã 10), tổng loi_nhuan_gop phải bằng lợi nhuận gộp (mã 20).`,
+      KY_NAY,
       `meta.nguon: tên thuyết minh đã dùng. ${DON_VI_BANG}`,
     ].join('\n'),
   },
   debt: {
     label: 'Vay: tiền vay / trả nợ trong năm',
-    schema: obj({ meta: obj({ don_vi: S }), vay_ngan_han: obj({ dau_nam: S, vay_trong_ky: S, tra_trong_ky: S, cuoi_nam: S }), vay_dai_han: obj({ dau_nam: S, vay_trong_ky: S, tra_trong_ky: S, cuoi_nam: S }) }, ['meta']),
+    schema: obj({ meta: obj({ don_vi: S }),
+      vay_ngan_han: obj({ dau_nam: S, vay_trong_ky: S, tra_trong_ky: S, cuoi_nam: S }, ['dau_nam', 'cuoi_nam']),
+      vay_dai_han: obj({ dau_nam: S, vay_trong_ky: S, tra_trong_ky: S, cuoi_nam: S }, ['dau_nam', 'cuoi_nam']) }, ['meta']),
     prompt: [
       'Đọc thuyết minh VAY VÀ NỢ THUÊ TÀI CHÍNH (ngắn hạn và dài hạn), bảng biến động trong NĂM NAY.',
-      'vay_trong_ky = cột/dòng "Tăng" (tiền vay mới), tra_trong_ky = "Giảm" (trả nợ), kèm số đầu năm, cuối năm. Lấy dòng TỔNG của từng loại (ngắn hạn, dài hạn).',
-      `Phần nợ dài hạn đến hạn trả chuyển sang ngắn hạn KHÔNG tính là vay mới. ${DON_VI_BANG}`,
+      'vay_trong_ky = cột/dòng "Tăng" (tiền vay mới), tra_trong_ky = "Giảm" (trả nợ).',
+      'dau_nam = số dư đầu năm, cuoi_nam = số dư cuối kỳ — lấy CẢ HAI, đừng để trống: số dư cuối kỳ phải khớp dòng',
+      '"Vay và nợ thuê tài chính" trên CĐKT, nhờ đó kiểm được là đã đọc đúng bảng.',
+      'Lấy dòng TỔNG của từng loại (ngắn hạn, dài hạn), đừng cộng tay từng chủ nợ.',
+      'Kiểm lại: dau_nam + vay_trong_ky − tra_trong_ky phải bằng cuoi_nam.',
+      `Phần nợ dài hạn đến hạn trả chuyển sang ngắn hạn KHÔNG tính là vay mới. ${KY_NAY} ${DON_VI_BANG}`,
     ].join('\n'),
   },
   equity: {
@@ -172,14 +207,14 @@ export const NOTE_TASKS = {
       'trước vào nam_truoc. Chỉ in một năm thì bỏ hẳn nam_truoc.',
       'Chép các dòng NGHIỆP VỤ CHI TIẾT (thường có gạch đầu dòng). Dòng cộng của khối ("Tăng trong năm",',
       '"Giảm trong năm") chỉ chép khi bảng KHÔNG tách chi tiết bên dưới nó.',
-      `Bỏ dòng số dư đầu năm / cuối năm và cột "Cộng". ${BO_COT_TONG}`,
+      `Bỏ dòng số dư đầu năm / cuối năm và cột "Cộng". ${BO_COT_TONG} ${CONG_DU}`,
       DON_VI_BANG,
     ].join('\n'),
   },
   goodwill: {
     label: 'Lợi thế thương mại',
     schema: obj({ meta: obj({ don_vi: S }), nguyen_gia: S, phan_bo_luy_ke: S, tang: S, phan_bo_trong_ky: S }, ['meta']),
-    prompt: `Đọc thuyết minh LỢI THẾ THƯƠNG MẠI năm nay: nguyen_gia (nguyên giá cuối năm), phan_bo_luy_ke (phân bổ lũy kế cuối năm), tang (tăng trong năm), phan_bo_trong_ky (phân bổ trong năm). ${DON_VI_BANG}`,
+    prompt: `Đọc thuyết minh LỢI THẾ THƯƠNG MẠI năm nay: nguyen_gia (nguyên giá cuối năm), phan_bo_luy_ke (phân bổ lũy kế cuối năm), tang (tăng trong năm), phan_bo_trong_ky (phân bổ trong năm). ${KY_NAY} ${DON_VI_BANG}`,
   },
   params: {
     label: 'Số cổ phiếu lưu hành, thuế suất TNDN',

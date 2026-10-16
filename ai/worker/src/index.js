@@ -49,6 +49,10 @@ export default {
     // thân là form chứ không phải JSON, trả về luồng nhị phân chứ không phải {ok,data},
     // và không đụng tới D1 nên Worker chưa nối cơ sở dữ liệu vẫn chạy được.
     if (url.pathname === '/taive' && req.method === 'POST') return taiThang(req, env);
+    // Mở /taive bằng trình duyệt (hay bị dán vào thanh địa chỉ để thử) thì nói thẳng là sai cách
+    // gọi, chứ không rơi xuống nhánh GET bên dưới mà trả về tình trạng máy chủ — nhìn như đã chạy
+    // xong mà thật ra chẳng tải gì.
+    if (url.pathname === '/taive') return json(loi('bad', 'Tải thẳng chỉ nhận POST kèm vé đã ký (xem README của worker)'), 405, { allow: 'POST, OPTIONS' });
     // Nội dung trang link-in-bio: đọc công khai, không nhớ đệm — chủ trang bấm Đăng là đổi ngay.
     if (url.pathname === '/links' && req.method === 'GET') {
       if (!env.DB) return json(loi('setup', 'Máy chủ chưa nối cơ sở dữ liệu D1 (xem README của worker)'));

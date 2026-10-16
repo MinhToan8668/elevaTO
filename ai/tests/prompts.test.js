@@ -36,7 +36,12 @@ test('chia đôi CĐKT: phần tài sản / nguồn vốn có chỉ dẫn riêng
   assert.match(statementTask('BS', 'assets').prompt, /CHỈ lấy phần TÀI SẢN/);
   assert.match(statementTask('BS', 'sources').prompt, /CHỈ lấy phần NGUỒN VỐN/);
   assert.doesNotMatch(statementTask('BS').prompt, /CHỈ lấy/);
-  assert.match(statementTask('IS').prompt, /LẤY CỘT LŨY KẾ/);
+  // Mẫu B 02a-DN in bốn cột (riêng quý / lũy kế × năm nay / năm trước). Chỉ dẫn phải nói rõ
+  // cặp nào mới lấy, kèm cờ cot_luy_ke để lúc nạp biết số đang là lũy kế hay riêng quý.
+  const is = statementTask('IS').prompt;
+  assert.match(is, /BẮT BUỘC lấy CẶP LŨY KẾ/);
+  assert.match(is, /cot_luy_ke = false/);
+  assert.match(is, /so_thang_p/);
   assert.match(statementTask('CF').prompt, /truc_tiep/);
 });
 

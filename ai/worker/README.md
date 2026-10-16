@@ -192,7 +192,9 @@ Xong. Từ đây sửa gì trong `ai/worker/` chỉ cần push.
 | Bot không nhắn gì | mở địa chỉ máy chủ xem `cai.bot_ai` / `cai.bot_el`: `false` = thiếu `TG_TOKEN` / `TG_SECRET` / `TG_ADMIN`, hoặc quên bấm **Deploy** sau khi thêm secret. `true` mà vẫn im = chưa bấm **Start** với bot (bấm xong, mở lại trang là lời chào tới) |
 | Quên mật khẩu không nhận được thư | chưa xác minh người gửi trên Brevo (bước 6.2) |
 
-Xem nhật ký máy chủ: **Workers & Pages → elevato → Logs → Begin log stream**.
+Xem nhật ký máy chủ: **Workers & Pages → elevato → Logs → Begin log stream**. `wrangler.toml` đã bật
+`[observability]` nên nhật ký được **giữ lại** (xem được cả lỗi đã xảy ra trước lúc mở trang); không bật
+thì lỗi chỉ hiện trong lúc đang mở log stream, sau đó mất hẳn. Xem từ dòng lệnh: `npx wrangler tail`.
 
 ## Worker này phục vụ những gì
 
@@ -205,7 +207,9 @@ Xem nhật ký máy chủ: **Workers & Pages → elevato → Logs → Begin log 
 Trang upload (`/upload/`) vẫn chạy trên Apps Script ở **chiều lên**: nó đẩy file lên Google Drive
 bằng quyền sẵn có của Apps Script, bê sang đây phải dựng OAuth service account — rắc rối hơn hẳn
 phần còn lại. Riêng **chiều tải xuống** thì Worker lo: `POST /taive` (`src/taive.js`) kéo các phần
-từ Telegram nối thành một luồng về máy, nên file không phải đi vòng qua Drive nữa.
+từ Telegram nối thành một luồng về máy, nên file không phải đi vòng qua Drive nữa. Đường này **chỉ
+nhận POST** kèm vé đã ký; mở bằng trình duyệt thì trả `405` kèm câu nói rõ lý do, chứ không rơi vào
+nhánh `GET` chung rồi trả về tình trạng máy chủ — nhìn như xong mà thật ra chẳng tải gì.
 
 ### Hai bot Telegram
 
