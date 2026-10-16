@@ -177,6 +177,13 @@ function call(action, data) {
   return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                       body: JSON.stringify(data) })
     .then(function (r) {
+      if (r.status === 404) {
+        // /exec không còn: bản triển khai Apps Script bị xoá/lưu trữ, hoặc tạo bản mới nên đổi URL.
+        var e404 = new Error('Máy chủ trả lỗi 404 — địa chỉ Apps Script trang đang nhớ không còn hoạt động ' +
+          '(bản triển khai đã bị xoá hoặc đổi URL). Chạy lại hàm caiDat trong Apps Script rồi mở link mới bot gửi');
+        e404.code = 'key';   // lỗi cố định: không thử lại, không nhắc "bấm Tải lên lần nữa"
+        throw e404;
+      }
       if (!r.ok) throw new Error('Máy chủ trả lỗi ' + r.status);
       return r.json().catch(function () { throw new Error('Máy chủ trả về dữ liệu lạ — bản triển khai đã cập nhật chưa?'); });
     })
