@@ -90,6 +90,13 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   phân tích AI FinLens, chuyển sang mã chỉ tiêu TT99 và sang bộ dữ liệu nhiều kỳ của tool.
   Ngưỡng là mức chung của doanh nghiệp Việt Nam (không theo ngành) và **cố định trong mã**: máy tính, máy xếp
   hạng, AI không viết chữ nào — nên cùng một kết luận đọc tiếng Việt hay tiếng Anh đều như nhau.
+- **AI nhận định** (cuối tab *Phân tích & đề xuất*, tốn 1 lượt AI): bấm nút là máy gửi đúng bảng số đã tính
+  (các dòng chính theo tỷ đồng, 22 chỉ số kèm mức xếp hạng, dấu hiệu bất thường, sức khoẻ, việc gợi ý) cho
+  Gemini để viết lời — tổng quan, điểm mạnh / yếu, xu hướng qua các kỳ (đúng các biểu đồ), rủi ro theo mức,
+  đề xuất, 5–8 câu hỏi cần làm rõ với doanh nghiệp và kết luận. AI **không xem BCTC, không tự tính**; câu lệnh
+  bắt mỗi nhận xét dẫn đúng con số và kỳ, nên đối chiếu được với bảng số bên trên. Viết bằng ngôn ngữ đang
+  chọn; sửa ô hay thêm file sau khi AI viết thì nhận định được đánh dấu lỗi thời để bấm "Viết lại"; có nút
+  sao chép ra văn bản thuần để dán vào tờ trình.
 - **Đối chiếu ngược thuyết minh** (hiện ở cả tab *Thuyết minh* và tab *Phân tích*): thuyết minh là bảng ma trận
   in nhỏ, hay kéo dài sang trang sau — chỗ AI đọc sai nhiều nhất mà không có gì tự phát hiện. **19 chỗ kiểm
   tra** cộng số thuyết minh rồi so với đúng dòng trên ba bảng chính: nguyên giá / hao mòn / giá trị còn lại

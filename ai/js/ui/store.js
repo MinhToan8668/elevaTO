@@ -20,6 +20,7 @@ export function initialState() {
     segmentMap: {},      // tên mảng trong thuyết minh → ô 0..4 của model
     segmentNames: ['', '', '', '', ''],
     running: false,
+    aiReview: null,      // AI nhận định: { hash, lang, result, at } — hash theo bộ số đã phân tích, số đổi thì nhận định cũ bị đánh dấu lỗi thời
   };
 }
 

@@ -90,3 +90,82 @@ export function renderReconcile(ds, unit) {
       h('thead', {}, h('tr', {}, h('th', {}, t('src.period')), h('th', {}, t('rc.item')), h('th', { class: 'num' }, t('rc.stmt')), h('th', { class: 'num' }, t('rc.note')), h('th', { class: 'num' }, t('rc.diff')))),
       h('tbody', {}, rows))));
 }
+
+// ─── AI nhận định ──────────────────────────────────────────
+// Lượt AI thứ hai, chạy khi người dùng bấm: máy gửi đúng bảng số đã tính (core/aireview.js) cho AI và
+// AI viết lời. Kết quả giữ trong store theo băm của số liệu: số đổi (sửa ô, thêm file) thì nhận định cũ
+// vẫn hiện nhưng được đánh dấu "lỗi thời" để bấm viết lại.
+
+import { buildAiReviewInput, aiReviewPrompt, sanitizeAiReview, aiReviewText, AI_REVIEW_SCHEMA, AI_REVIEW_SYSTEM } from '../core/aireview.js';
+import { toast } from './dom.js';
+import { isFatal } from '../ai.js';
+
+const aiUi = { running: false, error: '' };
+
+/** @returns khối "AI nhận định" ở cuối tab Phân tích & đề xuất. */
+export function renderAiReview(store, ctx) {
+  const s = store.get();
+  const { ds } = store.data();
+  const built = buildAiReviewInput(ds, { company: ds.company });
+  if (!built) return null;
+  const cur = s.aiReview;
+  const stale = !!(cur && cur.hash !== built.hash);
+  const run = async () => {
+    if (aiUi.running) return;
+    if (!ctx.canDo(t('ai.need'), run)) return;
+    const client = ctx.client((sec, msg) => toast(t('run.retry', { msg: msg || t('run.busy'), sec }), sec * 1000));
+    if (!client) return toast(t('run.needLogin'));
+    aiUi.running = true; aiUi.error = '';
+    store.set({ aiReview: cur ? { ...cur } : null });           // vẽ lại để hiện trạng thái đang chạy
+    try {
+      const raw = await client.json({ parts: [{ text: aiReviewPrompt(built.input) }], schema: AI_REVIEW_SCHEMA, system: AI_REVIEW_SYSTEM, maxOutputTokens: 8192 });
+      const result = sanitizeAiReview(raw);
+      if (!result.tong_quan && !result.ket_luan) throw new Error(t('ai.empty'));
+      store.set({ aiReview: { hash: built.hash, lang: built.input.language, result, at: new Date().toISOString() } });
+    } catch (e) {
+      aiUi.error = e.message;
+      if (isFatal(e)) toast(e.message, 8000);
+      store.set({ aiReview: cur ? { ...cur } : null });
+    } finally {
+      aiUi.running = false;
+      ctx.refreshQuota?.();
+    }
+  };
+  const btn = h('button', { class: 'btn', type: 'button', disabled: aiUi.running, onclick: run },
+    aiUi.running ? t('ai.running') : cur ? t('ai.again') : t('ai.btn'));
+  const head = h('div', { class: 'ai-head' },
+    h('h3', {}, t('ai.h')),
+    h('p', { class: 'priv', style: { margin: 0 } }, t('ai.lead')),
+    h('div', { class: 'bar' }, btn, h('span', { class: 'tag' }, t('ai.cost')),
+      cur ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => {
+        const text = aiReviewText(cur.result, tieuDe());
+        navigator.clipboard?.writeText(text).then(() => toast(t('ai.copied'))).catch(() => toast(t('ai.copyFail')));
+      } }, t('ai.copy')) : null));
+  const body = [];
+  if (aiUi.error) body.push(h('p', { class: 'msg err' }, aiUi.error));
+  if (cur) {
+    if (stale) body.push(h('p', { class: 'msg warn' }, t('ai.stale')));
+    body.push(renderAiResult(cur.result));
+    body.push(h('p', { class: 'priv' }, t('ai.note', { at: new Date(cur.at).toLocaleString() })));
+  }
+  return h('section', { class: 'airev' }, head, body);
+}
+
+const tieuDe = () => ({ title: t('ai.h'), tong_quan: t('ai.sec.tong_quan'), diem_manh: t('ai.sec.diem_manh'), diem_yeu: t('ai.sec.diem_yeu'),
+  xu_huong: t('ai.sec.xu_huong'), rui_ro: t('ai.sec.rui_ro'), de_xuat: t('ai.sec.de_xuat'), cau_hoi: t('ai.sec.cau_hoi'), ket_luan: t('ai.sec.ket_luan'),
+  muc: { cao: t('sev.cao'), tb: t('sev.tb'), thap: t('sev.thap') } });
+
+function renderAiResult(r) {
+  const list = (key, items) => (items.length ? h('div', { class: 'ai-sec' }, h('h4', {}, t(`ai.sec.${key}`)), h('ul', {}, items.map((x) => h('li', {}, x)))) : null);
+  return h('div', { class: 'ai-body' },
+    r.tong_quan ? h('div', { class: 'ai-sec' }, h('h4', {}, t('ai.sec.tong_quan')), h('p', {}, r.tong_quan)) : null,
+    h('div', { class: 'ai-grid' }, list('diem_manh', r.diem_manh), list('diem_yeu', r.diem_yeu)),
+    list('xu_huong', r.xu_huong),
+    r.rui_ro.length ? h('div', { class: 'ai-sec' }, h('h4', {}, t('ai.sec.rui_ro')),
+      h('ul', { class: 'ai-risks' }, r.rui_ro.map((x) => h('li', { class: `sv-${x.muc}` },
+        h('span', { class: `tag ${x.muc === 'cao' ? 'red' : x.muc === 'tb' ? 'gold' : ''}` }, t(`sev.${x.muc}`)),
+        x.tieu_de ? h('b', {}, x.tieu_de, ' — ') : null, h('span', {}, x.noi_dung))))) : null,
+    list('de_xuat', r.de_xuat),
+    list('cau_hoi', r.cau_hoi),
+    r.ket_luan ? h('div', { class: 'ai-sec ai-end' }, h('h4', {}, t('ai.sec.ket_luan')), h('p', {}, r.ket_luan)) : null);
+}
