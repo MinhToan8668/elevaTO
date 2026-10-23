@@ -60,3 +60,11 @@ test('kỳ lưu trữ 1–12 tháng hợp lệ (quý / tháng lẻ) vẫn đư�
   file.data.sources[1].period = { id: 'Q1-2026', year: 2026, months: 2, endMonth: 3 };
   assert.equal(parseSession(JSON.stringify(file)).sources.length, 2);
 });
+
+test('bối cảnh doanh nghiệp (AI nhận định) đi cùng phiên: giữ 5 ô đúng tên, bỏ khoá lạ, cắt 2000 ký tự, trống thì không mọc khoá', () => {
+  const s = { sources: [], edits: [], ticks: null, unit: 1e6, segmentMap: {}, segmentNames: ['', '', '', '', ''],
+    aiContext: { nganh: 'Phân phối xe tải', su_kien: 'x'.repeat(2500), la: 'bỏ', luu_y: '' } };
+  const back = parseSession(serializeSession(s));
+  assert.deepEqual(back.aiContext, { nganh: 'Phân phối xe tải', su_kien: 'x'.repeat(2000) });
+  assert.deepEqual(parseSession(serializeSession({ ...s, aiContext: undefined })).aiContext, {});
+});

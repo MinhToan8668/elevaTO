@@ -143,3 +143,23 @@ test('nhận diện mẫu: TT99 có mã 280, TT200 tổng tài sản ở 270', (
   assert.equal(detectRegime({ 'IS:27': 5, 'BS:420': 1 }), 'TT99');
   assert.equal(detectRegime({}), null);
 });
+
+test('[v2026-10] quy ước dấu quyết bằng cộng dồn, không nhìn dấu từng dòng', () => {
+  const fixes = [];
+  // 10 − 11 = 20 → báo cáo in chi phí dương; dòng 25 âm là AI tự thêm dấu → lấy trị tuyệt đối
+  const out = normalizeSigns({ 'IS:10': 2000, 'IS:11': 1900, 'IS:20': 100, 'IS:25': -20 }, fixes, { unit: 1 });
+  assert.equal(out['IS:11'], 1900); assert.equal(out['IS:25'], 20);
+  assert.deepEqual(fixes.map((f) => f.kind), ['IS']);
+  // 10 + 11 = 20 → báo cáo in trong ngoặc; dòng thuế hoãn lại in DƯƠNG là khoản được hoàn → giữ âm
+  const out2 = normalizeSigns({ 'IS:10': 2000, 'IS:11': -1900, 'IS:20': 100, 'IS:52': 7 }, null, { unit: 1 });
+  assert.equal(out2['IS:11'], 1900);
+  assert.equal(out2['IS:52'], -7);
+  // LCTT: tiền chi in dương, khối không cộng ra tổng → đổi âm đúng dòng
+  const M = 1e6;   // số cỡ triệu đồng: lệch dưới 1.000 đồng được coi là làm tròn, không phải sai dấu
+  const cf = normalizeSigns({ 'CF:21': 40 * M, 'CF:22': 3 * M, 'CF:27': 2 * M, 'CF:30': -35 * M, 'CF:14': 9 * M, 'CF:15': 11 * M, 'CF:08': 100 * M, 'CF:20': 80 * M }, fixes, { unit: 1 });
+  assert.deepEqual([cf['CF:21'], cf['CF:22'], cf['CF:14'], cf['CF:15']], [-40 * M, 3 * M, -9 * M, -11 * M]);
+  assert.deepEqual(fixes.filter((f) => f.kind === 'CF').map((f) => f.codes.sort()), [['14', '15', '21']]);
+  // Khối đã khớp sẵn thì không đụng vào
+  const ok = normalizeSigns({ 'CF:21': -40 * M, 'CF:22': 3 * M, 'CF:30': -37 * M }, null, { unit: 1 });
+  assert.equal(ok['CF:21'], -40 * M);
+});

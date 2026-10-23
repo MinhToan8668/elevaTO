@@ -41,7 +41,7 @@ test('bình thường: 3 bảng + thuyết minh đã chọn; KQKD theo mẫu TT2
   assert.equal(r.company, 'CTCP ABC');
   assert.deepEqual(r.meta, { ngay_ket_thuc: '2025-12-31', so_thang: 12 });
   assert.deepEqual(r.statements.BS.cur, { 'BS:111': 10, 'BS:280': 10, 'BS:420': 3 });   // TT200 → TT99
-  assert.deepEqual(r.statements.IS.cur, { 'IS:10': 100, 'IS:22': 5 });                 // 21 (TT200) → 22
+  assert.deepEqual(r.statements.IS.cur, { 'IS:01': 100, 'IS:10': 100, 'IS:22': 5 });   // 21 (TT200) → 22; 01 suy từ 10 vì báo cáo không in dòng 01
   assert.deepEqual(r.notes.debt, { stProceeds: 100, stRepay: 80, ltProceeds: 0, ltRepay: 0 });
   assert.deepEqual(r.notes.segments, [{ name: 'A', revenue: 100, gross: 20 }]);
   assert.ok(r.warnings.some((w) => /Tài sản cố định/.test(w)), 'nhóm được chọn mà không có trang → cảnh báo');

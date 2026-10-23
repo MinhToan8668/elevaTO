@@ -49,9 +49,11 @@ export function createClient({ api, token, onWait, onAuth } = {}) {
     /**
      * @param parts   [{ text } | { inlineData: { mimeType, data } }]
      * @param schema  khuôn JSON (responseSchema)
+     * @param system  câu lệnh hệ thống riêng (mặc định: SYSTEM "chỉ chép số" của phần trích xuất;
+     *                phần AI nhận định gửi câu lệnh khác vì ở đó AI phải VIẾT chứ không chép)
      * @returns       đối tượng JSON AI trả
      */
-    async json({ parts, schema, maxOutputTokens = 32768 }) {
+    async json({ parts, schema, maxOutputTokens = 32768, system = SYSTEM }) {
       let busy = 0;
       for (;;) {
         const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens };
@@ -61,7 +63,7 @@ export function createClient({ api, token, onWait, onAuth } = {}) {
           d = await call({
             action: 'generate',
             contents: [{ role: 'user', parts }],
-            systemInstruction: { parts: [{ text: SYSTEM }] },
+            systemInstruction: { parts: [{ text: system }] },
             generationConfig,
           });
         } catch (e) {

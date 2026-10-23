@@ -37,6 +37,16 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 - **AI chỉ chép số**, không tự tính. Đổi đơn vị (đồng / nghìn / triệu), dấu âm, quy đổi mã và
   **kiểm tra cộng dồn** do máy làm: tổng tài sản = nguồn vốn, tiền cuối kỳ LCTT = tiền trên CĐKT, LNTT
   trên LCTT = trên KQKD, từng dòng tổng = cộng các dòng con. Ô lệch tô đỏ, bấm vào ô để sửa.
+- **Máy tự hiểu quy ước trình bày của từng công ty** (logic lấy từ bản nâng cấp AI FinLens v3.2): AI chép đúng dấu
+  như in, còn quy ước thì máy suy bằng cộng dồn — KQKD in chi phí trong ngoặc hay in dương quyết bằng
+  "doanh thu thuần − giá vốn = lãi gộp"; thuế TNDN in ngược dấu thử cả hai chiều với "LNTT − thuế = LNST";
+  dự phòng / hao mòn in dương quy về âm; dòng tiền chi của LCTT in dương mà khối không cộng ra tổng thì
+  đổi âm đúng dòng. **Tên gọi khác mẫu nhưng cùng bản chất** ("Phải thu khách hàng", "Giá vốn dịch vụ cung
+  cấp", "Lỗ khác", "Tiền thu từ đi vay"…) có bảng đồng nghĩa hơn 150 tên và bộ đồng nhất viết tắt (TSCĐ,
+  BĐSĐT, HĐKD…). **Mã in lệch mẫu** (ví dụ BCTC THILOGI 2024 in "Tài sản cố định vô hình" ở mã 221, "hữu
+  hình" ở 227) được xếp lại theo tên, kéo theo cả dòng nguyên giá / hao mòn; dòng tổng không bao giờ bị
+  đổi mã. BCTC dịch vụ không in dòng 01 thì doanh thu bán hàng lấy bằng doanh thu thuần + giảm trừ. Mọi
+  chỗ máy tự đổi dấu / đổi mã / suy số đều ghi thành cảnh báo ở bước rà soát để người dùng soát lại.
 - **Nhiều file, nhiều kỳ**: mỗi BCTC có sẵn cột kỳ trước. Nên tải BCTC năm gần nhất + các năm trước
   (model cần ≥ 4 năm), thêm báo cáo quý mới nhất nếu có. Hai báo cáo cùng kỳ khác số → dùng số của báo cáo
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.
@@ -80,6 +90,18 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   phân tích AI FinLens, chuyển sang mã chỉ tiêu TT99 và sang bộ dữ liệu nhiều kỳ của tool.
   Ngưỡng là mức chung của doanh nghiệp Việt Nam (không theo ngành) và **cố định trong mã**: máy tính, máy xếp
   hạng, AI không viết chữ nào — nên cùng một kết luận đọc tiếng Việt hay tiếng Anh đều như nhau.
+- **AI nhận định** (cuối tab *Phân tích & đề xuất*, tốn 1 lượt AI): bấm nút là máy gửi đúng bảng số đã tính
+  (các dòng chính theo tỷ đồng, 22 chỉ số kèm mức xếp hạng, dấu hiệu bất thường, sức khoẻ, việc gợi ý) cho
+  Gemini để viết lời — tổng quan, điểm mạnh / yếu, xu hướng qua các kỳ (đúng các biểu đồ), rủi ro theo mức,
+  đề xuất, 5–8 câu hỏi cần làm rõ với doanh nghiệp và kết luận. AI **không xem BCTC, không tự tính**; câu lệnh
+  bắt mỗi nhận xét dẫn đúng con số và kỳ, nên đối chiếu được với bảng số bên trên. Viết bằng ngôn ngữ đang
+  chọn; sửa ô hay thêm file sau khi AI viết thì nhận định được đánh dấu lỗi thời để bấm "Viết lại"; có nút
+  sao chép ra văn bản thuần để dán vào tờ trình. Ngay trên nút có khối **Bối cảnh doanh nghiệp** (tuỳ chọn, 5 ô:
+  ngành & mô hình kinh doanh, khách hàng / nhà cung cấp / thị trường, sự kiện trong kỳ, thông tin hỏi được từ
+  doanh nghiệp, lưu ý của người phân tích) — những điều BCTC không nói mà người trong ngành hoặc đi hỏi công ty
+  mới biết. AI dùng bối cảnh để diễn giải con số (tồn kho lớn có thể là bình thường với bất động sản), không
+  dùng để thay số, và phải chỉ ra khi lời giải thích của doanh nghiệp mâu thuẫn với số liệu. Bối cảnh lưu cùng
+  phiên làm việc; đổi bối cảnh thì nhận định cũ cũng được đánh dấu lỗi thời.
 - **Đối chiếu ngược thuyết minh** (hiện ở cả tab *Thuyết minh* và tab *Phân tích*): thuyết minh là bảng ma trận
   in nhỏ, hay kéo dài sang trang sau — chỗ AI đọc sai nhiều nhất mà không có gì tự phát hiện. **19 chỗ kiểm
   tra** cộng số thuyết minh rồi so với đúng dòng trên ba bảng chính: nguyên giá / hao mòn / giá trị còn lại

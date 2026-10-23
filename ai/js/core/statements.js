@@ -109,27 +109,107 @@ const IS_EXPENSES = new Set(['02', '11', '23', '24', '25', '26', '32', '51', '52
 // Dòng chắc chắn là chi phí, không bao giờ là khoản hoàn — dùng để đoán cách trình bày của báo cáo.
 const CHAC_CHI_PHI = ['11', '25', '26'];
 
+// Dòng TIỀN CHI của LCTT theo từng khối: phải mang dấu âm thì cộng thẳng mới ra dòng tổng.
+// Mỗi mục: [mã dòng tổng, các mã trong khối, các mã là tiền chi]. Khối T… là phương pháp trực tiếp.
+const CF_CHI = [
+  ['30', ['21', '22', '23', '24', '25', '26', '27'], ['21', '23', '25']],
+  ['40', ['31', '32', '33', '34', '35', '36'], ['32', '34', '35', '36']],
+  ['20', ['08', '09', '10', '11', '12', '13', '14', '15', '16', '17'], ['14', '15', '17']],
+  ['T20', ['T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T07'], ['T02', 'T03', 'T04', 'T05', 'T07']],
+  ['T30', ['T21', 'T22', 'T23', 'T24', 'T25', 'T26', 'T27'], ['T21', 'T23', 'T25']],
+  ['T40', ['T31', 'T32', 'T33', 'T34', 'T35', 'T36'], ['T32', 'T34', 'T35', 'T36']],
+];
+
 /**
- * Chi phí KQKD → dương; dòng có (*) trên CĐKT (dự phòng, hao mòn, cổ phiếu quỹ) → âm; LCTT giữ nguyên.
+ * Chi phí KQKD → dương; dòng có (*) trên CĐKT (dự phòng, hao mòn, cổ phiếu quỹ) → âm; dòng tiền chi LCTT → âm.
  *
- * BCTC Việt Nam có hai lối trình bày chi phí, phải phân biệt mới ra đúng số:
- *   a) In trong ngoặc, ví dụ "(9.980.708.521.338)" — dấu in chính là phần đóng góp vào dòng tổng.
- *      Khi đó dòng chi phí in KHÔNG ngoặc là khoản ĐƯỢC HOÀN (hay gặp ở thuế hoãn lại, mã 52)
- *      và phải giữ dấu âm, nếu lấy trị tuyệt đối sẽ trừ nhầm hai lần.
- *   b) In số dương trơn — lấy trị tuyệt đối cho chắc, vì AI đôi khi tự thêm dấu âm.
+ * Mỗi công ty có QUY ƯỚC TRÌNH BÀY RIÊNG và AI chỉ chép đúng dấu như in, nên máy phải tự đoán quy ước
+ * bằng phép cộng dồn chứ không tin dấu của từng dòng:
+ *   a) KQKD in chi phí trong ngoặc, ví dụ "(9.980.708.521.338)" — dấu in chính là phần đóng góp vào dòng
+ *      tổng (10 + 11 = 20). Khi đó dòng chi phí in KHÔNG ngoặc là khoản ĐƯỢC HOÀN (hay gặp ở thuế hoãn lại,
+ *      mã 52) và phải giữ dấu âm, nếu lấy trị tuyệt đối sẽ trừ nhầm hai lần.
+ *   b) KQKD in chi phí số dương trơn (10 − 11 = 20) — lấy trị tuyệt đối cho chắc, vì AI đôi khi tự thêm dấu âm.
+ *   Quy ước được quyết bằng "doanh thu thuần − giá vốn = lãi gộp" (hoặc thu nhập khác − chi phí khác = lợi
+ *   nhuận khác); không có dòng tổng để thử thì mới nhìn dấu của các dòng chắc chắn là chi phí (11, 25, 26).
+ *   Thuế TNDN (51/52) kiểm riêng: nhiều báo cáo in thuế ngược dấu với chi phí khác — thử cả hai chiều với
+ *   50 − thuế = 60, chiều nào khớp thì theo.
+ *   c) CĐKT: dự phòng / hao mòn / cổ phiếu quỹ in dương hay in ngoặc đều quy về ÂM (cộng thẳng ra dòng tổng).
+ *   d) LCTT: dòng tiền chi in dương (không ngoặc) mà khối không cộng ra dòng tổng → đổi âm từng khối
+ *      (thử đổi cả khối trước, không khớp thì thử từng dòng).
+ *
+ * @param fixes mảng để ghi lại chỗ đã đổi dấu: { kind: 'IS'|'TAX'|'BS'|'CF', codes: [...] } — hiện cho người dùng soát.
+ * @param opts.unit đơn vị in trên BCTC (để tính sai số làm tròn khi thử cộng dồn)
  */
-export function normalizeSigns(vals) {
-  const trongNgoac = CHAC_CHI_PHI.some((c) => typeof vals[`IS:${c}`] === 'number' && vals[`IS:${c}`] < 0);
+export function normalizeSigns(vals, fixes = null, opts = {}) {
+  const unit = opts.unit || 1;
+  const num = (k) => (typeof vals[k] === 'number' && Number.isFinite(vals[k]) ? vals[k] : null);
+  const near = (a, b, n) => Math.abs(a - b) <= tolFor(unit, n);
+  const ghi = (kind, codes) => { if (fixes && codes.length) fixes.push({ kind, codes }); };
+
+  // KQKD: quy ước chi phí quyết bằng cộng dồn, không có dòng tổng thì theo dấu chi phí lớn.
+  let trongNgoac = null;
+  for (const [a, b, c] of [['IS:10', 'IS:11', 'IS:20'], ['IS:31', 'IS:32', 'IS:40']]) {
+    const x = num(a), y = num(b), z = num(c);
+    if (x === null || y === null || z === null || y === 0) continue;
+    const duong = near(x - y, z, 2), ngoac = near(x + y, z, 2);
+    if (duong !== ngoac) { trongNgoac = ngoac; break; }
+  }
+  if (trongNgoac === null) trongNgoac = CHAC_CHI_PHI.some((c) => num(`IS:${c}`) !== null && num(`IS:${c}`) < 0);
+
   const out = {};
+  const daDoi = { IS: [], BS: [], TAX: [] };
   for (const [k, v] of Object.entries(vals)) {
     const [st, code] = k.split(':');
     const it = BY_KEY.get(k);
     if (typeof v !== 'number') { out[k] = v; continue; }
-    if (st === 'IS' && IS_EXPENSES.has(code)) out[k] = trongNgoac ? -v : Math.abs(v);
-    else if (st === 'BS' && it && it.label.includes('(*)')) out[k] = -Math.abs(v);
+    if (st === 'IS' && IS_EXPENSES.has(code)) {
+      out[k] = trongNgoac ? -v : Math.abs(v);
+      // Báo cáo in chi phí dương mà riêng thuế in âm: thực chất là thuế ngược dấu (hay gặp), báo riêng cho rõ.
+      if (out[k] !== v) (!trongNgoac && (code === '51' || code === '52') ? daDoi.TAX : daDoi.IS).push(code);
+    }
+    else if (st === 'BS' && it && it.label.includes('(*)')) { out[k] = -Math.abs(v); if (v > 0) daDoi.BS.push(code); }
     else out[k] = v;
   }
+  ghi('IS', daDoi.IS);
+  ghi('BS', daDoi.BS);
+  ghi('TAX', daDoi.TAX);
+
+  // Thuế TNDN: 60 = 50 − 51 − 52 không khớp nhưng 60 = 50 + 51 + 52 khớp → thuế in ngược dấu.
+  const n50 = num('IS:50'), n60 = num('IS:60');
+  const thue = ['51', '52'].filter((c) => typeof out[`IS:${c}`] === 'number');
+  if (n50 !== null && n60 !== null && thue.length) {
+    const tong = thue.reduce((s, c) => s + out[`IS:${c}`], 0);
+    if (tong !== 0 && !near(n50 - tong, n60, 3) && near(n50 + tong, n60, 3)) {
+      for (const c of thue) out[`IS:${c}`] = -out[`IS:${c}`];
+      ghi('TAX', thue);
+    }
+  }
+
+  // LCTT: từng khối, dòng tiền chi in dương mà khối không cộng ra tổng → đổi âm.
+  const daDoiCF = [];
+  for (const [tong, khoi, chi] of CF_CHI) {
+    const L = typeof out[`CF:${tong}`] === 'number' ? out[`CF:${tong}`] : null;
+    if (L === null) continue;
+    const val = (c) => (typeof out[`CF:${c}`] === 'number' ? out[`CF:${c}`] : null);
+    const cong = (lat) => khoi.reduce((s, c) => { const x = val(c); return x === null ? s : s + (lat.has(c) ? -x : x); }, 0);
+    const n = khoi.filter((c) => val(c) !== null).length;
+    if (!n || near(cong(new Set()), L, n)) continue;
+    const ung = chi.filter((c) => val(c) !== null && val(c) > 0);
+    if (!ung.length) continue;
+    let chon = null;
+    if (near(cong(new Set(ung)), L, n)) chon = ung;
+    else for (const c of ung) { if (near(cong(new Set([c])), L, n)) { chon = [c]; break; } }
+    if (chon) { for (const c of chon) out[`CF:${c}`] = -out[`CF:${c}`]; daDoiCF.push(...chon); }
+  }
+  ghi('CF', daDoiCF);
   return out;
+}
+
+/** Khoá TT99 tương ứng của một khoá TT200 ("BS:270" → "BS:280"); không có thì null. LCTT giữ nguyên. */
+export function toTT99Key(k) {
+  const st = k.split(':')[0];
+  if (st === 'CF') return BY_KEY.has(k) ? k : null;
+  return TT200.get(k) || null;
 }
 
 /** Đổi khoá mã TT200 sang TT99. LCTT giữ nguyên mã. Trả { values, unmapped }. */

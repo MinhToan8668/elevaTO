@@ -11,11 +11,13 @@ const PERIOD_RE = /^(FY\d{4}|Q[1-4]-\d{4})$/;
 const UNITS = [1, 1e3, 1e6, 1e9];
 const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const SLOTS = 5;
+/** Các ô bối cảnh doanh nghiệp (xem core/aireview.js) — lưu theo đúng danh sách này, khoá lạ bỏ. */
+export const CONTEXT_KEYS = ['nganh', 'thi_truong', 'su_kien', 'tu_doanh_nghiep', 'luu_y'];
 
 export function serializeSession(s) {
   const data = {
     sources: s.sources, edits: s.edits, ticks: s.ticks, unit: s.unit,
-    segmentMap: s.segmentMap, segmentNames: s.segmentNames,
+    segmentMap: s.segmentMap, segmentNames: s.segmentNames, aiContext: s.aiContext || {},
   };
   return JSON.stringify({ app: APP, v: VERSION, savedAt: new Date().toISOString(), data });
 }
@@ -33,6 +35,7 @@ export function parseSession(text) {
     unit: UNITS.includes(d.unit) ? d.unit : 1e6,
     segmentMap: Object.fromEntries(Object.entries(obj(d.segmentMap)).filter(([k, v]) => safeKey(k) && Number.isInteger(v) && v >= 0 && v < SLOTS).map(([k, v]) => [str(k, 120), v]).slice(0, 50)),
     segmentNames: Array.from({ length: SLOTS }, (_, i) => str(arr(d.segmentNames, SLOTS)[i], 60)),
+    aiContext: Object.fromEntries(CONTEXT_KEYS.map((k) => [k, str(obj(d.aiContext)[k], 2000)]).filter(([, v]) => v)),
     savedAt: str(o.savedAt, 40),
   };
 }
