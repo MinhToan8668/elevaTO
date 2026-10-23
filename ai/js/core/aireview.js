@@ -53,7 +53,22 @@ const lam = (v, fmt) => (!Number.isFinite(v) ? null : fmt === 'd' ? Math.round(v
  * Bảng dữ liệu gửi AI, dựng từ chính những gì tab Biểu đồ & chỉ số và tab Phân tích đang hiện.
  * @returns { input, hash } hoặc null nếu chưa có kỳ nào. hash đổi khi số liệu / ngôn ngữ đổi.
  */
-export function buildAiReviewInput(ds, { company = '' } = {}) {
+/**
+ * Bối cảnh doanh nghiệp do người phân tích nhập — thứ chỉ người trong ngành hoặc đi hỏi công ty mới biết
+ * (mô hình kinh doanh, mùa vụ, khách hàng lớn, sự kiện trong kỳ, giải thích của kế toán…). AI dùng để DIỄN GIẢI
+ * số, không dùng để thay số. Khoá cố định để lưu phiên / dịch nhãn (xem session.js, i18n `ctx.*`).
+ */
+export const CONTEXT_FIELDS = ['nganh', 'thi_truong', 'su_kien', 'tu_doanh_nghiep', 'luu_y'];
+const CONTEXT_LABEL = { nganh: 'Ngành & mô hình kinh doanh', thi_truong: 'Khách hàng / nhà cung cấp / thị trường', su_kien: 'Sự kiện trong kỳ',
+  tu_doanh_nghiep: 'Thông tin hỏi được từ doanh nghiệp', luu_y: 'Lưu ý của người phân tích' };
+/** Chỉ các ô có chữ, cắt gọn; {} nếu trống hết. */
+export function cleanContext(c) {
+  const out = {};
+  for (const k of CONTEXT_FIELDS) { const v = typeof c?.[k] === 'string' ? c[k].trim().slice(0, 2000) : ''; if (v) out[k] = v; }
+  return out;
+}
+
+export function buildAiReviewInput(ds, { company = '', context = null } = {}) {
   const a = analyze(ds);
   if (!a) return null;
   const lang = getLang();
@@ -83,7 +98,9 @@ export function buildAiReviewInput(ds, { company = '' } = {}) {
     flags,
     suggested_actions: a.advice.map((x) => t(`adv.${x.id}`)),
   };
-  return { input, hash: hashOf(JSON.stringify([input.periods, figures, ratios, lang])) };
+  const ctx = cleanContext(context);
+  if (Object.keys(ctx).length) input.context = Object.fromEntries(Object.entries(ctx).map(([k, v]) => [k, { label: CONTEXT_LABEL[k], text: v }]));
+  return { input, hash: hashOf(JSON.stringify([input.periods, figures, ratios, lang, ctx])) };
 }
 
 /** Câu lệnh gửi kèm bảng dữ liệu. */
@@ -100,6 +117,11 @@ export function aiReviewPrompt(input) {
     '- cau_hoi: 5–8 câu hỏi cần làm rõ với doanh nghiệp, mỗi câu dẫn đúng con số đáng ngờ.',
     '- ket_luan: 2–3 câu chốt, nêu mức sức khoẻ ("health") và điều kiện cần theo dõi.',
     'Không nhắc tới các chỉ số không có trong bảng. Kỳ ngắn hơn một năm đã được quy về mức năm ở các chỉ số dòng.',
+    ...(input.context ? [
+      'BỐI CẢNH DOANH NGHIỆP ("context") do người phân tích cung cấp — là thông tin ngoài BCTC (ngành, mô hình kinh doanh, mùa vụ, khách hàng lớn, sự kiện trong kỳ, lời giải thích của doanh nghiệp). Hãy DÙNG nó để diễn giải con số: một chỉ số "yếu" theo ngưỡng chung có thể là bình thường trong ngành (ví dụ tồn kho lớn ở bất động sản, phải thu dài ở xây dựng), một biến động có thể do sự kiện đã nêu.',
+      'Nhưng bối cảnh KHÔNG thay được số: không bịa số từ bối cảnh; nếu lời giải thích của doanh nghiệp mâu thuẫn với số liệu (ví dụ nói "đã thu hồi nợ" mà phải thu vẫn tăng) thì phải nêu rõ mâu thuẫn ấy trong rui_ro hoặc cau_hoi. Chỗ nào bối cảnh làm thay đổi cách đánh giá so với mức máy xếp, nói rõ vì sao.',
+      'Mục "luu_y" là yêu cầu của người phân tích về điểm cần tập trung hoặc ngưỡng riêng của ngành — ưu tiên theo đó.',
+    ] : []),
     ngonNgu,
     '',
     'DỮ LIỆU (JSON):',

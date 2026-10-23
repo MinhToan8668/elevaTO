@@ -96,7 +96,7 @@ export function renderReconcile(ds, unit) {
 // AI viết lời. Kết quả giữ trong store theo băm của số liệu: số đổi (sửa ô, thêm file) thì nhận định cũ
 // vẫn hiện nhưng được đánh dấu "lỗi thời" để bấm viết lại.
 
-import { buildAiReviewInput, aiReviewPrompt, sanitizeAiReview, aiReviewText, AI_REVIEW_SCHEMA, AI_REVIEW_SYSTEM } from '../core/aireview.js';
+import { buildAiReviewInput, aiReviewPrompt, sanitizeAiReview, aiReviewText, AI_REVIEW_SCHEMA, AI_REVIEW_SYSTEM, CONTEXT_FIELDS, cleanContext } from '../core/aireview.js';
 import { toast } from './dom.js';
 import { isFatal } from '../ai.js';
 
@@ -106,7 +106,7 @@ const aiUi = { running: false, error: '' };
 export function renderAiReview(store, ctx) {
   const s = store.get();
   const { ds } = store.data();
-  const built = buildAiReviewInput(ds, { company: ds.company });
+  const built = buildAiReviewInput(ds, { company: ds.company, context: s.aiContext });
   if (!built) return null;
   const cur = s.aiReview;
   const stale = !!(cur && cur.hash !== built.hash);
@@ -136,6 +136,7 @@ export function renderAiReview(store, ctx) {
   const head = h('div', { class: 'ai-head' },
     h('h3', {}, t('ai.h')),
     h('p', { class: 'priv', style: { margin: 0 } }, t('ai.lead')),
+    contextForm(store),
     h('div', { class: 'bar' }, btn, h('span', { class: 'tag' }, t('ai.cost')),
       cur ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => {
         const text = aiReviewText(cur.result, tieuDe());
@@ -149,6 +150,23 @@ export function renderAiReview(store, ctx) {
     body.push(h('p', { class: 'priv' }, t('ai.note', { at: new Date(cur.at).toLocaleString() })));
   }
   return h('section', { class: 'airev' }, head, body);
+}
+
+/**
+ * Bối cảnh doanh nghiệp: thứ BCTC không nói mà người trong ngành / người đi hỏi công ty mới biết. Ghi vào
+ * store ngay khi rời ô (lưu cùng phiên làm việc), gửi kèm cho AI ở lượt kế tiếp; đổi bối cảnh thì nhận định
+ * cũ được đánh dấu lỗi thời như khi đổi số.
+ */
+function contextForm(store) {
+  const cur = cleanContext(store.get().aiContext);
+  const n = Object.keys(cur).length;
+  const luu = (k, v) => store.set((st) => ({ aiContext: cleanContext({ ...(st.aiContext || {}), [k]: v }) }));
+  return h('details', { class: 'ai-ctx', open: n > 0 },
+    h('summary', {}, h('b', {}, t('ctx.h')), ' ', h('span', { class: 'tag' }, n ? t('ctx.filled', { n }) : t('ctx.empty'))),
+    h('p', { class: 'priv', style: { marginTop: '4px' } }, t('ctx.lead')),
+    h('div', { class: 'ai-ctx-grid' }, CONTEXT_FIELDS.map((k) => h('label', { class: 'ai-ctx-f' },
+      h('span', {}, t(`ctx.${k}`)),
+      h('textarea', { rows: 3, maxlength: 2000, placeholder: t(`ctx.${k}.hint`), onchange: (e) => luu(k, e.target.value) }, cur[k] || '')))));
 }
 
 const tieuDe = () => ({ title: t('ai.h'), tong_quan: t('ai.sec.tong_quan'), diem_manh: t('ai.sec.diem_manh'), diem_yeu: t('ai.sec.diem_yeu'),

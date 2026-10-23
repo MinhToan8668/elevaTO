@@ -96,7 +96,12 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   đề xuất, 5–8 câu hỏi cần làm rõ với doanh nghiệp và kết luận. AI **không xem BCTC, không tự tính**; câu lệnh
   bắt mỗi nhận xét dẫn đúng con số và kỳ, nên đối chiếu được với bảng số bên trên. Viết bằng ngôn ngữ đang
   chọn; sửa ô hay thêm file sau khi AI viết thì nhận định được đánh dấu lỗi thời để bấm "Viết lại"; có nút
-  sao chép ra văn bản thuần để dán vào tờ trình.
+  sao chép ra văn bản thuần để dán vào tờ trình. Ngay trên nút có khối **Bối cảnh doanh nghiệp** (tuỳ chọn, 5 ô:
+  ngành & mô hình kinh doanh, khách hàng / nhà cung cấp / thị trường, sự kiện trong kỳ, thông tin hỏi được từ
+  doanh nghiệp, lưu ý của người phân tích) — những điều BCTC không nói mà người trong ngành hoặc đi hỏi công ty
+  mới biết. AI dùng bối cảnh để diễn giải con số (tồn kho lớn có thể là bình thường với bất động sản), không
+  dùng để thay số, và phải chỉ ra khi lời giải thích của doanh nghiệp mâu thuẫn với số liệu. Bối cảnh lưu cùng
+  phiên làm việc; đổi bối cảnh thì nhận định cũ cũng được đánh dấu lỗi thời.
 - **Đối chiếu ngược thuyết minh** (hiện ở cả tab *Thuyết minh* và tab *Phân tích*): thuyết minh là bảng ma trận
   in nhỏ, hay kéo dài sang trang sau — chỗ AI đọc sai nhiều nhất mà không có gì tự phát hiện. **19 chỗ kiểm
   tra** cộng số thuyết minh rồi so với đúng dòng trên ba bảng chính: nguyên giá / hao mòn / giá trị còn lại

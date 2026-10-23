@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildAiReviewInput, aiReviewPrompt, sanitizeAiReview, aiReviewText, AI_REVIEW_SCHEMA, hashOf } from '../js/core/aireview.js';
+import { buildAiReviewInput, aiReviewPrompt, sanitizeAiReview, aiReviewText, AI_REVIEW_SCHEMA, hashOf, cleanContext } from '../js/core/aireview.js';
 
 const M = 1e6;
 const KY = (id, year) => ({ id, year, months: 12, endMonth: 12 });
@@ -69,4 +69,17 @@ test('lọc kết quả AI: thiếu trường → rỗng, mức rủi ro lạ �
   assert.equal(sanitizeAiReview(null).tong_quan, '');
   const text = aiReviewText(r, { title: 'T', tong_quan: 'TQ', diem_manh: 'DM', diem_yeu: 'DY', xu_huong: 'XH', rui_ro: 'RR', de_xuat: 'DX', cau_hoi: 'CH', ket_luan: 'KL', muc: { cao: 'C', tb: 'TB', thap: 'T' } });
   assert.match(text, /^T\n\nTQ: Ổn\.\n\nDM:\n- a\n\nRR:\n- \[TB\] Nợ — x\n- \[TB\] chuỗi trần\n\nKL: k+$/);
+});
+
+test('bối cảnh doanh nghiệp: chỉ ô có chữ được gửi kèm (có nhãn), câu lệnh nêu quy tắc dùng bối cảnh, băm đổi theo bối cảnh', () => {
+  const ctx = { nganh: ' Phân phối xe tải qua đại lý ', thi_truong: '', su_kien: 'Mở nhà máy 6/2025', khoa_la: 'bỏ', luu_y: 'x'.repeat(3000) };
+  assert.deepEqual(cleanContext(ctx), { nganh: 'Phân phối xe tải qua đại lý', su_kien: 'Mở nhà máy 6/2025', luu_y: 'x'.repeat(2000) });
+  assert.deepEqual(cleanContext(null), {});
+  const khong = buildAiReviewInput(ds()), co = buildAiReviewInput(ds(), { context: ctx });
+  assert.equal(khong.input.context, undefined);
+  assert.equal(co.input.context.nganh.text, 'Phân phối xe tải qua đại lý');
+  assert.ok(co.input.context.nganh.label);
+  assert.notEqual(co.hash, khong.hash);
+  assert.match(aiReviewPrompt(co.input), /BỐI CẢNH DOANH NGHIỆP/);
+  assert.doesNotMatch(aiReviewPrompt(khong.input), /BỐI CẢNH DOANH NGHIỆP/);
 });
