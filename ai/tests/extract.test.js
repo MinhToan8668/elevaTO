@@ -324,3 +324,101 @@ test('TSCĐ: bảng của HAX (trang 25) — "Tăng trong năm" trong khối hao
   assert.equal(nha.costOpen, 243439059314, 'giữ cột đầu năm để tách nhóm cho năm trước');
   assert.equal(nha.accDepOpen, -103864639518);
 });
+
+// ─── [v2026-10] Hiểu ngữ cảnh BCTC: quy ước dấu, thuật ngữ đồng nghĩa, mã in lệch mẫu ───
+
+test('tên gọi khác mẫu nhưng cùng bản chất → đúng mã; viết tắt và "và/&" không làm lệch', () => {
+  assert.equal(matchLabel('BS', 'Phải thu khách hàng'), '131');
+  assert.equal(matchLabel('BS', 'Tài sản cố định hữu hình'), '221');          // danh mục ghi "TSCĐ hữu hình"
+  assert.equal(matchLabel('BS', 'Tiền và các khoản tương đương tiền'), '110'); // danh mục ghi "Tiền & các khoản…"
+  assert.equal(matchLabel('BS', 'Vay và nợ thuê tài chính ngắn hạn'), '321');
+  assert.equal(matchLabel('IS', 'Giá vốn dịch vụ cung cấp'), '11');
+  assert.equal(matchLabel('IS', '11. Lỗ khác'), '40');
+  assert.equal(matchLabel('CF', 'Tiền thu từ đi vay'), '33');
+  assert.equal(matchLabel('CF', '(Tăng) giảm hàng tồn kho'), '10');
+  assert.equal(matchLabel('CF', 'Lợi nhuận đã trả cho chủ sở hữu'), '36');
+  assert.equal(matchLabel('BS', '- Nguyên giá'), null, 'tên trùng nhiều dòng vẫn không đoán');
+});
+
+// Số thật của BCTC riêng THILOGI 31/12/2024 (kiểm toán EY): KQKD in chi phí trong ngoặc, bắt đầu từ mã 10;
+// CĐKT in "Tài sản cố định vô hình" ở mã 221–223 và "hữu hình" ở 227–229 (ngược mẫu TT200).
+test('THILOGI 2024: KQKD chi phí trong ngoặc → dương, thiếu 01 thì suy từ 10; 221/227 in ngược → xếp lại theo tên kèm nguyên giá/hao mòn', () => {
+  const is = statementToValues('IS', { meta: { don_vi: 'VND', ngay_ket_thuc: '2024-12-31' }, items: [
+    { c: '10', n: 'Doanh thu thuần về cung cấp dịch vụ', v: '1.927.538.418.715', p: '1.119.263.713.782' },
+    { c: '11', n: 'Giá vốn dịch vụ cung cấp', v: '(1.862.374.210.744)', p: '(1.064.290.294.166)' },
+    { c: '20', n: 'Lợi nhuận gộp về cung cấp dịch vụ', v: '65.164.207.971', p: '54.973.419.616' },
+    { c: '21', n: 'Doanh thu hoạt động tài chính', v: '62.326.962.584', p: '103.924.509.710' },
+    { c: '22', n: 'Chi phí tài chính', v: '(7.985.204.384)', p: '(11.272.369.675)' },
+    { c: '23', n: '- Trong đó: Chi phí lãi vay', v: '(7.486.824.531)', p: '(11.204.472.442)' },
+    { c: '25', n: 'Chi phí bán hàng', v: '(15.719.747.512)', p: '(10.348.371.195)' },
+    { c: '26', n: 'Chi phí quản lý doanh nghiệp', v: '(14.927.708.995)', p: '(10.297.048.150)' },
+    { c: '30', n: 'Lợi nhuận thuần từ hoạt động kinh doanh', v: '88.858.509.664', p: '126.980.140.306' },
+    { c: '31', n: 'Thu nhập khác', v: '1.695.983.185', p: '312.028.769' },
+    { c: '32', n: 'Chi phí khác', v: '(1.743.195.544)', p: '(362.627.329)' },
+    { c: '40', n: 'Lỗ khác', v: '(47.212.359)', p: '(50.598.560)' },
+    { c: '50', n: 'Tổng lợi nhuận kế toán trước thuế', v: '88.811.297.305', p: '126.929.541.746' },
+    { c: '51', n: 'Chi phí thuế TNDN hiện hành', v: '(2.631.504.088)', p: '(1.732.530.242)' },
+    { c: '60', n: 'Lợi nhuận sau thuế TNDN', v: '86.179.793.217', p: '125.197.011.504' },
+  ] });
+  assert.equal(is.regime, 'TT200');
+  assert.equal(is.cur['IS:11'], 1862374210744, 'giá vốn về dương');
+  assert.equal(is.cur['IS:24'], 7486824531, 'lãi vay 23 (TT200) → 24, dương');
+  assert.equal(is.cur['IS:22'], 62326962584, 'doanh thu tài chính 21 → 22, giữ nguyên');
+  assert.equal(is.cur['IS:51'], 2631504088, 'thuế hiện hành dương');
+  assert.equal(is.cur['IS:40'], -47212359, 'lỗ khác vẫn âm (không phải chi phí)');
+  assert.equal(is.cur['IS:01'], 1927538418715, 'không in 01 → lấy bằng 10');
+  assert.equal(is.prev['IS:01'], 1119263713782);
+  assert.deepEqual(validate(is.cur, { unit: 1 }), [], 'cộng dồn KQKD khớp hết');
+  assert.match(is.warnings.join('\n'), /trong ngoặc/);
+  assert.match(is.warnings.join('\n'), /không in dòng 01/);
+
+  const bs = statementToValues('BS', { meta: { don_vi: 'VND', ngay_ket_thuc: '2024-12-31' }, items: [
+    { c: '220', n: 'I. Tài sản cố định', v: '2.378.014.155', p: '229.948.331' },
+    { c: '221', n: '1. Tài sản cố định vô hình', v: '2.229.532.496', p: '48.100.000' },
+    { c: '222', n: 'Nguyên giá', v: '2.644.164.545', p: '48.100.000' },
+    { c: '223', n: 'Khấu hao lũy kế', v: '(414.632.049)', p: '-' },
+    { c: '227', n: '2. Tài sản cố định hữu hình', v: '148.481.659', p: '181.848.331' },
+    { c: '228', n: 'Nguyên giá', v: '200.200.000', p: '200.200.000' },
+    { c: '229', n: 'Giá trị hao mòn lũy kế', v: '(51.718.341)', p: '(18.351.669)' },
+    { c: '270', n: 'TỔNG CỘNG TÀI SẢN', v: '1.696.188.119.064', p: '1.485.749.762.798' },
+    { c: '110', n: 'I. Tiền', v: '1.878.256.654', p: '1.874.312.077' },
+    { c: '111', n: '1. Tiền', v: '1.878.256.654', p: '1.874.312.077' },
+    { c: '421', n: '2. Lợi nhuận sau thuế chưa phân phối', v: '34.960.260.251', p: '438.025.444' },
+  ] });
+  assert.equal(bs.cur['BS:221'], 148481659, 'hữu hình về đúng 221');
+  assert.equal(bs.cur['BS:222'], 200200000); assert.equal(bs.cur['BS:223'], -51718341);
+  assert.equal(bs.cur['BS:227'], 2229532496, 'vô hình về đúng 227');
+  assert.equal(bs.cur['BS:228'], 2644164545); assert.equal(bs.cur['BS:229'], -414632049);
+  assert.equal(bs.prev['BS:223'], -18351669); assert.equal(bs.prev['BS:229'], undefined);
+  assert.equal(bs.cur['BS:110'], 1878256654, 'dòng tổng "I. Tiền" giữ mã 110, không bị xếp vào 111');
+  assert.equal(bs.cur['BS:111'], 1878256654);
+  assert.equal(bs.cur['BS:420'], 34960260251);
+  assert.equal(bs.warnings.filter((w) => /không khớp mẫu/.test(w)).length, 6, 'báo rõ 6 dòng đã xếp lại theo tên');
+  assert.deepEqual(validate(bs.cur, { unit: 1 }).filter((i) => i.key.startsWith('BS:22')), [], 'khối TSCĐ cộng dồn khớp');
+});
+
+test('báo cáo in mọi thứ dương (chi phí, dự phòng, tiền chi): máy tự nhận quy ước bằng cộng dồn', () => {
+  const is = statementToValues('IS', { meta: { don_vi: 'triệu đồng', ngay_ket_thuc: '2025-12-31' }, items: [
+    { c: '01', n: 'Doanh thu bán hàng và cung cấp dịch vụ', v: '2.100', p: '' }, { c: '02', n: 'Các khoản giảm trừ', v: '100', p: '' },
+    { c: '10', n: 'Doanh thu thuần', v: '2.000', p: '' }, { c: '11', n: 'Giá vốn hàng bán', v: '1.900', p: '' },
+    { c: '20', n: 'Lợi nhuận gộp', v: '100', p: '' }, { c: '50', n: 'Tổng lợi nhuận kế toán trước thuế', v: '93', p: '' },
+    { c: '51', n: 'Chi phí thuế TNDN hiện hành', v: '(18)', p: '' }, { c: '60', n: 'Lợi nhuận sau thuế', v: '75', p: '' },
+  ] });
+  assert.equal(is.cur['IS:11'], 1900e6);
+  assert.equal(is.cur['IS:51'], 18e6, 'thuế in ngược dấu với chi phí khác → đổi để 60 = 50 − 51');
+  assert.match(is.warnings.join('\n'), /Thuế TNDN/);
+  const bs = statementToValues('BS', { meta: { don_vi: 'VND', ngay_ket_thuc: '2025-12-31' }, items: [
+    { c: '140', n: 'IV. Hàng tồn kho', v: '100', p: '' }, { c: '141', n: '1. Hàng tồn kho', v: '110', p: '' },
+    { c: '149', n: '2. Dự phòng giảm giá hàng tồn kho (*)', v: '10', p: '' }, { c: '270', n: 'TỔNG CỘNG TÀI SẢN', v: '100', p: '' },
+  ] });
+  assert.equal(bs.cur['BS:142'], -10); assert.match(bs.warnings.join('\n'), /Dự phòng/);
+  const cf = statementToValues('CF', { meta: { don_vi: 'triệu đồng', ngay_ket_thuc: '2025-12-31' }, items: [
+    { c: '21', n: 'Tiền chi mua sắm, xây dựng TSCĐ', v: '40', p: '' }, { c: '27', n: 'Thu lãi cho vay, cổ tức', v: '2', p: '' },
+    { c: '30', n: 'Lưu chuyển tiền thuần từ HĐĐT', v: '(38)', p: '' },
+    { c: '33', n: 'Tiền vay nhận được', v: '500', p: '' }, { c: '34', n: 'Tiền chi trả nợ gốc vay', v: '390', p: '' },
+    { c: '36', n: 'Cổ tức đã trả', v: '10', p: '' }, { c: '40', n: 'Lưu chuyển tiền thuần từ HĐTC', v: '100', p: '' },
+  ] });
+  assert.deepEqual([cf.cur['CF:21'], cf.cur['CF:34'], cf.cur['CF:36'], cf.cur['CF:33']], [-40e6, -390e6, -10e6, 500e6]);
+  assert.match(cf.warnings.join('\n'), /tiền chi mã 21/);
+  assert.deepEqual(validate(cf.cur, { unit: 1e6 }), []);
+});

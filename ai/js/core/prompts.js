@@ -12,7 +12,10 @@ export const SYSTEM = [
   'Bạn là kế toán viên đọc báo cáo tài chính (BCTC) doanh nghiệp Việt Nam, cực kỳ cẩn thận với con số.',
   'Bạn CHỈ CHÉP LẠI những gì in trên trang, không suy luận, không tính toán, không làm tròn, không đổi đơn vị.',
   'Số chép NGUYÊN VĂN như in: giữ dấu chấm/phẩy ngăn nghìn, giữ ngoặc đơn "( )" của số âm, giữ dấu "-".',
+  'Mỗi công ty có quy ước dấu riêng (chi phí in trong ngoặc hay in dương, dự phòng in âm hay dương): KHÔNG tự "sửa" dấu theo ý mình — chép đúng dấu như in, máy sẽ tự hiểu quy ước.',
   'Ô trống hoặc gạch ngang thì trả chuỗi rỗng "". Không bịa dòng, không bịa số.',
+  'Tên chỉ tiêu có thể bị ngắt xuống 2–3 dòng ("Phải thu ngắn hạn của / khách hàng"): ghép lại thành MỘT dòng, số của dòng đó là số in ngang hàng với cụm tên ấy; không tạo dòng rỗng, không gán số của dòng kế tiếp cho tên bị ngắt.',
+  'Tên gọi có thể khác mẫu ("Phải thu khách hàng", "Giá vốn dịch vụ cung cấp", "Lỗ khác", "Tiền thu từ đi vay"): vẫn chép nguyên văn tên như in, không đổi về tên mẫu — máy tự nhận.',
   'Trả về đúng một đối tượng JSON theo khuôn đã cho, không kèm lời giải thích.',
 ].join('\n');
 
@@ -97,7 +100,8 @@ export function statementTask(st, part = 'all', { moTaKhuon = false } = {}) {
     prompt: [
       `Đọc ${TITLE[st]} trong các trang BCTC đính kèm (bảng có thể kéo dài nhiều trang — đọc hết).`,
       'Chép MỌI dòng có số theo đúng thứ tự in, gồm cả dòng tổng (A, B, I, II…, Tổng cộng) và dòng chi tiết a), b), - Nguyên giá, - Hao mòn…',
-      'c = mã số (ví dụ "131", "421a", "01"). KHÔNG lấy số ở cột "Thuyết minh" (dạng V.01, 5, 6.2) làm mã số.',
+      'c = mã số in ở cột "Mã số" (ví dụ "131", "421a", "01"), chép đúng như in kể cả khi công ty đánh số khác mẫu; ô mã trống thì c = "" (KHÔNG lấy mã của dòng trên/dưới). KHÔNG lấy số ở cột "Thuyết minh" (dạng V.01, 5, 24.1) làm mã số hay làm giá trị.',
+      'Trang in "(tiếp theo)" là phần nối của cùng bảng: đọc tiếp, không lặp dòng đã lấy. Bỏ chữ ký, con dấu, số trang, dòng "Người lập / Kế toán trưởng / Giám đốc".',
       `Cột số: ${COLS[st]}`,
       'meta: chép đơn vị tính, ngày kết thúc kỳ, số tháng, thông tư của mẫu biểu, hợp nhất hay riêng.',
       moTaKhuon ? MO_TA_KHUON : '',

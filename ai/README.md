@@ -37,6 +37,16 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 - **AI chỉ chép số**, không tự tính. Đổi đơn vị (đồng / nghìn / triệu), dấu âm, quy đổi mã và
   **kiểm tra cộng dồn** do máy làm: tổng tài sản = nguồn vốn, tiền cuối kỳ LCTT = tiền trên CĐKT, LNTT
   trên LCTT = trên KQKD, từng dòng tổng = cộng các dòng con. Ô lệch tô đỏ, bấm vào ô để sửa.
+- **Máy tự hiểu quy ước trình bày của từng công ty** (logic lấy từ bản nâng cấp AI FinLens v3.2): AI chép đúng dấu
+  như in, còn quy ước thì máy suy bằng cộng dồn — KQKD in chi phí trong ngoặc hay in dương quyết bằng
+  "doanh thu thuần − giá vốn = lãi gộp"; thuế TNDN in ngược dấu thử cả hai chiều với "LNTT − thuế = LNST";
+  dự phòng / hao mòn in dương quy về âm; dòng tiền chi của LCTT in dương mà khối không cộng ra tổng thì
+  đổi âm đúng dòng. **Tên gọi khác mẫu nhưng cùng bản chất** ("Phải thu khách hàng", "Giá vốn dịch vụ cung
+  cấp", "Lỗ khác", "Tiền thu từ đi vay"…) có bảng đồng nghĩa hơn 150 tên và bộ đồng nhất viết tắt (TSCĐ,
+  BĐSĐT, HĐKD…). **Mã in lệch mẫu** (ví dụ BCTC THILOGI 2024 in "Tài sản cố định vô hình" ở mã 221, "hữu
+  hình" ở 227) được xếp lại theo tên, kéo theo cả dòng nguyên giá / hao mòn; dòng tổng không bao giờ bị
+  đổi mã. BCTC dịch vụ không in dòng 01 thì doanh thu bán hàng lấy bằng doanh thu thuần + giảm trừ. Mọi
+  chỗ máy tự đổi dấu / đổi mã / suy số đều ghi thành cảnh báo ở bước rà soát để người dùng soát lại.
 - **Nhiều file, nhiều kỳ**: mỗi BCTC có sẵn cột kỳ trước. Nên tải BCTC năm gần nhất + các năm trước
   (model cần ≥ 4 năm), thêm báo cáo quý mới nhất nếu có. Hai báo cáo cùng kỳ khác số → dùng số của báo cáo
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.

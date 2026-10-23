@@ -4,7 +4,7 @@
 
 import { CHART } from '../chart2026.js';
 import { parseVN, unitScale } from './numbers.js';
-import { fromTT200, normalizeSigns, detectRegime } from './statements.js';
+import { fromTT200, normalizeSigns, detectRegime, toTT99Key, item as chartItem } from './statements.js';
 import { t } from '../i18n.js';
 
 // ─── JSON từ AI ────────────────────────────────────────────
@@ -43,10 +43,26 @@ export function normCode(st, raw) {
 }
 
 export const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+// Viết tắt hay gặp trên BCTC và trong danh mục → cụm đầy đủ, áp cho CẢ HAI phía nên "TSCĐ hữu hình" trên danh mục
+// khớp "Tài sản cố định hữu hình" trên báo cáo. Chỉ các viết tắt không nhập nhằng (bỏ "NH", "DH", "CP", "KH").
+const VIET_TAT = [
+  [/\btscd\b/g, 'tai san co dinh'], [/\bbdsdt\b/g, 'bat dong san dau tu'], [/\bbds\b/g, 'bat dong san'],
+  [/\bccdv\b/g, 'cung cap dich vu'], [/\bhdkd\b/g, 'hoat dong kinh doanh'], [/\bhddt\b/g, 'hoat dong dau tu'],
+  [/\bhdtc\b/g, 'hoat dong tai chinh'], [/\bvld\b/g, 'von luu dong'], [/\blnst\b/g, 'loi nhuan sau thue'],
+  [/\blntt\b/g, 'loi nhuan truoc thue'], [/\bln\b/g, 'loi nhuan'], [/\blc\b/g, 'luu chuyen'], [/\btndn\b/g, 'thu nhap doanh nghiep'],
+  [/\bdn\b/g, 'doanh nghiep'], [/\bsxkd\b/g, 'san xuat kinh doanh'], [/\bxdcb\b/g, 'xay dung co ban'],
+  [/\bhdxd\b/g, 'hop dong xay dung'], [/\btdt\b/g, 'tuong duong tien'], [/\bcsh\b/g, 'chu so huu'],
+  [/\bld lk\b/g, 'lien doanh lien ket'], [/\bldlk\b/g, 'lien doanh lien ket'], [/\bhtk\b/g, 'hang ton kho'],
+  [/\bvcsh\b/g, 'von chu so huu'], [/\bqldn\b/g, 'quan ly doanh nghiep'], [/\bgtgt\b/g, 'gia tri gia tang'],
+];
 function normLabel(s) {
-  return fold(s).toLowerCase().replace(/\(\*\)|¤/g, ' ').replace(/&/g, ' va ')
+  let t = fold(s).toLowerCase().replace(/\(\*\)|¤/g, ' ').replace(/&/g, ' va ')
+    // "(Tăng) giảm hàng tồn kho" → "tang giam hang ton kho": giữ chữ trong ngoặc đầu dòng
+    .replace(/^\s*\(([^)]*)\)/, '$1 ')
     .replace(/^\s*(?:[ivxlc]+|\d+|[a-z])\s*[.)]\s*/, '').replace(/^[-–+\s]+/, '')
     .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  for (const [re, full] of VIET_TAT) t = t.replace(re, full);
+  return t.replace(/\bva\b/g, ' ').replace(/\s+/g, ' ').trim();
 }
 const LABELS = {};
 for (const it of CHART) {
@@ -54,10 +70,131 @@ for (const it of CHART) {
   ((LABELS[it.st] ||= {})[k] ||= []).push(it.code);
 }
 
-/** Mã TT99 của một dòng không in mã số, theo tên chỉ tiêu. Tên trùng nhiều dòng ("- Nguyên giá") → null. */
+// Tên gọi khác nhau nhưng bản chất như nhau → mã TT99. Chỉ nhận tên KHÔNG nhập nhằng (không đưa "hàng tồn kho",
+// "vốn chủ sở hữu"… vì vừa là dòng tổng vừa là dòng con). Khoá đi qua normLabel như nhãn AI đọc.
+const DONG_NGHIA_GOC = {
+  BS: {
+    'tien va cac khoan tuong duong tien': '110', 'tien va tuong duong tien': '110', 'tien mat va tien gui ngan hang': '111',
+    'phai thu khach hang': '131', 'phai thu cua khach hang': '131', 'phai thu ngan han khach hang': '131',
+    'tra truoc cho nguoi ban': '132', 'tra truoc nguoi ban': '132',
+    'tai san co dinh huu hinh': '221', 'tai san co dinh thue tai chinh': '224', 'tai san co dinh vo hinh': '227',
+    'dau tu vao cong ty con': '261', 'dau tu vao cong ty lien doanh lien ket': '262', 'dau tu vao cong ty lien ket lien doanh': '262',
+    'tong tai san': '280', 'tong cong tai san': '280', 'no phai tra': '300', 'no ngan han': '310', 'no dai han': '330',
+    'phai tra nguoi ban': '311', 'phai tra nha cung cap': '311', 'phai tra cho nguoi ban': '311',
+    'nguoi mua tra tien truoc': '312', 'khach hang ung truoc': '312', 'nguoi mua ung truoc': '312', 'nguoi mua tra truoc': '312',
+    'thue va cac khoan phai nop nha nuoc': '314', 'thue va cac khoan phai nop': '314', 'thue phai nop nha nuoc': '314',
+    'phai tra nguoi lao dong': '315', 'phai tra cong nhan vien': '315', 'chi phi phai tra': '316',
+    'vay ngan han': '321', 'vay va no ngan han': '321', 'vay va no thue tai chinh ngan han': '321',
+    'vay dai han': '339', 'vay va no dai han': '339', 'vay va no thue tai chinh dai han': '339',
+    'von dau tu cua chu so huu': '411', 'von gop cua chu so huu': '411', 'von dieu le': '411', 'von gop': '411',
+    'thang du von co phan': '412', 'co phieu quy': '415', 'quy dau tu phat trien': '418',
+    'loi nhuan chua phan phoi': '420', 'lai chua phan phoi': '420', 'loi nhuan sau thue chua phan phoi': '420', 'loi nhuan giu lai': '420',
+    'loi ich co dong khong kiem soat': '429', 'loi ich cua co dong khong kiem soat': '429', 'loi ich co dong thieu so': '429',
+    'loi the thuong mai': '279', 'tong nguon von': '440', 'tong cong nguon von': '440',
+    'du phong giam gia hang ton kho': '142', 'du phong phai thu ngan han kho doi': '136', 'du phong phai thu kho doi': '136',
+    'chi phi tra truoc ngan han': '161', 'chi phi tra truoc dai han': '271', 'thue gia tri gia tang duoc khau tru': '162',
+    'chi phi xay dung co ban do dang': '252', 'tai san thue thu nhap hoan lai': '272', 'thue thu nhap hoan lai phai tra': '342',
+  },
+  IS: {
+    'doanh thu ban hang': '01', 'doanh thu ban hang va cung cap dich vu': '01', 'doanh thu': '01',
+    'cac khoan giam tru doanh thu': '02', 'cac khoan giam tru': '02',
+    'doanh thu thuan': '10', 'doanh thu thuan ve ban hang va cung cap dich vu': '10', 'doanh thu thuan ve cung cap dich vu': '10', 'doanh thu thuan ban hang va cung cap dich vu': '10',
+    'gia von hang ban': '11', 'gia von': '11', 'gia von dich vu cung cap': '11', 'gia von hang ban va dich vu cung cap': '11',
+    'loi nhuan gop': '20', 'loi nhuan gop ve ban hang va cung cap dich vu': '20', 'loi nhuan gop ve cung cap dich vu': '20', 'lai gop': '20',
+    'doanh thu hoat dong tai chinh': '22', 'chi phi tai chinh': '23', 'trong do chi phi lai vay': '24', 'chi phi lai vay': '24', 'trong do chi phi di vay': '24',
+    'chi phi ban hang': '25', 'chi phi quan ly doanh nghiep': '26',
+    'loi nhuan thuan tu hoat dong kinh doanh': '30', 'loi nhuan tu hoat dong kinh doanh': '30',
+    'thu nhap khac': '31', 'chi phi khac': '32', 'loi nhuan khac': '40', 'lo khac': '40', 'lai lo khac': '40', 'loi nhuan lo khac': '40',
+    'tong loi nhuan ke toan truoc thue': '50', 'loi nhuan ke toan truoc thue': '50', 'loi nhuan truoc thue': '50', 'tong loi nhuan truoc thue': '50',
+    'chi phi thue thu nhap doanh nghiep hien hanh': '51', 'thue thu nhap doanh nghiep hien hanh': '51', 'chi phi thue thu nhap doanh nghiep': '51',
+    'chi phi thue thu nhap doanh nghiep hoan lai': '52', 'thue thu nhap doanh nghiep hoan lai': '52', 'loi ich thue thu nhap doanh nghiep hoan lai': '52',
+    'loi nhuan sau thue': '60', 'loi nhuan sau thue thu nhap doanh nghiep': '60', 'loi nhuan thuan sau thue': '60', 'loi nhuan sau thue trong ky': '60', 'loi nhuan sau thue trong nam': '60',
+    'loi nhuan sau thue cua cong ty me': '61', 'loi nhuan sau thue cua co dong cong ty me': '61', 'loi nhuan sau thue cua co dong khong kiem soat': '62',
+    'lai co ban tren co phieu': '70', 'lai suy giam tren co phieu': '71',
+  },
+  CF: {
+    'loi nhuan truoc thue': '01', 'tong loi nhuan ke toan truoc thue': '01', 'loi nhuan ke toan truoc thue': '01',
+    'khau hao va hao mon': '02', 'khau hao tai san co dinh': '02', 'khau hao tai san co dinh va bat dong san dau tu': '02', 'khau hao va phan bo': '02', 'chi phi khau hao': '02', 'khau hao': '02',
+    'cac khoan du phong': '03', 'du phong': '03', 'trich lap hoan nhap du phong': '03',
+    'lai lo chenh lech ty gia hoi doai': '04', 'lai lo chenh lech ty gia hoi doai do danh gia lai cac khoan muc tien te co goc ngoai te': '04', 'lai lo chenh lech ty gia': '04', 'lai lo chenh lech ty gia chua thuc hien': '04',
+    'lai lo tu hoat dong dau tu': '05', 'lai tu hoat dong dau tu': '05', 'lo tu hoat dong dau tu': '05', 'lai lo hoat dong dau tu': '05',
+    'chi phi lai vay': '06', 'chi phi di vay': '06', 'cac khoan dieu chinh khac': '07',
+    'loi nhuan tu hoat dong kinh doanh truoc thay doi von luu dong': '08', 'loi nhuan kinh doanh truoc nhung thay doi von luu dong': '08', 'loi nhuan tu hoat dong kinh doanh truoc nhung thay doi von luu dong': '08',
+    'tang giam cac khoan phai thu': '09', 'tang cac khoan phai thu': '09', 'giam cac khoan phai thu': '09', 'giam tang cac khoan phai thu': '09',
+    'tang giam hang ton kho': '10', 'tang hang ton kho': '10', 'giam hang ton kho': '10', 'giam tang hang ton kho': '10',
+    'tang giam cac khoan phai tra': '11', 'tang cac khoan phai tra': '11', 'giam cac khoan phai tra': '11',
+    'tang giam chi phi tra truoc': '12', 'giam tang chi phi tra truoc': '12', 'giam chi phi tra truoc': '12', 'tang chi phi tra truoc': '12', 'tang giam chi phi cho phan bo': '12',
+    'tang giam chung khoan kinh doanh': '13', 'tien lai vay da tra': '14', 'lai vay da tra': '14', 'chi phi di vay da tra': '14',
+    'thue thu nhap doanh nghiep da nop': '15', 'tien thu khac tu hoat dong kinh doanh': '16', 'tien chi khac cho hoat dong kinh doanh': '17', 'tien chi khac tu hoat dong kinh doanh': '17',
+    'luu chuyen tien thuan tu hoat dong kinh doanh': '20', 'luu chuyen tien thuan tu su dung vao hoat dong kinh doanh': '20', 'luu chuyen tien thuan su dung vao hoat dong kinh doanh': '20',
+    'tien chi de mua sam xay dung tai san co dinh va cac tai san dai han khac': '21', 'tien chi de mua sam xay dung tai san co dinh': '21', 'tien chi mua sam xay dung tai san co dinh': '21', 'tien chi de mua sam tai san co dinh': '21', 'tien chi mua sam tai san co dinh': '21',
+    'tien thu tu thanh ly nhuong ban tai san co dinh va cac tai san dai han khac': '22', 'tien thu tu thanh ly nhuong ban tai san co dinh': '22', 'tien thu thanh ly nhuong ban tai san co dinh': '22',
+    'tien chi cho vay mua cac cong cu no cua don vi khac': '23', 'tien chi cho vay': '23', 'tien chi cho vay mua cong cu no': '23',
+    'tien thu hoi cho vay ban lai cac cong cu no cua don vi khac': '24', 'tien thu hoi cho vay': '24', 'tien thu hoi cho vay ban lai cong cu no': '24',
+    'tien chi dau tu gop von vao don vi khac': '25', 'tien chi dau tu gop von vao cac don vi khac': '25', 'tien thu hoi dau tu gop von vao don vi khac': '26', 'tien thu hoi dau tu gop von vao cac don vi khac': '26',
+    'tien thu lai cho vay co tuc va loi nhuan duoc chia': '27', 'tien thu lai tien gui co tuc va loi nhuan duoc chia': '27', 'thu lai cho vay co tuc va loi nhuan duoc chia': '27', 'tien thu lai cho vay va loi nhuan duoc chia': '27',
+    'luu chuyen tien thuan tu hoat dong dau tu': '30', 'luu chuyen tien thuan su dung vao hoat dong dau tu': '30', 'luu chuyen tien thuan tu su dung vao hoat dong dau tu': '30',
+    'tien thu tu phat hanh co phieu nhan von gop cua chu so huu': '31', 'tien thu tu nhan von gop cua chu so huu': '31', 'tien thu tu phat hanh co phieu': '31', 'tien thu tu nhan von gop': '31',
+    'tien tra lai von gop cho cac chu so huu mua lai co phieu cua doanh nghiep da phat hanh': '32', 'tien chi tra von gop cho chu so huu': '32', 'tien chi mua lai co phieu': '32',
+    'tien thu tu di vay': '33', 'tien vay ngan han dai han nhan duoc': '33', 'tien thu tu di vay ngan han dai han': '33', 'tien vay nhan duoc': '33',
+    'tien tra no goc vay': '34', 'tien chi tra no goc vay': '34', 'tien tra no goc vay ngan han dai han': '34',
+    'tien tra no goc thue tai chinh': '35', 'tien chi tra no goc thue tai chinh': '35', 'tien tra no thue tai chinh': '35',
+    'co tuc loi nhuan da tra cho chu so huu': '36', 'loi nhuan da tra cho chu so huu': '36', 'co tuc da tra cho chu so huu': '36', 'co tuc da tra': '36', 'co tuc loi nhuan da tra': '36', 'tien chi tra co tuc': '36',
+    'luu chuyen tien thuan tu hoat dong tai chinh': '40', 'luu chuyen tien thuan su dung vao hoat dong tai chinh': '40', 'luu chuyen tien thuan tu su dung vao hoat dong tai chinh': '40',
+    'luu chuyen tien thuan trong ky': '50', 'luu chuyen tien thuan trong nam': '50', 'luu chuyen tien va tuong duong tien thuan trong ky': '50', 'tang giam tien thuan trong ky': '50', 'tang giam tien thuan trong nam': '50',
+    'tien va tuong duong tien dau ky': '60', 'tien va tuong duong tien dau nam': '60', 'tien dau ky': '60', 'tien dau nam': '60', 'tien va cac khoan tuong duong tien dau ky': '60', 'tien va cac khoan tuong duong tien dau nam': '60',
+    'anh huong cua thay doi ty gia hoi doai quy doi ngoai te': '61', 'anh huong cua thay doi ty gia quy doi ngoai te': '61', 'anh huong cua thay doi ty gia hoi doai': '61', 'anh huong thay doi ty gia hoi doai': '61', 'anh huong cua thay doi ty gia': '61',
+    'tien va tuong duong tien cuoi ky': '70', 'tien va tuong duong tien cuoi nam': '70', 'tien cuoi ky': '70', 'tien cuoi nam': '70', 'tien va cac khoan tuong duong tien cuoi ky': '70', 'tien va cac khoan tuong duong tien cuoi nam': '70',
+  },
+};
+const DONG_NGHIA = {};
+for (const [st, m] of Object.entries(DONG_NGHIA_GOC)) {
+  DONG_NGHIA[st] = {};
+  for (const [lbl, code] of Object.entries(m)) if (chartItem(st, code)) DONG_NGHIA[st][normLabel(lbl)] = code;
+}
+
+/**
+ * Mã TT99 của một dòng theo tên chỉ tiêu: đúng tên trên danh mục (tên trùng nhiều dòng như "- Nguyên giá" → null),
+ * không thì theo bảng tên gọi đồng nghĩa ("Phải thu khách hàng" → 131, "Tiền thu từ đi vay" → 33).
+ */
 export function matchLabel(st, label) {
-  const hits = (LABELS[st] || {})[normLabel(label)];
-  return hits && hits.length === 1 ? hits[0] : null;
+  const k = normLabel(label);
+  const hits = (LABELS[st] || {})[k];
+  if (hits && hits.length === 1) return hits[0];
+  if (hits) return null;
+  return (DONG_NGHIA[st] || {})[k] || null;
+}
+
+/** Độ giống hai tên đã chuẩn hoá (Dice trên tập từ), 0..1. */
+function labelSim(a, b) {
+  const A = new Set(a.split(' ').filter(Boolean)), B = new Set(b.split(' ').filter(Boolean));
+  if (!A.size || !B.size) return 0;
+  let n = 0; for (const x of A) if (B.has(x)) n++;
+  return (2 * n) / (A.size + B.size);
+}
+const DONG_CON_TSCD = /nguyen gia|hao mon|khau hao/;
+const DAU_KHOI_TSCD = new Set(['221', '224', '227', '240']);
+
+/**
+ * Mã in trên giấy và TÊN chỉ tiêu không khớp nhau (công ty đánh số lệch mẫu, ví dụ THILOGI 2024 in
+ * "Tài sản cố định vô hình" ở mã 221 trong khi mẫu là 227) → tin TÊN khi tên khớp ĐÚNG một dòng khác của danh mục
+ * (hoặc bảng đồng nghĩa). Dòng tổng (có công thức) không bao giờ bị đổi: "I. Tiền" ở 110 vẫn là 110.
+ * Trả mã TT99 mới hoặc null (giữ mã in).
+ */
+function maTheoTen(st, tt99Code, label) {
+  if (!tt99Code) return null;
+  const cur = chartItem(st, tt99Code);
+  if (!cur) return null;
+  const byName = matchLabel(st, label);
+  if (!byName || byName === tt99Code) return null;
+  const target = chartItem(st, byName);
+  if (!target || target.kind === 'memo') return null;
+  // Dòng tổng giữ nguyên mã — trừ các đầu khối TSCĐ / BĐSĐT (221, 224, 227, 240: tổng của nguyên giá + hao mòn),
+  // là chỗ các công ty hay đánh số lẫn nhau; đổi được giữa chúng với nhau.
+  const dauKhoi = (c) => DAU_KHOI_TSCD.has(c);
+  if ((cur.sum || target.sum) && !(dauKhoi(tt99Code) && dauKhoi(byName))) return null;
+  if (labelSim(normLabel(label), normLabel(target.label)) < 0.75) return null;
+  return byName;
 }
 
 // ─── Báo cáo chính ────────────────────────────────────────
@@ -74,23 +211,42 @@ export function statementToValues(st, ai, hint = {}) {
   if (!unit) { unit = 1; warnings.push(t('w.noUnit', { raw: meta.don_vi || '' })); }
   const direct = st === 'CF' && /truc/.test(fold(meta.phuong_phap || '').toLowerCase());
 
-  const raw = { cur: {}, prev: {} }, byLabel = { cur: {}, prev: {} };
-  const dup = new Set();
-  for (const it of ai.items || []) {
-    const code = normCode(st, it.c);
-    const target = code ? raw : byLabel;
-    const key = code ? `${st}:${code}` : matchLabel(st, it.n) && `${st}:${matchLabel(st, it.n)}`;
-    if (!key) { if (it.n && (parseVN(it.v) !== null || parseVN(it.p) !== null)) warnings.push(t('w.noCode', { name: String(it.n).slice(0, 60) })); continue; }
-    for (const [side, rawV] of [['cur', it.v], ['prev', it.p]]) {
-      const v = parseVN(rawV);
-      if (v === null) continue;
-      if (key in target[side]) { dup.add(key); continue; }
-      target[side][key] = v * unit;
+  // Gom số theo mã (raw, mã như in) và theo tên (byLabel, mã TT99). regime = null ở lượt đầu (chỉ để đoán mẫu),
+  // lượt sau mới sửa mã in lệch theo tên — vì muốn so tên phải biết mã in thuộc mẫu nào.
+  const gom = (regime) => {
+    const raw = { cur: {}, prev: {} }, byLabel = { cur: {}, prev: {} };
+    const dup = new Set(), remap = [];
+    let khoi = null;   // khối TSCĐ/BĐSĐT vừa bị đổi mã → dòng con "Nguyên giá"/"Hao mòn" đi theo
+    for (const it of ai.items || []) {
+      const code = normCode(st, it.c);
+      let target = code ? raw : byLabel;
+      let key = code ? `${st}:${code}` : matchLabel(st, it.n) && `${st}:${matchLabel(st, it.n)}`;
+      if (code && regime) {
+        const k99 = regime === 'TT200' && st !== 'CF' ? (toTT99Key(key) || '').split(':')[1] : code;
+        const nl = normLabel(it.n);
+        let moi = null;
+        if (st === 'BS' && khoi && DONG_CON_TSCD.test(nl) && /^\d{3}$/.test(k99) && (+k99 === khoi.from + 1 || +k99 === khoi.from + 2)) {
+          moi = String(khoi.to + (+k99 - khoi.from));
+        } else {
+          moi = maTheoTen(st, k99, it.n);
+          if (st === 'BS') khoi = moi && DAU_KHOI_TSCD.has(moi) && /^\d{3}$/.test(k99) ? { from: +k99, to: +moi } : (DONG_CON_TSCD.test(nl) ? khoi : null);
+        }
+        if (moi) { remap.push({ from: code, to: moi, name: String(it.n || '').trim().slice(0, 50) }); target = byLabel; key = `${st}:${moi}`; }
+      }
+      if (!key) { if (it.n && (parseVN(it.v) !== null || parseVN(it.p) !== null)) warnings.push(t('w.noCode', { name: String(it.n).slice(0, 60) })); continue; }
+      for (const [side, rawV] of [['cur', it.v], ['prev', it.p]]) {
+        const v = parseVN(rawV);
+        if (v === null) continue;
+        if (key in target[side]) { dup.add(key); continue; }
+        target[side][key] = v * unit;
+      }
     }
-  }
+    return { raw, byLabel, dup, remap };
+  };
+  const regime = hint.regime || regimeFrom(st, meta, gom(null).raw.cur, ai.items || []);
+  const { raw, byLabel, dup, remap } = gom(regime);
   if (dup.size) warnings.push(t('w.dup', { codes: [...dup].map((k) => k.split(':')[1]).join(', ') }));
-
-  const regime = hint.regime || regimeFrom(st, meta, raw.cur, ai.items || []);
+  for (const r of remap) warnings.push(t('w.remap', r));
   if (!hint.regime && regime === 'TT200' && oldYear(meta) && (/99/.test(String(meta.thong_tu || '')) || detectRegime(raw.cur) === 'TT99')) {
     warnings.push(t('w.oldForm', { d: meta.ngay_ket_thuc }));
   }
@@ -102,10 +258,24 @@ export function statementToValues(st, ai, hint = {}) {
     return v;
   };
   const out = {};
+  const fixes = [];
+  let suy01 = false;
   for (const side of ['cur', 'prev']) {
     const labeled = direct ? Object.fromEntries(Object.entries(byLabel[side]).map(([k, x]) => [k.replace(/^CF:(\d)/, 'CF:T$1'), x])) : byLabel[side];
-    out[side] = normalizeSigns({ ...labeled, ...conv(raw[side]) });   // dòng có mã được ưu tiên
+    const v = normalizeSigns({ ...labeled, ...conv(raw[side]) }, fixes, { unit });   // dòng có mã được ưu tiên
+    // BCTC dịch vụ hay in KQKD từ "Doanh thu thuần" (mã 10), không có 01/02. Dòng 10 là dòng tổng (10 = 01 − 02)
+    // nên mọi chỗ cộng dồn / tính tăng trưởng doanh thu sẽ hụt → suy 01 = 10 + 02 và nói rõ.
+    if (st === 'IS' && typeof v['IS:10'] === 'number' && typeof v['IS:01'] !== 'number') {
+      v['IS:01'] = v['IS:10'] + (typeof v['IS:02'] === 'number' ? v['IS:02'] : 0);
+      suy01 = true;
+    }
+    out[side] = v;
   }
+  if (suy01) warnings.push(t('w.derived01'));
+  // Chỗ đã đổi dấu theo quy ước của báo cáo: gộp theo loại, mỗi loại một dòng cảnh báo để người dùng soát.
+  const daDoi = {};
+  for (const f of fixes) { daDoi[f.kind] ||= new Set(); f.codes.forEach((c) => daDoi[f.kind].add(c)); }
+  for (const [kind, codes] of Object.entries(daDoi)) warnings.push(t(`w.sign${kind}`, { codes: [...codes].join(', ') }));
   return { cur: out.cur, prev: out.prev, unit, regime, direct, unmapped: [...unmapped], warnings, meta };
 }
 
