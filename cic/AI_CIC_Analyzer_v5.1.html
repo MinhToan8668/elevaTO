@@ -1009,6 +1009,33 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
   body.tl-printing .ct{max-width:none;padding:0}
 }
 </style>
+<script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
+   ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
+   hơn H rõ rệt và l hẹp hơn m; font lệch mã vẽ I bằng nét H, l bằng nét k nên các tỷ lệ đó sai. Phát hiện hỏng ở bất kỳ
+   độ đậm nào → chuyển toàn trang sang font hệ thống đầu tiên đo được là đúng. */
+(function(){
+  var cv=null;
+  function bad(fam,w){try{cv=cv||document.createElement('canvas').getContext('2d');cv.font=w+' 40px '+fam;
+    var I=cv.measureText('IIIIIIIIII').width,H=cv.measureText('HHHHHHHHHH').width,l=cv.measureText('llllllllll').width,m=cv.measureText('mmmmmmmmmm').width;
+    return !(I<H*0.75&&l<m*0.6);}catch(e){return false;}}
+  var W=['400','500','600','700'];
+  function check(){
+    var broken=W.some(function(w){return bad("'Myriad Pro'",w);});
+    var html=document.documentElement;
+    if(!broken){html.classList.remove('font-safe');return;}
+    var cands=['system-ui','-apple-system','BlinkMacSystemFont','Arial','Helvetica','Verdana','Tahoma'],pick='sans-serif';
+    for(var i=0;i<cands.length;i++){var f=cands[i];if(!W.some(function(w){return bad(f,w);})){pick=f;break;}}
+    var st=document.getElementById('fontSafe');if(!st){st=document.createElement('style');st.id='fontSafe';(document.head||html).appendChild(st);}
+    st.textContent='html.font-safe body,html.font-safe body *:not(svg):not(svg *){font-family:'+pick+',sans-serif!important}';
+    if(!html.classList.contains('font-safe')){html.classList.add('font-safe');try{console.info('[CIC] Font Myriad Pro trên máy hiển thị sai ký tự → chuyển sang '+pick);}catch(e){}}
+    window._cicFontPick=pick;
+  }
+  check();
+  document.addEventListener('DOMContentLoaded',check);
+  try{if(document.fonts){document.fonts.ready.then(check);document.fonts.addEventListener&&document.fonts.addEventListener('loadingdone',check);}}catch(e){}
+  setTimeout(check,800);setTimeout(check,2500);
+})();
+</script>
 </head>
 <body>
 <script>/* ?datamgr=1 (hoặc __CIC_PARAMS__.datamgr do srcdoc tiêm): bật chế độ chỉ hiện modal Quản lý dữ liệu. */
