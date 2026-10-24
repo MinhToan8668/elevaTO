@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v5.2 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v5.3 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1024,6 +1024,44 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 .tf-co select,.tf-co input{font-family:inherit;font-size:.68rem;border:1px solid var(--bd);border-radius:5px;padding:.15rem .3rem;min-width:0}
 .tf-co select.bad{border-color:var(--rd);background:var(--rdbg)}.tf-co select.warn{border-color:var(--am)}
 .tf-sum{font-size:.72rem;margin:.6rem 0 .2rem;color:var(--tx2)}
+
+/* ═══ v5.3 đánh giá & điều hướng ═══ */
+.tl-crumb{display:flex;align-items:center;gap:.4rem;margin:-.2rem 0 .7rem;flex-wrap:wrap}
+.tl-crumb .btn{padding:.25rem .65rem;font-size:.7rem}
+.tl-crumb .btn:disabled{opacity:.4;cursor:default}
+.tl-crumb-p{font-size:.78rem;color:var(--tx2);margin-left:.3rem}
+.tl-crumb-p a{color:var(--ac);cursor:pointer;text-decoration:underline}
+.tl-health{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(0,1.6fr);gap:1rem;align-items:start;border-radius:var(--rl);padding:.9rem 1rem;margin-bottom:1rem;border:1px solid;box-shadow:var(--sh)}
+@media(max-width:1000px){.tl-health{grid-template-columns:1fr}}
+.tl-lv-g{background:#F0FDF4;border-color:#86EFAC}.tl-lv-y{background:#FFFBEB;border-color:#FCD34D}.tl-lv-r{background:#FEF2F2;border-color:#FCA5A5}.tl-lv-n{background:var(--bg2);border-color:var(--bd)}
+.tl-hl{display:flex;gap:.8rem;align-items:flex-start}
+.tl-light{display:flex;flex-direction:column;gap:4px;background:#1F2937;border-radius:10px;padding:6px;flex-shrink:0}
+.tl-light span{width:16px;height:16px;border-radius:50%;background:#4B5563;opacity:.35}
+.tl-lv-r .tl-light .r{background:#EF4444;opacity:1;box-shadow:0 0 8px #EF4444}
+.tl-lv-y .tl-light .y{background:#F59E0B;opacity:1;box-shadow:0 0 8px #F59E0B}
+.tl-lv-g .tl-light .g{background:#22C55E;opacity:1;box-shadow:0 0 8px #22C55E}
+.tl-hv{font-size:1.05rem;font-weight:800;letter-spacing:.02em}
+.tl-lv-g .tl-hv{color:#15803D}.tl-lv-y .tl-hv{color:#B45309}.tl-lv-r .tl-hv{color:#B91C1C}
+.tl-hs{font-size:.76rem;color:var(--tx2);margin-top:.15rem;line-height:1.5}
+.tl-hc{display:flex;gap:.7rem;flex-wrap:wrap;font-size:.72rem;font-weight:600;margin-top:.45rem;align-items:center}
+.tl-hc .g{color:#15803D}.tl-hc .y{color:#B45309}.tl-hc .r{color:#B91C1C}.tl-hc a{color:var(--ac);cursor:pointer;font-weight:500}
+.tl-issl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.25rem}
+.tl-iss{display:flex;gap:.45rem;align-items:flex-start;font-size:.73rem;line-height:1.45;background:rgba(255,255,255,.75);border-radius:6px;padding:.3rem .5rem}
+.tl-iss[onclick]{cursor:pointer}.tl-iss[onclick]:hover{background:#fff;box-shadow:var(--sh)}
+.tl-iss i{width:9px;height:9px;border-radius:50%;margin-top:.3rem;flex-shrink:0}
+.tl-iss.r i{background:#EF4444}.tl-iss.y i{background:#F59E0B}.tl-iss.g i{background:#22C55E}
+.tl-issl.sm .tl-iss{background:none;padding:.08rem 0;font-size:.7rem}
+.tl-dotlv{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:.35rem;vertical-align:0;flex-shrink:0}
+.tl-dotlv.g{background:#22C55E}.tl-dotlv.y{background:#F59E0B}.tl-dotlv.r{background:#EF4444}.tl-dotlv.n{background:#CBD5E1}
+.tl-rk tr.lv-r td:first-child{box-shadow:inset 3px 0 #EF4444}.tl-rk tr.lv-y td:first-child{box-shadow:inset 3px 0 #F59E0B}.tl-rk tr.lv-g td:first-child{box-shadow:inset 3px 0 #22C55E}
+.tl-rk td{white-space:normal!important;vertical-align:top}
+.tl-rk .tl-dotlv{width:13px;height:13px;margin-top:.2rem}
+.tl-bal{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--r);padding:.55rem .8rem;font-size:.74rem;line-height:1.55;margin-bottom:.8rem;color:var(--tx2)}
+.tl-bal.zero{background:#FFFBEB;border-color:#FCD34D}
+.tl-help{border:1px solid var(--bd);background:var(--bg2);border-radius:50%;width:20px;height:20px;font-size:.66rem;font-weight:700;color:var(--ac);cursor:pointer;line-height:1;padding:0;margin-left:.3rem}
+@media print{.tl-crumb{display:none!important}.tl-iss{background:none}}
+.tl-thr{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.35rem .9rem;padding:0 .9rem .8rem;font-size:.72rem;color:var(--tx2);align-items:center}
+.tl-thr input{width:64px;border:1px solid var(--bd);border-radius:5px;padding:.15rem .3rem;font-family:inherit;font-size:.72rem}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -1476,7 +1514,8 @@ if(window.parent!==window)document.documentElement.classList.add('cic-embedded')
     <div class="tl-f"><label>Chỉ tiêu</label><select id="tlMetric" onchange="tlSet('metric',this.value)"><option value="total">Tổng dư nợ (Vay + Ngoại bảng + TP)</option><option value="dn">Nợ vay</option><option value="ob">Ngoại bảng</option><option value="tp">Trái phiếu</option></select></div>
     <div class="tl-f"><label>Tháng không có bản tra</label><select id="tlFill" onchange="tlSet('fill',this.value)" title="Cách lấp những tháng không có báo cáo CIC"><option value="cic">Nợ vay theo bảng 12 tháng CIC, thiếu thì kéo bản cũ</option><option value="carry">Kéo bản tra gần nhất trước đó</option><option value="none">Bỏ trống</option></select></div>
     <div class="tl-f"><label>Kéo bản cũ tối đa</label><select id="tlMaxCarry" onchange="tlSet('maxCarry',this.value)" title="Quá số tháng này thì không lấy bản cũ, để trống"><option value="1">1 tháng</option><option value="2">2 tháng</option><option value="3">3 tháng</option><option value="6">6 tháng</option><option value="12">12 tháng</option></select></div>
-    <div class="tl-f"><label>Xếp kỳ theo</label><select id="tlBasis" onchange="tlSet('basis',this.value)" title="Ngày số liệu = ngày TCTD báo cáo số dư lên CIC (đúng bản chất). Ngày tra = ngày bấm tra."><option value="data">Ngày số liệu CIC (khuyến nghị)</option><option value="query">Ngày tra</option></select></div>
+    <div class="tl-f"><label>So sánh các kỳ</label><select id="tlBal" onchange="tlSetBalanced(this.value==='1')" title="Cân bằng: chỉ giữ công ty có bản tra thật ở mọi kỳ đang xem, để các kỳ so cùng một tập công ty"><option value="0">Giữ nguyên tất cả công ty</option><option value="1">Cân bằng: chỉ công ty có bản tra ở mọi kỳ</option></select></div>
+    <div class="tl-f"><label>Xếp kỳ theo <button type="button" class="tl-help" onclick="tlExplainBasis()" title="Ngày số liệu khác ngày tra thế nào?">?</button></label><select id="tlBasis" onchange="tlSet('basis',this.value)" title="Ngày số liệu = ngày TCTD báo cáo số dư lên CIC (đúng bản chất). Ngày tra = ngày bấm tra."><option value="data">Ngày số liệu CIC (khuyến nghị)</option><option value="query">Ngày tra</option></select></div>
     <div class="tl-sp"></div>
     <div class="tl-actions">
       <button class="btn btn-o ta-mini" id="tlsBtn2" onclick="tlsClick()" title="Đồng bộ qua thư mục chung"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>Đồng bộ</button>
@@ -7291,7 +7330,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='5.2';
+const APP_VERSION='5.3';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8246,7 +8285,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='5.2';
+const TL_VER='5.3';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10135,6 +10174,222 @@ function tfExport(){
 }
 // nút mở
 (function(){const _gr=tlgRenderEdit;tlgRenderEdit=function(g){_gr(g);if(g&&g.id!=='__new'){const el=document.getElementById('tlgEdit');if(el){const d=document.createElement('div');d.style.cssText='margin-top:.4rem';d.innerHTML='<button class="btn btn-o" style="padding:.25rem .65rem;font-size:.68rem" onclick="tlCloseGroups();TL.scope={kind:\'group\',id:\''+g.id+'\'};tfOpen()">Xuất form nội bộ (Dư nợ &amp; TSBĐ)…</button>';el.appendChild(d);}}};})();
+
+
+/* ═══════════ v5.3 — SO SÁNH CÂN BẰNG · QUAY LẠI/TIẾN TỚI · ĐÈN ĐÁNH GIÁ XANH/VÀNG/ĐỎ ═══════════ */
+// ─────────── 1. So sánh cân bằng: chỉ giữ công ty có BẢN TRA THẬT ở mọi kỳ đang xem ───────────
+(function(){
+  const _b=tlBuildModel;
+  tlBuildModel=function(opt){
+    opt=opt||{};
+    if(!TL.balanced||opt.noBalance)return _b(opt);
+    const full=_b(opt);if(full.empty||full.gran!=='month')return full;
+    const keep=full.rows.filter(r=>r.cells.every(c=>c.kind==='real')).map(r=>r.mst);
+    const hidden=full.rows.filter(r=>keep.indexOf(r.mst)<0).map(r=>({mst:r.mst,name:r.name,miss:full.cols.filter((c,i)=>r.cells[i].kind!=='real').map(c=>c.label)}));
+    const sv=TL.excl;TL.excl=new Set([...sv,...hidden.map(h=>h.mst)]);
+    let M;try{M=_b(opt);}finally{TL.excl=sv;}
+    if(M.empty){M=Object.assign({},full,{rows:[],agg:full.agg.map(a=>Object.assign({},a,{has:false})),lastIdx:-1,firstIdx:-1,firstRealIdx:-1,balEmpty:true});}
+    M.balanced=true;M.balHidden=hidden;M.balTotal=full.rows.length;return M;
+  };
+})();
+function tlSetBalanced(on){_tlNavPush();TL.balanced=!!on;TL.sel=-1;_tlSaveSt();tlRender();}
+function _tlBalBanner(M){
+  if(!M.balanced)return '';
+  const n=M.balTotal,k=n-M.balHidden.length;
+  if(M.gran!=='month')return '<div class="grp-hi warn"><h4>So sánh cân bằng chỉ áp dụng cho mốc "Theo tháng"</h4></div>';
+  let h='<div class="tl-bal '+(k?'':'zero')+'"><div><b>⚖ So sánh cân bằng:</b> chỉ tính <b>'+k+'/'+n+'</b> công ty có bản tra thật ở cả '+M.cols.length+' kỳ ('+M.cols[0].label+' → '+M.cols[M.cols.length-1].label+'). Mọi tổng, biểu đồ, Δ so cùng một tập công ty, nên tăng/giảm phản ánh đúng việc vay thêm hay trả bớt.</div>';
+  if(!k){
+    // gợi ý số kỳ gần nhất có ít nhất 1 công ty đủ
+    let sug=0;try{for(let q=M.cols.length-1;q>=1;q--){const sv={quick:TL.quick,from:TL.from,to:TL.to};TL.quick=q;TL.from='';const m=tlBuildModel({noBalance:false});Object.assign(TL,sv);if(m.rows&&m.rows.length){sug=q;break;}}}catch(e){}
+    h+='<div style="margin-top:.3rem"><b>Không công ty nào có bản tra ở đủ mọi kỳ.</b> '+(sug?'<button class="btn btn-o" style="padding:.12rem .5rem;font-size:.64rem" onclick="tlQuick('+sug+')">Thu hẹp về '+sug+' kỳ gần nhất</button> ':'')+'hoặc tắt so sánh cân bằng.</div>';
+  }
+  if(M.balHidden.length)h+='<details style="margin-top:.25rem"><summary style="cursor:pointer">Đang ẩn '+M.balHidden.length+' công ty thiếu bản tra</summary><div class="tl-src" style="columns:2 300px;margin-top:.3rem">'+M.balHidden.map(x=>'<div>'+_dmEsc(shortName(x.name).substring(0,40))+' <span class="tl-mini">thiếu: '+x.miss.slice(0,6).join(', ')+(x.miss.length>6?'…':'')+'</span></div>').join('')+'</div></details>';
+  return h+'</div>';
+}
+// ─────────── 2. Quay lại / Tiến tới giữa các màn xem ───────────
+const TLH={back:[],fwd:[]};
+const _TLNAV_KEYS=['scope','tab','sel','hiBank','from','to','quick','gran','metric','balanced','stack','win','winEnd'];
+function _tlNavSnap(){const o={};_TLNAV_KEYS.forEach(k=>o[k]=TL[k]);o.excl=[...TL.excl];return JSON.stringify(o);}
+function _tlNavPush(){const s=_tlNavSnap();if(TLH.back[TLH.back.length-1]!==s){TLH.back.push(s);if(TLH.back.length>60)TLH.back.shift();}TLH.fwd=[];_tlNavBtns();}
+function _tlNavApply(s){const o=JSON.parse(s);_TLNAV_KEYS.forEach(k=>TL[k]=o[k]);TL.excl=new Set(o.excl||[]);_tlSaveSt();tlRender();}
+function tlBack(){if(!TLH.back.length)return;const cur=_tlNavSnap();let s=TLH.back.pop();while(s===cur&&TLH.back.length)s=TLH.back.pop();if(s===cur)return _tlNavBtns();TLH.fwd.push(cur);_tlNavApply(s);_tlNavBtns();}
+function tlFwd(){if(!TLH.fwd.length)return;TLH.back.push(_tlNavSnap());_tlNavApply(TLH.fwd.pop());_tlNavBtns();}
+function _tlNavBtns(){const b=document.getElementById('tlNavB'),f=document.getElementById('tlNavF');if(b)b.disabled=!TLH.back.length;if(f)f.disabled=!TLH.fwd.length;}
+(function(){
+  const wrap=name=>{const o=window[name];if(typeof o!=='function')return;window[name]=function(){_tlNavPush();return o.apply(this,arguments);};};
+  ['tlFocusCo','tlOnScope','tlToggleCo','tlQuick','tlSetStack','tlSetWin','tlgView'].forEach(wrap);
+  const _s=tlSet;tlSet=function(k){if(['gran','from','to','metric','basis','fill','maxCarry'].indexOf(k)>=0)_tlNavPush();return _s.apply(this,arguments);};
+  const _t=tlTab;tlTab=function(t){if(t!==TL.tab)_tlNavPush();return _t.apply(this,arguments);};
+  const _sc=tlSelCol;tlSelCol=function(i){_tlNavPush();return _sc(i);};
+  document.addEventListener('keydown',e=>{if(MODE!=='timeline'||!e.altKey)return;if(e.key==='ArrowLeft'){e.preventDefault();tlBack();}else if(e.key==='ArrowRight'){e.preventDefault();tlFwd();}});
+})();
+function _tlCrumb(M){
+  const sc=M.scope;let h='<div class="tl-crumb"><button id="tlNavB" class="btn btn-o" onclick="tlBack()" title="Quay lại màn trước (Alt + ←)">◀ Quay lại</button><button id="tlNavF" class="btn btn-o" onclick="tlFwd()" title="Tiến tới (Alt + →)">Tiến tới ▶</button><span class="tl-crumb-p">';
+  if(sc.kind==='co'){const gs=_tlGroupsOfMst(sc.id);
+    h+=(gs.length?gs.map(g=>'<a onclick="tlGoScope(\'group\',\''+g.id+'\')">'+_dmEsc(g.name)+'</a>').join(' / ')+' › ':'<a onclick="tlGoScope(\'all\',\'\')">Tất cả KH</a> › ')+'<b>'+_dmEsc(shortName(sc.name).substring(0,50))+'</b>';}
+  else h+='<b>'+_dmEsc(sc.name)+'</b>'+(TL.excl.size?' <span class="tl-mini">(đang ẩn '+TL.excl.size+' cty)</span>':'');
+  return h+'</span></div>';
+}
+function tlGoScope(kind,id){_tlNavPush();TL.scope={kind,id};TL.excl=new Set();TL.sel=-1;TL.hiBank=null;_tlSaveSt();tlRender();}
+
+// ─────────── 3. ĐÁNH GIÁ XANH / VÀNG / ĐỎ ───────────
+// Mỗi phát hiện chỉ đích danh: công ty · TCTD · kỳ. Ngưỡng ghi ngay trong câu để người đọc tự thẩm định.
+const TLR_DEF={grpShareR:5,growY:30,growR:60,dropY:50,minAbs:1000/*triệu = 1 tỷ*/,newBankY:3,manyBankY:10,collLowY:30,collDropY:30,stY:20,obY:50,inqY:5,staleY:2,concY:40,concR:60};
+let TLR=Object.assign({},TLR_DEF);try{Object.assign(TLR,JSON.parse(localStorage.getItem('cic_tl_thr')||'{}'));}catch(e){}
+function tlSetThr(k,v){const n=parseFloat(v);if(!isFinite(n)||n<0)return;TLR[k]=k==='minAbs'?n*1000:n;try{localStorage.setItem('cic_tl_thr',JSON.stringify(TLR));}catch(e){}tlRender();}
+function tlResetThr(){TLR=Object.assign({},TLR_DEF);try{localStorage.removeItem('cic_tl_thr');}catch(e){}tlRender();}
+function _tlPctTxt(p){return (p>0?'+':'')+p.toFixed(0)+'%';}
+function _tlCoAssess(M,r){
+  const iss=[];const A=M.cols;const add=(lv,t,o)=>iss.push(Object.assign({lv,t,mst:r.mst},o||{}));
+  const idx=r.cells.map((c,i)=>c.kind!=='none'?i:-1).filter(i=>i>=0);
+  if(!idx.length){add('y','Không có số liệu trong khoảng đang xem — cần tra CIC');return _tlLv(iss,r,null);}
+  const li=idx[idx.length-1];const realIdx=r.cells.map((c,i)=>c.kind==='real'?i:-1).filter(i=>i>=0);const fi=realIdx.length?realIdx[0]:idx[0];
+  const cL=r.cells[li],cF=r.cells[fi];const snap=cL.snap;
+  if(snap&&snap.S10A){
+    const S=snap.S10A;
+    _tlMergedOf(snap).forEach(b=>{const g=+b.debtGroup;if(g>=3)add('r','Nợ nhóm '+g+' (nợ xấu) tại '+tctdLabel(b.name),{bank:bankKey(b.name),col:li});else if(g===2)add('y','Nợ nhóm 2 (cần chú ý) tại '+tctdLabel(b.name),{bank:bankKey(b.name),col:li});});
+    (S.badDebtHistory||[]).slice(0,2).forEach(x=>add('r','Lịch sử nợ xấu: '+fm(x.amount||0)+' '+unitShort()+' tại '+tctdLabel(x.bankName||'')+(x.month?' tháng '+String(x.month).slice(4)+'/'+String(x.month).slice(0,4):'')));
+    if(!(S.badDebtHistory||[]).length&&S.creditHistory&&S.creditHistory.badDebt5y)add('r','Có nợ xấu trong 5 năm gần nhất (theo CIC)');
+    (S.noteDebtHistory||[]).slice(0,2).forEach(x=>add('y','Nợ cần chú ý trong 12 tháng: '+fm(x.amount||0)+' '+unitShort()+' tại '+tctdLabel(x.bankName||'')+(x.month?' tháng '+String(x.month).slice(4)+'/'+String(x.month).slice(0,4):'')));
+    if(!(S.noteDebtHistory||[]).length&&S.creditHistory&&S.creditHistory.noteDebt12m)add('y','Có nợ cần chú ý trong 12 tháng (theo CIC)');
+    if(S.creditHistory&&S.creditHistory.lateCard3y)add('y','Chậm thanh toán thẻ trong 3 năm');
+    if(S.totalMismatch)add('y','Báo cáo CIC lệch dòng tổng — kiểm tra lại bản tra');
+    // Chỉ đếm TCTD CHƯA cho vay công ty này LẪN mọi công ty cùng nhóm theo dõi: ngân hàng đang cho vay tập đoàn
+    // tra cứu định kỳ cả các công ty anh em là bình thường, không phải dấu hiệu tìm vốn mới.
+    const q=snap.ts;const lend=new Set([..._tlMergedOf(snap).map(b=>_tlBK(b.name)),..._tlGrpLenders(r.mst)]);const lendN=[...lend].map(x=>_tfBN(String(x).replace(/^short:/,''))).filter(x=>x.length>=4);const fis=new Map();
+    (S.inquiries||[]).forEach(i=>{const d=parseDMY(String(i.inquiryDate||'').slice(0,10));if(!d||q-d.getTime()>30*864e5||q<d.getTime())return;const k=_tlBK(i.fiName||'');if(!k||lend.has(k)||/quốc tế việt nam/i.test(i.fiName||''))return;const nn=_tfBN(i.fiName);if(lendN.some(x=>nn.includes(x)))return;fis.set(k,bankShort(i.fiName)||tctdLabel(i.fiName));});
+    if(fis.size>=TLR.inqY)add('y',fis.size+' TCTD chưa cho vay (cả nhóm) đã tra cứu CIC trong 30 ngày trước '+_tlDayLbl(snap.day)+' ('+[...fis.values()].slice(0,4).join(', ')+(fis.size>4?'…':'')+') — có thể đang tìm nguồn vốn mới',{col:li});
+  }
+  if(li!==fi){
+    const v0=_tlMv(cF,'total'),v1=_tlMv(cL,'total');
+    if(v0>0&&Math.abs(v1-v0)>=TLR.minAbs){const p=(v1-v0)/v0*100;
+      if(p>=TLR.growR)add('r','Dư nợ tăng '+_tlPctTxt(p)+' ('+fm(v0)+' → '+fm(v1)+') từ '+A[fi].label+' đến '+A[li].label,{col:li});
+      else if(p>=TLR.growY)add('y','Dư nợ tăng '+_tlPctTxt(p)+' ('+fm(v0)+' → '+fm(v1)+') từ '+A[fi].label+' đến '+A[li].label,{col:li});
+      else if(p<=-TLR.dropY)add('y','Dư nợ giảm '+_tlPctTxt(p)+' — kiểm tra là trả nợ hay bị TCTD thu hồi/siết',{col:li});}
+    else if(!v0&&v1>=TLR.minAbs)add('y','Phát sinh dư nợ mới '+fm(v1)+' '+unitShort()+' (đầu kỳ không có)',{col:li});
+    if(cF.snap&&cL.snap){
+      const k0=new Set(_tlMergedOf(cF.snap).filter(b=>b.total>0).map(b=>bankKey(b.name)));const nb=_tlMergedOf(cL.snap).filter(b=>b.total>0&&!k0.has(bankKey(b.name)));
+      if(nb.length>=TLR.newBankY)add('y','Thêm '+nb.length+' TCTD mới: '+nb.slice(0,4).map(b=>tctdLabel(b.name)).join(', '),{col:li});
+      nb.filter(b=>b.total>=Math.max(TLR.minAbs*5,0.2*(v1||1))).slice(0,2).forEach(b=>add('y','Dư nợ lớn tại TCTD mới '+tctdLabel(b.name)+': '+fm(b.total),{bank:bankKey(b.name),col:li}));
+      const m0=new Map(_tlMergedOf(cF.snap).map(b=>[bankKey(b.name),b]));
+      _tlMergedOf(cL.snap).forEach(b=>{const o=m0.get(bankKey(b.name));if(!o||o.total<TLR.minAbs)return;const p=(b.total-o.total)/o.total*100;if(p>=100&&b.total-o.total>=TLR.minAbs*5)add('y','Dư nợ tại '+tctdLabel(b.name)+' tăng '+_tlPctTxt(p)+' ('+fm(o.total)+' → '+fm(b.total)+')',{bank:bankKey(b.name),col:li});});
+      const st=c=>{const d=(c.nh||0)+(c.th||0)+(c.dh||0)+(c.kh||0);return d>0?(c.nh||0)/d*100:null;};const s0=st(cF),s1=st(cL);
+      if(s0!=null&&s1!=null&&s1-s0>=TLR.stY)add('y','Tỷ trọng vay ngắn hạn tăng '+(s1-s0).toFixed(0)+' điểm ('+s0.toFixed(0)+'% → '+s1.toFixed(0)+'%) — áp lực đáo hạn gần',{col:li});
+      if((cF.ob||0)>=TLR.minAbs&&(cL.ob-cF.ob)/cF.ob*100>=TLR.obY)add('y','Ngoại bảng (bảo lãnh/LC) tăng '+_tlPctTxt((cL.ob-cF.ob)/cF.ob*100)+' ('+fm(cF.ob)+' → '+fm(cL.ob)+')',{col:li});
+      if(cF.snap.R20&&cL.snap.R20&&cF.coll>0){const p=(cL.coll-cF.coll)/cF.coll*100;const dp=(cF.dn>0?(cL.dn-cF.dn)/cF.dn*100:0);if(p<=-TLR.collDropY&&dp>-10)add(p<=-60?'r':'y','TSBĐ giảm '+_tlPctTxt(p)+' ('+fm(cF.coll)+' → '+fm(cL.coll)+') trong khi nợ vay không giảm',{col:li});}
+    }
+  }
+  if(cL.snap&&cL.snap.R20&&cL.dn>=TLR.minAbs*10){const cov=cL.coll/cL.dn*100;if(cov<TLR.collLowY)add('y','TSBĐ chỉ bằng '+cov.toFixed(0)+'% nợ vay ('+fm(cL.coll)+' / '+fm(cL.dn)+')',{col:li});}
+  if(cL.snap&&_tlMergedOf(cL.snap).filter(b=>b.total>0).length>=TLR.manyBankY)add('y','Quan hệ với '+_tlMergedOf(cL.snap).filter(b=>b.total>0).length+' TCTD — rủi ro vay chồng chéo',{col:li});
+  const lastReal=r.snaps.length?r.snaps[r.snaps.length-1]:null;
+  if(lastReal&&M.to&&_tlMonDiff(_tlDataInfo(lastReal).mon,M.to)>=TLR.staleY)add('y','Số liệu cũ: bản tra gần nhất '+_tlDayLbl(lastReal.day)+' (số liệu '+_tlDayLbl(_tlDD(lastReal))+')');
+  return _tlLv(iss,r,cL);
+}
+const _tlBK=n=>bankKey(bankShort(n)||n);// khoá TCTD chuẩn: tên đầy đủ và tên tắt về cùng một khoá
+const _tlGLCache=new Map();
+function _tlGrpLenders(mst){
+  const gs=_tlGroupsOfMst(mst);const key=gs.map(g=>g.id).join('|')+'#'+_TL_CACHE.length;if(_tlGLCache.has(key))return _tlGLCache.get(key);
+  const set=new Set();const mem=new Set();gs.forEach(g=>g.msts.forEach(m=>mem.add(m)));
+  const last=new Map();_TL_CACHE.forEach(s=>{if(mem.has(s.mst)){const c=last.get(s.mst);if(!c||s.ts>c.ts)last.set(s.mst,s);}});
+  last.forEach(s=>_tlMergedOf(s).forEach(b=>{if(b.total>0)set.add(_tlBK(b.name));}));
+  _tlGLCache.set(key,set);return set;
+}
+function _tlLv(iss,r,cL){const lv=iss.some(x=>x.lv==='r')?'r':iss.some(x=>x.lv==='y')?'y':'g';iss.sort((a,b)=>(a.lv==='r'?0:1)-(b.lv==='r'?0:1));return {mst:r.mst,name:r.name,lv,iss,exp:cL?(_tlMv(cL,'total')||0):0};}
+function tlAssess(M){
+  if(M.empty||M.lastIdx<0)return {lv:'n',cos:[],grp:[]};
+  const cos=M.rows.map(r=>_tlCoAssess(M,r));const A=M.agg,l=M.lastIdx;const tot=_tlMv(A[l],'total')||1;cos.forEach(c=>c.share=c.exp/tot*100);
+  const grp=[];const add=(lv,t,o)=>grp.push(Object.assign({lv,t},o||{}));
+  if(M.scope.kind!=='co'){
+    const red=cos.filter(c=>c.lv==='r'),yel=cos.filter(c=>c.lv==='y');
+    const _sh=l2=>{const v=l2.reduce((s,c)=>s+c.share,0);return v<1?'<1%':v.toFixed(0)+'%';};
+    // Nợ xấu ở BẤT KỲ công ty nào → nhóm đỏ (rủi ro lây chéo trong tập đoàn). Cảnh báo đỏ khác chỉ làm nhóm đỏ
+    // khi công ty đó chiếm ≥ TLR.grpShareR % dư nợ nhóm; nhỏ hơn thì nhóm ở mức vàng.
+    const bad=red.filter(c=>c.iss.some(x=>x.lv==='r'&&/nợ xấu|Nợ nhóm [345]/i.test(x.t)));
+    const big=red.filter(c=>bad.indexOf(c)<0&&c.share>=TLR.grpShareR),small=red.filter(c=>bad.indexOf(c)<0&&c.share<TLR.grpShareR);
+    if(bad.length)add('r',bad.length+' công ty có nợ xấu — rủi ro lây chéo toàn nhóm: '+bad.slice(0,4).map(c=>shortName(c.name).substring(0,28)).join(', '),{mst:bad[0].mst});
+    if(big.length)add('r',big.length+' công ty lớn ở mức ĐỎ (chiếm '+_sh(big)+' dư nợ nhóm): '+big.slice(0,4).map(c=>shortName(c.name).substring(0,28)).join(', '),{mst:big[0].mst});
+    if(small.length)add('y',small.length+' công ty nhỏ ở mức ĐỎ (chiếm '+_sh(small)+' dư nợ nhóm, dưới ngưỡng '+TLR.grpShareR+'%): '+small.slice(0,4).map(c=>shortName(c.name).substring(0,28)).join(', '),{mst:small[0].mst});
+    if(yel.length)add('y',yel.length+' công ty cần chú ý (vàng), chiếm '+_sh(yel)+' dư nợ nhóm');
+    // tăng trưởng cùng tập công ty
+    const f=M.firstIdx;if(f>=0&&f!==l){const both=M.rows.filter(r=>r.cells[f].kind!=='none'&&r.cells[l].kind!=='none');const v0=both.reduce((s,r)=>s+(_tlMv(r.cells[f],'total')||0),0),v1=both.reduce((s,r)=>s+(_tlMv(r.cells[l],'total')||0),0);
+      if(v0>0){const p=(v1-v0)/v0*100;if(p>=TLR.growR)add('r','Dư nợ nhóm (cùng '+both.length+' công ty) tăng '+_tlPctTxt(p)+' từ '+A[f].label+' đến '+A[l].label,{col:l});else if(p>=TLR.growY)add('y','Dư nợ nhóm (cùng '+both.length+' công ty) tăng '+_tlPctTxt(p)+' từ '+A[f].label+' đến '+A[l].label,{col:l});}}
+    // tập trung TCTD
+    let top=null;A[l].banks.forEach(b=>{if(!top||b.total>top.total)top=b;});const det=(A[l].total-A[l].unk)||1;
+    if(top){const p=top.total/det*100;if(p>=TLR.concR)add('r','Tập trung TCTD: '+tctdLabel(top.name)+' chiếm '+p.toFixed(0)+'% dư nợ nhóm kỳ '+A[l].label,{bank:top.key,col:l});else if(p>=TLR.concY)add('y','Tập trung TCTD: '+tctdLabel(top.name)+' chiếm '+p.toFixed(0)+'% dư nợ nhóm kỳ '+A[l].label,{bank:top.key,col:l});}
+    if(A[l].worst!=='01'&&!red.length)add(+A[l].worst>=3?'r':'y','Có dư nợ nhóm '+(+A[l].worst)+' trong nhóm kỳ '+A[l].label,{col:l});
+    const cov=A[l].cov;if(cov.real<M.rows.length)add('y','Kỳ '+A[l].label+' mới có '+cov.real+'/'+M.rows.length+' công ty được tra — số còn lại là ước tính/kéo bản cũ',{tab:'cal'});
+  }
+  const all=M.scope.kind==='co'?(cos[0]?cos[0].iss:[]):grp;
+  const lv=all.some(x=>x.lv==='r')?'r':all.some(x=>x.lv==='y')?'y':'g';
+  return {lv,cos,grp};
+}
+const TL_LV={g:['XANH','Ổn định','tl-lv-g'],y:['VÀNG','Cần chú ý','tl-lv-y'],r:['ĐỎ','Nghiêm trọng','tl-lv-r'],n:['—','Chưa có số liệu','tl-lv-n']};
+function _tlIssGo(x){const p=[];if(x.mst&&TL.scope.kind!=='co')p.push("tlFocusCo('"+x.mst+"')");if(x.bank)p.push("TL.hiBank='"+_dmEsc(x.bank)+"'");if(x.col!=null)p.push('TL.sel='+x.col);if(x.tab)p.push("tlTab('"+x.tab+"')");else if(x.bank)p.push("tlTab('tctd')");return p.length?p.join(';')+';tlRenderBody(true)':'';}
+function _tlIssLi(x,withCo){const go=_tlIssGo(x);return '<li class="tl-iss '+x.lv+'"'+(go?' onclick="'+go+'" title="Bấm để xem đúng chỗ"':'')+'><i></i><span>'+(withCo&&x.co?'<b>'+_dmEsc(shortName(x.co).substring(0,34))+'</b> · ':'')+_dmEsc(x.t)+'</span></li>';}
+function tlHtmlHealth(M){
+  const R=tlAssess(M);M._assess=R;const L=TL_LV[R.lv];const isCo=M.scope.kind==='co';
+  let list=[];
+  if(isCo)list=R.cos[0]?R.cos[0].iss:[];
+  else{list=R.grp.slice();R.cos.filter(c=>c.lv!=='g').sort((a,b)=>(a.lv==='r'?0:1)-(b.lv==='r'?0:1)||b.exp-a.exp).slice(0,8).forEach(c=>c.iss.slice(0,2).forEach(x=>list.push(Object.assign({co:c.name},x))));}
+  const cnt={g:R.cos.filter(c=>c.lv==='g').length,y:R.cos.filter(c=>c.lv==='y').length,r:R.cos.filter(c=>c.lv==='r').length};
+  const head=isCo?(R.lv==='g'?'Không phát hiện dấu hiệu bất thường trong khoảng đang xem.':R.lv==='y'?'Có điểm cần chú ý, xem chi tiết bên dưới.':'Có dấu hiệu nghiêm trọng, cần xử lý trước khi đánh giá cấp tín dụng.')
+    :(R.lv==='g'?'Toàn nhóm ổn định: không công ty nào có cảnh báo.':R.lv==='y'?'Nhóm cần chú ý ở các điểm dưới đây.':'Nhóm có dấu hiệu nghiêm trọng ở các điểm dưới đây.');
+  let h='<div class="tl-health '+L[2]+'"><div class="tl-hl"><div class="tl-light"><span class="r"></span><span class="y"></span><span class="g"></span></div><div><div class="tl-hv">'+L[0]+' · '+L[1]+'</div><div class="tl-hs">'+head+'</div>'
+    +(isCo?'':'<div class="tl-hc"><span class="g">● '+cnt.g+' xanh</span><span class="y">● '+cnt.y+' vàng</span><span class="r">● '+cnt.r+' đỏ</span><a onclick="tlTab(\'rk\')">Xem bảng đánh giá từng công ty →</a></div>')+'</div></div>';
+  h+=list.length?'<ul class="tl-issl">'+list.slice(0,12).map(x=>_tlIssLi(x,!isCo)).join('')+'</ul>':'<div class="tl-mini" style="padding:.3rem 0">Các phép kiểm: nợ nhóm ≥2, lịch sử nợ xấu / nợ cần chú ý, tăng dư nợ ≥'+TLR.growY+'%, thêm ≥'+TLR.newBankY+' TCTD, tỷ trọng ngắn hạn, ngoại bảng, TSBĐ, số TCTD tra cứu, độ cũ số liệu'+(isCo?'':', tập trung TCTD')+'.</div>';
+  return h+'</div>';
+}
+function tlHtmlRisk(M){
+  const R=M._assess||tlAssess(M);
+  if(!R.cos.length)return '<div class="na">Không có dữ liệu</div>';
+  const rows=R.cos.slice().sort((a,b)=>({r:0,y:1,g:2}[a.lv]-{r:0,y:1,g:2}[b.lv])||b.exp-a.exp);
+  let h=tlHtmlHealth(M);
+  h+='<div class="tw"><div class="th"><span class="tt">Đánh giá từng công ty <span class="tl-mini">đỏ → vàng → xanh, trong mỗi mức xếp theo dư nợ · bấm tên để xem riêng · bấm dòng cảnh báo để tới đúng chỗ</span></span><span class="tc">'+rows.length+' công ty</span></div><div class="tl-mtx tl-wrap"><table class="d tl-rk"><thead><tr><th style="width:34px"></th><th>Công ty</th><th class="c" style="text-align:right!important">'+_tlMetricLbl()+' kỳ cuối</th><th class="c" style="text-align:right!important">Tỷ trọng</th><th>Nhận định</th></tr></thead><tbody>'
+    +rows.map(c=>'<tr class="lv-'+c.lv+'"><td><span class="tl-dotlv '+c.lv+'" title="'+TL_LV[c.lv][1]+'"></span></td><td><a style="cursor:pointer;color:var(--ac);font-weight:600" onclick="tlFocusCo(\''+c.mst+'\')">'+_dmEsc(shortName(c.name).substring(0,46))+'</a><div class="tl-mini">MST '+c.mst+'</div></td><td class="am">'+fm(c.exp)+'</td><td class="am">'+(c.share||0).toFixed(1).replace('.',',')+'%</td><td>'+(c.iss.length?'<ul class="tl-issl sm">'+c.iss.slice(0,4).map(x=>_tlIssLi(x,false)).join('')+(c.iss.length>4?'<li class="tl-mini">+'+(c.iss.length-4)+' điểm khác</li>':'')+'</ul>':'<span class="tl-dn">Không có cảnh báo</span>')+'</td></tr>').join('')
+    +'</tbody></table></div></div>';
+  const thr=[['growY','Dư nợ tăng (vàng) ≥','%'],['growR','Dư nợ tăng (đỏ) ≥','%'],['dropY','Dư nợ giảm (vàng) ≥','%'],['newBankY','Thêm TCTD mới ≥','TCTD'],['manyBankY','Quan hệ ≥','TCTD'],['stY','Tỷ trọng ngắn hạn tăng ≥','điểm'],['obY','Ngoại bảng tăng ≥','%'],['collLowY','TSBĐ / nợ vay <','%'],['collDropY','TSBĐ giảm ≥','%'],['inqY','TCTD chưa cho vay tra cứu (30 ngày) ≥','TCTD'],['staleY','Số liệu cũ ≥','tháng'],['concY','Một TCTD chiếm (vàng) ≥','%'],['concR','Một TCTD chiếm (đỏ) ≥','%'],['grpShareR','Công ty đỏ làm cả nhóm đỏ khi chiếm ≥','% dư nợ'],['minAbs','Bỏ qua thay đổi nhỏ hơn','tỷ']];
+  h+='<details class="tl-rules"><summary>⚙ Chỉnh ngưỡng theo khẩu vị rủi ro của đơn vị</summary><div class="tl-thr">'+thr.map(([k,l,u])=>'<label>'+l+' <input type="number" min="0" step="1" value="'+(k==='minAbs'?TLR[k]/1000:TLR[k])+'" onchange="tlSetThr(\''+k+'\',this.value)"> '+u+'</label>').join('')+'<button class="btn btn-o" style="padding:.2rem .6rem;font-size:.66rem" onclick="tlResetThr()">Về mặc định</button></div></details>';
+  h+='<details class="tl-rules"><summary>📏 Ngưỡng đánh giá đang dùng</summary><div class="tl-rules-b" style="display:block"><ul style="margin-left:1rem">'
+    +'<li><b class="tl-up">ĐỎ</b> (công ty): nợ nhóm 3–5 hoặc lịch sử nợ xấu; dư nợ tăng ≥'+TLR.growR+'% trong khoảng xem; TSBĐ giảm ≥60% khi nợ vay không giảm; một TCTD chiếm ≥'+TLR.concR+'% dư nợ nhóm. <b>Cả nhóm đỏ</b> khi có công ty nợ xấu, hoặc công ty đỏ chiếm ≥'+TLR.grpShareR+'% dư nợ nhóm.</li>'
+    +'<li><b style="color:var(--amtx)">VÀNG</b>: nợ nhóm 2 / nợ cần chú ý 12 tháng / chậm trả thẻ; dư nợ tăng ≥'+TLR.growY+'% hoặc giảm ≥'+TLR.dropY+'%; thêm ≥'+TLR.newBankY+' TCTD; dư nợ tại một TCTD tăng gấp đôi; tỷ trọng ngắn hạn tăng ≥'+TLR.stY+' điểm; ngoại bảng tăng ≥'+TLR.obY+'%; TSBĐ < '+TLR.collLowY+'% nợ vay; ≥'+TLR.manyBankY+' TCTD; ≥'+TLR.inqY+' TCTD chưa cho vay tra cứu trong 30 ngày; số liệu cũ ≥'+TLR.staleY+' tháng; một TCTD chiếm ≥'+TLR.concY+'% dư nợ nhóm; kỳ cuối chưa tra đủ công ty.</li>'
+    +'<li><b class="tl-dn">XANH</b>: không vướng điểm nào. Thay đổi nhỏ hơn '+(TLR.minAbs/1000)+' tỷ không tính.</li></ul>Đây là sàng lọc từ số liệu CIC, không thay thế thẩm định. Ngưỡng có thể chỉnh theo khẩu vị rủi ro của đơn vị.</div></details>';
+  return h;
+}
+// ─────────── 4. Gắn vào giao diện ───────────
+(function(){
+  const _ov=tlHtmlOverview;tlHtmlOverview=function(M){return _tlBalBanner(M)+tlHtmlHealth(M)+_ov(M);};
+  const _rb=tlRenderBody;
+  tlRenderBody=function(keepTab){
+    const M=tlModelCache;
+    if(M&&M.balEmpty){const el=document.getElementById('tlBody');el.innerHTML='<div class="tl-tabs"></div>'+_tlBalBanner(M);return;}
+    _rb(keepTab);
+    const el=document.getElementById('tlBody');if(!el||!M||M.empty)return;
+    // tab Đánh giá
+    const tabs=el.querySelector('.tl-tabs');
+    if(tabs&&!tabs.querySelector('[data-t="rk"]')){const b=document.createElement('button');b.className='tl-tab'+(TL.tab==='rk'?' on':'');b.dataset.t='rk';b.innerHTML='<span class="tl-dotlv '+((M._assess||tlAssess(M)).lv)+'"></span>Đánh giá rủi ro';b.onclick=()=>tlTab('rk',b);tabs.insertBefore(b,tabs.children[1]||null);}
+    if(!document.getElementById('tlpn-rk')){const p=document.createElement('div');p.className='tl-pn'+(TL.tab==='rk'?' on':'');p.id='tlpn-rk';p.innerHTML=(TL._print?'<h2 class="tl-ph">Đánh giá rủi ro</h2>':'')+tlHtmlRisk(M);const ov=document.getElementById('tlpn-ov');ov.parentNode.insertBefore(p,ov.nextSibling);}
+    if(TL.tab==='rk'){document.querySelectorAll('#tlBody .tl-pn').forEach(x=>x.classList.toggle('on',x.id==='tlpn-rk'));}
+    if(!TL._print&&!el.querySelector('.tl-crumb'))el.insertAdjacentHTML('afterbegin',_tlCrumb(M));
+    _tlNavBtns();
+    // chấm màu cạnh tên công ty trong ma trận & chip
+    const A=M._assess;if(A){const lv=new Map(A.cos.map(c=>[c.mst,c.lv]));
+      el.querySelectorAll('a[onclick^="tlFocusCo("]').forEach(a=>{const m=(a.getAttribute('onclick').match(/'(\d+)'/)||[])[1];if(m&&lv.has(m)&&!a.previousElementSibling?.classList?.contains('tl-dotlv'))a.insertAdjacentHTML('beforebegin','<span class="tl-dotlv '+lv.get(m)+'"></span>');});
+      document.querySelectorAll('#tlChips .tl-chip').forEach(ch=>{const m=((ch.getAttribute('onclick')||'').match(/'(\d+)'/)||[])[1];if(m&&lv.has(m)&&!ch.querySelector('.tl-dotlv'))ch.insertAdjacentHTML('afterbegin','<span class="tl-dotlv '+lv.get(m)+'"></span>');});}
+  };
+  const _rc=tlRenderChips;tlRenderChips=function(M){_rc(M);};
+  const _r=tlRender;tlRender=function(){_r();const c=document.getElementById('tlBal');if(c)c.value=TL.balanced?'1':'0';};
+  if(TL.balanced==null)TL.balanced=false;
+})();
+// Giải thích ngày số liệu vs ngày tra
+function tlExplainBasis(){
+  _xnXoa({nhe:true,chiDong:true,tieuDe:'Ngày số liệu CIC khác ngày tra thế nào?',nhan:'Đã hiểu',nutKieu:'btn-p',ghiChu:'',
+    than:'<div class="tl-ask"><p><b>Ngày tra</b> là ngày bạn bấm tra trên cổng CIC. <b>Ngày số liệu</b> là ngày TCTD báo cáo số dư lên CIC, in ở cột "Ngày báo cáo" của S10A. Ngày số liệu luôn trước ngày tra vài ngày tới vài tuần.</p>'
+    +'<p>Ví dụ từ data của bạn: tra ngày <b>05/10</b>, dư nợ vay là số ngày <b>23–29/09</b>. Xếp theo ngày tra thì bản này nằm ở tháng 10, nhưng thực chất nó là <b>số tháng 9</b>.</p>'
+    +'<ul><li><b>Xếp theo ngày số liệu (khuyến nghị)</b>: mỗi cột là trạng thái nợ của đúng tháng đó. Hai công ty tra vào 05/10 và 25/09 đều thành số tháng 9, nên so sánh được với nhau.</li>'
+    +'<li><b>Xếp theo ngày tra</b>: dễ hình dung ("tháng 10 tôi tra"), nhưng cùng một cột có thể trộn số của hai tháng khác nhau.</li></ul>'
+    +'<p><b>Tra nhiều lần trong tháng</b>: tool lấy bản có ngày số liệu muộn nhất, gần cuối tháng nhất. Các bản khác vẫn lưu, xem ở mốc "Theo lần tra" hoặc tab Lịch tra.</p>'
+    +'<p><b>Tra thiếu công ty</b>: công ty chưa tra trong tháng được lấy nợ vay theo bảng 12 tháng của CIC, hoặc kéo bản tra cũ (tối đa N tháng). Tổng nhóm vì vậy trộn số thật với số ước tính. Bật <b>So sánh cân bằng</b> để chỉ giữ công ty có bản tra thật ở mọi kỳ, khi đó tăng/giảm phản ánh đúng việc vay thêm hay trả bớt.</p></div>'});
+}
 
 </script>
 </body>

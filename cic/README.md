@@ -1,6 +1,6 @@
-# AI CIC Analyzer v5.2 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v5.3 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v5.2.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v5.3.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -86,6 +86,21 @@ Diễn biến › **Form nội bộ** (hoặc Nhóm & kho › sửa nhóm › Xu
 - Kèm sheet **TSBĐ chi tiết** (từng tài sản, mã loại R20 → cột form) và **Ghi chú & nguồn**.
 - Quy đổi loại TSBĐ R20: 01 → BĐS · 02 → PTVT · 03, 04, 06–11 → GTCG · 05 → CP · 12–14 → MMTB · 15–17 → HTK ·
   21 (quyền đòi nợ) → KPT · còn lại → QTS. "Bảo lãnh" không có trên R20, để nhập tay.
+
+## v5.3 — So sánh cân bằng, Quay lại/Tiến tới, đèn đánh giá xanh/vàng/đỏ
+- **So sánh các kỳ**: "Giữ nguyên tất cả công ty" hoặc "Cân bằng: chỉ công ty có bản tra thật ở mọi kỳ đang xem".
+  Ở chế độ cân bằng, tổng, biểu đồ và Δ so cùng một tập công ty; danh sách công ty bị ẩn và kỳ còn thiếu hiện ngay đầu trang.
+  Không công ty nào đủ thì tool gợi ý thu hẹp số kỳ.
+- **◀ Quay lại / Tiến tới ▶** (Alt + ← / →) giữa các màn xem: nhóm → công ty → về nhóm, kèm đường dẫn nhóm › công ty.
+- **Đèn đánh giá** ở đầu Tổng quan và tab **Đánh giá rủi ro**: mỗi cảnh báo ghi đích danh công ty · TCTD · kỳ, bấm để tới đúng chỗ;
+  chấm màu cạnh tên công ty ở chip và bảng.
+  - Đỏ (công ty): nợ nhóm 3–5 / lịch sử nợ xấu; dư nợ tăng ≥60%; TSBĐ giảm ≥60% khi nợ vay không giảm.
+  - Vàng: nợ nhóm 2 / nợ cần chú ý 12 tháng / chậm trả thẻ; dư nợ tăng ≥30% hoặc giảm ≥50%; thêm ≥3 TCTD; dư nợ tại một TCTD
+    tăng gấp đôi; tỷ trọng ngắn hạn tăng ≥20 điểm; ngoại bảng tăng ≥50%; TSBĐ < 30% nợ vay; ≥10 TCTD; ≥5 TCTD **chưa cho vay
+    công ty nào trong nhóm** tra cứu CIC trong 30 ngày; số liệu cũ ≥2 tháng.
+  - Cả nhóm: đỏ khi có công ty nợ xấu (rủi ro lây chéo) hoặc công ty đỏ chiếm ≥5% dư nợ nhóm; vàng khi có công ty vàng, dư nợ nhóm
+    (cùng tập công ty) tăng ≥30%, một TCTD chiếm ≥40% dư nợ nhóm, hoặc kỳ cuối chưa tra đủ công ty.
+  - Mọi ngưỡng chỉnh được trong tab Đánh giá rủi ro › Chỉnh ngưỡng. Thay đổi dưới 1 tỷ không tính.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
