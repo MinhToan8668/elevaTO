@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v5.1 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v5.2 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1008,6 +1008,22 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
   .tl-ins{grid-template-columns:repeat(3,1fr)}
   body.tl-printing .ct{max-width:none;padding:0}
 }
+
+/* ═══ v5.2 form nội bộ ═══ */
+.tf-row{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:.6rem}
+.tf-mons{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center}
+.tf-mon{display:inline-flex;align-items:center;gap:.25rem;border:1px solid var(--bd);border-radius:6px;padding:.15rem .45rem;font-size:.68rem;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;color:var(--tx2)}
+.tf-mon.on{border-color:var(--ac);background:var(--acbg);color:var(--ac)}
+.tf-mon input{margin:0}
+.tf-box{border:1px solid var(--bd);border-radius:8px;margin-top:.7rem;padding:.5rem .6rem}
+.tf-bh{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.4rem}
+.tf-map{max-height:40vh;overflow:auto}
+.tf-sub{font-size:.7rem;font-weight:700;color:var(--ac);padding:.35rem .2rem .15rem;border-bottom:1px solid var(--bd)}
+.tf-co{display:grid;grid-template-columns:minmax(0,1.3fr) auto minmax(0,1fr) auto;gap:.4rem;align-items:center;padding:.2rem .2rem;font-size:.7rem;border-bottom:1px solid var(--bg3)}
+.tf-co .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tf-co select,.tf-co input{font-family:inherit;font-size:.68rem;border:1px solid var(--bd);border-radius:5px;padding:.15rem .3rem;min-width:0}
+.tf-co select.bad{border-color:var(--rd);background:var(--rdbg)}.tf-co select.warn{border-color:var(--am)}
+.tf-sum{font-size:.72rem;margin:.6rem 0 .2rem;color:var(--tx2)}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -1466,6 +1482,7 @@ if(window.parent!==window)document.documentElement.classList.add('cic-embedded')
       <button class="btn btn-o ta-mini" id="tlsBtn2" onclick="tlsClick()" title="Đồng bộ qua thư mục chung"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>Đồng bộ</button>
       <button class="btn btn-o ta-mini" onclick="openTctdMap()" title="Quy đổi tên TCTD viết tắt"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Tên TCTD</button>
       <button class="btn btn-o ta-mini" onclick="toggleChartUnit()" title="Đổi đơn vị Triệu / Tỷ">Đơn vị: <span class="unit-toggle-lbl">Tỷ</span></button>
+      <button class="btn btn-o ta-mini" onclick="tfOpen()" title="Xuất form nội bộ Debt Inventory + Collateral Inventory theo công ty trong tập đoàn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Form nội bộ</button>
       <button class="btn btn-o ta-mini" onclick="tlOpenExport()" title="Xuất Excel theo khoảng thời gian"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Xuất Excel</button>
       <button class="btn btn-o ta-mini" onclick="tlPrint()" title="In / lưu PDF"><svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>In PDF</button>
     </div>
@@ -1520,6 +1537,12 @@ if(window.parent!==window)document.documentElement.classList.add('cic-embedded')
     <div class="tl-mini" style="margin-top:.5rem">Đơn vị số trong file = đơn vị đang hiển thị (<span class="unit-toggle-lbl">Tỷ</span> đồng). Ô ước tính / kéo từ bản cũ được ghi chú riêng trong sheet.</div>
   </div>
   <div class="modal-f"><button class="btn btn-o" onclick="tlCloseExport()">Đóng</button><button class="btn btn-p" onclick="tlExportXlsx()">Xuất file</button></div>
+</div></div>
+<!-- Modal: Xuất form nội bộ -->
+<div id="tfModal" class="modal-bg" style="display:none" onclick="if(event.target===this)tfClose()"><div class="modal" style="width:min(900px,96vw)">
+  <div class="modal-h"><h3>Xuất form nội bộ — Dư nợ &amp; TSBĐ theo công ty trong tập đoàn</h3><button class="close" onclick="tfClose()">✕</button></div>
+  <div class="modal-b" style="padding:.8rem 1rem;max-height:76vh" id="tfBody"></div>
+  <div class="modal-f"><button class="btn btn-o" onclick="tfClose()">Đóng</button><button class="btn btn-p" onclick="tfExport()">Xuất file Excel</button></div>
 </div></div>
 <!-- Scroll to top -->
 <button id="scrollTop" title="Lên đầu trang" aria-label="Scroll to top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></button>
@@ -7268,7 +7291,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='5.1';
+const APP_VERSION='5.2';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8223,7 +8246,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='5.1';
+const TL_VER='5.2';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -9832,6 +9855,286 @@ _tlReady.then(()=>tlsInitFromStore());
       b:'Kỳ '+M.agg[f].label+' có số liệu của '+n0+' công ty, kỳ '+M.agg[l].label+' có '+n1+' công ty. Tổng nhóm thay đổi một phần vì <b>số công ty có số liệu thay đổi</b>, không phải vì vay thêm / trả bớt. '
         +'Chỉ tính '+both.length+' công ty có số ở cả hai kỳ: '+fm(v0)+' → <b>'+fm(v1)+'</b> '+unitShort()+'.'});}
   }catch(e){}return out;};})();
+
+
+/* ═══════════ v5.2 — XUẤT FORM NỘI BỘ: DEBT INVENTORY + COLLATERAL INVENTORY THEO TẬP ĐOÀN ═══════════
+   Cấu trúc theo form nội bộ: Nhóm con (F) › Công ty (G) › từng TCTD (I); mỗi kỳ STL / MLT / Khác / Off Bal. / Bonds /
+   Total exposure; sheet TSBĐ cùng thứ tự dòng, cột theo loại tài sản. Đơn vị TỶ ĐỒNG. Có công thức Total / Grand total.
+   Khung (nhóm con, thứ tự công ty, thứ tự ngân hàng, hạn mức) nạp MỘT LẦN từ form cũ và lưu vào nhóm theo dõi. */
+const _TF_MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const _tfPer=m=>_TF_MON[+m.slice(5,7)-1]+'.'+m.slice(2,4);
+function _tfNorm(s){
+  let t=_mgNorm(s||'').replace(/\(\s*ten cu[\s\S]*$/,'');
+  [[/\bctcp\b/g,'cong ty co phan'],[/\bcty\b/g,'cong ty'],[/\bct\b/g,'cong ty'],[/\bsx\b/g,'san xuat'],[/\btm\b/g,'thuong mai'],[/\bdv\b/g,'dich vu'],[/\bmtv\b/g,'mot thanh vien'],[/\bgnvc\b/g,'giao nhan van chuyen'],[/&/g,' va '],[/\bqt\b/g,'quoc te'],[/\bxnk\b/g,'xuat nhap khau'],[/\bkcn\b/g,'khu cong nghiep'],[/\bdt\b/g,'dau tu']].forEach(([a,b])=>{t=t.replace(a,b);});
+  return t.replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+const _TF_STOP=new Set(['cong','ty','tnhh','co','phan','mot','thanh','vien','trach','nhiem','huu','han','va','chi','nhanh']);
+function _tfToks(s){return new Set(_tfNorm(s).split(' ').filter(t=>t&&!_TF_STOP.has(t)));}
+function _tfScore(a,b){const A=_tfToks(a),B=_tfToks(b);if(!A.size||!B.size)return 0;let n=0;A.forEach(t=>{if(B.has(t))n++;});return 2*n/(A.size+B.size);}
+// Khớp tên công ty trong form ↔ MST trong nhóm (tham lam theo điểm cao nhất, mỗi bên dùng 1 lần)
+function _tfMatchCos(labels,msts){
+  const cand=msts.map(m=>({mst:m,names:[_tlNameOfMst(m)].concat(_TL_CACHE.filter(s=>s.mst===m).map(s=>s.name))}));
+  const pairs=[];labels.forEach((l,i)=>cand.forEach((c,j)=>{const sc=Math.max(...c.names.map(n=>_tfScore(l,n)));if(sc>=0.55)pairs.push([sc,i,j]);}));
+  pairs.sort((a,b)=>b[0]-a[0]);const ui=new Set(),uj=new Set(),res=labels.map(()=>null);
+  pairs.forEach(([sc,i,j])=>{if(ui.has(i)||uj.has(j))return;ui.add(i);uj.add(j);res[i]={mst:cand[j].mst,score:sc};});
+  return res;
+}
+// Khớp nhãn ngân hàng trong form ("VP Bank", "ABB", "Siam Comercial"…) ↔ khoá TCTD trong dữ liệu CIC
+const _TF_BANK_ALIAS={vpbank:'vpb',mbbank:'mbb',mb:'mbb',abb:'anbinh',abbank:'anbinh',siamcomercial:'siambank',siamcommercial:'siambank',scb:'siambank',malayanberhad:'malayanbankingberhad',maybank:'malayanbankingberhad',mizuho:'mizuhobank',mufg:'mufgbank',cathay:'cathayunitedbank',firstcommercial:'firstcommercialbank',techcombank:'tcb',vietcombank:'vcb',vietinbank:'vietinbank',ctg:'vietinbank',hdbank:'hdb',tpbank:'tpb',sea:'seabank',baoviet:'baovietbank',stanchart:'standardchartered',sc:'standardchartered',bnp:'bnpparibas',lpbank:'lpb',lienviet:'lpb',msb:'msb',maritime:'msb',eib:'eximbank',stb:'sacombank'};
+const _tfBN=s=>_mgNorm(s||'').replace(/[^a-z0-9]/g,'');
+function _tfBankKeys(b){const full=_tfBN(b.name);return [_tfBN(bankShort(b.name)),_tfBN(tctdLabel(b.name)),_tfBN(bankRoot(b.name)),full].filter(Boolean);}
+function _tfBankMatch(label,banks){
+  let l=_tfBN(label);if(!l)return null;l=_TF_BANK_ALIAS[l]||l;
+  let hit=banks.find(b=>_tfBankKeys(b).slice(0,3).some(k=>k===l));
+  if(!hit&&l.length>=4)hit=banks.find(b=>_tfBankKeys(b).some(k=>k.includes(l)));
+  return hit?hit.key:null;
+}
+// ── Đọc khung từ form cũ (.xlsx) ──
+function _tfParseForm(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+  let hr=-1,bc=-1;
+  for(let r=0;r<Math.min(rows.length,30)&&hr<0;r++)rows[r].forEach((v,c)=>{if(hr<0&&String(v).trim().toLowerCase()==='bank'){hr=r;bc=c;}});
+  if(hr<0)throw new Error('Không thấy dòng tiêu đề có cột "Bank" trong sheet đầu tiên');
+  const gc=bc-2,fc=bc-3,lc=bc+1;
+  const subs=[];let sub=null,co=null;
+  const isTot=s=>/^\s*(grand\s*)?total/i.test(s);
+  for(let r=hr+1;r<rows.length;r++){
+    const R=rows[r];const F=String(R[fc]||'').trim(),G=String(R[gc]||'').trim(),B=String(R[bc]||'').trim();
+    if(B&&isTot(B)&&!G)continue;
+    if(F&&F!=='-'&&!isTot(F)){sub={name:F,cos:[]};subs.push(sub);}
+    if(G&&G!=='-'){if(!sub){sub={name:'Khác',cos:[]};subs.push(sub);}co={label:G,mst:null,banks:[]};sub.cos.push(co);}
+    if(B&&!isTot(B)&&co){const lim=+R[lc];co.banks.push({label:B,limit:isFinite(lim)&&lim>0?lim:null});}
+  }
+  if(!subs.length)throw new Error('Không đọc được công ty nào (cột công ty phải nằm trước cột Bank 2 cột)');
+  return {subs,t:Date.now(),src:'xlsx',sheet:wb.SheetNames[0]};
+}
+// ── Trạng thái modal ──
+let TF={gid:'',form:null,mode:'form',debtMons:new Set(),collMon:'',fill:'carry'};
+function _tfGroup(){return _tlGroupOf(TF.gid);}
+function _tfSaveGroupForm(){const all=_tlGroups();const g=all.find(x=>x.id===TF.gid);if(!g)return;g.form=TF.form;g.t=Date.now();_tlGroupsSave(all);}
+function tfOpen(){
+  const gs=_tlGroups();if(!gs.length){toast('Chưa có nhóm theo dõi nào — tạo nhóm trong Nhóm & kho trước');return tlOpenGroups();}
+  TF.gid=(TL.scope.kind==='group'&&_tlGroupOf(TL.scope.id))?TL.scope.id:gs[0].id;
+  _tfLoadGroup();document.getElementById('tfModal').style.display='flex';tfRender();
+}
+function tfClose(){document.getElementById('tfModal').style.display='none';}
+function _tfModelFor(g,fill,from,to){
+  const sv={scope:TL.scope,excl:TL.excl};TL.scope={kind:'group',id:g.id};TL.excl=new Set();
+  try{return tlBuildModel({gran:'month',fill:fill==='none'?'none':'carry',from,to,quick:0});}finally{TL.scope=sv.scope;TL.excl=sv.excl;}
+}
+function _tfLoadGroup(){
+  const g=_tfGroup();TF.form=g&&g.form?JSON.parse(JSON.stringify(g.form)):null;TF.mode=TF.form?'form':'auto';
+  const M=_tfModelFor(g,'none');TF._months=M.empty?[]:M.cols.map(c=>c.key).filter((k,i)=>M.agg[i].cov.real>0);
+  const ms=TF._months;TF.debtMons=new Set(ms.slice(-4));TF.collMon=ms[ms.length-1]||'';
+}
+function tfSetGroup(id){TF.gid=id;_tfLoadGroup();tfRender();}
+function tfToggleMon(m,on){if(on)TF.debtMons.add(m);else TF.debtMons.delete(m);tfRender();}
+function tfQuickMons(n){const ms=TF._months;TF.debtMons=new Set(n?ms.slice(-n):ms);tfRender();}
+function tfLoadForm(inp){
+  const f=inp.files&&inp.files[0];if(!f)return;inp.value='';
+  f.arrayBuffer().then(buf=>{
+    const wb=XLSX.read(buf,{type:'array'});const form=_tfParseForm(wb);const g=_tfGroup();
+    const labels=[];form.subs.forEach(s=>s.cos.forEach(c=>labels.push(c)));
+    const mt=_tfMatchCos(labels.map(c=>c.label),g.msts);labels.forEach((c,i)=>{c.mst=mt[i]?mt[i].mst:null;c.score=mt[i]?mt[i].score:0;});
+    form.file=f.name;TF.form=form;TF.mode='form';_tfSaveGroupForm();
+    const n=labels.filter(c=>c.mst).length;toast('✓ Đã nạp khung "'+f.name+'": '+form.subs.length+' nhóm con · '+labels.length+' công ty · khớp MST '+n+'/'+labels.length);tfRender();
+  }).catch(e=>{toast('⚠ Không đọc được form: '+e.message);});
+}
+function tfSetCoMst(si,ci,mst){const c=TF.form.subs[si].cos[ci];c.mst=mst||null;c.score=mst?1:0;_tfSaveGroupForm();tfRender();}
+function tfSetSub(mst,v){const all=_tlGroups();const g=all.find(x=>x.id===TF.gid);if(!g)return;g.subs=g.subs||{};if(v)g.subs[mst]=v.trim();else delete g.subs[mst];g.t=Date.now();_tlGroupsSave(all);}
+function tfDropForm(){if(!confirm('Bỏ khung form cũ của nhóm này? (Xuất sẽ tự dựng theo nhóm con)'))return;TF.form=null;TF.mode='auto';_tfSaveGroupForm();tfRender();}
+function tfRender(){
+  const el=document.getElementById('tfBody');if(!el)return;const g=_tfGroup();const gs=_tlGroups();
+  const ms=TF._months||[];
+  let h='<div class="modal-tip">Xuất theo format nội bộ <b>Debt Inventory (F)</b> + <b>Collateral Inventory (F)</b>: nhóm con › công ty › từng TCTD, đơn vị <b>tỷ đồng</b>, có công thức Total / Grand total. Số lấy từ kho bản tra CIC (S10A cho dư nợ, R20 cho TSBĐ), mỗi kỳ là bản đại diện theo ngày số liệu.</div>';
+  h+='<div class="tf-row"><div class="tl-f"><label>Nhóm theo dõi</label><select class="tg-in" style="width:auto" onchange="tfSetGroup(this.value)">'+gs.map(x=>'<option value="'+x.id+'"'+(x.id===TF.gid?' selected':'')+'>'+_dmEsc(x.name)+' ('+x.msts.length+' cty)</option>').join('')+'</select></div>'
+    +'<div class="tl-f"><label>Kỳ TSBĐ (sheet Collateral)</label><select class="tg-in" style="width:auto" onchange="TF.collMon=this.value">'+ms.slice().reverse().map(m=>'<option value="'+m+'"'+(m===TF.collMon?' selected':'')+'>'+_tfPer(m)+'</option>').join('')+'</select></div>'
+    +'<div class="tl-f"><label>Công ty không tra trong kỳ</label><select class="tg-in" style="width:auto" onchange="TF.fill=this.value"><option value="carry"'+(TF.fill==='carry'?' selected':'')+'>Kéo bản tra gần nhất (tối đa '+(TL.maxCarry||3)+' tháng, ghi chú ở Remark)</option><option value="none"'+(TF.fill==='none'?' selected':'')+'>Để trống</option></select></div></div>';
+  h+='<div class="tl-f" style="margin-top:.5rem"><label>Kỳ dư nợ (mỗi kỳ một khối cột) · đã chọn '+TF.debtMons.size+'</label><div class="tf-mons">'+(ms.length?ms.map(m=>'<label class="tf-mon'+(TF.debtMons.has(m)?' on':'')+'"><input type="checkbox" '+(TF.debtMons.has(m)?'checked':'')+' onchange="tfToggleMon(\''+m+'\',this.checked)">'+_tfPer(m)+'</label>').join('')
+    +' <span class="tl-quick"><button onclick="tfQuickMons(1)">Kỳ mới nhất</button><button onclick="tfQuickMons(4)">4 kỳ</button><button onclick="tfQuickMons(6)">6 kỳ</button><button onclick="tfQuickMons(0)">Tất cả</button></span>':'<span class="na">Nhóm chưa có bản tra nào trong kho</span>')+'</div></div>';
+  // Khung
+  h+='<div class="tf-box"><div class="tf-bh"><b>Khung form</b><span class="tl-mini">'+(TF.form?'Đang dùng khung từ <b>'+_dmEsc(TF.form.file||'form cũ')+'</b> · nạp '+new Date(TF.form.t).toLocaleDateString('vi-VN'):'Chưa có khung — tool tự dựng theo cột "Nhóm con"')+'</span>'
+    +'<input type="file" id="tfFile" accept=".xlsx,.xls" style="display:none" onchange="tfLoadForm(this)"><button class="btn btn-o" style="margin-left:auto;padding:.2rem .6rem;font-size:.66rem" onclick="document.getElementById(\'tfFile\').click()">'+(TF.form?'Nạp lại form cũ…':'Nạp khung từ form cũ (.xlsx)…')+'</button>'+(TF.form?'<button class="btn btn-o" style="padding:.2rem .6rem;font-size:.66rem" onclick="tfDropForm()">Bỏ khung</button>':'')+'</div>';
+  if(TF.form){
+    const used=new Set();TF.form.subs.forEach(s=>s.cos.forEach(c=>{if(c.mst)used.add(c.mst);}));
+    const opts=(cur)=>'<option value="">— chưa khớp —</option>'+g.msts.map(m=>'<option value="'+m+'"'+(m===cur?' selected':'')+'>'+_dmEsc(shortName(_tlNameOfMst(m)).substring(0,46))+' · '+m+(used.has(m)&&m!==cur?' (đã dùng)':'')+'</option>').join('');
+    let nOk=0,nAll=0;
+    h+='<div class="tf-map">'+TF.form.subs.map((s,si)=>'<div class="tf-sub">'+_dmEsc(s.name)+'</div>'+s.cos.map((c,ci)=>{nAll++;if(c.mst)nOk++;const has=c.mst&&_TL_CACHE.some(x=>x.mst===c.mst);
+      return '<div class="tf-co"><span class="n" title="'+_dmEsc(c.label)+'">'+_dmEsc(c.label)+'</span><span class="tl-mini">'+c.banks.length+' TCTD</span><select onchange="tfSetCoMst('+si+','+ci+',this.value)" class="'+(c.mst?(c.score<0.8?'warn':''):'bad')+'">'+opts(c.mst)+'</select><span class="tl-mini">'+(c.mst?(has?'✓':'chưa có bản tra'):'⚠')+'</span></div>';}).join('')).join('')+'</div>';
+    const extra=g.msts.filter(m=>!used.has(m)&&_TL_CACHE.some(s=>s.mst===m));
+    h='<div class="tf-sum">Khớp MST: <b>'+nOk+'/'+nAll+'</b> công ty trong form'+(extra.length?' · <b>'+extra.length+'</b> công ty của nhóm chưa có trong form (sẽ thêm vào nhóm con "Khác" ở cuối)':'')+'</div>'+h.replace('<div class="tf-map">','<div class="tf-map">');
+    if(extra.length)h+='<details class="tl-mini" style="margin-top:.4rem"><summary style="cursor:pointer">Xem '+extra.length+' công ty chưa có trong form (xuất vào nhóm con "Khác")</summary><div style="margin-top:.3rem;line-height:1.6">'+extra.map(m=>_dmEsc(toProper(shortName(_tlNameOfMst(m))).substring(0,40))+' <span style="color:var(--tx3)">'+m+'</span>').join(' · ')+'</div></details>';
+  }else{
+    const subs=g.subs||{};const dl='<datalist id="tfSubDl">'+[...new Set(Object.values(subs))].map(v=>'<option value="'+_dmEsc(v)+'">').join('')+'</datalist>';
+    h+=dl+'<div class="tf-map">'+g.msts.filter(m=>_TL_CACHE.some(s=>s.mst===m)).map(m=>'<div class="tf-co"><span class="n">'+_dmEsc(shortName(_tlNameOfMst(m)).substring(0,60))+'</span><span class="tl-mini">'+m+'</span><input list="tfSubDl" placeholder="Nhóm con (VD: Thaco Auto)" value="'+_dmEsc(subs[m]||'')+'" onchange="tfSetSub(\''+m+'\',this.value)"></div>').join('')+'</div>'
+      +'<div class="tl-mini" style="margin-top:.3rem">Để trống = xếp vào nhóm con mang tên nhóm. Công ty trong mỗi nhóm con xếp theo tổng dư nợ giảm dần.</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+}
+// ── Dựng dữ liệu xuất ──
+const _TF_DCOLS=[['STL',b=>b.nh],['MLT',b=>b.th+b.dh],['Khác',b=>b.kh],['Off Bal.',b=>b.ob],['Bonds',b=>b.tp]];
+// Loại TSBĐ trên R20 (mã 01–27) → cột form nội bộ
+const _TF_CCOLS=['KPT','HTK','MMTB','GTCG','BĐS','QTS','PTVT','CP','Bảo lãnh'];
+const _TF_CMAP={'01':'BĐS','02':'PTVT','03':'GTCG','04':'GTCG','05':'CP','06':'GTCG','07':'GTCG','08':'GTCG','09':'GTCG','10':'GTCG','11':'GTCG','12':'MMTB','13':'MMTB','14':'MMTB','15':'HTK','16':'HTK','17':'HTK','18':'QTS','19':'QTS','20':'QTS','21':'KPT','22':'QTS','23':'QTS','24':'QTS','25':'QTS','26':'QTS','27':'QTS'};
+function _tfBuild(){
+  const g=_tfGroup();const mons=[...TF.debtMons].sort();if(!mons.length)throw new Error('Chọn ít nhất một kỳ dư nợ');
+  const cm=TF.collMon||mons[mons.length-1];const all=mons.concat([cm]).sort();
+  const M=_tfModelFor(g,TF.fill,all[0],all[all.length-1]);if(M.empty)throw new Error('Nhóm chưa có bản tra nào');
+  const ci=k=>M.cols.findIndex(c=>c.key===k);
+  const rowOf=mst=>M.rows.find(r=>r.mst===mst);
+  // các khối: [{sub, cos:[{label, mst, bankOrder:[{label,key,limit}]}]}]
+  let subs=[];
+  if(TF.form){
+    const used=new Set();
+    subs=TF.form.subs.map(s=>({name:s.name,cos:s.cos.map(c=>{if(c.mst)used.add(c.mst);return {label:c.label,mst:c.mst,banks:c.banks};})}));
+    const extra=g.msts.filter(m=>!used.has(m)&&rowOf(m)&&rowOf(m).snaps.length);
+    if(extra.length)subs.push({name:'Khác',cos:extra.map(m=>({label:toProper(_nameNoOld(_tlNameOfMst(m))),mst:m,banks:[],extra:true}))});
+  }else{
+    const by=new Map();const gs=g.subs||{};
+    g.msts.forEach(m=>{const r=rowOf(m);if(!r||!r.snaps.length)return;const s=gs[m]||g.name;if(!by.has(s))by.set(s,[]);by.get(s).push({label:toProper(_nameNoOld(_tlNameOfMst(m))),mst:m,banks:[]});});
+    const lastI=ci(mons[mons.length-1]);
+    by.forEach(list=>list.sort((a,b)=>((_tlMv(rowOf(b.mst).cells[lastI],'total')||0)-(_tlMv(rowOf(a.mst).cells[lastI],'total')||0))));
+    subs=[...by.entries()].map(([name,cos])=>({name,cos}));
+  }
+  const hm=_hmtdAll();
+  subs.forEach(s=>s.cos.forEach(co=>{
+    const r=co.mst?rowOf(co.mst):null;co.r=r;
+    const cells=all.map(k=>r?r.cells[ci(k)]:null);
+    // gom TCTD xuất hiện ở bất kỳ kỳ nào
+    const bmap=new Map();
+    cells.forEach(c=>{if(c&&c.snap)_tlMergedOf(c.snap).forEach(b=>{const k=bankKey(b.name);if(!bmap.has(k))bmap.set(k,{key:k,name:b.name});});});
+    const banks=[...bmap.values()];const lastC=r?r.cells[ci(mons[mons.length-1])]:null;
+    const lastMg=lastC&&lastC.snap?_tlMergedOf(lastC.snap):[];const lv=k=>{const b=lastMg.find(x=>bankKey(x.name)===k);return b?b.total+(b.collValue||0)/1e6:0;};
+    const rowsB=[];const usedK=new Set();
+    (co.banks||[]).forEach(fb=>{const k=_tfBankMatch(fb.label,banks.filter(b=>!usedK.has(b.key)));if(k)usedK.add(k);rowsB.push({label:fb.label,key:k,limit:fb.limit,fromForm:true});});
+    banks.filter(b=>!usedK.has(b.key)).sort((a,b)=>lv(b.key)-lv(a.key)).forEach(b=>rowsB.push({label:tctdLabel(b.name),key:b.key,fromForm:false,isNew:!!TF.form&&!co.extra}));
+    rowsB.forEach(rb=>{const h=co.mst&&hm[co.mst]&&rb.key?hm[co.mst][rb.key]:null;if(h!=null)rb.limit=h/1000;});
+    co.rowsB=rowsB;
+  }));
+  return {g,M,mons,cm,subs,ci};
+}
+const _tfBank=(cell,key)=>{if(!cell||!cell.snap||!key)return null;return _tlMergedOf(cell.snap).find(b=>bankKey(b.name)===key)||null;};
+const _tfSrc=c=>!c||c.kind==='none'?'không có số':c.kind==='real'?'tra '+_tlDM(c.qd)+' (SL '+_tlDM(c.dd)+')':'kéo bản '+_tlDM(c.qd)+' (cũ '+c.age+'T)';
+function tfExport(){
+  let D;try{D=_tfBuild();}catch(e){toast('⚠ '+e.message);return;}
+  const {g,M,mons,cm,subs,ci}=D;const T=v=>v==null?null:Math.round(v/1000*1000)/1000;// triệu → tỷ (3 số lẻ)
+  const wb=XLSX.utils.book_new();
+  const F={name:'Myriad Pro',sz:11};const NF='#,##0.0;(#,##0.0);"-"';
+  const st={title:{font:{...F,sz:14,bold:true}},meta:{font:{...F,sz:9,italic:true,color:{rgb:'4A5568'}}},
+    hd:{font:{...F,bold:true},fill:{patternType:'solid',fgColor:{rgb:'DDEBF7'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:{bottom:{style:'thin',color:{rgb:'9DC3E6'}}}},
+    hdL:{font:{...F,bold:true},fill:{patternType:'solid',fgColor:{rgb:'DDEBF7'}},alignment:{horizontal:'left',vertical:'center'}},
+    tx:{font:F},txB:{font:{...F,bold:true}},num:{font:F,numFmt:NF},numB:{font:{...F,bold:true},numFmt:NF},
+    tot:{font:{...F,bold:true},fill:{patternType:'solid',fgColor:{rgb:'F2F2F2'}},border:{top:{style:'thin',color:{rgb:'BFBFBF'}}}},
+    totN:{font:{...F,bold:true},fill:{patternType:'solid',fgColor:{rgb:'F2F2F2'}},numFmt:NF,border:{top:{style:'thin',color:{rgb:'BFBFBF'}}}},
+    gt:{font:{...F,bold:true,color:{rgb:'002D72'}},fill:{patternType:'solid',fgColor:{rgb:'E6ECF7'}},border:{top:{style:'medium',color:{rgb:'0A3A8C'}}}},
+    gtN:{font:{...F,bold:true,color:{rgb:'002D72'}},fill:{patternType:'solid',fgColor:{rgb:'E6ECF7'}},numFmt:NF,border:{top:{style:'medium',color:{rgb:'0A3A8C'}}}},
+    rem:{font:{...F,sz:9,color:{rgb:'4A5568'}}},warn:{font:{...F,sz:9,color:{rgb:'B91C1C'}}},muted:{font:{...F,color:{rgb:'8592A6'},italic:true}}};
+  const A=(c)=>XLSX.utils.encode_col(c);
+  let V={};const sv=(r,c)=>V[r+','+c]||0;
+  const put=(ws,r,c,v,s,f)=>{if(typeof v==='number')V[r+','+c]=v;const a=XLSX.utils.encode_cell({r,c});const o={v:v==null?'':v,t:typeof v==='number'?'n':'s'};if(f){o.f=f;o.t='n';if(v==null||v==='')o.v=0;}if(v==null&&!f){o.t='s';o.v='';}if(s)o.s=s;ws[a]=o;};
+  // cột chung: A '<<', B mã, C STT, D, E Item, F nhóm con, G công ty, H số TT công ty, I TCTD, J Credit limit
+  const C0=10;// K
+  const by=new Date().toLocaleDateString('vi-VN');const gname=g.name;
+  const covNote=mons.map(m=>{const a=M.agg[ci(m)];return _tfPer(m)+': '+a.cov.real+'/'+M.rows.length+' cty có bản tra'+(a.ddMin?' (SL '+_tlDM(a.ddMin)+(a.ddMax!==a.ddMin?'–'+_tlDM(a.ddMax):'')+')':'');}).join(' · ');
+  function sheet(kind){
+    const ws={};const isD=kind==='D';V={};
+    const blocks=isD?mons.map(m=>({m,cols:_TF_DCOLS.length+1})):[{m:cm,cols:_TF_CCOLS.length+1}];
+    const width=isD?_TF_DCOLS.length+1:_TF_CCOLS.length+1;
+    const lastC=C0+blocks.length*width-1;const RC=lastC+1;// Remark
+    put(ws,0,0,'<<',st.tx);
+    put(ws,1,1,isD?'ALL DEBT INVENTORY DETAILS BY ENTITIES (F)':gname.toUpperCase()+' - ALL COLLATERAL INVENTORY DETAILS (Z)',st.title);
+    put(ws,2,1,'Nguồn: CIC (S10A'+(isD?'':' / R20')+') trong kho Tool CIC · đơn vị: tỷ đồng · kỳ theo ngày số liệu TCTD báo cáo · '+(isD?covNote:'kỳ '+_tfPer(cm))+' · xuất '+by,st.meta);
+    put(ws,4,1,(gname.replace(/^\s*(nhóm|nhom|group|tập đoàn|tap doan)\s+/i,'').split(/[\s(]+/)[0]||gname).toUpperCase().slice(0,8),st.hdL);put(ws,4,4,isD?'All Debt Details Inventory by Entities':'All Collateral Inventory by Entities',st.hdL);
+    put(ws,5,4,'Object',st.hdL);put(ws,5,8,isD?'Facility ':'',st.hdL);put(ws,6,4,'Item',st.hdL);put(ws,6,6,'-',st.hdL);put(ws,6,8,'Bank',st.hdL);put(ws,6,9,isD?'Credit limit':'',st.hd);
+    for(let c=1;c<=RC;c++){[4,5,6].forEach(r=>{const a=XLSX.utils.encode_cell({r,c});if(!ws[a]&&c>=4)put(ws,r,c,'',st.hd);});}
+    ws['!merges']=[];
+    blocks.forEach((b,bi)=>{const c=C0+bi*width;put(ws,5,c,'Balance ('+_tfPer(b.m)+')',st.hd);ws['!merges'].push({s:{r:5,c},e:{r:5,c:c+width-1}});
+      (isD?_TF_DCOLS.map(x=>x[0]).concat(['Total exposure']):_TF_CCOLS.concat(['Total'])).forEach((t,i)=>put(ws,6,c+i,t,st.hd));});
+    put(ws,4,RC,'Remark',st.hdL);put(ws,5,RC,'-',st.hd);put(ws,6,RC,'-',st.hd);
+    let r=8;const topRefs=[];let coNo=0;const rowGT=7;
+    put(ws,rowGT,2,1,st.tx);put(ws,rowGT,4,ws[XLSX.utils.encode_cell({r:4,c:1})].v,st.gt);put(ws,rowGT,8,'Total '+gname,st.gt);
+    subs.forEach(s=>{
+      const coTotRows=[];
+      s.cos.forEach((co,k)=>{
+        const r0=r;
+        if(k===0)put(ws,r,5,s.name,st.txB);
+        put(ws,r,6,co.label,st.txB);
+        // remark công ty: nguồn số từng kỳ
+        const srcs=(isD?mons:[cm]).map(m=>{const c=co.r?co.r.cells[ci(m)]:null;return _tfPer(m)+': '+_tfSrc(c)+(!isD&&c&&c.snap&&!c.snap.R20?' · không có R20':'');});
+        put(ws,r,RC,co.mst?('MST '+co.mst+' · '+srcs.join(' · ')):'Chưa khớp MST / chưa có dữ liệu CIC',co.mst?st.rem:st.warn);
+        r++;const b0=r;
+        const rowsB=co.rowsB.length?co.rowsB:[{label:'(không có quan hệ tín dụng trên CIC)',key:null}];
+        rowsB.forEach(rb=>{
+          put(ws,r,8,rb.label,rb.key||!co.mst?st.tx:st.muted);
+          if(isD&&rb.limit!=null)put(ws,r,9,Math.round(rb.limit*1000)/1000,st.num);
+          const rem=[];
+          blocks.forEach((b,bi)=>{const c=C0+bi*width;const cell=co.r?co.r.cells[ci(b.m)]:null;const bk=_tfBank(cell,rb.key);
+            if(isD){let sum=0;_TF_DCOLS.forEach((x,i)=>{const v=bk?T(x[1](bk)):null;if(v)sum+=v;put(ws,r,c+i,v||null,st.num);});
+              put(ws,r,c+_TF_DCOLS.length,Math.round(sum*1000)/1000,st.num,'SUM('+A(c)+(r+1)+':'+A(c+_TF_DCOLS.length-1)+(r+1)+')');
+              if(bk&&parseInt(bk.debtGroup)>1)rem.push('Nhóm nợ '+(+bk.debtGroup)+' kỳ '+_tfPer(b.m));
+              if(bk&&bk.tp&&bi===blocks.length-1)rem.push('Bond '+rb.label+': '+(Math.round(bk.tp/100)/10).toLocaleString('en-US'));}
+            else{const agg={};_TF_CCOLS.forEach(t=>agg[t]=0);const own=new Set();let n=0;
+              if(bk)(bk.collateral||[]).forEach(as=>{const t=_TF_CMAP[String(as.assetType).padStart(2,'0')]||'QTS';agg[t]+=as.value||0;n++;if(as.owner&&_tfScore(as.owner,co.label)<0.5)own.add(as.owner);});
+              let sum=0;_TF_CCOLS.forEach((t,i)=>{const v=agg[t]?T(agg[t]):null;if(v)sum+=v;put(ws,r,c+i,v,st.num);});
+              put(ws,r,c+_TF_CCOLS.length,Math.round(sum*1000)/1000,st.num,'SUM('+A(c)+(r+1)+':'+A(c+_TF_CCOLS.length-1)+(r+1)+')');
+              if(n)rem.push(n+' TS');if(own.size)rem.push('TS bên thứ ba: '+[...own].slice(0,2).join('; ')+(own.size>2?'…':''));}
+          });
+          if(rb.isNew)rem.unshift('TCTD mới so với form');
+          if(rb.fromForm&&!rb.key&&co.mst)rem.unshift('Không có số trên CIC ở các kỳ đã chọn');
+          if(rem.length)put(ws,r,RC,rem.join(' · '),rem.some(x=>/Nhóm nợ|Không có số/.test(x))?st.warn:st.rem);
+          r++;});
+        const b1=r-1;coNo++;
+        put(ws,r,7,coNo,st.tot);put(ws,r,8,s.cos.length>1?'Total':'Total '+s.name,st.tot);
+        for(let c=9;c<=lastC;c++){if(c===9&&!isD){put(ws,r,c,null,st.tot);continue;}const f='SUM('+A(c)+(b0+1)+':'+A(c)+(b1+1)+')';let v=0;for(let x=b0;x<=b1;x++)v+=sv(x,c);put(ws,r,c,Math.round(v*1000)/1000,st.totN,f);}
+        coTotRows.push(r);r++;
+        // ô trống cột công ty giữa các dòng
+        for(let rr=r0+1;rr<r;rr++)[5,6].forEach(c=>{const a=XLSX.utils.encode_cell({r:rr,c});if(!ws[a])put(ws,rr,c,null,st.tx);});
+      });
+      if(s.cos.length>1){put(ws,r,8,'Grand total '+s.name,st.gt);for(let c=9;c<=lastC;c++){if(c===9&&!isD){put(ws,r,c,null,st.gt);continue;}put(ws,r,c,Math.round(coTotRows.reduce((s,x)=>s+sv(x,c),0)*1000)/1000,st.gtN,coTotRows.map(x=>A(c)+(x+1)).join('+'));}topRefs.push(r);r++;}
+      else topRefs.push(coTotRows[0]);
+    });
+    for(let c=9;c<=lastC;c++){if(c===9&&!isD){put(ws,rowGT,c,null,st.gt);continue;}put(ws,rowGT,c,Math.round(topRefs.reduce((s,x)=>s+sv(x,c),0)*1000)/1000,st.gtN,topRefs.map(x=>A(c)+(x+1)).join('+')||'0');}
+    // STT cột C
+    for(let rr=8;rr<r;rr++)put(ws,rr,2,rr-6,st.rem);
+    // tỷ giá đã dùng
+    const fx=RC+2;put(ws,7,fx,'Ty gia',st.rem);put(ws,7,fx+1,'usd',st.rem);put(ws,7,fx+2,(FX_RATES.USD||0)/1e9,{font:F,numFmt:'0.000000000'});
+    put(ws,8,fx,'(tool đã quy đổi USD theo tỷ giá '+(FX_SOURCE||'')+(FX_DATE?' '+FX_DATE:'')+')',st.rem);
+    ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:r+1,c:fx+2}});
+    const cw=[5.4,10.5,6.3,2.6,12.4,16.3,isD?49.6:40,5.6,23.1,isD?13:12.7];
+    for(let c=C0;c<=lastC;c++)cw.push(isD?11.5:11);cw.push(46,2,9,6,13);
+    ws['!cols']=cw.map(w=>({wch:w}));ws['!rows']=[];for(let i=0;i<=r;i++)ws['!rows'].push({hpt:18});
+    ws['!freeze']={xSplit:9,ySplit:7};
+    return ws;
+  }
+  XLSX.utils.book_append_sheet(wb,sheet('D'),'Deb Inventory (F)');
+  XLSX.utils.book_append_sheet(wb,sheet('C'),'Collateral Inventory (F)');
+  // chi tiết TSBĐ để đối chiếu
+  {const rows=[['Nhóm con','Công ty','MST','TCTD','Mã loại (R20)','Loại theo CIC','Cột trong form','Mô tả tài sản','Giá trị (tỷ)','Chủ sở hữu','Ngày thế chấp','Ngày số liệu R20']];
+    subs.forEach(s=>s.cos.forEach(co=>{const c=co.r?co.r.cells[ci(cm)]:null;if(!c||!c.snap||!c.snap.R20)return;
+      (c.snap.R20.assets||[]).forEach(as=>{const code=String(as.assetType).padStart(2,'0');rows.push([s.name,co.label,co.mst,tctdLabel(as.bankName),code,ct(code).n,_TF_CMAP[code]||'QTS',as.description||'',T(as.value),as.owner||'',as.pledgeDate||'',as.reportDate||'']);});}));
+    const ws=XLSX.utils.aoa_to_sheet(rows);xStyl(ws,0,0,0,11,xS.tHead);for(let i=1;i<rows.length;i++){xStyl(ws,i,0,i,11,xS.body);xStylC(ws,i,8,Object.assign({},xS.bodyNum,{numFmt:'#,##0.000'}));xStylC(ws,i,7,xS.bodyDetail);}
+    ws['!cols']=[{wch:16},{wch:40},{wch:13},{wch:16},{wch:8},{wch:22},{wch:10},{wch:70},{wch:11},{wch:30},{wch:12},{wch:12}];XLSX.utils.book_append_sheet(wb,ws,'TSBD chi tiet '+_tfPer(cm).replace('.','-'));}
+  // ghi chú & nguồn
+  {const rows=[['GHI CHÚ CÁCH LẤY SỐ'],[''],
+    ['Đơn vị','Tỷ đồng (số CIC tính theo triệu đồng ÷ 1.000). Dư nợ USD đã quy đổi VND theo tỷ giá tool đang dùng.'],
+    ['Kỳ','Tháng của ngày số liệu TCTD báo cáo lên CIC (không phải ngày tra). Nhiều bản tra trong tháng → lấy bản có ngày số liệu muộn nhất.'],
+    ['Công ty không tra trong kỳ',TF.fill==='carry'?'Kéo bản tra gần nhất trước đó, tối đa '+(TL.maxCarry||3)+' tháng; ghi ở cột Remark của dòng công ty.':'Để trống.'],
+    ['STL / MLT / Khác','Nợ vay ngắn hạn / trung + dài hạn / nợ khác theo S10A.'],
+    ['Off Bal. / Bonds','Ngoại bảng (bảo lãnh, LC…) / trái phiếu doanh nghiệp do TCTD nắm giữ, theo S10A.'],
+    ['Credit limit','Hạn mức đã nhập trong Tool CIC (ô HMTD) cho từng TCTD; nếu không có thì lấy từ form cũ.'],
+    ['TSBĐ','Theo R20 kỳ '+_tfPer(cm)+'. Giá trị là giá trị TCTD báo cáo; một tài sản có thể bảo đảm cho nhiều khoản vay. Cột "Bảo lãnh" không có trên R20 — nhập tay nếu có.'],
+    ['Quy đổi loại TSBĐ','01 → BĐS · 02 → PTVT · 03,04,06–11 → GTCG · 05 → CP · 12–14 → MMTB · 15–17 → HTK · 21 (quyền đòi nợ) → KPT · 18–20, 22–27 → QTS'],
+    [''],['NGUỒN TỪNG CÔNG TY'],['Nhóm con','Công ty','MST','Kỳ','Loại số','Ngày tra','Ngày số liệu','Có R20']];
+    subs.forEach(s=>s.cos.forEach(co=>mons.concat(mons.includes(cm)?[]:[cm]).forEach(m=>{const c=co.r?co.r.cells[ci(m)]:null;rows.push([s.name,co.label,co.mst||'(chưa khớp)',_tfPer(m),!c||c.kind==='none'?'không có':c.kind==='real'?'bản tra thật':'kéo bản cũ ('+c.age+' tháng)',c&&c.qd?_tlDayLbl(c.qd):'',c&&c.dd?_tlDayLbl(c.dd):'',c&&c.snap&&c.snap.R20?'Có':'Không']);})));
+    const ws=XLSX.utils.aoa_to_sheet(rows);xStyl(ws,0,0,0,7,xS.sectionH);xStyl(ws,11,0,11,7,xS.sectionH);xStyl(ws,12,0,12,7,xS.tHead);
+    for(let i=2;i<=9;i++){xStylC(ws,i,0,xS.label);xStylC(ws,i,1,xS.bodyDetail);}
+    ws['!cols']=[{wch:24},{wch:46},{wch:14},{wch:10},{wch:20},{wch:12},{wch:13},{wch:8}];XLSX.utils.book_append_sheet(wb,ws,'Ghi chu & nguon');}
+  const nm='Form_DuNo_TSBD_'+g.name.replace(/[^\p{L}\d]+/gu,'_').slice(0,30)+'_'+mons.map(m=>m.replace('-','').slice(2)).join('-').slice(0,40)+'.xlsx';
+  XLSX.writeFile(wb,nm);toast('✓ Đã xuất form nội bộ: '+nm);
+}
+// nút mở
+(function(){const _gr=tlgRenderEdit;tlgRenderEdit=function(g){_gr(g);if(g&&g.id!=='__new'){const el=document.getElementById('tlgEdit');if(el){const d=document.createElement('div');d.style.cssText='margin-top:.4rem';d.innerHTML='<button class="btn btn-o" style="padding:.25rem .65rem;font-size:.68rem" onclick="tlCloseGroups();TL.scope={kind:\'group\',id:\''+g.id+'\'};tfOpen()">Xuất form nội bộ (Dư nợ &amp; TSBĐ)…</button>';el.appendChild(d);}}};})();
 
 </script>
 </body>

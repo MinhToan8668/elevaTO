@@ -1,6 +1,6 @@
-# AI CIC Analyzer v5.1 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v5.2 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v5.1.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v5.2.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -70,6 +70,22 @@ SharePoint/OneDrive của đơn vị đã đồng bộ về máy). Cần Chrome 
 - Tuỳ chọn mã hoá AES-256-GCM, khoá dẫn xuất PBKDF2 (250.000 vòng) từ mật khẩu nhóm. Tool không lưu mật khẩu.
 - Mặc định chỉ gửi công ty thuộc nhóm theo dõi. Không có máy chủ, tool không gửi dữ liệu khách hàng ra mạng.
 - Cần IT / Quản trị rủi ro xác nhận thư mục nào được phép chứa dữ liệu CIC và ai được cấp quyền.
+
+## v5.2 — Xuất form nội bộ Dư nợ & TSBĐ theo công ty trong tập đoàn
+Diễn biến › **Form nội bộ** (hoặc Nhóm & kho › sửa nhóm › Xuất form nội bộ).
+- Hai sheet theo format nội bộ: **Deb Inventory (F)** (mỗi kỳ STL / MLT / Khác / Off Bal. / Bonds / Total exposure, cột
+  Credit limit) và **Collateral Inventory (F)** (KPT / HTK / MMTB / GTCG / BĐS / QTS / PTVT / CP / Bảo lãnh / Total), cùng thứ
+  tự dòng: nhóm con › công ty › từng TCTD. Đơn vị tỷ đồng. Dòng Total / Grand total là **công thức** (đã kèm sẵn kết quả).
+- **Khung form**: nạp form cũ (.xlsx) một lần → tool đọc nhóm con, thứ tự công ty, thứ tự ngân hàng, hạn mức; khớp tên công
+  ty với MST (bỏ dấu, mở rộng viết tắt SX/TM/DV/MTV/GNVC…; chọn tay được nếu sai) và khớp nhãn ngân hàng ("VP Bank", "ABB",
+  "Siam Comercial"…). Khung lưu vào nhóm theo dõi (đồng bộ qua thư mục chung). Không có khung thì tự dựng theo cột "Nhóm con".
+- Chọn nhiều kỳ dư nợ (mỗi kỳ một khối cột) và một kỳ TSBĐ. Công ty không tra trong kỳ: kéo bản gần nhất (tối đa N tháng) hoặc để trống.
+- Cột **Remark**: nguồn số từng kỳ của mỗi công ty (ngày tra · ngày số liệu · kéo bản cũ), "TCTD mới so với form",
+  "Không có số trên CIC ở các kỳ đã chọn", nhóm nợ ≥2, trái phiếu ("Bond ACB: 1,500"), TSBĐ của bên thứ ba.
+- Công ty trong nhóm nhưng chưa có trong form → thêm ở nhóm con "Khác" cuối file. Credit limit lấy từ ô HMTD trong tool.
+- Kèm sheet **TSBĐ chi tiết** (từng tài sản, mã loại R20 → cột form) và **Ghi chú & nguồn**.
+- Quy đổi loại TSBĐ R20: 01 → BĐS · 02 → PTVT · 03, 04, 06–11 → GTCG · 05 → CP · 12–14 → MMTB · 15–17 → HTK ·
+  21 (quyền đòi nợ) → KPT · còn lại → QTS. "Bảo lãnh" không có trên R20, để nhập tay.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
