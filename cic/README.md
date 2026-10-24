@@ -1,6 +1,6 @@
-# AI CIC Analyzer v5.0 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v5.1 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v5.0.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v5.1.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -33,6 +33,43 @@ muốn xem diễn biến phải tự lưu file định kỳ rồi dán lại the
   Công ty × kỳ, TSBĐ × kỳ, Biến động TSBĐ, Nhận định, Nguồn dữ liệu. PNG biểu đồ, In PDF.
 - **Tệp dữ liệu (Quản lý dữ liệu) nâng lên `_ver: 2`**: kèm `cic.snapshots` (mọi bản tra theo ngày) và
   `cic.groups` (nhóm theo dõi). Tệp bản 1 vẫn nhập được (mỗi KH thành 1 bản tra theo ngày tra cứu).
+
+## v5.1 — quy ước chọn số liệu, in ấn, đồng bộ nhiều máy
+
+### Quy ước chọn số liệu (tool tự áp dụng)
+1. **Kỳ = tháng của ngày số liệu**, không phải ngày tra. Ngày số liệu là "Ngày báo cáo" TCTD gửi CIC, in trên S10A.
+   Dư nợ vay thường trễ 1–2 tuần so với ngày tra; ngoại bảng chốt cuối tháng (tra đầu tháng có thể còn số của 2 tháng trước).
+   Bản tra thuộc tháng chiếm phần lớn dư nợ vay (gia quyền theo số dư). Có tuỳ chọn xếp theo ngày tra.
+2. Nhiều bản tra trong cùng tháng → bản có ngày số liệu muộn nhất là đại diện. Các bản khác vẫn giữ, xem ở "Theo lần tra".
+3. Công ty không được tra trong tháng → nợ vay theo bảng 12 tháng của CIC; không có thì kéo bản trước đó tối đa N tháng
+   (mặc định 3, chỉnh được); quá hạn thì để trống.
+4. Mỗi ô ghi loại số và ngày số liệu. Mọi kỳ hiện độ phủ "x/y công ty". Nhận định có thêm phép so sánh **cùng tập công ty**
+   để không nhầm tăng/giảm do thay đổi số công ty có dữ liệu.
+
+### Quy trình gợi ý cho nhân viên
+Mỗi nhóm một người phụ trách · tra cả nhóm trong một đợt, một ngày cố định mỗi tháng (gợi ý 10–15) · luôn kèm R20 ·
+trước đợt mở tab **Lịch tra › Cần tra kỳ này › Copy MST** để giao việc · đồng nghiệp tra hộ dùng chung thư mục đồng bộ.
+
+### Giao diện
+- Bảng ma trận: cột tên, xu hướng, Δ, tỷ trọng **cố định bên trái**; các kỳ cuộn ngang, mặc định mở ở kỳ mới nhất.
+- Biểu đồ khung cố định (6/12/24/Tất cả kỳ), kéo chuột / thanh trượt / ◀ ▶ để xem kỳ khác; trục Y tự co giãn theo khung.
+- Tab **Lịch tra**: lưới công ty × kỳ, mỗi ô ghi ngày tra → ngày số liệu, in đậm bản đại diện; độ lệch ngày số liệu trong kỳ;
+  danh sách công ty chưa tra kèm nút copy.
+- **In PDF**: khổ A4 ngang, mỗi tab một trang, ma trận tự chia thành nhiều khối kỳ vừa trang (cột xu hướng/Δ lặp lại ở mỗi khối),
+  biểu đồ hiện đủ mọi kỳ.
+
+### Xuất theo nhóm
+Quản lý dữ liệu › Xuất dữ liệu › **Xuất theo nhóm theo dõi**, hoặc Nhóm & kho › sửa nhóm › **Xuất tệp nhóm**:
+một tệp gồm danh sách MST của nhóm và mọi bản tra theo ngày trong khoảng từ tháng – đến tháng.
+
+### Đồng bộ nhiều máy qua thư mục chung
+Nhóm & kho › **Thư mục chung**. Mọi người chọn cùng một thư mục nội bộ do ngân hàng quản lý (ổ mạng phòng, hoặc thư mục
+SharePoint/OneDrive của đơn vị đã đồng bộ về máy). Cần Chrome hoặc Edge (File System Access API).
+- Mỗi bản tra mới tự ghi thành `snap/<MST>/<MST>_<ngày>_<người tra>.json`; nhóm theo dõi ở `groups/<id>.json`.
+  Tệp tách theo người tra nên không ghi đè lẫn nhau. Máy khác tự nhận khi mở tool, mỗi 5 phút, hoặc bấm "Đồng bộ ngay".
+- Tuỳ chọn mã hoá AES-256-GCM, khoá dẫn xuất PBKDF2 (250.000 vòng) từ mật khẩu nhóm. Tool không lưu mật khẩu.
+- Mặc định chỉ gửi công ty thuộc nhóm theo dõi. Không có máy chủ, tool không gửi dữ liệu khách hàng ra mạng.
+- Cần IT / Quản trị rủi ro xác nhận thư mục nào được phép chứa dữ liệu CIC và ai được cấp quyền.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
