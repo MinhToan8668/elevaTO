@@ -69,7 +69,6 @@ SharePoint/OneDrive của đơn vị đã đồng bộ về máy). Cần Chrome 
   Tệp tách theo người tra nên không ghi đè lẫn nhau. Máy khác tự nhận khi mở tool, mỗi 5 phút, hoặc bấm "Đồng bộ ngay".
 - Tuỳ chọn mã hoá AES-256-GCM, khoá dẫn xuất PBKDF2 (250.000 vòng) từ mật khẩu nhóm. Tool không lưu mật khẩu.
 - Mặc định chỉ gửi công ty thuộc nhóm theo dõi. Không có máy chủ, tool không gửi dữ liệu khách hàng ra mạng.
-- Cần IT / Quản trị rủi ro xác nhận thư mục nào được phép chứa dữ liệu CIC và ai được cấp quyền.
 
 ## v5.2 — Xuất form nội bộ Dư nợ & TSBĐ theo công ty trong tập đoàn
 Diễn biến › **Form nội bộ** (hoặc Nhóm & kho › sửa nhóm › Xuất form nội bộ).

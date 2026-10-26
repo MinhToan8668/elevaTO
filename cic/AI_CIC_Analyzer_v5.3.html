@@ -9854,12 +9854,12 @@ function tlsRenderPane(){
       +'<button class="btn btn-p" style="margin-top:.5rem" onclick="tlsConnect()">Chọn thư mục chung…</button>'+(TLS.err?'<div class="tl-mini tl-up" style="margin-top:.3rem">'+_dmEsc(TLS.err)+'</div>':'')+'</div>';
   }
   h+='</div></div>';
-  h+='<details class="tl-rules" open><summary>🔐 Vì sao cách này giữ được bảo mật — và cần xác nhận gì với IT</summary><div class="tl-rules-b" style="display:block"><ol>'
+  h+='<details class="tl-rules" open><summary>🔐 Vì sao cách này giữ được bảo mật</summary><div class="tl-rules-b" style="display:block"><ol>'
     +'<li><b>Không có máy chủ, không có dịch vụ bên ngoài.</b> Dữ liệu CIC chỉ đi từ máy bạn vào thư mục bạn chọn. Tool không gửi dữ liệu khách hàng tới địa chỉ mạng nào.</li>'
     +'<li><b>Dùng đúng chỗ lưu trữ ngân hàng đã quản lý</b>: ổ mạng nội bộ của phòng, hoặc thư mục SharePoint / OneDrive của đơn vị đã đồng bộ về máy. Phân quyền thư mục quyết định ai đọc được; nhật ký truy cập do hệ thống của ngân hàng ghi.</li>'
     +'<li><b>Mã hoá AES-256-GCM</b> bằng mật khẩu nhóm. Lỡ thư mục bị phân quyền sai thì tệp vẫn không đọc được nếu thiếu mật khẩu. Mật khẩu không lưu ở đâu cả.</li>'
     +'<li><b>Mỗi tệp ghi tên người tra</b>, chỉ gửi công ty thuộc nhóm theo dõi (mặc định): đúng nguyên tắc cần-biết.</li>'
-    +'<li><b>Cần IT / Khối Quản trị rủi ro xác nhận</b> thư mục nào được phép chứa dữ liệu CIC, và danh sách người được cấp quyền. Không chọn thư mục cá nhân, USB hay dịch vụ lưu trữ ngoài ngân hàng.</li></ol></div></details>';
+    +'<li>Không chọn thư mục cá nhân, USB hay dịch vụ lưu trữ ngoài ngân hàng.</li></ol></div></details>';
   el.innerHTML=h;
 }
 (function(){
