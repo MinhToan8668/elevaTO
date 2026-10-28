@@ -10695,6 +10695,14 @@ function _tlVerifyGroups(S){
 }
 // ───────── dọn mọi bản đã lưu: kho · Lịch sử · chỉ mục · phiên đang mở ─────────
 function _tlCleanPair(s10a,r20){let n=0;if(s10a&&_tlVerifyGroups(s10a).fixed)n++;if(_tlFixGroups(s10a))n++;if(r20&&_r20SplitReleased(r20))n++;return n;}
+// bảng gộp (merged) đã lưu có còn khớp nhóm nợ / TSBĐ của S10A·R20 đã chuẩn hoá không
+function _tlNeedsRemerge(s10a,r20){return !!((s10a&&(s10a.debts||[]).some(d=>d._gFix))||(r20&&(r20.released||[]).length));}
+function _tlMergedStale(u){try{const m=mergeForCompany(u.s10a,u.r20);const sig=x=>(x||[]).map(b=>bankKey(b.name)+':'+b.debtGroup+':'+Math.round(b.total||0)+':'+Math.round(b.collValue||0)).sort().join('|');return sig(m)!==sig(u.merged);}catch(e){return false;}}
+// ghi cả 3 phiên đang mở (saveState gốc chỉ ghi phiên của tab đang xem)
+function _tlSaveAllSlots(){try{const o=_readSession()||{};
+  if(S10A||R20)o.single={S10A,R20};if(companies&&companies.length)o.group=Object.assign({},o.group||{},{companies,coCtr,grpName:(document.getElementById('grpNameInput')||{}).value||((o.group||{}).grpName)||''});
+  if(PERIODS&&PERIODS.length)o.period=Object.assign({},o.period||{},{PERIODS,PERIOD_HIDE:[...PERIOD_HIDE],PERIOD_TSBD_HIDE:[...PERIOD_TSBD_HIDE],PERIOD_METRIC});
+  if(!o.active)o.active=MODE;o.t=Date.now();localStorage.setItem(_SS_KEY,JSON.stringify(o));}catch(e){console.warn('Lưu phiên:',e&&e.message);}}
 async function _tlCleanAll(){
   let nK=0,nH=0,gf=0,rel=0;
   const ch=[];_TL_CACHE.forEach(s=>{const a=s.S10A?_tlVerifyGroups(s.S10A).fixed:0;const b=s.R20?_r20SplitReleased(s.R20):0;const c=_tlFixGroups(s.S10A);if(a||b||c){gf+=a;rel+=b;delete s._m;delete s._d;s.t=Date.now();ch.push(s);}});
@@ -10702,12 +10710,19 @@ async function _tlCleanAll(){
   try{await _histReady;}catch(e){}
   for(const e of (_getHistory()||[])){let n=0;
     if(e.mode==='single')n+=_tlCleanPair(e.S10A,e.R20);
-    (e.companies||[]).forEach(c=>{const k=_tlCleanPair(c.s10a,c.r20);if(k){n+=k;c.merged=mergeForCompany(c.s10a,c.r20);}});
-    (e.PERIODS||[]).forEach(p=>{const k=_tlCleanPair(p.s10a,p.r20);if(k){n+=k;p.merged=mergeForCompany(p.s10a,p.r20);}});
+    (e.companies||[]).forEach(c=>{const k=_tlCleanPair(c.s10a,c.r20);if(k||(c.merged&&_tlMergedStale(c))){n++;c.merged=mergeForCompany(c.s10a,c.r20);}});
+    (e.PERIODS||[]).forEach(p=>{const k=_tlCleanPair(p.s10a,p.r20);if(k||(p.merged&&_tlMergedStale(p))){n++;p.merged=mergeForCompany(p.s10a,p.r20);}});
     if(n){nH++;try{if(_HIST_USE_LS)_lsSet(_HIST_CACHE);else await _histOp('readwrite',s=>s.put(e));}catch(err){}}}
   try{const idx=_getMstIndex();let c=0;Object.keys(idx).forEach(k=>{c+=_tlCleanPair(idx[k].S10A,idx[k].R20);});if(c)localStorage.setItem(_MST_KEY,JSON.stringify(idx));}catch(e){}
-  let open=_tlCleanPair(S10A,R20);(companies||[]).forEach(c=>{if(_tlCleanPair(c.s10a,c.r20)){open++;c.merged=mergeForCompany(c.s10a,c.r20);}});(PERIODS||[]).forEach(p=>{if(_tlCleanPair(p.s10a,p.r20)){open++;p.merged=mergeForCompany(p.s10a,p.r20);}});
-  if(open){try{if(S10A||R20){mergeData();if(MODE==='single')renderAll();}saveState();}catch(e){}}
+  // phiên đang mở: chuẩn hoá rồi TÍNH LẠI + VẼ LẠI cả 3 màn (1 KH · Nhóm KH · Theo kỳ), không chỉ màn đang xem
+  let open=0;const fixS=_tlCleanPair(S10A,R20)||_tlNeedsRemerge(S10A,R20);
+  const fixG=(companies||[]).map(c=>_tlCleanPair(c.s10a,c.r20)||_tlNeedsRemerge(c.s10a,c.r20)).some(Boolean);
+  const fixP=(PERIODS||[]).map(p=>_tlCleanPair(p.s10a,p.r20)||_tlNeedsRemerge(p.s10a,p.r20)).some(Boolean);
+  if(fixS||fixG||fixP){open=1;const _rs=window._suppressScroll;window._suppressScroll=true;
+    try{if(fixS&&(S10A||R20)){mergeData();if(document.getElementById('tBar')&&document.getElementById('tBar').style.display!=='none'){renderHero();renderAll();}}}catch(e){}
+    try{if(fixG&&companies.length){companies.forEach(c=>{c.merged=mergeForCompany(c.s10a,c.r20);});renderChips();updateGrpHero();analyzeGroup();}}catch(e){}
+    try{if(fixP&&PERIODS.length){PERIODS.forEach(p=>{p.merged=mergeForCompany(p.s10a,p.r20);});updatePerHero();analyzePeriods();}}catch(e){}
+    window._suppressScroll=_rs;_tlSaveAllSlots();}
   if(nK||nH||open){_tlAfterChange();try{const f=JSON.parse(localStorage.getItem('cic_tl_fixlog')||'{}');f.t=Date.now();f.grp=(f.grp||0)+gf;f.rel=(f.rel||0)+rel;f.kho=(f.kho||0)+nK;f.hist=(f.hist||0)+nH;localStorage.setItem('cic_tl_fixlog',JSON.stringify(f));}catch(e){}
     console.info('[CIC] Chuẩn hoá số liệu đã lưu: '+nK+' bản tra trong kho, '+nH+' hồ sơ Lịch sử ('+gf+' nhóm nợ đối chiếu lại, '+rel+' TSBĐ đã giải chấp tách riêng)');}
 }
