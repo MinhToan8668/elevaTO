@@ -1,6 +1,6 @@
-# AI CIC Analyzer v6.3 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v6.4 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v6.3.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v6.4.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -171,6 +171,20 @@ Nên sau khi sửa bộ đọc, dán lại S10A chỉ sửa được Nhóm KH / 
 Nay cùng một báo cáo thì bản đọc mới (có số tiền theo nhóm) luôn thay bản đọc cũ — áp cho dán tay, nhập tệp và thư mục chung.
 Kiểm tra đầu-cuối: kho có bản 24/08 bị hạ nhầm về N1 (cả khi mất dấu hoàn lại) → dán lại S10A có ngắt trang giữa TCTD →
 Nhóm KH, 1 KH và Diễn biến kỳ 08/2026 đều N2, số tiền nhóm 2 = 890.741.
+
+## v6.4 — Tự đối soát số liệu ở mọi phạm vi, một định nghĩa nhóm nợ
+**Nhóm nợ hiện tại** = nhóm cao nhất của nợ vay, ngoại bảng, trái phiếu tại ngày số liệu báo cáo — dùng chung cho 1 KH, Nhóm KH,
+Theo kỳ, Diễn biến. Trước đây Nhóm KH gộp cả lịch sử nợ xấu 5 năm (mục 2.7) và bỏ qua nhóm của ngoại bảng / trái phiếu, 1 KH bỏ qua
+ngoại bảng / trái phiếu. Lịch sử nợ xấu 5 năm vẫn báo riêng.
+
+**Đối soát tự động** (chạy mỗi lần xem, cho mọi nhóm / công ty / lần tra):
+- Diễn biến: mỗi ô (công ty × kỳ) được tính lại độc lập từ chính bản tra nguồn — nợ vay, ngoại bảng, trái phiếu, nhóm nợ; tổng kỳ =
+  Σ công ty; Σ theo TCTD + "không rõ TCTD" = nợ vay kỳ. Khung xanh "✓ Đối soát số liệu: N ô khớp" hoặc khung đỏ liệt kê từng chỗ lệch.
+- Mỗi bản tra: ngắn + trung + dài + khác = dòng "Tổng cộng dư nợ" từng TCTD; Σ TCTD = dòng "Tổng cộng các TCTD"; có số tiền nhóm ≥2 thì
+  nhóm nợ phải khớp; nhóm ≥2 chưa có số tiền theo nhóm thì ghi "cần xác nhận".
+- Nhóm KH / 1 KH: số đang mở so với kho Diễn biến cùng MST + ngày tra; huy hiệu "✓ số liệu khớp kho" hoặc "⚠ N chỗ lệch".
+
+Đối soát ngoài (bộ tính viết riêng, không dùng hàm tính của tool) trên dữ liệu thật: 0 chỗ lệch ở mọi ô, cả hai chế độ lấp tháng.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).

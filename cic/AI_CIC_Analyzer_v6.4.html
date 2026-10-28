@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v6.3 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v6.4 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1082,6 +1082,15 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 @media print{.lnk-bar{display:none!important}}
 #lnkSingle{box-sizing:border-box;width:calc(100% - 4rem);max-width:1376px;margin:.6rem auto .2rem}
 .lnk-now{color:var(--tx2)}.lnk-now b{color:var(--ac)}
+.cic-audit{margin:0 0 .7rem;padding:.45rem .7rem;border-radius:8px;font-size:.7rem;line-height:1.55;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2)}
+.cic-audit.ok{border-color:#BBE5C8;background:#F0FAF3;color:#166534}
+.cic-audit.warn{border-color:#F5D9A8;background:#FFF8EB;color:#92400E}
+.cic-audit.bad{border-color:#F3B4B4;background:#FFF1F1;color:#991B1B}
+.cic-audit ul{margin:.25rem 0 0 1rem;padding:0}
+.lnk-audit{font-size:.66rem;font-weight:600;padding:.12rem .45rem;border-radius:999px;cursor:default}
+.lnk-audit.ok{background:#F0FAF3;color:#166534}.lnk-audit.bad{background:#FFF1F1;color:#991B1B}
+@media (prefers-color-scheme:dark){.cic-audit.ok,.lnk-audit.ok{background:#0F2A1A;color:#86EFAC;border-color:#1F5132}.cic-audit.warn{background:#2A1F0A;color:#FCD34D}.cic-audit.bad,.lnk-audit.bad{background:#2A0F0F;color:#FCA5A5;border-color:#5B1F1F}}
+.lnk-audit.warn{background:#FFF8EB;color:#92400E}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -2123,7 +2132,7 @@ function rOverview(){if(!MERGED)return;let tL=0,tO=0,tP=0,tC=0,mG='01';
   MERGED.forEach(b=>{tL+=b.nh+b.th+b.dh+b.kh;tO+=b.ob;tP+=b.tp;tC+=b.collValue;if(parseInt(b.debtGroup)>parseInt(mG))mG=b.debtGroup;});
   // Include 5-year bad debt history (2.7) so "Nhóm nợ cao nhất" reflects true 5-year peak
   (S10A?.badDebtHistory||[]).forEach(b=>{const g=parseInt(b.debtGroup)||0;if(g>parseInt(mG))mG=g.toString().padStart(2,'0');});
-  const tA=tL+tO+tP;const cG=S10A?.debts.length?Math.max(...S10A.debts.map(d=>parseInt(d.debtGroup)||1)).toString().padStart(2,'0'):'01';
+  const tA=tL+tO+tP;const cG=(typeof _cicCurGroup==='function'?String(_cicCurGroup(S10A)):String(S10A?.debts.length?Math.max(...S10A.debts.map(d=>parseInt(d.debtGroup)||1)):1)).padStart(2,'0');
   // Collect currencies used
   const usedCur=new Set();
   if(S10A){S10A.debts.forEach(d=>{if(d.shortTerm.usd||d.medTerm.usd||d.longTerm.usd||d.other.usd)usedCur.add('USD');});
@@ -7354,7 +7363,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='6.3';
+const APP_VERSION='6.4';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8309,7 +8318,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='6.3';
+const TL_VER='6.4';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10959,6 +10968,51 @@ _tlMerge=function(s){
   if(ch){cu.t=Date.now();delete cu._m;delete cu._d;}
   return ch?'upd':'same';
 };
+// ═══════════ v6.4 — MỘT ĐỊNH NGHĨA NHÓM NỢ + TỰ ĐỐI SOÁT SỐ LIỆU Ở MỌI PHẠM VI ═══════════
+// Nhóm nợ hiện tại = nhóm cao nhất của nợ vay, ngoại bảng, trái phiếu tại ngày số liệu của báo cáo. Lịch sử nợ xấu 5 năm (mục 2.7)
+// báo riêng ("Có nợ xấu 5 năm"), không trộn vào nhóm hiện tại — cùng một quy ước cho 1 KH · Nhóm KH · Theo kỳ · Diễn biến.
+function _cicCurGroup(S){if(!S)return 1;let g=1;(S.debts||[]).forEach(d=>{g=Math.max(g,parseInt(d.debtGroup)||1);});(S.offBalance||[]).forEach(o=>{g=Math.max(g,parseInt(o.debtGroup)||1);});(S.bonds||[]).forEach(o=>{g=Math.max(g,parseInt(o.debtGroup)||1);});return g;}
+getMaxDebtGroup=function(co){return _cicCurGroup(co&&co.s10a);};
+// Kiểm tra toàn vẹn một bản tra (dùng cho mọi KH, mọi lần tra)
+function _cicIntegrity(S,tag){const out=[];if(!S)return out;
+  (S.debts||[]).forEach(d=>{['vnd','usd'].forEach(c=>{const a=(d.shortTerm[c]||0)+(d.medTerm[c]||0)+(d.longTerm[c]||0)+(d.other[c]||0),t=(d.total&&d.total[c])||0;
+      if(Math.abs(a-t)>1)out.push({lv:'r',t:tag+tctdLabel(d.name)+': ngắn+trung+dài+khác = '+_fmInt(a)+' ≠ dòng "Tổng cộng dư nợ" '+_fmInt(t)+' ('+c.toUpperCase()+', đơn vị như báo cáo) — mở báo cáo gốc kiểm tra'});});
+    if(d.grpAmt){const top=Object.keys(d.grpAmt).filter(g=>d.grpAmt[g]>0).sort().pop()||'01';if(top>d.debtGroup)out.push({lv:'r',t:tag+tctdLabel(d.name)+': có số tiền nhóm '+(+top)+' nhưng đang ghi nhóm '+(+d.debtGroup)});}
+    else if(+d.debtGroup>=2&&d._gUnconf)out.push({lv:'y',t:tag+tctdLabel(d.name)+': nhóm '+(+d.debtGroup)+' chưa có số tiền theo nhóm — xác nhận trên báo cáo gốc hoặc dán lại S10A'});});
+  if(S.totalMismatch&&S.reportedTotal&&S.parsedTotal)out.push({lv:'r',t:tag+'Tổng các TCTD đọc được '+_fmInt(S.parsedTotal.vnd)+' ≠ dòng "Tổng cộng các TCTD" '+_fmInt(S.reportedTotal.vnd)+' — có TCTD đọc thiếu/thừa'});
+  return out;}
+// Đối soát mô hình Diễn biến: mỗi ô = tính lại độc lập từ chính bản tra nguồn; tổng kỳ = Σ công ty; Σ TCTD + không rõ = nợ vay
+function cicAuditModel(M){
+  const iss=[];let n=0;const U=x=>(x&&x.vnd||0)+toVND(x&&x.usd||0,'USD');const tol=v=>Math.max(1,Math.abs(v)*1e-9);const seen=new Set();
+  M.rows.forEach(r=>r.cells.forEach((x,ci)=>{if(!x||x.kind==='none')return;n++;const lab=shortName(r.name).substring(0,30)+' · '+M.cols[ci].label+': ';
+    const s=x.snap;if(s&&s.S10A&&!seen.has(s.key)){seen.add(s.key);_cicIntegrity(s.S10A,shortName(r.name).substring(0,30)+' · bản tra '+_tlDayLbl(s.day)+' · ').forEach(i=>iss.push(i));}
+    if(!s||!s.S10A)return;const S=s.S10A;
+    const dn=(S.debts||[]).reduce((a,d)=>a+U(d.shortTerm)+U(d.medTerm)+U(d.longTerm)+U(d.other),0),ob=(S.offBalance||[]).reduce((a,o)=>a+toVND(o.value,o.currency),0),tp=(S.bonds||[]).reduce((a,o)=>a+(o.value||0),0);
+    if(x.kind!=='cic'&&Math.abs(x.dn-dn)>tol(dn))iss.push({lv:'r',t:lab+'nợ vay '+fm(x.dn)+' ≠ bản tra '+fm(dn)});
+    if(Math.abs(x.ob-ob)>tol(ob))iss.push({lv:'r',t:lab+'ngoại bảng '+fm(x.ob)+' ≠ bản tra '+fm(ob)});
+    if(Math.abs(x.tp-tp)>tol(tp))iss.push({lv:'r',t:lab+'trái phiếu '+fm(x.tp)+' ≠ bản tra '+fm(tp)});
+    if(parseInt(x.worst)!==_cicCurGroup(S))iss.push({lv:'r',t:lab+'nhóm nợ N'+(+x.worst)+' ≠ bản tra N'+_cicCurGroup(S)});}));
+  M.agg.forEach((a,ci)=>{if(!a.has)return;const sT=M.rows.reduce((s,r)=>s+((r.cells[ci]&&r.cells[ci].total)||0),0);if(Math.abs(a.total-sT)>tol(sT))iss.push({lv:'r',t:'Kỳ '+a.label+': tổng '+fm(a.total)+' ≠ Σ công ty '+fm(sT)});
+    let b=0;a.banks.forEach(x=>{b+=x.dn;});if(Math.abs(b+a.unk-a.dn)>tol(a.dn))iss.push({lv:'r',t:'Kỳ '+a.label+': Σ theo TCTD '+fm(b+a.unk)+' ≠ nợ vay '+fm(a.dn)});});
+  return {n,iss};}
+// Nhóm KH / 1 KH đang mở so với kho: cùng MST + cùng ngày tra phải cùng số
+function cicAuditOpen(){const iss=[];const chk=(s10a,r20,nm)=>{if(!s10a)return;const m=_normMstCic(s10a.customer&&s10a.customer.taxCode);const q=_qDate(s10a);if(!m||!q)return;
+    const day=q.slice(6,10)+'-'+q.slice(3,5)+'-'+q.slice(0,2);const k=_TL_IDX.get(m+'|'+day);if(!k||!k.S10A)return;
+    const sig=S=>(S.debts||[]).map(d=>bankKey(d.name)+':'+d.debtGroup+':'+Math.round(d.total.vnd)+':'+Math.round(d.total.usd)).sort().join('|')+'#'+(S.offBalance||[]).length+'#'+(S.bonds||[]).length;
+    if(sig(s10a)!==sig(k.S10A))iss.push({lv:'r',t:shortName(nm||'').substring(0,30)+' · bản tra '+q+': số đang mở khác kho Diễn biến'});
+    _cicIntegrity(s10a,shortName(nm||'').substring(0,30)+' · ').forEach(i=>iss.push(i));};
+  (companies||[]).forEach(c=>chk(c.s10a,c.r20,c.name||(c.s10a&&c.s10a.customer.name)));if(MODE==='single'&&S10A)chk(S10A,R20,S10A.customer.name);return iss;}
+function _cicAuditBox(r,scopeLbl){
+  const red=r.iss.filter(i=>i.lv==='r'),yel=r.iss.filter(i=>i.lv!=='r');
+  if(!r.iss.length)return '<div class="cic-audit ok" title="Mỗi ô được tính lại độc lập từ bản tra nguồn; tổng kỳ, tổng theo TCTD, nhóm nợ, tổng trong báo cáo đều được đối chiếu">✓ Đối soát số liệu '+scopeLbl+': <b>'+r.n+'</b> ô khớp bản tra nguồn · tổng theo TCTD, tổng báo cáo, nhóm nợ đều khớp</div>';
+  return '<div class="cic-audit '+(red.length?'bad':'warn')+'"><b>'+(red.length?'⚠ Đối soát số liệu: '+red.length+' chỗ lệch':'Đối soát số liệu: '+yel.length+' điểm cần xác nhận')+'</b> '+scopeLbl+' ('+r.n+' ô đã kiểm)<ul>'+red.concat(yel).slice(0,12).map(i=>'<li>'+_dmEsc(i.t)+'</li>').join('')+(r.iss.length>12?'<li>… và '+(r.iss.length-12)+' điểm khác</li>':'')+'</ul></div>';}
+(function(){const _ov=tlHtmlOverview;tlHtmlOverview=function(M){let h=_ov(M);try{const r=cicAuditModel(M);window._cicLastAudit=r;h=_cicAuditBox(r,'· '+_dmEsc(M.scope.name))+h;}catch(e){console.warn('Đối soát:',e&&e.message);}return h;};})();
+// Nhóm KH & 1 KH: dòng đối soát trên thanh liên kết
+function _lnkAuditTag(iss){const red=iss.filter(i=>i.lv==='r');return '<span class="lnk-audit '+(red.length?'bad':'warn')+'" title="'+_dmEsc(iss.slice(0,8).map(i=>i.t).join('\n'))+'">'+(red.length?'⚠ '+red.length+' chỗ lệch số liệu':iss.length+' điểm cần xác nhận')+'</span>';}
+(function(){
+  const _g=_lnkGroup;_lnkGroup=function(){let h=_g();try{if(companies&&companies.length){const iss=cicAuditOpen();h+='<span class="lnk-sep"></span>'+(iss.length?_lnkAuditTag(iss):'<span class="lnk-audit ok" title="Số từng công ty khớp kho Diễn biến cùng ngày tra; tổng theo kỳ hạn = dòng tổng từng TCTD; tổng TCTD = tổng báo cáo">✓ số liệu khớp kho</span>');}}catch(e){}return h;};
+  const _s=_lnkSingle;_lnkSingle=function(){let h=_s();try{if(S10A){const iss=cicAuditOpen();h+=(iss.length?_lnkAuditTag(iss):'<span class="lnk-audit ok">✓ số liệu khớp kho</span>');}}catch(e){}return h;};
+})();
 
 </script>
 </body>
