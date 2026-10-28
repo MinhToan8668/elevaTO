@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v6.2 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v6.3 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -7354,7 +7354,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='6.2';
+const APP_VERSION='6.3';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8309,7 +8309,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='6.2';
+const TL_VER='6.3';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10943,6 +10943,22 @@ async function cicDeleteCustomer(mst){
 // TSBĐ chưa có giá trị: ghi rõ ở KPI diễn biến và form
 (function(){const _ov=tlHtmlOverview;tlHtmlOverview=function(M){let h=_ov(M);try{const l=M.lastIdx;if(l<0)return h;let nv=0,n=0;M.rows.forEach(r=>{const c=r.cells[l];if(c&&c.snap&&c.snap.R20){nv+=_tlCollNoVal(c.snap.R20);n+=(c.snap.R20.assets||[]).length;}});
   if(nv)h=h.replace(/(<div class="lb">TSBĐ \(R20\) kỳ cuối<\/div>[\s\S]*?<div class="sub">)/,'$1<b class="tl-up">'+nv+'/'+n+' TS chưa có giá trị</b> · ');}catch(e){}return h;};})();
+// ───────── Kho: dán lại CÙNG một báo cáo thì bản đọc mới thay bản đọc cũ ─────────
+// Trước đây cùng MST + cùng giờ tra → giữ bản cũ, bỏ bản vừa dán → dán lại S10A không sửa được số trong Diễn biến.
+function _tlParseRank(x){return x?((x.pv===2&&!x._gv)?2:1):0;}
+_tlMerge=function(s){
+  const cu=_TL_IDX.get(s.key);
+  if(!cu){_TL_CACHE.push(s);_TL_IDX.set(s.key,s);return 'new';}
+  let ch=false;
+  if(s.ts>cu.ts){cu.ts=s.ts;if(s.S10A){cu.S10A=s.S10A;ch=true;}if(s.R20){cu.R20=s.R20;ch=true;}if(s.name)cu.name=s.name;}
+  else{
+    const same=s.ts===cu.ts;
+    if(s.S10A&&(!cu.S10A||(same&&_tlParseRank(s.S10A)>_tlParseRank(cu.S10A)))){cu.S10A=s.S10A;ch=true;}
+    if(s.R20&&(!cu.R20||(same&&_tlParseRank(s.R20)>_tlParseRank(cu.R20)))){cu.R20=s.R20;ch=true;}
+  }
+  if(ch){cu.t=Date.now();delete cu._m;delete cu._d;}
+  return ch?'upd':'same';
+};
 
 </script>
 </body>

@@ -1,6 +1,6 @@
-# AI CIC Analyzer v6.2 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v6.3 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v6.2.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v6.3.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -164,6 +164,13 @@ tool tính lại và vẽ lại cả 3 màn, lưu lại cả 3 phiên; hồ sơ 
   Ô chọn nhóm/kỳ chuyển sang mục "Mở kỳ khác từ kho", mặc định là nhóm khớp danh sách đang mở và kỳ của dữ liệu đang mở.
 - Sang Diễn biến từ Nhóm KH thì chọn sẵn kỳ của dữ liệu đang mở.
 - Câu "Có dư nợ nhóm ≥2 trong nhóm kỳ …" ghi tên công ty và nguồn (bản tra thật / kéo từ bản tra ngày …).
+
+## v6.3 — Dán lại báo cáo thì kho Diễn biến nhận bản đọc mới
+**Lỗi (có từ 5.0)**: kho giữ một bản cho mỗi MST + ngày tra; dán lại ĐÚNG báo cáo đó (cùng giờ tra) thì kho giữ bản đọc cũ, bỏ bản vừa dán.
+Nên sau khi sửa bộ đọc, dán lại S10A chỉ sửa được Nhóm KH / 1 KH, còn Diễn biến vẫn dùng số đọc cũ (vd. nhóm 2 đã bị hạ nhầm).
+Nay cùng một báo cáo thì bản đọc mới (có số tiền theo nhóm) luôn thay bản đọc cũ — áp cho dán tay, nhập tệp và thư mục chung.
+Kiểm tra đầu-cuối: kho có bản 24/08 bị hạ nhầm về N1 (cả khi mất dấu hoàn lại) → dán lại S10A có ngắt trang giữa TCTD →
+Nhóm KH, 1 KH và Diễn biến kỳ 08/2026 đều N2, số tiền nhóm 2 = 890.741.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
