@@ -1,6 +1,6 @@
-# AI CIC Analyzer v5.5 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v6.0 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v5.5.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v6.0.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -122,9 +122,34 @@ hiện 52.886 tỷ trong khi đúng là 1.879 tỷ. Nhóm THACO không bị ản
 3. Dòng ngoại bảng / trái phiếu thiếu cột thì đọc nhầm ngày báo cáo thành nhóm nợ.
 
 Bản sửa: nhóm nợ chỉ gán khi dòng nhóm đó có số tiền > 0 (lưu cả số tiền theo nhóm); vùng nợ vay đóng khi sang mục khác;
-nhóm nợ không hợp lệ quy về nhóm 1. Bản tra đọc bằng tool cũ không đọc lại được (tool không lưu nguyên văn báo cáo) → tool
-liệt kê các bản có nhóm nợ ≥2 kèm nút mở báo cáo để đối chiếu hoặc dán lại; nợ nhóm 3–5 vẫn giữ mức đỏ, có ghi chú đối chiếu.
+nhóm nợ không hợp lệ quy về nhóm 1. (Từ 6.0, bản tra đã lưu trước đó được đối chiếu tự động với mục 2.9 / 2.7 của chính báo cáo.)
 Mỗi cảnh báo nhóm nợ ghi ngày tra, ngày số liệu, số tiền ở nhóm đó. Tiêu đề mỗi kỳ ghi khoảng ngày số liệu và ngày tra.
+
+## v6.0 — 4 tab dùng chung một nguồn dữ liệu, rà soát lại số dư nợ & TSBĐ
+**Số liệu** (rà trên 142 khách hàng / 2.703 tài sản bảo đảm):
+- **TSBĐ đã giải chấp vẫn bị cộng**: 11 tài sản có ngày giải chấp ≤ ngày tra R20 (vd. một KH có 9 tài sản tại một ngân hàng giải chấp
+  10/09/2026, tra R20 05/10/2026). Nay tách sang danh sách "đã giải chấp", không cộng vào TSBĐ ở mọi tab, form và file xuất;
+  tab TSBĐ của 1 KH liệt kê riêng để đối chiếu. Dữ liệu đã lưu được tự chuẩn hoá khi mở tool.
+- **Nhóm nợ của bản tra đã lưu trước 5.5**: nhóm 2 chỉ giữ khi mục 2.9 của chính báo cáo có dòng của TCTD đó đúng tháng số liệu,
+  không có → về nhóm 1. Nhóm 3–5 không có trong mục 2.7 → giữ mức đỏ, ghi "mục 2.7 chưa xác nhận — mở báo cáo gốc".
+- **Số thập phân kiểu VN** ("1.234,5") trước đây bị đọc thành 12345; nay đọc đúng 1234,5.
+- **Tra theo MST** ưu tiên khớp đúng MST; chỉ khi không có mới khớp MST mẹ/chi nhánh (trước đây có thể lấy nhầm số của chi nhánh).
+- **Kỳ lấy theo bảng 12 tháng của CIC** dùng dư nợ vay (không gồm thẻ) cho khớp với bản tra thật.
+- **Tỷ giá** quy đổi ngoại tệ hiện trên thanh liên kết mọi tab, sửa được (nút 💱), áp cho mọi tab và file xuất.
+- R20: lưu "Hình thức đảm bảo" (bảo lãnh hiện là "Bảo lãnh" thay vì N/A); KPI TSBĐ ở Diễn biến ghi số tài sản chưa có giá trị.
+
+**Liên kết 4 tab**
+- Mọi lần tra (1 KH, Nhóm KH, Theo kỳ, nhập tệp) tự vào kho — một nguồn dữ liệu cho cả 4 tab.
+- Mỗi tab có thanh liên kết: 1 KH (các ngày tra trong kho, sang Diễn biến / Theo thời kỳ / nhóm theo dõi), Nhóm KH (chọn nhóm theo dõi +
+  kỳ → **dựng nhóm từ kho** không cần dán lại), Theo thời kỳ (dựng lại từ đủ mọi bản tra trong kho), Diễn biến (mở 1 KH, Theo thời kỳ,
+  phân tích Nhóm KH tại kỳ đang chọn).
+- Đổi tab giữ khách hàng / nhóm đang xem.
+- Nút **Dữ liệu** chung ở mọi tab: khách hàng & bản tra · nhóm theo dõi · thư mục chung · Lịch sử · Xuất/Nhập.
+- **Xoá dữ liệu KH** xoá đồng bộ: kho diễn biến, hồ sơ 1 KH / Theo kỳ trong Lịch sử, gỡ khỏi hồ sơ Nhóm KH, mục tra nhanh, màn hình đang mở.
+- Bỏ các thông báo kiểu "tool cũ".
+
+**Giới hạn còn lại**: tool không lưu nguyên văn báo cáo, nên bản tra đã lưu chỉ sửa được bằng thông tin có sẵn trong chính bản đó;
+719 tài sản không có giá trị trên R20 (CIC không ghi) không ước tính được.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).

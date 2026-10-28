@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v5.5 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v6.0 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1064,6 +1064,23 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 .tl-thr input{width:64px;border:1px solid var(--bd);border-radius:5px;padding:.15rem .3rem;font-family:inherit;font-size:.72rem}
 .tl-hsub{display:block;font-size:.5rem;font-weight:400;color:var(--tx3);text-transform:none;letter-spacing:0;line-height:1.25;margin-top:.1rem}
 .tl-open{color:var(--ac);cursor:pointer;text-decoration:underline;font-size:.66rem;margin-left:.3rem;white-space:nowrap}
+/* v6.0 thanh liên kết giữa các tab */
+.lnk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;margin:.55rem 0 .7rem;padding:.45rem .6rem;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);font-size:.7rem}
+.lnk-b{padding:.22rem .55rem!important;font-size:.66rem!important;white-space:nowrap}
+.lnk-chip{border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);border-radius:999px;padding:.12rem .5rem;font-size:.64rem;cursor:pointer;font-family:inherit}
+.lnk-chip:hover{border-color:var(--ac);color:var(--ac)}
+.lnk-chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.lnk-chip i{font-style:normal;font-weight:700;margin-left:.2rem;opacity:.75}
+.lnk-sep{width:1px;align-self:stretch;background:var(--bd);margin:0 .2rem}
+.lnk-t{color:var(--tx3);font-weight:600}
+.lnk-sel{font-family:inherit;font-size:.68rem;padding:.18rem .35rem;border:1px solid var(--bd);border-radius:6px;background:var(--bg3);color:inherit;max-width:240px}
+.lnk-row{display:inline-flex;gap:.25rem;margin-right:.3rem}
+.fx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin-top:.4rem}
+.fx-grid label{display:flex;flex-direction:column;gap:.15rem;font-size:.68rem;font-weight:600;color:var(--tx2)}
+.fx-grid input{font-family:inherit;font-size:.74rem;padding:.3rem .4rem;border:1px solid var(--bd);border-radius:6px;background:var(--bg3);color:inherit}
+.cic-data-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;vertical-align:-2px}
+@media print{.lnk-bar{display:none!important}}
+#lnkSingle{box-sizing:border-box;width:calc(100% - 4rem);max-width:1376px;margin:.6rem auto .2rem}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -1596,7 +1613,7 @@ if(window.Chart){Chart.defaults.color='#000';// nhãn trục & chú giải biể
   try{ if(_cicQP('print')==='1'){ Chart.defaults.animation=false; Chart.defaults.animations=false; } }catch(e){}
 }
 const CT={'01':{n:'QSD đất & TS gắn liền',t:'tg-bds',s:'BĐS'},'02':{n:'Phương tiện giao thông',t:'tg-xe',s:'PTGT'},'03':{n:'Giấy tờ có giá',t:'tg-tg',s:'GTCG'},'04':{n:'Trái phiếu',t:'tg-tg',s:'TP'},'05':{n:'Cổ phiếu',t:'tg-tg',s:'CP'},'06':{n:'Tín phiếu',t:'tg-tg',s:'TPh'},'07':{n:'Kỳ phiếu',t:'tg-tg',s:'KP'},'08':{n:'Chứng chỉ tiền gửi',t:'tg-tg',s:'CCTG'},'09':{n:'Thương phiếu',t:'tg-tg',s:'ThP'},'10':{n:'GT khác trị giá bằng tiền',t:'tg-tg',s:'GTKH'},'11':{n:'Kim khí đá quý',t:'tg-kh',s:'KKĐQ'},'12':{n:'MMTB+NVL+HH',t:'tg-htk',s:'MMHH'},'13':{n:'Máy móc thiết bị',t:'tg-htk',s:'MMTB'},'14':{n:'Dây chuyền SX',t:'tg-htk',s:'DCSX'},'15':{n:'NVL/Hàng hóa',t:'tg-htk',s:'NVL'},'16':{n:'Hàng tiêu dùng',t:'tg-htk',s:'HTD'},'17':{n:'HH khác',t:'tg-htk',s:'HHK'},'18':{n:'TS đăng ký QSH khác',t:'tg-qdn',s:'TSĐK'},'19':{n:'Quyền tác giả',t:'tg-qdn',s:'QTG'},'20':{n:'Quyền SHCN',t:'tg-qdn',s:'SHCN'},'21':{n:'Quyền đòi nợ',t:'tg-qdn',s:'QĐN'},'22':{n:'Quyền nhận BH',t:'tg-qdn',s:'QBH'},'23':{n:'Quyền góp vốn',t:'tg-qdn',s:'QGV'},'24':{n:'Quyền khai thác TN',t:'tg-qdn',s:'QKTN'},'25':{n:'Lợi tức TS cầm cố',t:'tg-qdn',s:'LTCC'},'26':{n:'Quyền TS khác',t:'tg-kh',s:'QTSK'},'27':{n:'Tài sản khác',t:'tg-kh',s:'TSK'}};
-const ct=c=>CT[String(c).padStart(2,'0')]||{n:'N/A',t:'tg-kh',s:'?'};
+let ct=c=>CT[String(c).padStart(2,'0')]||{n:'N/A',t:'tg-kh',s:'?'};
 // Đơn vị hiển thị TOÀN CỤC: 'trieu' (triệu) | 'ty' (tỷ). Áp cho mọi card/bảng/biểu đồ ở mọi tab.
 // Mọi số (triệu) đi qua fm() → tự quy đổi; nhãn dùng unitLabel()/unitShort(). Xuất Excel dùng ĐÚNG đơn vị đang hiển thị.
 // Mặc định xem theo TỶ.
@@ -1635,7 +1652,7 @@ function _btnTctdDonVi(){
 // file khớp với cái đang nhìn, và bản thân file Excel cũng đã ghi rõ đơn vị.
 function _askExportUnit(){return CHART_UNIT;}
 const TABS=[['overview','Tổng quan'],['qhtd','Quan hệ tín dụng'],['overdue','Lịch sử nợ quá hạn'],['hdtd','Hợp đồng tín dụng'],['coll','Tài sản bảo đảm']];
-const parseVN=s=>{if(!s||s==='—'||s==='NaN')return null;const c=s.toString().replace(/\./g,'').replace(/,/g,'').trim();const n=parseInt(c);return isNaN(n)?null:n;};
+let parseVN=s=>{if(!s||s==='—'||s==='NaN')return null;const c=s.toString().replace(/\./g,'').replace(/,/g,'').trim();const n=parseInt(c);return isNaN(n)?null:n;};
 const normN=n=>n?n.replace(/\s+/g,' ').trim():'';
 // Title Case (Proper) — hỗ trợ tiếng Việt; viết hoa chữ đầu mỗi từ
 const toProper=s=>(s||'').toString().toLowerCase().replace(/(^|[\s\-\/(.])([\p{L}\p{N}])/gu,(m,p,c)=>p+c.toUpperCase());
@@ -7336,7 +7353,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='5.5';
+const APP_VERSION='6.0';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -7758,7 +7775,7 @@ function _dmRead(inp){
     let o=null;try{o=JSON.parse(txt);}catch(e){}
     o=_dmCoiTepCu(o);   // tệp do bản Tool CIC cũ xuất ra → bọc lại vỏ cho đúng định dạng hiện hành
     if(!o||o._type!==_DM_FILE_TYPE){prev.innerHTML='<div class="grp-hi warn" style="margin-top:.6rem"><h4>Tệp không hợp lệ</h4><div style="font-size:.72rem;color:var(--tx2)">Đây không phải tệp dữ liệu do tool xuất ra.</div></div>';return;}
-    if(o._tepCu)toast('Tệp do bản Tool CIC cũ xuất ra — đã tự nhận, nội dung giữ nguyên');
+    if(o._tepCu)toast('Đã nhận tệp định dạng trước — nội dung giữ nguyên');
     if(o._ver>_DM_VER){prev.innerHTML='<div class="grp-hi warn" style="margin-top:.6rem"><h4>Tệp từ phiên bản mới hơn</h4><div style="font-size:.72rem;color:var(--tx2)">Hãy cập nhật tool trước khi nhập tệp này.</div></div>';return;}
     _histReady.then(()=>{_dmAnalyze(o);_dmRenderPrev();}).catch(()=>{_dmAnalyze(o);_dmRenderPrev();});
   };
@@ -8291,7 +8308,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='5.5';
+const TL_VER='6.0';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10532,7 +10549,7 @@ _tlReady.then(()=>_tlRepairAll()).catch(e=>console.warn('Dọn dữ liệu ghép
   };
   const _rp=_dmRenderPrev;
   _dmRenderPrev=function(){_rp();try{const f=_dmData&&_dmData.r20fix;if(!f||!f.n)return;const prev=_dmEl('dmPrev');const b=document.createElement('div');b.className='grp-hi warn';b.style.marginTop='.6rem';
-    b.innerHTML='<h4>Đã bỏ '+f.n+' báo cáo R20 không cùng khách hàng với S10A</h4><div style="font-size:.72rem;color:var(--tx2);line-height:1.7">Tệp có những hồ sơ mang R20 (TSBĐ) của công ty khác — thường do bản tool cũ giữ lại R20 của khách trước khi chỉ dán S10A. Các R20 đó <b>không được nhập</b>, để TSBĐ không bị cộng nhầm.'+(f.who.length?'<br>R20 bị ghép nhầm thuộc: '+f.who.map(([k,v])=>'<b>'+_dmEsc(k)+'</b> (gắn vào '+v+' KH)').join(' · '):'')+'<br>Cần TSBĐ của các KH đó thì tra lại R20 đúng khách hàng.</div>';prev.insertBefore(b,prev.firstChild.nextSibling);}catch(e){}};
+    b.innerHTML='<h4>Đã bỏ '+f.n+' báo cáo R20 không cùng khách hàng với S10A</h4><div style="font-size:.72rem;color:var(--tx2);line-height:1.7">Tệp có những hồ sơ mang R20 (TSBĐ) của công ty khác — thường do R20 của khách trước còn giữ lại khi chỉ dán S10A. Các R20 đó <b>không được nhập</b>, để TSBĐ không bị cộng nhầm.'+(f.who.length?'<br>R20 bị ghép nhầm thuộc: '+f.who.map(([k,v])=>'<b>'+_dmEsc(k)+'</b> (gắn vào '+v+' KH)').join(' · '):'')+'<br>Cần TSBĐ của các KH đó thì tra lại R20 đúng khách hàng.</div>';prev.insertBefore(b,prev.firstChild.nextSibling);}catch(e){}};
 })();
 // Xem 1 KH / Nhóm KH / Theo kỳ từ Lịch sử: luôn dọn cặp ghép nhầm trước khi hiển thị
 (function(){
@@ -10583,8 +10600,8 @@ function _tlGrpDetail(snap,b,g){
   const ob=obs.reduce((s,o)=>s+toVND(o.value,o.currency),0),bd=bds.reduce((s,o)=>s+(o.value||0),0);
   const parts=[];if(known&&amt)parts.push('nợ vay '+fm(amt));if(ob)parts.push('ngoại bảng '+fm(ob));if(bd)parts.push('trái phiếu '+fm(bd));
   const loanG=ds.some(d=>+d.debtGroup===g);
-  const unverified=S.pv!==2&&loanG&&!ob&&!bd;
-  return {txt:(parts.length?' · số tiền nhóm '+g+': '+parts.join(', ')+' '+unitShort():'')+(unverified?' · bản tra này đọc bằng tool cũ (bản cũ có lỗi đọc nhóm nợ) — mở báo cáo gốc đối chiếu hoặc dán lại S10A':''),unverified};
+  const unverified=loanG&&!ob&&!bd&&ds.some(d=>+d.debtGroup===g&&(d._gUnconf||(!d.grpAmt&&S.pv!==2)));
+  return {txt:(parts.length?' · số tiền nhóm '+g+': '+parts.join(', ')+' '+unitShort():'')+(unverified?' · chưa có số tiền theo nhóm và mục 2.7 của báo cáo không ghi nhận — mở báo cáo gốc để kiểm tra':''),unverified};
 }
 // dọn nhóm nợ sai định dạng trong kho (ngoại bảng / trái phiếu đọc lệch cột)
 _tlReady.then(()=>{const ch=[];_TL_CACHE.forEach(s=>{if(_tlFixGroups(s.S10A)){delete s._m;ch.push(s);}});if(ch.length){_tlPersist(ch);console.info('[CIC] Sửa nhóm nợ đọc lệch cột ở '+ch.length+' bản tra');_tlAfterChange();}}).catch(()=>{});
@@ -10602,21 +10619,296 @@ _tlReady.then(()=>{const ch=[];_TL_CACHE.forEach(s=>{if(_tlFixGroups(s.S10A)){de
 // biểu đồ: nhãn trục X kèm ngày tra
 (function(){const _d=tlDrawCharts;tlDrawCharts=function(){_d();try{const M=tlModelCache;if(!M||!tlMainChart||M.gran!=='month')return;
   tlMainChart.options.plugins.tooltip.callbacks.afterTitle=items=>{const k=items[0].dataIndex+(window._tlWinS||0);const q=[];M.rows.forEach(r=>{const x=r.cells[k];if(x&&x.kind==='real')q.push(x.qd);});q.sort();return q.length?'Ngày tra trong kỳ: '+_tlDM(q[0])+(q[0]!==q[q.length-1]?' → '+_tlDM(q[q.length-1]):'')+' (kỳ xếp theo ngày số liệu)':'';};tlMainChart.update('none');}catch(e){}};})();
-// Khung cảnh báo: bản tra đọc bằng tool cũ có nhóm nợ ≥2 trong phạm vi đang xem → cần đối chiếu / dán lại
+// Khung cảnh báo: nhóm nợ ≥3 chưa được mục 2.7 xác nhận trong phạm vi đang xem → cần đối chiếu / dán lại
 function _tlOldGrpList(M){
   const out=[];const seen=new Set();
-  M.rows.forEach(r=>r.cells.forEach((c,i)=>{const s=c&&c.snap;if(!s||!s.S10A||s.S10A.pv===2||seen.has(s.key))return;seen.add(s.key);
-    const bad=(s.S10A.debts||[]).filter(d=>+d.debtGroup>=2);if(bad.length)out.push({s,r,banks:bad.map(d=>tctdLabel(d.name)+' (N'+(+d.debtGroup)+')')});}));
+  M.rows.forEach(r=>r.cells.forEach((c,i)=>{const s=c&&c.snap;if(!s||!s.S10A||seen.has(s.key))return;seen.add(s.key);
+    const bad=(s.S10A.debts||[]).filter(d=>+d.debtGroup>=2&&(d._gUnconf||(!d.grpAmt&&s.S10A.pv!==2)));if(bad.length)out.push({s,r,banks:bad.map(d=>tctdLabel(d.name)+' (N'+(+d.debtGroup)+')')});}));
   return out;
 }
 (function(){const _ov=tlHtmlOverview;tlHtmlOverview=function(M){const L=_tlOldGrpList(M);
-  const w=L.length?'<div class="grp-hi warn" style="margin-bottom:.8rem"><h4>'+L.length+' bản tra đọc bằng tool cũ có ghi nhóm nợ ≥ 2 — cần đối chiếu</h4><div style="font-size:.72rem;color:var(--tx2);line-height:1.7">Bản tool trước 5.5 đọc sai nhóm nợ trong một số trường hợp: gán nhóm 2 khi dòng "Nợ cần chú ý" có số tiền 0, hoặc khi báo cáo thiếu dòng kết thúc mục nợ vay. Tool không lưu nguyên văn báo cáo nên không tự đọc lại được — mở báo cáo gốc để đối chiếu, hoặc <b>dán lại S10A</b> của những bản này để đọc bằng bản mới.<ul style="margin:.3rem 0 0 1rem">'
+  const w=L.length?'<div class="grp-hi warn" style="margin-bottom:.8rem"><h4>'+L.length+' bản tra có nhóm nợ ≥ 3 chưa được mục 2.7 xác nhận</h4><div style="font-size:.72rem;color:var(--tx2);line-height:1.7">Bản tra này không có số tiền theo từng nhóm, và mục 2.7 (nợ xấu 5 năm) của chính báo cáo không có dòng của TCTD đó. Mở báo cáo gốc để kiểm tra, hoặc dán lại S10A để tool đọc số tiền theo nhóm.<ul style="margin:.3rem 0 0 1rem">'
     +L.slice(0,12).map(x=>'<li><b>'+_dmEsc(shortName(x.r.name).substring(0,40))+'</b> · bản tra '+_tlDayLbl(x.s.day)+' (số liệu '+_tlDayLbl(_tlDD(x.s))+') · '+_dmEsc(x.banks.slice(0,4).join(', '))+' <a class="tl-open" onclick="tlOpenSnap(\''+x.s.key+'\')">mở báo cáo</a></li>').join('')+(L.length>12?'<li>… và '+(L.length-12)+' bản khác</li>':'')+'</ul></div></div>':'';
   return w+_ov(M);};})();
 (function(){const _i=tlInsights;tlInsights=function(M){const out=_i(M);try{const L=_tlOldGrpList(M);if(!L.length)return out;const keys=new Set(L.map(x=>x.s.key));
   // kỳ nào có nhóm ≥2 mà TOÀN BỘ đến từ bản đọc cũ → ghi rõ là cần đối chiếu
   const onlyOld=M.agg.every((a,i)=>!a.has||a.worst==='01'||M.rows.every(r=>{const c=r.cells[i];return !c||!c.snap||+c.worst<2||keys.has(c.snap.key);}));
-  out.forEach(x=>{if(/^Có nợ nhóm ≥2/.test(x.t)){x.t+=onlyOld?' — chỉ từ bản tra đọc bằng tool cũ, cần đối chiếu':' (có phần từ bản tra đọc bằng tool cũ)';if(onlyOld)x.lv='';}});}catch(e){}return out;};})();
+  out.forEach(x=>{if(/^Có nợ nhóm ≥2/.test(x.t)){x.t+=onlyOld?' — mục 2.7 chưa xác nhận, mở báo cáo gốc kiểm tra':' (một phần chưa được mục 2.7 xác nhận)';if(onlyOld)x.lv='';}});}catch(e){}return out;};})();
+
+
+/* ═══════════ v6.0 — SỐ LIỆU ĐÚNG + 4 TAB DÙNG CHUNG MỘT NGUỒN DỮ LIỆU ═══════════
+   A. Số liệu
+     A1. TSBĐ đã giải chấp (ngày giải chấp ≤ ngày tra R20) không còn cộng vào TSBĐ — tách sang R20.released.
+     A2. Nhóm nợ của bản tra đã lưu trước bản 5.5: đối chiếu với mục 2.9 (nợ cần chú ý 12 tháng) và 2.7 (nợ xấu 5 năm)
+         của CHÍNH báo cáo đó. Nhóm 2 không có trong 2.9 → về nhóm 1. Nhóm 3–5 không có trong 2.7 → giữ, ghi "cần mở báo cáo".
+     A3. parseVN đọc đúng phần thập phân kiểu VN ("1.234,5").
+     A4. Tra theo MST: ưu tiên khớp ĐÚNG MST, chỉ khi không có mới khớp MST mẹ/chi nhánh.
+     A5. Kỳ lấy số theo bảng 12 tháng của CIC: dùng dư nợ VAY (không gồm thẻ) cho khớp với bản tra thật.
+     A6. Tỷ giá quy đổi hiện rõ, sửa được, áp cho mọi tab và mọi file xuất.
+     A7. R20: lưu "Hình thức đảm bảo"; tài sản không có giá trị được đếm và ghi rõ.
+   B. Liên kết: mọi lần tra tự vào kho; mỗi tab có thanh liên kết; đổi tab giữ khách hàng/nhóm; nút "Dữ liệu" chung;
+      xoá dữ liệu một khách hàng xoá đồng bộ kho · Lịch sử · chỉ mục. */
+// ───────── A3. đọc số kiểu VN có phần thập phân ─────────
+(function(){
+  const _o=parseVN;
+  parseVN=function(s){
+    if(s==null)return null;const t=String(s).trim();
+    // "1.234,5" / "12,75" (phẩy + 1–2 số cuối) → thập phân kiểu VN; còn lại giữ nguyên cách đọc số nguyên
+    const m=t.match(/^(-?[\d.]*\d),(\d{1,2})$/);
+    if(m){const n=parseFloat(m[1].replace(/\./g,'')+'.'+m[2]);return isNaN(n)?null:n;}
+    return _o(s);
+  };
+})();
+// ───────── A1 + A7. R20: tách tài sản đã giải chấp, lưu hình thức đảm bảo ─────────
+function _r20QDate(r){const q=String((r&&r.customer&&r.customer.queryDate)||'').match(/(\d{2}\/\d{2}\/\d{4})/);return q?parseDMY(q[1]):null;}
+function _r20SplitReleased(r){
+  if(!r||!Array.isArray(r.assets))return 0;const q=_r20QDate(r);if(!q)return 0;
+  const keep=[],rel=Array.isArray(r.released)?r.released:[];
+  r.assets.forEach(a=>{const d=parseDMY(String(a.releaseDate||''));if(d&&d.getTime()<=q.getTime())rel.push(a);else keep.push(a);});
+  const n=r.assets.length-keep.length;if(n){r.assets=keep;r.released=rel;}return n;
+}
+(function(){
+  const _p=parseR20;
+  parseR20=function(text){
+    const r=_p(text);
+    try{const L=String(text).split('\n');const forms=[];L.forEach(l=>{if(l.includes('Hình thức đảm bảo:')){const v=l.split('Hình thức đảm bảo:')[1]||'';forms.push(v.replace(/\t/g,' ').trim());}});
+      if(forms.length===r.assets.length)r.assets.forEach((a,i)=>{a.form=forms[i];if(!a.assetType&&/bảo lãnh/i.test(forms[i]))a.assetType='BL';});
+      _r20SplitReleased(r);r.pv=2;}catch(e){}
+    return r;
+  };
+  const _ct=ct;ct=function(c){if(c==='BL')return {n:'Bảo lãnh',t:'tg-kh',s:'BL'};if(!c)return {n:'Chưa rõ loại',t:'tg-kh',s:'?'};return _ct(c);};
+})();
+function _tlCollNoVal(R){return R&&Array.isArray(R.assets)?R.assets.filter(a=>a.value==null||!(a.value>0)).length:0;}
+// ───────── A2. đối chiếu nhóm nợ với mục 2.9 / 2.7 của chính báo cáo ─────────
+function _tlVerifyGroups(S){
+  if(!S||S.pv===2||!Array.isArray(S.debts))return {fixed:0,unconf:0};
+  // nhóm 2 hiện tại ⇒ mục 2.9 phải có dòng của TCTD đó đúng tháng số liệu
+  const ym=d=>{const m=String(d||'').match(/(\d{2})\/(\d{4})/);return m?m[2]+m[1]:'';};
+  const note=new Set((S.noteDebtHistory||[]).filter(x=>x.amount>0).map(x=>_tlBK(x.bankName||'')+'|'+String(x.month||'')));
+  const bad=new Set((S.badDebtHistory||[]).map(x=>_tlBK(x.bankName||'')).filter(Boolean));
+  let fixed=0,unconf=0;
+  S.debts.forEach(d=>{const g=+d.debtGroup;const k=_tlBK(d.name||'');
+    const mm=ym(d.reportDate);const in29=mm?note.has(k+'|'+mm):[...note].some(z=>z.split('|')[0]===k);
+    if(g===2&&!in29){d.debtGroup='01';d._gFix='2→1';fixed++;}
+    else if(g>=3&&!bad.has(k)){d._gUnconf=true;unconf++;}});
+  S._gv={fixed,unconf};S.pv=2;return S._gv;
+}
+// ───────── dọn mọi bản đã lưu: kho · Lịch sử · chỉ mục · phiên đang mở ─────────
+function _tlCleanPair(s10a,r20){let n=0;if(s10a&&_tlVerifyGroups(s10a).fixed)n++;if(_tlFixGroups(s10a))n++;if(r20&&_r20SplitReleased(r20))n++;return n;}
+async function _tlCleanAll(){
+  let nK=0,nH=0,gf=0,rel=0;
+  const ch=[];_TL_CACHE.forEach(s=>{const a=s.S10A?_tlVerifyGroups(s.S10A).fixed:0;const b=s.R20?_r20SplitReleased(s.R20):0;const c=_tlFixGroups(s.S10A);if(a||b||c){gf+=a;rel+=b;delete s._m;delete s._d;s.t=Date.now();ch.push(s);}});
+  if(ch.length){nK=ch.length;await _tlPersist(ch);}
+  try{await _histReady;}catch(e){}
+  for(const e of (_getHistory()||[])){let n=0;
+    if(e.mode==='single')n+=_tlCleanPair(e.S10A,e.R20);
+    (e.companies||[]).forEach(c=>{const k=_tlCleanPair(c.s10a,c.r20);if(k){n+=k;c.merged=mergeForCompany(c.s10a,c.r20);}});
+    (e.PERIODS||[]).forEach(p=>{const k=_tlCleanPair(p.s10a,p.r20);if(k){n+=k;p.merged=mergeForCompany(p.s10a,p.r20);}});
+    if(n){nH++;try{if(_HIST_USE_LS)_lsSet(_HIST_CACHE);else await _histOp('readwrite',s=>s.put(e));}catch(err){}}}
+  try{const idx=_getMstIndex();let c=0;Object.keys(idx).forEach(k=>{c+=_tlCleanPair(idx[k].S10A,idx[k].R20);});if(c)localStorage.setItem(_MST_KEY,JSON.stringify(idx));}catch(e){}
+  let open=_tlCleanPair(S10A,R20);(companies||[]).forEach(c=>{if(_tlCleanPair(c.s10a,c.r20)){open++;c.merged=mergeForCompany(c.s10a,c.r20);}});(PERIODS||[]).forEach(p=>{if(_tlCleanPair(p.s10a,p.r20)){open++;p.merged=mergeForCompany(p.s10a,p.r20);}});
+  if(open){try{if(S10A||R20){mergeData();if(MODE==='single')renderAll();}saveState();}catch(e){}}
+  if(nK||nH||open){_tlAfterChange();try{const f=JSON.parse(localStorage.getItem('cic_tl_fixlog')||'{}');f.t=Date.now();f.grp=(f.grp||0)+gf;f.rel=(f.rel||0)+rel;f.kho=(f.kho||0)+nK;f.hist=(f.hist||0)+nH;localStorage.setItem('cic_tl_fixlog',JSON.stringify(f));}catch(e){}
+    console.info('[CIC] Chuẩn hoá số liệu đã lưu: '+nK+' bản tra trong kho, '+nH+' hồ sơ Lịch sử ('+gf+' nhóm nợ đối chiếu lại, '+rel+' TSBĐ đã giải chấp tách riêng)');}
+}
+_tlReady.then(()=>_tlCleanAll()).catch(e=>console.warn('Chuẩn hoá số liệu:',e&&e.message));
+// mọi dữ liệu mới đi vào kho / màn hình đều được chuẩn hoá
+(function(){
+  const _s=_tlSnapOf;_tlSnapOf=function(s10a,r20,hint,src){try{_tlCleanPair(s10a,r20);}catch(e){}return _s(s10a,r20,hint,src);};
+  const _a=_applyState;_applyState=function(st){try{if(st){if(st.mode==='single')_tlCleanPair(st.S10A,st.R20);(st.companies||[]).forEach(c=>{if(_tlCleanPair(c.s10a,c.r20))c.merged=mergeForCompany(c.s10a,c.r20);});(st.PERIODS||[]).forEach(p=>{if(_tlCleanPair(p.s10a,p.r20))p.merged=mergeForCompany(p.s10a,p.r20);});}}catch(e){}return _a(st);};
+  const _an=_dmAnalyze;_dmAnalyze=function(o){try{((o&&o.cic&&o.cic.customers)||[]).forEach(c=>_tlCleanPair(c.S10A,c.R20));((o&&o.cic&&o.cic.snapshots)||[]).forEach(c=>_tlCleanPair(c.S10A,c.R20));((o&&o.cic&&o.cic.history)||[]).forEach(e=>{if(e.mode==='single')_tlCleanPair(e.S10A,e.R20);(e.companies||[]).forEach(c=>_tlCleanPair(c.s10a,c.r20));(e.PERIODS||[]).forEach(p=>_tlCleanPair(p.s10a,p.r20));});}catch(e){}return _an(o);};
+})();
+// màn 1 KH · tab TSBĐ: liệt kê tài sản đã giải chấp (không tính vào tổng) để đối chiếu
+(function(){const _r=rColl;rColl=function(){_r();try{const rel=(R20&&R20.released)||[];if(!rel.length)return;const pn=document.getElementById('pn-coll');if(!pn)return;
+  const tv=rel.reduce((s,x)=>s+(x.value||0),0);const d=document.createElement('div');d.className='grp-hi warn';d.style.margin='0 0 .8rem';
+  d.innerHTML='<h4>'+rel.length+' tài sản đã qua ngày giải chấp — không tính vào TSBĐ ('+fm(tv)+' '+unitShort()+')</h4><div style="font-size:.7rem;color:var(--tx2);line-height:1.6">'+rel.slice(0,10).map(x=>'<div>'+_dmEsc(tctdLabel(x.bankName))+' · '+_dmEsc(ct(x.assetType).n)+' · '+(x.value?fm(x.value):'chưa có giá trị')+' · thế chấp '+_dmEsc(x.pledgeDate||'—')+' · giải chấp <b>'+_dmEsc(x.releaseDate)+'</b></div>').join('')+(rel.length>10?'<div>… và '+(rel.length-10)+' tài sản khác</div>':'')+'</div>';
+  pn.insertBefore(d,pn.firstChild);}catch(e){}};})();
+// ───────── A4. tra theo MST: khớp đúng MST trước ─────────
+(function(){
+  const _f=_findCicIn;_findCicIn=function(cands,m){const ex=cands.filter(it=>it._k===_normMstCic(m));if(ex.length){ex.sort((a,b)=>b.ts-a.ts);return ex[0];}return _f(cands,m);};
+  const _s=_cicFindSessionByMst;_cicFindSessionByMst=function(m,mode){const mm=_normMstCic(m);const list=(_getHistory()||[]).filter(e=>e.mode===mode).slice().sort((a,b)=>(b.t||0)-(a.t||0));
+    for(const e of list){const ms=mode==='group'?(e.companies||[]).map(c=>_normMstCic((c.s10a&&c.s10a.customer&&c.s10a.customer.taxCode)||c.taxCode)):(e.PERIODS||[]).map(p=>_normMstCic(p.s10a&&p.s10a.customer&&p.s10a.customer.taxCode));if(ms.indexOf(mm)>=0)return e;}
+    return _s(m,mode);};
+  // kho diễn biến cũng là nguồn tra theo MST (bản tra mới nhất có S10A)
+  const _c=_cicCandTable;_cicCandTable=function(){const c=_c();try{const last=new Map();_TL_CACHE.forEach(s=>{if(!s.S10A)return;const o=last.get(s.mst);if(!o||s.ts>o.ts)last.set(s.mst,s);});
+    last.forEach(s=>{const v=_tlWithOwnR20(s);c.push({S10A:v.S10A,R20:v.R20,taxCode:s.mst,name:s.name,ts:_cicDateTs(s.S10A),qd:_qDate(s.S10A),_k:s.mst,_kho:s.key});});}catch(e){}return c;};
+})();
+// bản tra có S10A mà không có R20 → mượn R20 gần nhất trước đó của chính công ty (≤ TL.maxCarry tháng)
+function _tlWithOwnR20(s){if(!s||s.R20||!s.S10A)return s;const maxC=+(TL.maxCarry||3);let best=null;_TL_CACHE.forEach(r=>{if(r.mst===s.mst&&r.R20&&r.ts<=s.ts&&_tlMonDiff(_tlB(r),_tlB(s))<=maxC&&(!best||r.ts>best.ts))best=r;});return best?Object.assign({},s,{R20:best.R20,_r20From:best.day}):s;}
+// ───────── A5. kỳ lấy theo bảng 12 tháng: dư nợ vay, không gồm thẻ ─────────
+_tlTrendVal=function(snaps,mon){
+  const key=mon.replace('-','');let best=null,bd=1e9;
+  snaps.forEach(s=>{const tr=s.S10A&&s.S10A.trend12m;if(!tr||!tr.length)return;const it=tr.find(t=>String(t.month)===key);if(!it)return;
+    const d=Math.abs(_tlMonDiff(mon,s.mon));if(d<bd){bd=d;best={v:(it.loanOut!=null&&it.loanOut>0)?it.loanOut:(it.totalOut||0),s};}});
+  return best;
+};
+// ───────── A6. tỷ giá hiện rõ, sửa được ─────────
+const _FXO_KEY='cic_fx_override';
+function _fxOv(){try{return JSON.parse(localStorage.getItem(_FXO_KEY)||'{}')||{};}catch(e){return {};}}
+(function(){const _g=getFX;getFX=function(c){const k=(c||'VND').toUpperCase().trim();const o=_fxOv();if(k!=='VND'&&o[k]>0)return o[k];return _g(c);};})();
+function _fxLabel(){const o=_fxOv();const u=getFX('USD');return 'USD '+_fmInt(u)+(o.USD?' (tự nhập)':' ('+(FX_SOURCE||'')+(FX_DATE?' '+FX_DATE:'')+')');}
+function cicEditFX(){
+  const cur=['USD','EUR','JPY','GBP','CNY','SGD','AUD','KRW','THB'];const o=_fxOv();
+  _xnXoa({nhe:true,tieuDe:'Tỷ giá quy đổi sang VND',nhan:'Áp dụng',nutKieu:'btn-p',ghiChu:'Áp cho mọi tab và mọi file xuất. Để trống = dùng tỷ giá tự lấy ('+_dmEsc(FX_SOURCE||'')+(FX_DATE?' ngày '+_dmEsc(FX_DATE):'')+'). Tỷ giá đang dùng được ghi trong từng file xuất.',
+    than:'<div class="fx-grid">'+cur.map(c=>'<label>'+c+'<input type="number" min="0" step="0.01" id="fxv_'+c+'" value="'+(o[c]||'')+'" placeholder="'+(_fmInt(Math.round((FX_RATES[c]||0)*100)/100))+'"></label>').join('')+'</div>'})
+  .then(ok=>{if(!ok)return;const n={};cur.forEach(c=>{const v=parseFloat((document.getElementById('fxv_'+c)||{}).value);if(v>0)n[c]=v;});try{localStorage.setItem(_FXO_KEY,JSON.stringify(n));}catch(e){}
+    _TL_CACHE.forEach(s=>{delete s._m;});(companies||[]).forEach(c=>{c.merged=mergeForCompany(c.s10a,c.r20);});(PERIODS||[]).forEach(p=>{p.merged=mergeForCompany(p.s10a,p.r20);});
+    try{_rerenderCurrentMode();}catch(e){}_cicLinkAll();toast('✓ Tỷ giá: '+_fxLabel());});
+}
+// ═══════════ B. LIÊN KẾT 4 TAB ═══════════
+// B1. mọi lần tra tự vào kho, không hỏi
+try{localStorage.setItem('cic_tl_auto','1');}catch(e){}
+_tlAuto=function(){return true;};
+// tiện ích
+const _lnkBtn=(lab,fn,title,cls)=>'<button class="btn '+(cls||'btn-o')+' lnk-b" onclick="'+fn+'"'+(title?' title="'+_dmEsc(title)+'"':'')+'>'+lab+'</button>';
+function _tlSnapsOf(mst){return _TL_CACHE.filter(s=>s.mst===mst&&s.S10A).sort((a,b)=>a.ts-b.ts);}
+function _tlLatestOf(mst){const l=_tlSnapsOf(mst);return l.length?l[l.length-1]:null;}
+// mở 1 KH bằng một bản tra trong kho (kèm R20 của chính công ty nếu bản đó không có)
+function cicOpenSingle(key){const s=_TL_IDX.get(key);if(!s)return;const v=_tlWithOwnR20(s);if(_applyState({mode:'single',S10A:v.S10A,R20:v.R20})){saveState();_cicFocusMstVal=s.mst;try{_cicPostViewCompany(s.mst,s.name);}catch(e){}window.scrollTo(0,0);toast('1 KH · '+shortName(s.name).substring(0,36)+' · bản tra '+_tlDayLbl(s.day)+(v._r20From?' · TSBĐ theo R20 '+_tlDayLbl(v._r20From):''));}}
+function cicOpenSingleLatest(mst){const s=_tlLatestOf(mst);if(!s){toast('Chưa có bản tra nào của MST '+mst);return;}cicOpenSingle(s.key);}
+// Theo thời kỳ dựng thẳng từ kho
+function cicBuildPeriodsFromKho(mst){
+  const l=_tlSnapsOf(mst);if(!l.length){toast('Chưa có bản tra nào của MST '+mst);return;}
+  PERIODS=l.map(s=>{const v=_tlWithOwnR20(s);const d=new Date(s.ts);const p=n=>String(n).padStart(2,'0');return {sendDate:d,sendDateStr:p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes()),s10a:v.S10A,r20:v.R20,merged:mergeForCompany(v.S10A,v.R20),cic:(v.S10A.customer.cicCode||'').trim(),name:v.S10A.customer.name||'',_noDate:false,_kho:s.key};});
+  try{PERIOD_HIDE=new Set();PERIOD_TSBD_HIDE=_defaultTsbdHide();}catch(e){}
+  try{_labelPeriods();}catch(e){}
+  switchMode('period');updatePerHero();analyzePeriods();saveState();_cicFocusMstVal=mst;
+  toast('Theo thời kỳ · '+shortName(l[0].name).substring(0,36)+' · '+l.length+' bản tra từ kho');
+}
+// Nhóm KH dựng từ kho tại một kỳ: mỗi công ty lấy bản đại diện của kỳ đó (hoặc bản gần nhất trước đó ≤ N tháng)
+function cicBuildGroupFromKho(gid,mon){
+  const g=_tlGroupOf(gid);if(!g){toast('Không tìm thấy nhóm');return;}
+  const maxC=+(TL.maxCarry||3);const miss=[],old=[];
+  companies=[];coCtr=0;
+  g.msts.forEach(m=>{const l=_tlSnapsOf(m);let rep=null;
+    if(mon){const inM=l.filter(s=>_tlB(s)===mon);rep=_tlRepOf(inM);if(!rep){const bf=l.filter(s=>_tlB(s)<mon);if(bf.length){const pb=bf.map(_tlB).sort().pop();if(_tlMonDiff(pb,mon)<=maxC){rep=_tlRepOf(bf.filter(s=>_tlB(s)===pb));old.push(shortName(rep.name).substring(0,26)+' ('+_tlMonLbl(pb)+')');}}}}
+    else rep=l[l.length-1]||null;
+    if(!rep){miss.push((g.names&&g.names[m])||m);return;}
+    const v=_tlWithOwnR20(rep);_pushCompany(v.S10A,v.R20);companies[companies.length-1]._kho=rep.key;});
+  switchMode('group');
+  const gn=document.getElementById('grpNameInput');if(gn)gn.value=g.name+(mon?' · kỳ '+_tlMonLbl(mon):'');
+  renderChips();updateGrpHero();if(companies.length)analyzeGroup();saveState();
+  window._grpFromKho={gid,mon};_cicLinkAll();
+  toast('Nhóm KH · '+g.name+(mon?' · kỳ '+_tlMonLbl(mon):'')+': '+companies.length+'/'+g.msts.length+' công ty'+(old.length?' · '+old.length+' lấy bản tháng trước':'')+(miss.length?' · '+miss.length+' chưa có bản tra':''));
+}
+function _grpMatch(){const ms=new Set((companies||[]).map(c=>_normMstCic((c.s10a&&c.s10a.customer&&c.s10a.customer.taxCode)||c.taxCode)).filter(Boolean));if(!ms.size)return null;let best=null,bs=0;_tlGroups().forEach(g=>{let n=0;g.msts.forEach(m=>{if(ms.has(m))n++;});const sc=n/Math.max(ms.size,1);if(n&&sc>bs){bs=sc;best=g;}});return bs>=0.6?best:null;}
+function _monthsOfGroup(g){const s=new Set();g.msts.forEach(m=>_tlSnapsOf(m).forEach(x=>s.add(_tlB(x))));return [...s].sort();}
+// B2. thanh liên kết của từng tab
+function _lnkSingle(){
+  const c=(S10A&&S10A.customer)||(R20&&R20.customer)||null;if(!c)return '';const m=_normMstCic(c.taxCode);if(!m)return '';
+  const l=_tlSnapsOf(m);const curD=_qDate(S10A);const gs=_tlGroupsOfMst(m);
+  return '<span class="lnk-t">Các lần tra trong kho:</span>'+(l.length?l.slice(-10).map(s=>'<button class="lnk-chip'+(_tlDayLbl(s.day)===curD?' on':'')+'" onclick="cicOpenSingle(\''+s.key+'\')" title="Ngày số liệu '+_tlDayLbl(_tlDD(s))+(s.R20?' · có R20':'')+'">'+_tlDM(s.day)+'/'+s.day.slice(2,4)+(s.R20?'<i>R</i>':'')+'</button>').join(''):'<span class="tl-mini">chưa có</span>')
+    +'<span class="lnk-sep"></span>'+_lnkBtn('📈 Diễn biến',"tlOpen('"+m+"')",'Diễn biến dư nợ · TCTD · TSBĐ theo thời gian của KH này')+_lnkBtn('🕒 Theo thời kỳ ('+l.length+')',"cicBuildPeriodsFromKho('"+m+"')",'Dựng Theo thời kỳ từ mọi bản tra trong kho')
+    +(gs.length?'<span class="lnk-sep"></span><span class="lnk-t">Thuộc nhóm:</span>'+gs.map(g=>_lnkBtn('👥 '+_dmEsc(g.name),"cicBuildGroupFromKho('"+g.id+"','"+(l.length?_tlB(l[l.length-1]):'')+"')",'Mở Nhóm KH dựng từ kho tại kỳ của bản tra này')).join(''):'')
+    +'<span class="lnk-sep"></span>'+_lnkBtn('💱 '+_fxLabel(),'cicEditFX()','Tỷ giá quy đổi dư nợ / ngoại bảng ngoại tệ');
+}
+function _lnkGroup(){
+  const gs=_tlGroups();const mt=_grpMatch();const fk=window._grpFromKho;
+  const gid=(fk&&_tlGroupOf(fk.gid))?fk.gid:(mt?mt.id:(gs[0]&&gs[0].id));const g=_tlGroupOf(gid);
+  let h='<span class="lnk-t">Nhóm theo dõi:</span>';
+  if(!gs.length)return h+'<span class="tl-mini">chưa có — bấm "Lưu nhóm theo dõi" để lưu danh sách công ty đang mở</span>'+_lnkBtn('Lưu nhóm theo dõi','tlSaveGroupFromSession()','','btn-p')+'<span class="lnk-sep"></span>'+_lnkBtn('💱 '+_fxLabel(),'cicEditFX()');
+  const ms=g?_monthsOfGroup(g):[];const curM=(fk&&fk.gid===gid&&fk.mon)||ms[ms.length-1]||'';
+  h+='<select id="lnkGrpSel" class="lnk-sel" onchange="window._grpFromKho={gid:this.value,mon:\'\'};_cicLinkAll()">'+gs.map(x=>'<option value="'+x.id+'"'+(x.id===gid?' selected':'')+'>'+_dmEsc(x.name)+' ('+x.msts.length+')</option>').join('')+'</select>'
+    +'<span class="lnk-t">kỳ</span><select id="lnkGrpMon" class="lnk-sel">'+ms.slice().reverse().map(m=>'<option value="'+m+'"'+(m===curM?' selected':'')+'>'+_tlMonLbl(m)+'</option>').join('')+'</select>'
+    +_lnkBtn('Dựng nhóm từ kho',"cicBuildGroupFromKho(document.getElementById('lnkGrpSel').value,document.getElementById('lnkGrpMon').value)",'Lấy bản đại diện của từng công ty trong kỳ đã chọn — không cần dán lại','btn-p')
+    +_lnkBtn('📈 Diễn biến nhóm',"TL.scope={kind:'group',id:document.getElementById('lnkGrpSel').value};TL.excl=new Set();tlOpen()")
+    +(mt?'<span class="tl-mini">· danh sách đang mở khớp nhóm <b>'+_dmEsc(mt.name)+'</b></span>':(companies&&companies.length?_lnkBtn('Lưu nhóm theo dõi','tlSaveGroupFromSession()'):''))
+    +'<span class="lnk-sep"></span>'+_lnkBtn('💱 '+_fxLabel(),'cicEditFX()');
+  return h;
+}
+function _lnkPeriod(){
+  const m=_kyMstHoSo&&_kyMstHoSo();if(!m)return '<span class="tl-mini">Mở một khách hàng ở tab 1 KH hoặc Diễn biến rồi bấm "Theo thời kỳ" để dựng từ kho.</span>';
+  const l=_tlSnapsOf(m);const gs=_tlGroupsOfMst(m);
+  return _lnkBtn('↻ Dựng lại từ kho ('+l.length+' bản tra)',"cicBuildPeriodsFromKho('"+m+"')",'Lấy đủ mọi bản tra của KH này trong kho')+_lnkBtn('📄 1 KH bản mới nhất',"cicOpenSingleLatest('"+m+"')")+_lnkBtn('📈 Diễn biến',"tlOpen('"+m+"')")
+    +(gs.length?'<span class="lnk-sep"></span><span class="lnk-t">Thuộc nhóm:</span>'+gs.map(g=>_lnkBtn('👥 '+_dmEsc(g.name),"cicBuildGroupFromKho('"+g.id+"','')")).join(''):'')+'<span class="lnk-sep"></span>'+_lnkBtn('💱 '+_fxLabel(),'cicEditFX()');
+}
+function _lnkPut(anchorSel,id,html,where){const a=document.querySelector(anchorSel);if(!a)return;let el=document.getElementById(id);if(!el){el=document.createElement('div');el.id=id;el.className='lnk-bar';if(where==='before')a.parentNode.insertBefore(el,a);else a.insertAdjacentElement('afterend',el);}el.innerHTML=html;el.style.display=html?'':'none';}
+function _cicLinkAll(){try{
+  _lnkPut('#singleUI #statusA','lnkSingle',(S10A||R20)?_lnkSingle():'');
+  _lnkPut('#groupUI #grpResult','lnkGroup',_lnkGroup(),'before');
+  _lnkPut('#periodUI #perResult','lnkPeriod',(PERIODS&&PERIODS.length)?_lnkPeriod():'','before');
+}catch(e){console.warn('Thanh liên kết:',e&&e.message);}}
+(function(){
+  const w=(name)=>{const o=window[name];if(typeof o!=='function')return;window[name]=function(){const r=o.apply(this,arguments);try{_cicLinkAll();}catch(e){}return r;};};
+  ['renderAll','analyzeGroup','renderChips','analyzePeriods','updatePerHero','switchMode'].forEach(w);
+  const _ac=_tlAfterChange;_tlAfterChange=function(){_ac();try{_cicLinkAll();}catch(e){}};
+})();
+// Diễn biến: nút sang các tab khác
+(function(){const _c=_tlCrumb;_tlCrumb=function(M){let h=_c(M);const sc=M.scope;let extra='';
+  if(sc.kind==='co')extra=_lnkBtn('📄 Mở 1 KH bản mới nhất',"cicOpenSingleLatest('"+sc.id+"')")+_lnkBtn('🕒 Theo thời kỳ',"cicBuildPeriodsFromKho('"+sc.id+"')");
+  else if(sc.kind==='group'){const k=(TL.sel>=0&&M.cols[TL.sel])?M.cols[TL.sel].key:(M.lastIdx>=0?M.cols[M.lastIdx].key:'');extra=_lnkBtn('👥 Phân tích Nhóm KH tại kỳ '+(k?_tlMonLbl(k):''),"cicBuildGroupFromKho('"+sc.id+"','"+k+"')",'Mở tab Nhóm KH với bản đại diện của từng công ty trong kỳ này');}
+  extra+=_lnkBtn('💱 '+_fxLabel(),'cicEditFX()');
+  return h.replace('</span></div>','</span><span class="lnk-sep"></span>'+extra+'</div>');};})();
+// B3. đổi tab giữ khách hàng / nhóm đang xem
+(function(){
+  const _f=_cicFocusMst;_cicFocusMst=function(){if(MODE==='timeline'&&TL.scope.kind==='co')return TL.scope.id;return _f();};
+  const _ap=_cicApplyFocus;
+  _cicApplyFocus=async function(newMode,m){
+    const from=window._cicPrevMode;
+    if(newMode==='timeline'){
+      if(from==='group'){const g=_grpMatch()||((window._grpFromKho&&_tlGroupOf(window._grpFromKho.gid))||null);if(g){TL.scope={kind:'group',id:g.id};TL.excl=new Set();}}
+      else if(m&&_TL_CACHE.some(s=>s.mst===m)){TL.scope={kind:'co',id:m};TL.excl=new Set();}
+      _tlSaveSt();tlRender();return;
+    }
+    if(newMode==='group'&&from==='timeline'&&TL.scope.kind==='group'){const g=_tlGroupOf(TL.scope.id);const mt=_grpMatch();if(g&&(!mt||mt.id!==g.id)){const ms=_monthsOfGroup(g);cicBuildGroupFromKho(g.id,ms[ms.length-1]||'');}return;}
+    if(newMode==='period'&&m&&!(PERIODS||[]).some(p=>_normMstCic(p.s10a&&p.s10a.customer&&p.s10a.customer.taxCode)===m)&&_tlSnapsOf(m).length){cicBuildPeriodsFromKho(m);return;}
+    if(newMode==='single'&&m){const cur=(S10A&&S10A.customer)||(R20&&R20.customer)||{};if(_normMstCic(cur.taxCode)!==m&&_tlSnapsOf(m).length){cicOpenSingleLatest(m);return;}}
+    return _ap(newMode,m);
+  };
+  const _sm=_cicSyncMode;_cicSyncMode=function(nm){window._cicPrevMode=MODE;if(MODE==='timeline'&&TL.scope&&TL.scope.kind==='co')_cicFocusMstVal=TL.scope.id;else if(MODE==='single'){const c=(S10A&&S10A.customer)||(R20&&R20.customer)||{};const m=_normMstCic(c.taxCode);if(m)_cicFocusMstVal=m;}else if(MODE==='period'){const m=_kyMstHoSo();if(m)_cicFocusMstVal=m;}return _sm(nm);};
+  const b4=document.getElementById('mBtn4');if(b4)b4.setAttribute('onclick',"_cicSyncMode('timeline')");
+})();
+// B4. nút "Dữ liệu" chung ở mọi tab → một nơi quản lý: khách hàng & bản tra · nhóm · Lịch sử · xuất/nhập · thư mục chung
+function cicOpenData(tab){tlOpenGroups(tab||'k');}
+(function(){
+  const ic='<svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>';
+  ['actSingle','actGroup','actPeriod'].forEach(id=>{const a=document.getElementById(id);if(!a||a.querySelector('.cic-data-btn'))return;const b=document.createElement('button');b.className='btn btn-o cic-data-btn';b.title='Khách hàng & bản tra · Nhóm theo dõi · Lịch sử · Xuất/Nhập · Thư mục chung';b.innerHTML=ic+' Dữ liệu';b.onclick=()=>cicOpenData('k');a.insertBefore(b,a.firstChild);});
+  const at=document.getElementById('actTimeline');if(at){const b=[...at.querySelectorAll('button')].find(x=>/Nhóm &amp; kho|Nhóm & kho/.test(x.innerHTML));if(b){b.innerHTML=ic+' Dữ liệu';b.onclick=()=>cicOpenData('k');}}
+  const t=document.getElementById('tlGrpTitle');if(t)t.textContent='Dữ liệu CIC — khách hàng, bản tra, nhóm theo dõi, đồng bộ';
+  const tabs=document.querySelector('#tlGrpModal .dm-tabs');
+  if(tabs){const t2=document.getElementById('tlgTab2');if(t2){t2.textContent='Khách hàng & bản tra';tabs.insertBefore(t2,tabs.firstChild);}
+    const x=document.createElement('span');x.style.cssText='margin-left:auto;display:flex;gap:.3rem';x.innerHTML='<button class="btn btn-o" style="padding:.2rem .55rem;font-size:.66rem" onclick="tlCloseGroups();openHistory()">Lịch sử phiên</button><button class="btn btn-o" style="padding:.2rem .55rem;font-size:.66rem" onclick="tlCloseGroups();openDataMgr(\'exp\')">Xuất / Nhập tệp</button>';tabs.appendChild(x);}
+})();
+// danh sách khách hàng & bản tra: thêm thao tác mở ở mọi tab + xoá đồng bộ
+(function(){const _k=tlkRender;tlkRender=function(){_k();try{document.querySelectorAll('#tlkList .tl-khorow').forEach(row=>{if(row.querySelector('.lnk-row'))return;const del=[...row.querySelectorAll('button')].find(b=>/tlkDelCo/.test(b.getAttribute('onclick')||''));if(!del)return;const m=(del.getAttribute('onclick').match(/'(\d+)'/)||[])[1];if(!m)return;
+  const d=document.createElement('span');d.className='lnk-row';d.innerHTML=_lnkBtn('1 KH',"tlCloseGroups();cicOpenSingleLatest('"+m+"')")+_lnkBtn('Theo kỳ',"tlCloseGroups();cicBuildPeriodsFromKho('"+m+"')");row.insertBefore(d,del);
+  del.textContent='Xoá dữ liệu KH';del.setAttribute('onclick',"cicDeleteCustomer('"+m+"')");del.title='Xoá mọi dữ liệu CIC của KH này: kho diễn biến, Lịch sử, mục tra nhanh';});}catch(e){}};})();
+// B5. xoá dữ liệu một khách hàng — đồng bộ mọi nơi
+async function cicDeleteCustomer(mst){
+  const m=_normMstCic(mst);const nm=_tlNameOfMst(m);
+  const kho=_TL_CACHE.filter(s=>s.mst===m).map(s=>s.key);
+  const H=(_getHistory()||[]);const msOf=e=>e.mode==='single'?[_normMstCic(((e.S10A||{}).customer||(e.R20||{}).customer||{}).taxCode)]:e.mode==='period'?(e.PERIODS||[]).map(p=>_normMstCic(((p.s10a||{}).customer||(p.r20||{}).customer||{}).taxCode)):(e.companies||[]).map(c=>_normMstCic(((c.s10a||{}).customer||{}).taxCode||c.taxCode));
+  const single=H.filter(e=>e.mode!=='group'&&msOf(e).indexOf(m)>=0),grp=H.filter(e=>e.mode==='group'&&msOf(e).indexOf(m)>=0);
+  const ok=await _xnXoa({tieuDe:'Xoá toàn bộ dữ liệu CIC của khách hàng?',ten:nm+' · MST '+m,
+    dong:[kho.length+' bản tra trong kho diễn biến',single.length+' hồ sơ 1 KH / Theo thời kỳ trong Lịch sử',grp.length+' hồ sơ Nhóm KH có công ty này (chỉ gỡ công ty này, giữ các công ty khác)','Mục tra nhanh theo MST của KH này'],
+    ghiChu:'<b>KHÔNG HOÀN TÁC ĐƯỢC.</b> Nhóm theo dõi vẫn giữ MST này để lần tra sau tự cập nhật. Bản tra đã đưa lên thư mục chung không bị xoá.'});
+  if(!ok)return;
+  await _tlRemove(kho);
+  for(const e of single){await _histRemove(e.id).catch(()=>{});}
+  for(const e of grp){e.companies=(e.companies||[]).filter(c=>_normMstCic(((c.s10a||{}).customer||{}).taxCode||c.taxCode)!==m);try{if(!e.companies.length)await _histRemove(e.id);else if(_HIST_USE_LS)_lsSet(_HIST_CACHE);else await _histOp('readwrite',s=>s.put(e));}catch(err){}}
+  try{const idx=_getMstIndex();delete idx[m];localStorage.setItem(_MST_KEY,JSON.stringify(idx));}catch(e){}
+  const cur=(S10A&&S10A.customer)||(R20&&R20.customer)||{};if(_normMstCic(cur.taxCode)===m)_donManDon();
+  companies=(companies||[]).filter(c=>_normMstCic(((c.s10a||{}).customer||{}).taxCode||c.taxCode)!==m);
+  if((PERIODS||[]).some(p=>_normMstCic(((p.s10a||{}).customer||{}).taxCode)===m))_donManKy();
+  saveState();_updHistBadge();_tlAfterChange();try{tlkRender();}catch(e){}
+  toast('✓ Đã xoá dữ liệu CIC của '+shortName(nm).substring(0,36));
+}
+// xoá hồ sơ trong Lịch sử mà KH không còn hồ sơ nào → hỏi xoá luôn bản tra trong kho, để hai nơi không lệch nhau
+(function(){
+  const _d=delFromHistory;delFromHistory=function(id){const e=_HIST_CACHE.find(x=>x.id===id);window._cicDelCtx=e?{id,ms:(_cicKhCuaPhien(e)||[]).map(k=>k.mst),t:Date.now()}:null;return _d(id);};
+  const _r=_histRemove;_histRemove=function(id){const ctx=window._cicDelCtx;return _r(id).then(v=>{if(ctx&&ctx.id===id&&Date.now()-ctx.t<120000){window._cicDelCtx=null;
+    const left=ctx.ms.filter(m=>m&&!(_getHistory()||[]).some(e=>JSON.stringify([e.S10A&&e.S10A.customer,e.R20&&e.R20.customer,(e.companies||[]).map(c=>c.taxCode),(e.PERIODS||[]).map(p=>p.s10a&&p.s10a.customer&&p.s10a.customer.taxCode)]).indexOf(m)>=0)&&_TL_CACHE.some(s=>s.mst===m));
+    if(left.length){const n=_TL_CACHE.filter(s=>left.indexOf(s.mst)>=0).length;
+      _xnXoa({tieuDe:'Xoá luôn bản tra trong kho diễn biến?',ten:left.length+' khách hàng không còn hồ sơ nào trong Lịch sử',dong:[n+' bản tra của '+left.map(m=>shortName(_tlNameOfMst(m)).substring(0,30)).slice(0,4).join(', ')+(left.length>4?'…':'')+' vẫn nằm trong kho diễn biến'],nhan:'Xoá luôn',ghiChu:'Chọn Hủy nếu muốn giữ lịch sử diễn biến của các khách hàng này.'})
+      .then(ok=>{if(ok)_tlRemove(_TL_CACHE.filter(s=>left.indexOf(s.mst)>=0).map(s=>s.key)).then(()=>{_tlAfterChange();toast('✓ Đã xoá '+n+' bản tra trong kho');});});}}return v;});};
+})();
+// ───────── C. Giao diện: câu thông báo trung tính khi nhập tệp ─────────
+(function(){
+  window.toast=(function(t){return function(msg){if(typeof msg==='string'&&/bản Tool CIC cũ/.test(msg))msg='Tệp định dạng trước — đã tự nhận, nội dung giữ nguyên';return t(msg);};})(window.toast);
+})();
+// TSBĐ chưa có giá trị: ghi rõ ở KPI diễn biến và form
+(function(){const _ov=tlHtmlOverview;tlHtmlOverview=function(M){let h=_ov(M);try{const l=M.lastIdx;if(l<0)return h;let nv=0,n=0;M.rows.forEach(r=>{const c=r.cells[l];if(c&&c.snap&&c.snap.R20){nv+=_tlCollNoVal(c.snap.R20);n+=(c.snap.R20.assets||[]).length;}});
+  if(nv)h=h.replace(/(<div class="lb">TSBĐ \(R20\) kỳ cuối<\/div>[\s\S]*?<div class="sub">)/,'$1<b class="tl-up">'+nv+'/'+n+' TS chưa có giá trị</b> · ');}catch(e){}return h;};})();
 
 </script>
 </body>
