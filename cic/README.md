@@ -1,6 +1,6 @@
-# AI CIC Analyzer v6.6 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.0 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v6.6.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.0.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -214,6 +214,19 @@ công ty, chưa có bản tháng 9–10 → kỳ 09, 10 vẫn báo nhóm 2 dù b
 - Bảng Công ty × kỳ: cột Nhóm nợ = nhóm của bản tra thật mới nhất (kèm "từng N2 kỳ …" nếu trong khoảng có nhóm cao hơn).
 - **Lỗi bước chạy thử trước khi ghi kho**: dán lại cùng báo cáo bị coi là "không mới" nên bản đọc mới không vào kho (sửa ở 6.3 chỉ chạy qua
   một số đường). Nay dùng cùng quy tắc với bước ghi; thêm công ty vào Nhóm KH / dán 1 KH / dán Theo kỳ là ghi kho ngay.
+
+## v7.0 — Chỉ dùng bản tra thật, không suy diễn
+Quy tắc mới: **bản tra của công ty tới đâu tính tới đó, của tháng nào là của tháng đó**. Tool không tự lấp số:
+- Diễn biến: tháng không có bản tra → để trống. Bỏ "kéo bản tháng trước" và "nợ vay theo bảng CIC 12 tháng" (2 ô chọn này ẩn đi).
+- TSBĐ: chỉ R20 của chính lần tra, hoặc R20 tra riêng **cùng kỳ** của chính công ty; không mượn R20 tháng khác.
+- Nhóm KH dựng từ kho: chỉ bản tra đúng kỳ; công ty thiếu được liệt kê (kèm ngày tra và kỳ số liệu của bản gần nhất), không tính vào số nhóm.
+- Form nội bộ: công ty không tra trong kỳ để trống.
+- Tổng của kỳ = Σ công ty có bản tra trong kỳ. So sánh giữa 2 kỳ (KPI Tổng dư nợ, TSBĐ) chỉ trên công ty có bản tra ở cả 2 kỳ, ghi "cùng N/M cty";
+  số TCTD / tỷ trọng Big4 không so khi độ phủ khác. Tỷ trọng công ty tính trên Σ dư nợ theo bản tra mới nhất của từng công ty.
+- Tổng quan có khung **Còn thiếu bản tra** theo kỳ (công ty nào, kỳ nào) để tra bổ sung.
+
+**Ẩn / hiện thông báo** ở Tổng quan (đèn đánh giá, còn thiếu bản tra, đối soát số liệu, bản tra cần xác nhận): nút "Ẩn" thu khung
+còn một dòng icon + tiêu đề + số tóm tắt; "Hiện" để mở lại. Tool nhớ lựa chọn.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
