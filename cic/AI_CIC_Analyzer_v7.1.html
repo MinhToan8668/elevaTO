@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v7.0 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v7.1 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -7400,7 +7400,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='7.0';
+const APP_VERSION='7.1';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8355,7 +8355,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='7.0';
+const TL_VER='7.1';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -9119,12 +9119,12 @@ function tlExportXlsx(){
   const table=(ws,r0,hdr,rows,numFrom,totIdx)=>{XLSX.utils.sheet_add_aoa(ws,[hdr].concat(rows),{origin:{r:r0,c:0}});xStyl(ws,r0,0,r0,hdr.length-1,xS.tHead);
     for(let i=0;i<rows.length;i++){const r=r0+1+i;const tot=totIdx!=null&&i===totIdx;xStyl(ws,r,0,r,numFrom-1,tot?xS.totRow:xS.body);xStyl(ws,r,numFrom,r,hdr.length-1,_xScale(tot?xS.totRowNum:xS.bodyNum));}
     return r0+1+rows.length;};
-  const kind=c=>c.kind==='real'?'thật':c.kind==='cic'?'CIC 12T':c.kind==='carry'?'kéo bản cũ':'trống';
+  const kind=c=>c.kind==='real'?'thật':c.kind==='cic'?'CIC 12T':c.kind==='carry'?'kéo bản cũ':'chưa tra';
   if(inc(1)){const ws={};head(ws,'TỔNG HỢP DIỄN BIẾN THEO KỲ — '+M.scope.name.toUpperCase(),sub,12);
     const hdr=['Kỳ','Tổng dư nợ','Nợ vay','Ngắn hạn','Trung-dài hạn','Khác','Ngoại bảng','Trái phiếu','TSBĐ (R20)','Số TS','Số TCTD','Nhóm nợ xấu nhất','Bản tra thật / tổng cty','Ghi chú'];
     const rows=A.map(a=>[a.label,xv(a.total),xv(a.dn),xv(a.nh),xv(a.th+a.dh),xv(a.kh),xv(a.ob),xv(a.tp),a.hasAnyR20?xv(a.coll):'',a.hasAnyR20?a.collN:'',a.has?a.nBank:'',a.has?'Nhóm '+(+a.worst):'',a.cov.real+'/'+M.rows.length,(a.unk?'Nợ vay '+xv(a.unk)+' theo CIC 12T; ':'')+(a.cov.carry?a.cov.carry+' cty kéo bản cũ; ':'')+(a.cov.none?a.cov.none+' cty không có số':'')]);
     let r=table(ws,3,hdr,rows,1);ws['!cols']=[{wch:12},{wch:14},{wch:14},{wch:12},{wch:14},{wch:10},{wch:12},{wch:12},{wch:12},{wch:8},{wch:9},{wch:14},{wch:14},{wch:60}];
-    XLSX.utils.sheet_add_aoa(ws,[['Ghi chú: "thật" = có báo cáo CIC trong kỳ; "CIC 12T" = nợ vay lấy từ bảng diễn biến 12 tháng in trên báo cáo CIC gần nhất (không có chi tiết TCTD, ngoại bảng/TP/TSBĐ kéo từ bản tra gần nhất); "kéo bản cũ" = dùng bản tra gần nhất trước kỳ.']],{origin:{r:r+1,c:0}});xStyl(ws,r+1,0,r+1,0,xS.note);
+    XLSX.utils.sheet_add_aoa(ws,[['Ghi chú: "thật" = có báo cáo CIC trong kỳ; "chưa tra" = không có bản tra kỳ đó — để trống, không cộng vào tổng kỳ (tool không suy diễn từ tháng khác).']],{origin:{r:r+1,c:0}});xStyl(ws,r+1,0,r+1,0,xS.note);
     XLSX.utils.book_append_sheet(wb,ws,'Tong hop');}
   if(inc(2)){const ws={};const w=cols.length+5;head(ws,_tlMetricLbl().toUpperCase()+' THEO TCTD × KỲ',sub,w);
     const keys=new Map();A.forEach(a=>a.banks.forEach(b=>{const o=keys.get(b.key)||{key:b.key,name:b.name,last:0,sum:0,cos:new Set()};o.name=pickDisplay(o.name,b.name);o.sum+=_tlMv(b)||0;b.cos.forEach(m=>o.cos.add(m));keys.set(b.key,o);}));keys.forEach(o=>{const b=A[l].banks.get(o.key);o.last=b?_tlMv(b):0;});
@@ -9431,17 +9431,17 @@ function tlHtmlCoMatrix(M){
     const pkI=r.cells.findIndex(c=>c.kind==='real'&&c.worst===peak);
     const gTag=worst==null?'<span class="tl-mini" title="Không có bản tra thật trong khoảng đang xem">—</span>':'<span class="tg tg-'+worst+'" title="Nhóm nợ bản tra '+_tlDayLbl(r.cells[li].qd)+' (kỳ '+A[li].label+')">N'+(+worst)+'</span>'+(parseInt(peak)>parseInt(worst)?'<div class="tl-mini" style="color:var(--rdtx)" title="Nhóm nợ cao nhất trong khoảng, theo bản tra thật">từng N'+(+peak)+' kỳ '+A[pkI].label+'</div>':'')+(li!==l?'<div class="tl-mini">bản '+_tlDM(r.cells[li].qd)+'</div>':'');
     return {title:r.name+' · MST '+r.mst,name:'<a style="cursor:pointer;color:var(--ac);font-weight:600" onclick="tlFocusCo(\''+r.mst+'\')">'+_dmEsc(shortName(r.name).substring(0,40))+'</a>',
-      fix:[_spark(cells,'#0A3A8C'),f!==l?_tlDelta(cells[l],cells[f]):'—',((cells[l]||0)/tot1*100).toFixed(1).replace('.',',')+'%',gTag],
+      fix:[_spark(cells,'#0A3A8C'),f!==l?_tlDelta(cells[l],cells[f]):'—',(cells[l]==null?'<span class="tl-mini" title="Chưa có bản tra kỳ '+A[l].label+'">chưa tra kỳ '+A[l].label+'</span>':((cells[l]||0)/tot1*100).toFixed(1).replace('.',',')+'%'),gTag],
       cells:r.cells.map((c,i)=>{const v=cells[i];
-        const tag=c.kind==='real'?'<span class="tl-tag r">● SL '+_tlDM(c.dd)+'</span>':c.kind==='cic'?'<span class="tl-tag i">◐ CIC 12T</span>':c.kind==='carry'?'<span class="tl-tag c">○ kéo '+_tlDM(c.dd)+'</span>':(c.stale?'<span class="tl-tag e">quá '+M.maxCarry+'T</span>':'');
-        const tt=c.kind==='real'?'Bản tra ngày '+_tlDayLbl(c.qd)+' · số liệu TCTD đến '+_tlDayLbl(c.dd):c.kind==='cic'?'Nợ vay cuối tháng theo bảng 12 tháng in trên bản tra '+_tlDayLbl(c.qd)+(c.snap?' · ngoại bảng/TP/TSBĐ kéo từ bản '+_tlDayLbl(c.snap.day):' · chưa có bản tra trước đó nên chỉ có nợ vay'):c.kind==='carry'?'Không tra trong kỳ → kéo bản tra '+_tlDayLbl(c.qd)+' (cũ '+c.age+' tháng)':(c.stale?'Bản gần nhất '+_tlDayLbl(c.stale.day)+' đã cũ hơn '+M.maxCarry+' tháng → không cộng vào tổng':'Không có số liệu');
+        const tag=c.kind==='real'?'<span class="tl-tag r">● SL '+_tlDM(c.dd)+'</span>':c.kind==='cic'?'<span class="tl-tag i">◐ CIC 12T</span>':c.kind==='carry'?'<span class="tl-tag c">○ kéo '+_tlDM(c.dd)+'</span>':(c.stale?'<span class="tl-tag e">chưa tra</span>':'');
+        const tt=c.kind==='real'?'Bản tra ngày '+_tlDayLbl(c.qd)+' · số liệu TCTD đến '+_tlDayLbl(c.dd):c.kind==='cic'?'Nợ vay cuối tháng theo bảng 12 tháng in trên bản tra '+_tlDayLbl(c.qd)+(c.snap?' · ngoại bảng/TP/TSBĐ kéo từ bản '+_tlDayLbl(c.snap.day):' · chưa có bản tra trước đó nên chỉ có nợ vay'):c.kind==='carry'?'Không tra trong kỳ → kéo bản tra '+_tlDayLbl(c.qd)+' (cũ '+c.age+' tháng)':(c.stale?'Chưa có bản tra kỳ '+M.cols[i].label+' — để trống, không cộng vào tổng kỳ. Bản gần nhất: tra '+_tlDayLbl(c.stale.day)+', số liệu kỳ '+_tlMonLbl(_tlB(c.stale)):'Chưa có bản tra');
         return {h:'<span class="d1">'+(v==null?'·':fmD(v))+'</span>'+(sub?(v!=null&&_tlPrevNN(cells,i)!=null?_tlDeltaS(v,_tlPrevNN(cells,i)):''):tag),cls:c.kind,title:tt};})};
   });
   const tc=A.map(a=>a.has?_tlMv(a):null);
   rows.push({cls:'tot',name:'Toàn nhóm',fix:[_spark(tc,'#0A3A8C'),f!==l?_tlDelta(tc[l],tc[f]):'—','100%',''],cells:tc.map((v,i)=>_tlNumCell(v,_tlPrevNN(tc,i),'','',true))});
   rows.push({name:'Công ty có bản tra thật',fix:['','','',''],cells:A.map(a=>({h:'<span class="d1 '+(a.cov.real<M.rows.length?'tl-up':'tl-dn')+'">'+a.cov.real+'/'+M.rows.length+'</span>'}))});
   const tog='<span class="tl-seg" style="margin-left:.4rem"><button class="'+(sub?'':'on')+'" onclick="TL.coSub=\'date\';_tlSaveSt();tlRenderBody(true)">Dòng phụ: ngày số liệu</button><button class="'+(sub?'on':'')+'" onclick="TL.coSub=\'delta\';_tlSaveSt();tlRenderBody(true)">Δ kỳ trước</button></span>';
-  return _tlMtx(M,{title:_tlMetricLbl()+' theo công ty × kỳ',sub:'('+unitLabel()+') · ● bản tra thật (SL = ngày số liệu) · ◐ CIC 12 tháng · ○ kéo bản cũ · bấm tên để xem riêng',right:list.length+' công ty'+tog,nameHead:'Công ty',nameW:230,fix,rows});
+  return _tlMtx(M,{title:_tlMetricLbl()+' theo công ty × kỳ',sub:'('+unitLabel()+') · ● bản tra thật (SL = ngày số liệu) · "chưa tra" = không có bản tra kỳ đó, để trống · bấm tên để xem riêng',right:list.length+' công ty'+tog,nameHead:'Công ty',nameW:230,fix,rows});
 }
 function tlHtmlColl(M){
   const A=M.agg,l=M.lastIdx,f=M.firstIdx;if(l<0)return '<div class="na">Không có dữ liệu</div>';
@@ -9476,7 +9476,7 @@ function tlHtmlColl(M){
     h+='<div class="tl-mini" style="margin-top:.4rem">So khớp theo mã tài sản + TCTD; tài sản không có mã thì so theo mô tả và giá trị.</div></div></div>';}
   return h;
 }
-function _tlKindLegend(){return '<div class="tl-legend-note"><span><i style="background:var(--ac)"></i>Bản tra thật trong kỳ (SL = ngày số liệu TCTD báo cáo)</span><span><i style="background:#A9C0E8"></i>Nợ vay theo bảng “12 tháng” của CIC (không có chi tiết TCTD)</span><span><i style="background:var(--bd2)"></i>Kéo bản tra gần nhất trước đó (tối đa '+(TL.maxCarry||3)+' tháng)</span><span><i style="border:1px dashed var(--bd2)"></i>Không có số liệu</span></div>';}
+function _tlKindLegend(){return '<div class="tl-legend-note"><span><i style="background:var(--ac)"></i>Bản tra thật trong kỳ (SL = ngày số liệu TCTD báo cáo)</span><span><i style="border:1px dashed var(--bd2)"></i>Chưa tra — không có bản tra kỳ đó, để trống, không cộng vào tổng kỳ</span></div>';}
 
 // ─────────── 4. LỊCH TRA & QUY TRÌNH CHUẨN ───────────
 function _tlRulesHtml(open){

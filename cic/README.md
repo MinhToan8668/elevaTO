@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.0 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.1 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.0.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.1.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -227,6 +227,11 @@ Quy tắc mới: **bản tra của công ty tới đâu tính tới đó, của 
 
 **Ẩn / hiện thông báo** ở Tổng quan (đèn đánh giá, còn thiếu bản tra, đối soát số liệu, bản tra cần xác nhận): nút "Ẩn" thu khung
 còn một dòng icon + tiêu đề + số tóm tắt; "Hiện" để mở lại. Tool nhớ lựa chọn.
+
+## v7.1 — Nhãn ô trống rõ nghĩa
+Ô không có bản tra trước đây ghi "quá 3T" (nhãn của cơ chế kéo bản cũ đã bỏ ở 7.0) → nay ghi **"chưa tra"**, chú thích: không có bản tra kỳ đó,
+để trống, không cộng vào tổng kỳ, kèm ngày tra và kỳ số liệu của bản gần nhất. Cột Tỷ trọng của công ty chưa tra kỳ cuối ghi "chưa tra kỳ …"
+thay vì 0,0%. Chú giải bảng / biểu đồ / file Excel bỏ "CIC 12 tháng" và "kéo bản cũ".
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
