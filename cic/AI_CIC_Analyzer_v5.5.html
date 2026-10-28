@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v5.4 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v5.5 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1062,6 +1062,8 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 @media print{.tl-crumb{display:none!important}.tl-iss{background:none}}
 .tl-thr{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.35rem .9rem;padding:0 .9rem .8rem;font-size:.72rem;color:var(--tx2);align-items:center}
 .tl-thr input{width:64px;border:1px solid var(--bd);border-radius:5px;padding:.15rem .3rem;font-family:inherit;font-size:.72rem}
+.tl-hsub{display:block;font-size:.5rem;font-weight:400;color:var(--tx3);text-transform:none;letter-spacing:0;line-height:1.25;margin-top:.1rem}
+.tl-open{color:var(--ac);cursor:pointer;text-decoration:underline;font-size:.66rem;margin-left:.3rem;white-space:nowrap}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -1923,7 +1925,9 @@ function parseS10A(text){
   r.customer={name:fv('Tên khách hàng'),cicCode:fv('Mã số CIC'),address:fv('Địa chỉ\t'),taxCode:fv('Mã số thuế'),director:fv('Tổng giám đốc/Giám đốc'),representative:fv('Người đại diện theo pháp luật'),queryDate:fv('Thời gian yêu cầu:')};
   let inD=false,cb=null;
   for(let i=0;i<L.length;i++){const l=L[i].trim();
-    if(l.includes('Chi tiết về nợ vay'))inD=true;if(l.includes('Thông tin thẻ tín dụng'))inD=false;if(!inD)continue;
+    if(l.includes('Chi tiết về nợ vay'))inD=true;if(l.includes('Thông tin thẻ tín dụng'))inD=false;
+    if(inD&&!/^\d+\.\s*Mã TCTD/.test(l)&&/lịch sử nợ|diễn biến dư nợ|trái phiếu|cam kết ngoại bảng|nợ cần chú ý trong 12 tháng|nợ xấu trong 05 năm/i.test(l))inD=false;
+    if(!inD)continue;
     const bm=l.match(/^(\d+)\.\s*Mã TCTD:\s*(.+?)\s*-\s*Tên TCTD:\s*(.+)/);// mã = mọi thứ giữa 2 neo "Mã TCTD:" và "- Tên TCTD:" — không giả định định dạng (VD 79F20002 có chữ F)
     if(bm){cb={code:bm[2],name:bm[3].trim(),reportDate:'',shortTerm:{vnd:0,usd:0},medTerm:{vnd:0,usd:0},longTerm:{vnd:0,usd:0},other:{vnd:0,usd:0},total:{vnd:0,usd:0},debtGroup:'01'};r.debts.push(cb);continue;}
     if(!cb)continue;
@@ -1935,9 +1939,10 @@ function parseS10A(text){
     else if(lb.startsWith('Dư nợ cho vay dài hạn')){cb.longTerm={vnd:vnd||0,usd:usd||0};}
     else if(lb.startsWith('Dư nợ khác')&&!lb.startsWith('- Dư')){cb.other={vnd:vnd||0,usd:usd||0};}
     else if(lb.startsWith('Tổng cộng dư nợ của')){cb.total={vnd:vnd||0,usd:usd||0};}
-    if(lb.includes('cần chú ý'))cb.debtGroup='02';if(lb.includes('dưới tiêu chuẩn'))cb.debtGroup='03';
-    if(lb.includes('nghi ngờ'))cb.debtGroup='04';if(lb.includes('khả năng mất vốn'))cb.debtGroup='05';
-    if(lb.includes('Nợ xấu khác')||lb.includes('nợ xấu khác')){if(cb.debtGroup<'03')cb.debtGroup='03';}
+    {const amt=(vnd||0)+(usd||0);const setG=g=>{cb.grpAmt=cb.grpAmt||{};cb.grpAmt[g]=(cb.grpAmt[g]||0)+amt;if(amt>0&&g>cb.debtGroup)cb.debtGroup=g;};
+     if(lb.includes('cần chú ý'))setG('02');if(lb.includes('dưới tiêu chuẩn'))setG('03');
+     if(lb.includes('nghi ngờ'))setG('04');if(lb.includes('khả năng mất vốn'))setG('05');
+     if(/nợ xấu khác/i.test(lb))setG('03');}
     if(l.startsWith('Tổng cộng các TCTD')){r.reportedTotal={vnd:vnd||0,usd:usd||0};inD=false;}
   }
   // Chốt kiểm tra: tổng tự cộng phải khớp dòng "Tổng cộng các TCTD" in trong báo cáo — lệch nghĩa là parser bỏ sót/gộp nhầm TCTD (định dạng lạ)
@@ -1993,6 +1998,7 @@ function parseS10A(text){
   let inI=false;for(let i=0;i<L.length;i++){const l=L[i].trim();
     if(l.includes('3.3')&&(l.includes('tra cứu')||l.includes('Danh sách')))inI=true;if(inI&&(l.includes('KẾT THÚC')||l.includes('IV.'))){inI=false;break;}if(!inI)continue;
     const p=l.split('\t').map(s=>s.trim());if(p.length>=4){const s=parseInt(p[0]);if(!isNaN(s))r.inquiries.push({stt:s,fiName:p[1],fiCode:p[2],product:p[3],inquiryDate:p[4]||''});}}
+  r.pv=2;
   return r;
 }
 // Thông điệp cảnh báo khi tổng parse ≠ tổng in trong báo cáo (dùng chung 3 mode)
@@ -7330,7 +7336,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='5.4';
+const APP_VERSION='5.5';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8285,7 +8291,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='5.4';
+const TL_VER='5.5';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10247,10 +10253,13 @@ function _tlCoAssess(M,r){
   const cL=r.cells[li],cF=r.cells[fi];const snap=cL.snap;
   if(snap&&snap.S10A){
     const S=snap.S10A;
-    _tlMergedOf(snap).forEach(b=>{const g=+b.debtGroup;if(g>=3)add('r','Nợ nhóm '+g+' (nợ xấu) tại '+tctdLabel(b.name),{bank:bankKey(b.name),col:li});else if(g===2)add('y','Nợ nhóm 2 (cần chú ý) tại '+tctdLabel(b.name),{bank:bankKey(b.name),col:li});});
+    _tlMergedOf(snap).forEach(b=>{const g=+b.debtGroup;if(!(g>=2&&g<=5))return;
+      const det=_tlGrpDetail(snap,b,g);const src=' — bản tra '+_tlDayLbl(snap.day)+' (số liệu '+_tlDayLbl(_tlDD(snap))+')'+det.txt;
+      if(g>=3)add('r','Nợ nhóm '+g+' (nợ xấu) tại '+tctdLabel(b.name)+src,{bank:bankKey(b.name),col:li,snap:snap.key});
+      else add('y','Nợ nhóm 2 (cần chú ý) tại '+tctdLabel(b.name)+src,{bank:bankKey(b.name),col:li,snap:snap.key});});
     (S.badDebtHistory||[]).slice(0,2).forEach(x=>add('r','Lịch sử nợ xấu: '+fm(x.amount||0)+' '+unitShort()+' tại '+tctdLabel(x.bankName||'')+(x.month?' tháng '+String(x.month).slice(4)+'/'+String(x.month).slice(0,4):'')));
     if(!(S.badDebtHistory||[]).length&&S.creditHistory&&S.creditHistory.badDebt5y)add('r','Có nợ xấu trong 5 năm gần nhất (theo CIC)');
-    (S.noteDebtHistory||[]).slice(0,2).forEach(x=>add('y','Nợ cần chú ý trong 12 tháng: '+fm(x.amount||0)+' '+unitShort()+' tại '+tctdLabel(x.bankName||'')+(x.month?' tháng '+String(x.month).slice(4)+'/'+String(x.month).slice(0,4):'')));
+    (S.noteDebtHistory||[]).slice(0,2).forEach(x=>add('y','Lịch sử (không phải hiện tại): từng có nợ cần chú ý trong 12 tháng — '+fm(x.amount||0)+' '+unitShort()+' tại '+tctdLabel(x.bankName||'')+(x.month?' tháng '+String(x.month).slice(4)+'/'+String(x.month).slice(0,4):'')));
     if(!(S.noteDebtHistory||[]).length&&S.creditHistory&&S.creditHistory.noteDebt12m)add('y','Có nợ cần chú ý trong 12 tháng (theo CIC)');
     if(S.creditHistory&&S.creditHistory.lateCard3y)add('y','Chậm thanh toán thẻ trong 3 năm');
     if(S.totalMismatch)add('y','Báo cáo CIC lệch dòng tổng — kiểm tra lại bản tra');
@@ -10324,8 +10333,8 @@ function tlAssess(M){
   return {lv,cos,grp};
 }
 const TL_LV={g:['XANH','Ổn định','tl-lv-g'],y:['VÀNG','Cần chú ý','tl-lv-y'],r:['ĐỎ','Nghiêm trọng','tl-lv-r'],n:['—','Chưa có số liệu','tl-lv-n']};
-function _tlIssGo(x){const p=[];if(x.mst&&TL.scope.kind!=='co')p.push("tlFocusCo('"+x.mst+"')");if(x.bank)p.push("TL.hiBank='"+_dmEsc(x.bank)+"'");if(x.col!=null)p.push('TL.sel='+x.col);if(x.tab)p.push("tlTab('"+x.tab+"')");else if(x.bank)p.push("tlTab('tctd')");return p.length?p.join(';')+';tlRenderBody(true)':'';}
-function _tlIssLi(x,withCo){const go=_tlIssGo(x);return '<li class="tl-iss '+x.lv+'"'+(go?' onclick="'+go+'" title="Bấm để xem đúng chỗ"':'')+'><i></i><span>'+(withCo&&x.co?'<b>'+_dmEsc(shortName(x.co).substring(0,34))+'</b> · ':'')+_dmEsc(x.t)+'</span></li>';}
+function _tlIssGo(x){if(x.snap&&!x.bank)return "tlOpenSnap('"+x.snap+"')";const p=[];if(x.mst&&TL.scope.kind!=='co')p.push("tlFocusCo('"+x.mst+"')");if(x.bank)p.push("TL.hiBank='"+_dmEsc(x.bank)+"'");if(x.col!=null)p.push('TL.sel='+x.col);if(x.tab)p.push("tlTab('"+x.tab+"')");else if(x.bank)p.push("tlTab('tctd')");return p.length?p.join(';')+';tlRenderBody(true)':'';}
+function _tlIssLi(x,withCo){const go=_tlIssGo(x);return '<li class="tl-iss '+x.lv+'"'+(go?' onclick="'+go+'" title="Bấm để xem đúng chỗ"':'')+'><i></i><span>'+(withCo&&x.co?'<b>'+_dmEsc(shortName(x.co).substring(0,34))+'</b> · ':'')+_dmEsc(x.t)+(x.snap?' <a class="tl-open" onclick="event.stopPropagation();tlOpenSnap(\''+x.snap+'\')">mở báo cáo gốc</a>':'')+'</span></li>';}
 function tlHtmlHealth(M){
   const R=tlAssess(M);M._assess=R;const L=TL_LV[R.lv];const isCo=M.scope.kind==='co';
   let list=[];
@@ -10554,6 +10563,60 @@ _tlReady.then(()=>_tlRepairAll()).catch(e=>console.warn('Dọn dữ liệu ghép
   const d=document.createElement('div');d.className='grp-hi warn';d.style.margin='.2rem 0 .6rem';
   d.innerHTML='<h4>Lần dọn dữ liệu ghép nhầm gần nhất: '+new Date(f.t).toLocaleString('vi-VN')+'</h4><div class="tl-mini">Đã tách R20 không cùng khách hàng với S10A ở '+[f.kho&&f.kho+' bản tra trong kho',f.hist&&f.hist+' hồ sơ Lịch sử',f.idx&&f.idx+' mục tra nhanh theo MST',f.open&&f.open+' mục đang mở'].filter(Boolean).join(' · ')+'. TSBĐ của các khách hàng đó cần tra lại R20 đúng khách hàng.</div>';
   el.parentNode.insertBefore(d,el);}catch(e){}};})();
+
+/* ═══════════ v5.5 — NHÓM NỢ ĐỌC ĐÚNG & CHỈ RÕ NGUỒN ═══════════
+   Lỗi đọc S10A (có từ 4.1): (1) dòng "Nợ cần chú ý…" có số tiền 0 vẫn gán nhóm 2 cho TCTD; (2) vùng "Chi tiết nợ vay"
+   không đóng khi báo cáo thiếu dòng kết thúc → đọc lấn sang mục "2.9 Nợ cần chú ý trong 12 tháng" và gán nhóm 2 oan cho
+   TCTD cuối; (3) ngoại bảng / trái phiếu thiếu cột thì đọc nhầm ngày báo cáo thành nhóm nợ. Bản đọc mới gắn r.pv=2. */
+const _tlGOK=g=>{const s=String(g==null?'':g).trim();return /^0?[1-5]$/.test(s)?s.padStart(2,'0'):'01';};
+function _tlFixGroups(S){if(!S)return false;let ch=false;
+  (S.offBalance||[]).forEach(o=>{const g=_tlGOK(o.debtGroup);if(g!==o.debtGroup){o.debtGroup=g;ch=true;}});
+  (S.bonds||[]).forEach(o=>{const g=_tlGOK(o.debtGroup);if(g!==o.debtGroup){o.debtGroup=g;ch=true;}});
+  (S.debts||[]).forEach(d=>{const g=_tlGOK(d.debtGroup);if(g!==d.debtGroup){d.debtGroup=g;ch=true;}});return ch;}
+(function(){const _p=parseS10A;parseS10A=function(t){const r=_p(t);try{_tlFixGroups(r);}catch(e){}return r;};})();
+// chi tiết nhóm nợ của một TCTD trong một bản tra: số tiền theo nhóm (bản đọc mới) hoặc đánh dấu "cần đối chiếu" (bản cũ)
+function _tlGrpDetail(snap,b,g){
+  const S=snap&&snap.S10A;if(!S)return {txt:'',unverified:true};
+  const k=_tlBK(b.name);const ds=(S.debts||[]).filter(d=>_tlBK(d.name)===k);
+  const obs=(S.offBalance||[]).filter(o=>_tlBK(o.name)===k&&+o.debtGroup===g),bds=(S.bonds||[]).filter(o=>_tlBK(o.bankName)===k&&+o.debtGroup===g);
+  let amt=0,known=false;ds.forEach(d=>{if(d.grpAmt){known=true;amt+=d.grpAmt[String(g).padStart(2,'0')]||0;}});
+  const ob=obs.reduce((s,o)=>s+toVND(o.value,o.currency),0),bd=bds.reduce((s,o)=>s+(o.value||0),0);
+  const parts=[];if(known&&amt)parts.push('nợ vay '+fm(amt));if(ob)parts.push('ngoại bảng '+fm(ob));if(bd)parts.push('trái phiếu '+fm(bd));
+  const loanG=ds.some(d=>+d.debtGroup===g);
+  const unverified=S.pv!==2&&loanG&&!ob&&!bd;
+  return {txt:(parts.length?' · số tiền nhóm '+g+': '+parts.join(', ')+' '+unitShort():'')+(unverified?' · bản tra này đọc bằng tool cũ (bản cũ có lỗi đọc nhóm nợ) — mở báo cáo gốc đối chiếu hoặc dán lại S10A':''),unverified};
+}
+// dọn nhóm nợ sai định dạng trong kho (ngoại bảng / trái phiếu đọc lệch cột)
+_tlReady.then(()=>{const ch=[];_TL_CACHE.forEach(s=>{if(_tlFixGroups(s.S10A)){delete s._m;ch.push(s);}});if(ch.length){_tlPersist(ch);console.info('[CIC] Sửa nhóm nợ đọc lệch cột ở '+ch.length+' bản tra');_tlAfterChange();}}).catch(()=>{});
+// tiêu đề kỳ: ghi ngày tra & ngày số liệu của các bản tra thật trong kỳ
+(function(){
+  const _m=_tlMtx;
+  _tlMtx=function(M,cfg){
+    let h=_m(M,cfg);
+    try{M.cols.forEach((c,k)=>{const q=[],d=[];M.rows.forEach(r=>{const x=r.cells[k];if(x&&x.kind==='real'){q.push(x.qd);d.push(x.dd);}});if(!q.length)return;q.sort();d.sort();
+      const sub='<span class="tl-hsub">SL '+_tlDM(d[0])+(d[0]!==d[d.length-1]?'–'+_tlDM(d[d.length-1]):'')+'<br>tra '+_tlDM(q[0])+(q[0]!==q[q.length-1]?'–'+_tlDM(q[q.length-1]):'')+'</span>';
+      h=h.split('title="Bấm để xem chi tiết kỳ '+c.label+'">'+c.label+'</th>').join('title="Bấm để xem chi tiết kỳ '+c.label+'">'+c.label+sub+'</th>');});}catch(e){}
+    return h;
+  };
+})();
+// biểu đồ: nhãn trục X kèm ngày tra
+(function(){const _d=tlDrawCharts;tlDrawCharts=function(){_d();try{const M=tlModelCache;if(!M||!tlMainChart||M.gran!=='month')return;
+  tlMainChart.options.plugins.tooltip.callbacks.afterTitle=items=>{const k=items[0].dataIndex+(window._tlWinS||0);const q=[];M.rows.forEach(r=>{const x=r.cells[k];if(x&&x.kind==='real')q.push(x.qd);});q.sort();return q.length?'Ngày tra trong kỳ: '+_tlDM(q[0])+(q[0]!==q[q.length-1]?' → '+_tlDM(q[q.length-1]):'')+' (kỳ xếp theo ngày số liệu)':'';};tlMainChart.update('none');}catch(e){}};})();
+// Khung cảnh báo: bản tra đọc bằng tool cũ có nhóm nợ ≥2 trong phạm vi đang xem → cần đối chiếu / dán lại
+function _tlOldGrpList(M){
+  const out=[];const seen=new Set();
+  M.rows.forEach(r=>r.cells.forEach((c,i)=>{const s=c&&c.snap;if(!s||!s.S10A||s.S10A.pv===2||seen.has(s.key))return;seen.add(s.key);
+    const bad=(s.S10A.debts||[]).filter(d=>+d.debtGroup>=2);if(bad.length)out.push({s,r,banks:bad.map(d=>tctdLabel(d.name)+' (N'+(+d.debtGroup)+')')});}));
+  return out;
+}
+(function(){const _ov=tlHtmlOverview;tlHtmlOverview=function(M){const L=_tlOldGrpList(M);
+  const w=L.length?'<div class="grp-hi warn" style="margin-bottom:.8rem"><h4>'+L.length+' bản tra đọc bằng tool cũ có ghi nhóm nợ ≥ 2 — cần đối chiếu</h4><div style="font-size:.72rem;color:var(--tx2);line-height:1.7">Bản tool trước 5.5 đọc sai nhóm nợ trong một số trường hợp: gán nhóm 2 khi dòng "Nợ cần chú ý" có số tiền 0, hoặc khi báo cáo thiếu dòng kết thúc mục nợ vay. Tool không lưu nguyên văn báo cáo nên không tự đọc lại được — mở báo cáo gốc để đối chiếu, hoặc <b>dán lại S10A</b> của những bản này để đọc bằng bản mới.<ul style="margin:.3rem 0 0 1rem">'
+    +L.slice(0,12).map(x=>'<li><b>'+_dmEsc(shortName(x.r.name).substring(0,40))+'</b> · bản tra '+_tlDayLbl(x.s.day)+' (số liệu '+_tlDayLbl(_tlDD(x.s))+') · '+_dmEsc(x.banks.slice(0,4).join(', '))+' <a class="tl-open" onclick="tlOpenSnap(\''+x.s.key+'\')">mở báo cáo</a></li>').join('')+(L.length>12?'<li>… và '+(L.length-12)+' bản khác</li>':'')+'</ul></div></div>':'';
+  return w+_ov(M);};})();
+(function(){const _i=tlInsights;tlInsights=function(M){const out=_i(M);try{const L=_tlOldGrpList(M);if(!L.length)return out;const keys=new Set(L.map(x=>x.s.key));
+  // kỳ nào có nhóm ≥2 mà TOÀN BỘ đến từ bản đọc cũ → ghi rõ là cần đối chiếu
+  const onlyOld=M.agg.every((a,i)=>!a.has||a.worst==='01'||M.rows.every(r=>{const c=r.cells[i];return !c||!c.snap||+c.worst<2||keys.has(c.snap.key);}));
+  out.forEach(x=>{if(/^Có nợ nhóm ≥2/.test(x.t)){x.t+=onlyOld?' — chỉ từ bản tra đọc bằng tool cũ, cần đối chiếu':' (có phần từ bản tra đọc bằng tool cũ)';if(onlyOld)x.lv='';}});}catch(e){}return out;};})();
 
 </script>
 </body>

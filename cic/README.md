@@ -1,6 +1,6 @@
-# AI CIC Analyzer v5.4 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v5.5 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v5.4.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v5.5.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -113,6 +113,18 @@ hiện 52.886 tỷ trong khi đúng là 1.879 tỷ. Nhóm THACO không bị ản
   bản S10A cùng MST gần nhất (≤45 ngày).
 - Kỳ có S10A nhưng không tra kèm R20: TSBĐ lấy theo R20 gần nhất trước đó của chính công ty (tối đa N tháng), ghi rõ ngày R20.
 - Form nội bộ: một MST không thể gán vào hai dòng công ty. Phạm vi "Tất cả KH trong kho" có cảnh báo đang cộng dồn KH không liên quan.
+
+## v5.5 — Sửa lỗi đọc nhóm nợ trên S10A
+**Lỗi (có từ bản 4.1)**, tái hiện bằng báo cáo mẫu — bản cũ gán nhóm 2 cho cả 3 TCTD, đúng ra chỉ 1:
+1. Dòng "Nợ cần chú ý" (hoặc dưới tiêu chuẩn / nghi ngờ / mất vốn) có **số tiền 0** vẫn gán nhóm nợ cho TCTD.
+2. Vùng "Chi tiết nợ vay" không đóng khi báo cáo thiếu dòng kết thúc → đọc lấn sang mục "2.9 Nợ cần chú ý trong 12 tháng"
+   và gán nhóm 2 cho TCTD cuối cùng.
+3. Dòng ngoại bảng / trái phiếu thiếu cột thì đọc nhầm ngày báo cáo thành nhóm nợ.
+
+Bản sửa: nhóm nợ chỉ gán khi dòng nhóm đó có số tiền > 0 (lưu cả số tiền theo nhóm); vùng nợ vay đóng khi sang mục khác;
+nhóm nợ không hợp lệ quy về nhóm 1. Bản tra đọc bằng tool cũ không đọc lại được (tool không lưu nguyên văn báo cáo) → tool
+liệt kê các bản có nhóm nợ ≥2 kèm nút mở báo cáo để đối chiếu hoặc dán lại; nợ nhóm 3–5 vẫn giữ mức đỏ, có ghi chú đối chiếu.
+Mỗi cảnh báo nhóm nợ ghi ngày tra, ngày số liệu, số tiền ở nhóm đó. Tiêu đề mỗi kỳ ghi khoảng ngày số liệu và ngày tra.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
