@@ -1,6 +1,6 @@
-# AI CIC Analyzer v6.5 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v6.6 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v6.5.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v6.6.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -203,6 +203,17 @@ tài sản phân bổ cho hợp đồng nào; dư nợ cụm gồm cả phần t
 
 Kiểm tra: bộ tính viết riêng bằng Python trên đúng các bản tra tool dùng — 4 kỳ, 261 cụm: TSBĐ cộng thẳng, TSBĐ không trùng, giá trị /
 dư nợ / số tài sản / số công ty từng cụm đều khớp.
+
+## v6.6 — Nhóm nợ chỉ theo bản tra thật, bản tra luôn vào kho
+**Lỗi**: tháng không có bản tra thật thì tool kéo bản trước (≤ N tháng) — kéo cả NHÓM NỢ. Vd. kho chỉ có bản 24/08 (SCB nhóm 2) của một
+công ty, chưa có bản tháng 9–10 → kỳ 09, 10 vẫn báo nhóm 2 dù báo cáo thực tế tháng 9–10 là nhóm 1.
+- Ô không có bản tra thật (kéo / CIC 12 tháng): không gán nhóm nợ; nhóm nợ của bản trước chỉ ghi ở chú thích. Nhóm nợ xấu nhất của kỳ,
+  nhóm nợ theo TCTD và cảnh báo nhóm nợ chỉ tính từ bản tra thật. Cảnh báo công ty ghi "Bản tra gần nhất dd/mm … ghi nợ nhóm 2 — cần
+  tra CIC kỳ … để xác nhận".
+- Đánh giá nhóm nêu đích danh công ty chưa có bản tra ở kỳ cuối và ngày bản gần nhất.
+- Bảng Công ty × kỳ: cột Nhóm nợ = nhóm của bản tra thật mới nhất (kèm "từng N2 kỳ …" nếu trong khoảng có nhóm cao hơn).
+- **Lỗi bước chạy thử trước khi ghi kho**: dán lại cùng báo cáo bị coi là "không mới" nên bản đọc mới không vào kho (sửa ở 6.3 chỉ chạy qua
+  một số đường). Nay dùng cùng quy tắc với bước ghi; thêm công ty vào Nhóm KH / dán 1 KH / dán Theo kỳ là ghi kho ngay.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
