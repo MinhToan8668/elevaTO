@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v6.4 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v6.5 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1091,6 +1091,25 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 .lnk-audit.ok{background:#F0FAF3;color:#166534}.lnk-audit.bad{background:#FFF1F1;color:#991B1B}
 @media (prefers-color-scheme:dark){.cic-audit.ok,.lnk-audit.ok{background:#0F2A1A;color:#86EFAC;border-color:#1F5132}.cic-audit.warn{background:#2A1F0A;color:#FCD34D}.cic-audit.bad,.lnk-audit.bad{background:#2A0F0F;color:#FCA5A5;border-color:#5B1F1F}}
 .lnk-audit.warn{background:#FFF8EB;color:#92400E}
+.pool-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin:.3rem 0 .5rem}
+.pool-kpi>div{border:1px solid var(--bd);border-radius:8px;padding:.45rem .6rem;background:var(--bg2);display:flex;flex-direction:column;gap:.1rem}
+.pool-kpi span{font-size:.62rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.02em}.pool-kpi b{font-size:1rem}.pool-kpi i{font-style:normal;font-size:.64rem;color:var(--tx3)}
+.pool-kpi .warn{border-color:#F5D9A8}.pool-kpi .bad{border-color:#F3B4B4}.pool-kpi .bad b{color:#B91C1C}.pool-kpi .ok b{color:#15803D}
+.pool-lv{display:inline-block;font-size:.6rem;font-weight:700;padding:.1rem .4rem;border-radius:999px;white-space:nowrap;background:var(--bg3);color:var(--tx2)}
+.pool-lv.r{background:#FEE2E2;color:#B91C1C}.pool-lv.y{background:#FEF3C7;color:#92400E}.pool-lv.g{background:#DCFCE7;color:#166534}
+.pool-c.r{color:#B91C1C}.pool-c.y{color:#B45309}.pool-c.g{color:#15803D}
+.pool-det{display:grid;grid-template-columns:1fr 1.4fr;gap:.8rem;padding:.4rem 0;font-size:.7rem}.pool-det table{width:100%;margin-top:.25rem}
+.pool-sh{margin-top:.6rem;font-size:.72rem}.pool-sh summary{cursor:pointer;font-weight:600;color:var(--ac)}
+@media (max-width:900px){.pool-kpi{grid-template-columns:repeat(2,1fr)}.pool-det{grid-template-columns:1fr}}
+.pool-lv.u,.pool-c.u{color:var(--tx3)}
+.pool-t{table-layout:auto;width:100%}
+.pool-t td,.pool-t th{white-space:normal!important}
+.pool-t td:nth-child(3){min-width:220px;max-width:360px}
+.pool-t td:nth-child(2){max-width:160px}
+.pool-t td.am,.pool-t th.c{white-space:nowrap!important}
+.tw.pool .tl-mtx{overflow-x:auto}
+.pool-t td:nth-child(4){white-space:nowrap!important}
+#grpPool{width:100%;clear:both}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -3518,7 +3537,7 @@ function analyzeGroup(){
   const grandTKH=coStats.reduce((s,c)=>s+c.tKH,0);
   const grandTO=coStats.reduce((s,c)=>s+c.tO,0);
   const grandTP=coStats.reduce((s,c)=>s+c.tP,0);
-  const grandTC=coStats.reduce((s,c)=>s+c.tC,0);
+  const grandTCraw=coStats.reduce((s,c)=>s+c.tC,0);const grandTC=(typeof cicGroupCollDedup==='function'&&grandTCraw)?(cicGroupCollDedup(companies)??grandTCraw):grandTCraw;
 
   // ===== Đối soát nợ vay: dò phần chênh giữa 3 nguồn số trong báo cáo S10A =====
   // a = Σ(ngắn+trung+dài+khác) — số nợ vay tool đang hiển thị (= grandTL)
@@ -3586,7 +3605,7 @@ function analyzeGroup(){
     <div class="sc"><div class="lb">Ngoại bảng (nhóm)</div><div class="vl">${fm(grandTO)}</div><div class="un">${unitLabel()}</div></div>
     <div class="sc"><div class="lb">Trái phiếu (nhóm)</div><div class="vl">${fm(grandTP)}</div><div class="un">${unitLabel()}</div></div>
     <div class="sc"><div class="lb">Tổng dư nợ (nhóm)</div><div class="vl" style="font-size:1.35rem">${fm(grandTotal)}</div><div class="un">Vay + Ngoại bảng + Trái phiếu</div></div>
-    <div class="sc"><div class="lb">TSBĐ (nhóm)</div><div class="vl">${grandTC?fm(grandTC):'—'}</div><div class="un">${grandTC?unitLabel():'Chưa có R20'}</div></div>
+    <div class="sc"><div class="lb">TSBĐ (nhóm)</div><div class="vl">${grandTC?fm(grandTC):'—'}</div><div class="un">${grandTC?unitLabel()+(grandTCraw-grandTC>0.5?' · mỗi TS tính 1 lần (đã loại trùng '+fm(grandTCraw-grandTC)+')':''):'Chưa có R20'}</div></div>
     <div class="sc"><div class="lb">TCTD cho vay</div><div class="vl">${fiArr.length}</div><div class="sb">${sharedFIs.length} TCTD chung</div></div>
     <div class="sc"${_riskyCos.length?` title="${_riskyTip}" style="cursor:help"`:''}><div class="lb">Công ty rủi ro</div><div class="vl"${_riskyCos.length?` style="color:var(--rdtx)"`:''}>${_riskyCos.length||'—'}</div><div class="sb" style="color:var(--tx3)">${_riskyCos.length?'Nhóm ≥ N2':companies.length+' CTY sạch'}</div></div>
   </div>`;
@@ -7363,7 +7382,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='6.4';
+const APP_VERSION='6.5';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8318,7 +8337,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='6.4';
+const TL_VER='6.5';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -9131,6 +9150,7 @@ function tlExportXlsx(){
     const rows=[];M.rows.forEach(r=>r.snaps.forEach(s=>{const t=_tlTotalsOf(s);rows.push([r.name,r.mst,_tlDayLbl(s.day),s.R20?'Có':'Không',xv(t.total),xv(t.dn),xv(t.coll)]);}));
     table(ws,3,['Công ty','MST','Ngày tra','Có R20','Tổng dư nợ','Nợ vay','TSBĐ'],rows,4);ws['!cols']=[{wch:44},{wch:13},{wch:12},{wch:8},{wch:14},{wch:14},{wch:14}];
     XLSX.utils.book_append_sheet(wb,ws,'Nguon du lieu');}
+  try{if(M.scope.kind!=='co'&&typeof cicPoolSheet==='function')cicPoolSheet(wb,cicCollPool(_poolUnitsModel(M,M.lastIdx)),'TSBĐ DÙNG CHUNG — kỳ '+M.cols[M.lastIdx].label+' · '+M.scope.name,U,un);}catch(e){console.warn('Sheet TSBĐ dùng chung:',e&&e.message);}
   if(!wb.SheetNames.length){toast('Chọn ít nhất một nội dung');return;}
   const nm='CIC_DienBien_'+M.scope.name.replace(/[^\p{L}\d]+/gu,'_').slice(0,40)+'_'+from.replace('-','')+'-'+to.replace('-','')+'.xlsx';
   XLSX.writeFile(wb,nm);tlCloseExport();toast('✓ Đã xuất '+nm);
@@ -10202,6 +10222,7 @@ function tfExport(){
     const ws=XLSX.utils.aoa_to_sheet(rows);xStyl(ws,0,0,0,7,xS.sectionH);xStyl(ws,11,0,11,7,xS.sectionH);xStyl(ws,12,0,12,7,xS.tHead);
     for(let i=2;i<=9;i++){xStylC(ws,i,0,xS.label);xStylC(ws,i,1,xS.bodyDetail);}
     ws['!cols']=[{wch:24},{wch:46},{wch:14},{wch:10},{wch:20},{wch:12},{wch:13},{wch:8}];XLSX.utils.book_append_sheet(wb,ws,'Ghi chu & nguon');}
+  try{const u=[];subs.forEach(s=>s.cos.forEach(co=>{const c=co.r?co.r.cells[ci(cm)]:null;if(c&&c.kind!=='none'&&c.snap)u.push({mst:co.r.mst,name:co.r.name,s10a:c.snap.S10A,r20:c.snap.R20});}));if(u.length)cicPoolSheet(wb,cicCollPool(u),'TSBĐ DÙNG CHUNG — kỳ '+_tfPer(cm)+' · '+g.name,1000,'tỷ đồng');}catch(e){console.warn('Sheet TSBĐ dùng chung:',e&&e.message);}
   const nm='Form_DuNo_TSBD_'+g.name.replace(/[^\p{L}\d]+/gu,'_').slice(0,30)+'_'+mons.map(m=>m.replace('-','').slice(2)).join('-').slice(0,40)+'.xlsx';
   XLSX.writeFile(wb,nm);toast('✓ Đã xuất form nội bộ: '+nm);
 }
@@ -11013,6 +11034,116 @@ function _lnkAuditTag(iss){const red=iss.filter(i=>i.lv==='r');return '<span cla
   const _g=_lnkGroup;_lnkGroup=function(){let h=_g();try{if(companies&&companies.length){const iss=cicAuditOpen();h+='<span class="lnk-sep"></span>'+(iss.length?_lnkAuditTag(iss):'<span class="lnk-audit ok" title="Số từng công ty khớp kho Diễn biến cùng ngày tra; tổng theo kỳ hạn = dòng tổng từng TCTD; tổng TCTD = tổng báo cáo">✓ số liệu khớp kho</span>');}}catch(e){}return h;};
   const _s=_lnkSingle;_lnkSingle=function(){let h=_s();try{if(S10A){const iss=cicAuditOpen();h+=(iss.length?_lnkAuditTag(iss):'<span class="lnk-audit ok">✓ số liệu khớp kho</span>');}}catch(e){}return h;};
 })();
+
+
+/* ═══════════ v6.5 — TSBĐ DÙNG CHUNG TRONG NHÓM: LOẠI TRÙNG & MỨC BẢO ĐẢM THEO CỤM ═══════════
+   Một tài sản có thể bảo đảm cho khoản vay của nhiều công ty trong nhóm → xuất hiện trên R20 của từng công ty đó.
+   1) Loại trùng: TSBĐ cấp nhóm tính MỖI TÀI SẢN MỘT LẦN (khoá = mã tài sản CIC; thiếu mã → mô tả + chủ sở hữu),
+      giá trị lấy theo báo cáo có ngày cập nhật mới nhất (các báo cáo khác ngày có thể định giá khác nhau).
+   2) Cụm bảo đảm: tài sản thế chấp tại TCTD X bảo đảm cho dư nợ tại X của các công ty có tài sản đó trên R20.
+      Nối (tài sản) ↔ (công ty, TCTD) → mỗi thành phần liên thông là một cụm; so Σ giá trị tài sản (không trùng)
+      với Σ dư nợ tại TCTD đó của mọi công ty trong cụm. Cách gộp này thận trọng: CIC không cho biết tài sản phân bổ
+      cho hợp đồng nào, nên coi toàn bộ dư nợ của cụm tại TCTD đều có thể đòi trên toàn bộ tài sản của cụm. */
+TLR_DEF.poolR=100;TLR_DEF.poolY=130;if(TLR.poolR==null)TLR.poolR=100;if(TLR.poolY==null)TLR.poolY=130;
+function _tsKey(a){const id=String(a.assetId||'').trim();return id?'id:'+id:'d:'+_mgNorm(a.description||'').slice(0,60)+'|'+_mgNorm(a.owner||'').slice(0,30);}
+function _tsDateTs(a){const d=parseDMY(String(a.reportDate||''));return d?d.getTime():0;}
+// units: [{mst,name,s10a,r20,day}] — mỗi công ty một bản tra
+function cicCollPool(units){
+  const A=new Map();let naive=0,naiveN=0;
+  const debt=new Map();   // mst|bank → {dn,ob}
+  units.forEach(u=>{
+    // khoá TCTD lấy từ TÊN GỐC trên báo cáo (như mergeForCompany) — không dùng tên đã rút gọn để hiển thị
+    if(u.s10a){const U=x=>(x&&x.vnd||0)+toVND(x&&x.usd||0,'USD');const put=(nm,dn,ob)=>{const k=u.mst+'|'+bankKey(nm);const o=debt.get(k)||{dn:0,ob:0,name:nm};o.name=pickDisplay(o.name,nm);o.dn+=dn;o.ob+=ob;debt.set(k,o);};
+      (u.s10a.debts||[]).forEach(d=>put(d.name,U(d.shortTerm)+U(d.medTerm)+U(d.longTerm)+U(d.other),0));(u.s10a.offBalance||[]).forEach(o=>put(o.name,0,toVND(o.value,o.currency)));}
+    ((u.r20&&u.r20.assets)||[]).forEach(a=>{naiveN++;naive+=a.value||0;const k=_tsKey(a);const bk=bankKey(a.bankName);
+      let o=A.get(k);if(!o){o={key:k,id:String(a.assetId||'').trim(),desc:a.description||'',owner:a.owner||'',type:a.assetType,form:a.form||'',value:null,vTs:-1,vDate:'',vals:new Set(),banks:new Map(),by:new Map(),recs:0};A.set(k,o);}
+      o.recs++;if(a.value!=null&&a.value>0){o.vals.add(a.value);const t=_tsDateTs(a);if(t>o.vTs||(t===o.vTs&&a.value>(o.value||0))){o.value=a.value;o.vTs=t;o.vDate=a.reportDate||'';}}
+      if(!o.banks.has(bk))o.banks.set(bk,a.bankName);o.banks.set(bk,pickDisplay(o.banks.get(bk),a.bankName));
+      const bb=o.by.get(u.mst)||{mst:u.mst,name:u.name,banks:new Set(),pledge:a.pledgeDate||''};bb.banks.add(bk);o.by.set(u.mst,bb);});
+  });
+  const assets=[...A.values()];
+  const dedup=assets.reduce((s,o)=>s+(o.value||0),0);
+  // cụm: union-find trên nút tài sản và nút (công ty, TCTD)
+  const P=new Map();const f=x=>{let r=x;while(P.get(r)!==r)r=P.get(r);let y=x;while(P.get(y)!==r){const n=P.get(y);P.set(y,r);y=n;}return r;};
+  const add=x=>{if(!P.has(x))P.set(x,x);};const uni=(a,b)=>{add(a);add(b);const ra=f(a),rb=f(b);if(ra!==rb)P.set(ra,rb);};
+  assets.forEach(o=>{add('A:'+o.key);o.by.forEach(b=>b.banks.forEach(bk=>uni('A:'+o.key,'B:'+b.mst+'|'+bk)));});
+  const C=new Map();
+  P.forEach((_,x)=>{const r=f(x);const c=C.get(r)||{assets:[],nodes:[]};if(x.startsWith('A:'))c.assets.push(A.get(x.slice(2)));else c.nodes.push(x.slice(2));C.set(r,c);});
+  const nm=new Map(units.map(u=>[u.mst,u.name]));
+  const pools=[...C.values()].map(c=>{
+    const banks=new Map();const bor=[];let dn=0,ob=0;
+    c.nodes.forEach(k=>{const [m,bk]=k.split('|');const d=debt.get(k)||{dn:0,ob:0,name:''};dn+=d.dn;ob+=d.ob;bor.push({mst:m,name:nm.get(m)||m,bank:bk,dn:d.dn,ob:d.ob});if(!banks.has(bk))banks.set(bk,d.name);});
+    c.assets.forEach(o=>o.banks.forEach((n,bk)=>{if(!banks.get(bk))banks.set(bk,n);}));
+    const V=c.assets.reduce((s,o)=>s+(o.value||0),0),noVal=c.assets.filter(o=>!(o.value>0)).length;
+    const cos=new Set(bor.map(b=>b.mst));const shared=c.assets.filter(o=>o.by.size>1).length;
+    const D=dn+ob;const cov=D>0?V/D*100:null,covL=dn>0?V/dn*100:null;
+    const lv=D<=0?'':(V<=0&&noVal)?'u':cov<TLR.poolR?'r':cov<TLR.poolY?'y':'g';
+    return {banks,bor,assets:c.assets,V,noVal,dn,ob,D,cov,covL,lv,nCo:cos.size,shared,multi:cos.size>1};
+  }).filter(p=>p.assets.length).sort((a,b)=>(b.multi-a.multi)||(_poolRank(a.lv)-_poolRank(b.lv))||(b.D-a.D));
+  pools.forEach(p=>p.assets.forEach(o=>{o.pool=p;}));
+  const sharedAssets=assets.filter(o=>o.by.size>1).sort((a,b)=>(b.value||0)-(a.value||0));
+  const diffVal=assets.filter(o=>o.vals.size>1);
+  return {assets,naive,naiveN,dedup,dupV:naive-dedup,dupN:naiveN-assets.length,pools,sharedAssets,diffVal,units:units.length};
+}
+// đơn vị đầu vào từ Nhóm KH (danh sách đang mở) và từ Diễn biến (bản đại diện tại một kỳ)
+function _poolUnitsGroup(){return (companies||[]).map(c=>({mst:_normMstCic((c.s10a&&c.s10a.customer&&c.s10a.customer.taxCode)||c.taxCode),name:c.name||(c.s10a&&c.s10a.customer.name)||'',s10a:c.s10a,r20:c.r20}));}
+function _poolUnitsModel(M,ci){return M.rows.map(r=>{const x=r.cells[ci];if(!x||x.kind==='none'||!x.snap)return null;return {mst:r.mst,name:r.name,s10a:x.snap.S10A,r20:x.snap.R20,kind:x.kind,day:x.snap.day};}).filter(Boolean);}
+function cicGroupCollDedup(cos){try{return cicCollPool(cos===companies?_poolUnitsGroup():cos).dedup;}catch(e){return null;}}
+// ───────── Diễn biến: TSBĐ kỳ của NHÓM = không trùng ─────────
+(function(){const _bm=tlBuildModel;tlBuildModel=function(opt){const M=_bm(opt);try{if(M&&!M.empty&&M.scope&&M.scope.kind!=='co')M.agg.forEach((a,ci)=>{if(!a.hasAnyR20)return;
+    const P=cicCollPool(_poolUnitsModel(M,ci));a.collRaw=a.coll;a.collNRaw=a.collN;a.coll=P.dedup;a.collN=P.assets.length;a.collDupV=P.dupV;a.collDupN=P.dupN;
+    // theo TCTD: mỗi tài sản một lần tại mỗi TCTD
+    const per=new Map();P.assets.forEach(o=>o.banks.forEach((n,bk)=>{per.set(bk,(per.get(bk)||0)+(o.value||0));}));a.banks.forEach((b,k)=>{if(b.coll>0||per.has(k)){b.collRaw=b.coll;b.coll=per.get(k)||0;}});});}catch(e){console.warn('TSBĐ không trùng:',e&&e.message);}return M;};})();
+// ───────── giao diện: bảng cụm bảo đảm ─────────
+const _poolLvTxt={r:'Không đủ',y:'Sát ngưỡng',g:'Đủ',u:'Chưa định giá'};
+function _poolRank(l){return l==='r'?0:l==='y'?1:l==='u'?2:3;}
+function cicHtmlPool(P,ctx){
+  if(!P||!P.assets.length)return '';
+  const pct=v=>v==null?'—':(v>=1000?'>999':v.toFixed(0))+'%';
+  const multi=P.pools.filter(p=>p.multi),nR=multi.filter(p=>p.lv==='r').length,nY=multi.filter(p=>p.lv==='y').length,nU=multi.filter(p=>p.lv==='u').length;
+  let h='<div class="tw pool"><div class="th"><span class="tt">TSBĐ dùng chung &amp; mức bảo đảm theo cụm'+(ctx?' <span class="tl-mini">· '+ctx+'</span>':'')+'</span><span class="tc">'+P.assets.length+' tài sản · '+P.sharedAssets.length+' dùng chung</span></div>';
+  h+='<div class="pool-kpi"><div><span>TSBĐ cộng thẳng R20 từng công ty</span><b>'+fm(P.naive)+'</b><i>'+P.naiveN+' dòng</i></div><div><span>TSBĐ nhóm (mỗi tài sản 1 lần)</span><b>'+fm(P.dedup)+'</b><i>'+P.assets.length+' tài sản</i></div>'
+    +'<div class="'+(P.dupV>0?'warn':'')+'"><span>Phần trùng đã loại</span><b>'+fm(P.dupV)+'</b><i>'+P.dupN+' dòng trùng'+(P.naive?' · '+(P.dupV/P.naive*100).toFixed(0)+'%':'')+'</i></div>'
+    +'<div class="'+(nR?'bad':nY?'warn':'ok')+'"><span>Cụm dùng chung (≥2 công ty)</span><b>'+multi.length+'</b><i>'+(nR?nR+' không đủ · ':'')+(nY?nY+' sát ngưỡng · ':'')+(nU?nU+' chưa định giá · ':'')+(multi.length-nR-nY-nU)+' đủ</i></div></div>';
+  h+='<div class="tl-mini" style="margin:.2rem 0 .5rem;line-height:1.6">Mức bảo đảm = Σ giá trị tài sản của cụm (không trùng) / Σ dư nợ (vay + ngoại bảng) tại TCTD nhận bảo đảm của <b>mọi</b> công ty trong cụm. '
+    +'Đỏ &lt; '+TLR.poolR+'% · vàng &lt; '+TLR.poolY+'% · xanh ≥ '+TLR.poolY+'%. CIC không cho biết tài sản phân bổ cho hợp đồng nào nên tool gộp thận trọng; dư nợ của cụm gồm cả phần vay tín chấp tại TCTD đó (CIC không tách). '
+    +'Tài sản chưa có giá trị trên R20 không được tính, nên mức bảo đảm thực tế có thể cao hơn.</div>';
+  const rows=P.pools.filter(p=>p.multi||p.lv==='r').slice(0,60);
+  if(rows.length){h+='<div class="tl-mtx tl-wrap"><table class="d pool-t"><thead><tr><th></th><th>TCTD nhận bảo đảm</th><th>Công ty dùng chung</th><th class="c">Tài sản</th><th class="c" style="text-align:right!important">Giá trị TSBĐ</th><th class="c" style="text-align:right!important">Dư nợ vay</th><th class="c" style="text-align:right!important">Ngoại bảng</th><th class="c" style="text-align:right!important">Mức bảo đảm</th><th class="c" style="text-align:right!important">TSBĐ/Nợ vay</th></tr></thead><tbody>';
+    rows.forEach((p,i)=>{const id='pool'+(ctx||'').length+'_'+i;const cos=[...new Map(p.bor.map(b=>[b.mst,b])).values()];
+      h+='<tr class="rowbtn" onclick="var e=document.getElementById(\''+id+'\');e.style.display=e.style.display?\'\':\'none\'"><td><span class="pool-lv '+p.lv+'">'+(_poolLvTxt[p.lv]||'—')+'</span></td><td>'+[...p.banks.values()].map(n=>_dmEsc(tctdLabel(n||''))).join(', ')+'</td><td>'+cos.slice(0,4).map(b=>_dmEsc(shortName(b.name).substring(0,26))).join(', ')+(cos.length>4?' +'+(cos.length-4):'')+' <span class="tl-mini">('+p.nCo+' cty)</span></td>'
+        +'<td class="c">'+p.assets.length+(p.shared?' <span class="tl-mini">('+p.shared+' chung)</span>':'')+(p.noVal?' <span class="tl-up" title="Chưa có giá trị trên R20">'+p.noVal+' chưa định giá</span>':'')+'</td><td class="am">'+fm(p.V)+'</td><td class="am">'+fm(p.dn)+'</td><td class="am">'+fm(p.ob)+'</td><td class="am"><b class="pool-c '+p.lv+'">'+pct(p.cov)+'</b></td><td class="am">'+pct(p.covL)+'</td></tr>';
+      h+='<tr id="'+id+'" style="display:none"><td></td><td colspan="8"><div class="pool-det"><div><b>Dư nợ tại TCTD của từng công ty</b><table class="d"><tbody>'+p.bor.sort((a,b)=>(b.dn+b.ob)-(a.dn+a.ob)).map(b=>'<tr><td>'+_dmEsc(shortName(b.name).substring(0,40))+'</td><td>'+_dmEsc(tctdLabel(p.banks.get(b.bank)||b.bank))+'</td><td class="am">'+fm(b.dn)+'</td><td class="am">'+fm(b.ob)+'</td></tr>').join('')+'</tbody></table></div>'
+        +'<div><b>Tài sản trong cụm</b><table class="d"><tbody>'+p.assets.slice().sort((a,b)=>(b.value||0)-(a.value||0)).slice(0,25).map(o=>'<tr><td><span class="tg '+ct(o.type).t+'">'+ct(o.type).s+'</span> '+_dmEsc((o.desc||'').substring(0,70))+'<div class="tl-mini">'+(o.id?'Mã '+_dmEsc(o.id)+' · ':'')+'chủ sở hữu: '+_dmEsc((o.owner||'—').substring(0,40))+' · bảo đảm cho '+o.by.size+' cty'+(o.vals.size>1?' · <span class="tl-up">giá trị khác nhau giữa các báo cáo ('+[...o.vals].map(v=>fm(v)).join(' / ')+') — lấy theo báo cáo '+_dmEsc(o.vDate)+'</span>':'')+'</div></td><td class="am">'+(o.value>0?fm(o.value):'<span class="tl-up">chưa có</span>')+'</td></tr>').join('')+(p.assets.length>25?'<tr><td colspan="2" class="tl-mini">… và '+(p.assets.length-25)+' tài sản khác</td></tr>':'')+'</tbody></table></div></div></td></tr>';});
+    h+='</tbody></table></div><div class="tl-mini" style="margin-top:.3rem">Bấm một dòng để xem dư nợ từng công ty và danh sách tài sản của cụm. Cụm chỉ có 1 công ty và đủ bảo đảm không liệt kê.</div>';}
+  if(P.sharedAssets.length){h+='<details class="pool-sh"><summary>'+P.sharedAssets.length+' tài sản bảo đảm cho từ 2 công ty trở lên</summary><div class="tl-mtx tl-wrap"><table class="d"><thead><tr><th>Tài sản</th><th>Chủ sở hữu</th><th>TCTD</th><th>Công ty dùng tài sản này</th><th class="c" style="text-align:right!important">Giá trị</th><th class="c" style="text-align:right!important">Dư nợ cả cụm</th><th class="c" style="text-align:right!important">Mức bảo đảm cụm</th></tr></thead><tbody>'
+    +P.sharedAssets.slice(0,80).map(o=>'<tr><td><span class="tg '+ct(o.type).t+'">'+ct(o.type).s+'</span> '+_dmEsc((o.desc||'').substring(0,60))+(o.id?'<div class="tl-mini">Mã '+_dmEsc(o.id)+'</div>':'')+'</td><td>'+_dmEsc((o.owner||'').substring(0,34))+'</td><td>'+[...o.banks.values()].map(n=>_dmEsc(tctdLabel(n||''))).join(', ')+'</td><td>'+[...o.by.values()].map(b=>_dmEsc(shortName(b.name).substring(0,24))).join(', ')+' <span class="tl-mini">('+o.by.size+')</span></td><td class="am">'+(o.value>0?fm(o.value):'—')+'</td><td class="am">'+(o.pool?fm(o.pool.D):'—')+'</td><td class="am">'+(o.pool?'<b class="pool-c '+o.pool.lv+'">'+pct(o.pool.cov)+'</b>':'—')+'</td></tr>').join('')+'</tbody></table><div class="tl-mini" style="margin-top:.3rem">Một tài sản thường nằm chung cụm với các tài sản khác cùng bảo đảm cho các công ty đó, nên mức bảo đảm tính cho cả cụm, không chia riêng từng tài sản.</div></div></details>';}
+  return h+'</div>';
+}
+// Diễn biến (nhóm): bảng cụm ở tab Tài sản bảo đảm, theo kỳ đang chọn (mặc định kỳ cuối)
+(function(){const _c=tlHtmlColl;tlHtmlColl=function(M){let h=_c(M);try{if(M.scope.kind!=='co'){const ci=(TL.sel>=0&&M.cols[TL.sel])?TL.sel:M.lastIdx;if(ci>=0){const P=cicCollPool(_poolUnitsModel(M,ci));
+  const est=M.rows.filter(r=>{const x=r.cells[ci];return x&&x.kind!=='real'&&x.kind!=='none';}).length;
+  h=cicHtmlPool(P,'kỳ '+M.cols[ci].label+(est?' · '+est+' công ty dùng bản tra kỳ trước':''))+h;}}}catch(e){console.warn('Cụm TSBĐ:',e&&e.message);}return h;};})();
+// Diễn biến: đánh giá rủi ro nhóm — cụm không đủ bảo đảm
+(function(){const _a=tlAssess;tlAssess=function(M){const R=_a(M);try{if(M.scope.kind!=='co'&&M.lastIdx>=0&&R&&R.grp){const P=cicCollPool(_poolUnitsModel(M,M.lastIdx));
+  P.pools.filter(p=>p.multi&&p.lv==='r').slice(0,4).forEach(p=>R.grp.push({lv:'y',t:'TSBĐ dùng chung tại '+[...p.banks.values()].map(n=>tctdLabel(n||'')).join(', ')+' chỉ bằng '+(p.cov||0).toFixed(0)+'% dư nợ của '+p.nCo+' công ty dùng chung ('+fm(p.V)+' / '+fm(p.D)+')'}));
+  if(P.dupV>0)R.grp.push({lv:'',t:'TSBĐ nhóm đã loại '+P.dupN+' dòng tài sản trùng giữa các công ty ('+fm(P.dupV)+' '+unitShort()+')'});}}catch(e){}return R;};})();
+// Nhóm KH: bảng cụm ngay dưới kết quả phân tích
+(function(){const _g=analyzeGroup;analyzeGroup=function(){const r=_g.apply(this,arguments);try{const el=document.getElementById('grpResult');if(el&&companies.length&&companies.some(c=>c.r20)){let b=document.getElementById('grpPool');if(!b){b=document.createElement('div');b.id='grpPool';}
+  const P=cicCollPool(_poolUnitsGroup());b.innerHTML=cicHtmlPool(P,'danh sách đang mở');const sc=el.querySelector('.sc');let kp=sc?sc.parentElement:null;while(kp&&kp.parentElement&&kp.parentElement!==el&&kp.parentElement.offsetWidth<=kp.offsetWidth+4)kp=kp.parentElement;if(kp&&kp.parentNode)kp.parentNode.insertBefore(b,kp.nextSibling);else el.appendChild(b);b.style.margin='.8rem 0';}}catch(e){console.warn('Cụm TSBĐ (Nhóm KH):',e&&e.message);}return r;};})();
+// sheet Excel: cụm bảo đảm + tài sản dùng chung (dùng cho file Diễn biến và form nội bộ)
+function cicPoolSheet(wb,P,title,div,unitTxt){
+  if(!P||!P.assets.length)return;const xv=v=>v==null?'':Math.round(v/div*100)/100;const pct=v=>v==null?'':Math.round(v);
+  const rows=[[title],['TSBĐ cộng thẳng R20 từng công ty: '+xv(P.naive)+' · mỗi tài sản 1 lần: '+xv(P.dedup)+' · phần trùng đã loại: '+xv(P.dupV)+' ('+P.dupN+' dòng) · đơn vị '+unitTxt],
+    ['Mức bảo đảm = Σ giá trị TSBĐ của cụm (không trùng) / Σ (dư nợ vay + ngoại bảng) tại TCTD nhận bảo đảm của mọi công ty trong cụm. Đỏ < '+TLR.poolR+'%, vàng < '+TLR.poolY+'%. Tài sản chưa có giá trị trên R20 không được tính.'],[''],
+    ['CỤM BẢO ĐẢM'],['Đánh giá','TCTD nhận bảo đảm','Số công ty','Công ty','Số tài sản','TS dùng chung','TS chưa định giá','Giá trị TSBĐ','Dư nợ vay','Ngoại bảng','Mức bảo đảm (%)','TSBĐ / Nợ vay (%)']];
+  P.pools.forEach(p=>{const cos=[...new Map(p.bor.map(b=>[b.mst,b])).values()];rows.push([_poolLvTxt[p.lv]||'',[...p.banks.values()].map(n=>tctdLabel(n||'')).join(', '),p.nCo,cos.map(b=>shortName(b.name)).join('; '),p.assets.length,p.shared,p.noVal,xv(p.V),xv(p.dn),xv(p.ob),pct(p.cov),pct(p.covL)]);});
+  const r1=rows.length+1;rows.push([''],['TÀI SẢN BẢO ĐẢM CHO TỪ 2 CÔNG TY TRỞ LÊN'],['Mã tài sản','Mô tả','Chủ sở hữu','TCTD','Số công ty','Công ty','Giá trị (báo cáo mới nhất)','Ngày báo cáo giá trị','Giá trị khác nhau giữa các báo cáo','Dư nợ cả cụm','Mức bảo đảm cụm (%)']);
+  P.sharedAssets.forEach(o=>rows.push([o.id,o.desc,o.owner,[...o.banks.values()].map(n=>tctdLabel(n||'')).join(', '),o.by.size,[...o.by.values()].map(b=>shortName(b.name)).join('; '),xv(o.value),o.vDate,o.vals.size>1?[...o.vals].map(xv).join(' / '):'',o.pool?xv(o.pool.D):'',o.pool?pct(o.pool.cov):'']));
+  const ws=XLSX.utils.aoa_to_sheet(rows);try{xStyl(ws,0,0,0,11,xS.sectionH);xStyl(ws,4,0,4,11,xS.sectionH);xStyl(ws,5,0,5,11,xS.tHead);xStyl(ws,r1,0,r1,8,xS.sectionH);xStyl(ws,r1+1,0,r1+1,8,xS.tHead);}catch(e){}
+  ws['!cols']=[{wch:24},{wch:40},{wch:10},{wch:60},{wch:10},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'TSBD dung chung');
+}
 
 </script>
 </body>

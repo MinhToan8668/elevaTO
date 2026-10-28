@@ -1,6 +1,6 @@
-# AI CIC Analyzer v6.4 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v6.5 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v6.4.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v6.5.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -185,6 +185,24 @@ ngoại bảng / trái phiếu. Lịch sử nợ xấu 5 năm vẫn báo riêng.
 - Nhóm KH / 1 KH: số đang mở so với kho Diễn biến cùng MST + ngày tra; huy hiệu "✓ số liệu khớp kho" hoặc "⚠ N chỗ lệch".
 
 Đối soát ngoài (bộ tính viết riêng, không dùng hàm tính của tool) trên dữ liệu thật: 0 chỗ lệch ở mọi ô, cả hai chế độ lấp tháng.
+
+## v6.5 — TSBĐ dùng chung trong nhóm: loại trùng & mức bảo đảm theo cụm
+**Vấn đề**: một tài sản bảo đảm cho khoản vay của nhiều công ty trong nhóm thì nằm trên R20 của từng công ty đó. Cộng thẳng R20 các công ty
+thì tài sản đó bị tính nhiều lần (Nhóm ABC kỳ 10/2026: 666 dòng tài sản nhưng chỉ 326 tài sản khác nhau, 60 tài sản dùng cho ≥2 công ty —
+TSBĐ nhóm bị cộng trùng 22.167 tỷ, 18%).
+
+**Loại trùng** — TSBĐ cấp nhóm (KPI Nhóm KH, Diễn biến: KPI, bảng theo loại / theo TCTD, tỷ lệ TSBĐ/nợ vay, Excel) tính mỗi tài sản một lần:
+khoá = mã tài sản CIC (thiếu mã → mô tả + chủ sở hữu); giá trị lấy theo báo cáo có ngày cập nhật mới nhất (báo cáo khác ngày có thể định giá
+khác nhau — ghi rõ). TSBĐ theo từng công ty giữ nguyên như R20 của công ty đó.
+
+**Cụm bảo đảm** — tài sản thế chấp tại TCTD X bảo đảm cho dư nợ tại X của các công ty có tài sản đó trên R20. Nối tài sản ↔ (công ty, TCTD);
+mỗi thành phần liên thông là một cụm. Mức bảo đảm = Σ giá trị tài sản của cụm (không trùng) / Σ (vay + ngoại bảng) tại TCTD đó của mọi công ty
+trong cụm. Đỏ < 100%, vàng < 130%, xanh ≥ 130%; cụm chỉ có tài sản chưa định giá ghi "Chưa định giá". Gộp thận trọng vì CIC không cho biết
+tài sản phân bổ cho hợp đồng nào; dư nợ cụm gồm cả phần tín chấp tại TCTD đó. Hiện ở Nhóm KH (dưới KPI), Diễn biến › Tài sản bảo đảm (theo kỳ
+đang chọn), đánh giá rủi ro nhóm, sheet "TSBD dung chung" trong file Excel Diễn biến và form nội bộ.
+
+Kiểm tra: bộ tính viết riêng bằng Python trên đúng các bản tra tool dùng — 4 kỳ, 261 cụm: TSBĐ cộng thẳng, TSBĐ không trùng, giá trị /
+dư nợ / số tài sản / số công ty từng cụm đều khớp.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
