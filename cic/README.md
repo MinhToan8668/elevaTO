@@ -1,6 +1,6 @@
-# AI CIC Analyzer v6.0 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v6.1 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v6.0.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v6.1.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -150,6 +150,11 @@ Mỗi cảnh báo nhóm nợ ghi ngày tra, ngày số liệu, số tiền ở n
 
 **Giới hạn còn lại**: tool không lưu nguyên văn báo cáo, nên bản tra đã lưu chỉ sửa được bằng thông tin có sẵn trong chính bản đó;
 719 tài sản không có giá trị trên R20 (CIC không ghi) không ước tính được.
+
+## v6.1 — Nhóm KH hiện nhóm nợ đã chuẩn hoá ngay khi mở tool
+Lỗi ở 6.0: bản tra đọc bằng bản trước 5.5 được chuẩn hoá nhóm nợ trong kho (Diễn biến đúng), nhưng phiên Nhóm KH / Theo kỳ /
+1 KH khôi phục từ lần mở trước vẫn dùng bảng gộp cũ → Nhóm KH còn báo nhóm 2 trong khi Diễn biến không có. Nay sau khi chuẩn hoá,
+tool tính lại và vẽ lại cả 3 màn, lưu lại cả 3 phiên; hồ sơ trong Lịch sử có bảng gộp lệch cũng được tính lại.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
