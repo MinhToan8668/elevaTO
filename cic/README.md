@@ -1,6 +1,6 @@
-# AI CIC Analyzer v5.3 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v5.4 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v5.3.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v5.4.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -100,6 +100,19 @@ Diễn biến › **Form nội bộ** (hoặc Nhóm & kho › sửa nhóm › Xu
   - Cả nhóm: đỏ khi có công ty nợ xấu (rủi ro lây chéo) hoặc công ty đỏ chiếm ≥5% dư nợ nhóm; vàng khi có công ty vàng, dư nợ nhóm
     (cùng tập công ty) tăng ≥30%, một TCTD chiếm ≥40% dư nợ nhóm, hoặc kỳ cuối chưa tra đủ công ty.
   - Mọi ngưỡng chỉnh được trong tab Đánh giá rủi ro › Chỉnh ngưỡng. Thay đổi dưới 1 tỷ không tính.
+
+## v5.4 — Sửa lỗi ghép nhầm dữ liệu giữa các công ty
+**Lỗi (có từ bản 4.1):** ở chế độ 1 KH, dán chỉ một báo cáo thì báo cáo kia của khách hàng TRƯỚC vẫn giữ trong bộ nhớ →
+hồ sơ lưu S10A của công ty B kèm R20 của công ty A. Từ bản 5.0 cặp này được ghi vào kho diễn biến nên TSBĐ của A bị cộng vào B.
+Trên tệp xuất của người dùng: 39 hồ sơ mang R20 của công ty khác (37 hồ sơ cùng mang R20 của một công ty); TSBĐ nhóm BAF
+hiện 52.886 tỷ trong khi đúng là 1.879 tỷ. Nhóm THACO không bị ảnh hưởng.
+- Chặn tại chỗ dán: dán một báo cáo của khách hàng khác thì báo cáo còn lại của khách trước tự bỏ; dán cả hai mà khác khách hàng thì báo lỗi, không xử lý.
+- Chặn ở mọi đường ghi vào kho (dán 1 KH, Nhóm KH, Theo kỳ, nhập tệp, đồng bộ thư mục chung).
+- Tự dọn khi mở tool: kho diễn biến, Lịch sử, mục tra nhanh theo MST, phiên đang mở; nhập tệp thì bỏ R20 ghép nhầm và báo danh sách.
+- Bản tra chỉ có R20 (không S10A) không còn được chọn làm số dư nợ đại diện kỳ (trước đây làm dư nợ kỳ đó về 0); được gắn vào
+  bản S10A cùng MST gần nhất (≤45 ngày).
+- Kỳ có S10A nhưng không tra kèm R20: TSBĐ lấy theo R20 gần nhất trước đó của chính công ty (tối đa N tháng), ghi rõ ngày R20.
+- Form nội bộ: một MST không thể gán vào hai dòng công ty. Phạm vi "Tất cả KH trong kho" có cảnh báo đang cộng dồn KH không liên quan.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v5.3 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v5.4 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -7330,7 +7330,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='5.3';
+const APP_VERSION='5.4';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8285,7 +8285,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='5.3';
+const TL_VER='5.4';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10054,7 +10054,7 @@ function _tfBuild(){
   return {g,M,mons,cm,subs,ci};
 }
 const _tfBank=(cell,key)=>{if(!cell||!cell.snap||!key)return null;return _tlMergedOf(cell.snap).find(b=>bankKey(b.name)===key)||null;};
-const _tfSrc=c=>!c||c.kind==='none'?'không có số':c.kind==='real'?'tra '+_tlDM(c.qd)+' (SL '+_tlDM(c.dd)+')':'kéo bản '+_tlDM(c.qd)+' (cũ '+c.age+'T)';
+const _tfSrc=c=>(!c||c.kind==='none'?'không có số':c.kind==='real'?'tra '+_tlDM(c.qd)+' (SL '+_tlDM(c.dd)+')':'kéo bản '+_tlDM(c.qd)+' (cũ '+c.age+'T)')+(c&&c.snap&&c.snap._r20From?' · TSBĐ theo R20 '+_tlDM(c.snap._r20From):'');
 function tfExport(){
   let D;try{D=_tfBuild();}catch(e){toast('⚠ '+e.message);return;}
   const {g,M,mons,cm,subs,ci}=D;const T=v=>v==null?null:Math.round(v/1000*1000)/1000;// triệu → tỷ (3 số lẻ)
@@ -10390,6 +10390,170 @@ function tlExplainBasis(){
     +'<p><b>Tra nhiều lần trong tháng</b>: tool lấy bản có ngày số liệu muộn nhất, gần cuối tháng nhất. Các bản khác vẫn lưu, xem ở mốc "Theo lần tra" hoặc tab Lịch tra.</p>'
     +'<p><b>Tra thiếu công ty</b>: công ty chưa tra trong tháng được lấy nợ vay theo bảng 12 tháng của CIC, hoặc kéo bản tra cũ (tối đa N tháng). Tổng nhóm vì vậy trộn số thật với số ước tính. Bật <b>So sánh cân bằng</b> để chỉ giữ công ty có bản tra thật ở mọi kỳ, khi đó tăng/giảm phản ánh đúng việc vay thêm hay trả bớt.</p></div>'});
 }
+
+
+/* ═══════════ v5.4 — CHỐNG GHÉP NHẦM DỮ LIỆU GIỮA CÁC CÔNG TY ═══════════
+   Lỗi gốc (có từ bản 4.1): ở chế độ 1 KH, dán CHỈ một báo cáo thì báo cáo kia của KHÁCH TRƯỚC vẫn nằm trong
+   bộ nhớ ("Dán lại để cập nhật") → hồ sơ lưu S10A của công ty B kèm R20 của công ty A. Bản 5.x ghi cặp này vào kho
+   diễn biến, nên TSBĐ của A bị cộng vào B (đo trên tệp xuất của người dùng: 37 công ty mang R20 của cùng một công ty).
+   Bản vá: (1) chặn tại chỗ dán, (2) chặn ở mọi đường ghi vào kho, (3) tự dọn kho / Lịch sử / chỉ mục / tệp nhập,
+   (4) bản tra CHỈ có R20 không còn được chọn làm số đại diện kỳ (trước đây làm dư nợ kỳ đó về 0). */
+function _tlCustId(c){c=c||{};return {mst:_normMstCic(c.taxCode),cic:String(c.cicCode||'').replace(/\s/g,''),nm:_mgNorm(_nameNoOld(c.name||'')).replace(/[^a-z0-9]/g,'')};}
+// true = chắc chắn KHÁC khách hàng; chỉ kết luận khi có cùng một loại định danh ở cả hai phía
+function _tlCustDiff(a,b){
+  if(!a||!b)return false;const x=_tlCustId(a),y=_tlCustId(b);
+  if(x.mst&&y.mst)return !_cicMstMatch(x.mst,y.mst);
+  if(x.cic&&y.cic)return x.cic!==y.cic;
+  if(x.nm&&y.nm)return x.nm!==y.nm;
+  return false;
+}
+const _tlPairBad=(s10a,r20)=>!!(s10a&&r20&&_tlCustDiff(s10a.customer,r20.customer));
+let _TL_FIX={r20:0,hist:0,idx:0,orph:0};
+// (2) mọi đường ghi vào kho đi qua _tlSnapOf
+(function(){
+  const _o=_tlSnapOf;
+  _tlSnapOf=function(s10a,r20,hint,src){if(_tlPairBad(s10a,r20)){_TL_FIX.r20++;r20=null;}return _o(s10a,r20,hint,src);};
+})();
+// (4) bản tra chỉ có R20: gắn vào bản S10A cùng MST gần nhất (≤45 ngày) nếu bản đó chưa có R20; không thì để riêng
+(function(){
+  const _ing=_tlIngest;
+  _tlIngest=function(list,src){
+    const rest=[];const ch=[];
+    (list||[]).forEach(x=>{
+      if(x&&!x.s10a&&x.r20){
+        const s=_tlSnapOf(null,x.r20,x.hint,x.src||src);if(!s){return;}
+        let best=null,bd=45*864e5;_TL_CACHE.forEach(c=>{if(c.mst===s.mst&&c.S10A){const d=Math.abs(c.ts-s.ts);if(d<=bd){bd=d;best=c;}}});
+        if(best){if(!best.R20||s.ts>=best.ts){if(best.R20!==x.r20){best.R20=x.r20;best.t=Date.now();delete best._m;delete best._d;ch.push(best);}}return;}
+        _TL_FIX.orph++;
+      }
+      rest.push(x);
+    });
+    if(ch.length){_tlPersist(ch);_tlAfterChange();}
+    const r=_ing(rest,src);r.upd=r.upd.concat(ch);return r;
+  };
+  // mô hình: chỉ bản có S10A mới được làm số dư nợ đại diện; bản có S10A mà THIẾU R20 thì TSBĐ lấy theo R20 gần nhất
+  // trước đó của CHÍNH công ty đó (tối đa TL.maxCarry tháng) — không để TSBĐ tụt về 0 chỉ vì lần đó không tra kèm R20.
+  const _bm=tlBuildModel;const _VCACHE=new Map();
+  tlBuildModel=function(opt){
+    const keep=_TL_CACHE;const maxC=+(TL.maxCarry||3);
+    const withR=new Map();keep.forEach(s=>{if(s.R20){if(!withR.has(s.mst))withR.set(s.mst,[]);withR.get(s.mst).push(s);}});
+    const list=[];
+    keep.forEach(s=>{
+      if(!s.S10A)return;
+      if(s.R20){list.push(s);return;}
+      const cand=(withR.get(s.mst)||[]).filter(r=>r.ts<=s.ts&&_tlMonDiff(_tlB(r),_tlB(s))<=maxC);
+      if(!cand.length){list.push(s);return;}
+      const r=cand.reduce((a,b)=>b.ts>a.ts?b:a);const vk=s.key+'~'+r.key+'~'+s.t+'~'+r.t;
+      let v=_VCACHE.get(vk);if(!v){v=Object.assign({},s,{R20:r.R20,_r20From:r.day,_r20Key:r.key});delete v._m;_VCACHE.set(vk,v);}
+      list.push(v);
+    });
+    _TL_CACHE=list;
+    try{return _bm(opt);}finally{_TL_CACHE=keep;}
+  };
+})();
+// (1) chặn tại chỗ dán — chế độ 1 KH
+(function(){
+  const _pp=processPaste;
+  processPaste=function(){
+    try{
+      const t1=document.getElementById('pasteS10A').value.trim(),t2=document.getElementById('pasteR20').value.trim();
+      const one=(t1&&!t2)?t1:(!t1&&t2)?t2:'';
+      if(one){
+        if(_isS10A(one)&&!_isR20(one)&&R20){const s=parseS10A(one);if(s&&_tlCustDiff(s.customer,R20.customer)){R20=null;setTimeout(()=>toast('Đã bỏ R20 của khách hàng trước — R20 đó không thuộc '+_nameNoOld(s.customer.name||'')),400);}}
+        else if(_isR20(one)&&!_isS10A(one)&&S10A){const r=parseR20(one);if(r&&_tlCustDiff(r.customer,S10A.customer)){S10A=null;setTimeout(()=>toast('Đã bỏ S10A của khách hàng trước — S10A đó không thuộc '+_nameNoOld(r.customer.name||'')),400);}}
+      }else if(t1&&t2&&_isS10A(t1)&&_isR20(t2)){
+        const s=parseS10A(t1),r=parseR20(t2);
+        if(s&&r&&_tlCustDiff(s.customer,r.customer)){
+          _xnXoa({chiDong:true,tieuDe:'S10A và R20 không cùng một khách hàng',ten:'Chưa xử lý dữ liệu',nhan:'Đóng',
+            dong:['S10A: <b>'+_dmEsc(_nameNoOld(s.customer.name||''))+'</b> · MST '+_dmEsc(s.customer.taxCode||'—'),'R20: <b>'+_dmEsc(_nameNoOld(r.customer.name||''))+'</b> · MST '+_dmEsc(r.customer.taxCode||'—')],
+            ghiChu:'Dán lại đúng cặp báo cáo của cùng một khách hàng. Ghép hai khách hàng sẽ làm TSBĐ của người này cộng vào người kia.'});
+          return;
+        }
+      }
+    }catch(e){console.warn('Kiểm tra cặp S10A/R20:',e&&e.message);}
+    return _pp();
+  };
+  // Nhóm KH: thêm từng công ty
+  const _pc=_pushCompany;
+  _pushCompany=function(s,r){if(_tlPairBad(s,r)){toast('⚠ R20 không cùng khách hàng với S10A ('+_nameNoOld((r.customer||{}).name||'')+') — đã bỏ R20');r=null;}return _pc(s,r);};
+})();
+// (3) tự dọn dữ liệu đã lưu: kho diễn biến · Lịch sử · chỉ mục MST · phiên đang mở
+function _tlSanitizeUnit(o,kS,kR){if(o&&_tlPairBad(o[kS],o[kR])){o[kR]=null;if('merged' in o)o.merged=mergeForCompany(o[kS],null);return true;}return false;}
+async function _tlRepairAll(){
+  let nK=0,nH=0,nI=0;
+  // kho
+  const ch=[];_TL_CACHE.forEach(s=>{if(_tlPairBad(s.S10A,s.R20)){s.R20=null;s.t=Date.now();delete s._m;delete s._d;ch.push(s);}});
+  if(ch.length){nK=ch.length;await _tlPersist(ch);}
+  // lịch sử
+  try{await _histReady;}catch(e){}
+  for(const e of (_getHistory()||[])){
+    let bad=false;
+    if(e.mode==='single'&&_tlPairBad(e.S10A,e.R20)){e.R20=null;bad=true;}
+    (e.companies||[]).forEach(c=>{if(_tlSanitizeUnit(c,'s10a','r20'))bad=true;});
+    (e.PERIODS||[]).forEach(p=>{if(_tlSanitizeUnit(p,'s10a','r20'))bad=true;});
+    if(bad){nH++;try{if(_HIST_USE_LS)_lsSet(_HIST_CACHE);else await _histOp('readwrite',s=>s.put(e));}catch(err){}}
+  }
+  // chỉ mục MST
+  try{const idx=_getMstIndex();let c=0;Object.keys(idx).forEach(k=>{const it=idx[k];if(it&&_tlPairBad(it.S10A,it.R20)){it.R20=null;c++;}});if(c){nI=c;localStorage.setItem(_MST_KEY,JSON.stringify(idx));}}catch(e){}
+  // phiên đang mở
+  let nS=0;
+  if(_tlPairBad(S10A,R20)){R20=null;nS++;try{mergeData();if(MODE==='single')renderAll();}catch(e){}}
+  (companies||[]).forEach(c=>{if(_tlSanitizeUnit(c,'s10a','r20'))nS++;});
+  (PERIODS||[]).forEach(p=>{if(_tlSanitizeUnit(p,'s10a','r20'))nS++;});
+  if(nS)try{saveState();}catch(e){}
+  _TL_FIX.hist+=nH;_TL_FIX.idx+=nI;
+  if(nK||nH||nI||nS){
+    _tlAfterChange();
+    const msg='Đã tách R20 ghép nhầm công ty: '+[nK&&nK+' bản tra trong kho diễn biến',nH&&nH+' hồ sơ Lịch sử',nI&&nI+' mục tra nhanh theo MST',nS&&nS+' mục đang mở'].filter(Boolean).join(' · ');
+    console.info('[CIC] '+msg);setTimeout(()=>toast('✓ '+msg),1200);
+    try{localStorage.setItem('cic_tl_fixlog',JSON.stringify({t:Date.now(),kho:nK,hist:nH,idx:nI,open:nS}));}catch(e){}
+  }
+  return {nK,nH,nI,nS};
+}
+_tlReady.then(()=>_tlRepairAll()).catch(e=>console.warn('Dọn dữ liệu ghép nhầm:',e&&e.message));
+// tệp nhập: bỏ R20 ghép nhầm trước khi đối chiếu, và báo trong khung xem trước
+(function(){
+  const _an=_dmAnalyze;
+  _dmAnalyze=function(o){
+    let n=0;const who=new Map();
+    try{((o&&o.cic&&o.cic.customers)||[]).forEach(c=>{if(_tlPairBad(c.S10A,c.R20)){const k=_nameNoOld((c.R20.customer||{}).name||'')+' · MST '+((c.R20.customer||{}).taxCode||'');who.set(k,(who.get(k)||0)+1);c.R20=null;n++;}});
+      ((o&&o.cic&&o.cic.snapshots)||[]).forEach(c=>{if(_tlPairBad(c.S10A,c.R20)){c.R20=null;n++;}});
+      ((o&&o.cic&&o.cic.history)||[]).forEach(e=>{if(e.mode==='single'&&_tlPairBad(e.S10A,e.R20)){e.R20=null;n++;}(e.companies||[]).forEach(c=>{if(_tlSanitizeUnit(c,'s10a','r20'))n++;});(e.PERIODS||[]).forEach(p=>{if(_tlSanitizeUnit(p,'s10a','r20'))n++;});});}catch(e){}
+    _an(o);if(_dmData)_dmData.r20fix={n,who:[...who.entries()]};
+  };
+  const _rp=_dmRenderPrev;
+  _dmRenderPrev=function(){_rp();try{const f=_dmData&&_dmData.r20fix;if(!f||!f.n)return;const prev=_dmEl('dmPrev');const b=document.createElement('div');b.className='grp-hi warn';b.style.marginTop='.6rem';
+    b.innerHTML='<h4>Đã bỏ '+f.n+' báo cáo R20 không cùng khách hàng với S10A</h4><div style="font-size:.72rem;color:var(--tx2);line-height:1.7">Tệp có những hồ sơ mang R20 (TSBĐ) của công ty khác — thường do bản tool cũ giữ lại R20 của khách trước khi chỉ dán S10A. Các R20 đó <b>không được nhập</b>, để TSBĐ không bị cộng nhầm.'+(f.who.length?'<br>R20 bị ghép nhầm thuộc: '+f.who.map(([k,v])=>'<b>'+_dmEsc(k)+'</b> (gắn vào '+v+' KH)').join(' · '):'')+'<br>Cần TSBĐ của các KH đó thì tra lại R20 đúng khách hàng.</div>';prev.insertBefore(b,prev.firstChild.nextSibling);}catch(e){}};
+})();
+// Xem 1 KH / Nhóm KH / Theo kỳ từ Lịch sử: luôn dọn cặp ghép nhầm trước khi hiển thị
+(function(){
+  const _ap=_applyState;
+  _applyState=function(st){
+    try{if(st){let n=0;if(st.mode==='single'&&_tlPairBad(st.S10A,st.R20)){st=Object.assign({},st,{R20:null});n++;}
+      (st.companies||[]).forEach(c=>{if(_tlSanitizeUnit(c,'s10a','r20'))n++;});(st.PERIODS||[]).forEach(p=>{if(_tlSanitizeUnit(p,'s10a','r20'))n++;});
+      if(n)setTimeout(()=>toast('Đã bỏ '+n+' R20 không cùng khách hàng với S10A trong hồ sơ này'),600);}}catch(e){}
+    return _ap(st);
+  };
+})();
+// Form nội bộ: không cho một MST gán vào hai công ty (tránh cộng trùng)
+(function(){
+  const _s=tfSetCoMst;
+  tfSetCoMst=function(si,ci,mst){
+    if(mst&&TF.form){let moved=0;TF.form.subs.forEach((s,a)=>s.cos.forEach((c,b)=>{if((a!==si||b!==ci)&&c.mst===mst){c.mst=null;c.score=0;moved++;}}));if(moved)toast('MST '+mst+' đã gỡ khỏi dòng cũ — mỗi MST chỉ ở một dòng để không cộng trùng');}
+    return _s(si,ci,mst);
+  };
+})();
+// Phạm vi "Tất cả KH trong kho" cộng dồn mọi KH không liên quan → báo rõ; lần đầu mở ưu tiên nhóm theo dõi
+(function(){
+  const _ov=tlHtmlOverview;
+  tlHtmlOverview=function(M){const w=M.scope.kind==='all'?'<div class="grp-hi warn" style="margin-bottom:.8rem"><h4>Đang cộng dồn TẤT CẢ khách hàng trong kho ('+M.scope.msts.length+' KH, không phải một nhóm)</h4><div style="font-size:.72rem;color:var(--tx2)">Các tổng ở đây gộp cả những công ty không liên quan nhau. Chọn một <b>nhóm theo dõi</b> hoặc một công ty ở ô "Đối tượng" để xem đúng phạm vi.</div></div>':'';return w+_ov(M);};
+  try{const st=JSON.parse(localStorage.getItem('cic_tl_state')||'null');if((!st||!st.scope||st.scope.kind==='all')){const g=_tlGroups()[0];if(g)TL.scope={kind:'group',id:g.id};}}catch(e){}
+})();
+// Ghi lại lần dọn gần nhất ở tab Kho để người dùng xem lại sau khi thông báo đã tắt
+(function(){const _k=tlkRender;tlkRender=function(){_k();try{const f=JSON.parse(localStorage.getItem('cic_tl_fixlog')||'null');const el=document.getElementById('tlkList');if(!f||!el)return;
+  const d=document.createElement('div');d.className='grp-hi warn';d.style.margin='.2rem 0 .6rem';
+  d.innerHTML='<h4>Lần dọn dữ liệu ghép nhầm gần nhất: '+new Date(f.t).toLocaleString('vi-VN')+'</h4><div class="tl-mini">Đã tách R20 không cùng khách hàng với S10A ở '+[f.kho&&f.kho+' bản tra trong kho',f.hist&&f.hist+' hồ sơ Lịch sử',f.idx&&f.idx+' mục tra nhanh theo MST',f.open&&f.open+' mục đang mở'].filter(Boolean).join(' · ')+'. TSBĐ của các khách hàng đó cần tra lại R20 đúng khách hàng.</div>';
+  el.parentNode.insertBefore(d,el);}catch(e){}};})();
 
 </script>
 </body>
