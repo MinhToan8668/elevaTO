@@ -1,6 +1,6 @@
-# AI CIC Analyzer v6.1 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v6.2 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v6.1.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v6.2.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -130,8 +130,7 @@ Mỗi cảnh báo nhóm nợ ghi ngày tra, ngày số liệu, số tiền ở n
 - **TSBĐ đã giải chấp vẫn bị cộng**: 11 tài sản có ngày giải chấp ≤ ngày tra R20 (vd. một KH có 9 tài sản tại một ngân hàng giải chấp
   10/09/2026, tra R20 05/10/2026). Nay tách sang danh sách "đã giải chấp", không cộng vào TSBĐ ở mọi tab, form và file xuất;
   tab TSBĐ của 1 KH liệt kê riêng để đối chiếu. Dữ liệu đã lưu được tự chuẩn hoá khi mở tool.
-- **Nhóm nợ của bản tra đã lưu trước 5.5**: nhóm 2 chỉ giữ khi mục 2.9 của chính báo cáo có dòng của TCTD đó đúng tháng số liệu,
-  không có → về nhóm 1. Nhóm 3–5 không có trong mục 2.7 → giữ mức đỏ, ghi "mục 2.7 chưa xác nhận — mở báo cáo gốc".
+- ~~Nhóm nợ của bản tra đã lưu trước 5.5: nhóm 2 không có trong mục 2.9 → về nhóm 1.~~ **Sai, đã bỏ ở 6.2** (xem dưới).
 - **Số thập phân kiểu VN** ("1.234,5") trước đây bị đọc thành 12345; nay đọc đúng 1234,5.
 - **Tra theo MST** ưu tiên khớp đúng MST; chỉ khi không có mới khớp MST mẹ/chi nhánh (trước đây có thể lấy nhầm số của chi nhánh).
 - **Kỳ lấy theo bảng 12 tháng của CIC** dùng dư nợ vay (không gồm thẻ) cho khớp với bản tra thật.
@@ -155,6 +154,16 @@ Mỗi cảnh báo nhóm nợ ghi ngày tra, ngày số liệu, số tiền ở n
 Lỗi ở 6.0: bản tra đọc bằng bản trước 5.5 được chuẩn hoá nhóm nợ trong kho (Diễn biến đúng), nhưng phiên Nhóm KH / Theo kỳ /
 1 KH khôi phục từ lần mở trước vẫn dùng bảng gộp cũ → Nhóm KH còn báo nhóm 2 trong khi Diễn biến không có. Nay sau khi chuẩn hoá,
 tool tính lại và vẽ lại cả 3 màn, lưu lại cả 3 phiên; hồ sơ trong Lịch sử có bảng gộp lệch cũng được tính lại.
+
+## v6.2 — Hoàn lại nhóm nợ bị hạ nhầm, Nhóm KH ghi rõ kỳ đang mở
+**Lỗi do bản 6.0**: quy tắc "nhóm 2 phải có trong mục 2.9" hạ nhầm nợ nhóm 2 THẬT về nhóm 1. Ví dụ báo cáo ghi
+"Dư nợ cần chú ý 890,741" tại một TCTD nhưng mục 2.9 trống. Nhóm KH (đọc lại báo cáo) báo N2, còn Diễn biến (kho đã bị hạ) không báo.
+- Bỏ hẳn việc tự đổi nhóm nợ. Các dòng đã bị hạ (có dấu `_gFix`) tự hoàn lại nhóm 2 khi mở tool.
+- Bản tra lưu khi tool chưa ghi số tiền theo nhóm: giữ đúng nhóm đã đọc, ghi "cần xác nhận số tiền trên báo cáo gốc". Mức cảnh báo không bị hạ.
+- Thanh liên kết Nhóm KH ghi rõ **Đang mở: N công ty · ngày tra · ngày số liệu → kỳ** theo cùng quy ước Diễn biến.
+  Ô chọn nhóm/kỳ chuyển sang mục "Mở kỳ khác từ kho", mặc định là nhóm khớp danh sách đang mở và kỳ của dữ liệu đang mở.
+- Sang Diễn biến từ Nhóm KH thì chọn sẵn kỳ của dữ liệu đang mở.
+- Câu "Có dư nợ nhóm ≥2 trong nhóm kỳ …" ghi tên công ty và nguồn (bản tra thật / kéo từ bản tra ngày …).
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
