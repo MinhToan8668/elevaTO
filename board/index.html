@@ -104,9 +104,20 @@ button{cursor:pointer;border:none;background:none}
 #qcBar.show{display:flex}
 #qcBar b{color:#9a7212} :root[data-theme="dark"] #qcBar b{color:var(--gold)}
 #qcBar .dot{width:10px;height:10px;border-radius:50%;background:#ffd84a;box-shadow:0 0 10px #ffd84a}
-#qcChip{position:fixed;z-index:35;display:none;align-items:center;gap:6px;padding:6px;border-radius:16px;font-size:12px}
+#qcChip{position:fixed;z-index:35;display:none;flex-direction:column;gap:6px;padding:8px;border-radius:18px;font-size:12px;max-width:min(560px,calc(100vw - 16px))}
 #qcChip.show{display:flex}
-#qcChip span{padding:0 6px;color:var(--muted);white-space:nowrap}
+#qcChip .qrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#qcChip span{padding:0 4px;color:var(--muted);white-space:nowrap}
+#qcPrev{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent-tx)!important;min-width:60px}
+#qcPrev.bad{color:var(--red)!important;font-weight:500;font-size:11.5px;font-family:var(--ff-body)}
+.qalts:empty{display:none}
+.qa{font-family:var(--mono);font-size:12.5px;padding:5px 9px;border-radius:9px;background:var(--input);box-shadow:inset 0 0 0 1px var(--line2)}
+.qa:hover{box-shadow:inset 0 0 0 1px var(--emerald);color:var(--accent-tx)}
+.qkeys{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.qkeys button{min-width:32px;height:30px;padding:0 7px;border-radius:9px;font-size:13px;font-weight:600;background:var(--input);box-shadow:inset 0 0 0 1px var(--line)}
+.qkeys button:hover{color:var(--accent-tx);box-shadow:inset 0 0 0 1px var(--emerald)}
+.qdec{display:flex;align-items:center;gap:5px;color:var(--muted);white-space:nowrap}
+.qdec select{height:30px;border-radius:9px;border:1px solid var(--line2);background:var(--input);color:var(--white);outline:none;padding:0 5px}
 #qcChip input{font-family:var(--mono);font-size:14px;background:var(--input);border:1px solid var(--line2);border-radius:10px;padding:7px 9px;width:240px;outline:none;color:var(--white);user-select:text;-webkit-user-select:text}
 #qcChip input:focus{border-color:var(--emerald)}
 
@@ -227,6 +238,7 @@ body.at-home #top,body.at-home #tools,body.at-home #pages,body.at-home #calc{dis
 .hempty{max-width:1240px;margin:60px auto;text-align:center;color:var(--muted)}
 .props{position:fixed;top:84px;left:80px;z-index:19;display:none;align-items:center;gap:6px;padding:6px 8px;border-radius:18px;max-width:calc(100% - 100px);flex-wrap:wrap}
 .props.show{display:flex}
+.props.mini{padding:4px}
 .props .pl{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;padding-left:4px}
 .props input[type=range]{width:110px;accent-color:#00b386}
 .props .pv{font-family:var(--mono);font-size:12px;min-width:26px;color:var(--white)}
@@ -234,6 +246,14 @@ body.at-home #top,body.at-home #tools,body.at-home #pages,body.at-home #calc{dis
 .props input[type=number]{width:58px;font-family:var(--mono)}
 .props .tb{height:32px;min-width:32px;padding:0 9px;font-size:12.5px}
 .props .tb.danger{color:var(--red)}
+.sbar{position:fixed;z-index:18;border-radius:99px;background:rgba(15,40,32,.06);box-shadow:inset 0 0 0 1px var(--line);transition:opacity .2s}
+:root[data-theme="dark"] .sbar{background:rgba(255,255,255,.05)}
+.sbar.h{left:84px;right:30px;bottom:4px;height:12px}
+.sbar.v{right:4px;top:84px;bottom:76px;width:12px}
+.sbar .sth{position:absolute;border-radius:99px;background:linear-gradient(180deg,rgba(0,200,150,.55),rgba(0,160,120,.55));box-shadow:inset 0 1px 0 rgba(255,255,255,.5);cursor:grab}
+.sbar .sth:hover,.sbar .sth.drag{background:linear-gradient(180deg,#22dcae,#00b386)}
+.sbar.h .sth{top:2px;bottom:2px} .sbar.v .sth{left:2px;right:2px}
+body.at-home .sbar,body.no-sbar .sbar{display:none}
 @media (max-width:760px){.hide-s,.savest{display:none}#calc{right:8px;left:8px;width:auto}.bname{width:34vw}}
 </style>
 </head>
@@ -297,8 +317,15 @@ body.at-home #top,body.at-home #tools,body.at-home #pages,body.at-home #calc{dis
 <div id="calcHint"></div>
 <div id="toast" class="glass"></div>
 <div id="props" class="props glass"></div>
+<div class="sbar h" id="sbH" title="Kéo để cuộn ngang"><div class="sth"></div></div>
+<div class="sbar v" id="sbV" title="Kéo để cuộn dọc"><div class="sth"></div></div>
 <div id="qcBar" class="glass"><span class="dot"></span><span>Kéo <b>khung vàng</b> quanh phép tính viết tay · <b>Ctrl+E</b> hoặc <b>Enter</b> để tính · <b>Esc</b> thoát</span><button class="tb cta" id="qcGo">Tính =</button></div>
-<div id="qcChip" class="glass"><span id="qcMsg">Đã hiểu</span><input id="qcIn" spellcheck="false"><button class="tb cta" id="qcOk" title="Tính lại">=</button><button class="tb" id="qcX" title="Đóng">✕</button></div>
+<div id="qcChip" class="glass">
+  <div class="qrow"><span id="qcMsg">Máy hiểu là</span><input id="qcIn" spellcheck="false"><button class="tb cta" id="qcOk" title="Ghi lại kết quả (Enter)">=</button><span id="qcPrev"></span><button class="tb" id="qcX" title="Đóng">✕</button></div>
+  <div class="qrow qalts" id="qcAlts"></div>
+  <div class="qrow"><div class="qkeys" id="qcKeys"><button data-i="√(">√</button><button data-i="∛(">∛</button><button data-i="root("> ⁿ√</button><button data-i="^">xʸ</button><button data-i="^2">x²</button><button data-i="(">(</button><button data-i=")">)</button><button data-i="×">×</button><button data-i="÷">÷</button><button data-i="−">−</button><button data-i="+">+</button><button data-i="π">π</button><button data-i="%">%</button><button data-i="!">n!</button><button data-i="ln(">ln</button><button data-i="log(">log</button><button data-i="⌫">⌫</button></div>
+  <label class="qdec">Làm tròn <select id="qcDec"><option value="auto">Tự động</option><option value="0">0</option><option value="2">2 số</option><option value="4">4 số</option><option value="6">6 số</option></select></label></div>
+</div>
 <div class="menu glass" id="cardMenu">
   <button id="cmOpen">Mở bảng</button>
   <button id="cmRename">Đổi tên</button>
@@ -317,6 +344,8 @@ body.at-home #top,body.at-home #tools,body.at-home #pages,body.at-home #calc{dis
   <button data-pat="grid">Lưới ô</button>
   <button data-pat="dots">Chấm nhỏ</button>
   <button data-pat="lines">Dòng kẻ</button>
+  <div class="t">Hiển thị</div>
+  <button id="mSbar">Thanh cuộn ngang / dọc</button>
 </div>
 <div class="menu glass" id="fileMenu">
   <button id="mPng">Xuất trang này ra PNG</button>
@@ -479,6 +508,8 @@ body.at-home #top,body.at-home #tools,body.at-home #pages,body.at-home #calc{dis
       <ul>
         <li><kbd>V</kbd> chọn · <kbd>H</kbd> kéo bảng · <kbd>P</kbd> bút · <kbd>M</kbd> bút dạ quang · <kbd>E</kbd> tẩy · <kbd>L</kbd> đường · <kbd>A</kbd> mũi tên · <kbd>R</kbd> chữ nhật · <kbd>O</kbd> elip · <kbd>T</kbd> chữ · <kbd>K</kbd> laser</li>
         <li>Thanh tuỳ chọn phía trên hiện theo công cụ: độ dày nét, nét đứt, tô nền, font chữ, cỡ chữ, đậm/nghiêng, khung. Chọn sẵn đối tượng (V) rồi đổi là áp dụng luôn.</li>
+        <li>Thanh cuộn ngang ở đáy và dọc ở mép phải: kéo để đi khắp bảng (bật/tắt trong nút <b>Nền</b>). Thanh tuỳ chọn có nút <b>◂ Ẩn</b> để thu gọn.</li>
+        <li>Ô "Máy hiểu là" sau khi tính nhanh: sửa trực tiếp, chọn "cách đọc khác", bấm phím ký hiệu (√ ∛ ⁿ√ xʸ π n! ln…) và chọn số chữ số làm tròn.</li>
         <li>Dán ảnh: copy ảnh hoặc chụp màn hình (Win+Shift+S) rồi <kbd>Ctrl+V</kbd> trên bảng. Chọn ảnh → <b>✂ Cắt ảnh</b> → kéo khung phần muốn giữ.</li>
         <li><kbd>1</kbd>–<kbd>7</kbd> đổi màu · <kbd>[</kbd> <kbd>]</kbd> nét nhỏ/to · giữ <kbd>Shift</kbd> để vẽ thẳng 45° / hình vuông</li>
         <li>Giữ <kbd>Space</kbd> hoặc chuột giữa để kéo bảng · <kbd>Ctrl</kbd>+lăn chuột / chụm 2 ngón để zoom · <kbd>Ctrl+0</kbd> về 100%</li>
@@ -906,6 +937,44 @@ function drawObj(c, o) {
   }
   c.restore();
 }
+/* scrollbars: the board is unbounded, so the scroll range = drawn content + current view, padded */
+let sbExt = null, showSbar = true;
+try { showSbar = localStorage.getItem('elevato-board-sbar') !== 'off'; } catch (e) {}
+function worldExtent() {
+  const [vx0, vy0] = toWorld(0, 0), [vx1, vy1] = toWorld(W, H), pw = vx1 - vx0, ph = vy1 - vy0;
+  let a = vx0, b = vy0, c = vx1, d = vy1;
+  for (const o of page().objs) { const bb = bbox(o); a = Math.min(a, bb[0] - pw * .5); b = Math.min(b, bb[1] - ph * .5); c = Math.max(c, bb[2] + pw * .5); d = Math.max(d, bb[3] + ph * .5); }
+  return { a, b, c, d, vx0, vy0, pw, ph };
+}
+function updBars() {
+  if (!showSbar || document.body.classList.contains('at-home')) return;
+  const e = sbExt || worldExtent(), [vx0, vy0] = toWorld(0, 0);
+  for (const [el, horiz] of [[$('sbH'), true], [$('sbV'), false]]) {
+    const L = horiz ? el.clientWidth : el.clientHeight, span = horiz ? e.c - e.a : e.d - e.b, vis = horiz ? e.pw : e.ph, pos = horiz ? vx0 - e.a : vy0 - e.b;
+    const size = Math.max(36, Math.min(L, L * vis / span)), off = Math.max(0, Math.min(L - size, (L - size) * pos / Math.max(1e-6, span - vis)));
+    const th = el.firstElementChild; if (horiz) { th.style.width = size + 'px'; th.style.left = off + 'px'; } else { th.style.height = size + 'px'; th.style.top = off + 'px'; }
+  }
+}
+for (const [id, horiz] of [['sbH', true], ['sbV', false]]) {
+  const el = $(id), th = el.firstElementChild;
+  let st = null;
+  th.addEventListener('pointerdown', e => { e.stopPropagation(); th.setPointerCapture(e.pointerId); th.classList.add('drag'); sbExt = worldExtent(); st = { p: horiz ? e.clientX : e.clientY, v: { ...view() } }; });
+  th.addEventListener('pointermove', e => {
+    if (!st) return;
+    const L = horiz ? el.clientWidth : el.clientHeight, size = horiz ? th.offsetWidth : th.offsetHeight, span = horiz ? sbExt.c - sbExt.a : sbExt.d - sbExt.b, vis = horiz ? sbExt.pw : sbExt.ph;
+    const dw = ((horiz ? e.clientX : e.clientY) - st.p) * (span - vis) / Math.max(1, L - size), v = view();
+    if (horiz) v.x = st.v.x - dw * v.z; else v.y = st.v.y - dw * v.z; dirty = true;
+  });
+  th.addEventListener('pointerup', () => { st = null; sbExt = null; th.classList.remove('drag'); save(); });
+  el.addEventListener('pointerdown', e => { // click on the track → jump there
+    if (e.target !== el) return; const r = el.getBoundingClientRect(), ext = worldExtent(), v = view();
+    const f = horiz ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height;
+    if (horiz) v.x = -(ext.a + f * (ext.c - ext.a) - ext.pw / 2) * v.z; else v.y = -(ext.b + f * (ext.d - ext.b) - ext.ph / 2) * v.z;
+    dirty = true; save();
+  });
+}
+function setSbar(on) { showSbar = on; document.body.classList.toggle('no-sbar', !on); $('mSbar').classList.toggle('on', on); try { localStorage.setItem('elevato-board-sbar', on ? 'on' : 'off'); } catch (e) {} dirty = true; }
+$('mSbar').onclick = () => setSbar(!showSbar);
 function render() {
   const v = view(), light = isLight();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -955,7 +1024,7 @@ function render() {
 }
 const eraserR = () => (ST.eraser / 2) / view().z;
 function loop() {
-  if (dirty || laser.length) { dirty = false; render(); if (!act && sigOf() !== propSig) renderProps(); }
+  if (dirty || laser.length) { dirty = false; render(); updBars(); if (!act && sigOf() !== propSig) renderProps(); }
   requestAnimationFrame(loop);
 }
 let marquee = null, laserDot = null, hover = null, editing = null;
@@ -1194,7 +1263,8 @@ function editSel(fn) {
 
 /* ═══ tool options bar (size, font, dashes…) ═══ */
 const ST = { w: 4, eraser: 20, dash: false, fill: false, textSize: 28, font: 'body', bold: false, italic: false, card: false };
-let cropTarget = null, propSig = '';
+let cropTarget = null, propSig = '', propsHidden = false;
+try { propsHidden = localStorage.getItem('elevato-board-props') === 'hidden'; } catch (e) {}
 function selObjs() { return tool === 'select' ? page().objs.filter(o => sel.has(o.id)) : []; }
 function renderProps() {
   const so = selObjs(), kinds = new Set(so.length ? so.map(o => o.t) : [tool]), bar = $('props');
@@ -1217,7 +1287,8 @@ function renderProps() {
   }
   if (so.length === 1 && so[0].t === 'img') h += `<button class="tb ${cropTarget ? 'on' : ''}" data-p="crop">✂ Cắt ảnh</button>${so[0].crop ? '<button class="tb" data-p="uncrop">Ảnh gốc</button>' : ''}`;
   if (so.length) h += `<span class="sep"></span><button class="tb" data-p="front" title="Đưa lên trên cùng">⬆ Lên trên</button><button class="tb" data-p="dup" title="Nhân bản (Ctrl+D)">⧉</button><button class="tb danger" data-p="del" title="Xoá (Del)">🗑</button>`;
-  bar.innerHTML = h; bar.classList.toggle('show', !!h && !document.body.classList.contains('at-home'));
+  if (h) h = propsHidden ? '<button class="tb" data-p="unhide" title="Hiện thanh tuỳ chọn">⚙ Tuỳ chọn ▸</button>' : h + '<span class="sep"></span><button class="tb" data-p="hide" title="Ẩn thanh tuỳ chọn">◂ Ẩn</button>';
+  bar.innerHTML = h; bar.classList.toggle('show', !!h && !document.body.classList.contains('at-home')); bar.classList.toggle('mini', propsHidden);
   bar.querySelectorAll('[data-p]').forEach(el => {
     const k = el.dataset.p;
     if (el.type === 'range') {
@@ -1235,6 +1306,7 @@ function propAction(k) {
   const so = selObjs(), tx = so.find(o => o.t === 'text');
   const flip = (key, st) => { const nv = so.length ? !(so.find(o => o.t === 'text' || 'x1' in o) || {})[key] : !ST[st]; ST[st] = nv; editSel(o => { if (key === 'dash' || key === 'fill' ? 'x1' in o : o.t === 'text') { o[key] = nv ? 1 : 0; if (o.t === 'text') measureText(o); } }); };
   switch (k) {
+    case 'hide': case 'unhide': propsHidden = k === 'hide'; try { localStorage.setItem('elevato-board-props', propsHidden ? 'hidden' : 'shown'); } catch (e) {} break;
     case 'dash': flip('dash', 'dash'); break;
     case 'fill': flip('fill', 'fill'); break;
     case 'bold': flip('b', 'bold'); break;
@@ -1861,7 +1933,7 @@ function boxOf(list) {
   return { x1, y1, x2, y2, w: x2 - x1, h: y2 - y1 };
 }
 const mkItem = pts => ({ pts, ...boxOf(pts.map(([x, y]) => ({ x1: x, y1: y, x2: x, y2: y }))) });
-const strokesOf = list => list.flatMap(i => i.frac ? [] : i.items ? strokesOf(i.items) : [i.pts]);
+const strokesOf = list => list.flatMap(i => i.frac || i.rad ? [] : i.items ? strokesOf(i.items) : [i.pts]);
 const isFlat = i => !i.frac && i.w > 3 && i.h < Math.max(4, i.w * .28);
 
 // recogniser: Google handwriting service (needs internet); returns candidate strings
@@ -1878,16 +1950,44 @@ async function hwRecognize(strokes) {
 }
 // handwriting look-alikes → math characters
 const HW_MAP = { x: '*', X: '*', '×': '*', '·': '*', '•': '*', '∙': '*', '÷': '/', ':': '/', o: '0', O: '0', D: '0', Q: '0', '°': '0', l: '1', I: '1', '|': '1', i: '1', j: '1', s: '5', S: '5',
-  z: '2', Z: '2', g: '9', q: '9', b: '6', G: '6', B: '8', '&': '8', T: '7', ',': '.', '−': '-', '–': '-', '—': '-', '_': '-', '~': '-', '[': '(', '{': '(', ']': ')', '}': ')', '∧': '^', '＋': '+', t: '+' };
+  z: '2', Z: '2', g: '9', q: '9', b: '6', G: '6', B: '8', '&': '8', T: '7', ',': '.', '−': '-', '–': '-', '—': '-', '_': '-', '~': '-', '[': '(', '{': '(', ']': ')', '}': ')', '∧': '^', '＋': '+', t: '+', '√': '√', '∛': '∛', 'π': 'π', '^': '^' };
 function hwNorm(t, sup) {
-  t = [...t.replace(/\s+/g, '')].map(c => HW_MAP[c] ?? c).join('').replace(/[^0-9.+\-*/^()%=√]/g, '');
+  t = [...t.replace(/\s+/g, '')].map(c => HW_MAP[c] ?? c).join('').replace(/[^0-9.+\-*/^()%=√∛π!]/g, '');
   if (sup) t = t.replace(/^\^+/, '');
   return t;
 }
 // lay strokes out like handwriting: fraction bars, superscripts (exponents), plain runs
+// √ drawn as one stroke: hook down to a low vertex, up, then a flat overbar to the right
+function radicalOf(it, H0) {
+  const P = it.pts; if (!P || P.length < 5 || it.w < H0 * .7 || it.h < H0 * .7) return null;
+  let iLow = 0; P.forEach((p, i) => { if (p[1] > P[iLow][1]) iLow = i; });
+  if (iLow === 0 || iLow > P.length * .75) return null;
+  const top = it.y1 + it.h * .22;
+  let iTop = -1; for (let i = iLow; i < P.length; i++) if (P[i][1] <= top) { iTop = i; break; }
+  if (iTop < 0 || P[0][1] < top) return null;
+  const barEnd = Math.max(...P.slice(iTop).map(p => p[0]));
+  if (barEnd - P[iTop][0] < Math.max(it.w * .3, H0 * .45)) return null;
+  return { x0: P[iLow][0], barEnd, y: it.y1, y2: it.y2 };
+}
 async function hwParse(items, out) {
   if (!items.length) return [''];
   const ref = items.filter(i => !isFlat(i)), H0 = median(ref.map(i => i.h)) || 20;
+  // a √ written as check-mark + separate overbar → join into one stroke first
+  for (const c of items.filter(i => !isFlat(i) && i.pts)) {
+    const P = c.pts, end = P[P.length - 1];
+    if (end[1] > c.y1 + c.h * .25 || P[0][1] < c.y1 + c.h * .3) continue;
+    const bar = items.find(f => f !== c && isFlat(f) && Math.abs(f.x1 - end[0]) < H0 * .6 && Math.abs((f.y1 + f.y2) / 2 - end[1]) < H0 * .5 && f.w > H0 * .5);
+    if (bar && items.includes(c)) { const pts = P.concat(bar.pts[0][0] < bar.pts[bar.pts.length - 1][0] ? bar.pts : [...bar.pts].reverse()); items = items.filter(i => i !== c && i !== bar).concat([mkItem(pts)]); }
+  }
+  // radicals (√ and ⁿ√ with a small index over the hook)
+  for (const it of [...items]) {
+    const r = items.includes(it) && radicalOf(it, H0); if (!r) continue;
+    const inner = items.filter(i => i !== it && (i.x1 + i.x2) / 2 > r.x0 && (i.x1 + i.x2) / 2 < r.barEnd + H0 * .2 && (i.y1 + i.y2) / 2 > r.y - H0 * .1 && (i.y1 + i.y2) / 2 < r.y2 + H0 * .3);
+    if (!inner.length) continue;
+    const idx = items.filter(i => i !== it && !inner.includes(i) && i.h < it.h * .6 && (i.x1 + i.x2) / 2 < r.x0 && i.y2 < (it.y1 + it.y2) / 2 + H0 * .1 && i.x2 > it.x1 - H0 * .5);
+    const node = { rad: true, inner, idx, ...boxOf([it, ...inner, ...idx]) };
+    items = items.filter(i => i !== it && !inner.includes(i) && !idx.includes(i)).concat([node]);
+  }
   for (const bar of items.filter(i => isFlat(i) && i.w > H0 * 1.1).sort((a, b) => b.w - a.w)) {
     if (!items.includes(bar)) continue;
     const cy = (bar.y1 + bar.y2) / 2, inSpan = i => { const cx = (i.x1 + i.x2) / 2; return cx > bar.x1 - bar.w * .08 && cx < bar.x2 + bar.w * .08; };
@@ -1898,33 +1998,41 @@ async function hwParse(items, out) {
       items = items.filter(i => i !== bar && !above.includes(i) && !below.includes(i)).concat([node]);
     }
   }
-  // characters = strokes that overlap horizontally
+  const isNode = i => i.frac || i.rad;
+  // characters = strokes that overlap horizontally (but a small raised stroke is an exponent, not part of its base)
   const cl = [];
   for (const it of [...items].sort((a, b) => a.x1 - b.x1)) {
     const last = cl[cl.length - 1];
-    if (last && !it.frac && !last.frac && Math.min(it.x2, last.x2) - it.x1 > .35 * Math.min(it.w || 1, last.w || 1)) { last.items.push(it); Object.assign(last, boxOf(last.items)); }
-    else cl.push(it.frac ? it : { items: [it], ...boxOf([it]) });
+    const raised = (a, b) => !isFlat(a) && a.h < b.h * .62 && a.y2 < (b.y1 + b.y2) / 2;
+    if (last && !isNode(it) && !isNode(last) && Math.min(it.x2, last.x2) - it.x1 > .35 * Math.min(it.w || 1, last.w || 1) && !raised(it, last) && !raised(last, it)) { last.items.push(it); Object.assign(last, boxOf(last.items)); }
+    else cl.push(isNode(it) ? it : { items: [it], ...boxOf([it]) });
   }
-  let body = cl.filter(c => !c.frac && !c.items.every(isFlat));
-  if (!body.length) body = cl.map(c => c.frac ? { ...c, h: c.h / 2.2 } : c); // e.g. a lone fraction
+  let body = cl.filter(c => !isNode(c) && !c.items.every(isFlat));
+  if (!body.length) body = cl.map(c => isNode(c) ? { ...c, h: c.frac ? c.h / 2.2 : c.h * .8 } : c); // e.g. a lone fraction or root
   const hs = body.map(c => c.h).sort((a, b) => b - a);
   const big = body.filter(c => c.h >= (hs[Math.floor(hs.length / 2)] || 0) * .99), H = median(big.map(c => c.h)) || H0, mid = median(big.map(c => (c.y1 + c.y2) / 2));
   cl.forEach(c => {
-    const flat = !c.frac && c.items.every(isFlat), cy = (c.y1 + c.y2) / 2;
-    c.sup = !c.frac && (flat ? cy < mid - .38 * H : c.h < .8 * H && c.y2 < mid + .12 * H);
+    const flat = !isNode(c) && c.items.every(isFlat), cy = (c.y1 + c.y2) / 2;
+    c.sup = !isNode(c) && (flat ? cy < mid - .38 * H : c.h < .8 * H && c.y2 < mid + .12 * H);
   });
   out.H = out.H || H; out.mid = out.mid ?? mid;
   // consecutive same-level characters form a run sent to the recogniser together
   const runs = [];
-  for (const c of cl) { const last = runs[runs.length - 1]; if (c.frac || !last || last.frac || last.sup !== c.sup) runs.push(c.frac ? c : { sup: c.sup, cs: [c] }); else last.cs.push(c); }
+  for (const c of cl) { const last = runs[runs.length - 1]; if (isNode(c) || !last || isNode(last) || last.sup !== c.sup) runs.push(isNode(c) ? c : { sup: c.sup, cs: [c] }); else last.cs.push(c); }
+  if (out.struct === undefined) out.struct = runs.some(r => isNode(r) || r.sup);
   return Promise.all(runs.map(async r => {
     if (r.frac) { const [n, d] = await Promise.all([hwParse(r.num, {}), hwParse(r.den, {})]); return [`(${n[0]})/(${d[0]})`]; }
+    if (r.rad) {
+      const [inn, ix] = await Promise.all([hwParse(r.inner, {}), r.idx.length ? hwRecognize(r.idx.map(i => i.pts)) : Promise.resolve([])]);
+      const n = ix.map(t => hwNorm(t)).find(t => /^\d+$/.test(t));
+      return [!n || n === '2' ? `√(${inn[0]})` : n === '3' ? `∛(${inn[0]})` : `root(${inn[0]},${n})`];
+    }
     const cands = (await hwRecognize(r.cs.flatMap(c => strokesOf(c.items)))).map(t => hwNorm(t, r.sup)).filter((t, i, a) => t && a.indexOf(t) === i);
     if (!cands.length) cands.push('');
     return r.sup ? cands.map(t => `^(${t})`) : cands;
   })).then(opts => { out.opts = opts; return opts.map(o => o[0]); }).then(first => [first.join('')]);
 }
-const prettyMath = e => e.replace(/\*/g, '×').replace(/\//g, '÷').replace(/\^\((\d+(\.\d+)?)\)/g, '^$1');
+const prettyMath = e => e.replace(/\bsqrt\(/g, '√(').replace(/\bcbrt\(/g, '∛(').replace(/\bpi\b/g, 'π').replace(/\*/g, '×').replace(/\//g, '÷').replace(/\^\((\d+(\.\d+)?)\)/g, '^$1');
 function qcEval(expr) {
   const lhs = expr.split('=')[0];
   return { lhs, v: evalExpr(lhs.replace(/×/g, '*').replace(/÷/g, '/'), scopeFor()) };
@@ -1944,42 +2052,65 @@ async function qcRun() {
   else {
     toast('Đang đọc chữ viết tay…');
     try {
-      const out = {}; await hwParse(pens.map(o => mkItem(o.pts)), out);
+      const out = {}, whole = hwRecognize(pens.map(o => o.pts)).catch(() => []);
+      await hwParse(pens.map(o => mkItem(o.pts)), out);
       if (out.H) { place.H = out.H; place.mid = out.mid; }
       // first combination that evaluates wins; otherwise try other candidates run by run
       const opts = out.opts, pick = opts.map(() => 0), build = () => opts.map((o, i) => o[pick[i]]).join('');
       expr = build();
       const ok = e => { try { qcEval(e); return /\d/.test(e.split('=')[0]); } catch (er) { return false; } };
       for (let i = 0; i < opts.length && !ok(expr); i++) for (let j = 1; j < opts[i].length; j++) { pick[i] = j; if (ok(build())) { expr = build(); break; } pick[i] = 0; }
+      // other readings the teacher can pick from in the little box
+      const alts = [expr];
+      opts.forEach((o, i) => o.slice(1, 4).forEach(c => { const save = pick[i]; pick[i] = o.indexOf(c); alts.push(build()); pick[i] = save; }));
+      if (!out.struct) (await whole).forEach(t => alts.push(hwNorm(t))); // flat line: the one-shot reading is a useful second opinion
+      place.alts = [...new Set(alts.map(a => a.split('=')[0]).filter(a => a && ok(a)))].slice(0, 6);
     } catch (e) { return qcChip(null, place, 'Không đọc được chữ (cần kết nối mạng) — gõ lại phép tính:'); }
   }
   hadEq = /=/.test(expr);
   qcChip(expr, place, null, hadEq);
 }
-// write/refresh the answer right after the "=" and show what was understood
+// write/refresh the answer right after the "=" and let the teacher fix the reading in the little box
+let qcDec = 'auto';
+try { qcDec = localStorage.getItem('elevato-board-qcdec') || 'auto'; } catch (e) {}
+const qcFmt = v => qcDec === 'auto' ? fmtNum(v) : fmtNum(v, +qcDec);
 function qcChip(expr, place, msg, hadEq) {
   const chip = $('qcChip'), inp = $('qcIn');
   const show = () => {
     const [sx, sy] = toScreen(qcResult ? qcResult.x : place.x, (qcResult ? qcResult.y + qcResult.h : place.mid + place.H / 2));
-    chip.style.left = Math.min(innerWidth - 420, Math.max(8, sx - 20)) + 'px'; chip.style.top = Math.min(innerHeight - 60, sy + 12) + 'px'; chip.classList.add('show');
+    chip.classList.add('show');
+    chip.style.left = Math.min(innerWidth - chip.offsetWidth - 8, Math.max(8, sx - 20)) + 'px'; chip.style.top = Math.min(innerHeight - chip.offsetHeight - 8, sy + 12) + 'px';
   };
+  const preview = () => { try { $('qcPrev').textContent = '= ' + qcFmt(qcEval(inp.value).v); $('qcPrev').classList.remove('bad'); } catch (er) { $('qcPrev').textContent = er.message; $('qcPrev').classList.add('bad'); } };
   const write = e => {
-    let r; try { r = qcEval(e); } catch (er) { $('qcMsg').textContent = '⚠ ' + er.message; show(); inp.focus(); return false; }
-    const txt = (hadEq ? '' : '= ') + fmtNum(r.v), s = Math.round(Math.min(120, Math.max(18, place.H * 1.05)));
+    let r; try { r = qcEval(e); } catch (er) { $('qcMsg').textContent = '⚠ Chưa tính được'; preview(); show(); inp.focus(); return false; }
+    const txt = (hadEq ? '' : '= ') + qcFmt(r.v), s = Math.round(Math.min(120, Math.max(18, place.H * 1.05)));
     if (qcResult && page().objs.includes(qcResult)) { qcResult.txt = txt; measureText(qcResult); }
     else { qcResult = addText(txt, place.x + place.H * .35, place.mid - s * .62, { s, b: 1, c: col()[1] }); }
-    commit(); $('qcMsg').textContent = 'Đã hiểu'; inp.value = prettyMath(r.lhs); show(); return true;
+    commit(); $('qcMsg').textContent = 'Máy hiểu là'; inp.value = prettyMath(r.lhs); preview(); show(); return true;
   };
   qcResult = null;
   inp.value = expr ? prettyMath(expr.split('=')[0]) : '';
-  $('qcMsg').textContent = msg || 'Đã hiểu';
-  if (expr && write(expr)) { clearTimeout(qcChip.t); qcChip.t = setTimeout(() => { if (document.activeElement !== inp) chip.classList.remove('show'); }, 9000); }
-  else { show(); setTimeout(() => inp.focus(), 0); }
+  $('qcMsg').textContent = msg || 'Máy hiểu là';
+  const alts = (place.alts || []).map(prettyMath).filter((a, i, arr) => arr.indexOf(a) === i);
+  $('qcAlts').innerHTML = alts.length > 1 ? '<span>Cách đọc khác:</span>' + alts.slice(1).map(a => `<button class="qa">${esc(a)}</button>`).join('') : '';
+  $('qcAlts').querySelectorAll('.qa').forEach(b => b.onclick = () => write(b.textContent));
+  $('qcDec').value = qcDec;
+  $('qcDec').onchange = e => { qcDec = e.target.value; try { localStorage.setItem('elevato-board-qcdec', qcDec); } catch (er) {} write(inp.value); };
+  $('qcKeys').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const ins = b.dataset.i, a = inp.selectionStart ?? inp.value.length, z = inp.selectionEnd ?? a;
+    if (ins === '⌫') { inp.value = a === z ? inp.value.slice(0, Math.max(0, a - 1)) + inp.value.slice(z) : inp.value.slice(0, a) + inp.value.slice(z); inp.focus(); inp.setSelectionRange(Math.max(0, a === z ? a - 1 : a), Math.max(0, a === z ? a - 1 : a)); }
+    else { inp.value = inp.value.slice(0, a) + ins + inp.value.slice(z); inp.focus(); inp.setSelectionRange(a + ins.length, a + ins.length); }
+    preview();
+  });
+  if (expr && write(expr)) { clearTimeout(qcChip.t); qcChip.t = setTimeout(() => { if (!chip.matches(':hover') && !chip.contains(document.activeElement)) chip.classList.remove('show'); }, 12000); }
+  else { preview(); show(); setTimeout(() => inp.focus(), 0); }
   $('qcOk').onclick = () => write(inp.value);
+  inp.oninput = preview;
   inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') { if (write(inp.value)) inp.blur(); } if (e.key === 'Escape') chip.classList.remove('show'); };
 }
 $('qcX').onclick = () => $('qcChip').classList.remove('show');
-cv.addEventListener('pointerdown', () => { if (document.activeElement !== $('qcIn')) $('qcChip').classList.remove('show'); });
+cv.addEventListener('pointerdown', () => { if (!$('qcChip').contains(document.activeElement)) $('qcChip').classList.remove('show'); });
 
 /* ═══════════════ BA II PLUS ═══════════════ */
 const KEYS = [
@@ -2487,7 +2618,7 @@ $('cInsT').onclick = () => {
 };
 
 /* ═══════════════ BOOT ═══════════════ */
-setTheme(THEME); buildTools(); setCalcMode(CM); updTools(); updPages(); updTimer(); updBgMenu(); resize();
+setTheme(THEME); setSbar(showSbar); buildTools(); setCalcMode(CM); updTools(); updPages(); updTimer(); updBgMenu(); resize();
 addEventListener('resize', resize);
 document.fonts && document.fonts.ready.then(() => { doc.pages.forEach(p => p.objs.forEach(o => o.t === 'text' && measureText(o))); dirty = true; });
 boot();
