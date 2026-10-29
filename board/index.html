@@ -520,7 +520,7 @@ body.at-home #bTopShow{display:none}
         <li>Thanh tuỳ chọn phía trên hiện theo công cụ: độ dày nét, nét đứt, tô nền, font chữ, cỡ chữ, đậm/nghiêng, khung. Chọn sẵn đối tượng (V) rồi đổi là áp dụng luôn.</li>
         <li>Thanh cuộn ngang ở đáy và dọc ở mép phải: kéo để đi khắp bảng (bật/tắt trong nút <b>Nền</b>). Thanh tuỳ chọn có nút <b>◂ Ẩn</b> để thu gọn.</li>
         <li>Ô "Máy hiểu là" sau khi tính nhanh: sửa trực tiếp, chọn "cách đọc khác", bấm phím ký hiệu (√ ∛ ⁿ√ xʸ π n! ln…) và chọn số chữ số làm tròn.</li>
-        <li>Dán ảnh: copy ảnh hoặc chụp màn hình (Win+Shift+S) rồi <kbd>Ctrl+V</kbd> trên bảng. Chọn ảnh → <b>✂ Cắt ảnh</b> → kéo khung phần muốn giữ.</li>
+        <li>Dán ảnh: copy ảnh hoặc chụp màn hình (Win+Shift+S) rồi <kbd>Ctrl+V</kbd> trên bảng. Chọn ảnh → <b>✂ Cắt ảnh</b> → kéo khung phần muốn giữ. Xoay ⟲ ⟳ 90°, thanh xoay tự do, lật ngang/dọc; kéo góc dưới phải để phóng to/thu nhỏ; <b>Ảnh gốc</b> để trả về ban đầu.</li>
         <li><kbd>1</kbd>–<kbd>7</kbd> đổi màu · <kbd>[</kbd> <kbd>]</kbd> nét nhỏ/to · giữ <kbd>Shift</kbd> để vẽ thẳng 45° / hình vuông</li>
         <li>Giữ <kbd>Space</kbd> hoặc chuột giữa để kéo bảng · <kbd>Ctrl</kbd>+lăn chuột / chụm 2 ngón để zoom · <kbd>Ctrl+0</kbd> về 100%</li>
         <li><kbd>Ctrl+Z</kbd>/<kbd>Ctrl+Y</kbd> · <kbd>Del</kbd> xoá vùng chọn · <kbd>Ctrl+D</kbd> nhân bản · <kbd>Ctrl+V</kbd> dán ảnh chụp đề bài · nháy đúp chữ để sửa</li>
@@ -832,7 +832,11 @@ function bbox(o) {
       return [Math.min(o.x1, o.x2) - h, Math.min(o.y1, o.y2) - h, Math.max(o.x1, o.x2) + h, Math.max(o.y1, o.y2) + h];
     }
     case 'text': { const p = o.f ? 12 : 0; return [o.x - p, o.y - p, o.x + o.w + p, o.y + o.h + p]; }
-    case 'img': return [o.x, o.y, o.x + o.w, o.y + o.h];
+    case 'img': {
+      if (!o.rot) return [o.x, o.y, o.x + o.w, o.y + o.h];
+      const a = o.rot * Math.PI / 180, cx = o.x + o.w / 2, cy = o.y + o.h / 2, ex = (Math.abs(o.w * Math.cos(a)) + Math.abs(o.h * Math.sin(a))) / 2, ey = (Math.abs(o.w * Math.sin(a)) + Math.abs(o.h * Math.cos(a))) / 2;
+      return [cx - ex, cy - ey, cx + ex, cy + ey];
+    }
   }
 }
 function hit(o, x, y, tol, edgeOnly) {
@@ -954,8 +958,10 @@ function drawObj(c, o) {
       let im = imgCache[o.src];
       if (!im) { im = imgCache[o.src] = new Image(); im.onload = () => dirty = true; im.src = src; }
       if (im.complete && im.naturalWidth) {
-        if (o.crop) { const [a, b, cw, ch] = o.crop, nw = im.naturalWidth, nh = im.naturalHeight; c.drawImage(im, a * nw, b * nh, cw * nw, ch * nh, o.x, o.y, o.w, o.h); }
-        else c.drawImage(im, o.x, o.y, o.w, o.h);
+        // rotate / flip around the picture's centre
+        c.translate(o.x + o.w / 2, o.y + o.h / 2); if (o.rot) c.rotate(o.rot * Math.PI / 180); if (o.fx || o.fy) c.scale(o.fx ? -1 : 1, o.fy ? -1 : 1);
+        if (o.crop) { const [a, b, cw, ch] = o.crop, nw = im.naturalWidth, nh = im.naturalHeight; c.drawImage(im, a * nw, b * nh, cw * nw, ch * nh, -o.w / 2, -o.h / 2, o.w, o.h); }
+        else c.drawImage(im, -o.w / 2, -o.h / 2, o.w, o.h);
       }
       break;
     }
@@ -1092,7 +1098,7 @@ cv.addEventListener('pointerdown', e => {
       const one = selOne();
       if (one && one.t === 'img') {
         const b = bbox(one);
-        if (Math.abs(x - b[2]) < 12 / v.z && Math.abs(y - b[3]) < 12 / v.z) { act = { kind: 'resize', o: one, r: one.w / one.h }; return; }
+        if (Math.abs(x - b[2]) < 12 / v.z && Math.abs(y - b[3]) < 12 / v.z) { act = { kind: 'resize', o: one, cx: one.x + one.w / 2, cy: one.y + one.h / 2, d0: Math.hypot(x - one.x - one.w / 2, y - one.y - one.h / 2) || 1, w0: one.w, h0: one.h }; return; }
       }
       const o = topHit(x, y, 6 / v.z);
       if (o) {
@@ -1134,7 +1140,10 @@ cv.addEventListener('pointermove', e => {
       dirty = true; break;
     }
     case 'crop': marquee = [Math.min(act.ox, x), Math.min(act.oy, y), Math.max(act.ox, x), Math.max(act.oy, y)]; dirty = true; break;
-    case 'resize': { const o = act.o; o.w = Math.max(20, x - o.x); o.h = o.w / act.r; dirty = true; break; }
+    case 'resize': { // scale about the centre so rotated pictures resize naturally
+      const o = act.o, k = Math.max(20 / act.w0, Math.hypot(x - act.cx, y - act.cy) / act.d0);
+      o.w = act.w0 * k; o.h = act.h0 * k; o.x = act.cx - o.w / 2; o.y = act.cy - o.h / 2; dirty = true; break;
+    }
     case 'marquee': {
       marquee = [Math.min(act.ox, x), Math.min(act.oy, y), Math.max(act.ox, x), Math.max(act.oy, y)];
       if (!e.shiftKey) sel.clear();
@@ -1310,15 +1319,25 @@ function renderProps() {
       <button class="tb ${o.b ? 'on' : ''}" data-p="bold" style="font-weight:800">B</button><button class="tb ${o.i ? 'on' : ''}" data-p="italic" style="font-style:italic;font-family:serif">I</button>
       <button class="tb ${o.f ? 'on' : ''}" data-p="card" title="Đóng khung kiểu thẻ công thức">▭ Khung</button>`;
   }
-  if (so.length === 1 && so[0].t === 'img') h += `<button class="tb ${cropTarget ? 'on' : ''}" data-p="crop">✂ Cắt ảnh</button>${so[0].crop ? '<button class="tb" data-p="uncrop">Ảnh gốc</button>' : ''}`;
+  const imgs = so.filter(o => o.t === 'img');
+  if (imgs.length) {
+    const r = Math.round(imgs[0].rot || 0);
+    h += `<span class="pl">ẢNH</span><button class="tb" data-p="rotL" title="Xoay trái 90°">⟲ 90°</button><button class="tb" data-p="rotR" title="Xoay phải 90°">⟳ 90°</button>
+      <input type="range" min="-180" max="180" step="1" value="${r}" data-p="rot" title="Xoay tự do"><span class="pv">${r}°</span>
+      <button class="tb ${imgs[0].fx ? 'on' : ''}" data-p="flipX" title="Lật ngang (gương)">⇋ Lật ngang</button><button class="tb ${imgs[0].fy ? 'on' : ''}" data-p="flipY" title="Lật dọc">⇅ Lật dọc</button>`;
+    if (imgs.length === 1) h += `<button class="tb ${cropTarget ? 'on' : ''}" data-p="crop">✂ Cắt ảnh</button>${imgs[0].crop || imgs[0].rot || imgs[0].fx || imgs[0].fy ? '<button class="tb" data-p="uncrop" title="Bỏ cắt, xoay, lật">Ảnh gốc</button>' : ''}`;
+  }
   if (so.length) h += `<span class="sep"></span><button class="tb" data-p="front" title="Đưa lên trên cùng">⬆ Lên trên</button><button class="tb" data-p="dup" title="Nhân bản (Ctrl+D)">⧉</button><button class="tb danger" data-p="del" title="Xoá (Del)">🗑</button>`;
   if (h) h = propsHidden ? '<button class="tb" data-p="unhide" title="Hiện thanh tuỳ chọn">⚙ Tuỳ chọn ▸</button>' : h + '<span class="sep"></span><button class="tb" data-p="hide" title="Ẩn thanh tuỳ chọn">◂ Ẩn</button>';
   bar.innerHTML = h; bar.classList.toggle('show', !!h && !document.body.classList.contains('at-home')); bar.classList.toggle('mini', propsHidden);
   bar.querySelectorAll('[data-p]').forEach(el => {
     const k = el.dataset.p;
     if (el.type === 'range') {
-      el.oninput = () => { el.nextElementSibling.textContent = el.value; const v = +el.value; if (k === 'eraser') ST.eraser = v; else { ST.w = v; liveW(v); } };
-      el.onchange = () => { if (k === 'w' && selObjs().length) commit(); };
+      el.oninput = () => {
+        const v = +el.value; el.nextElementSibling.textContent = el.value + (k === 'rot' ? '°' : '');
+        if (k === 'eraser') ST.eraser = v; else if (k === 'rot') { selObjs().forEach(o => { if (o.t === 'img') o.rot = v; }); dirty = true; } else { ST.w = v; liveW(v); }
+      };
+      el.onchange = () => { if ((k === 'w' || k === 'rot') && selObjs().length) commit(); };
     } else if (el.tagName === 'SELECT') el.onchange = () => { ST.font = el.value; editSel(o => { if (o.t === 'text') { o.ff = el.value; measureText(o); } }); renderProps(); };
     else if (el.type === 'number') el.onchange = () => setTextSize(+el.value);
     else el.onclick = () => propAction(k);
@@ -1339,8 +1358,16 @@ function propAction(k) {
     case 'card': flip('f', 'card'); break;
     case 'sz-': case 'sz+': { const cur = tx ? tx.s : ST.textSize, steps = [10, 12, 14, 16, 18, 20, 24, 28, 32, 38, 44, 52, 60, 72, 88, 104, 128, 160, 200];
       setTextSize(k === 'sz+' ? steps.find(x => x > cur) || cur * 1.2 : [...steps].reverse().find(x => x < cur) || cur / 1.2); return; }
-    case 'crop': cropTarget = cropTarget ? null : so[0]; if (cropTarget) toast('Kéo khung quanh phần ảnh muốn giữ lại'); break;
-    case 'uncrop': editSel(o => { if (o.crop) { const [a, b, cw, ch] = o.crop; o.w /= cw; o.h /= ch; o.x -= a * o.w; o.y -= b * o.h; delete o.crop; } }); break;
+    case 'crop':
+      if (!cropTarget && so[0].rot) { toast('Đưa ảnh về góc 0° rồi hãy cắt (kéo thanh xoay về 0)'); break; }
+      cropTarget = cropTarget ? null : so[0]; if (cropTarget) toast('Kéo khung quanh phần ảnh muốn giữ lại'); break;
+    case 'uncrop': editSel(o => {
+      if (o.crop) { const [a, b, cw, ch] = o.crop; o.w /= cw; o.h /= ch; o.x -= (o.fx ? 1 - a - cw : a) * o.w; o.y -= (o.fy ? 1 - b - ch : b) * o.h; delete o.crop; }
+      delete o.rot; delete o.fx; delete o.fy;
+    }); break;
+    case 'rotL': case 'rotR': editSel(o => { if (o.t === 'img') { let r = Math.round(((o.rot || 0) + (k === 'rotR' ? 90 : -90)) / 90) * 90; r = ((r + 180) % 360 + 360) % 360 - 180; o.rot = r; } }); break;
+    case 'flipX': editSel(o => { if (o.t === 'img') o.fx = o.fx ? 0 : 1; }); break;
+    case 'flipY': editSel(o => { if (o.t === 'img') o.fy = o.fy ? 0 : 1; }); break;
     case 'front': { const objs = page().objs, keep = objs.filter(o => !sel.has(o.id)); page().objs = keep.concat(objs.filter(o => sel.has(o.id))); commit(); break; }
     case 'dup': duplicate(); break;
     case 'del': page().objs = page().objs.filter(o => !sel.has(o.id)); sel.clear(); commit(); break;
@@ -1352,7 +1379,9 @@ function applyCrop() {
   if (!o || !m) return renderProps();
   const x1 = Math.max(m[0], o.x), y1 = Math.max(m[1], o.y), x2 = Math.min(m[2], o.x + o.w), y2 = Math.min(m[3], o.y + o.h);
   if (x2 - x1 < 8 || y2 - y1 < 8) { toast('Khung cắt quá nhỏ'); return renderProps(); }
-  const c = o.crop || [0, 0, 1, 1], fx = (x1 - o.x) / o.w, fy = (y1 - o.y) / o.h, fw = (x2 - x1) / o.w, fh = (y2 - y1) / o.h;
+  const c = o.crop || [0, 0, 1, 1], fw = (x2 - x1) / o.w, fh = (y2 - y1) / o.h;
+  let fx = (x1 - o.x) / o.w, fy = (y1 - o.y) / o.h;
+  if (o.fx) fx = 1 - fx - fw; if (o.fy) fy = 1 - fy - fh; // a flipped picture shows its source mirrored
   o.crop = [c[0] + fx * c[2], c[1] + fy * c[3], fw * c[2], fh * c[3]]; Object.assign(o, { x: x1, y: y1, w: x2 - x1, h: y2 - y1 });
   commit(); renderProps(); toast('Đã cắt ảnh — “Ảnh gốc” để khôi phục');
 }
