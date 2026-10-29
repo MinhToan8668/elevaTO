@@ -254,6 +254,14 @@ body.at-home #top,body.at-home #tools,body.at-home #pages,body.at-home #calc{dis
 .sbar .sth:hover,.sbar .sth.drag{background:linear-gradient(180deg,#22dcae,#00b386)}
 .sbar.h .sth{top:2px;bottom:2px} .sbar.v .sth{left:2px;right:2px}
 body.at-home .sbar,body.no-sbar .sbar{display:none}
+#bTopShow{position:fixed;top:10px;right:12px;z-index:21;display:none;height:34px;border-radius:14px;max-width:40vw;overflow:hidden;white-space:nowrap}
+body.top-min #top{display:none}
+body.top-min #bTopShow{display:inline-flex}
+body.top-min #tools{top:12px;max-height:calc(100% - 90px)}
+body.top-min .props{top:12px}
+body.top-min #calc,body.top-min #qcBar{top:12px}
+body.top-min .sbar.v{top:56px}
+body.at-home #bTopShow{display:none}
 @media (max-width:760px){.hide-s,.savest{display:none}#calc{right:8px;left:8px;width:auto}.bname{width:34vw}}
 </style>
 </head>
@@ -298,7 +306,9 @@ body.at-home .sbar,body.no-sbar .sbar{display:none}
   <button class="tb" id="bFile" title="Lưu / mở / xuất"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg></button>
   <button class="tb" id="bFull" title="Toàn màn hình"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <button class="tb" id="bHelp" title="Hướng dẫn (?)">?</button>
+  <button class="tb" id="bTopHide" title="Ẩn thanh trên (phím \)"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
 </header>
+<button class="glass tb" id="bTopShow" title="Hiện thanh trên (phím \)"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg><span id="topMiniName"></span></button>
 
 <nav id="tools" class="glass"></nav>
 
@@ -393,7 +403,7 @@ body.at-home .sbar,body.no-sbar .sbar{display:none}
     </div>
     <div class="mbody">
       <div class="pane on" id="p-tl">
-        <p class="d">Nhập dòng tiền theo thứ tự từ t = 0, cách nhau bằng dấu phẩy hoặc chấm phẩy. Có lãi suất thì bảng sẽ vẽ luôn PV từng kỳ và NPV.</p>
+        <p class="d">Nhập dòng tiền theo thứ tự từ t = 0, cách nhau bằng “, ” hoặc “;”. Số theo chuẩn quốc tế: 1,000.50 (phẩy ngăn hàng nghìn, chấm thập phân). Có lãi suất thì bảng sẽ vẽ luôn PV từng kỳ và NPV.</p>
         <div class="grid">
           <label class="f" style="grid-column:1/-1">Dòng tiền<input id="tlCf" value="-1000, 300, 400, 500, 600"></label>
           <label class="f">Lãi suất chiết khấu (%)<input id="tlR" value="10"></label>
@@ -514,6 +524,7 @@ body.at-home .sbar,body.no-sbar .sbar{display:none}
         <li><kbd>1</kbd>–<kbd>7</kbd> đổi màu · <kbd>[</kbd> <kbd>]</kbd> nét nhỏ/to · giữ <kbd>Shift</kbd> để vẽ thẳng 45° / hình vuông</li>
         <li>Giữ <kbd>Space</kbd> hoặc chuột giữa để kéo bảng · <kbd>Ctrl</kbd>+lăn chuột / chụm 2 ngón để zoom · <kbd>Ctrl+0</kbd> về 100%</li>
         <li><kbd>Ctrl+Z</kbd>/<kbd>Ctrl+Y</kbd> · <kbd>Del</kbd> xoá vùng chọn · <kbd>Ctrl+D</kbd> nhân bản · <kbd>Ctrl+V</kbd> dán ảnh chụp đề bài · nháy đúp chữ để sửa</li>
+        <li>Nút <b>⌃</b> cuối thanh trên (hoặc phím <kbd>\</kbd>) để ẩn thanh trên cho rộng bảng; bấm nút nhỏ góc phải để hiện lại.</li>
         <li><kbd>G</kbd> bật/tắt lưới (kiểu lưới chọn ở nút Nền: ô vuông, ô ly, chấm toạ độ, dòng kẻ) · nút mặt trăng/mặt trời đổi giao diện sáng–tối</li>
         <li><kbd>PageUp</kbd>/<kbd>PageDown</kbd> đổi trang · bảng tự lưu liên tục (<kbd>Ctrl+S</kbd> lưu ngay) · nút ‹ góc trái về danh sách bảng theo ngày.</li>
       </ul>
@@ -615,7 +626,21 @@ Object.assign(FN, {
   cbrt: Math.cbrt, ncr: (n, k) => FN.comb(n, k), npr: (n, k) => FN.perm(n, k), root: (x, n) => Math.pow(x, 1 / n),
 });
 const CONST = { pi: Math.PI, e: Math.E };
+// number format is international: "," groups thousands, "." is the decimal point.
+// Grouping commas (1,234,567.89) are dropped, except inside function calls where "," separates arguments.
+function ungroup(src) {
+  let out = '', fnDepth = 0; const stack = [];
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '(') { const isFn = /[A-Za-z_]\s*$/.test(src.slice(0, i)); stack.push(isFn); if (isFn) fnDepth++; }
+    else if (ch === ')') { if (stack.pop()) fnDepth--; }
+    else if (ch === ',' && !fnDepth && /\d$/.test(out) && /^\d{3}(?!\d)/.test(src.slice(i + 1))) continue;
+    out += ch;
+  }
+  return out;
+}
 function evalExpr(src, scope = {}) {
+  src = ungroup(String(src));
   const s = src.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\*\*/g, '^')
     .replace(/(sin|cos|tan)⁻¹/g, 'a$1').replace(/⁻¹/g, '^(-1)').replace(/²/g, '^2').replace(/³/g, '^3')
     .replace(/√(\d+\.?\d*)/g, 'sqrt($1)').replace(/∛(\d+\.?\d*)/g, 'cbrt($1)').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt')
@@ -1427,6 +1452,7 @@ addEventListener('keydown', e => {
   if (k === '?') { $('helpModal').classList.add('show'); return; }
   const l = k.toLowerCase();
   if (l === 'g') { toggleGrid(); return; }
+  if (k === '\\') { setTopMin(!document.body.classList.contains('top-min')); return; }
   if (l === 'c') { toggleCalc(); return; } if (l === 'f') { openFin(); return; } if (l === 'b') { setBg({ green: 'dark', dark: 'white', white: 'green' }[doc.bg]); return; }
   if (TOOLKEY[l]) setTool(TOOLKEY[l]);
 });
@@ -1594,7 +1620,7 @@ async function openBoard(id, d) {
     if (w) p.objs = p.objs.filter(o => w.g ? o.g !== w.g : o !== w);
   });
   cur = m; pg = Math.min(m.pg || 0, doc.pages.length - 1); hist = []; fut = []; sel.clear(); lastSnap = snap(); thumbAt = Date.now();
-  $('boardName').value = m.name; document.title = m.name + ' — elevaTO Board';
+  $('boardName').value = m.name; $('topMiniName').textContent = document.body.classList.contains('top-min') ? m.name : ''; document.title = m.name + ' — elevaTO Board';
   document.body.classList.remove('at-home'); history.replaceState(null, '', '#b=' + id);
   doc.pages.forEach(p => p.objs.forEach(o => o.t === 'text' && measureText(o)));
   updPages(); updTools(); updBgMenu(); setSaveState(false); dirty = true;
@@ -1608,6 +1634,13 @@ async function goHome() {
   closeMenus(); renderHome();
 }
 $('bHome').onclick = goHome;
+function setTopMin(on) {
+  document.body.classList.toggle('top-min', on); $('topMiniName').textContent = on && cur ? cur.name : '';
+  try { localStorage.setItem('elevato-board-top', on ? 'min' : 'full'); } catch (e) {} dirty = true;
+}
+$('bTopHide').onclick = () => setTopMin(true);
+$('bTopShow').onclick = () => setTopMin(false);
+try { if (localStorage.getItem('elevato-board-top') === 'min') document.body.classList.add('top-min'); } catch (e) {}
 $('boardName').addEventListener('input', e => { if (cur) { cur.name = e.target.value.trim() || 'Bảng không tên'; document.title = cur.name + ' — elevaTO Board'; save(); } });
 $('boardName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); });
 async function boot() {
@@ -1671,7 +1704,9 @@ function placeBlock(w, h) {
 }
 
 /* timeline */
-const parseList = s => s.split(/[;,\s]+/).filter(Boolean).map(x => evalExpr(x));
+// lists: items separated by ";" or ", " (comma + space); "1,000" stays one thousand
+const splitList = s => s.replace(/(\d),(?=\d{3}(?!\d))/g, '$1').split(/;|,\s*|\s+(?=[-+]?\d)/).map(x => x.trim()).filter(Boolean);
+const parseList = s => splitList(s).map(x => evalExpr(x));
 function tlPreview() {
   try {
     const cfs = parseList($('tlCf').value), r = $('tlR').value.trim() === '' ? null : evalExpr($('tlR').value) / 100;
@@ -1807,7 +1842,7 @@ $('tbGo').onclick = () => {
 };
 
 /* data charts: bar / line / pie */
-const chList = id => $(id).value.trim() ? $(id).value.split(/[;,]/).map(x => x.trim()) : [];
+const chList = id => $(id).value.trim() ? (/^chV/.test(id) ? splitList($(id).value) : $(id).value.split(/;|,\s*/).map(x => x.trim())) : [];
 function chData() {
   const L = chList('chL'), v1 = chList('chV').map(x => evalExpr(x)), v2 = chList('chV2').map(x => evalExpr(x));
   if (!v1.length) throw new Error('Chưa có số liệu');
@@ -1952,7 +1987,7 @@ async function hwRecognize(strokes) {
 const HW_MAP = { x: '*', X: '*', '×': '*', '·': '*', '•': '*', '∙': '*', '÷': '/', ':': '/', o: '0', O: '0', D: '0', Q: '0', '°': '0', l: '1', I: '1', '|': '1', i: '1', j: '1', s: '5', S: '5',
   z: '2', Z: '2', g: '9', q: '9', b: '6', G: '6', B: '8', '&': '8', T: '7', ',': '.', '−': '-', '–': '-', '—': '-', '_': '-', '~': '-', '[': '(', '{': '(', ']': ')', '}': ')', '∧': '^', '＋': '+', t: '+', '√': '√', '∛': '∛', 'π': 'π', '^': '^' };
 function hwNorm(t, sup) {
-  t = [...t.replace(/\s+/g, '')].map(c => HW_MAP[c] ?? c).join('').replace(/[^0-9.+\-*/^()%=√∛π!]/g, '');
+  t = [...t.replace(/\s+/g, '').replace(/(\d),(?=\d{3}(?!\d))/g, '$1')].map(c => HW_MAP[c] ?? c).join('').replace(/[^0-9.+\-*/^()%=√∛π!]/g, '');
   if (sup) t = t.replace(/^\^+/, '');
   return t;
 }
