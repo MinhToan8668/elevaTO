@@ -19,8 +19,15 @@
   --ff-head:'Plus Jakarta Sans','Be Vietnam Pro',system-ui,sans-serif;
   --ff-body:'Be Vietnam Pro',system-ui,sans-serif;
   --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
-  --r:14px;
+  --r:14px; --hover:rgba(255,255,255,.06); --modal:#0b1714; --input:#06110e; --accent-tx:#3ce0b4;
 }
+:root[data-theme="light"]{
+  --deep:#eef3f1; --panel:rgba(255,255,255,.9); --line:rgba(0,0,0,.08); --line2:rgba(0,0,0,.16);
+  --white:#0f1a17; --text:#33403b; --muted:#6b756f; --hover:rgba(0,0,0,.05);
+  --modal:#ffffff; --input:#f3f6f4; --accent-tx:#00875a; --emerald-glow:rgba(0,200,150,.13);
+}
+:root[data-theme="light"] .tb.gold{color:#9a7212}
+:root[data-theme="light"] .glass{box-shadow:0 8px 30px rgba(0,40,30,.12)}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:var(--deep);color:var(--text);font-family:var(--ff-body);-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none}
 button,select,input,textarea{font-family:inherit;color:inherit}
@@ -36,16 +43,16 @@ button{cursor:pointer;border:none;background:none}
 .brand b i{font-style:normal;color:var(--emerald)}
 .brand small{font-size:10px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;font-weight:600}
 .tb{height:36px;min-width:36px;padding:0 10px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--text);transition:.15s}
-.tb:hover{background:rgba(255,255,255,.06);color:var(--white)}
-.tb.on{background:var(--emerald-glow);color:var(--emerald-lt)}
+.tb:hover{background:var(--hover);color:var(--white)}
+.tb.on{background:var(--emerald-glow);color:var(--accent-tx)}
 .tb.cta{background:var(--emerald);color:#03261a;font-weight:600}
-.tb.cta:hover{background:var(--emerald-lt);color:#03261a}
+.tb.cta:hover{filter:brightness(1.1);color:#03261a}
 .tb.gold{color:var(--gold)}
 .tb svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .sp{flex:1}
 .sep{width:1px;height:24px;background:var(--line);margin:0 4px}
 #timer{font-family:var(--mono);font-size:14px;min-width:70px}
-#timer.run{color:var(--emerald-lt)} #timer.low{color:var(--red)}
+#timer.run{color:var(--accent-tx)} #timer.low{color:var(--red)}
 
 /* left toolbar */
 #tools{position:fixed;left:12px;top:76px;width:52px;padding:8px 6px;display:flex;flex-direction:column;gap:3px;z-index:20;max-height:calc(100% - 150px);overflow-y:auto;scrollbar-width:none}
@@ -73,7 +80,7 @@ button{cursor:pointer;border:none;background:none}
 #calcHint{position:fixed;z-index:31;display:none;font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:6px;background:var(--emerald);color:#03261a;font-weight:600;pointer-events:none}
 
 /* BA II Plus */
-#calc{position:fixed;right:16px;top:78px;width:300px;z-index:40;display:none;padding:0;overflow:hidden;border-color:rgba(0,200,150,.25)}
+#calc{position:fixed;right:16px;top:78px;width:340px;z-index:40;display:none;padding:0;overflow:hidden;border-color:rgba(0,200,150,.25)}
 #calc.show{display:block}
 .chead{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:move;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(0,200,150,.10),transparent)}
 .chead b{font-family:var(--ff-head);font-size:13px;color:var(--white);font-weight:800}
@@ -86,17 +93,25 @@ button{cursor:pointer;border:none;background:none}
 .lcd .main{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:25px;font-weight:600;white-space:nowrap;overflow:hidden}
 .lcd .main .lb{font-size:16px}
 .keys{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:4px 12px 12px}
-.k{height:34px;border-radius:8px;background:#1b2723;color:var(--white);font-size:12px;font-weight:600;border-bottom:2px solid #0a110f;position:relative;line-height:1}
+.k{height:34px;border-radius:8px;background:#1b2723;color:#f4f4f0;font-size:12px;font-weight:600;border-bottom:2px solid #0a110f;position:relative;line-height:1}
 .k:hover{background:#25352f}
 .k:active{transform:translateY(1px);border-bottom-width:1px}
 .k sup{position:absolute;top:2px;left:0;right:0;font-size:7.5px;color:var(--gold);font-weight:600;letter-spacing:.02em}
 .k.n{background:#2c3a35;font-size:15px}
 .k.n:hover{background:#38483f}
-.k.tv{background:#0f3a2e;color:var(--emerald-lt)}
+.k.tv{background:#0f3a2e;color:#3ce0b4}
 .k.sec{background:var(--gold);color:#2a1d00}
-.k.cpt{background:#23302c;color:var(--emerald-lt)}
+.k.cpt{background:#23302c;color:#3ce0b4}
 .k.eq{background:var(--emerald);color:#03261a}
 .k.on2{outline:2px solid var(--gold)}
+.k.ac{background:#c94a4a;color:#fff}
+.k.fn{font-size:12.5px}
+.ctabs{display:flex;gap:2px;background:var(--hover);border-radius:9px;padding:2px}
+.ctabs button{white-space:nowrap;padding:5px 7px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--muted)}
+.ctabs button.on{background:var(--emerald);color:#03261a}
+.lcd .ex.sci{text-align:left;font-size:16px;opacity:1;min-height:22px;overflow-x:auto;text-overflow:clip}
+.lcd .main.dim #cVal{opacity:.45}
+.cfoot .tb{color:var(--text)}
 .cfoot{display:flex;gap:6px;padding:0 12px 12px}
 .cfoot .tb{flex:1;height:30px;font-size:11.5px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
 .cfoot .tb:hover{border-color:var(--emerald)}
@@ -104,35 +119,35 @@ button{cursor:pointer;border:none;background:none}
 /* modal */
 .modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
 .modal.show{display:flex}
-.mbox{width:min(760px,100%);max-height:calc(100% - 32px);display:flex;flex-direction:column;background:#0b1714;user-select:text;-webkit-user-select:text}
+.mbox{width:min(760px,100%);max-height:calc(100% - 32px);display:flex;flex-direction:column;background:var(--modal);user-select:text;-webkit-user-select:text}
 .mhead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
 .mhead h3{font-family:var(--ff-head);color:var(--white);font-size:17px;font-weight:800;flex:1}
 .tabs{display:flex;gap:4px;padding:10px 16px 0;flex-wrap:wrap}
 .tab{padding:8px 12px;border-radius:9px;font-size:13px;color:var(--muted)}
-.tab.on{background:var(--emerald-glow);color:var(--emerald-lt)}
+.tab.on{background:var(--emerald-glow);color:var(--accent-tx)}
 .mbody{padding:16px;overflow:auto}
 .pane{display:none}.pane.on{display:block}
 .pane p.d{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
-label.f input,label.f select{background:#06110e;border:1px solid var(--line2);border-radius:9px;padding:9px 10px;font-size:14px;color:var(--white);outline:none;font-family:var(--mono)}
+label.f input,label.f select{background:var(--input);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;font-size:14px;color:var(--white);outline:none;font-family:var(--mono)}
 label.f input:focus{border-color:var(--emerald)}
 .fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-.fc{text-align:left;padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid var(--line);transition:.15s}
+.fc{text-align:left;padding:11px 12px;border-radius:11px;background:var(--hover);border:1px solid var(--line);transition:.15s}
 .fc:hover{border-color:var(--emerald);background:var(--emerald-glow)}
 .fc b{display:block;font-size:13px;color:var(--white);margin-bottom:4px;font-weight:600}
-.fc code{font-family:var(--mono);font-size:11.5px;color:var(--emerald-lt);white-space:pre-wrap}
+.fc code{font-family:var(--mono);font-size:11.5px;color:var(--accent-tx);white-space:pre-wrap}
 .fc em{font-style:normal;font-size:10px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase}
-.out{font-family:var(--mono);font-size:13px;color:var(--emerald-lt);background:#06110e;border-radius:10px;padding:10px 12px;margin:0 0 12px;white-space:pre-wrap;min-height:20px}
+.out{font-family:var(--mono);font-size:13px;color:var(--accent-tx);background:var(--input);border-radius:10px;padding:10px 12px;margin:0 0 12px;white-space:pre-wrap;min-height:20px}
 .help h4{font-family:var(--ff-head);color:var(--white);font-size:14px;margin:14px 0 6px}
 .help h4:first-child{margin-top:0}
 .help li{font-size:13px;margin:4px 0 4px 18px;line-height:1.5}
-.help kbd,.help code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;color:var(--emerald-lt)}
+.help kbd,.help code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;color:var(--accent-tx)}
 .menu{position:fixed;z-index:45;padding:6px;display:none;min-width:190px}
 .menu.show{display:block}
 .menu button{display:flex;width:100%;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:13px;text-align:left}
-.menu button:hover{background:rgba(255,255,255,.06)}
-.menu button.on{color:var(--emerald-lt)}
+.menu button:hover{background:var(--hover)}
+.menu button.on{color:var(--accent-tx)}
 .menu .t{font-size:10px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;padding:6px 10px 2px}
 @media (max-width:720px){.brand small,.hide-s{display:none}#calc{right:8px;left:8px;width:auto}}
 </style>
@@ -149,12 +164,13 @@ label.f input:focus{border-color:var(--emerald)}
   <button class="tb" id="bRedo" title="Làm lại (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
   <div class="sep"></div>
   <button class="tb" id="bBg" title="Nền bảng (B)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg><span class="hide-s">Nền</span></button>
+  <button class="tb" id="bTheme" title="Giao diện sáng / tối"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
   <button class="tb" id="bClear" title="Xoá trang"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
   <div class="sp"></div>
   <select class="tb" id="timerSel" title="Chọn thời gian bấm giờ" style="background:none;border:none;outline:none"><option value="90">1:30 /câu</option><option value="180">3:00</option><option value="300">5:00</option><option value="600">10:00</option><option value="900">15:00</option></select>
   <button class="tb" id="timer" title="Bấm để chạy/dừng · nháy đúp để đặt lại">1:30</button>
   <div class="sep"></div>
-  <button class="tb gold" id="bCalc" title="Máy tính BA II Plus (C)"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 18h.01M12 18h.01M16 18h.01"/></svg><span class="hide-s">BA II Plus</span></button>
+  <button class="tb gold" id="bCalc" title="Máy tính: BA II Plus / Khoa học / Phổ thông (C)"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 18h.01M12 18h.01M16 18h.01"/></svg><span class="hide-s">Máy tính</span></button>
   <button class="tb cta" id="bFin" title="Công cụ tài chính (F)"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></svg><span class="hide-s">Công cụ TC</span></button>
   <div class="sep"></div>
   <button class="tb" id="bFile" title="Lưu / mở / xuất"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg></button>
@@ -171,6 +187,7 @@ label.f input:focus{border-color:var(--emerald)}
   <button class="tb" id="pAdd" title="Thêm trang">＋</button>
   <button class="tb" id="pDel" title="Xoá trang này">－</button>
   <div class="sep"></div>
+  <button class="tb" id="bGrid" title="Bật / tắt lưới (G)"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 10h16M4 16h16M10 4v16M16 4v16"/></svg></button>
   <span id="zoomLbl" title="Bấm để về 100%">100%</span>
 </div>
 
@@ -186,7 +203,8 @@ label.f input:focus{border-color:var(--emerald)}
   <div class="t">Hoạ tiết</div>
   <button data-pat="none">Trơn</button>
   <button data-pat="grid">Lưới ô vuông</button>
-  <button data-pat="dots">Chấm</button>
+  <button data-pat="oly">Ô ly (vở học sinh)</button>
+  <button data-pat="dots">Chấm toạ độ</button>
   <button data-pat="lines">Dòng kẻ</button>
 </div>
 <div class="menu glass" id="fileMenu">
@@ -203,12 +221,12 @@ label.f input:focus{border-color:var(--emerald)}
 <!-- BA II Plus -->
 <section id="calc" class="glass">
   <div class="chead" id="calcHead">
-    <b>BA II Plus<i>elevaTO</i></b><div class="sp"></div>
+    <div class="ctabs" id="ctabs"><button data-cm="ba">BA II Plus</button><button data-cm="sci">Khoa học</button><button data-cm="basic">Phổ thông</button></div><div class="sp"></div>
     <select class="tb" id="calcDec" title="Số chữ số thập phân" style="background:none;border:1px solid var(--line);outline:none"><option value="2">DEC 2</option><option value="4">DEC 4</option><option value="6">DEC 6</option><option value="9">FLOAT</option></select>
     <button class="tb" id="calcClose" title="Đóng">✕</button>
   </div>
   <div class="lcd">
-    <div class="ind"><span id="i2nd">2ND</span><span id="icpt">COMPUTE</span><span id="ibgn">BGN</span><span id="isto">STO</span><span id="ircl">RCL</span><span id="iws"></span></div>
+    <div class="ind" id="cInd"></div>
     <div class="ex" id="cEx"></div>
     <div class="main"><span class="lb" id="cLb"></span><span id="cVal">0.00</span></div>
   </div>
@@ -227,7 +245,8 @@ label.f input:focus{border-color:var(--emerald)}
       <button class="tab on" data-p="tl">Dòng tiền (timeline)</button>
       <button class="tab" data-p="am">Lịch trả nợ</button>
       <button class="tab" data-p="bd">Trái phiếu</button>
-      <button class="tab" data-p="pl">Vẽ đồ thị</button>
+      <button class="tab" data-p="ch">Biểu đồ dữ liệu</button>
+      <button class="tab" data-p="pl">Đồ thị hàm số</button>
       <button class="tab" data-p="tb">Bảng kẻ</button>
       <button class="tab" data-p="fm">Công thức CFA</button>
     </div>
@@ -264,8 +283,22 @@ label.f input:focus{border-color:var(--emerald)}
         <div class="out" id="bdOut"></div>
         <button class="tb cta" id="bdGo">Ghi lên bảng</button> <button class="tb" id="bdPlot">Vẽ đường Giá – YTM</button>
       </div>
+      <div class="pane" id="p-ch">
+        <p class="d">Nhập nhãn và số liệu (cách nhau bằng dấu phẩy) → vẽ biểu đồ minh hoạ lên bảng. Có thể thêm dãy số thứ 2 để so sánh (cột / đường).</p>
+        <div class="grid">
+          <label class="f">Kiểu<select id="chK"><option value="bar">Cột</option><option value="line">Đường</option><option value="pie">Tròn</option></select></label>
+          <label class="f" style="grid-column:span 2">Tiêu đề<input id="chT" value="Doanh thu VNM (nghìn tỷ)"></label>
+          <label class="f" style="grid-column:1/-1">Nhãn<input id="chL" value="2021, 2022, 2023, 2024, 2025"></label>
+          <label class="f" style="grid-column:1/-1">Dãy 1<input id="chV" value="61, 60.5, 60.4, 61.8, 63.7"></label>
+          <label class="f">Tên dãy 1<input id="chN1" value="Doanh thu"></label>
+          <label class="f" style="grid-column:span 2">Dãy 2 (tuỳ chọn)<input id="chV2" value=""></label>
+          <label class="f">Tên dãy 2<input id="chN2" value=""></label>
+        </div>
+        <div class="out" id="chOut"></div>
+        <button class="tb cta" id="chGo">Vẽ lên bảng</button>
+      </div>
       <div class="pane" id="p-pl">
-        <p class="d">Biểu thức theo <code style="font-family:var(--mono);color:var(--emerald-lt)">x</code>, dùng được mọi hàm của máy tính thông minh. Ví dụ NPV profile: <code style="font-family:var(--mono);color:var(--emerald-lt)">npv(x, -1000, 300, 400, 500, 600)</code></p>
+        <p class="d">Biểu thức theo <code style="font-family:var(--mono);color:var(--accent-tx)">x</code>, dùng được mọi hàm của máy tính thông minh. Ví dụ NPV profile: <code style="font-family:var(--mono);color:var(--accent-tx)">npv(x, -1000, 300, 400, 500, 600)</code></p>
         <div class="grid">
           <label class="f" style="grid-column:1/-1">y =<input id="plE" value="npv(x, -1000, 300, 400, 500, 600)"></label>
           <label class="f">x từ<input id="plA" value="0"></label>
@@ -301,6 +334,18 @@ label.f input:focus{border-color:var(--emerald)}
         <li><code>npv(r, CF0, CF1, …)</code> (CF0 ở t=0, giống BA II) · <code>irr(CF0, CF1, …)</code> · <code>ear(apr, m)</code> · <code>cont(apr)</code> · <code>price(F, c, y, n, m)</code> · <code>ytm(P, F, c, n, m)</code></li>
         <li>Thống kê: <code>sum mean avg stdev var sd min max median</code> · <code>comb(n,k) perm(n,k) fact(n)</code> · <code>sqrt ln log exp abs round</code>. <code>5%</code> = 0.05.</li>
       </ul>
+      <h4>Máy tính (phím C) — 3 chế độ</h4>
+      <ul>
+        <li><b>Khoa học</b> kiểu Casio: gõ cả biểu thức, thấy kết quả tạm ngay khi gõ, <kbd>=</kbd> để chốt. <kbd>SHIFT</kbd> cho sin⁻¹, 10ˣ, eˣ, x⁻¹, ∛, ˣ√y. <kbd>DRG</kbd> đổi độ/radian. <kbd>Ans</kbd> = kết quả trước.</li>
+        <li><b>Phổ thông</b>: tính từng bước như máy cầm tay, có <kbd>%</kbd> (100 + 10% = 110), <kbd>√</kbd>, bộ nhớ M+ M− MR MC.</li>
+        <li><b>Ghi lịch sử tính</b> chép 10 phép tính gần nhất lên bảng.</li>
+      </ul>
+      <h4>Biểu đồ (phím F)</h4>
+      <ul>
+        <li><b>Biểu đồ dữ liệu</b>: nhập nhãn + số → cột, đường hoặc tròn; thêm dãy 2 để so sánh.</li>
+        <li><b>Đồ thị hàm số</b>: vẽ y = f(x), vd NPV theo lãi suất (tự đánh dấu IRR), giá trái phiếu theo YTM.</li>
+        <li>Mọi thứ chèn vào đều là nét vẽ bình thường: kéo di chuyển cả cụm, tẩy, vẽ thêm chú thích lên trên.</li>
+      </ul>
       <h4>BA II Plus</h4>
       <ul>
         <li>Giống máy thật: nhập số → bấm <kbd>N</kbd> <kbd>I/Y</kbd> <kbd>PV</kbd> <kbd>PMT</kbd> <kbd>FV</kbd>; <kbd>CPT</kbd> + phím để giải. <kbd>2ND</kbd>+<kbd>FV</kbd> = CLR TVM, <kbd>2ND</kbd>+<kbd>PMT</kbd> = BGN/END, <kbd>2ND</kbd>+<kbd>I/Y</kbd> = P/Y, <kbd>2ND</kbd>+<kbd>PV</kbd> = AMORT, <kbd>2ND</kbd>+<kbd>N</kbd> = xP/Y, <kbd>2ND</kbd>+<kbd>CE|C</kbd> = QUIT.</li>
@@ -314,6 +359,7 @@ label.f input:focus{border-color:var(--emerald)}
         <li><kbd>1</kbd>–<kbd>7</kbd> đổi màu · <kbd>[</kbd> <kbd>]</kbd> nét nhỏ/to · giữ <kbd>Shift</kbd> để vẽ thẳng 45° / hình vuông</li>
         <li>Giữ <kbd>Space</kbd> hoặc chuột giữa để kéo bảng · <kbd>Ctrl</kbd>+lăn chuột / chụm 2 ngón để zoom · <kbd>Ctrl+0</kbd> về 100%</li>
         <li><kbd>Ctrl+Z</kbd>/<kbd>Ctrl+Y</kbd> · <kbd>Del</kbd> xoá vùng chọn · <kbd>Ctrl+D</kbd> nhân bản · <kbd>Ctrl+V</kbd> dán ảnh chụp đề bài · nháy đúp chữ để sửa</li>
+        <li><kbd>G</kbd> bật/tắt lưới (kiểu lưới chọn ở nút Nền: ô vuông, ô ly, chấm toạ độ, dòng kẻ) · nút mặt trăng/mặt trời đổi giao diện sáng–tối</li>
         <li><kbd>PageUp</kbd>/<kbd>PageDown</kbd> đổi trang · <kbd>Ctrl+S</kbd> lưu file · bài giảng tự lưu trong trình duyệt.</li>
       </ul>
     </div>
@@ -405,9 +451,20 @@ const FN = {
   price: (F, c, y, n, m = 1) => FM.bond(F, c, y, n, m).P,
   ytm: (P, F, c, n, m = 1) => FM.root(y => FM.bond(F, c, y, n, m).P - P, -0.5, 5, c),
 };
+let ANG = 'deg'; // angle mode shared by the scientific calculator and board text
+const rad = x => ANG === 'deg' ? x * Math.PI / 180 : x, unrad = x => ANG === 'deg' ? x * 180 / Math.PI : x;
+const snap0 = v => Math.abs(v) < 1e-12 ? 0 : v; // sin(180°) = 0, not 1.2e-16
+Object.assign(FN, {
+  sin: x => snap0(Math.sin(rad(x))), cos: x => snap0(Math.cos(rad(x))), tan: x => snap0(Math.tan(rad(x))),
+  asin: x => unrad(Math.asin(x)), acos: x => unrad(Math.acos(x)), atan: x => unrad(Math.atan(x)),
+  cbrt: Math.cbrt, ncr: (n, k) => FN.comb(n, k), npr: (n, k) => FN.perm(n, k), root: (x, n) => Math.pow(x, 1 / n),
+});
 const CONST = { pi: Math.PI, e: Math.E };
 function evalExpr(src, scope = {}) {
-  const s = src.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\*\*/g, '^');
+  const s = src.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\*\*/g, '^')
+    .replace(/(sin|cos|tan)⁻¹/g, 'a$1').replace(/⁻¹/g, '^(-1)').replace(/²/g, '^2').replace(/³/g, '^3')
+    .replace(/√(\d+\.?\d*)/g, 'sqrt($1)').replace(/∛(\d+\.?\d*)/g, 'cbrt($1)').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt')
+    .replace(/π/g, '(pi)').replace(/ℯ/g, '(e)');
   const toks = []; const re = /\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z_0-9]*)|(\S))/gy;
   let m; re.lastIndex = 0;
   while (re.lastIndex < s.length && (m = re.exec(s))) {
@@ -486,6 +543,9 @@ function smartCalc(text, scope) {
 /* ═══════════════ STATE ═══════════════ */
 const $ = id => document.getElementById(id);
 const cv = $('board'), ctx = cv.getContext('2d');
+let THEME = 'light';
+try { THEME = localStorage.getItem('elevato-board-theme') || 'light'; } catch (e) {}
+document.documentElement.dataset.theme = THEME;
 const BG = { green: '#062a22', dark: '#0b0f0e', white: '#fbfbf7' };
 const PALETTE = {
   dark: ['#f4f4f0', '#00c896', '#d4a843', '#ff6b6b', '#5fb3ff', '#ff9f43', '#c58bff'],
@@ -500,7 +560,7 @@ const imgCache = {};
 let uid = Date.now() % 1e6;
 const nid = () => (++uid).toString(36);
 
-function newDoc() { return { v: 1, bg: 'green', pat: 'grid', pages: [newPage()], imgs: {} }; }
+function newDoc() { return { v: 1, bg: THEME === 'dark' ? 'green' : 'white', pat: 'grid', lastPat: 'grid', pages: [newPage()], imgs: {} }; }
 function newPage() { return { objs: [], view: { x: 0, y: 0, z: 1 }, vars: {} }; }
 const page = () => doc.pages[pg];
 const view = () => page().view;
@@ -530,7 +590,7 @@ function save() {
 function load() {
   try {
     const s = localStorage.getItem('elevato-board');
-    if (s) { const d = JSON.parse(s); if (d && d.pages && d.pages.length) { doc = d; doc.imgs = doc.imgs || {}; pg = Math.min(+localStorage.getItem('elevato-board-pg') || 0, doc.pages.length - 1); } }
+    if (s) { const d = JSON.parse(s); if (d && d.pages && d.pages.length) { doc = d; doc.imgs = doc.imgs || {}; doc.lastPat = doc.lastPat || 'grid'; pg = Math.min(+localStorage.getItem('elevato-board-pg') || 0, doc.pages.length - 1); } }
   } catch (e) {}
   lastSnap = snap();
 }
@@ -551,10 +611,10 @@ function measureText(o) {
 }
 function bbox(o) {
   switch (o.t) {
-    case 'pen': case 'hl': {
+    case 'pen': case 'hl': case 'poly': {
       let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
       for (const [x, y] of o.pts) { a = Math.min(a, x); b = Math.min(b, y); c = Math.max(c, x); d = Math.max(d, y); }
-      const h = o.w / 2; return [a - h, b - h, c + h, d + h];
+      const h = (o.w || 0) / 2; return [a - h, b - h, c + h, d + h];
     }
     case 'line': case 'arrow': case 'rect': case 'ell': {
       const h = o.w / 2 + (o.t === 'arrow' ? o.w * 3 : 0);
@@ -614,7 +674,17 @@ function drawPattern(c, v, w, h, light) {
   c.save();
   c.strokeStyle = c.fillStyle = light ? 'rgba(0,40,30,.10)' : 'rgba(180,255,230,.07)';
   c.lineWidth = 1;
-  if (doc.pat === 'dots') { for (let x = ox; x < w; x += s) for (let y = oy; y < h; y += s) c.fillRect(x - 1, y - 1, 2.2, 2.2); }
+  if (doc.pat === 'oly') { // Vietnamese school grid: bold squares split into 4 faint rows
+    const minor = s / 4;
+    c.beginPath();
+    if (minor >= 5) for (let y = oy - s; y < h; y += minor) { c.moveTo(0, Math.round(y) + .5); c.lineTo(w, Math.round(y) + .5); }
+    c.globalAlpha = .55; c.stroke(); c.globalAlpha = 1;
+    c.strokeStyle = light ? 'rgba(0,100,200,.22)' : 'rgba(120,200,255,.16)';
+    c.beginPath();
+    for (let x = ox; x < w; x += s) { c.moveTo(Math.round(x) + .5, 0); c.lineTo(Math.round(x) + .5, h); }
+    for (let y = oy; y < h; y += s) { c.moveTo(0, Math.round(y) + .5); c.lineTo(w, Math.round(y) + .5); }
+    c.stroke();
+  } else if (doc.pat === 'dots') { for (let x = ox; x < w; x += s) for (let y = oy; y < h; y += s) c.fillRect(x - 1, y - 1, 2.2, 2.2); }
   else {
     c.beginPath();
     if (doc.pat === 'grid') for (let x = ox; x < w; x += s) { c.moveTo(Math.round(x) + .5, 0); c.lineTo(Math.round(x) + .5, h); }
@@ -637,6 +707,10 @@ function drawObj(c, o) {
   switch (o.t) {
     case 'pen': strokePts(c, o.pts); break;
     case 'hl': c.globalAlpha = .32; c.lineCap = 'butt'; strokePts(c, o.pts); break;
+    case 'poly':
+      c.beginPath(); o.pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.closePath();
+      c.globalAlpha = o.a ?? .85; c.fill(); c.globalAlpha = 1;
+      if (o.w) { c.strokeStyle = o.sc || o.c; c.stroke(); } break;
     case 'line': case 'arrow':
       if (o.dash) c.setLineDash([o.w * 3, o.w * 3]);
       c.beginPath(); c.moveTo(o.x1, o.y1); c.lineTo(o.x2, o.y2); c.stroke();
@@ -959,9 +1033,22 @@ function closeMenus() { document.querySelectorAll('.menu.show').forEach(m => m.c
 $('bBg').onclick = e => { e.stopPropagation(); updBgMenu(); toggleMenu($('bgMenu'), $('bBg')); };
 $('bFile').onclick = e => { e.stopPropagation(); toggleMenu($('fileMenu'), $('bFile')); };
 document.addEventListener('click', e => { if (!e.target.closest('.menu')) closeMenus(); });
-function updBgMenu() { document.querySelectorAll('[data-bg]').forEach(b => b.classList.toggle('on', b.dataset.bg === doc.bg)); document.querySelectorAll('[data-pat]').forEach(b => b.classList.toggle('on', b.dataset.pat === doc.pat)); }
+function updBgMenu() { $('bGrid').classList.toggle('on', doc.pat !== 'none'); document.querySelectorAll('[data-bg]').forEach(b => b.classList.toggle('on', b.dataset.bg === doc.bg)); document.querySelectorAll('[data-pat]').forEach(b => b.classList.toggle('on', b.dataset.pat === doc.pat)); }
 document.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => setBg(b.dataset.bg));
-document.querySelectorAll('[data-pat]').forEach(b => b.onclick = () => { doc.pat = b.dataset.pat; updBgMenu(); save(); dirty = true; });
+document.querySelectorAll('[data-pat]').forEach(b => b.onclick = () => setPat(b.dataset.pat));
+function setPat(p) { doc.pat = p; if (p !== 'none') doc.lastPat = p; updBgMenu(); save(); dirty = true; }
+function toggleGrid() { setPat(doc.pat === 'none' ? (doc.lastPat || 'grid') : 'none'); toast(doc.pat === 'none' ? 'Đã tắt lưới' : 'Đã bật lưới'); }
+$('bGrid').onclick = toggleGrid;
+const ICO_SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const ICO_MOON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+function setTheme(t, withBoard) {
+  THEME = t; document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('elevato-board-theme', t); } catch (e) {}
+  $('themeIco').innerHTML = t === 'dark' ? ICO_SUN : ICO_MOON;
+  document.querySelector('meta[name=theme-color]').content = t === 'dark' ? '#04211b' : '#eef3f1';
+  if (withBoard) setBg(t === 'dark' ? 'green' : 'white');
+}
+$('bTheme').onclick = () => { setTheme(THEME === 'dark' ? 'light' : 'dark', true); toast(THEME === 'dark' ? 'Giao diện tối · bảng xanh' : 'Giao diện sáng · bảng trắng'); };
 function setBg(bg) {
   const wasLight = isLight(); doc.bg = bg; updBgMenu();
   if (wasLight !== isLight()) { // swap default ink so old notes stay readable
@@ -1024,6 +1111,7 @@ addEventListener('keydown', e => {
   if (/^[1-7]$/.test(k)) return setColor(+k - 1);
   if (k === '?') { $('helpModal').classList.add('show'); return; }
   const l = k.toLowerCase();
+  if (l === 'g') { toggleGrid(); return; }
   if (l === 'c') { toggleCalc(); return; } if (l === 'f') { openFin(); return; } if (l === 'b') { setBg({ green: 'dark', dark: 'white', white: 'green' }[doc.bg]); return; }
   if (TOOLKEY[l]) setTool(TOOLKEY[l]);
 });
@@ -1270,6 +1358,72 @@ $('tbGo').onclick = () => {
   finishInsert(g, 'Đã kẻ bảng — dùng công cụ Chữ (T) để điền');
 };
 
+/* data charts: bar / line / pie */
+const chList = id => $(id).value.trim() ? $(id).value.split(/[;,]/).map(x => x.trim()) : [];
+function chData() {
+  const L = chList('chL'), v1 = chList('chV').map(x => evalExpr(x)), v2 = chList('chV2').map(x => evalExpr(x));
+  if (!v1.length) throw new Error('Chưa có số liệu');
+  const n = Math.max(v1.length, v2.length);
+  return { L: Array.from({ length: n }, (_, i) => L[i] ?? String(i + 1)), series: [v1, v2].filter(v => v.length) };
+}
+function chPreview() {
+  try { const d = chData(); $('chOut').textContent = d.series.map((v, i) => `Dãy ${i + 1}: ${v.length} số · tổng ${fmtNum(FN.sum(...v))} · TB ${fmtNum(FN.mean(...v))}`).join('\n'); }
+  catch (e) { $('chOut').textContent = '⚠ ' + e.message; }
+}
+['chL', 'chV', 'chV2', 'chK'].forEach(i => $(i).addEventListener('input', chPreview));
+$('chGo').onclick = () => {
+  let d; try { d = chData(); } catch (e) { return toast(e.message); }
+  const kind = $('chK').value, C = col(), g = nid(), SC = [C[1], C[2], C[4], C[3], C[5], C[6]];
+  const label = (txt, x, y, opt) => { mctx.font = `${opt.b ? 700 : 500} ${opt.s}px 'Be Vietnam Pro'`; addText(txt, x - (opt.al === 'c' ? mctx.measureText(txt).width / 2 : opt.al === 'r' ? mctx.measureText(txt).width : 0), y, { ...opt, g }); };
+  const poly = (pts, c, a) => page().objs.push({ id: nid(), t: 'poly', pts, c, a, w: 0, g });
+  if (kind === 'pie') {
+    const v = d.series[0].map(Math.abs), tot = FN.sum(...v) || 1, R = 150, [x0, y0] = placeBlock(620, 380), cx = x0 + 170, cy = y0 + 210;
+    label($('chT').value, x0, y0, { s: 24, b: 1, c: C[2] });
+    let a0 = -Math.PI / 2;
+    v.forEach((val, i) => {
+      const a1 = a0 + val / tot * Math.PI * 2, pts = [[cx, cy]], steps = Math.max(2, Math.ceil((a1 - a0) / .05));
+      for (let k = 0; k <= steps; k++) { const a = a0 + (a1 - a0) * k / steps; pts.push([cx + R * Math.cos(a), cy + R * Math.sin(a)]); }
+      poly(pts, SC[i % SC.length], .88);
+      const am = (a0 + a1) / 2, pct = val / tot * 100;
+      if (pct >= 5) label(fmtNum(pct, 1) + '%', cx + R * .62 * Math.cos(am), cy + R * .62 * Math.sin(am) - 10, { s: 17, b: 1, c: isLight() ? '#ffffff' : '#08130f', al: 'c' });
+      const ly = y0 + 70 + i * 34;
+      poly([[x0 + 360, ly], [x0 + 380, ly], [x0 + 380, ly + 20], [x0 + 360, ly + 20]], SC[i % SC.length], .9);
+      label(`${d.L[i]}: ${fmtNum(d.series[0][i])} (${fmtNum(pct, 1)}%)`, x0 + 390, ly - 1, { s: 18, c: C[0] });
+      a0 = a1;
+    });
+    return finishInsert(g, 'Đã vẽ biểu đồ tròn');
+  }
+  const all = d.series.flat(), n = d.L.length, PW = Math.max(420, Math.min(760, n * 90)), PH = 300;
+  const [x0, y0] = placeBlock(PW + 120, PH + 130), ox = x0 + 70, oy = y0 + 60;
+  let hi = Math.max(0, ...all), lo = Math.min(0, ...all); if (kind === 'line' && lo === 0 && Math.min(...all) > 0) lo = Math.min(...all) * .9;
+  if (hi === lo) hi = lo + 1; const pad = (hi - lo) * .12; hi += pad; if (lo < 0) lo -= pad;
+  const Y = v => oy + PH - (v - lo) / (hi - lo) * PH, slot = PW / n, base = Y(Math.max(lo, 0));
+  label($('chT').value, ox, y0, { s: 24, b: 1, c: C[2] });
+  addLine('line', ox, oy, ox, oy + PH, C[0], 2, g); addLine('line', ox, base, ox + PW, base, C[0], 2, g);
+  for (let i = 0; i <= 4; i++) { const v = lo + (hi - lo) * i / 4; addLine('line', ox, Y(v), ox + PW, Y(v), C[0], .6, g, { dash: 1 }); label(niceNum(v), ox - 8, Y(v) - 9, { s: 14, c: C[0], al: 'r' }); }
+  d.L.forEach((l, i) => label(l, ox + slot * (i + .5), oy + PH + 10, { s: 16, c: C[0], al: 'c' }));
+  const S = d.series.length;
+  d.series.forEach((v, si) => {
+    const c = SC[si];
+    if (kind === 'bar') {
+      const bw = slot * .7 / S;
+      v.forEach((val, i) => {
+        const x = ox + slot * i + slot * .15 + bw * si, y = Y(val);
+        poly([[x, base], [x + bw, base], [x + bw, y], [x, y]], c, .85);
+        label(fmtNum(val), x + bw / 2, val >= 0 ? y - 22 : y + 4, { s: 14, b: 1, c, al: 'c' });
+      });
+    } else {
+      const pts = v.map((val, i) => [ox + slot * (i + .5), Y(val)]);
+      page().objs.push({ id: nid(), t: 'pen', c, w: 3.5, g, pts });
+      pts.forEach(([x, y], i) => { addLine('ell', x - 5, y - 5, x + 5, y + 5, c, 3, g); label(fmtNum(v[i]), x, y - 28, { s: 14, b: 1, c, al: 'c' }); });
+    }
+  });
+  if (S > 1) [$('chN1').value || 'Dãy 1', $('chN2').value || 'Dãy 2'].forEach((nm, si) => {
+    const lx = ox + PW - 260 + si * 130; poly([[lx, y0 + 6], [lx + 16, y0 + 6], [lx + 16, y0 + 22], [lx, y0 + 22]], SC[si], .9); label(nm, lx + 22, y0 + 3, { s: 16, c: C[0] });
+  });
+  finishInsert(g, 'Đã vẽ biểu đồ');
+};
+
 /* formula cards (CFA Level I–II staples) */
 const FORMULAS = [
   ['Quant', 'Giá trị tương lai / hiện tại', 'FV = PV × (1 + r)^N\nPV = FV / (1 + r)^N'],
@@ -1310,7 +1464,7 @@ document.querySelectorAll('#finTabs .tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('#finTabs .tab').forEach(x => x.classList.toggle('on', x === t));
   document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + t.dataset.p));
 });
-function openFin() { $('finModal').classList.add('show'); tlPreview(); amPreview(); bdPreview(); plPreview(); }
+function openFin() { $('finModal').classList.add('show'); chPreview(); tlPreview(); amPreview(); bdPreview(); plPreview(); }
 $('bFin').onclick = openFin;
 
 /* ═══════════════ BA II PLUS ═══════════════ */
@@ -1479,7 +1633,7 @@ function numStr() { const v = cDisp(); return v < 0 ? `(${v})` : String(v); }
 function partial(e) { const bal = (e.match(/\(/g) || []).length - (e.match(/\)/g) || []).length; return e + ')'.repeat(Math.max(0, bal)); }
 function prettyExpr(e) { return e.replace(/\*/g, ' × ').replace(/\//g, ' ÷ ').replace(/\+/g, ' + ').replace(/(\d|\))-/g, '$1 − ').replace(/\^/g, '^'); }
 function allClear() { C.entry = ''; C.val = 0; C.expr = ''; C.fresh = true; C.closed = false; C.cpt = false; C.label = ''; C.sto = C.rcl = false; C.pendRoot = false; }
-function calcRender() {
+function baRender() {
   const on = (id, b) => $(id).classList.toggle('on', !!b);
   on('i2nd', C.second); on('icpt', C.cpt); on('ibgn', C.bgn); on('isto', C.sto); on('ircl', C.rcl);
   $('iws').textContent = { std: '', cf: 'CF', npv: 'NPV', irr: 'IRR', py: 'P/Y', amort: 'AMORT' }[C.mode]; on('iws', C.mode !== 'std');
@@ -1500,11 +1654,147 @@ function calcRender() {
   $('cLb').textContent = lb; $('cVal').textContent = val;
   $('cEx').textContent = C.mode === 'std' && C.expr ? prettyExpr(C.expr) : C.mode === 'std' ? `P/Y=${fmtNum(C.py)} C/Y=${fmtNum(C.cy)} · ${C.bgn ? 'BGN' : 'END'}` : '';
 }
-function buildKeys() {
-  $('keys').innerHTML = KEYS.map(([k, cls, s]) => `<button class="k ${cls}" data-key="${k}">${s ? `<sup>${s}</sup>` : ''}${k}</button>`).join('');
-  $('keys').querySelectorAll('.k').forEach(b => b.onclick = () => { calcFocus = true; press(b.dataset.key); });
+/* ── Scientific (Casio-style, expression entry) ── */
+const SCI_KEYS = [
+  ['SHIFT', 'sec', ''], ['DRG', 'fn', ''], ['(', '', ''], [')', '', ''], [',', '', ''],
+  ['sin', 'fn', 'sin⁻¹'], ['cos', 'fn', 'cos⁻¹'], ['tan', 'fn', 'tan⁻¹'], ['log', 'fn', '10ˣ'], ['ln', 'fn', 'eˣ'],
+  ['x²', '', 'x⁻¹'], ['x³', '', '∛'], ['xʸ', '', 'ˣ√y'], ['√', '', ''], ['x!', '', ''],
+  ['nCr', 'fn', ''], ['nPr', 'fn', ''], ['π', '', ''], ['ℯ', '', ''], ['%', '', ''],
+  ['7', 'n', ''], ['8', 'n', ''], ['9', 'n', ''], ['DEL', 'cpt', ''], ['AC', 'ac', ''],
+  ['4', 'n', ''], ['5', 'n', ''], ['6', 'n', ''], ['×', '', ''], ['÷', '', ''],
+  ['1', 'n', ''], ['2', 'n', ''], ['3', 'n', ''], ['+', '', ''], ['−', '', ''],
+  ['0', 'n', ''], ['.', 'n', ''], ['×10ˣ', '', ''], ['Ans', '', ''], ['=', 'eq', ''],
+];
+const S = { expr: '', ans: 0, done: false, shift: false, err: '', log: [] };
+const SCI_INS = { sin: 'sin(', cos: 'cos(', tan: 'tan(', log: 'log(', ln: 'ln(', 'x²': '²', 'x³': '³', 'xʸ': '^(', '√': '√(', 'x!': '!',
+  nCr: 'nCr(', nPr: 'nPr(', '×10ˣ': '×10^(', '−': '−' };
+const SCI_SHIFT = { sin: 'sin⁻¹(', cos: 'cos⁻¹(', tan: 'tan⁻¹(', log: '10^(', ln: 'ℯ^(', 'x²': '⁻¹', 'x³': '∛(', 'xʸ': '^(1÷' };
+const SCI_TOK = ['sin⁻¹(', 'cos⁻¹(', 'tan⁻¹(', '×10^(', 'sin(', 'cos(', 'tan(', 'log(', 'nCr(', 'nPr(', 'ℯ^(', '10^(', '^(1÷', 'ln(', 'Ans', '⁻¹', '√(', '∛(', '^('];
+const closeParens = e => e + ')'.repeat(Math.max(0, (e.match(/\(/g) || []).length - (e.match(/\)/g) || []).length));
+const sciEval = e => evalExpr(closeParens(e).replace(/Ans/g, '(' + S.ans + ')'));
+function fmtSci(v) { if (!isFinite(v)) return 'Math ERROR'; const a = Math.abs(v); if (a !== 0 && (a >= 1e10 || a < 1e-9)) return v.toExponential(8).replace(/\.?0+e/, 'e'); return String(+v.toPrecision(10)); }
+function sciPress(k) {
+  const sh = S.shift; S.shift = false; S.err = '';
+  if (k === 'SHIFT') { S.shift = !sh; return calcRender(); }
+  if (k === 'DRG') { ANG = ANG === 'deg' ? 'rad' : 'deg'; return calcRender(); }
+  if (k === 'AC') { S.expr = ''; S.done = false; return calcRender(); }
+  if (k === 'DEL') { if (S.done) S.done = false; const t = SCI_TOK.find(t => S.expr.endsWith(t)); S.expr = S.expr.slice(0, -(t ? t.length : 1)); return calcRender(); }
+  if (k === '=') {
+    const e = S.expr || 'Ans';
+    try { const v = sciEval(e); S.log.push(`${closeParens(e)} = ${fmtSci(v)}`); S.ans = v; S.done = true; S.expr = closeParens(e); }
+    catch (er) { S.err = 'Syntax ERROR'; }
+    return calcRender();
+  }
+  let ins = (sh && SCI_SHIFT[k]) || SCI_INS[k] || k;
+  if (S.done) { // after "=": operators continue from Ans, anything else starts fresh
+    S.expr = /^([+×÷^²³!%−]|⁻¹)/.test(ins) ? 'Ans' : '';
+    S.done = false;
+  }
+  S.expr += ins; calcRender();
 }
-function calcKeyboard(e) {
+function sciRender() {
+  $('cInd').innerHTML = `<span class="${S.shift ? 'on' : ''}">SHIFT</span><span class="on">${ANG === 'deg' ? 'D' : 'R'}</span><span class="on">Ans=${fmtSci(S.ans)}</span>`;
+  const ex = $('cEx'); ex.className = 'ex sci'; ex.textContent = S.expr || ' '; ex.scrollLeft = ex.scrollWidth;
+  $('cLb').textContent = '';
+  let v = '', dim = false;
+  if (S.err) v = S.err;
+  else if (S.done) v = fmtSci(S.ans);
+  else if (S.expr) { try { v = fmtSci(sciEval(S.expr)); dim = true; } catch (e) { v = ''; } }
+  else v = '0';
+  $('cVal').textContent = v; document.querySelector('.lcd .main').classList.toggle('dim', dim);
+  document.querySelectorAll('.k[data-key="SHIFT"]').forEach(k => k.classList.toggle('on2', S.shift));
+}
+function sciKeyboard(e) {
+  const k = e.key, map = { '*': '×', '/': '÷', '-': '−', '+': '+', '^': 'xʸ', '(': '(', ')': ')', '%': '%', '!': 'x!', ',': ',', '=': '=', Enter: '=', Backspace: 'DEL', Escape: 'AC', Delete: 'AC' };
+  if (/^[0-9.]$/.test(k)) { sciPress(k); return true; }
+  if (map[k]) { sciPress(map[k]); return true; }
+  return false;
+}
+
+/* ── Basic (phổ thông, immediate execution) ── */
+const BASIC_KEYS = [
+  ['MC', 'fn', ''], ['MR', 'fn', ''], ['M+', 'fn', ''], ['M−', 'fn', ''], ['⌫', 'cpt', ''],
+  ['7', 'n', ''], ['8', 'n', ''], ['9', 'n', ''], ['÷', '', ''], ['C', 'ac', ''],
+  ['4', 'n', ''], ['5', 'n', ''], ['6', 'n', ''], ['×', '', ''], ['%', '', ''],
+  ['1', 'n', ''], ['2', 'n', ''], ['3', 'n', ''], ['−', '', ''], ['√', '', ''],
+  ['0', 'n', ''], ['.', 'n', ''], ['±', 'n', ''], ['+', '', ''], ['=', 'eq', ''],
+];
+const B = { acc: null, op: null, entry: '0', fresh: true, typed: false, mem: 0, hist: '', log: [] };
+const bApply = (a, op, b) => op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : a / b;
+const bNum = () => parseFloat(B.entry) || 0;
+const bSet = v => { B.entry = String(+v.toPrecision(12)); B.fresh = true; B.typed = true; };
+function bFmt(str) {
+  if (!isFinite(+str)) return 'Lỗi';
+  if (/e/.test(str)) return str;
+  const [i, d] = str.split('.'), neg = i.startsWith('-');
+  return (neg ? '-' : '') + (+i.replace('-', '')).toLocaleString('en-US') + (d !== undefined ? '.' + d : '');
+}
+function basicPress(k) {
+  if (/^\d$/.test(k) || k === '.') {
+    if (B.fresh) { B.entry = '0'; B.fresh = false; }
+    if (k === '.' && B.entry.includes('.')) return calcRender();
+    if (B.entry.replace(/[-.]/g, '').length >= 14) return calcRender();
+    B.entry = B.entry === '0' && k !== '.' ? k : B.entry + k; B.typed = true;
+  } else switch (k) {
+    case '+': case '−': case '×': case '÷':
+      if (B.op && B.typed) { B.acc = bApply(B.acc, B.op, bNum()); bSet(B.acc); }
+      else if (B.acc === null || !B.op) B.acc = bNum();
+      B.op = k; B.fresh = true; B.typed = false; B.hist = `${bFmt(String(+B.acc.toPrecision(12)))} ${k}`; break;
+    case '=': {
+      if (!B.op) break;
+      const b = bNum(), r = bApply(B.acc, B.op, b);
+      B.log.push(`${bFmt(String(+B.acc.toPrecision(12)))} ${B.op} ${bFmt(String(b))} = ${bFmt(String(+r.toPrecision(12)))}`);
+      B.hist = B.log[B.log.length - 1].replace(/ = .*/, ' ='); bSet(r); B.acc = null; B.op = null; B.typed = false; break;
+    }
+    case '%': bSet(B.op === '+' || B.op === '−' ? B.acc * bNum() / 100 : bNum() / 100); break;
+    case '√': bSet(Math.sqrt(bNum())); break;
+    case '±': B.entry = B.entry.startsWith('-') ? B.entry.slice(1) : B.entry === '0' ? '0' : '-' + B.entry; B.typed = true; break;
+    case '⌫': if (!B.fresh) B.entry = B.entry.length > 1 && B.entry !== '-0' ? B.entry.slice(0, -1).replace(/^-$/, '0') : '0'; break;
+    case 'C': Object.assign(B, { acc: null, op: null, entry: '0', fresh: true, typed: false, hist: '' }); break;
+    case 'MC': B.mem = 0; break;
+    case 'MR': bSet(B.mem); break;
+    case 'M+': B.mem += bNum(); B.fresh = true; break;
+    case 'M−': B.mem -= bNum(); B.fresh = true; break;
+  }
+  calcRender();
+}
+function basicRender() {
+  $('cInd').innerHTML = `<span class="${B.mem ? 'on' : ''}">M</span>${B.mem ? `<span class="on">${bFmt(String(+B.mem.toPrecision(12)))}</span>` : ''}`;
+  const ex = $('cEx'); ex.className = 'ex'; ex.textContent = B.hist;
+  $('cLb').textContent = ''; $('cVal').textContent = bFmt(B.entry); document.querySelector('.lcd .main').classList.remove('dim');
+}
+function basicKeyboard(e) {
+  const k = e.key, map = { '*': '×', '/': '÷', '-': '−', '+': '+', '%': '%', '=': '=', Enter: '=', Backspace: '⌫', Escape: 'C', Delete: 'C' };
+  if (/^[0-9.]$/.test(k)) { basicPress(k); return true; }
+  if (map[k]) { basicPress(map[k]); return true; }
+  return false;
+}
+
+/* ── mode switching ── */
+let CM = 'ba';
+try { CM = localStorage.getItem('elevato-board-calc') || 'ba'; } catch (e) {}
+const CALC = {
+  ba: { keys: KEYS, press: k => press(k), render: () => baRender(), kb: e => baKeyboard(e) },
+  sci: { keys: SCI_KEYS, press: sciPress, render: sciRender, kb: sciKeyboard },
+  basic: { keys: BASIC_KEYS, press: basicPress, render: basicRender, kb: basicKeyboard },
+};
+function calcRender() { CALC[CM].render(); }
+function calcKeyboard(e) { return CALC[CM].kb(e); }
+function buildKeys() {
+  $('keys').innerHTML = CALC[CM].keys.map(([k, cls, s]) => `<button class="k ${cls}" data-key="${k}">${s ? `<sup>${s}</sup>` : ''}${k}</button>`).join('');
+  $('keys').querySelectorAll('.k').forEach(b => b.onclick = () => { calcFocus = true; CALC[CM].press(b.dataset.key); });
+}
+function setCalcMode(m) {
+  CM = m; try { localStorage.setItem('elevato-board-calc', m); } catch (e) {}
+  document.querySelectorAll('#ctabs button').forEach(b => b.classList.toggle('on', b.dataset.cm === m));
+  $('calcDec').style.display = m === 'ba' ? '' : 'none';
+  if (m === 'ba') { $('cInd').innerHTML = '<span id="i2nd">2ND</span><span id="icpt">COMPUTE</span><span id="ibgn">BGN</span><span id="isto">STO</span><span id="ircl">RCL</span><span id="iws"></span>'; $('cEx').className = 'ex'; document.querySelector('.lcd .main').classList.remove('dim'); }
+  $('cIns').textContent = m === 'ba' ? '⇪ Ghi số lên bảng' : '⇪ Ghi phép tính lên bảng';
+  $('cInsT').textContent = m === 'ba' ? '⇪ Ghi bài giải' : '⇪ Ghi lịch sử tính';
+  buildKeys(); calcRender();
+}
+document.querySelectorAll('#ctabs button').forEach(b => b.onclick = () => { calcFocus = true; setCalcMode(b.dataset.cm); });
+function baKeyboard(e) {
   const k = e.key, map = { '+': '+', '-': '−', '*': '×', '/': '÷', '^': 'yˣ', '(': '(', ')': ')', '%': '%', '=': '=', Enter: C.mode === 'std' ? '=' : 'ENTER', Backspace: '→', Escape: 'CE|C', ArrowUp: '↑', ArrowDown: '↓', Delete: 'CE|C' };
   if (/^[0-9.]$/.test(k)) { press(k); return true; }
   if (map[k]) { press(map[k]); return true; }
@@ -1524,11 +1814,20 @@ $('calcDec').onchange = e => { C.dec = +e.target.value; calcRender(); };
   h.addEventListener('pointerup', () => d = null);
 })();
 $('cIns').onclick = () => {
+  if (CM !== 'ba') {
+    const t = CM === 'sci' ? (S.done ? `${S.expr} = ${fmtSci(S.ans)}` : S.expr ? `${closeParens(S.expr)} = ${$('cVal').textContent}` : fmtSci(S.ans))
+      : (B.log.length && !B.typed && B.fresh ? B.log[B.log.length - 1] : bFmt(B.entry));
+    const g = nid(), [x, y] = placeBlock(300, 40); addText(t, x, y, { s: 32, b: 1, c: col()[2], g }); return finishInsert(g, 'Đã ghi lên bảng');
+  }
   const txt = ($('cLb').textContent ? $('cLb').textContent.replace(/=\*?$/, ' = ') : '') + $('cVal').textContent;
   const g = nid(), [x, y] = placeBlock(200, 40); addText(txt, x, y, { s: 32, b: 1, c: col()[2], g }); finishInsert(g, 'Đã ghi số lên bảng');
 };
 $('cInsT').onclick = () => {
   let txt;
+  if (CM !== 'ba') {
+    const log = (CM === 'sci' ? S.log : B.log).slice(-10); if (!log.length) return toast('Chưa có phép tính nào');
+    const g = nid(), [x, y] = placeBlock(460, log.length * 30); addText(log.join('\n'), x, y, { s: 22, f: 1, c: col()[1], g }); return finishInsert(g, 'Đã ghi lịch sử tính');
+  }
   if (C.mode === 'cf' || C.mode === 'npv' || C.mode === 'irr') {
     const lines = ['BA II Plus — CF worksheet', `CF0 = ${cFmt(C.cf[0].c)}`];
     C.cf.slice(1).forEach((x, j) => lines.push(`C${String(j + 1).padStart(2, '0')} = ${cFmt(x.c)}   F${String(j + 1).padStart(2, '0')} = ${x.f}`));
@@ -1544,7 +1843,7 @@ $('cInsT').onclick = () => {
 };
 
 /* ═══════════════ BOOT ═══════════════ */
-load(); buildTools(); buildKeys(); updTools(); updPages(); updTimer(); calcRender(); resize();
+load(); setTheme(THEME); buildTools(); setCalcMode(CM); updTools(); updPages(); updTimer(); updBgMenu(); resize();
 addEventListener('resize', resize);
 document.fonts && document.fonts.ready.then(() => { doc.pages.forEach(p => p.objs.forEach(o => o.t === 'text' && measureText(o))); dirty = true; });
 if (!localStorage.getItem('elevato-board-seen')) {
@@ -1558,7 +1857,7 @@ if (!localStorage.getItem('elevato-board-seen')) {
 }
 loop();
 // expose for quick testing in console
-window.__board = { FM, evalExpr, smartCalc, press, C };
+window.__board = { FM, evalExpr, smartCalc, press, C, sciPress, S, basicPress, B, setCalcMode };
 </script>
 </body>
 </html>
