@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#04211b">
+<title>elevaTO Board — Bảng giảng tài chính</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="stylesheet" href="../ai/vendor/fonts/be-vietnam-pro.css">
+<link rel="stylesheet" href="../links/fonts/plus-jakarta-sans.css">
+<style>
+:root{
+  --deep:#04211b; --black:#080808; --panel:rgba(8,18,15,.86); --panel2:#0d1a16;
+  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+  --emerald:#00c896; --emerald-lt:#3ce0b4; --emerald-glow:rgba(0,200,150,.14);
+  --gold:#d4a843; --red:#e05252;
+  --white:#f4f4f0; --text:#c9c9c4; --muted:#818179;
+  --ff-head:'Plus Jakarta Sans','Be Vietnam Pro',system-ui,sans-serif;
+  --ff-body:'Be Vietnam Pro',system-ui,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --r:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--deep);color:var(--text);font-family:var(--ff-body);-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none}
+button,select,input,textarea{font-family:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+#board{position:fixed;inset:0;touch-action:none;display:block}
+.glass{background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 10px 40px rgba(0,0,0,.35)}
+
+/* top bar */
+#top{position:fixed;top:12px;left:12px;right:12px;height:52px;display:flex;align-items:center;gap:6px;padding:0 10px;z-index:20}
+.brand{display:flex;align-items:center;gap:9px;padding-right:10px;margin-right:4px;border-right:1px solid var(--line)}
+.brand svg{width:24px;height:24px}
+.brand b{font-family:var(--ff-head);font-weight:800;color:var(--white);font-size:15px;letter-spacing:-.01em}
+.brand b i{font-style:normal;color:var(--emerald)}
+.brand small{font-size:10px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+.tb{height:36px;min-width:36px;padding:0 10px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--text);transition:.15s}
+.tb:hover{background:rgba(255,255,255,.06);color:var(--white)}
+.tb.on{background:var(--emerald-glow);color:var(--emerald-lt)}
+.tb.cta{background:var(--emerald);color:#03261a;font-weight:600}
+.tb.cta:hover{background:var(--emerald-lt);color:#03261a}
+.tb.gold{color:var(--gold)}
+.tb svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sp{flex:1}
+.sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+#timer{font-family:var(--mono);font-size:14px;min-width:70px}
+#timer.run{color:var(--emerald-lt)} #timer.low{color:var(--red)}
+
+/* left toolbar */
+#tools{position:fixed;left:12px;top:76px;width:52px;padding:8px 6px;display:flex;flex-direction:column;gap:3px;z-index:20;max-height:calc(100% - 150px);overflow-y:auto;scrollbar-width:none}
+#tools .tb{width:40px;padding:0}
+#tools .tb[data-k]::after{content:attr(data-k);position:absolute;margin:20px 0 0 22px;font-size:8px;color:var(--muted)}
+.swatch{width:22px;height:22px;border-radius:50%;margin:3px auto;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.swatch.on{border-color:var(--white);transform:scale(1.12)}
+.wdot{width:40px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.wdot span{background:var(--text);border-radius:99px;display:block}
+.wdot.on{background:var(--emerald-glow)} .wdot.on span{background:var(--emerald-lt)}
+.hr{height:1px;background:var(--line);margin:5px 4px}
+#colorPick{width:22px;height:22px;border:none;background:none;margin:2px auto;cursor:pointer;padding:0}
+
+/* page nav */
+#pages{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:5px;z-index:20}
+#pageLbl{font-family:var(--mono);font-size:13px;min-width:62px;text-align:center;color:var(--white)}
+#zoomLbl{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:48px;text-align:center;cursor:pointer}
+
+/* hint toast */
+#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(10px);opacity:0;transition:.25s;padding:9px 16px;font-size:13px;z-index:60;pointer-events:none;color:var(--white)}
+#toast.show{opacity:1;transform:translateX(-50%)}
+
+/* text editor */
+#editor{position:fixed;z-index:30;background:rgba(0,200,150,.06);outline:1px dashed var(--emerald);border:none;resize:none;overflow:hidden;white-space:pre;line-height:1.3;padding:0;min-width:40px;display:none;user-select:text;-webkit-user-select:text}
+#calcHint{position:fixed;z-index:31;display:none;font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:6px;background:var(--emerald);color:#03261a;font-weight:600;pointer-events:none}
+
+/* BA II Plus */
+#calc{position:fixed;right:16px;top:78px;width:300px;z-index:40;display:none;padding:0;overflow:hidden;border-color:rgba(0,200,150,.25)}
+#calc.show{display:block}
+.chead{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:move;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(0,200,150,.10),transparent)}
+.chead b{font-family:var(--ff-head);font-size:13px;color:var(--white);font-weight:800}
+.chead b i{font-style:normal;color:var(--gold);font-weight:600;font-size:11px;margin-left:4px}
+.chead .tb{height:26px;min-width:26px;padding:0 6px;font-size:11px}
+.lcd{margin:10px 12px 8px;background:#a9b9a0;background:linear-gradient(180deg,#b9c8af,#9fb095);border-radius:8px;padding:6px 10px 8px;color:#122016;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)}
+.lcd .ind{display:flex;gap:8px;font-size:9.5px;font-weight:700;letter-spacing:.06em;min-height:13px;font-family:var(--mono)}
+.lcd .ind span{opacity:.18} .lcd .ind span.on{opacity:1}
+.lcd .ex{font-family:var(--mono);font-size:11px;text-align:right;min-height:14px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcd .main{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:25px;font-weight:600;white-space:nowrap;overflow:hidden}
+.lcd .main .lb{font-size:16px}
+.keys{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:4px 12px 12px}
+.k{height:34px;border-radius:8px;background:#1b2723;color:var(--white);font-size:12px;font-weight:600;border-bottom:2px solid #0a110f;position:relative;line-height:1}
+.k:hover{background:#25352f}
+.k:active{transform:translateY(1px);border-bottom-width:1px}
+.k sup{position:absolute;top:2px;left:0;right:0;font-size:7.5px;color:var(--gold);font-weight:600;letter-spacing:.02em}
+.k.n{background:#2c3a35;font-size:15px}
+.k.n:hover{background:#38483f}
+.k.tv{background:#0f3a2e;color:var(--emerald-lt)}
+.k.sec{background:var(--gold);color:#2a1d00}
+.k.cpt{background:#23302c;color:var(--emerald-lt)}
+.k.eq{background:var(--emerald);color:#03261a}
+.k.on2{outline:2px solid var(--gold)}
+.cfoot{display:flex;gap:6px;padding:0 12px 12px}
+.cfoot .tb{flex:1;height:30px;font-size:11.5px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.cfoot .tb:hover{border-color:var(--emerald)}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.show{display:flex}
+.mbox{width:min(760px,100%);max-height:calc(100% - 32px);display:flex;flex-direction:column;background:#0b1714;user-select:text;-webkit-user-select:text}
+.mhead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.mhead h3{font-family:var(--ff-head);color:var(--white);font-size:17px;font-weight:800;flex:1}
+.tabs{display:flex;gap:4px;padding:10px 16px 0;flex-wrap:wrap}
+.tab{padding:8px 12px;border-radius:9px;font-size:13px;color:var(--muted)}
+.tab.on{background:var(--emerald-glow);color:var(--emerald-lt)}
+.mbody{padding:16px;overflow:auto}
+.pane{display:none}.pane.on{display:block}
+.pane p.d{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+label.f input,label.f select{background:#06110e;border:1px solid var(--line2);border-radius:9px;padding:9px 10px;font-size:14px;color:var(--white);outline:none;font-family:var(--mono)}
+label.f input:focus{border-color:var(--emerald)}
+.fl{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.fc{text-align:left;padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid var(--line);transition:.15s}
+.fc:hover{border-color:var(--emerald);background:var(--emerald-glow)}
+.fc b{display:block;font-size:13px;color:var(--white);margin-bottom:4px;font-weight:600}
+.fc code{font-family:var(--mono);font-size:11.5px;color:var(--emerald-lt);white-space:pre-wrap}
+.fc em{font-style:normal;font-size:10px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase}
+.out{font-family:var(--mono);font-size:13px;color:var(--emerald-lt);background:#06110e;border-radius:10px;padding:10px 12px;margin:0 0 12px;white-space:pre-wrap;min-height:20px}
+.help h4{font-family:var(--ff-head);color:var(--white);font-size:14px;margin:14px 0 6px}
+.help h4:first-child{margin-top:0}
+.help li{font-size:13px;margin:4px 0 4px 18px;line-height:1.5}
+.help kbd,.help code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;color:var(--emerald-lt)}
+.menu{position:fixed;z-index:45;padding:6px;display:none;min-width:190px}
+.menu.show{display:block}
+.menu button{display:flex;width:100%;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:13px;text-align:left}
+.menu button:hover{background:rgba(255,255,255,.06)}
+.menu button.on{color:var(--emerald-lt)}
+.menu .t{font-size:10px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;padding:6px 10px 2px}
+@media (max-width:720px){.brand small,.hide-s{display:none}#calc{right:8px;left:8px;width:auto}}
+</style>
+</head>
+<body>
+<canvas id="board"></canvas>
+
+<header id="top" class="glass">
+  <div class="brand">
+    <svg viewBox="272.4 149.1 32 31.5"><path fill="#18cb96" d="M293.44 160 275.41 159.2c-3.48-.16-4.07 6.63.05 6.74l11.22.3-.86 11.29c-.26 3.44 6.44 3.8 6.63.31Z"/><path fill="#18cb96" d="M304.11 150.14 286.08 149.34c-3.48-.15-4.07 6.63.06 6.74l11.21.3-.86 11.29c-.26 3.44 6.44 3.8 6.63.31Z" opacity=".55"/></svg>
+    <div><b>eleva<i>TO</i> Board</b><br><small>Finance whiteboard</small></div>
+  </div>
+  <button class="tb" id="bUndo" title="Hoàn tác (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+  <button class="tb" id="bRedo" title="Làm lại (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+  <div class="sep"></div>
+  <button class="tb" id="bBg" title="Nền bảng (B)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg><span class="hide-s">Nền</span></button>
+  <button class="tb" id="bClear" title="Xoá trang"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+  <div class="sp"></div>
+  <select class="tb" id="timerSel" title="Chọn thời gian bấm giờ" style="background:none;border:none;outline:none"><option value="90">1:30 /câu</option><option value="180">3:00</option><option value="300">5:00</option><option value="600">10:00</option><option value="900">15:00</option></select>
+  <button class="tb" id="timer" title="Bấm để chạy/dừng · nháy đúp để đặt lại">1:30</button>
+  <div class="sep"></div>
+  <button class="tb gold" id="bCalc" title="Máy tính BA II Plus (C)"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 18h.01M12 18h.01M16 18h.01"/></svg><span class="hide-s">BA II Plus</span></button>
+  <button class="tb cta" id="bFin" title="Công cụ tài chính (F)"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></svg><span class="hide-s">Công cụ TC</span></button>
+  <div class="sep"></div>
+  <button class="tb" id="bFile" title="Lưu / mở / xuất"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg></button>
+  <button class="tb" id="bFull" title="Toàn màn hình"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button class="tb" id="bHelp" title="Hướng dẫn (?)">?</button>
+</header>
+
+<nav id="tools" class="glass"></nav>
+
+<div id="pages" class="glass">
+  <button class="tb" id="pPrev" title="Trang trước (PageUp)">‹</button>
+  <span id="pageLbl">1 / 1</span>
+  <button class="tb" id="pNext" title="Trang sau (PageDown)">›</button>
+  <button class="tb" id="pAdd" title="Thêm trang">＋</button>
+  <button class="tb" id="pDel" title="Xoá trang này">－</button>
+  <div class="sep"></div>
+  <span id="zoomLbl" title="Bấm để về 100%">100%</span>
+</div>
+
+<textarea id="editor" spellcheck="false"></textarea>
+<div id="calcHint"></div>
+<div id="toast" class="glass"></div>
+
+<div class="menu glass" id="bgMenu">
+  <div class="t">Màu bảng</div>
+  <button data-bg="green">● Xanh elevaTO</button>
+  <button data-bg="dark">● Đen</button>
+  <button data-bg="white">○ Trắng</button>
+  <div class="t">Hoạ tiết</div>
+  <button data-pat="none">Trơn</button>
+  <button data-pat="grid">Lưới ô vuông</button>
+  <button data-pat="dots">Chấm</button>
+  <button data-pat="lines">Dòng kẻ</button>
+</div>
+<div class="menu glass" id="fileMenu">
+  <button id="mPng">Xuất trang này ra PNG</button>
+  <button id="mPngAll">Xuất tất cả trang (PNG)</button>
+  <button id="mSave">Lưu bài giảng (.elevato.json)</button>
+  <button id="mOpen">Mở bài giảng…</button>
+  <button id="mImg">Chèn ảnh từ máy…</button>
+  <button id="mNew">Bài giảng mới</button>
+</div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+<input type="file" id="imgIn" accept="image/*" hidden>
+
+<!-- BA II Plus -->
+<section id="calc" class="glass">
+  <div class="chead" id="calcHead">
+    <b>BA II Plus<i>elevaTO</i></b><div class="sp"></div>
+    <select class="tb" id="calcDec" title="Số chữ số thập phân" style="background:none;border:1px solid var(--line);outline:none"><option value="2">DEC 2</option><option value="4">DEC 4</option><option value="6">DEC 6</option><option value="9">FLOAT</option></select>
+    <button class="tb" id="calcClose" title="Đóng">✕</button>
+  </div>
+  <div class="lcd">
+    <div class="ind"><span id="i2nd">2ND</span><span id="icpt">COMPUTE</span><span id="ibgn">BGN</span><span id="isto">STO</span><span id="ircl">RCL</span><span id="iws"></span></div>
+    <div class="ex" id="cEx"></div>
+    <div class="main"><span class="lb" id="cLb"></span><span id="cVal">0.00</span></div>
+  </div>
+  <div class="keys" id="keys"></div>
+  <div class="cfoot">
+    <button class="tb" id="cIns" title="Ghi số đang hiển thị lên bảng">⇪ Ghi số lên bảng</button>
+    <button class="tb" id="cInsT" title="Ghi tóm tắt TVM / CF lên bảng">⇪ Ghi bài giải</button>
+  </div>
+</section>
+
+<!-- Finance tools -->
+<div class="modal" id="finModal">
+  <div class="mbox glass">
+    <div class="mhead"><h3>Công cụ tài chính</h3><button class="tb" data-close>✕</button></div>
+    <div class="tabs" id="finTabs">
+      <button class="tab on" data-p="tl">Dòng tiền (timeline)</button>
+      <button class="tab" data-p="am">Lịch trả nợ</button>
+      <button class="tab" data-p="bd">Trái phiếu</button>
+      <button class="tab" data-p="pl">Vẽ đồ thị</button>
+      <button class="tab" data-p="tb">Bảng kẻ</button>
+      <button class="tab" data-p="fm">Công thức CFA</button>
+    </div>
+    <div class="mbody">
+      <div class="pane on" id="p-tl">
+        <p class="d">Nhập dòng tiền theo thứ tự từ t = 0, cách nhau bằng dấu phẩy hoặc chấm phẩy. Có lãi suất thì bảng sẽ vẽ luôn PV từng kỳ và NPV.</p>
+        <div class="grid">
+          <label class="f" style="grid-column:1/-1">Dòng tiền<input id="tlCf" value="-1000, 300, 400, 500, 600"></label>
+          <label class="f">Lãi suất chiết khấu (%)<input id="tlR" value="10"></label>
+          <label class="f">Nhãn kỳ<select id="tlLb"><option value="t">0, 1, 2…</option><option value="y">Năm 0, 1…</option><option value="q">Q0, Q1…</option></select></label>
+        </div>
+        <div class="out" id="tlOut"></div>
+        <button class="tb cta" id="tlGo">Vẽ lên bảng</button>
+      </div>
+      <div class="pane" id="p-am">
+        <p class="d">Khoản vay trả góp đều. Bảng hiện tối đa 36 kỳ đầu (kỳ cuối luôn có).</p>
+        <div class="grid">
+          <label class="f">Số tiền vay<input id="amP" value="100000"></label>
+          <label class="f">Lãi suất năm (%)<input id="amR" value="6"></label>
+          <label class="f">Số năm<input id="amY" value="5"></label>
+          <label class="f">Số kỳ / năm<select id="amF"><option>1</option><option>2</option><option>4</option><option selected>12</option></select></label>
+        </div>
+        <div class="out" id="amOut"></div>
+        <button class="tb cta" id="amGo">Vẽ bảng lên bảng</button>
+      </div>
+      <div class="pane" id="p-bd">
+        <div class="grid">
+          <label class="f">Mệnh giá<input id="bdF" value="1000"></label>
+          <label class="f">Coupon năm (%)<input id="bdC" value="6"></label>
+          <label class="f">YTM (%)<input id="bdY" value="5"></label>
+          <label class="f">Số năm<input id="bdN" value="5"></label>
+          <label class="f">Trả coupon / năm<select id="bdQ"><option>1</option><option selected>2</option><option>4</option></select></label>
+        </div>
+        <div class="out" id="bdOut"></div>
+        <button class="tb cta" id="bdGo">Ghi lên bảng</button> <button class="tb" id="bdPlot">Vẽ đường Giá – YTM</button>
+      </div>
+      <div class="pane" id="p-pl">
+        <p class="d">Biểu thức theo <code style="font-family:var(--mono);color:var(--emerald-lt)">x</code>, dùng được mọi hàm của máy tính thông minh. Ví dụ NPV profile: <code style="font-family:var(--mono);color:var(--emerald-lt)">npv(x, -1000, 300, 400, 500, 600)</code></p>
+        <div class="grid">
+          <label class="f" style="grid-column:1/-1">y =<input id="plE" value="npv(x, -1000, 300, 400, 500, 600)"></label>
+          <label class="f">x từ<input id="plA" value="0"></label>
+          <label class="f">đến<input id="plB" value="0.4"></label>
+          <label class="f">Tiêu đề<input id="plT" value="NPV profile"></label>
+        </div>
+        <div class="out" id="plOut"></div>
+        <button class="tb cta" id="plGo">Vẽ lên bảng</button>
+      </div>
+      <div class="pane" id="p-tb">
+        <div class="grid">
+          <label class="f">Số dòng<input id="tbR" value="5"></label>
+          <label class="f">Số cột<input id="tbC" value="4"></label>
+          <label class="f">Rộng ô<input id="tbW" value="150"></label>
+          <label class="f">Cao ô<input id="tbH" value="48"></label>
+        </div>
+        <button class="tb cta" id="tbGo">Kẻ bảng</button>
+      </div>
+      <div class="pane" id="p-fm"><div class="fl" id="fmList"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="helpModal">
+  <div class="mbox glass">
+    <div class="mhead"><h3>Hướng dẫn nhanh</h3><button class="tb" data-close>✕</button></div>
+    <div class="mbody help">
+      <h4>Máy tính thông minh trên bảng</h4>
+      <ul>
+        <li>Dùng công cụ Chữ (<kbd>T</kbd>), gõ biểu thức rồi kết thúc bằng <code>=</code> → tự điền kết quả. VD: <code>1000/1.05^3 =</code></li>
+        <li>Đặt biến: <code>r = 8%</code>, <code>n = 10</code> rồi dùng ở dòng sau: <code>pv(r, n, 0, 1000) =</code>. Biến dùng chung trong cả trang.</li>
+        <li>Hàm (quy ước dấu như BA II / Excel): <code>pv(r,n,pmt,fv,bgn)</code> <code>fv(r,n,pmt,pv,bgn)</code> <code>pmt(r,n,pv,fv,bgn)</code> <code>nper(r,pmt,pv,fv)</code> <code>rate(n,pmt,pv,fv)</code></li>
+        <li><code>npv(r, CF0, CF1, …)</code> (CF0 ở t=0, giống BA II) · <code>irr(CF0, CF1, …)</code> · <code>ear(apr, m)</code> · <code>cont(apr)</code> · <code>price(F, c, y, n, m)</code> · <code>ytm(P, F, c, n, m)</code></li>
+        <li>Thống kê: <code>sum mean avg stdev var sd min max median</code> · <code>comb(n,k) perm(n,k) fact(n)</code> · <code>sqrt ln log exp abs round</code>. <code>5%</code> = 0.05.</li>
+      </ul>
+      <h4>BA II Plus</h4>
+      <ul>
+        <li>Giống máy thật: nhập số → bấm <kbd>N</kbd> <kbd>I/Y</kbd> <kbd>PV</kbd> <kbd>PMT</kbd> <kbd>FV</kbd>; <kbd>CPT</kbd> + phím để giải. <kbd>2ND</kbd>+<kbd>FV</kbd> = CLR TVM, <kbd>2ND</kbd>+<kbd>PMT</kbd> = BGN/END, <kbd>2ND</kbd>+<kbd>I/Y</kbd> = P/Y, <kbd>2ND</kbd>+<kbd>PV</kbd> = AMORT, <kbd>2ND</kbd>+<kbd>N</kbd> = xP/Y, <kbd>2ND</kbd>+<kbd>CE|C</kbd> = QUIT.</li>
+        <li><kbd>CF</kbd>: nhập CF0 → <kbd>ENTER</kbd> → <kbd>↓</kbd> C01 … ; <kbd>NPV</kbd>: nhập I → <kbd>↓</kbd> → <kbd>CPT</kbd>; <kbd>IRR</kbd> → <kbd>CPT</kbd>. <kbd>2ND</kbd>+<kbd>CF</kbd> = CLR WORK.</li>
+        <li>Khi đã bấm vào máy tính, bàn phím số/phép tính/Enter/Backspace điều khiển máy tính. Bấm ra bảng để trả lại phím tắt.</li>
+        <li><b>Ghi bài giải</b> chép toàn bộ các bước TVM/CF lên bảng để học viên chụp lại.</li>
+      </ul>
+      <h4>Phím tắt bảng</h4>
+      <ul>
+        <li><kbd>V</kbd> chọn · <kbd>H</kbd> kéo bảng · <kbd>P</kbd> bút · <kbd>M</kbd> bút dạ quang · <kbd>E</kbd> tẩy · <kbd>L</kbd> đường · <kbd>A</kbd> mũi tên · <kbd>R</kbd> chữ nhật · <kbd>O</kbd> elip · <kbd>T</kbd> chữ · <kbd>K</kbd> laser</li>
+        <li><kbd>1</kbd>–<kbd>7</kbd> đổi màu · <kbd>[</kbd> <kbd>]</kbd> nét nhỏ/to · giữ <kbd>Shift</kbd> để vẽ thẳng 45° / hình vuông</li>
+        <li>Giữ <kbd>Space</kbd> hoặc chuột giữa để kéo bảng · <kbd>Ctrl</kbd>+lăn chuột / chụm 2 ngón để zoom · <kbd>Ctrl+0</kbd> về 100%</li>
+        <li><kbd>Ctrl+Z</kbd>/<kbd>Ctrl+Y</kbd> · <kbd>Del</kbd> xoá vùng chọn · <kbd>Ctrl+D</kbd> nhân bản · <kbd>Ctrl+V</kbd> dán ảnh chụp đề bài · nháy đúp chữ để sửa</li>
+        <li><kbd>PageUp</kbd>/<kbd>PageDown</kbd> đổi trang · <kbd>Ctrl+S</kbd> lưu file · bài giảng tự lưu trong trình duyệt.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════ MATH CORE ═══════════════ */
+const FM = {
+  tvm(target, o) { // o: n, i (per period, decimal), pv, pmt, fv, bgn
+    const { n, i, pv, pmt, fv } = o, b = o.bgn ? 1 : 0;
+    const g = x => Math.pow(1 + i, x), a = x => i === 0 ? x : (g(x) - 1) / i, k = 1 + i * b;
+    switch (target) {
+      case 'fv': return -(pv * g(n) + pmt * k * a(n));
+      case 'pv': return -(fv + pmt * k * a(n)) / g(n);
+      case 'pmt': return -(fv + pv * g(n)) / (k * a(n));
+      case 'n': {
+        if (i === 0) return -(pv + fv) / pmt;
+        const q = pmt * k / i, r = (q - fv) / (pv + q);
+        if (!(r > 0)) throw new Error('Không có nghiệm N');
+        return Math.log(r) / Math.log(1 + i);
+      }
+      case 'i': {
+        const f = r => {
+          const gg = Math.pow(1 + r, n), aa = Math.abs(r) < 1e-12 ? n : (gg - 1) / r;
+          return pv * gg + pmt * (1 + r * b) * aa + fv;
+        };
+        return FM.root(f, -0.99, 10, 0.05);
+      }
+    }
+  },
+  root(f, lo, hi, guess) {
+    // Newton first, bisection on a scanned bracket as fallback
+    let x = guess;
+    for (let it = 0; it < 60; it++) {
+      const y = f(x), d = (f(x + 1e-7) - y) / 1e-7;
+      if (!isFinite(y) || !isFinite(d) || d === 0) break;
+      const nx = x - y / d;
+      if (Math.abs(nx - x) < 1e-12) { if (nx > lo && nx < hi) return nx; break; }
+      x = nx; if (x <= lo || x >= hi) break;
+    }
+    const N = 400; let pa = lo + 1e-9, fa = f(pa);
+    for (let s = 1; s <= N; s++) {
+      const pb = lo + (hi - lo) * Math.pow(s / N, 2), fb = f(pb);
+      if (isFinite(fa) && isFinite(fb) && fa * fb <= 0) {
+        let a = pa, c = pb, ya = fa;
+        for (let j = 0; j < 200; j++) { const m = (a + c) / 2, ym = f(m); if (ya * ym <= 0) c = m; else { a = m; ya = ym; } }
+        return (a + c) / 2;
+      }
+      pa = pb; fa = fb;
+    }
+    throw new Error('Không tìm được nghiệm');
+  },
+  npv(r, cfs) { return cfs.reduce((s, c, t) => s + c / Math.pow(1 + r, t), 0); },
+  irr(cfs) { return FM.root(r => FM.npv(r, cfs), -0.99, 10, 0.1); },
+  bond(F, c, y, n, m) { // c, y annual decimals; n years; m per year
+    const N = Math.round(n * m), cp = F * c / m, yy = y / m;
+    let P = 0, D = 0, C = 0;
+    for (let t = 1; t <= N; t++) {
+      const cf = cp + (t === N ? F : 0), pv = cf / Math.pow(1 + yy, t);
+      P += pv; D += t * pv; C += t * (t + 1) * pv;
+    }
+    const mac = D / P / m, mod = mac / (1 + yy), conv = C / P / Math.pow(1 + yy, 2) / (m * m);
+    return { P, mac, mod, conv, N, cp };
+  },
+};
+
+/* expression evaluator (safe, no eval) */
+const FN = {
+  sqrt: Math.sqrt, ln: Math.log, log: x => Math.log10(x), exp: Math.exp, abs: Math.abs,
+  round: (x, d = 0) => Math.round(x * 10 ** d) / 10 ** d, floor: Math.floor, ceil: Math.ceil,
+  min: (...a) => Math.min(...a), max: (...a) => Math.max(...a),
+  sum: (...a) => a.reduce((s, x) => s + x, 0),
+  mean: (...a) => FN.sum(...a) / a.length, avg: (...a) => FN.mean(...a),
+  median: (...a) => { const s = [...a].sort((p, q) => p - q), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; },
+  var: (...a) => { const m = FN.mean(...a); return a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1); },
+  varp: (...a) => { const m = FN.mean(...a); return a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length; },
+  stdev: (...a) => Math.sqrt(FN.var(...a)), sd: (...a) => FN.stdev(...a), stdevp: (...a) => Math.sqrt(FN.varp(...a)),
+  fact: n => { let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; },
+  comb: (n, k) => FN.fact(n) / (FN.fact(k) * FN.fact(n - k)), perm: (n, k) => FN.fact(n) / FN.fact(n - k),
+  pv: (r, n, pmt = 0, fv = 0, b = 0) => FM.tvm('pv', { n, i: r, pv: 0, pmt, fv, bgn: b }),
+  fv: (r, n, pmt = 0, pv = 0, b = 0) => FM.tvm('fv', { n, i: r, pv, pmt, fv: 0, bgn: b }),
+  pmt: (r, n, pv = 0, fv = 0, b = 0) => FM.tvm('pmt', { n, i: r, pv, pmt: 0, fv, bgn: b }),
+  nper: (r, pmt, pv = 0, fv = 0, b = 0) => FM.tvm('n', { n: 0, i: r, pv, pmt, fv, bgn: b }),
+  rate: (n, pmt, pv = 0, fv = 0, b = 0) => FM.tvm('i', { n, i: 0, pv, pmt, fv, bgn: b }),
+  npv: (r, ...cf) => FM.npv(r, cf), irr: (...cf) => FM.irr(cf),
+  ear: (apr, m) => Math.pow(1 + apr / m, m) - 1, cont: apr => Math.exp(apr) - 1,
+  price: (F, c, y, n, m = 1) => FM.bond(F, c, y, n, m).P,
+  ytm: (P, F, c, n, m = 1) => FM.root(y => FM.bond(F, c, y, n, m).P - P, -0.5, 5, c),
+};
+const CONST = { pi: Math.PI, e: Math.E };
+function evalExpr(src, scope = {}) {
+  const s = src.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/\*\*/g, '^');
+  const toks = []; const re = /\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z_0-9]*)|(\S))/gy;
+  let m; re.lastIndex = 0;
+  while (re.lastIndex < s.length && (m = re.exec(s))) {
+    if (m[1] !== undefined) toks.push({ t: 'n', v: parseFloat(m[1]) });
+    else if (m[2] !== undefined) toks.push({ t: 'id', v: m[2] });
+    else if (m[3] !== undefined) toks.push({ t: 'op', v: m[3] });
+  }
+  let p = 0;
+  const peek = () => toks[p], eat = v => { const k = toks[p]; if (!k || (v && k.v !== v)) throw new Error('Cú pháp'); p++; return k; };
+  const isOp = v => toks[p] && toks[p].t === 'op' && toks[p].v === v;
+  function expr() { let v = term(); while (isOp('+') || isOp('-')) { const o = eat().v, r = term(); v = o === '+' ? v + r : v - r; } return v; }
+  function term() {
+    let v = unary();
+    for (;;) {
+      if (isOp('*') || isOp('/')) { const o = eat().v, r = unary(); v = o === '*' ? v * r : v / r; }
+      else if (peek() && (peek().t === 'id' || isOp('('))) v = v * unary(); // implicit: 2(1+r), 3pi
+      else break;
+    }
+    return v;
+  }
+  function unary() { if (isOp('-')) { eat(); return -unary(); } if (isOp('+')) { eat(); return unary(); } return power(); }
+  function power() { const b = postfix(); if (isOp('^')) { eat(); return Math.pow(b, unary()); } return b; }
+  function postfix() { let v = primary(); while (isOp('%') || isOp('!')) { v = eat().v === '%' ? v / 100 : FN.fact(v); } return v; }
+  function primary() {
+    const k = peek(); if (!k) throw new Error('Thiếu số');
+    if (k.t === 'n') { p++; return k.v; }
+    if (k.t === 'id') {
+      p++; const name = k.v, low = name.toLowerCase();
+      if (isOp('(') && FN[low]) {
+        eat('('); const args = [];
+        if (!isOp(')')) { args.push(expr()); while (isOp(',') || isOp(';')) { eat(); args.push(expr()); } }
+        eat(')'); return FN[low](...args);
+      }
+      if (name in scope) return scope[name];
+      if (low in CONST) return CONST[low];
+      throw new Error('Chưa biết "' + name + '"');
+    }
+    if (isOp('(')) { eat(); const v = expr(); eat(')'); return v; }
+    throw new Error('Cú pháp');
+  }
+  const v = expr(); if (p < toks.length) throw new Error('Cú pháp');
+  if (typeof v !== 'number' || !isFinite(v)) throw new Error('Không xác định');
+  return v;
+}
+function fmtNum(v, dec) {
+  if (!isFinite(v)) return 'Lỗi';
+  if (dec === undefined) { // smart: up to 6 significant decimals
+    const a = Math.abs(v);
+    if (a !== 0 && (a >= 1e15 || a < 1e-6)) return v.toExponential(4);
+    dec = a >= 1000 ? 2 : a >= 1 ? 4 : 6;
+    let s = v.toLocaleString('en-US', { maximumFractionDigits: dec });
+    return s === '-0' ? '0' : s;
+  }
+  return v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+// "x = 1+2 =" → appends result; "r = 5%" → defines variable
+function smartCalc(text, scope) {
+  return text.split('\n').map(line => {
+    const t = line.trim();
+    if (/=\s*$/.test(t) && !/==\s*$/.test(t)) {
+      const body = t.replace(/=\s*$/, ''), parts = body.split('=');
+      const ex = parts[parts.length - 1];
+      try {
+        const v = evalExpr(ex, scope);
+        const lhs = parts.length > 1 ? parts[0].trim() : '';
+        if (/^[A-Za-z_]\w*$/.test(lhs) && !FN[lhs.toLowerCase()]) scope[lhs] = v;
+        return line.replace(/\s*$/, '') + ' ' + fmtNum(v);
+      } catch (e) { return line; }
+    }
+    const a = t.match(/^([A-Za-z_]\w*)\s*=\s*([^=]+)$/);
+    if (a && !FN[a[1].toLowerCase()]) { try { scope[a[1]] = evalExpr(a[2], scope); } catch (e) {} }
+    return line;
+  }).join('\n');
+}
+
+/* ═══════════════ STATE ═══════════════ */
+const $ = id => document.getElementById(id);
+const cv = $('board'), ctx = cv.getContext('2d');
+const BG = { green: '#062a22', dark: '#0b0f0e', white: '#fbfbf7' };
+const PALETTE = {
+  dark: ['#f4f4f0', '#00c896', '#d4a843', '#ff6b6b', '#5fb3ff', '#ff9f43', '#c58bff'],
+  light: ['#151a18', '#00875a', '#b07d12', '#d63c3c', '#1f6fd1', '#e0731a', '#8b48d6'],
+};
+const WIDTHS = [2, 4, 7, 12], TSIZES = [20, 28, 38, 56];
+let doc = newDoc(), pg = 0;
+let tool = 'pen', colorIdx = 0, customColor = null, widthIdx = 1;
+let sel = new Set(), draft = null, laser = [], hist = [], fut = [];
+let dpr = window.devicePixelRatio || 1, W = 0, H = 0, dirty = true;
+const imgCache = {};
+let uid = Date.now() % 1e6;
+const nid = () => (++uid).toString(36);
+
+function newDoc() { return { v: 1, bg: 'green', pat: 'grid', pages: [newPage()], imgs: {} }; }
+function newPage() { return { objs: [], view: { x: 0, y: 0, z: 1 }, vars: {} }; }
+const page = () => doc.pages[pg];
+const view = () => page().view;
+const isLight = () => doc.bg === 'white';
+const ink = () => customColor || PALETTE[isLight() ? 'light' : 'dark'][colorIdx];
+const inkDefault = () => PALETTE[isLight() ? 'light' : 'dark'][0];
+
+/* history (images live outside snapshots) */
+function snap() { return JSON.stringify({ pages: doc.pages, pg }); }
+function commit() {
+  hist.push(lastSnap); if (hist.length > 120) hist.shift();
+  fut = []; lastSnap = snap(); save(); dirty = true;
+}
+let lastSnap = snap();
+function restore(s) { const o = JSON.parse(s); doc.pages = o.pages; pg = Math.min(o.pg, doc.pages.length - 1); sel.clear(); lastSnap = s; save(); updPages(); dirty = true; }
+function undo() { if (!hist.length) return; fut.push(lastSnap); restore(hist.pop()); }
+function redo() { if (!fut.length) return; hist.push(lastSnap); restore(fut.pop()); }
+
+let saveT;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try { localStorage.setItem('elevato-board', JSON.stringify(doc)); localStorage.setItem('elevato-board-pg', pg); }
+    catch (e) { toast('Bộ nhớ trình duyệt đầy — hãy Lưu bài giảng ra file'); }
+  }, 400);
+}
+function load() {
+  try {
+    const s = localStorage.getItem('elevato-board');
+    if (s) { const d = JSON.parse(s); if (d && d.pages && d.pages.length) { doc = d; doc.imgs = doc.imgs || {}; pg = Math.min(+localStorage.getItem('elevato-board-pg') || 0, doc.pages.length - 1); } }
+  } catch (e) {}
+  lastSnap = snap();
+}
+
+/* ═══════════════ GEOMETRY ═══════════════ */
+const toWorld = (sx, sy) => { const v = view(); return [(sx - v.x) / v.z, (sy - v.y) / v.z]; };
+const toScreen = (wx, wy) => { const v = view(); return [wx * v.z + v.x, wy * v.z + v.y]; };
+function segDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy;
+  let t = l ? ((px - ax) * dx + (py - ay) * dy) / l : 0; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+}
+const mctx = document.createElement('canvas').getContext('2d');
+function textFont(o) { return `${o.b ? 700 : 500} ${o.s}px ${o.f ? 'ui-monospace,Menlo,Consolas,monospace' : "'Be Vietnam Pro',system-ui,sans-serif"}`; }
+function measureText(o) {
+  mctx.font = textFont(o); const lines = o.txt.split('\n');
+  o.w = Math.max(10, ...lines.map(l => mctx.measureText(l).width)); o.h = lines.length * o.s * 1.3;
+}
+function bbox(o) {
+  switch (o.t) {
+    case 'pen': case 'hl': {
+      let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+      for (const [x, y] of o.pts) { a = Math.min(a, x); b = Math.min(b, y); c = Math.max(c, x); d = Math.max(d, y); }
+      const h = o.w / 2; return [a - h, b - h, c + h, d + h];
+    }
+    case 'line': case 'arrow': case 'rect': case 'ell': {
+      const h = o.w / 2 + (o.t === 'arrow' ? o.w * 3 : 0);
+      return [Math.min(o.x1, o.x2) - h, Math.min(o.y1, o.y2) - h, Math.max(o.x1, o.x2) + h, Math.max(o.y1, o.y2) + h];
+    }
+    case 'text': { const p = o.f ? 12 : 0; return [o.x - p, o.y - p, o.x + o.w + p, o.y + o.h + p]; }
+    case 'img': return [o.x, o.y, o.x + o.w, o.y + o.h];
+  }
+}
+function hit(o, x, y, tol, edgeOnly) {
+  const bb = bbox(o);
+  if (x < bb[0] - tol || x > bb[2] + tol || y < bb[1] - tol || y > bb[3] + tol) return false;
+  switch (o.t) {
+    case 'pen': case 'hl': {
+      const t = tol + o.w / 2, P = o.pts;
+      if (P.length === 1) return Math.hypot(x - P[0][0], y - P[0][1]) <= t;
+      for (let i = 1; i < P.length; i++) if (segDist(x, y, P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]) <= t) return true;
+      return false;
+    }
+    case 'line': case 'arrow': return segDist(x, y, o.x1, o.y1, o.x2, o.y2) <= tol + o.w / 2;
+    case 'rect': {
+      if (!edgeOnly && !o.fill) return true;
+      if (o.fill && !edgeOnly) return true;
+      const t = tol + o.w / 2, [a, b, c, d] = [Math.min(o.x1, o.x2), Math.min(o.y1, o.y2), Math.max(o.x1, o.x2), Math.max(o.y1, o.y2)];
+      return segDist(x, y, a, b, c, b) <= t || segDist(x, y, c, b, c, d) <= t || segDist(x, y, a, d, c, d) <= t || segDist(x, y, a, b, a, d) <= t;
+    }
+    case 'ell': {
+      if (!edgeOnly) return true;
+      const cx = (o.x1 + o.x2) / 2, cy = (o.y1 + o.y2) / 2, rx = Math.abs(o.x2 - o.x1) / 2 || 1, ry = Math.abs(o.y2 - o.y1) / 2 || 1;
+      const k = Math.hypot((x - cx) / rx, (y - cy) / ry);
+      return Math.abs(k - 1) * Math.min(rx, ry) <= tol + o.w / 2;
+    }
+    default: return true;
+  }
+}
+function moveObj(o, dx, dy) {
+  if (o.pts) o.pts.forEach(p => { p[0] += dx; p[1] += dy; });
+  else if ('x1' in o) { o.x1 += dx; o.x2 += dx; o.y1 += dy; o.y2 += dy; }
+  else { o.x += dx; o.y += dy; }
+}
+function topHit(x, y, tol) {
+  const objs = page().objs;
+  for (let i = objs.length - 1; i >= 0; i--) if (hit(objs[i], x, y, tol, false)) return objs[i];
+  return null;
+}
+function groupOf(o) { return o.g ? page().objs.filter(q => q.g === o.g) : [o]; }
+
+/* ═══════════════ RENDER ═══════════════ */
+function resize() {
+  dpr = window.devicePixelRatio || 1; W = innerWidth; H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; dirty = true;
+}
+function drawPattern(c, v, w, h, light) {
+  if (doc.pat === 'none') return;
+  let s = 40 * v.z; while (s < 14) s *= 2;
+  const ox = ((v.x % s) + s) % s, oy = ((v.y % s) + s) % s;
+  c.save();
+  c.strokeStyle = c.fillStyle = light ? 'rgba(0,40,30,.10)' : 'rgba(180,255,230,.07)';
+  c.lineWidth = 1;
+  if (doc.pat === 'dots') { for (let x = ox; x < w; x += s) for (let y = oy; y < h; y += s) c.fillRect(x - 1, y - 1, 2.2, 2.2); }
+  else {
+    c.beginPath();
+    if (doc.pat === 'grid') for (let x = ox; x < w; x += s) { c.moveTo(Math.round(x) + .5, 0); c.lineTo(Math.round(x) + .5, h); }
+    for (let y = oy; y < h; y += s) { c.moveTo(0, Math.round(y) + .5); c.lineTo(w, Math.round(y) + .5); }
+    c.stroke();
+  }
+  c.restore();
+}
+function strokePts(c, P) {
+  c.beginPath(); c.moveTo(P[0][0], P[0][1]);
+  if (P.length < 3) { for (const p of P) c.lineTo(p[0], p[1]); if (P.length === 1) c.lineTo(P[0][0] + .01, P[0][1]); }
+  else {
+    for (let i = 1; i < P.length - 1; i++) { const mx = (P[i][0] + P[i + 1][0]) / 2, my = (P[i][1] + P[i + 1][1]) / 2; c.quadraticCurveTo(P[i][0], P[i][1], mx, my); }
+    const l = P[P.length - 1]; c.lineTo(l[0], l[1]);
+  }
+  c.stroke();
+}
+function drawObj(c, o) {
+  c.save(); c.lineCap = c.lineJoin = 'round'; c.strokeStyle = c.fillStyle = o.c; c.lineWidth = o.w;
+  switch (o.t) {
+    case 'pen': strokePts(c, o.pts); break;
+    case 'hl': c.globalAlpha = .32; c.lineCap = 'butt'; strokePts(c, o.pts); break;
+    case 'line': case 'arrow':
+      if (o.dash) c.setLineDash([o.w * 3, o.w * 3]);
+      c.beginPath(); c.moveTo(o.x1, o.y1); c.lineTo(o.x2, o.y2); c.stroke();
+      if (o.t === 'arrow') {
+        c.setLineDash([]);
+        const a = Math.atan2(o.y2 - o.y1, o.x2 - o.x1), L = Math.max(12, o.w * 3.5);
+        c.beginPath(); c.moveTo(o.x2, o.y2);
+        c.lineTo(o.x2 - L * Math.cos(a - .42), o.y2 - L * Math.sin(a - .42));
+        c.lineTo(o.x2 - L * Math.cos(a + .42), o.y2 - L * Math.sin(a + .42)); c.closePath(); c.fill();
+      }
+      break;
+    case 'rect': {
+      const x = Math.min(o.x1, o.x2), y = Math.min(o.y1, o.y2), w = Math.abs(o.x2 - o.x1), h = Math.abs(o.y2 - o.y1);
+      if (o.fill) { c.globalAlpha = .14; c.fillRect(x, y, w, h); c.globalAlpha = 1; }
+      if (o.w > 0) c.strokeRect(x, y, w, h); break;
+    }
+    case 'ell':
+      c.beginPath(); c.ellipse((o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2, Math.abs(o.x2 - o.x1) / 2, Math.abs(o.y2 - o.y1) / 2, 0, 0, 7); c.stroke(); break;
+    case 'text': {
+      if (o.w === undefined) measureText(o);
+      if (o.f) { // formula card
+        c.globalAlpha = .1; c.beginPath(); c.roundRect(o.x - 12, o.y - 12, o.w + 24, o.h + 24, 12); c.fill();
+        c.globalAlpha = .55; c.lineWidth = 1.5; c.stroke(); c.globalAlpha = 1;
+      }
+      c.font = textFont(o); c.textBaseline = 'top';
+      o.txt.split('\n').forEach((l, i) => c.fillText(l, o.x, o.y + i * o.s * 1.3 + o.s * .1));
+      break;
+    }
+    case 'img': {
+      const src = doc.imgs[o.src]; if (!src) break;
+      let im = imgCache[o.src];
+      if (!im) { im = imgCache[o.src] = new Image(); im.onload = () => dirty = true; im.src = src; }
+      if (im.complete && im.naturalWidth) c.drawImage(im, o.x, o.y, o.w, o.h);
+      break;
+    }
+  }
+  c.restore();
+}
+function render() {
+  const v = view(), light = isLight();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = BG[doc.bg]; ctx.fillRect(0, 0, W, H);
+  drawPattern(ctx, v, W, H, light);
+  ctx.setTransform(dpr * v.z, 0, 0, dpr * v.z, dpr * v.x, dpr * v.y);
+  const [vx0, vy0] = toWorld(0, 0), [vx1, vy1] = toWorld(W, H);
+  for (const o of page().objs) {
+    if (o === editing) continue;
+    const b = bbox(o); if (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1) continue;
+    drawObj(ctx, o);
+  }
+  if (draft) drawObj(ctx, draft);
+  // selection
+  if (sel.size) {
+    let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+    for (const o of page().objs) if (sel.has(o.id)) { const bb = bbox(o); a = Math.min(a, bb[0]); b = Math.min(b, bb[1]); c = Math.max(c, bb[2]); d = Math.max(d, bb[3]); }
+    if (a < Infinity) {
+      ctx.save(); ctx.strokeStyle = '#00c896'; ctx.lineWidth = 1.5 / v.z; ctx.setLineDash([6 / v.z, 4 / v.z]);
+      ctx.strokeRect(a - 6 / v.z, b - 6 / v.z, c - a + 12 / v.z, d - b + 12 / v.z);
+      const one = selOne();
+      if (one && one.t === 'img') { ctx.setLineDash([]); ctx.fillStyle = '#00c896'; ctx.fillRect(c - 6 / v.z, d - 6 / v.z, 12 / v.z, 12 / v.z); }
+      ctx.restore();
+    }
+  }
+  if (marquee) {
+    ctx.save(); ctx.fillStyle = 'rgba(0,200,150,.08)'; ctx.strokeStyle = '#00c896'; ctx.lineWidth = 1 / v.z;
+    const [x, y, x2, y2] = marquee; ctx.fillRect(x, y, x2 - x, y2 - y); ctx.strokeRect(x, y, x2 - x, y2 - y); ctx.restore();
+  }
+  // laser
+  const now = performance.now(); laser = laser.filter(p => now - p[2] < 900);
+  if (laser.length > 1) {
+    ctx.save(); ctx.lineCap = ctx.lineJoin = 'round';
+    for (let i = 1; i < laser.length; i++) {
+      if (laser[i][3] !== laser[i - 1][3]) continue;
+      const age = (now - laser[i][2]) / 900;
+      ctx.strokeStyle = `rgba(255,70,70,${1 - age})`; ctx.shadowColor = '#ff3b3b'; ctx.shadowBlur = 14;
+      ctx.lineWidth = (6 * (1 - age) + 2) / v.z;
+      ctx.beginPath(); ctx.moveTo(laser[i - 1][0], laser[i - 1][1]); ctx.lineTo(laser[i][0], laser[i][1]); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  if (laserDot) { ctx.save(); ctx.fillStyle = '#ff4646'; ctx.shadowColor = '#ff3b3b'; ctx.shadowBlur = 18; ctx.beginPath(); ctx.arc(laserDot[0], laserDot[1], 6 / v.z, 0, 7); ctx.fill(); ctx.restore(); }
+  // eraser cursor
+  if (tool === 'eraser' && hover) { ctx.save(); ctx.strokeStyle = light ? '#333' : '#fff'; ctx.globalAlpha = .6; ctx.lineWidth = 1 / v.z; ctx.beginPath(); ctx.arc(hover[0], hover[1], eraserR() , 0, 7); ctx.stroke(); ctx.restore(); }
+}
+const eraserR = () => (WIDTHS[widthIdx] * 2 + 6) / view().z;
+function loop() {
+  if (dirty || laser.length) { dirty = false; render(); }
+  requestAnimationFrame(loop);
+}
+let marquee = null, laserDot = null, hover = null, editing = null;
+const selOne = () => { if (sel.size !== 1) return null; const id = [...sel][0]; return page().objs.find(o => o.id === id); };
+
+/* ═══════════════ INPUT ═══════════════ */
+const pointers = new Map(); let gesture = null, act = null, spaceDown = false;
+cv.addEventListener('pointerdown', e => {
+  calcFocus = false; closeMenus();
+  if (editing) { commitText(); return; }
+  cv.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 2) { // pinch
+    if (act && act.kind === 'draw') draft = null;
+    act = null; const [a, b] = [...pointers.values()];
+    gesture = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2, v: { ...view() } };
+    return;
+  }
+  if (pointers.size > 2) return;
+  const [x, y] = toWorld(e.clientX, e.clientY), v = view();
+  if (e.button === 1 || spaceDown || tool === 'hand' || e.button === 2) { act = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y }; cv.style.cursor = 'grabbing'; return; }
+  const w = WIDTHS[widthIdx];
+  switch (tool) {
+    case 'pen': case 'hl':
+      draft = { id: nid(), t: tool, c: ink(), w: tool === 'hl' ? w * 4 + 8 : w, pts: [[x, y]] }; act = { kind: 'draw' }; break;
+    case 'line': case 'arrow': case 'rect': case 'ell':
+      draft = { id: nid(), t: tool, c: ink(), w, x1: x, y1: y, x2: x, y2: y }; act = { kind: 'shape', ox: x, oy: y }; break;
+    case 'eraser': act = { kind: 'erase', n: 0 }; eraseAt(x, y); break;
+    case 'laser': act = { kind: 'laser', s: nid() }; laser.push([x, y, performance.now(), act.s]); break;
+    case 'text': {
+      const o = topHit(x, y, 4 / v.z);
+      if (o && o.t === 'text') editText(o); else editText(null, x, y);
+      break;
+    }
+    case 'select': {
+      const one = selOne();
+      if (one && one.t === 'img') {
+        const b = bbox(one);
+        if (Math.abs(x - b[2]) < 12 / v.z && Math.abs(y - b[3]) < 12 / v.z) { act = { kind: 'resize', o: one, r: one.w / one.h }; return; }
+      }
+      const o = topHit(x, y, 6 / v.z);
+      if (o) {
+        if (!sel.has(o.id)) { if (!e.shiftKey) sel.clear(); groupOf(o).forEach(q => sel.add(q.id)); }
+        act = { kind: 'move', lx: x, ly: y, moved: false };
+      } else { if (!e.shiftKey) sel.clear(); act = { kind: 'marquee', ox: x, oy: y }; marquee = [x, y, x, y]; }
+      dirty = true; break;
+    }
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  const [x, y] = toWorld(e.clientX, e.clientY);
+  if (tool === 'eraser') { hover = [x, y]; dirty = true; }
+  if (tool === 'laser') { laserDot = [x, y]; dirty = true; }
+  if (gesture && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2;
+    const g = gesture, z = clampZ(g.v.z * d / g.d), v = view();
+    v.z = z; v.x = cx - (g.cx - g.v.x) * z / g.v.z; v.y = cy - (g.cy - g.v.y) * z / g.v.z; updZoom(); dirty = true; return;
+  }
+  if (!act) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  switch (act.kind) {
+    case 'pan': { const v = view(); v.x = act.vx + e.clientX - act.sx; v.y = act.vy + e.clientY - act.sy; dirty = true; break; }
+    case 'draw': for (const ev of evs) { const p = toWorld(ev.clientX, ev.clientY), l = draft.pts[draft.pts.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) > .6 / view().z) draft.pts.push(p); } dirty = true; break;
+    case 'shape': {
+      let x2 = x, y2 = y; const dx = x - act.ox, dy = y - act.oy;
+      if (e.shiftKey) {
+        if (draft.t === 'rect' || draft.t === 'ell') { const s = Math.max(Math.abs(dx), Math.abs(dy)); x2 = act.ox + Math.sign(dx || 1) * s; y2 = act.oy + Math.sign(dy || 1) * s; }
+        else { const a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * Math.PI / 4, L = Math.hypot(dx, dy); x2 = act.ox + L * Math.cos(a); y2 = act.oy + L * Math.sin(a); }
+      }
+      draft.x2 = x2; draft.y2 = y2; dirty = true; break;
+    }
+    case 'erase': for (const ev of evs) { const p = toWorld(ev.clientX, ev.clientY); eraseAt(p[0], p[1]); } break;
+    case 'laser': for (const ev of evs) { const p = toWorld(ev.clientX, ev.clientY); laser.push([p[0], p[1], performance.now(), act.s]); } break;
+    case 'move': {
+      const dx = x - act.lx, dy = y - act.ly; act.lx = x; act.ly = y; act.moved = true;
+      for (const o of page().objs) if (sel.has(o.id)) moveObj(o, dx, dy);
+      dirty = true; break;
+    }
+    case 'resize': { const o = act.o; o.w = Math.max(20, x - o.x); o.h = o.w / act.r; dirty = true; break; }
+    case 'marquee': {
+      marquee = [Math.min(act.ox, x), Math.min(act.oy, y), Math.max(act.ox, x), Math.max(act.oy, y)];
+      if (!e.shiftKey) sel.clear();
+      for (const o of page().objs) { const b = bbox(o); if (b[0] >= marquee[0] && b[1] >= marquee[1] && b[2] <= marquee[2] && b[3] <= marquee[3]) sel.add(o.id); }
+      dirty = true; break;
+    }
+  }
+});
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (gesture) { if (pointers.size < 2) { gesture = null; save(); } return; }
+  if (!act) return;
+  switch (act.kind) {
+    case 'pan': cv.style.cursor = cursorFor(); save(); break;
+    case 'draw': page().objs.push(draft); draft = null; commit(); break;
+    case 'shape':
+      if (Math.hypot(draft.x2 - draft.x1, draft.y2 - draft.y1) > 3 / view().z) { page().objs.push(draft); commit(); }
+      draft = null; dirty = true; break;
+    case 'erase': if (act.n) commit(); break;
+    case 'move': if (act.moved) commit(); break;
+    case 'resize': commit(); break;
+    case 'marquee': marquee = null; dirty = true; break;
+  }
+  act = null;
+}
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+cv.addEventListener('pointerleave', () => { hover = null; laserDot = null; dirty = true; });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('dblclick', e => {
+  const [x, y] = toWorld(e.clientX, e.clientY), o = topHit(x, y, 4 / view().z);
+  if (o && o.t === 'text') editText(o);
+  else if (tool === 'select' && !o) editText(null, x, y);
+});
+function eraseAt(x, y) {
+  const objs = page().objs, r = eraserR(), n = objs.length;
+  for (let i = objs.length - 1; i >= 0; i--) if (hit(objs[i], x, y, r, true)) objs.splice(i, 1);
+  if (objs.length !== n) { act.n += n - objs.length; dirty = true; }
+}
+const clampZ = z => Math.min(8, Math.max(.1, z));
+function zoomAt(f, sx = W / 2, sy = H / 2) {
+  const v = view(), z = clampZ(v.z * f);
+  v.x = sx - (sx - v.x) * z / v.z; v.y = sy - (sy - v.y) * z / v.z; v.z = z; updZoom(); dirty = true; save();
+}
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * .01), e.clientX, e.clientY);
+  else { const v = view(); v.x -= e.deltaX; v.y -= e.deltaY; dirty = true; save(); }
+}, { passive: false });
+function updZoom() { $('zoomLbl').textContent = Math.round(view().z * 100) + '%'; }
+$('zoomLbl').onclick = () => { const v = view(); zoomAt(1 / v.z); };
+
+/* ═══════════════ TEXT ═══════════════ */
+const ed = $('editor'), hint = $('calcHint');
+function editText(o, x, y) {
+  if (!o) o = { id: nid(), t: 'text', x, y, s: TSIZES[widthIdx], c: ink(), txt: '', isNew: true };
+  editing = o; dirty = true;
+  const [sx, sy] = toScreen(o.x, o.y), z = view().z;
+  Object.assign(ed.style, { display: 'block', left: sx + 'px', top: sy + 'px', fontSize: o.s * z + 'px', color: o.c,
+    font: `${o.b ? 700 : 500} ${o.s * z}px ${o.f ? 'ui-monospace,Menlo,monospace' : "'Be Vietnam Pro',sans-serif"}` });
+  ed.style.lineHeight = '1.3';
+  ed.value = o.txt; autoSize(); setTimeout(() => { ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); }, 0);
+  updHint();
+}
+function autoSize() { ed.style.width = '10px'; ed.style.height = '10px'; ed.style.width = (ed.scrollWidth + 30) + 'px'; ed.style.height = ed.scrollHeight + 'px'; }
+function updHint() {
+  const line = ed.value.slice(0, ed.selectionStart).split('\n').pop().trim().replace(/=\s*$/, '');
+  const ex = line.split('=').pop();
+  let s = '';
+  if (ex && /[\d)]/.test(ex) && /[-+*/^%(×÷a-z]/i.test(ex.replace(/^-/, ''))) { try { s = '= ' + fmtNum(evalExpr(ex, scopeFor())); } catch (e) {} }
+  if (s) { const r = ed.getBoundingClientRect(); Object.assign(hint.style, { display: 'block', left: r.left + 'px', top: r.bottom + 6 + 'px' }); hint.textContent = s + '   (gõ "=" để ghi)'; }
+  else hint.style.display = 'none';
+}
+function scopeFor() { const p = page(); p.vars = p.vars || {}; return p.vars; }
+ed.addEventListener('input', () => {
+  // typing "=" at end of a line → compute immediately
+  const pos = ed.selectionStart, before = ed.value.slice(0, pos), after = ed.value.slice(pos);
+  if (before.endsWith('=') && (after === '' || after.startsWith('\n'))) {
+    const lines = before.split('\n'), cur = lines.pop();
+    const done = smartCalc(cur, scopeFor());
+    if (done !== cur) { const nb = [...lines, done].join('\n'); ed.value = nb + after; ed.setSelectionRange(nb.length, nb.length); }
+  }
+  autoSize(); updHint();
+});
+ed.addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); commitText(); }
+});
+ed.addEventListener('keyup', updHint); ed.addEventListener('click', updHint);
+ed.addEventListener('blur', () => setTimeout(() => { if (editing && document.activeElement !== ed) commitText(); }, 50));
+function commitText() {
+  const o = editing; if (!o) return;
+  editing = null; ed.style.display = 'none'; hint.style.display = 'none';
+  const txt = ed.value.replace(/\s+$/, '');
+  // evaluate definitions (r = 5%) so later lines/blocks can use them
+  smartCalc(txt.split('\n').filter(l => !/=\s*$/.test(l.trim())).join('\n'), scopeFor());
+  const objs = page().objs;
+  if (!txt) { if (!o.isNew) { objs.splice(objs.indexOf(o), 1); commit(); } dirty = true; return; }
+  if (txt === o.txt && !o.isNew) { dirty = true; return; }
+  o.txt = txt; delete o.isNew; measureText(o);
+  if (!objs.includes(o)) objs.push(o);
+  commit();
+}
+
+/* ═══════════════ TOOLBAR ═══════════════ */
+const ICONS = {
+  select: '<path d="M5 3l14 8-6 2-3 6z"/>', hand: '<path d="M7 11V6a1.5 1.5 0 0 1 3 0v4m0-5a1.5 1.5 0 0 1 3 0v5m0-4a1.5 1.5 0 0 1 3 0v5m0-2a1.5 1.5 0 0 1 3 0v4a7 7 0 0 1-7 7h-1a7 7 0 0 1-6-4l-2.5-4a1.5 1.5 0 0 1 2.5-1.6L7 13"/>',
+  pen: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>', hl: '<path d="M9 15l-4 5h5l2-2"/><path d="M8 14l6-10 5 3-6 10z"/>',
+  eraser: '<path d="M8 20h12M5 15l9-9 5 5-8 8H8z"/>', line: '<path d="M5 19L19 5"/>', arrow: '<path d="M5 19L19 5M10 5h9v9"/>',
+  rect: '<rect x="4" y="6" width="16" height="12" rx="1"/>', ell: '<ellipse cx="12" cy="12" rx="8" ry="6"/>',
+  text: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>', laser: '<circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
+};
+const TOOLS = [['select', 'V', 'Chọn / di chuyển'], ['hand', 'H', 'Kéo bảng'], ['pen', 'P', 'Bút'], ['hl', 'M', 'Bút dạ quang'], ['eraser', 'E', 'Tẩy'],
+  ['line', 'L', 'Đường thẳng'], ['arrow', 'A', 'Mũi tên'], ['rect', 'R', 'Chữ nhật'], ['ell', 'O', 'Elip'], ['text', 'T', 'Chữ + máy tính thông minh'], ['laser', 'K', 'Bút laser']];
+function buildTools() {
+  const t = $('tools'); let h = '';
+  for (const [k, key, name] of TOOLS) h += `<button class="tb" data-tool="${k}" title="${name} (${key})"><svg viewBox="0 0 24 24">${ICONS[k]}</svg></button>`;
+  h += '<div class="hr"></div><div id="sw"></div><input type="color" id="colorPick" title="Màu tuỳ chọn"><div class="hr"></div>';
+  WIDTHS.forEach((w, i) => h += `<div class="wdot" data-w="${i}" title="Độ dày ${i + 1}"><span style="width:${Math.min(w * 1.6 + 2, 20)}px;height:${Math.min(w, 12)}px"></span></div>`);
+  t.innerHTML = h;
+  t.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
+  t.querySelectorAll('[data-w]').forEach(b => b.onclick = () => setWidth(+b.dataset.w));
+  $('colorPick').oninput = e => { customColor = e.target.value; updTools(); applyStyleToSel(); };
+}
+function updTools() {
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === tool));
+  document.querySelectorAll('[data-w]').forEach(b => b.classList.toggle('on', +b.dataset.w === widthIdx));
+  const pal = PALETTE[isLight() ? 'light' : 'dark'];
+  $('sw').innerHTML = pal.map((c, i) => `<div class="swatch ${!customColor && i === colorIdx ? 'on' : ''}" data-c="${i}" style="background:${c}" title="Màu ${i + 1}"></div>`).join('');
+  $('sw').querySelectorAll('[data-c]').forEach(s => s.onclick = () => setColor(+s.dataset.c));
+  cv.style.cursor = cursorFor();
+}
+function cursorFor() { return { hand: 'grab', select: 'default', text: 'text', laser: 'none', eraser: 'none' }[tool] || 'crosshair'; }
+function setTool(t) { tool = t; if (t !== 'select') sel.clear(); laserDot = null; updTools(); dirty = true; }
+function setColor(i) { colorIdx = i; customColor = null; updTools(); applyStyleToSel(); }
+function setWidth(i) { widthIdx = Math.max(0, Math.min(3, i)); updTools(); applyStyleToSel(true); }
+function applyStyleToSel(width) {
+  if (!sel.size) return;
+  for (const o of page().objs) if (sel.has(o.id)) {
+    if (width) { if (o.t === 'text') { o.s = TSIZES[widthIdx]; measureText(o); } else if (o.t !== 'img') o.w = o.t === 'hl' ? WIDTHS[widthIdx] * 4 + 8 : WIDTHS[widthIdx]; }
+    else if (o.t !== 'img') o.c = ink();
+  }
+  commit();
+}
+
+/* top bar actions */
+$('bUndo').onclick = undo; $('bRedo').onclick = redo;
+function toggleMenu(m, btn) {
+  const show = !m.classList.contains('show'); closeMenus();
+  if (show) { const r = btn.getBoundingClientRect(); m.style.top = r.bottom + 8 + 'px'; m.style.left = Math.min(r.left, innerWidth - 220) + 'px'; m.classList.add('show'); }
+}
+function closeMenus() { document.querySelectorAll('.menu.show').forEach(m => m.classList.remove('show')); }
+$('bBg').onclick = e => { e.stopPropagation(); updBgMenu(); toggleMenu($('bgMenu'), $('bBg')); };
+$('bFile').onclick = e => { e.stopPropagation(); toggleMenu($('fileMenu'), $('bFile')); };
+document.addEventListener('click', e => { if (!e.target.closest('.menu')) closeMenus(); });
+function updBgMenu() { document.querySelectorAll('[data-bg]').forEach(b => b.classList.toggle('on', b.dataset.bg === doc.bg)); document.querySelectorAll('[data-pat]').forEach(b => b.classList.toggle('on', b.dataset.pat === doc.pat)); }
+document.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => setBg(b.dataset.bg));
+document.querySelectorAll('[data-pat]').forEach(b => b.onclick = () => { doc.pat = b.dataset.pat; updBgMenu(); save(); dirty = true; });
+function setBg(bg) {
+  const wasLight = isLight(); doc.bg = bg; updBgMenu();
+  if (wasLight !== isLight()) { // swap default ink so old notes stay readable
+    const from = PALETTE[wasLight ? 'light' : 'dark'], to = PALETTE[isLight() ? 'light' : 'dark'];
+    doc.pages.forEach(p => p.objs.forEach(o => { const i = from.indexOf(o.c); if (i >= 0) o.c = to[i]; }));
+    commit();
+  }
+  updTools(); save(); dirty = true;
+}
+$('bClear').onclick = () => { if (page().objs.length && confirm('Xoá toàn bộ nội dung trang này?')) { page().objs = []; page().vars = {}; sel.clear(); commit(); } };
+$('bFull').onclick = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); };
+$('bHelp').onclick = () => $('helpModal').classList.add('show');
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) m.classList.remove('show'); }));
+
+/* pages */
+function updPages() { $('pageLbl').textContent = `${pg + 1} / ${doc.pages.length}`; updZoom(); }
+function goPage(i) { if (editing) commitText(); pg = Math.max(0, Math.min(doc.pages.length - 1, i)); sel.clear(); updPages(); save(); dirty = true; }
+$('pPrev').onclick = () => goPage(pg - 1); $('pNext').onclick = () => goPage(pg + 1);
+$('pAdd').onclick = () => { doc.pages.splice(pg + 1, 0, newPage()); pg++; commit(); updPages(); toast('Đã thêm trang ' + (pg + 1)); };
+$('pDel').onclick = () => {
+  if (doc.pages.length === 1) { if (confirm('Xoá nội dung trang duy nhất?')) { doc.pages[0] = newPage(); commit(); } return; }
+  if (!confirm(`Xoá trang ${pg + 1}?`)) return; doc.pages.splice(pg, 1); pg = Math.min(pg, doc.pages.length - 1); commit(); updPages();
+};
+
+/* timer */
+let tLeft = 90, tRun = null;
+function updTimer() { const t = $('timer'), m = Math.floor(Math.abs(tLeft) / 60), s = Math.abs(tLeft) % 60; t.textContent = (tLeft < 0 ? '-' : '') + m + ':' + String(s).padStart(2, '0'); t.classList.toggle('run', !!tRun); t.classList.toggle('low', tLeft <= 10); }
+$('timerSel').onchange = e => { clearInterval(tRun); tRun = null; tLeft = +e.target.value; updTimer(); };
+$('timer').onclick = () => { if (tRun) { clearInterval(tRun); tRun = null; } else tRun = setInterval(() => { tLeft--; if (tLeft === 0) toast('⏰ Hết giờ!'); updTimer(); }, 1000); updTimer(); };
+$('timer').ondblclick = () => { clearInterval(tRun); tRun = null; tLeft = +$('timerSel').value; updTimer(); };
+
+/* toast */
+let toastT;
+function toast(s) { const t = $('toast'); t.textContent = s; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
+
+/* ═══════════════ KEYBOARD ═══════════════ */
+const TOOLKEY = { v: 'select', h: 'hand', p: 'pen', m: 'hl', e: 'eraser', l: 'line', a: 'arrow', r: 'rect', o: 'ell', t: 'text', k: 'laser' };
+let calcFocus = false;
+addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea,select')) return;
+  const k = e.key, ctrl = e.ctrlKey || e.metaKey;
+  if (calcFocus && $('calc').classList.contains('show') && !ctrl && calcKeyboard(e)) { e.preventDefault(); return; }
+  if (k === ' ') { spaceDown = true; cv.style.cursor = 'grab'; e.preventDefault(); return; }
+  if (ctrl) {
+    const l = k.toLowerCase();
+    if (l === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if (l === 'y') { e.preventDefault(); redo(); }
+    else if (l === 's') { e.preventDefault(); saveFile(); }
+    else if (l === 'd') { e.preventDefault(); duplicate(); }
+    else if (l === 'a') { e.preventDefault(); setTool('select'); page().objs.forEach(o => sel.add(o.id)); dirty = true; }
+    else if (k === '0') { e.preventDefault(); zoomAt(1 / view().z); }
+    else if (k === '=' || k === '+') { e.preventDefault(); zoomAt(1.2); }
+    else if (k === '-') { e.preventDefault(); zoomAt(1 / 1.2); }
+    return;
+  }
+  if (k === 'Escape') { sel.clear(); closeMenus(); document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show')); dirty = true; return; }
+  if ((k === 'Delete' || k === 'Backspace') && sel.size) { page().objs = page().objs.filter(o => !sel.has(o.id)); sel.clear(); commit(); return; }
+  if (k === 'PageDown') { goPage(pg + 1); return; } if (k === 'PageUp') { goPage(pg - 1); return; }
+  if (k === '[') return setWidth(widthIdx - 1); if (k === ']') return setWidth(widthIdx + 1);
+  if (/^[1-7]$/.test(k)) return setColor(+k - 1);
+  if (k === '?') { $('helpModal').classList.add('show'); return; }
+  const l = k.toLowerCase();
+  if (l === 'c') { toggleCalc(); return; } if (l === 'f') { openFin(); return; } if (l === 'b') { setBg({ green: 'dark', dark: 'white', white: 'green' }[doc.bg]); return; }
+  if (TOOLKEY[l]) setTool(TOOLKEY[l]);
+});
+addEventListener('keyup', e => { if (e.key === ' ') { spaceDown = false; cv.style.cursor = cursorFor(); } });
+function duplicate() {
+  if (!sel.size) return; const gmap = {}, add = [];
+  for (const o of page().objs) if (sel.has(o.id)) {
+    const c = JSON.parse(JSON.stringify(o)); c.id = nid(); if (c.g) c.g = gmap[c.g] || (gmap[c.g] = nid()); moveObj(c, 24, 24); add.push(c);
+  }
+  page().objs.push(...add); sel = new Set(add.map(o => o.id)); commit();
+}
+
+/* paste images / text */
+addEventListener('paste', e => {
+  if (e.target.matches('input,textarea')) return;
+  const items = [...(e.clipboardData?.items || [])], im = items.find(i => i.type.startsWith('image/'));
+  if (im) { e.preventDefault(); addImageFile(im.getAsFile()); return; }
+  const txt = e.clipboardData?.getData('text/plain');
+  if (txt) { e.preventDefault(); const [x, y] = centerWorld(); addText(txt, x - 100, y - 20, {}); toast('Đã dán chữ'); }
+});
+function addImageFile(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const src = r.result, im = new Image();
+    im.onload = () => {
+      // downscale large screenshots to keep the save file light
+      const max = 1600, sc = Math.min(1, max / Math.max(im.width, im.height));
+      let data = src;
+      if (sc < 1) { const c = document.createElement('canvas'); c.width = im.width * sc; c.height = im.height * sc; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); data = c.toDataURL('image/jpeg', .88); }
+      const id = 'i' + nid(); doc.imgs[id] = data;
+      const v = view(), w = Math.min(im.width * sc, (W * .6) / v.z), h = w * im.height / im.width, [cx, cy] = centerWorld();
+      const o = { id: nid(), t: 'img', src: id, x: cx - w / 2, y: cy - h / 2, w, h };
+      page().objs.push(o); setTool('select'); sel = new Set([o.id]); commit(); toast('Đã chèn ảnh — kéo góc dưới phải để đổi cỡ');
+    };
+    im.src = src;
+  };
+  r.readAsDataURL(file);
+}
+$('mImg').onclick = () => $('imgIn').click();
+$('imgIn').onchange = e => { addImageFile(e.target.files[0]); e.target.value = ''; };
+cv.addEventListener('dragover', e => e.preventDefault());
+cv.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) addImageFile(f); else if (f) openFile(f); });
+
+/* ═══════════════ FILE ═══════════════ */
+function download(name, href) { const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+const stamp = () => new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-');
+function saveFile() {
+  const used = new Set(); doc.pages.forEach(p => p.objs.forEach(o => o.src && used.add(o.src)));
+  Object.keys(doc.imgs).forEach(k => used.has(k) || delete doc.imgs[k]);
+  const blob = new Blob([JSON.stringify(doc)], { type: 'application/json' }), url = URL.createObjectURL(blob);
+  download(`bai-giang-${stamp()}.elevato.json`, url); setTimeout(() => URL.revokeObjectURL(url), 2000); toast('Đã lưu file bài giảng');
+}
+function openFile(f) {
+  const r = new FileReader();
+  r.onload = () => {
+    try { const d = JSON.parse(r.result); if (!d.pages) throw 0; doc = d; doc.imgs = doc.imgs || {}; pg = 0; hist = []; fut = []; lastSnap = snap(); save(); updPages(); updTools(); dirty = true; toast('Đã mở bài giảng'); }
+    catch (e) { toast('File không hợp lệ'); }
+  };
+  r.readAsText(f);
+}
+$('mSave').onclick = saveFile;
+$('mOpen').onclick = () => $('fileIn').click();
+$('fileIn').onchange = e => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value = ''; };
+$('mNew').onclick = () => { if (confirm('Tạo bài giảng mới? (Nhớ lưu file bài cũ nếu cần)')) { doc = newDoc(); pg = 0; hist = []; fut = []; lastSnap = snap(); save(); updPages(); updTools(); dirty = true; } };
+function pageCanvas(p) {
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const o of p.objs) { const bb = bbox(o); a = Math.min(a, bb[0]); b = Math.min(b, bb[1]); c = Math.max(c, bb[2]); d = Math.max(d, bb[3]); }
+  if (a === Infinity) { [a, b] = [0, 0]; [c, d] = [W, H]; }
+  const pad = 60, sc = 2, w = c - a + pad * 2, h = d - b + pad * 2;
+  const can = document.createElement('canvas'), k = Math.min(sc, 8000 / Math.max(w, h));
+  can.width = w * k; can.height = h * k;
+  const g = can.getContext('2d'); g.fillStyle = BG[doc.bg]; g.fillRect(0, 0, can.width, can.height);
+  drawPattern(g, { x: (pad - a) * k, y: (pad - b) * k, z: k }, can.width, can.height, isLight());
+  g.setTransform(k, 0, 0, k, (pad - a) * k, (pad - b) * k);
+  p.objs.forEach(o => drawObj(g, o));
+  // watermark
+  g.setTransform(1, 0, 0, 1, 0, 0); g.font = `600 ${22 * k / 2}px 'Plus Jakarta Sans',sans-serif`; g.fillStyle = isLight() ? 'rgba(0,135,90,.55)' : 'rgba(0,200,150,.55)';
+  g.textAlign = 'right'; g.fillText('elevaTO', can.width - 20, can.height - 18);
+  return can;
+}
+$('mPng').onclick = () => { download(`elevato-trang-${pg + 1}-${stamp()}.png`, pageCanvas(page()).toDataURL('image/png')); };
+$('mPngAll').onclick = () => { doc.pages.forEach((p, i) => setTimeout(() => download(`elevato-trang-${i + 1}.png`, pageCanvas(p).toDataURL('image/png')), i * 350)); };
+
+/* ═══════════════ INSERT HELPERS ═══════════════ */
+function centerWorld() { return toWorld(W / 2, H / 2); }
+function addText(txt, x, y, opt = {}) {
+  const o = { id: nid(), t: 'text', x, y, s: opt.s || 26, c: opt.c || inkDefault(), txt, f: opt.f ? 1 : 0, b: opt.b ? 1 : 0 };
+  if (opt.g) o.g = opt.g; measureText(o); page().objs.push(o); return o;
+}
+function addLine(t, x1, y1, x2, y2, c, w, g, extra) { const o = { id: nid(), t, x1, y1, x2, y2, c, w, g, ...extra }; page().objs.push(o); return o; }
+function finishInsert(g, msg) {
+  const ids = page().objs.filter(o => o.g === g).map(o => o.id);
+  setTool('select'); sel = new Set(ids); commit(); toast(msg || 'Đã chèn — kéo để di chuyển');
+  $('finModal').classList.remove('show');
+}
+const col = () => PALETTE[isLight() ? 'light' : 'dark'];
+// fit a block of given world size near the current viewport centre
+// …sliding down past whatever is already drawn there so inserts don't pile up
+function placeBlock(w, h) {
+  const [cx, cy] = centerWorld(), boxes = page().objs.map(bbox), x = cx - w / 2;
+  let y = cy - h / 2;
+  for (let k = 0; k < 60; k++) {
+    const hitB = boxes.find(b => b[0] < x + w + 20 && b[2] > x - 20 && b[1] < y + h + 30 && b[3] > y - 30);
+    if (!hitB) break; y = hitB[3] + 40;
+  }
+  if (y + h > toWorld(0, H)[1]) { const v = view(); v.y -= (y + h - toWorld(0, H)[1] + 60) * v.z; } // scroll into view
+  return [x, y];
+}
+
+/* timeline */
+const parseList = s => s.split(/[;,\s]+/).filter(Boolean).map(x => evalExpr(x));
+function tlPreview() {
+  try {
+    const cfs = parseList($('tlCf').value), r = $('tlR').value.trim() === '' ? null : evalExpr($('tlR').value) / 100;
+    let s = `${cfs.length} dòng tiền, tổng = ${fmtNum(FN.sum(...cfs))}`;
+    if (r !== null) s += `\nNPV @ ${fmtNum(r * 100)}% = ${fmtNum(FM.npv(r, cfs), 2)}`;
+    try { s += `\nIRR = ${fmtNum(FM.irr(cfs) * 100, 4)}%`; } catch (e) {}
+    $('tlOut').textContent = s;
+  } catch (e) { $('tlOut').textContent = '⚠ ' + e.message; }
+}
+['tlCf', 'tlR'].forEach(i => $(i).addEventListener('input', tlPreview));
+$('tlGo').onclick = () => {
+  let cfs, r;
+  try { cfs = parseList($('tlCf').value); r = $('tlR').value.trim() === '' ? null : evalExpr($('tlR').value) / 100; } catch (e) { return toast('Dòng tiền chưa đúng'); }
+  const n = cfs.length, sp = Math.max(110, Math.min(170, 900 / n)), g = nid(), C = col(), w = (n - 1) * sp + 120, h = r !== null ? 330 : 260;
+  const [x0, y0] = placeBlock(w, h), ax = x0 + 40, ay = y0 + 130, mx = Math.max(...cfs.map(Math.abs)) || 1, lab = $('tlLb').value;
+  addLine('arrow', ax - 30, ay, ax + (n - 1) * sp + 60, ay, C[0], 3, g);
+  cfs.forEach((cf, t) => {
+    const x = ax + t * sp;
+    addLine('line', x, ay - 8, x, ay + 8, C[0], 3, g);
+    addText(lab === 'y' ? 'Năm ' + t : lab === 'q' ? 'Q' + t : String(t), x - (lab === 't' ? 6 : 24), ay + 14, { s: 20, c: C[0], g });
+    if (cf) {
+      const L = 30 + 60 * Math.abs(cf) / mx, up = cf > 0, c = up ? C[1] : C[3];
+      addLine('arrow', x, ay - (up ? 10 : -34), x, up ? ay - 10 - L : ay + 34 + L, c, 3, g);
+      const s = fmtNum(cf), tw = s.length * 7;
+      addText(s, x - tw, up ? ay - 10 - L - 34 : ay + 40 + L, { s: 22, c, b: 1, g });
+    }
+  });
+  if (r !== null) {
+    const npv = FM.npv(r, cfs);
+    addText(`r = ${fmtNum(r * 100)}%   →   NPV = Σ CFt/(1+r)^t = ${fmtNum(npv, 2)}`, ax - 30, y0 + h - 10, { s: 22, c: C[2], b: 1, g });
+  }
+  finishInsert(g, 'Đã vẽ dòng thời gian');
+};
+
+/* amortization */
+function amCalc() {
+  const P = evalExpr($('amP').value), R = evalExpr($('amR').value) / 100, Y = evalExpr($('amY').value), F = +$('amF').value;
+  const n = Math.round(Y * F), i = R / F, pmt = -FM.tvm('pmt', { n, i, pv: P, pmt: 0, fv: 0 });
+  const rows = []; let bal = P;
+  for (let k = 1; k <= n; k++) { const it = bal * i, pr = pmt - it, beg = bal; bal -= pr; rows.push([k, beg, pmt, it, pr, Math.abs(bal) < 1e-6 ? 0 : bal]); }
+  return { P, n, i, pmt, rows };
+}
+function amPreview() { try { const a = amCalc(); $('amOut').textContent = `${a.n} kỳ · lãi suất kỳ ${fmtNum(a.i * 100, 4)}%\nPMT = ${fmtNum(a.pmt, 2)} · Tổng lãi = ${fmtNum(a.pmt * a.n - a.P, 2)}`; } catch (e) { $('amOut').textContent = '⚠ ' + e.message; } }
+['amP', 'amR', 'amY', 'amF'].forEach(i => $(i).addEventListener('input', amPreview));
+$('amGo').onclick = () => {
+  let a; try { a = amCalc(); } catch (e) { return toast('Số liệu chưa đúng'); }
+  let rows = a.rows; if (rows.length > 36) rows = [...rows.slice(0, 35), null, rows[rows.length - 1]];
+  const g = nid(), C = col(), cw = [70, 160, 150, 150, 150, 170], rh = 38, tw = cw.reduce((s, x) => s + x, 0);
+  const th = (rows.length + 1) * rh + 60, [x0, y0] = placeBlock(tw, th);
+  addText(`Lịch trả nợ: ${fmtNum(a.P, 0)} · ${fmtNum(a.i * 100, 4)}%/kỳ · ${a.n} kỳ · PMT = ${fmtNum(a.pmt, 2)}`, x0, y0, { s: 24, b: 1, c: C[1], g });
+  const ty = y0 + 50, heads = ['Kỳ', 'Dư nợ đầu', 'Trả (PMT)', 'Lãi', 'Gốc', 'Dư nợ cuối'];
+  addLine('rect', x0, ty, x0 + tw, ty + rh, C[1], 0, g, { fill: 1 });
+  for (let r = 0; r <= rows.length + 1; r++) addLine('line', x0, ty + r * rh, x0 + tw, ty + r * rh, C[0], r <= 1 || r === rows.length + 1 ? 2 : 1, g);
+  let cx = x0; for (let c = 0; c <= cw.length; c++) { addLine('line', cx, ty, cx, ty + (rows.length + 1) * rh, C[0], 1, g); cx += cw[c] || 0; }
+  const cell = (txt, ci, ri, opt) => { const x = x0 + cw.slice(0, ci).reduce((s, v) => s + v, 0); mctx.font = `500 ${opt.s}px 'Be Vietnam Pro'`; const w = mctx.measureText(txt).width; addText(txt, ci ? x + cw[ci] - w - 10 : x + 10, ty + ri * rh + 8, opt); };
+  heads.forEach((h, i) => cell(h, i, 0, { s: 18, b: 1, c: C[0], g }));
+  rows.forEach((r, ri) => {
+    if (!r) { cell('…', 0, ri + 1, { s: 18, c: C[0], g }); return; }
+    r.forEach((v, ci) => cell(ci ? fmtNum(v, 2) : String(v), ci, ri + 1, { s: 18, c: ci === 3 ? C[2] : ci === 4 ? C[1] : C[0], g }));
+  });
+  finishInsert(g, 'Đã kẻ lịch trả nợ');
+};
+
+/* bond */
+function bdCalc() {
+  const F = evalExpr($('bdF').value), c = evalExpr($('bdC').value) / 100, y = evalExpr($('bdY').value) / 100, n = evalExpr($('bdN').value), m = +$('bdQ').value;
+  return { F, c, y, n, m, ...FM.bond(F, c, y, n, m) };
+}
+function bdText(b) {
+  const prem = b.P > b.F * 1.0000001 ? 'premium (c > YTM)' : b.P < b.F * .9999999 ? 'discount (c < YTM)' : 'par';
+  return `Trái phiếu  F = ${fmtNum(b.F)}, c = ${fmtNum(b.c * 100)}%, YTM = ${fmtNum(b.y * 100)}%, ${fmtNum(b.n)} năm, ${b.m} kỳ/năm
+Coupon/kỳ = ${fmtNum(b.cp, 2)}   ·   N = ${b.N}   ·   r/kỳ = ${fmtNum(b.y / b.m * 100, 4)}%
+Giá       = ${fmtNum(b.P, 4)}   → ${prem}
+Mac Dur   = ${fmtNum(b.mac, 4)} năm
+Mod Dur   = ${fmtNum(b.mod, 4)}
+Convexity = ${fmtNum(b.conv, 4)}
+%ΔP ≈ −ModDur·Δy + ½·Conv·(Δy)²`;
+}
+function bdPreview() { try { $('bdOut').textContent = bdText(bdCalc()); } catch (e) { $('bdOut').textContent = '⚠ ' + e.message; } }
+['bdF', 'bdC', 'bdY', 'bdN', 'bdQ'].forEach(i => $(i).addEventListener('input', bdPreview));
+$('bdGo').onclick = () => { let b; try { b = bdCalc(); } catch (e) { return toast('Số liệu chưa đúng'); } const g = nid(), [x, y] = placeBlock(640, 220); addText(bdText(b), x, y, { s: 22, f: 1, c: col()[1], g }); finishInsert(g); };
+$('bdPlot').onclick = () => {
+  let b; try { b = bdCalc(); } catch (e) { return toast('Số liệu chưa đúng'); }
+  plotOnBoard(x => FM.bond(b.F, b.c, x / 100, b.n, b.m).P, Math.max(0.1, b.y * 100 - 6), b.y * 100 + 6, 'Giá trái phiếu theo YTM (%)', b.y * 100);
+};
+
+/* plot */
+function niceNum(v) { return Math.abs(v) >= 1000 ? fmtNum(v, 0) : fmtNum(+v.toPrecision(3)); }
+function plotOnBoard(f, a, b, title, markX) {
+  const g = nid(), C = col(), PW = 560, PH = 320, [x0, y0] = placeBlock(PW + 120, PH + 110);
+  const ox = x0 + 80, oy = y0 + 50, N = 160, pts = [];
+  for (let i = 0; i <= N; i++) { const x = a + (b - a) * i / N; try { const y = f(x); if (isFinite(y)) pts.push([x, y]); } catch (e) {} }
+  if (pts.length < 2) return toast('Không vẽ được — kiểm tra biểu thức');
+  let lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1])); if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
+  const pad = (hi - lo) * .08; lo -= pad; hi += pad;
+  const X = x => ox + (x - a) / (b - a) * PW, Y = y => oy + PH - (y - lo) / (hi - lo) * PH;
+  addText(title, ox, y0, { s: 22, b: 1, c: C[2], g });
+  addLine('line', ox, oy, ox, oy + PH, C[0], 2, g); addLine('line', ox, oy + PH, ox + PW, oy + PH, C[0], 2, g);
+  if (lo < 0 && hi > 0) { addLine('line', ox, Y(0), ox + PW, Y(0), C[0], 1.5, g, { dash: 1 }); addText('0', ox - 24, Y(0) - 10, { s: 16, c: C[0], g }); }
+  for (let i = 0; i <= 4; i++) {
+    const xv = a + (b - a) * i / 4, yv = lo + (hi - lo) * i / 4;
+    addLine('line', X(xv), oy + PH, X(xv), oy + PH + 6, C[0], 1.5, g); addText(niceNum(xv), X(xv) - 14, oy + PH + 10, { s: 15, c: C[0], g });
+    addLine('line', ox - 6, Y(yv), ox, Y(yv), C[0], 1.5, g); const s = niceNum(yv); addText(s, ox - 12 - s.length * 8.5, Y(yv) - 9, { s: 15, c: C[0], g });
+  }
+  page().objs.push({ id: nid(), t: 'pen', c: C[1], w: 3.5, g, pts: pts.map(p => [X(p[0]), Y(p[1])]) });
+  if (markX !== undefined) { const yv = f(markX); addLine('line', X(markX), oy + PH, X(markX), Y(yv), C[2], 1.5, g, { dash: 1 }); addText(`(${niceNum(markX)}, ${niceNum(yv)})`, X(markX) + 8, Y(yv) - 28, { s: 16, c: C[2], g }); }
+  // sign change → mark root (IRR on an NPV profile)
+  for (let i = 1; i < pts.length; i++) if (pts[i - 1][1] * pts[i][1] < 0) {
+    try { const r = FM.root(f, pts[i - 1][0], pts[i][0], (pts[i - 1][0] + pts[i][0]) / 2); addLine('ell', X(r) - 6, Y(0) - 6, X(r) + 6, Y(0) + 6, C[3], 3, g); addText('x = ' + fmtNum(r), X(r) + 10, Y(0) + 8, { s: 16, b: 1, c: C[3], g }); } catch (e) {}
+    break;
+  }
+  finishInsert(g, 'Đã vẽ đồ thị');
+}
+function plPreview() {
+  try { const e = $('plE').value, a = evalExpr($('plA').value), b = evalExpr($('plB').value); $('plOut').textContent = `f(${niceNum(a)}) = ${fmtNum(evalExpr(e, { x: a }))}\nf(${niceNum(b)}) = ${fmtNum(evalExpr(e, { x: b }))}`; }
+  catch (er) { $('plOut').textContent = '⚠ ' + er.message; }
+}
+['plE', 'plA', 'plB'].forEach(i => $(i).addEventListener('input', plPreview));
+$('plGo').onclick = () => {
+  let a, b; const e = $('plE').value; try { a = evalExpr($('plA').value); b = evalExpr($('plB').value); } catch (er) { return toast('Khoảng x chưa đúng'); }
+  if (!(b > a)) return toast('Cần x từ < đến');
+  plotOnBoard(x => evalExpr(e, { ...scopeFor(), x }), a, b, $('plT').value || 'y = ' + e);
+};
+
+/* table */
+$('tbGo').onclick = () => {
+  const R = Math.min(40, +$('tbR').value || 1), Cc = Math.min(20, +$('tbC').value || 1), w = +$('tbW').value || 150, h = +$('tbH').value || 48, g = nid(), C = col();
+  const [x0, y0] = placeBlock(Cc * w, R * h);
+  addLine('rect', x0, y0, x0 + Cc * w, y0 + h, C[1], 0, g, { fill: 1 });
+  for (let r = 0; r <= R; r++) addLine('line', x0, y0 + r * h, x0 + Cc * w, y0 + r * h, C[0], r === 0 || r === R ? 2.5 : 1.5, g);
+  for (let c = 0; c <= Cc; c++) addLine('line', x0 + c * w, y0, x0 + c * w, y0 + R * h, C[0], c === 0 || c === Cc ? 2.5 : 1.5, g);
+  finishInsert(g, 'Đã kẻ bảng — dùng công cụ Chữ (T) để điền');
+};
+
+/* formula cards (CFA Level I–II staples) */
+const FORMULAS = [
+  ['Quant', 'Giá trị tương lai / hiện tại', 'FV = PV × (1 + r)^N\nPV = FV / (1 + r)^N'],
+  ['Quant', 'Lãi suất hiệu dụng (EAR)', 'EAR = (1 + APR/m)^m − 1\nLiên tục: EAR = e^APR − 1'],
+  ['Quant', 'Niên kim (annuity)', 'PV = PMT × [1 − (1 + r)^−N] / r\nFV = PMT × [(1 + r)^N − 1] / r\nAnnuity due = × (1 + r)'],
+  ['Quant', 'Perpetuity', 'PV = PMT / r\nTăng trưởng: PV = PMT₁ / (r − g)'],
+  ['Quant', 'NPV / IRR', 'NPV = Σ CFt / (1 + r)^t\nIRR: Σ CFt / (1 + IRR)^t = 0'],
+  ['Quant', 'Holding period & money-weighted', 'HPR = (P₁ − P₀ + D₁) / P₀\nTWR = [(1+HPR₁)…(1+HPRₙ)]^(1/n) − 1'],
+  ['Quant', 'Thống kê mô tả', 'σ² mẫu = Σ(x − x̄)² / (n − 1)\nCV = s / x̄\nSharpe = (Rp − Rf) / σp'],
+  ['Quant', 'Hiệp phương sai & tương quan', 'Cov(X,Y) = Σ(x−x̄)(y−ȳ) / (n−1)\nρ = Cov / (σx σy)'],
+  ['Quant', 'Hồi quy tuyến tính', 'b₁ = Cov(X,Y) / σ²x\nb₀ = ȳ − b₁x̄\nR² = SSR / SST'],
+  ['Quant', 'Khoảng tin cậy & kiểm định', 'x̄ ± z(α/2) × σ/√n\nt = (x̄ − μ₀) / (s/√n)'],
+  ['Econ', 'Ngang giá lãi suất có bảo hiểm', 'F/S = (1 + i_price) / (1 + i_base)\n(theo kỳ hạn: × Actual/360)'],
+  ['FSA', 'DuPont 3 bước', 'ROE = NI/Sales × Sales/TA × TA/Equity'],
+  ['FSA', 'DuPont 5 bước', 'ROE = NI/EBT × EBT/EBIT × EBIT/Sales\n      × Sales/TA × TA/Equity'],
+  ['FSA', 'Chu kỳ chuyển đổi tiền mặt', 'CCC = DOH + DSO − DPO\nDOH = 365 / Inventory turnover'],
+  ['Corp', 'WACC', 'WACC = wd·rd·(1 − t) + wp·rp + we·re'],
+  ['Corp', 'Đòn bẩy', 'DOL = %ΔEBIT / %ΔSales\nDFL = EBIT / (EBIT − I)\nDTL = DOL × DFL'],
+  ['Equity', 'Gordon Growth (DDM)', 'V₀ = D₁ / (r − g) = D₀(1 + g) / (r − g)\ng = b × ROE'],
+  ['Equity', 'P/E hợp lý', 'P₀/E₁ = (1 − b) / (r − g)'],
+  ['Equity', 'FCFF / FCFE', 'FCFF = CFO + Int(1−t) − FCInv\nFCFE = FCFF − Int(1−t) + Net borrowing'],
+  ['Fixed Inc', 'Giá trái phiếu', 'P = Σ C/(1 + r)^t + F/(1 + r)^N'],
+  ['Fixed Inc', 'Duration & Convexity', 'ModDur = MacDur / (1 + r)\n%ΔP ≈ −ModDur·Δy + ½·Conv·(Δy)²\nMoney dur = ModDur × P'],
+  ['Fixed Inc', 'Forward rate', '(1 + S₂)² = (1 + S₁)(1 + ₁f₁)'],
+  ['Deriv', 'Put–call parity', 'c + PV(X) = p + S₀\nForward: F₀ = S₀(1 + r)^T'],
+  ['Deriv', 'Binomial 1 bước', 'π = (1 + r − d) / (u − d)\nc₀ = [π c⁺ + (1 − π) c⁻] / (1 + r)'],
+  ['PM', 'CAPM & SML', 'E(Ri) = Rf + βi [E(Rm) − Rf]\nβi = Cov(i,m) / σ²m'],
+  ['PM', 'Danh mục 2 tài sản', 'σp² = w₁²σ₁² + w₂²σ₂² + 2w₁w₂ρσ₁σ₂'],
+  ['PM', 'Chỉ số hiệu quả', 'Treynor = (Rp − Rf) / βp\nJensen α = Rp − [Rf + βp(Rm − Rf)]\nM² = (Rp−Rf)σm/σp − (Rm−Rf)'],
+  ['Alt', 'Cap rate (BĐS)', 'Cap rate = NOI / Value\nValue = NOI₁ / cap rate'],
+];
+$('fmList').innerHTML = FORMULAS.map((f, i) => `<button class="fc" data-f="${i}"><em>${f[0]}</em><b>${f[1]}</b><code>${f[2]}</code></button>`).join('');
+$('fmList').querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+  const f = FORMULAS[+b.dataset.f], g = nid(), [x, y] = placeBlock(480, 120);
+  addText(f[1], x, y, { s: 20, b: 1, c: col()[2], g }); addText(f[2], x, y + 46, { s: 24, f: 1, c: col()[1], g }); finishInsert(g);
+});
+document.querySelectorAll('#finTabs .tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('#finTabs .tab').forEach(x => x.classList.toggle('on', x === t));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + t.dataset.p));
+});
+function openFin() { $('finModal').classList.add('show'); tlPreview(); amPreview(); bdPreview(); plPreview(); }
+$('bFin').onclick = openFin;
+
+/* ═══════════════ BA II PLUS ═══════════════ */
+const KEYS = [
+  ['2ND', 'sec', ''], ['CPT', 'cpt', 'QUIT?'], ['ENTER', 'cpt', 'SET'], ['↑', 'cpt', 'DEL'], ['↓', 'cpt', 'INS'],
+  ['CF', '', 'CLR WORK'], ['NPV', '', ''], ['IRR', '', ''], ['→', '', ''], ['CE|C', '', 'QUIT'],
+  ['N', 'tv', 'xP/Y'], ['I/Y', 'tv', 'P/Y'], ['PV', 'tv', 'AMORT'], ['PMT', 'tv', 'BGN'], ['FV', 'tv', 'CLR TVM'],
+  ['%', '', ''], ['√x', '', ''], ['x²', '', ''], ['1/x', '', ''], ['yˣ', '', 'ˣ√y'],
+  ['LN', '', 'eˣ'], ['(', '', ''], [')', '', ''], ['STO', '', ''], ['÷', '', ''],
+  ['RCL', '', ''], ['7', 'n', ''], ['8', 'n', ''], ['9', 'n', ''], ['×', '', ''],
+  ['π', '', ''], ['4', 'n', ''], ['5', 'n', ''], ['6', 'n', ''], ['−', '', ''],
+  ['ANS', '', ''], ['1', 'n', ''], ['2', 'n', ''], ['3', 'n', ''], ['+', '', ''],
+  ['ON/OFF', '', 'RESET'], ['0', 'n', ''], ['.', 'n', 'FORMAT'], ['+|−', 'n', ''], ['=', 'eq', ''],
+];
+KEYS[1][2] = '';
+const C = {
+  entry: '', val: 0, expr: '', fresh: true, closed: false, second: false, cpt: false, sto: false, rcl: false,
+  tvm: { N: 0, 'I/Y': 0, PV: 0, PMT: 0, FV: 0 }, py: 1, cy: 1, bgn: false, last: null, ans: 0,
+  cf: [{ c: 0, f: 1 }], npvI: 0, npv: null, irr: null, am: { P1: 1, P2: 1 }, mem: Array(10).fill(0),
+  mode: 'std', idx: 0, label: '', err: '', dec: 2, log: [],
+};
+function cDisp() { return C.entry !== '' ? parseFloat(C.entry) || 0 : C.val; }
+function cFmt(v) {
+  if (!isFinite(v)) return 'Error';
+  if (C.dec === 9) { const s = +v.toPrecision(10); return Math.abs(s) >= 1e10 ? s.toExponential(6) : String(s); }
+  return v.toLocaleString('en-US', { minimumFractionDigits: C.dec, maximumFractionDigits: C.dec });
+}
+const rateP = () => Math.pow(1 + C.tvm['I/Y'] / 100 / C.cy, C.cy / C.py) - 1;
+function solveTVM(k) {
+  const t = C.tvm, o = { n: t.N, i: rateP(), pv: t.PV, pmt: t.PMT, fv: t.FV, bgn: C.bgn };
+  if (k === 'I/Y') { const i = FM.tvm('i', o); return (Math.pow(1 + i, C.py / C.cy) - 1) * C.cy * 100; }
+  return FM.tvm({ N: 'n', PV: 'pv', PMT: 'pmt', FV: 'fv' }[k], o);
+}
+function cfList() { const a = []; C.cf.forEach(x => { for (let j = 0; j < Math.round(x.f); j++) a.push(x.c); }); a[0] = C.cf[0].c; const out = [C.cf[0].c]; C.cf.slice(1).forEach(x => { for (let j = 0; j < Math.round(x.f); j++) out.push(x.c); }); return out; }
+function amVals() {
+  const t = C.tvm, i = rateP(), bal = k => -FM.tvm('fv', { n: k, i, pv: t.PV, pmt: t.PMT, fv: 0, bgn: C.bgn });
+  const { P1, P2 } = C.am, b2 = bal(P2), b1 = bal(P1 - 1), prn = b2 - b1;
+  return { BAL: b2, PRN: prn, INT: t.PMT * (P2 - P1 + 1) - prn };
+}
+// worksheet items: [label, getter, setter|null, computable]
+function wsItems() {
+  switch (C.mode) {
+    case 'cf': {
+      const it = [['CF0', () => C.cf[0].c, v => C.cf[0].c = v]];
+      for (let j = 1; j <= C.cf.length && j <= 24; j++) {
+        const L = String(j).padStart(2, '0');
+        it.push(['C' + L, () => (C.cf[j] ? C.cf[j].c : 0), v => { if (!C.cf[j]) C.cf[j] = { c: 0, f: 1 }; C.cf[j].c = v; }]);
+        if (C.cf[j]) it.push(['F' + L, () => C.cf[j].f, v => C.cf[j].f = Math.max(1, Math.round(v))]);
+      }
+      return it;
+    }
+    case 'npv': return [['I', () => C.npvI, v => C.npvI = v], ['NPV', () => C.npv ?? 0, null, () => C.npv = FM.npv(C.npvI / 100, cfList())]];
+    case 'irr': return [['IRR', () => C.irr ?? 0, null, () => C.irr = FM.irr(cfList()) * 100]];
+    case 'py': return [['P/Y', () => C.py, v => { C.py = v; C.cy = v; }], ['C/Y', () => C.cy, v => C.cy = v]];
+    case 'amort': return [['P1', () => C.am.P1, v => C.am.P1 = Math.max(1, Math.round(v))], ['P2', () => C.am.P2, v => C.am.P2 = Math.max(1, Math.round(v))],
+      ['BAL', () => amVals().BAL, null], ['PRN', () => amVals().PRN, null], ['INT', () => amVals().INT, null]];
+  }
+  return [];
+}
+function cLog(s) { C.log.push(s); if (C.log.length > 40) C.log.shift(); }
+function press(key) {
+  C.err = '';
+  const sec = C.second; C.second = false;
+  try { pressInner(key, sec); } catch (e) { C.err = 'Error'; C.entry = ''; C.fresh = true; C.cpt = false; }
+  calcRender();
+}
+function pressInner(key, sec) {
+  if (/^\d$/.test(key)) {
+    if (C.sto) { C.mem[+key] = cDisp(); C.sto = false; C.label = 'M' + key; C.fresh = true; return; }
+    if (C.rcl) { C.val = C.mem[+key]; C.entry = ''; C.rcl = false; C.fresh = true; C.label = 'M' + key; return; }
+  }
+  if (sec) {
+    switch (key) {
+      case 'CE|C': C.mode = 'std'; C.label = ''; C.cpt = false; return;
+      case 'FV': for (const k in C.tvm) C.tvm[k] = 0; C.last = null; C.mode = 'std'; C.label = 'CLR TVM'; C.val = 0; C.entry = ''; C.fresh = true; cLog('CLR TVM'); return;
+      case 'PMT': C.bgn = !C.bgn; C.label = C.bgn ? 'BGN' : 'END'; C.fresh = true; return;
+      case 'I/Y': C.mode = 'py'; C.idx = 0; C.entry = ''; return;
+      case 'PV': C.mode = 'amort'; C.idx = 0; C.entry = ''; return;
+      case 'N': C.val = cDisp() * C.py; C.entry = ''; C.fresh = true; C.label = ''; return;
+      case 'CF': if (C.mode === 'cf' || C.mode === 'npv' || C.mode === 'irr') { C.cf = [{ c: 0, f: 1 }]; C.npv = C.irr = null; C.mode = 'cf'; C.idx = 0; C.entry = ''; cLog('CLR WORK'); } return;
+      case 'LN': C.val = Math.exp(cDisp()); C.entry = ''; C.fresh = true; return;
+      case 'yˣ': C.expr += numStr() + '^(1/'; C.closed = false; C.entry = ''; C.fresh = true; C.pendRoot = true; return;
+      case '.': { const order = [2, 4, 6, 9]; C.dec = order[(order.indexOf(C.dec) + 1) % 4]; $('calcDec').value = C.dec; C.label = 'DEC'; return; }
+      case 'ON/OFF': Object.assign(C, { tvm: { N: 0, 'I/Y': 0, PV: 0, PMT: 0, FV: 0 }, py: 1, cy: 1, bgn: false, cf: [{ c: 0, f: 1 }], npv: null, irr: null, mem: Array(10).fill(0), log: [], last: null }); allClear(); C.label = 'RESET'; return;
+    }
+  }
+  if (C.mode !== 'std' && wsKey(key)) return;
+  if (/^\d$/.test(key) || key === '.') {
+    if (C.fresh) { C.entry = ''; C.fresh = false; if (C.mode === 'std') C.label = ''; }
+    if (key === '.' && C.entry.includes('.')) return;
+    if (C.entry.replace(/[-.]/g, '').length >= 13) return;
+    C.entry = (C.entry === '' && key === '.') ? '0.' : C.entry === '0' && key !== '.' ? key : C.entry + key;
+    C.closed = false; return;
+  }
+  switch (key) {
+    case '2ND': C.second = !sec; return;
+    case 'CPT': C.cpt = true; return;
+    case '+|−':
+      if (C.entry !== '') C.entry = C.entry.startsWith('-') ? C.entry.slice(1) : '-' + C.entry;
+      else { C.val = -C.val; }
+      return;
+    case '→': if (!C.fresh && C.entry) C.entry = C.entry.slice(0, -1); return;
+    case 'CE|C':
+      if (C.entry !== '' && !C.fresh) { C.entry = ''; C.fresh = true; C.val = 0; return; }
+      allClear(); return;
+    case 'ON/OFF': allClear(); return;
+    case '+': case '−': case '×': case '÷': case 'yˣ': {
+      const op = { '+': '+', '−': '-', '×': '*', '÷': '/', 'yˣ': '^' }[key];
+      if (C.fresh && !C.closed && /[-+*/^]$/.test(C.expr)) C.expr = C.expr.slice(0, -1) + op; // change operator
+      else C.expr += (C.closed ? '' : numStr()) + op;
+      C.closed = false; C.entry = ''; C.fresh = true; C.label = '';
+      try { C.val = evalExpr(partial(C.expr.slice(0, -1))); } catch (e) {}
+      return;
+    }
+    case '(': C.expr += '('; C.entry = ''; C.fresh = true; C.closed = false; return;
+    case ')': C.expr += (C.closed ? '' : numStr()) + ')'; C.closed = true; C.entry = ''; C.fresh = true; try { C.val = evalExpr(partial(C.expr)); } catch (e) {} return;
+    case '=': {
+      const full = C.expr + (C.closed ? '' : numStr()) + (C.pendRoot ? ')' : '');
+      const bal = (full.match(/\(/g) || []).length - (full.match(/\)/g) || []).length;
+      const v = evalExpr(full + ')'.repeat(Math.max(0, bal)));
+      if (C.expr) cLog(prettyExpr(full) + ' = ' + cFmt(v));
+      C.val = C.ans = v; C.expr = ''; C.entry = ''; C.fresh = true; C.closed = false; C.pendRoot = false; C.label = ''; return;
+    }
+    case '%': C.val = cDisp() / 100; C.entry = ''; C.fresh = true; return;
+    case '√x': C.val = Math.sqrt(cDisp()); C.entry = ''; C.fresh = true; return;
+    case 'x²': C.val = cDisp() ** 2; C.entry = ''; C.fresh = true; return;
+    case '1/x': C.val = 1 / cDisp(); C.entry = ''; C.fresh = true; return;
+    case 'LN': C.val = Math.log(cDisp()); C.entry = ''; C.fresh = true; return;
+    case 'π': C.val = Math.PI; C.entry = ''; C.fresh = true; return;
+    case 'ANS': C.val = C.ans; C.entry = ''; C.fresh = true; return;
+    case 'STO': C.sto = true; C.rcl = false; return;
+    case 'RCL': C.rcl = true; C.sto = false; return;
+    case 'N': case 'I/Y': case 'PV': case 'PMT': case 'FV': {
+      if (C.rcl) { C.rcl = false; C.val = C.tvm[key]; C.entry = ''; C.fresh = true; C.label = key; return; }
+      if (C.cpt) { const v = solveTVM(key); if (!isFinite(v)) throw 0; C.tvm[key] = v; C.last = key; C.cpt = false; cLog(`CPT ${key} = ${cFmt(v)}`); C.val = v; }
+      else { C.tvm[key] = cDisp(); if (C.last === key) C.last = null; cLog(`${key} = ${cFmt(C.tvm[key])}`); C.val = C.tvm[key]; }
+      C.entry = ''; C.fresh = true; C.label = key; C.mode = 'std'; return;
+    }
+    case 'CF': C.mode = 'cf'; C.idx = 0; C.entry = ''; C.fresh = true; return;
+    case 'NPV': C.mode = 'npv'; C.idx = 0; C.entry = ''; C.fresh = true; return;
+    case 'IRR': C.mode = 'irr'; C.idx = 0; C.entry = ''; C.fresh = true; return;
+  }
+}
+function wsKey(key) {
+  const items = wsItems(), it = items[C.idx];
+  switch (key) {
+    case '↓': C.idx = (C.idx + 1) % items.length; C.entry = ''; C.fresh = true; C.cpt = false; return true;
+    case '↑': C.idx = (C.idx - 1 + items.length) % items.length; C.entry = ''; C.fresh = true; C.cpt = false; return true;
+    case 'ENTER':
+      if (it && it[2] && C.entry !== '') { it[2](parseFloat(C.entry)); cLog(`${it[0]} = ${cFmt(parseFloat(C.entry))}`); C.entry = ''; C.fresh = true; if (C.mode === 'cf' || C.mode === 'npv') { C.npv = null; C.irr = null; } }
+      return true;
+    case 'CPT':
+      if (it && it[3]) { it[3](); cLog(`CPT ${it[0]} = ${cFmt(it[1]())}${it[0] === 'IRR' ? '%' : ''}`); C.entry = ''; C.fresh = true; return true; }
+      if (C.mode === 'npv' || C.mode === 'irr') return true;
+      return false;
+    case 'CE|C': C.entry = ''; C.fresh = true; return true;
+    case 'IRR': if (C.mode !== 'irr') return false; return true;
+  }
+  if (['+|−', '→'].includes(key) && C.entry !== '') return false;
+  if (key === '+|−' && C.entry === '' && it && it[2]) { it[2](-it[1]()); return true; }
+  if (/^(\d|\.)$/.test(key) || key === '+|−' || key === '→') return false;
+  if (['N', 'I/Y', 'PV', 'PMT', 'FV', 'CF', 'NPV', 'IRR'].includes(key)) { C.mode = 'std'; return false; }
+  return false;
+}
+function numStr() { const v = cDisp(); return v < 0 ? `(${v})` : String(v); }
+function partial(e) { const bal = (e.match(/\(/g) || []).length - (e.match(/\)/g) || []).length; return e + ')'.repeat(Math.max(0, bal)); }
+function prettyExpr(e) { return e.replace(/\*/g, ' × ').replace(/\//g, ' ÷ ').replace(/\+/g, ' + ').replace(/(\d|\))-/g, '$1 − ').replace(/\^/g, '^'); }
+function allClear() { C.entry = ''; C.val = 0; C.expr = ''; C.fresh = true; C.closed = false; C.cpt = false; C.label = ''; C.sto = C.rcl = false; C.pendRoot = false; }
+function calcRender() {
+  const on = (id, b) => $(id).classList.toggle('on', !!b);
+  on('i2nd', C.second); on('icpt', C.cpt); on('ibgn', C.bgn); on('isto', C.sto); on('ircl', C.rcl);
+  $('iws').textContent = { std: '', cf: 'CF', npv: 'NPV', irr: 'IRR', py: 'P/Y', amort: 'AMORT' }[C.mode]; on('iws', C.mode !== 'std');
+  document.querySelectorAll('.k[data-key="2ND"]').forEach(k => k.classList.toggle('on2', C.second));
+  let lb = '', val;
+  if (C.err) { val = C.err; }
+  else if (C.mode !== 'std') {
+    const it = wsItems()[C.idx]; lb = it[0] + '=';
+    val = C.entry !== '' ? C.entry : cFmt(it[1]());
+    if (it[0] === 'NPV' && C.npv === null || it[0] === 'IRR' && C.irr === null) val = cFmt(0);
+    if (!it[2] && (it[0] === 'NPV' || it[0] === 'IRR') && C.cpt) lb = it[0] + '=';
+  } else {
+    if (C.label && C.fresh) lb = /^(N|I\/Y|PV|PMT|FV|M\d)$/.test(C.label) ? C.label + '=' + (C.last === C.label ? '*' : '') : C.label;
+    val = C.entry !== '' ? C.entry : cFmt(C.val);
+    if (C.label === 'BGN' || C.label === 'END' || C.label === 'CLR TVM' || C.label === 'RESET') { lb = ''; val = C.label; }
+    if (C.label === 'DEC') { lb = 'DEC='; val = C.dec === 9 ? '9 (float)' : String(C.dec); }
+  }
+  $('cLb').textContent = lb; $('cVal').textContent = val;
+  $('cEx').textContent = C.mode === 'std' && C.expr ? prettyExpr(C.expr) : C.mode === 'std' ? `P/Y=${fmtNum(C.py)} C/Y=${fmtNum(C.cy)} · ${C.bgn ? 'BGN' : 'END'}` : '';
+}
+function buildKeys() {
+  $('keys').innerHTML = KEYS.map(([k, cls, s]) => `<button class="k ${cls}" data-key="${k}">${s ? `<sup>${s}</sup>` : ''}${k}</button>`).join('');
+  $('keys').querySelectorAll('.k').forEach(b => b.onclick = () => { calcFocus = true; press(b.dataset.key); });
+}
+function calcKeyboard(e) {
+  const k = e.key, map = { '+': '+', '-': '−', '*': '×', '/': '÷', '^': 'yˣ', '(': '(', ')': ')', '%': '%', '=': '=', Enter: C.mode === 'std' ? '=' : 'ENTER', Backspace: '→', Escape: 'CE|C', ArrowUp: '↑', ArrowDown: '↓', Delete: 'CE|C' };
+  if (/^[0-9.]$/.test(k)) { press(k); return true; }
+  if (map[k]) { press(map[k]); return true; }
+  const l = k.toLowerCase(); const L = { n: 'N', i: 'I/Y', v: 'PV', p: 'PMT', f: 'FV', c: 'CPT', s: '2ND' };
+  if (L[l] && !e.altKey) { press(L[l]); return true; }
+  return false;
+}
+function toggleCalc(force) { const c = $('calc'), s = force ?? !c.classList.contains('show'); c.classList.toggle('show', s); $('bCalc').classList.toggle('on', s); calcFocus = s; if (s) calcRender(); }
+$('bCalc').onclick = () => toggleCalc(); $('calcClose').onclick = () => toggleCalc(false);
+$('calc').addEventListener('pointerdown', () => { calcFocus = true; });
+$('calcDec').onchange = e => { C.dec = +e.target.value; calcRender(); };
+// drag calculator by its header
+(() => {
+  const h = $('calcHead'), c = $('calc'); let d = null;
+  h.addEventListener('pointerdown', e => { if (e.target.closest('button,select')) return; const r = c.getBoundingClientRect(); d = [e.clientX - r.left, e.clientY - r.top]; h.setPointerCapture(e.pointerId); });
+  h.addEventListener('pointermove', e => { if (!d) return; c.style.left = Math.max(0, Math.min(innerWidth - 80, e.clientX - d[0])) + 'px'; c.style.top = Math.max(0, Math.min(innerHeight - 60, e.clientY - d[1])) + 'px'; c.style.right = 'auto'; });
+  h.addEventListener('pointerup', () => d = null);
+})();
+$('cIns').onclick = () => {
+  const txt = ($('cLb').textContent ? $('cLb').textContent.replace(/=\*?$/, ' = ') : '') + $('cVal').textContent;
+  const g = nid(), [x, y] = placeBlock(200, 40); addText(txt, x, y, { s: 32, b: 1, c: col()[2], g }); finishInsert(g, 'Đã ghi số lên bảng');
+};
+$('cInsT').onclick = () => {
+  let txt;
+  if (C.mode === 'cf' || C.mode === 'npv' || C.mode === 'irr') {
+    const lines = ['BA II Plus — CF worksheet', `CF0 = ${cFmt(C.cf[0].c)}`];
+    C.cf.slice(1).forEach((x, j) => lines.push(`C${String(j + 1).padStart(2, '0')} = ${cFmt(x.c)}   F${String(j + 1).padStart(2, '0')} = ${x.f}`));
+    lines.push(`[NPV] I = ${cFmt(C.npvI)}  →  CPT NPV = ${cFmt(FM.npv(C.npvI / 100, cfList()))}`);
+    try { lines.push(`[IRR]  →  CPT IRR = ${cFmt(FM.irr(cfList()) * 100)}%`); } catch (e) {}
+    txt = lines.join('\n');
+  } else {
+    const t = C.tvm, lines = [`BA II Plus — TVM  (${C.bgn ? 'BGN' : 'END'}, P/Y = ${fmtNum(C.py)}, C/Y = ${fmtNum(C.cy)})`];
+    for (const k of ['N', 'I/Y', 'PV', 'PMT', 'FV']) lines.push(`${k.padEnd(4)}= ${C.last === k ? cFmt(t[k]) + '   ← CPT ' + k : cFmt(t[k])}`);
+    txt = lines.join('\n');
+  }
+  const g = nid(), [x, y] = placeBlock(520, 200); addText(txt, x, y, { s: 22, f: 1, c: col()[1], g }); finishInsert(g, 'Đã ghi bài giải lên bảng');
+};
+
+/* ═══════════════ BOOT ═══════════════ */
+load(); buildTools(); buildKeys(); updTools(); updPages(); updTimer(); calcRender(); resize();
+addEventListener('resize', resize);
+document.fonts && document.fonts.ready.then(() => { doc.pages.forEach(p => p.objs.forEach(o => o.t === 'text' && measureText(o))); dirty = true; });
+if (!localStorage.getItem('elevato-board-seen')) {
+  try { localStorage.setItem('elevato-board-seen', 1); } catch (e) {}
+  if (!page().objs.length) {
+    const C2 = col(), g = nid();
+    addText('Chào mừng tới elevaTO Board 👋', 80, 110, { s: 40, b: 1, c: C2[1], g });
+    addText('Bấm T rồi gõ:   1000 / 1.08^5 =        → tự ra kết quả\nĐặt biến:   r = 8%     rồi     pv(r, 10, -50, -1000) =\nBấm C mở máy BA II Plus · F mở công cụ tài chính · ? xem hướng dẫn', 80, 180, { s: 24, c: C2[0], g });
+    lastSnap = snap(); save();
+  }
+}
+loop();
+// expose for quick testing in console
+window.__board = { FM, evalExpr, smartCalc, press, C };
+</script>
+</body>
+</html>
