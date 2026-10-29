@@ -80,7 +80,7 @@ button{cursor:pointer;border:none;background:none}
 #calcHint{position:fixed;z-index:31;display:none;font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:6px;background:var(--emerald);color:#03261a;font-weight:600;pointer-events:none}
 
 /* BA II Plus */
-#calc{position:fixed;right:16px;top:78px;width:340px;z-index:40;display:none;padding:0;overflow:hidden;border-color:rgba(0,200,150,.25)}
+#calc{position:fixed;right:16px;top:78px;width:364px;z-index:40;display:none;padding:0;overflow:hidden;border-color:rgba(0,200,150,.25)}
 #calc.show{display:block}
 .chead{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:move;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(0,200,150,.10),transparent)}
 .chead b{font-family:var(--ff-head);font-size:13px;color:var(--white);font-weight:800}
@@ -202,9 +202,8 @@ label.f input:focus{border-color:var(--emerald)}
   <button data-bg="white">○ Trắng</button>
   <div class="t">Hoạ tiết</div>
   <button data-pat="none">Trơn</button>
-  <button data-pat="grid">Lưới ô vuông</button>
-  <button data-pat="oly">Ô ly (vở học sinh)</button>
-  <button data-pat="dots">Chấm toạ độ</button>
+  <button data-pat="grid">Lưới ô (như Excel)</button>
+  <button data-pat="dots">Chấm nhỏ</button>
   <button data-pat="lines">Dòng kẻ</button>
 </div>
 <div class="menu glass" id="fileMenu">
@@ -348,8 +347,11 @@ label.f input:focus{border-color:var(--emerald)}
       </ul>
       <h4>BA II Plus</h4>
       <ul>
-        <li>Giống máy thật: nhập số → bấm <kbd>N</kbd> <kbd>I/Y</kbd> <kbd>PV</kbd> <kbd>PMT</kbd> <kbd>FV</kbd>; <kbd>CPT</kbd> + phím để giải. <kbd>2ND</kbd>+<kbd>FV</kbd> = CLR TVM, <kbd>2ND</kbd>+<kbd>PMT</kbd> = BGN/END, <kbd>2ND</kbd>+<kbd>I/Y</kbd> = P/Y, <kbd>2ND</kbd>+<kbd>PV</kbd> = AMORT, <kbd>2ND</kbd>+<kbd>N</kbd> = xP/Y, <kbd>2ND</kbd>+<kbd>CE|C</kbd> = QUIT.</li>
-        <li><kbd>CF</kbd>: nhập CF0 → <kbd>ENTER</kbd> → <kbd>↓</kbd> C01 … ; <kbd>NPV</kbd>: nhập I → <kbd>↓</kbd> → <kbd>CPT</kbd>; <kbd>IRR</kbd> → <kbd>CPT</kbd>. <kbd>2ND</kbd>+<kbd>CF</kbd> = CLR WORK.</li>
+        <li>Giống máy thật: nhập số → bấm <kbd>N</kbd> <kbd>I/Y</kbd> <kbd>PV</kbd> <kbd>PMT</kbd> <kbd>FV</kbd>; <kbd>CPT</kbd> + phím để giải. <kbd>2ND</kbd>+<kbd>FV</kbd> = CLR TVM, <kbd>2ND</kbd>+<kbd>PMT</kbd> = BGN/END, <kbd>2ND</kbd>+<kbd>I/Y</kbd> = P/Y, <kbd>2ND</kbd>+<kbd>PV</kbd> = AMORT, <kbd>2ND</kbd>+<kbd>N</kbd> = xP/Y, <kbd>2ND</kbd>+<kbd>CPT</kbd> = QUIT, <kbd>2ND</kbd>+<kbd>CE|C</kbd> = CLR WORK (xoá worksheet đang mở).</li>
+        <li><kbd>2ND</kbd>+<kbd>9</kbd> BOND: SDT, CPN, RDT, RV, ACT/360, 2/Y-1/Y, YLD, PRI, AI. Ngày nhập kiểu MM.DDYY (6.1524 = 15/06/2024). <kbd>2ND</kbd>+<kbd>ENTER</kbd> (SET) đổi ACT↔360, 2/Y↔1/Y. Đứng ở PRI bấm <kbd>CPT</kbd> để ra giá, ở YLD bấm <kbd>CPT</kbd> để ra YTM.</li>
+        <li><kbd>2ND</kbd>+<kbd>7</kbd> DATA nhập X01, Y01, X02… · <kbd>2ND</kbd>+<kbd>8</kbd> STAT xem n, x̄, Sx, σx, ȳ, a, b, r, X', Y'. SET đổi LIN → Ln → Exp → Pwr → 1-V (1-V: Y là tần suất).</li>
+        <li><kbd>2ND</kbd>+<kbd>1</kbd> DATE (số ngày giữa 2 ngày) · <kbd>2ND</kbd>+<kbd>2</kbd> ICONV (NOM ↔ EFF) · <kbd>2ND</kbd>+<kbd>=</kbd> ANS · <kbd>2ND</kbd>+<kbd>+|−</kbd> RESET.</li>
+        <li><kbd>CF</kbd>: nhập CF0 → <kbd>ENTER</kbd> → <kbd>↓</kbd> C01 … ; <kbd>NPV</kbd>: nhập I → <kbd>↓</kbd> → <kbd>CPT</kbd>; <kbd>IRR</kbd> → <kbd>CPT</kbd>. <kbd>2ND</kbd>+<kbd>CE|C</kbd> = CLR WORK.</li>
         <li>Khi đã bấm vào máy tính, bàn phím số/phép tính/Enter/Backspace điều khiển máy tính. Bấm ra bảng để trả lại phím tắt.</li>
         <li><b>Ghi bài giải</b> chép toàn bộ các bước TVM/CF lên bảng để học viên chụp lại.</li>
       </ul>
@@ -669,25 +671,20 @@ function resize() {
 }
 function drawPattern(c, v, w, h, light) {
   if (doc.pat === 'none') return;
+  const pat = doc.pat === 'dots' ? 'dots' : doc.pat === 'lines' ? 'lines' : 'grid';
   let s = 40 * v.z; while (s < 14) s *= 2;
   const ox = ((v.x % s) + s) % s, oy = ((v.y % s) + s) % s;
   c.save();
-  c.strokeStyle = c.fillStyle = light ? 'rgba(0,40,30,.10)' : 'rgba(180,255,230,.07)';
-  c.lineWidth = 1;
-  if (doc.pat === 'oly') { // Vietnamese school grid: bold squares split into 4 faint rows
-    const minor = s / 4;
+  if (pat === 'dots') { // small dark dots at every grid intersection, for reading coordinates
+    c.fillStyle = light ? 'rgba(0,0,0,.42)' : 'rgba(255,255,255,.38)';
+    const r = Math.max(1, Math.min(1.8, 1.4 * v.z));
     c.beginPath();
-    if (minor >= 5) for (let y = oy - s; y < h; y += minor) { c.moveTo(0, Math.round(y) + .5); c.lineTo(w, Math.round(y) + .5); }
-    c.globalAlpha = .55; c.stroke(); c.globalAlpha = 1;
-    c.strokeStyle = light ? 'rgba(0,100,200,.22)' : 'rgba(120,200,255,.16)';
-    c.beginPath();
-    for (let x = ox; x < w; x += s) { c.moveTo(Math.round(x) + .5, 0); c.lineTo(Math.round(x) + .5, h); }
-    for (let y = oy; y < h; y += s) { c.moveTo(0, Math.round(y) + .5); c.lineTo(w, Math.round(y) + .5); }
-    c.stroke();
-  } else if (doc.pat === 'dots') { for (let x = ox; x < w; x += s) for (let y = oy; y < h; y += s) c.fillRect(x - 1, y - 1, 2.2, 2.2); }
-  else {
-    c.beginPath();
-    if (doc.pat === 'grid') for (let x = ox; x < w; x += s) { c.moveTo(Math.round(x) + .5, 0); c.lineTo(Math.round(x) + .5, h); }
+    for (let x = ox; x < w; x += s) for (let y = oy; y < h; y += s) { c.moveTo(x + r, y); c.arc(x, y, r, 0, 7); }
+    c.fill();
+  } else { // thin grey cell lines like a spreadsheet
+    c.strokeStyle = light ? 'rgba(0,0,0,.14)' : 'rgba(255,255,255,.10)';
+    c.lineWidth = 1; c.beginPath();
+    if (pat === 'grid') for (let x = ox; x < w; x += s) { c.moveTo(Math.round(x) + .5, 0); c.lineTo(Math.round(x) + .5, h); }
     for (let y = oy; y < h; y += s) { c.moveTo(0, Math.round(y) + .5); c.lineTo(w, Math.round(y) + .5); }
     c.stroke();
   }
@@ -1469,21 +1466,21 @@ $('bFin').onclick = openFin;
 
 /* ═══════════════ BA II PLUS ═══════════════ */
 const KEYS = [
-  ['2ND', 'sec', ''], ['CPT', 'cpt', 'QUIT?'], ['ENTER', 'cpt', 'SET'], ['↑', 'cpt', 'DEL'], ['↓', 'cpt', 'INS'],
-  ['CF', '', 'CLR WORK'], ['NPV', '', ''], ['IRR', '', ''], ['→', '', ''], ['CE|C', '', 'QUIT'],
+  ['2ND', 'sec', ''], ['CPT', 'cpt', 'QUIT'], ['ENTER', 'cpt', 'SET'], ['↑', 'cpt', 'DEL'], ['↓', 'cpt', 'INS'],
+  ['CF', '', ''], ['NPV', '', ''], ['IRR', '', ''], ['→', '', ''], ['CE|C', '', 'CLR WORK'],
   ['N', 'tv', 'xP/Y'], ['I/Y', 'tv', 'P/Y'], ['PV', 'tv', 'AMORT'], ['PMT', 'tv', 'BGN'], ['FV', 'tv', 'CLR TVM'],
   ['%', '', ''], ['√x', '', ''], ['x²', '', ''], ['1/x', '', ''], ['yˣ', '', 'ˣ√y'],
   ['LN', '', 'eˣ'], ['(', '', ''], [')', '', ''], ['STO', '', ''], ['÷', '', ''],
-  ['RCL', '', ''], ['7', 'n', ''], ['8', 'n', ''], ['9', 'n', ''], ['×', '', ''],
+  ['RCL', '', ''], ['7', 'n', 'DATA'], ['8', 'n', 'STAT'], ['9', 'n', 'BOND'], ['×', '', ''],
   ['π', '', ''], ['4', 'n', ''], ['5', 'n', ''], ['6', 'n', ''], ['−', '', ''],
-  ['ANS', '', ''], ['1', 'n', ''], ['2', 'n', ''], ['3', 'n', ''], ['+', '', ''],
-  ['ON/OFF', '', 'RESET'], ['0', 'n', ''], ['.', 'n', 'FORMAT'], ['+|−', 'n', ''], ['=', 'eq', ''],
+  ['ANS', '', ''], ['1', 'n', 'DATE'], ['2', 'n', 'ICONV'], ['3', 'n', ''], ['+', '', ''],
+  ['ON/OFF', '', 'RESET'], ['0', 'n', ''], ['.', 'n', 'FORMAT'], ['+|−', 'n', 'RESET'], ['=', 'eq', 'ANS'],
 ];
-KEYS[1][2] = '';
 const C = {
   entry: '', val: 0, expr: '', fresh: true, closed: false, second: false, cpt: false, sto: false, rcl: false,
   tvm: { N: 0, 'I/Y': 0, PV: 0, PMT: 0, FV: 0 }, py: 1, cy: 1, bgn: false, last: null, ans: 0,
   cf: [{ c: 0, f: 1 }], npvI: 0, npv: null, irr: null, am: { P1: 1, P2: 1 }, mem: Array(10).fill(0),
+  data: [], stat: 'LIN', xp: 0, yp: 0, bd: null, dt: null, ic: { nom: 0, eff: 0, cy: 1 },
   mode: 'std', idx: 0, label: '', err: '', dec: 2, log: [],
 };
 function cDisp() { return C.entry !== '' ? parseFloat(C.entry) || 0 : C.val; }
@@ -1504,7 +1501,77 @@ function amVals() {
   const { P1, P2 } = C.am, b2 = bal(P2), b1 = bal(P1 - 1), prn = b2 - b1;
   return { BAL: b2, PRN: prn, INT: t.PMT * (P2 - P1 + 1) - prn };
 }
-// worksheet items: [label, getter, setter|null, computable]
+/* dates are keyed in the BA II way: MM.DDYY (6.1524 = 15 Jun 2024; YY 50–99 → 19xx) */
+function parseBADate(v) {
+  const s = Math.abs(v).toFixed(4), [m, r] = s.split('.'), mm = +m, dd = +r.slice(0, 2), yy = +r.slice(2, 4);
+  const y = yy < 50 ? 2000 + yy : 1900 + yy, dim = new Date(Date.UTC(y, mm, 0)).getUTCDate();
+  if (mm < 1 || mm > 12 || dd < 1 || dd > dim) throw new Error('Ngày không hợp lệ');
+  return { y, m: mm, d: dd };
+}
+const dnum = t => Date.UTC(t.y, t.m - 1, t.d) / 864e5;
+const dimOf = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+const toBADate = n => { const t = new Date(Math.round(n) * 864e5); return t.getUTCMonth() + 1 + t.getUTCDate() / 100 + (t.getUTCFullYear() % 100) / 10000; };
+const dateStr = v => { try { const t = parseBADate(v); return `${t.m}-${t.d}-${t.y}`; } catch (e) { return 'Error'; } };
+function days360(a, b) { let d1 = a.d, d2 = b.d; if (d1 === 31) d1 = 30; if (d2 === 31 && d1 >= 30) d2 = 30; return (b.y - a.y) * 360 + (b.m - a.m) * 30 + d2 - d1; }
+function addMonths(t, k, eom) {
+  const mm = t.m - 1 + k, y = t.y + Math.floor(mm / 12), m = ((mm % 12) + 12) % 12 + 1, dim = dimOf(y, m);
+  return { y, m, d: eom ? dim : Math.min(t.d, dim) };
+}
+const BD0 = () => ({ sdt: 12.319, cpn: 0, rdt: 12.319, rv: 100, act: true, freq: 2, yld: 0, pri: 0 });
+const DT0 = () => ({ dt1: 12.319, dt2: 12.319, dbd: 0, act: true });
+C.bd = BD0(); C.dt = DT0();
+// clean price per 100 par + accrued interest (same method as Excel PRICE / BA II BOND)
+function bondPrice(yld) {
+  const b = C.bd, S = parseBADate(b.sdt), R = parseBADate(b.rdt), m = b.freq, step = 12 / m, eom = R.d === dimOf(R.y, R.m);
+  if (dnum(S) >= dnum(R)) throw new Error('SDT phải trước RDT');
+  let k = 0, pcd, ncd;
+  for (;; k++) { pcd = addMonths(R, -(k + 1) * step, eom); if (dnum(pcd) <= dnum(S)) { ncd = addMonths(R, -k * step, eom); break; } }
+  const N = k + 1, A = b.act ? dnum(S) - dnum(pcd) : days360(pcd, S), E = b.act ? dnum(ncd) - dnum(pcd) : 360 / m;
+  const DSC = b.act ? dnum(ncd) - dnum(S) : E - A, Cp = b.cpn / m, r = yld / 100 / m, ai = A / E * Cp;
+  let P;
+  if (N === 1) P = (b.rv + Cp) / (1 + DSC / E * r) - ai;
+  else { P = b.rv / Math.pow(1 + r, N - 1 + DSC / E); for (let j = 1; j <= N; j++) P += Cp / Math.pow(1 + r, j - 1 + DSC / E); P -= ai; }
+  return { P, ai };
+}
+// STAT: LIN, Ln, Exp, Pwr regressions and 1-V (Y = frequency)
+const STAT_MODES = ['LIN', 'Ln', 'Exp', 'Pwr', '1-V'];
+function statVals() {
+  const D = C.data, st = C.stat, o = {};
+  if (!D.length) throw new Error('Chưa có dữ liệu');
+  if (st === '1-V') {
+    let n = 0, sx = 0, sxx = 0; D.forEach(p => { const f = Math.round(p.y); n += f; sx += f * p.x; sxx += f * p.x * p.x; });
+    const m = sx / n, ss = sxx - n * m * m;
+    return { n, xm: m, Sx: Math.sqrt(ss / (n - 1)), sx: Math.sqrt(ss / n), Sumx: sx, Sumx2: sxx };
+  }
+  const n = D.length, X = D.map(p => p.x), Yv = D.map(p => p.y);
+  const U = X.map(x => st === 'Ln' || st === 'Pwr' ? Math.log(x) : x), V = Yv.map(y => st === 'Exp' || st === 'Pwr' ? Math.log(y) : y);
+  const mean = a => a.reduce((s, x) => s + x, 0) / a.length, mu = mean(U), mv = mean(V);
+  const suu = U.reduce((s, u) => s + (u - mu) ** 2, 0), svv = V.reduce((s, v) => s + (v - mv) ** 2, 0), suv = U.reduce((s, u, i) => s + (u - mu) * (V[i] - mv), 0);
+  const B = suv / suu, A = mv - B * mu, xm = mean(X), ym = mean(Yv);
+  const ssx = X.reduce((s, x) => s + (x - xm) ** 2, 0), ssy = Yv.reduce((s, y) => s + (y - ym) ** 2, 0);
+  Object.assign(o, { n, xm, Sx: Math.sqrt(ssx / (n - 1)), sx: Math.sqrt(ssx / n), ym, Sy: Math.sqrt(ssy / (n - 1)), sy: Math.sqrt(ssy / n),
+    a: st === 'Exp' || st === 'Pwr' ? Math.exp(A) : A, b: st === 'Exp' ? Math.exp(B) : B, r: suv / Math.sqrt(suu * svv),
+    Sumx: X.reduce((s, x) => s + x, 0), Sumx2: X.reduce((s, x) => s + x * x, 0), Sumy: Yv.reduce((s, y) => s + y, 0),
+    Sumy2: Yv.reduce((s, y) => s + y * y, 0), Sumxy: X.reduce((s, x, i) => s + x * Yv[i], 0) });
+  return o;
+}
+function forecastY(x) { const { a, b } = statVals(); return { LIN: a + b * x, Ln: a + b * Math.log(x), Exp: a * Math.pow(b, x), Pwr: a * Math.pow(x, b) }[C.stat]; }
+function forecastX(y) { const { a, b } = statVals(); return { LIN: (y - a) / b, Ln: Math.exp((y - a) / b), Exp: Math.log(y / a) / Math.log(b), Pwr: Math.pow(y / a, 1 / b) }[C.stat]; }
+const WS_NAME = { std: '', cf: 'CF', npv: 'NPV', irr: 'IRR', py: 'P/Y', amort: 'AMORT', data: 'DATA', stat: 'STAT', bond: 'BOND', date: 'DATE', iconv: 'ICONV' };
+function clrWork() {
+  switch (C.mode) {
+    case 'cf': case 'npv': case 'irr': C.cf = [{ c: 0, f: 1 }]; C.npv = C.irr = null; C.npvI = 0; break;
+    case 'data': case 'stat': C.data = []; break;
+    case 'bond': C.bd = BD0(); break;
+    case 'date': C.dt = DT0(); break;
+    case 'iconv': C.ic = { nom: 0, eff: 0, cy: 1 }; break;
+    case 'amort': C.am = { P1: 1, P2: 1 }; break;
+    case 'py': C.py = C.cy = 1; break;
+    default: return;
+  }
+  C.idx = 0; C.entry = ''; C.fresh = true; cLog('CLR WORK ' + WS_NAME[C.mode]);
+}
+// worksheet items: [label, getter, setter|null, computable, {fmt, toggle}]
 function wsItems() {
   switch (C.mode) {
     case 'cf': {
@@ -1519,6 +1586,47 @@ function wsItems() {
     case 'npv': return [['I', () => C.npvI, v => C.npvI = v], ['NPV', () => C.npv ?? 0, null, () => C.npv = FM.npv(C.npvI / 100, cfList())]];
     case 'irr': return [['IRR', () => C.irr ?? 0, null, () => C.irr = FM.irr(cfList()) * 100]];
     case 'py': return [['P/Y', () => C.py, v => { C.py = v; C.cy = v; }], ['C/Y', () => C.cy, v => C.cy = v]];
+    case 'data': {
+      const it = [];
+      for (let j = 0; j <= C.data.length && j < 50; j++) {
+        const L = String(j + 1).padStart(2, '0'), row = () => C.data[j] || (C.data[j] = { x: 0, y: 1 });
+        it.push(['X' + L, () => (C.data[j] ? C.data[j].x : 0), v => row().x = v]);
+        it.push(['Y' + L, () => (C.data[j] ? C.data[j].y : 1), v => row().y = v]);
+      }
+      return it;
+    }
+    case 'stat': {
+      const g = k => () => statVals()[k];
+      const it = [[C.stat, () => 0, null, null, { toggle: () => C.stat = STAT_MODES[(STAT_MODES.indexOf(C.stat) + 1) % 5], fmt: () => C.stat }],
+        ['n', g('n')], ['x̄', g('xm')], ['Sx', g('Sx')], ['σx', g('sx')]];
+      if (C.stat === '1-V') return it.concat([['Σx', g('Sumx')], ['Σx²', g('Sumx2')]]);
+      return it.concat([['ȳ', g('ym')], ['Sy', g('Sy')], ['σy', g('sy')], ['a', g('a')], ['b', g('b')], ['r', g('r')],
+        ["X'", () => C.xp, v => C.xp = v, () => C.xp = forecastX(C.yp)], ["Y'", () => C.yp, v => C.yp = v, () => C.yp = forecastY(C.xp)],
+        ['Σx', g('Sumx')], ['Σx²', g('Sumx2')], ['Σy', g('Sumy')], ['Σy²', g('Sumy2')], ['Σxy', g('Sumxy')]]);
+    }
+    case 'bond': {
+      const b = C.bd, D = { fmt: dateStr };
+      return [['SDT', () => b.sdt, v => (parseBADate(v), b.sdt = v), null, D], ['CPN', () => b.cpn, v => b.cpn = v], ['RDT', () => b.rdt, v => (parseBADate(v), b.rdt = v), null, D],
+        ['RV', () => b.rv, v => b.rv = v], ['ACT', () => 0, null, null, { toggle: () => b.act = !b.act, fmt: () => b.act ? 'ACT' : '360' }],
+        ['2/Y', () => 0, null, null, { toggle: () => b.freq = b.freq === 2 ? 1 : 2, fmt: () => b.freq + '/Y' }],
+        ['YLD', () => b.yld, v => b.yld = v, () => { b.yld = FM.root(y => bondPrice(y).P - b.pri, -90, 500, b.cpn || 5); }],
+        ['PRI', () => b.pri, v => b.pri = v, () => { b.pri = bondPrice(b.yld).P; }],
+        ['AI', () => bondPrice(b.yld).ai, null]];
+    }
+    case 'date': {
+      const d = C.dt, D = { fmt: dateStr }, diff = () => { const a = parseBADate(d.dt1), b = parseBADate(d.dt2); return d.act ? dnum(b) - dnum(a) : days360(a, b); };
+      const needAct = () => { if (!d.act) throw new Error('Chỉ tính ngày ở chế độ ACT'); };
+      return [['DT1', () => d.dt1, v => (parseBADate(v), d.dt1 = v), () => { needAct(); d.dt1 = toBADate(dnum(parseBADate(d.dt2)) - d.dbd); }, D],
+        ['DT2', () => d.dt2, v => (parseBADate(v), d.dt2 = v), () => { needAct(); d.dt2 = toBADate(dnum(parseBADate(d.dt1)) + d.dbd); }, D],
+        ['DBD', () => d.dbd, v => d.dbd = v, () => d.dbd = diff()],
+        ['ACT', () => 0, null, null, { toggle: () => d.act = !d.act, fmt: () => d.act ? 'ACT' : '360' }]];
+    }
+    case 'iconv': {
+      const c = C.ic;
+      return [['NOM', () => c.nom, v => c.nom = v, () => c.nom = c.cy * (Math.pow(1 + c.eff / 100, 1 / c.cy) - 1) * 100],
+        ['EFF', () => c.eff, v => c.eff = v, () => c.eff = (Math.pow(1 + c.nom / 100 / c.cy, c.cy) - 1) * 100],
+        ['C/Y', () => c.cy, v => c.cy = v]];
+    }
     case 'amort': return [['P1', () => C.am.P1, v => C.am.P1 = Math.max(1, Math.round(v))], ['P2', () => C.am.P2, v => C.am.P2 = Math.max(1, Math.round(v))],
       ['BAL', () => amVals().BAL, null], ['PRN', () => amVals().PRN, null], ['INT', () => amVals().INT, null]];
   }
@@ -1538,17 +1646,21 @@ function pressInner(key, sec) {
   }
   if (sec) {
     switch (key) {
-      case 'CE|C': C.mode = 'std'; C.label = ''; C.cpt = false; return;
+      case 'CPT': C.mode = 'std'; C.label = ''; C.cpt = false; C.entry = ''; C.fresh = true; return; // QUIT
+      case 'CE|C': clrWork(); return;
+      case '7': case '8': case '9': case '1': case '2':
+        C.mode = { 7: 'data', 8: 'stat', 9: 'bond', 1: 'date', 2: 'iconv' }[key]; C.idx = 0; C.entry = ''; C.fresh = true; C.cpt = false; return;
+      case 'ENTER': { const it = C.mode !== 'std' && wsItems()[C.idx]; if (it && it[4] && it[4].toggle) it[4].toggle(); return; } // SET
+      case '=': C.val = C.ans; C.entry = ''; C.fresh = true; return;
       case 'FV': for (const k in C.tvm) C.tvm[k] = 0; C.last = null; C.mode = 'std'; C.label = 'CLR TVM'; C.val = 0; C.entry = ''; C.fresh = true; cLog('CLR TVM'); return;
       case 'PMT': C.bgn = !C.bgn; C.label = C.bgn ? 'BGN' : 'END'; C.fresh = true; return;
       case 'I/Y': C.mode = 'py'; C.idx = 0; C.entry = ''; return;
       case 'PV': C.mode = 'amort'; C.idx = 0; C.entry = ''; return;
       case 'N': C.val = cDisp() * C.py; C.entry = ''; C.fresh = true; C.label = ''; return;
-      case 'CF': if (C.mode === 'cf' || C.mode === 'npv' || C.mode === 'irr') { C.cf = [{ c: 0, f: 1 }]; C.npv = C.irr = null; C.mode = 'cf'; C.idx = 0; C.entry = ''; cLog('CLR WORK'); } return;
       case 'LN': C.val = Math.exp(cDisp()); C.entry = ''; C.fresh = true; return;
       case 'yˣ': C.expr += numStr() + '^(1/'; C.closed = false; C.entry = ''; C.fresh = true; C.pendRoot = true; return;
       case '.': { const order = [2, 4, 6, 9]; C.dec = order[(order.indexOf(C.dec) + 1) % 4]; $('calcDec').value = C.dec; C.label = 'DEC'; return; }
-      case 'ON/OFF': Object.assign(C, { tvm: { N: 0, 'I/Y': 0, PV: 0, PMT: 0, FV: 0 }, py: 1, cy: 1, bgn: false, cf: [{ c: 0, f: 1 }], npv: null, irr: null, mem: Array(10).fill(0), log: [], last: null }); allClear(); C.label = 'RESET'; return;
+      case '+|−': case 'ON/OFF': Object.assign(C, { data: [], stat: 'LIN', bd: BD0(), dt: DT0(), ic: { nom: 0, eff: 0, cy: 1 }, mode: 'std', tvm: { N: 0, 'I/Y': 0, PV: 0, PMT: 0, FV: 0 }, py: 1, cy: 1, bgn: false, cf: [{ c: 0, f: 1 }], npv: null, irr: null, mem: Array(10).fill(0), log: [], last: null }); allClear(); C.label = 'RESET'; return;
     }
   }
   if (C.mode !== 'std' && wsKey(key)) return;
@@ -1614,12 +1726,12 @@ function wsKey(key) {
     case '↓': C.idx = (C.idx + 1) % items.length; C.entry = ''; C.fresh = true; C.cpt = false; return true;
     case '↑': C.idx = (C.idx - 1 + items.length) % items.length; C.entry = ''; C.fresh = true; C.cpt = false; return true;
     case 'ENTER':
-      if (it && it[2] && C.entry !== '') { it[2](parseFloat(C.entry)); cLog(`${it[0]} = ${cFmt(parseFloat(C.entry))}`); C.entry = ''; C.fresh = true; if (C.mode === 'cf' || C.mode === 'npv') { C.npv = null; C.irr = null; } }
+      if (it && it[4] && it[4].toggle) { it[4].toggle(); return true; }
+      if (it && it[2] && C.entry !== '') { it[2](parseFloat(C.entry)); cLog(`${it[0]} = ${itemStr(it, parseFloat(C.entry))}`); C.entry = ''; C.fresh = true; if (C.mode === 'cf' || C.mode === 'npv') { C.npv = null; C.irr = null; } }
       return true;
     case 'CPT':
-      if (it && it[3]) { it[3](); cLog(`CPT ${it[0]} = ${cFmt(it[1]())}${it[0] === 'IRR' ? '%' : ''}`); C.entry = ''; C.fresh = true; return true; }
-      if (C.mode === 'npv' || C.mode === 'irr') return true;
-      return false;
+      if (it && it[3]) { it[3](); cLog(`CPT ${it[0]} = ${itemStr(it, it[1]())}${it[0] === 'IRR' ? '%' : ''}`); C.entry = ''; C.fresh = true; return true; }
+      return C.mode !== 'std';
     case 'CE|C': C.entry = ''; C.fresh = true; return true;
     case 'IRR': if (C.mode !== 'irr') return false; return true;
   }
@@ -1627,8 +1739,10 @@ function wsKey(key) {
   if (key === '+|−' && C.entry === '' && it && it[2]) { it[2](-it[1]()); return true; }
   if (/^(\d|\.)$/.test(key) || key === '+|−' || key === '→') return false;
   if (['N', 'I/Y', 'PV', 'PMT', 'FV', 'CF', 'NPV', 'IRR'].includes(key)) { C.mode = 'std'; return false; }
+  if (['+', '−', '×', '÷', 'yˣ', '(', ')', '=', '%', '√x', 'x²', '1/x', 'LN', 'π', 'ANS'].includes(key)) return false;
   return false;
 }
+function itemStr(it, v) { return it[4] && it[4].fmt ? it[4].fmt(v) : cFmt(v); }
 function numStr() { const v = cDisp(); return v < 0 ? `(${v})` : String(v); }
 function partial(e) { const bal = (e.match(/\(/g) || []).length - (e.match(/\)/g) || []).length; return e + ')'.repeat(Math.max(0, bal)); }
 function prettyExpr(e) { return e.replace(/\*/g, ' × ').replace(/\//g, ' ÷ ').replace(/\+/g, ' + ').replace(/(\d|\))-/g, '$1 − ').replace(/\^/g, '^'); }
@@ -1636,15 +1750,19 @@ function allClear() { C.entry = ''; C.val = 0; C.expr = ''; C.fresh = true; C.cl
 function baRender() {
   const on = (id, b) => $(id).classList.toggle('on', !!b);
   on('i2nd', C.second); on('icpt', C.cpt); on('ibgn', C.bgn); on('isto', C.sto); on('ircl', C.rcl);
-  $('iws').textContent = { std: '', cf: 'CF', npv: 'NPV', irr: 'IRR', py: 'P/Y', amort: 'AMORT' }[C.mode]; on('iws', C.mode !== 'std');
+  $('iws').textContent = WS_NAME[C.mode]; on('iws', C.mode !== 'std');
   document.querySelectorAll('.k[data-key="2ND"]').forEach(k => k.classList.toggle('on2', C.second));
   let lb = '', val;
   if (C.err) { val = C.err; }
   else if (C.mode !== 'std') {
-    const it = wsItems()[C.idx]; lb = it[0] + '=';
-    val = C.entry !== '' ? C.entry : cFmt(it[1]());
-    if (it[0] === 'NPV' && C.npv === null || it[0] === 'IRR' && C.irr === null) val = cFmt(0);
-    if (!it[2] && (it[0] === 'NPV' || it[0] === 'IRR') && C.cpt) lb = it[0] + '=';
+    const items = wsItems(); if (C.idx >= items.length) C.idx = 0;
+    const it = items[C.idx];
+    if (it[4] && it[4].toggle) { lb = ''; val = it[4].fmt(); }
+    else {
+      lb = it[0] + '=';
+      try { val = C.entry !== '' ? C.entry : itemStr(it, it[1]()); } catch (e) { val = C.mode === 'stat' ? 'Error' : '0'; }
+      if (it[0] === 'NPV' && C.npv === null || it[0] === 'IRR' && C.irr === null) val = cFmt(0);
+    }
   } else {
     if (C.label && C.fresh) lb = /^(N|I\/Y|PV|PMT|FV|M\d)$/.test(C.label) ? C.label + '=' + (C.last === C.label ? '*' : '') : C.label;
     val = C.entry !== '' ? C.entry : cFmt(C.val);
@@ -1652,7 +1770,7 @@ function baRender() {
     if (C.label === 'DEC') { lb = 'DEC='; val = C.dec === 9 ? '9 (float)' : String(C.dec); }
   }
   $('cLb').textContent = lb; $('cVal').textContent = val;
-  $('cEx').textContent = C.mode === 'std' && C.expr ? prettyExpr(C.expr) : C.mode === 'std' ? `P/Y=${fmtNum(C.py)} C/Y=${fmtNum(C.cy)} · ${C.bgn ? 'BGN' : 'END'}` : '';
+  $('cEx').textContent = C.mode !== 'std' ? `${WS_NAME[C.mode]} · ↑↓ chọn · ENTER lưu${C.mode === 'stat' || C.mode === 'bond' || C.mode === 'date' ? ' · 2ND ENTER đổi chế độ' : ''}${/^(SDT|RDT|DT1|DT2)$/.test(lb.slice(0, -1)) ? ' · ngày MM.DDYY' : ''}` : C.expr ? prettyExpr(C.expr) : `P/Y=${fmtNum(C.py)} C/Y=${fmtNum(C.cy)} · ${C.bgn ? 'BGN' : 'END'}`;
 }
 /* ── Scientific (Casio-style, expression entry) ── */
 const SCI_KEYS = [
@@ -1834,6 +1952,15 @@ $('cInsT').onclick = () => {
     lines.push(`[NPV] I = ${cFmt(C.npvI)}  →  CPT NPV = ${cFmt(FM.npv(C.npvI / 100, cfList()))}`);
     try { lines.push(`[IRR]  →  CPT IRR = ${cFmt(FM.irr(cfList()) * 100)}%`); } catch (e) {}
     txt = lines.join('\n');
+  } else if (C.mode !== 'std' && C.mode !== 'py' && C.mode !== 'amort') {
+    const lines = [`BA II Plus — ${WS_NAME[C.mode]}${C.mode === 'stat' || C.mode === 'data' ? ' (' + C.stat + ')' : ''}`];
+    if (C.mode === 'data' || C.mode === 'stat') {
+      C.data.forEach((p, j) => lines.push(`X${String(j + 1).padStart(2, '0')} = ${cFmt(p.x)}   Y${String(j + 1).padStart(2, '0')} = ${cFmt(p.y)}`));
+      const keep = C.mode; C.mode = 'stat';
+      wsItems().slice(1).forEach(it => { try { lines.push(`${it[0]} = ${itemStr(it, it[1]())}`); } catch (e) {} });
+      C.mode = keep;
+    } else wsItems().forEach(it => { try { lines.push(it[4] && it[4].toggle ? it[4].fmt() : `${it[0]} = ${itemStr(it, it[1]())}`); } catch (e) {} });
+    txt = lines.join('\n');
   } else {
     const t = C.tvm, lines = [`BA II Plus — TVM  (${C.bgn ? 'BGN' : 'END'}, P/Y = ${fmtNum(C.py)}, C/Y = ${fmtNum(C.cy)})`];
     for (const k of ['N', 'I/Y', 'PV', 'PMT', 'FV']) lines.push(`${k.padEnd(4)}= ${C.last === k ? cFmt(t[k]) + '   ← CPT ' + k : cFmt(t[k])}`);
@@ -1846,15 +1973,11 @@ $('cInsT').onclick = () => {
 load(); setTheme(THEME); buildTools(); setCalcMode(CM); updTools(); updPages(); updTimer(); updBgMenu(); resize();
 addEventListener('resize', resize);
 document.fonts && document.fonts.ready.then(() => { doc.pages.forEach(p => p.objs.forEach(o => o.t === 'text' && measureText(o))); dirty = true; });
-if (!localStorage.getItem('elevato-board-seen')) {
-  try { localStorage.setItem('elevato-board-seen', 1); } catch (e) {}
-  if (!page().objs.length) {
-    const C2 = col(), g = nid();
-    addText('Chào mừng tới elevaTO Board 👋', 80, 110, { s: 40, b: 1, c: C2[1], g });
-    addText('Bấm T rồi gõ:   1000 / 1.08^5 =        → tự ra kết quả\nĐặt biến:   r = 8%     rồi     pv(r, 10, -50, -1000) =\nBấm C mở máy BA II Plus · F mở công cụ tài chính · ? xem hướng dẫn', 80, 180, { s: 24, c: C2[0], g });
-    lastSnap = snap(); save();
-  }
-}
+// older versions seeded a welcome note onto page 1 — remove it (help lives behind the ? button)
+doc.pages.forEach(p => {
+  const w = p.objs.find(o => o.t === 'text' && o.txt.startsWith('Chào mừng tới elevaTO Board'));
+  if (w) { p.objs = p.objs.filter(o => w.g ? o.g !== w.g : o !== w); lastSnap = snap(); save(); dirty = true; }
+});
 loop();
 // expose for quick testing in console
 window.__board = { FM, evalExpr, smartCalc, press, C, sciPress, S, basicPress, B, setCalcMode };
