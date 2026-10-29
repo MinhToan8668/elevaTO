@@ -730,8 +730,8 @@ try { THEME = localStorage.getItem('elevato-board-theme') || 'light'; } catch (e
 document.documentElement.dataset.theme = THEME;
 const BG = { green: '#062a22', dark: '#0b0f0e', white: '#fbfbf7' };
 const PALETTE = {
-  dark: ['#f4f4f0', '#00c896', '#d4a843', '#ff6b6b', '#5fb3ff', '#ff9f43', '#c58bff'],
-  light: ['#151a18', '#00875a', '#b07d12', '#d63c3c', '#1f6fd1', '#e0731a', '#8b48d6'],
+  dark: ['#f4f4f0', '#00c896', '#ffd23f', '#ff6b6b', '#5fb3ff', '#ff9f43', '#c58bff'],
+  light: ['#151a18', '#00875a', '#f2b600', '#d63c3c', '#1f6fd1', '#e0731a', '#8b48d6'],
 };
 const WIDTHS = [2, 4, 7, 12], TSIZES = [20, 28, 38, 56];
 let doc = newDoc(), pg = 0;
@@ -1387,7 +1387,7 @@ $('bTheme').onclick = () => { setTheme(THEME === 'dark' ? 'light' : 'dark', true
 function setBg(bg) {
   const wasLight = isLight(); doc.bg = bg; updBgMenu();
   if (wasLight !== isLight()) { // swap default ink so old notes stay readable
-    const from = PALETTE[wasLight ? 'light' : 'dark'], to = PALETTE[isLight() ? 'light' : 'dark'];
+    const from = [...PALETTE[wasLight ? 'light' : 'dark'], ACCENT[wasLight ? 'light' : 'dark']], to = [...PALETTE[isLight() ? 'light' : 'dark'], ACCENT[isLight() ? 'light' : 'dark']];
     doc.pages.forEach(p => p.objs.forEach(o => { const i = from.indexOf(o.c); if (i >= 0) o.c = to[i]; }));
     commit();
   }
@@ -1689,7 +1689,9 @@ function finishInsert(g, msg) {
   setTool('select'); sel = new Set(ids); commit(); toast(msg || 'Đã chèn — kéo để di chuyển');
   $('finModal').classList.remove('show');
 }
-const col = () => PALETTE[isLight() ? 'light' : 'dark'];
+// inserted titles/labels keep the darker elevaTO gold (pure yellow is hard to read as text on white)
+const ACCENT = { dark: '#d4a843', light: '#b07d12' };
+const col = () => { const p = [...PALETTE[isLight() ? 'light' : 'dark']]; p[2] = ACCENT[isLight() ? 'light' : 'dark']; return p; };
 // fit a block of given world size near the current viewport centre
 // …sliding down past whatever is already drawn there so inserts don't pile up
 function placeBlock(w, h) {
