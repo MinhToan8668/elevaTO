@@ -1,0 +1,46 @@
+# Lấy api_id / api_hash tại https://my.telegram.org -> API development tools
+api_id: 123456
+api_hash: "0123456789abcdef0123456789abcdef"
+
+# Nơi nhận file: "me" = Saved Messages, hoặc @username kênh/nhóm, hoặc ID số (-100...)
+target: "me"
+
+# Các folder cần quét & upload
+folders:
+  - "~/Documents/CanUpload"
+  - "~/Downloads/Telegram-Queue"
+
+# Tài khoản Telegram Premium được up 4GB/file, thường là 2GB/file
+premium: false
+
+# Sau khi up thành công: chuyển file gốc vào Thùng rác (có thể "Put Back")
+move_to_trash: true
+
+# Bỏ qua file vừa sửa trong N giây (đang copy/tải dở)
+min_file_age_seconds: 120
+
+# Bỏ qua các mẫu này (glob)
+ignore:
+  - ".*"
+  - "*.tmp"
+  - "*.part"
+  - "*.crdownload"
+  - "*.download"
+  - "Icon\r"
+
+# Gửi ảnh/video dạng "file" (giữ nguyên chất lượng, không bị nén)
+send_as_document: true
+
+# Upload song song bao nhiêu file một lúc
+concurrency: 2
+
+# Chế độ watch: quét lại mỗi N giây
+watch_interval_seconds: 300
+
+# ---- Video Sorter (./sort.sh) ----
+video_sorter:
+  library: "~/Movies/Library"          # thư viện đích: Năm/Tháng/Ngày_DuAn/Raw|Final/Video|Anh|Audio
+  name_template: "{date}_{project}_{seq:03d}"   # biến: date, day, project, seq, orig, cam
+  move: true                           # false = copy (thẻ nhớ luôn copy + kiểm tra)
+  include_photos: true
+  include_audio: true
