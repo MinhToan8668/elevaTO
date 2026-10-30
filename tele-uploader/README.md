@@ -22,7 +22,9 @@ Trong app → **Cài đặt**:
 - **Upload**: hàng chờ, tiến độ từng file (tốc độ, thời gian còn lại), lịch sử đã up, nút Dừng.
 - **Sắp xếp video**: chọn folder/thẻ nhớ → Xem trước → Thực hiện → (Hoàn tác nếu cần).
 - **Cắt & gộp** (cần `brew install ffmpeg`):
-  - *Cắt video*: mỗi đoạn N phút, mỗi đoạn khoảng N MB, hoặc lấy các khoảng thời gian (`0:10 - 1:25`). Không nén lại → nhanh, giữ nguyên chất lượng; điểm cắt có thể lệch 1–2 giây.
+  - *Cắt video*: xem video ngay trong app, **kéo chọn đoạn trên thanh thời gian** (có ảnh thu nhỏ), kéo 2 mép để chỉnh, ▶ xem lại từng đoạn, sửa giờ bằng tay được. Phím tắt: `Space` phát/dừng, `I`/`O` đặt đầu/cuối, `Enter` thêm đoạn, `←/→` tua 1s (Shift 5s), `,`/`.` từng khung hình.
+    Cắt theo các đoạn đã chọn (tuỳ chọn gộp thành 1 file), hoặc chia đều mỗi N phút / mỗi N MB (vạch chia hiện trên timeline).
+    Mặc định cắt nhanh không nén lại (lệch 1–2s theo keyframe); bật *Cắt chính xác từng khung hình* nếu cần đúng tuyệt đối. mkv/avi/mts: bấm *Tạo bản xem trước* để xem, khi cắt vẫn dùng file gốc.
   - *Gộp video*: chọn nhiều video, sắp thứ tự bằng ↑↓. Video khác máy quay/độ phân giải thì bật *Chuyển đổi cho khớp* (nén lại H.264, dùng chip đồ hoạ của Mac).
   - *Chia / ghép file*: chia file bất kỳ thành `.part001`… và ghép lại (chọn 1 phần, app tự tìm đủ các phần).
 - **Ổ cứng**: quét → xem file nên dọn, file trùng, folder nặng → tick chọn → *Đưa lên Telegram & dọn* hoặc *Thùng rác*.

@@ -7,6 +7,7 @@ Giao diện là trang web chạy nội bộ trên máy (127.0.0.1), hiển thị
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import platform
 import secrets
@@ -329,6 +330,9 @@ web = Flask(__name__, static_folder=None)
 @web.before_request
 def check_token():
     if request.path.startswith("/api/") and request.headers.get("X-Token") != TOKEN:
+        abort(403)
+    # <video>/<img> không gửi được header → dùng token trên URL
+    if request.path.startswith("/media/") and request.args.get("t") != TOKEN:
         abort(403)
 
 
@@ -725,7 +729,79 @@ def api_media_probe():
 @web.post("/api/media/split_video")
 def api_split_video():
     b = body()
-    return media_job("Cắt video", lambda pr: mt.split_video(Path(b["path"]), b["mode"], str(b["value"]), progress=pr))
+    return media_job("Cắt video", lambda pr: mt.split_video(Path(b["path"]), b["mode"], str(b["value"]), progress=pr,
+                                                             precise=bool(b.get("precise")), join=bool(b.get("join"))))
+
+
+# ---- xem trước video trong app
+PLAYABLE_EXT = {"mp4", "mov", "m4v", "webm"}
+PLAYABLE_CODEC = {"h264", "hevc", "vp8", "vp9", "av1", None}
+OPENED: dict[str, dict] = {}   # id → {"src": file gốc, "play": file để phát}
+
+
+@web.post("/api/media/open")
+def api_media_open():
+    p = Path(body().get("path", ""))
+    if not p.is_file():
+        return err("Không thấy file.")
+    try:
+        info = mt.probe(p)
+    except Exception as e:  # noqa: BLE001
+        return err(e)
+    vid = hashlib.sha1(str(p).encode()).hexdigest()[:12]
+    OPENED[vid] = {"src": p, "play": p}
+    cached = core.SPLIT_DIR / "preview" / f"{vid}.mp4"
+    playable = p.suffix.lower().lstrip(".") in PLAYABLE_EXT and info["vcodec"] in PLAYABLE_CODEC
+    if not playable and cached.exists():
+        OPENED[vid]["play"], playable = cached, True
+    return ok(id=vid, path=str(p), name=p.name, playable=playable, **info)
+
+
+def _opened(vid):
+    v = OPENED.get(vid)
+    if not v:
+        abort(404)
+    return v
+
+
+@web.get("/media/stream/<vid>")
+def media_stream(vid):
+    return send_file(_opened(vid)["play"], conditional=True)  # hỗ trợ Range → tua được
+
+
+@web.get("/media/thumbs/<vid>")
+def media_thumbs(vid):
+    v = _opened(vid)
+    n = max(4, min(30, int(request.args.get("n", 12))))
+    out = core.SPLIT_DIR / "preview" / f"{vid}_{n}.jpg"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    if not out.exists():
+        try:
+            mt.thumbnails(v["src"], out, count=n)
+        except Exception:  # noqa: BLE001
+            abort(404)
+    return send_file(out, max_age=3600)
+
+
+@web.post("/api/media/make_preview")
+def api_make_preview():
+    vid = body().get("id")
+    v = _opened(vid)
+    out = core.SPLIT_DIR / "preview" / f"{vid}.mp4"
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    def job():
+        prog = GuiProgress("media")
+        task = prog.add_task("Tạo bản xem trước", total=1)
+        try:
+            mt.make_preview(v["src"], out, lambda d, t, l: prog.update(task, description=l, completed=d, total=t))
+        finally:
+            prog.remove_task(task)
+        v["play"] = out
+        S.results["preview"] = {"at": time.time(), "id": vid}
+    if not background("media", "Đang tạo bản xem trước…", job):
+        return err("Đang xử lý một việc khác, chờ chút.")
+    return ok()
 
 
 @web.post("/api/media/merge")

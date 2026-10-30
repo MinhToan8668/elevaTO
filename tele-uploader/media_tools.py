@@ -87,9 +87,12 @@ def _run_ffmpeg(args: list[str], total_sec: float, progress, label: str):
 
 
 # ---------------------------------------------------------------- cắt video
-def split_video(path: Path, mode: str, value: str, out_dir: Path | None = None, progress=_noop) -> list[Path]:
+def split_video(path: Path, mode: str, value: str, out_dir: Path | None = None, progress=_noop,
+                precise: bool = False, join: bool = False) -> list[Path]:
     """mode: 'duration' (value = phút mỗi đoạn), 'size' (value = MB mỗi đoạn),
-             'ranges' (value = mỗi dòng 'bắt đầu - kết thúc', vd '0:10 - 1:25')."""
+             'ranges' (value = mỗi dòng 'bắt đầu - kết thúc', vd '0:10 - 1:25').
+    precise: nén lại để cắt đúng từng khung hình (chậm hơn); mặc định cắt nhanh theo keyframe.
+    join:    gộp các đoạn đã cắt thành 1 file (vd bỏ đoạn quay hỏng ở giữa)."""
     path = Path(path)
     info = probe(path)
     dur = info["duration"]
@@ -130,12 +133,47 @@ def split_video(path: Path, mode: str, value: str, out_dir: Path | None = None, 
         out = _unique(out_dir / f"{path.stem}_{i:02d}{path.suffix.lower()}")
         label = f"Cắt {path.name} ({i}/{len(ranges)})"
         # -ss trước -i: tua nhanh; cắt không nén lại nên điểm cắt rơi vào keyframe gần nhất
-        _run_ffmpeg(["-ss", f"{a:.3f}", "-i", str(path), "-t", f"{b - a:.3f}", "-map", "0", "-c", "copy",
+        codec = _encode_args() if precise else ["-map", "0", "-c", "copy"]
+        if precise:
+            out = out.with_suffix(".mp4")
+        _run_ffmpeg(["-ss", f"{a:.3f}", "-i", str(path), "-t", f"{b - a:.3f}", *codec,
                      "-avoid_negative_ts", "make_zero", str(out)],
                     b - a, lambda d, _t, l, base=done_before: progress(base + d, total, l), label)
         done_before += b - a
         outs.append(out)
+    if join and len(outs) > 1:
+        merged = merge_videos(outs, out_dir / f"{path.stem}_da_cat{outs[0].suffix}", progress=progress)
+        for o in outs:
+            o.unlink(missing_ok=True)
+        return [merged]
     return outs
+
+
+def _encode_args() -> list[str]:
+    v = ["-c:v", "h264_videotoolbox", "-b:v", "12M"] if _has_encoder("h264_videotoolbox") else \
+        ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20"]
+    return ["-map", "0:v:0", "-map", "0:a?", *v, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "+faststart"]
+
+
+def thumbnails(path: Path, out: Path, count: int = 12, height: int = 72) -> Path:
+    """Dải ảnh thu nhỏ (count khung hình, ghép ngang) cho thanh timeline."""
+    info = probe(path)
+    dur = max(info["duration"], 0.1)
+    fps = count / dur
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(path),
+                    "-vf", f"fps={fps:.6f},scale=-2:{height},tile={count}x1", "-frames:v", "1", "-q:v", "5", str(out)],
+                   check=True, capture_output=True)
+    return out
+
+
+def make_preview(path: Path, out: Path, progress=_noop) -> Path:
+    """Bản xem trước nhẹ (H.264 540p) cho định dạng trình phát không đọc được (mkv, avi, mts…)."""
+    dur = probe(path)["duration"]
+    _run_ffmpeg(["-i", str(path), "-map", "0:v:0", "-map", "0:a?", "-vf", "scale=-2:540", "-c:v", "libx264",
+                 "-preset", "ultrafast", "-crf", "28", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k",
+                 "-movflags", "+faststart", str(out)], dur, progress, f"Tạo bản xem trước {path.name}")
+    return out
 
 
 # ---------------------------------------------------------------- gộp video

@@ -178,6 +178,44 @@ code{font-size:12px;background:var(--hover);padding:1px 6px;border-radius:6px}
 .theme-tg{border:1px solid var(--g-rim);background:var(--card);width:36px;height:36px;border-radius:12px;cursor:pointer;display:grid;place-items:center;box-shadow:var(--g-hi);font-size:15px}
 .theme-tg:hover{background:var(--card3)}
 .hide{display:none!important}
+.pick-hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding:44px 20px;text-align:center}
+.pick-hero b{font:700 16px/1.3 var(--ff-head);color:var(--fg)}
+.player{position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:16/9;max-height:52vh;width:100%;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgb(255 255 255 / .06)}
+.player video{width:100%;height:100%;object-fit:contain;display:block}
+.pv-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;text-align:center;color:#fff;background:rgb(4 33 27 / .85)}
+.pv-msg .mut{color:#a9bbb4}
+.ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 10px}
+.ctrl .play-btn{width:44px;font-size:14px}
+.ctrl .tc{font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mut);margin:0 6px;font-variant-numeric:tabular-nums}
+.ctrl .tc b{color:var(--fg);font-weight:600}
+.ctrl select{padding:5px 8px;border-radius:10px;font-size:12.5px}
+kbd{font:600 10.5px/1 ui-monospace,Menlo,monospace;padding:2px 5px;border-radius:5px;border:1px solid var(--line2);background:var(--card2);color:var(--mut);margin-left:2px}
+.btn.pri kbd{background:rgb(255 255 255 / .35);border-color:transparent;color:var(--btn-ink)}
+.tl{position:relative;height:64px;border-radius:12px;overflow:hidden;cursor:crosshair;user-select:none;background:var(--line);touch-action:none}
+.tl-thumbs{position:absolute;inset:0;background-size:100% 100%;background-repeat:no-repeat;opacity:.75;filter:saturate(.9)}
+.tl-marks{position:absolute;inset:0;pointer-events:none}
+.tl-marks i{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed #fff;opacity:.8}
+.tl-segs{position:absolute;inset:0}
+.tl-segs .s{position:absolute;top:0;bottom:0;background:rgba(46,224,173,.32);border-left:2px solid #2ee0ad;border-right:2px solid #2ee0ad;cursor:pointer}
+.tl-segs .s span{position:absolute;top:4px;left:4px;font:700 10.5px/1 var(--ff-head);color:#04241a;background:#2ee0ad;padding:2px 5px;border-radius:5px}
+.tl-sel{position:absolute;top:0;bottom:0;background:rgba(250,204,21,.25);border:2px solid #facc15;border-radius:4px;box-shadow:0 0 0 9999px rgb(0 0 0 / .25)}
+.tl-sel .h{position:absolute;top:-2px;bottom:-2px;width:12px;background:#facc15;cursor:ew-resize}
+.tl-sel .h.l{left:-7px;border-radius:5px 0 0 5px}.tl-sel .h.r{right:-7px;border-radius:0 5px 5px 0}
+.tl-sel .h::after{content:"";position:absolute;left:5px;top:35%;bottom:35%;width:2px;background:rgb(0 0 0 / .45);border-radius:1px}
+.tl-sel span{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font:700 10.5px/1 ui-monospace,Menlo,monospace;background:#facc15;color:#2a2000;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.tl-head{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 6px rgb(0 0 0 / .6);pointer-events:none;transform:translateX(-1px)}
+.tl-head i{position:absolute;top:-1px;left:-5px;border:6px solid transparent;border-top-color:#fff}
+.tl-hover{position:absolute;top:2px;transform:translateX(-50%);font:600 10.5px/1 ui-monospace,Menlo,monospace;background:rgb(0 0 0 / .7);color:#fff;padding:3px 5px;border-radius:5px;pointer-events:none}
+.tl-ruler{position:relative;height:18px;margin-top:3px;font:500 10.5px/18px ui-monospace,Menlo,monospace;color:var(--mut2)}
+.tl-ruler span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.seglist{display:flex;flex-direction:column;gap:7px}
+.segrow{display:grid;grid-template-columns:24px 1fr auto 1fr auto auto auto;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);padding:6px 8px;border-radius:12px}
+.segrow.on{border-color:#facc15}
+.segrow .no{width:22px;height:22px;border-radius:50%;background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);font:700 11px/22px var(--ff-head);text-align:center}
+.segrow input{width:100%;padding:5px 8px;font:500 12.5px/1.2 ui-monospace,Menlo,monospace;border-radius:9px}
+.segrow .d{font:500 12px ui-monospace,Menlo,monospace;color:var(--mut);white-space:nowrap}
+.segrow button{border:0;background:transparent;cursor:pointer;color:var(--mut);border-radius:7px;width:26px;height:26px}
+.segrow button:hover{background:var(--hover);color:var(--fg)}
 textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;width:100%}
 .seg{display:flex;flex-direction:column;gap:8px}
 .seg label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);cursor:pointer}
@@ -313,24 +351,70 @@ textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospa
         <div class="tabs" data-tabs="md"><a data-t="cut" class="on">✂️ Cắt video</a><a data-t="merge">🔗 Gộp video</a><a data-t="file">🧩 Chia / ghép file</a></div>
 
         <div data-pane="md-cut">
-          <div class="grid two">
+          <div class="card pick-hero" id="cutEmpty">
+            <div style="font-size:38px">🎞</div>
+            <b>Chọn video để xem và chọn đoạn cắt</b>
+            <span class="mut small">mp4, mov, m4v phát được ngay · mkv, avi, mts sẽ tạo bản xem trước</span>
+            <button class="btn pri" id="cutPick">Chọn video…</button>
+          </div>
+
+          <div class="card hide" id="cutEditor">
+            <div class="row" style="margin-bottom:10px">
+              <b id="cutName" style="color:var(--fg);font-family:var(--ff-head)"></b><span id="cutTags" class="vinfo" style="margin:0"></span>
+              <span style="flex:1"></span><button class="btn sm" id="cutPick2">Đổi video…</button>
+            </div>
+            <div class="player">
+              <video id="vp" preload="auto" playsinline></video>
+              <div class="pv-msg hide" id="pvMsg"><b>Trình phát không đọc được định dạng này</b>
+                <span class="mut small">Tạo một bản xem trước nhẹ để chọn đoạn — khi cắt vẫn dùng file gốc, giữ nguyên chất lượng.</span>
+                <button class="btn pri" id="pvMake">Tạo bản xem trước</button></div>
+            </div>
+            <div class="ctrl">
+              <button class="btn sm" id="vpBack" title="Lùi 5s (Shift+←)">⏪</button>
+              <button class="btn sm pri play-btn" id="vpPlay" title="Phát / dừng (Space)">▶</button>
+              <button class="btn sm" id="vpFwd" title="Tiến 5s (Shift+→)">⏩</button>
+              <span class="tc"><b id="vpCur">0:00.0</b> / <span id="vpDur">0:00.0</span></span>
+              <select id="vpRate" title="Tốc độ phát"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="4">4×</option></select>
+              <span style="flex:1"></span>
+              <button class="btn sm" id="setIn" title="Phím I">⟦ Đặt đầu <kbd>I</kbd></button>
+              <button class="btn sm" id="setOut" title="Phím O">Đặt cuối ⟧ <kbd>O</kbd></button>
+              <button class="btn sm pri" id="addSeg" title="Phím Enter">＋ Thêm đoạn <kbd>↵</kbd></button>
+            </div>
+            <div class="tl" id="tl">
+              <div class="tl-thumbs" id="tlThumbs"></div>
+              <div class="tl-marks" id="tlMarks"></div>
+              <div class="tl-segs" id="tlSegs"></div>
+              <div class="tl-sel hide" id="tlSel"><i class="h l" data-h="in"></i><i class="h r" data-h="out"></i><span id="tlSelLbl"></span></div>
+              <div class="tl-head" id="tlHead"><i></i></div>
+              <div class="tl-hover hide" id="tlHover"></div>
+            </div>
+            <div class="tl-ruler" id="tlRuler"></div>
+            <div class="mut small" style="margin-top:8px">Kéo trên thanh thời gian để chọn đoạn · kéo 2 mép để chỉnh · bấm để tua.
+              Phím tắt: <kbd>Space</kbd> phát/dừng · <kbd>I</kbd>/<kbd>O</kbd> đầu/cuối · <kbd>↵</kbd> thêm đoạn · <kbd>←</kbd><kbd>→</kbd> 1s (Shift 5s) · <kbd>,</kbd><kbd>.</kbd> từng khung hình</div>
+          </div>
+
+          <div class="grid two" style="margin-top:14px">
             <div class="card">
-              <h3>1. Chọn video</h3>
-              <button class="btn" id="cutPick">🎞 Chọn video…</button>
-              <div id="cutInfo" class="mut small" style="margin-top:10px">Chưa chọn video.</div>
+              <h3>Các đoạn sẽ cắt<span class="sp"></span><span class="mut small" id="segTotal"></span></h3>
+              <div id="segList"></div>
             </div>
             <div class="card">
-              <h3>2. Cắt thế nào?</h3>
+              <h3>Cách cắt</h3>
               <div class="seg">
-                <label><input type="radio" name="cutMode" value="duration" checked> Mỗi đoạn <input type="number" id="cutMin" value="10" min="0.1" step="0.5" style="width:80px"> phút</label>
-                <label><input type="radio" name="cutMode" value="size"> Mỗi đoạn khoảng <input type="number" id="cutMb" value="1950" min="1" style="width:90px"> MB</label>
-                <label style="flex-direction:column;align-items:stretch"><span><input type="radio" name="cutMode" value="ranges"> Lấy các khoảng thời gian (mỗi dòng 1 đoạn)</span>
-                  <textarea id="cutRanges" rows="3" placeholder="0:00 - 1:30&#10;5:10 - 7:45&#10;12:00 -        (bỏ trống = tới hết)"></textarea></label>
+                <label><input type="radio" name="cutMode" value="ranges" checked> Theo các đoạn đã chọn trên video</label>
+                <label><input type="radio" name="cutMode" value="duration"> Chia đều mỗi đoạn <input type="number" id="cutMin" value="10" min="0.1" step="0.5" style="width:80px"> phút</label>
+                <label><input type="radio" name="cutMode" value="size"> Chia mỗi đoạn khoảng <input type="number" id="cutMb" value="1900" min="1" style="width:90px"> MB</label>
+              </div>
+              <div class="grid" style="gap:10px;margin-top:12px">
+                <label class="chk"><span class="switch"><input type="checkbox" id="cutJoin"><span></span></span>
+                  <span>Gộp các đoạn thành 1 file<br><span class="mut small">VD: bỏ các đoạn quay hỏng, giữ phần còn lại liền mạch</span></span></label>
+                <label class="chk"><span class="switch"><input type="checkbox" id="cutPrecise"><span></span></span>
+                  <span>Cắt chính xác từng khung hình<br><span class="mut small">Chậm hơn, có nén lại. Tắt = cắt nhanh, lệch ~1–2s</span></span></label>
               </div>
             </div>
           </div>
           <div class="row" style="margin-top:14px"><button class="btn pri" id="cutGo" disabled>✂️ Cắt video</button>
-            <span class="mut small">Cắt không nén lại → rất nhanh, giữ nguyên chất lượng. Điểm cắt có thể lệch ~1–2 giây (theo khung hình chính).</span></div>
+            <span class="mut small" id="cutHint">Lưu vào folder <code>tên-video_cat</code> cạnh video gốc.</span></div>
         </div>
 
         <div data-pane="md-merge" class="hide">
@@ -574,6 +658,7 @@ function render(s) {
   if (st.sort !== stamps.sort) loadSort();
   if (st.disk !== stamps.disk) loadDisk();
   if (st.media !== stamps.media) loadMedia();
+  if (st.preview && st.preview !== stamps.preview) onPreviewReady();
   stamps = st;
   if (wasUploading && !s.uploading) { loadScan(); loadHistory(); }
   wasBusy = {...s.busy}; wasUploading = s.uploading;
@@ -743,19 +828,159 @@ async function pickFiles(multiple) {
 }
 const vtag = i => `<div class="vinfo"><span class="tag acc">⏱ ${fmtT(i.duration)}</span>${i.width ? `<span class="tag">${i.width}×${i.height}</span>` : ""}
   ${i.fps ? `<span class="tag">${i.fps} fps</span>` : ""}${i.vcodec ? `<span class="tag">${esc(i.vcodec)}${i.acodec ? " / " + esc(i.acodec) : " · không tiếng"}</span>` : ""}<span class="tag">${human(i.size)}</span></div>`;
-let cutVid = null;
-$("#cutPick").onclick = async () => {
+/* ---- cắt video có xem trước ---- */
+const fmtP = x => { x = Math.max(0, +x || 0); const h = Math.floor(x/3600), m = Math.floor(x%3600/60), sec = (x%60).toFixed(1).padStart(4, "0");
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + sec; };
+const parseT = str => { const p = String(str).trim().replace(",", ".").split(":").map(Number); if (p.some(isNaN) || !p.length) return NaN; return p.reduce((a, v) => a*60 + v, 0); };
+const vp = $("#vp");
+let cutVid = null, segs = [], selIn = null, selOut = null, playUntil = null, activeSeg = -1;
+const DUR = () => cutVid?.duration || vp.duration || 0;
+const pct = t => (DUR() ? t / DUR() * 100 : 0) + "%";
+
+async function openCut() {
   const [p] = await pickFiles(false); if (!p) return;
-  const r = await api("media/probe", {paths: [p]}); cutVid = r.items[0];
-  $("#cutInfo").innerHTML = `<b style="color:var(--fg)">${esc(cutVid.name)}</b>${vtag(cutVid)}`; $("#cutGo").disabled = false;
+  let r; try { r = await api("media/open", {path: p}); } catch { return; }
+  cutVid = r; segs = []; selIn = selOut = null; activeSeg = -1;
+  $("#cutEmpty").classList.add("hide"); $("#cutEditor").classList.remove("hide");
+  $("#cutName").textContent = r.name;
+  $("#cutTags").innerHTML = vtag(r).replace(/^<div class="vinfo">|<\/div>$/g, "");
+  $("#pvMsg").classList.toggle("hide", r.playable);
+  vp.src = r.playable ? `/media/stream/${r.id}?t=${TOKEN}&v=${Date.now()}` : "";
+  $("#vpDur").textContent = fmtP(r.duration);
+  loadThumbs(); drawRuler(); drawTL(); renderSegs();
+}
+$("#cutPick").onclick = $("#cutPick2").onclick = openCut;
+$("#pvMake").onclick = () => api("media/make_preview", {id: cutVid.id}).catch(() => {});
+function onPreviewReady() { if (cutVid) { $("#pvMsg").classList.add("hide"); vp.src = `/media/stream/${cutVid.id}?t=${TOKEN}&v=${Date.now()}`; } }
+vp.addEventListener("error", () => { if (cutVid && vp.getAttribute("src")) $("#pvMsg").classList.remove("hide"); });
+
+function loadThumbs() {
+  const n = Math.max(6, Math.min(30, Math.round($("#tl").clientWidth / 110)));
+  $("#tlThumbs").style.backgroundImage = `url("/media/thumbs/${cutVid.id}?t=${TOKEN}&n=${n}")`;
+}
+function drawRuler() {
+  const d = DUR(); if (!d) return;
+  const steps = [1,2,5,10,15,30,60,120,300,600,900,1800,3600];
+  const want = d / Math.max(4, Math.floor($("#tl").clientWidth / 90));
+  const st = steps.find(x => x >= want) || 3600;
+  let h = ""; for (let t = 0; t <= d + .01; t += st) h += `<span style="left:${pct(t)}">${fmtT(t)}</span>`;
+  $("#tlRuler").innerHTML = h;
+}
+function drawTL() {
+  $("#tlSegs").innerHTML = segs.map((g, i) => `<div class="s" data-i="${i}" style="left:${pct(g.a)};width:calc(${pct(g.b - g.a)})" title="Đoạn ${i+1}: ${fmtP(g.a)} → ${fmtP(g.b)}"><span>${i+1}</span></div>`).join("");
+  $$("#tlSegs .s").forEach(el => el.onpointerdown = e => { e.stopPropagation(); const g = segs[+el.dataset.i]; activeSeg = +el.dataset.i; selIn = g.a; selOut = g.b; vp.currentTime = g.a; drawSel(); renderSegs(); });
+  const mode = document.querySelector("input[name=cutMode]:checked").value;
+  let marks = "";
+  if (mode === "duration" && DUR()) { const st = (+$("#cutMin").value || 0) * 60; if (st > 0) for (let t = st; t < DUR() - .5 && t / st < 400; t += st) marks += `<i style="left:${pct(t)}"></i>`; }
+  if (mode === "size" && DUR() && cutVid?.size) { const st = DUR() * (+$("#cutMb").value * 1048576) / cutVid.size * .97; if (st > 1) for (let t = st; t < DUR() - .5 && t / st < 400; t += st) marks += `<i style="left:${pct(t)}"></i>`; }
+  $("#tlMarks").innerHTML = marks;
+  drawSel();
+}
+function drawSel() {
+  const el = $("#tlSel");
+  if (selIn == null && selOut == null) { el.classList.add("hide"); return; }
+  const a = selIn ?? vp.currentTime, b = selOut ?? DUR();
+  el.classList.remove("hide"); el.style.left = pct(Math.min(a, b)); el.style.width = `calc(${pct(Math.abs(b - a))})`;
+  $("#tlSelLbl").textContent = `${fmtP(Math.min(a, b))} → ${fmtP(Math.max(a, b))} · ${fmtP(Math.abs(b - a))}`;
+}
+const tick = () => {
+  $("#tlHead").style.left = pct(vp.currentTime); $("#vpCur").textContent = fmtP(vp.currentTime);
+  if (playUntil != null && vp.currentTime >= playUntil) { vp.pause(); playUntil = null; }
+  $("#vpPlay").textContent = vp.paused ? "▶" : "❚❚";
+  requestAnimationFrame(tick);
 };
+requestAnimationFrame(tick);
+vp.addEventListener("loadedmetadata", () => { if (!cutVid.duration) cutVid.duration = vp.duration; $("#vpDur").textContent = fmtP(DUR()); drawRuler(); drawTL(); });
+window.addEventListener("resize", () => { if (cutVid) { drawRuler(); } });
+
+// tương tác trên thanh thời gian: bấm = tua, kéo = chọn đoạn, kéo mép = chỉnh
+const tl = $("#tl");
+const tAt = e => { const r = tl.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * DUR(); };
+let drag = null;
+tl.addEventListener("pointerdown", e => {
+  if (!cutVid) return; tl.setPointerCapture(e.pointerId);
+  const h = e.target.dataset?.h;
+  drag = h ? {mode: h} : {mode: "new", start: tAt(e), x: e.clientX};
+  if (!h) vp.currentTime = drag.start;
+});
+tl.addEventListener("pointermove", e => {
+  if (!cutVid) return;
+  const t = tAt(e), hv = $("#tlHover"); hv.classList.remove("hide"); hv.style.left = (e.clientX - tl.getBoundingClientRect().left) + "px"; hv.textContent = fmtP(t);
+  if (!drag) return;
+  if (drag.mode === "in") { selIn = t; vp.currentTime = t; }
+  else if (drag.mode === "out") { selOut = t; vp.currentTime = t; }
+  else if (Math.abs(e.clientX - drag.x) > 4) { selIn = Math.min(drag.start, t); selOut = Math.max(drag.start, t); activeSeg = -1; drag.moved = true; vp.currentTime = t; }
+  else return;
+  if (selIn != null && selOut != null && selIn > selOut) { [selIn, selOut] = [selOut, selIn]; drag.mode = drag.mode === "in" ? "out" : drag.mode === "out" ? "in" : drag.mode; }
+  if (activeSeg >= 0 && drag.mode !== "new") { segs[activeSeg] = {a: selIn, b: selOut}; drawTL(); renderSegs(); } else drawSel();
+});
+tl.addEventListener("pointerleave", () => $("#tlHover").classList.add("hide"));
+tl.addEventListener("pointerup", () => { drag = null; });
+
+// điều khiển
+const seek = d => vp.currentTime = Math.max(0, Math.min(DUR(), vp.currentTime + d));
+$("#vpPlay").onclick = () => { playUntil = null; vp.paused ? vp.play() : vp.pause(); };
+$("#vpBack").onclick = () => seek(-5); $("#vpFwd").onclick = () => seek(5);
+$("#vpRate").onchange = e => vp.playbackRate = +e.target.value;
+const setIn = () => { selIn = vp.currentTime; if (selOut != null && selOut <= selIn) selOut = null; activeSeg = -1; drawSel(); };
+const setOut = () => { selOut = vp.currentTime; if (selIn == null || selIn >= selOut) selIn = selIn != null && selIn < selOut ? selIn : 0; activeSeg = -1; drawSel(); };
+function addSeg() {
+  if (!cutVid) return;
+  const a = selIn ?? 0, b = selOut ?? DUR();
+  if (b - a < 0.3) return toast("Đoạn quá ngắn", "Đặt điểm đầu (I) và cuối (O) trước", "warn");
+  if (activeSeg >= 0) segs[activeSeg] = {a, b}; else segs.push({a, b});
+  segs.sort((x, y) => x.a - y.a); selIn = selOut = null; activeSeg = -1;
+  document.querySelector("input[name=cutMode][value=ranges]").checked = true;
+  drawTL(); renderSegs();
+}
+$("#setIn").onclick = setIn; $("#setOut").onclick = setOut; $("#addSeg").onclick = addSeg;
+
+function renderSegs() {
+  const tot = segs.reduce((a, g) => a + g.b - g.a, 0);
+  $("#segTotal").textContent = segs.length ? `${segs.length} đoạn · ${fmtP(tot)}` : "";
+  $("#segList").innerHTML = segs.length ? `<div class="seglist">` + segs.map((g, i) => `<div class="segrow ${i === activeSeg ? "on" : ""}">
+      <span class="no">${i+1}</span><input value="${fmtP(g.a)}" data-a="${i}" title="Bắt đầu"><span class="mut">→</span><input value="${fmtP(g.b)}" data-b="${i}" title="Kết thúc">
+      <span class="d">${fmtP(g.b - g.a)}</span><button data-pv="${i}" title="Xem đoạn này">▶</button><button data-del="${i}" title="Bỏ">✕</button></div>`).join("") + `</div>`
+    : `<div class="empty small">Chưa có đoạn nào.<br>Kéo chọn trên thanh thời gian (hoặc bấm <kbd>I</kbd> / <kbd>O</kbd>) rồi bấm <b>＋ Thêm đoạn</b>.</div>`;
+  $$("[data-pv]").forEach(b => b.onclick = () => { const g = segs[+b.dataset.pv]; vp.currentTime = g.a; playUntil = g.b; vp.play(); });
+  $$("[data-del]").forEach(b => b.onclick = () => { segs.splice(+b.dataset.del, 1); activeSeg = -1; drawTL(); renderSegs(); });
+  $$("[data-a],[data-b]").forEach(inp => inp.onchange = () => {
+    const i = +(inp.dataset.a ?? inp.dataset.b), t = parseT(inp.value);
+    if (isNaN(t)) return renderSegs();
+    const g = segs[i]; if (inp.dataset.a != null) g.a = Math.max(0, t); else g.b = Math.min(DUR(), t);
+    if (g.b - g.a < 0.3) { toast("Thời gian không hợp lệ", "Cuối phải sau đầu", "warn"); }
+    segs.sort((x, y) => x.a - y.a); drawTL(); renderSegs();
+  });
+  const mode = document.querySelector("input[name=cutMode]:checked").value;
+  $("#cutGo").disabled = !cutVid || (mode === "ranges" && !segs.length);
+  $("#cutJoin").closest("label").style.opacity = mode === "ranges" ? 1 : .45;
+}
+$$("input[name=cutMode]").forEach(r => r.onchange = () => { drawTL(); renderSegs(); });
+["#cutMin","#cutMb"].forEach((id, i) => { $(id).addEventListener("focus", () => { document.querySelectorAll("input[name=cutMode]")[i + 1].checked = true; drawTL(); renderSegs(); });
+  $(id).addEventListener("input", drawTL); });
+
 $("#cutGo").onclick = () => {
   const mode = document.querySelector("input[name=cutMode]:checked").value;
-  const value = mode === "duration" ? $("#cutMin").value : mode === "size" ? $("#cutMb").value : $("#cutRanges").value;
-  if (mode === "ranges" && !value.trim()) return toast("Nhập ít nhất 1 khoảng thời gian", "", "warn");
-  api("media/split_video", {path: cutVid.path, mode, value}).catch(() => {});
+  const value = mode === "duration" ? $("#cutMin").value : mode === "size" ? $("#cutMb").value
+              : segs.map(g => `${g.a.toFixed(3)} - ${g.b.toFixed(3)}`).join("\n");
+  vp.pause();
+  api("media/split_video", {path: cutVid.path, mode, value, precise: $("#cutPrecise").checked,
+                            join: mode === "ranges" && $("#cutJoin").checked}).catch(() => {});
 };
-["#cutMin","#cutMb","#cutRanges"].forEach((id, i) => $(id).addEventListener("focus", () => document.querySelectorAll("input[name=cutMode]")[i].checked = true));
+
+// phím tắt (chỉ khi đang ở tab Cắt video và không gõ trong ô nhập)
+document.addEventListener("keydown", e => {
+  if (!cutVid || !$("#v-media").classList.contains("on") || $("[data-pane=md-cut]").classList.contains("hide")) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
+  const k = e.key, big = e.shiftKey ? 5 : 1, fr = 1 / (cutVid.fps || 30);
+  const map = {" ": () => $("#vpPlay").click(), i: setIn, I: setIn, o: setOut, O: setOut, Enter: addSeg,
+    ArrowLeft: () => seek(-big), ArrowRight: () => seek(big), ",": () => { vp.pause(); seek(-fr); }, ".": () => { vp.pause(); seek(fr); },
+    Escape: () => { selIn = selOut = null; activeSeg = -1; drawSel(); renderSegs(); },
+    Delete: () => { if (activeSeg >= 0) { segs.splice(activeSeg, 1); activeSeg = -1; selIn = selOut = null; drawTL(); renderSegs(); } },
+    Backspace: () => map.Delete()};
+  if (map[k]) { e.preventDefault(); map[k](); }
+});
+renderSegs();
 
 let mg = [];
 function renderMerge() {
