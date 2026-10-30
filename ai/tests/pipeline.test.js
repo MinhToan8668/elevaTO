@@ -343,3 +343,18 @@ test('KQKD một trang bị cắt MAX_TOKENS (HAX 2025) → gọi lại đúng t
   assert.equal(r.statements.IS.cur['IS:10'], 100);
   assert.ok(!r.warnings.some((w) => /Kết quả kinh doanh:/.test(w) && /cắt|MAX/.test(w)), r.warnings.join('\n'));
 });
+
+test('KQKD chép ra dòng mà không có số → coi như chưa đọc được, tự đọc lại (trước đây báo "xong" mà bảng rỗng)', async () => {
+  let lan = 0;
+  const io = makeIO({ 'KẾT QUẢ HOẠT ĐỘNG': () => {
+    lan++;
+    const meta = { don_vi: 'VND', ngay_ket_thuc: '2025-12-31', so_thang: 12 };
+    if (lan === 1) return { meta, items: [{ c: '10', n: 'Doanh thu thuần', v: '', p: '' }, { c: '20', n: 'Lợi nhuận gộp', v: '', p: '' }] };
+    // Lượt lại không gửi khuôn JSON: AI tự đặt tên trường.
+    return { meta, items: [{ ma_so: '10', chi_tieu: 'Doanh thu thuần', nam_nay: '100', nam_truoc: '90' }] };
+  } });
+  const r = await extractJob(job, io, {});
+  assert.equal(lan, 2);
+  assert.equal(r.statements.IS.cur['IS:10'], 100);
+  assert.ok(r.warnings.some((w) => /không dòng nào có số/.test(w)));
+});

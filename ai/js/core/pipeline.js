@@ -7,7 +7,8 @@
 //   io.isSplittable(err), io.isFatal(err)
 
 import { statementTask, NOTE_TASKS } from './prompts.js';
-import { statementToValues, noteToModel } from './extract.js';
+import { statementToValues, noteToModel, normItems } from './extract.js';
+import { parseVN } from './numbers.js';
 import { t } from '../i18n.js';
 
 const STATEMENTS = ['BS', 'IS', 'CF'];
@@ -40,6 +41,12 @@ export async function extractJob(job, io, opts = {}) {
         warnings.push(t('w.schema', { st: NAME(st) }));
         return null;
       });
+      // AI trả dòng nhưng KHÔNG dòng nào có số (chép tên mà để trống cột số, hoặc bỏ khuôn JSON rồi đặt tên trường lạ)
+      // cũng là chưa đọc được: trước đây bước này vẫn báo "xong" mà bảng rỗng, người dùng bấm tab KQKD chẳng thấy gì.
+      if (res && !coSo(res)) {
+        if ((res.items || []).length) warnings.push(t('w.noNumbers', { st: NAME(st), n: res.items.length }));
+        res = null;
+      }
       // Đọc ra rỗng: có thể do dạng file gửi đi (PDF scan, hoặc PDF có lớp chữ rác) chứ không phải
       // trang sai. Gửi lại đúng trang đó dưới dạng ảnh — tốn thêm 1 lượt, chỉ khi đã hỏng sẵn.
       if (!(res?.items || []).length) {
@@ -48,12 +55,12 @@ export async function extractJob(job, io, opts = {}) {
         const cach = t(job.scanned ? 'step.how.schema' : 'step.how.image');
         step({ key: st, state: 'run', label: t('step.retry', { st: NAME(st), how: cach, pages: list(pages) }) });
         const lai = await statementWithSplit(st, pages, io, step, { anh: true, moTaKhuon: true }).catch(() => null);
-        if ((lai?.items || []).length) {
+        if (lai && coSo(lai)) {
           warnings.push(t('w.retried', { st: NAME(st) }));
           res = lai;
         }
       }
-      if (!(res?.items || []).length) {
+      if (!res || !coSo(res)) {
         trong.push(st);
         warnings.push(t('w.noTable', { st: NAME(st), pages: list(pages) }));
         step({ key: st, state: 'fail', error: t('step.noTable') });
@@ -130,6 +137,12 @@ export async function extractJob(job, io, opts = {}) {
   await theoLo(opts.noteGroups || [], 2, chayNhom);
   return { file: job.name, company: meta0.ten_cong_ty || '', meta, statements, units, notes, warnings, goiY,
     pages: Object.fromEntries(STATEMENTS.map((s) => [s, pagesOf(s)])) };
+}
+
+/** Kết quả AI có ít nhất một dòng mang số (sau khi gom tên trường lạ về c/n/v/p). */
+function coSo(res) {
+  res.items = normItems(res.items);
+  return res.items.some((i) => parseVN(i.v) !== null || parseVN(i.p) !== null);
 }
 
 /** Tên báo cáo / loại trang theo ngôn ngữ đang chọn. */

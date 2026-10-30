@@ -81,6 +81,7 @@ const labelOf = (key) => { const [st, code] = key.split(':'); const it = item(st
 
 // ─── Bảng rà soát ──────────────────────────────────────────
 
+let hasSt = () => true;
 function renderReview(store, ctx) {
   TABS = canUseModel(store.get().user) ? ALL_TABS : ALL_TABS.filter((k) => k !== 'MODEL');
   if (!TABS.includes(ui.tab)) ui.tab = 'BS';
@@ -90,8 +91,9 @@ function renderReview(store, ctx) {
   document.querySelector('.rail a[data-step="5"]').classList.toggle('done', ds.periods.length > 0);
   if (!ds.periods.length) { mount(box); return; }
   // Đang ở tab báo cáo không có số (ví dụ file Excel chỉ có KQKD) → chuyển sang báo cáo đầu tiên có số.
-  const hasSt = (st) => ds.periods.some((p) => Object.keys(ds.values[p.id] || {}).some((k) => k.startsWith(`${st}:`)));
-  if (['BS', 'IS', 'CF'].includes(ui.tab) && !hasSt(ui.tab)) ui.tab = ['BS', 'IS', 'CF'].find(hasSt) || ui.tab;
+  hasSt = (st) => ds.periods.some((p) => Object.keys(ds.values[p.id] || {}).some((k) => k.startsWith(`${st}:`)));
+  // Chỉ tự chuyển khi người dùng CHƯA tự chọn tab: bấm KQKD mà bị đẩy về CĐKT thì trông như nút hỏng.
+  if (!ui.chon && ['BS', 'IS', 'CF'].includes(ui.tab) && !hasSt(ui.tab)) ui.tab = ['BS', 'IS', 'CF'].find(hasSt) || ui.tab;
 
   const pills = ds.periods.map((p) => {
     const iss = checks[p.id] || [];
@@ -99,7 +101,7 @@ function renderReview(store, ctx) {
       onclick: () => { if (!iss.length) return; ui.tab = iss[0].key.split(':')[0]; ui.focus = { period: p.id, key: iss[0].key }; renderReview(store, ctx); } },
     iss.length ? t('rv.bad', { p: periodLabel(p), n: iss.length }) : t('rv.ok', { p: periodLabel(p) }));
   });
-  const go = (k) => { ui.tab = k; renderReview(store, ctx); $(`#tab-${k}`)?.focus(); };
+  const go = (k) => { ui.tab = k; ui.chon = true; renderReview(store, ctx); $(`#tab-${k}`)?.focus(); };
   const tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': t('tab.aria'), onkeydown: (e) => {
     const i = TABS.indexOf(ui.tab);
     if (e.key === 'ArrowRight') go(TABS[(i + 1) % TABS.length]);
@@ -117,6 +119,7 @@ function renderReview(store, ctx) {
   if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, unitLabel(s.unit), () => renderReview(store, ctx));
   else if (ui.tab === 'TM') body = [renderReconcile(ds, s.unit), renderNotes(store)];
   else if (ui.tab === 'MODEL') body = renderModel(store);
+  else if (!hasSt(ui.tab)) body = trongBang(ds, ui.tab);
   else body = [crossIssues(ds, checks, ui.tab), grid(store, ui.tab), legend()];
   keepFocus(box, () => mount(box, h('div', { class: 'sum' }, pills), bar,
     h('div', { id: 'tabpanel', role: 'tabpanel', 'aria-labelledby': `tab-${ui.tab}` }, body)));
@@ -138,7 +141,32 @@ function crossIssues(ds, checks, st) {
   const list = ds.periods.flatMap((p) => (checks[p.id] || []).filter((i) => i.kind === 'cross' && i.key.includes(`${st}:`)).map((i) => ({ p, i })));
   if (!list.length) return null;
   return h('div', { class: 'msg err' }, h('b', {}, t('rv.cross')),
-    h('ul', {}, list.map(({ p, i }) => h('li', {}, t('rv.crossRow', { p: periodLabel(p), label: i.label, reported: fmt(i.reported, 1e6), computed: fmt(i.computed, 1e6), d: fmt(i.diff, 1) })))));
+    h('ul', {}, list.map(({ p, i }) => h('li', {}, t('rv.crossRow', { p: periodLabel(p), label: i.label, reported: fmt(i.reported, 1e6), computed: fmt(i.computed, 1e6), d: fmt(i.diff, 1e6) }),
+      goiYLech(ds.values[p.id] || {}, i) ? h('div', { class: 'priv' }, goiYLech(ds.values[p.id] || {}, i)) : null))));
+}
+
+/** Giải thích chỗ lệch giữa hai báo cáo bằng lời, và đoán phía nào đọc sai (phía tự cộng không khớp). */
+function goiYLech(v, i) {
+  const n = (k) => (Number.isFinite(v[k]) ? v[k] : null);
+  const gan = (a, b) => Math.abs(a - b) <= Math.max(1e6, Math.abs(b) * 1e-6);
+  if (i.key === 'CF:70=BS:110') {
+    const cf = [n('CF:50'), n('CF:60')].every((x) => x !== null) ? n('CF:50') + n('CF:60') + (n('CF:61') || 0) : null;
+    const bs = n('BS:111') !== null ? n('BS:111') + (n('BS:112') || 0) : null;
+    const cfLech = cf !== null && n('CF:70') !== null && !gan(n('CF:70'), cf);
+    const bsLech = bs !== null && n('BS:110') !== null && !gan(n('BS:110'), bs);
+    return t('rv.why.cash') + (cfLech ? ' ' + t('rv.why.cashCF') : bsLech ? ' ' + t('rv.why.cashBS') : ' ' + t('rv.why.cashBoth'));
+  }
+  if (i.key === 'CF:01=IS:50') return t('rv.why.pbt');
+  if (i.key === 'BS:280=440' || i.key === 'BS:N300=N600') return t('rv.why.bal');
+  return '';
+}
+
+/** Tab báo cáo chưa có số: nói rõ vì sao và đưa đúng các lưu ý của báo cáo đó, thay vì một bảng trống. */
+function trongBang(ds, st) {
+  const ten = t(`xl.sheet.${st}`);
+  const lienQuan = ds.warnings.filter((w) => w.includes(ten));
+  return h('div', { class: 'msg warn' }, h('b', {}, t('rv.empty', { st: ten })), h('p', {}, t('rv.emptyHint')),
+    lienQuan.length ? h('ul', {}, lienQuan.map((w) => h('li', {}, w))) : null);
 }
 
 function legend() {

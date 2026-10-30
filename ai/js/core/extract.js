@@ -33,6 +33,26 @@ function matchEnd(s, start) {
   return -1;
 }
 
+// Khi không gửi khuôn JSON (lượt thử lại), AI hay đặt tên trường theo ý mình: "ma_so", "chi_tieu", "nam_nay"…
+// Không gom về c/n/v/p thì mọi dòng bị bỏ âm thầm và cả bảng ra rỗng.
+const BI_DANH = {
+  c: ['c', 'ma', 'ma_so', 'maso', 'code', 'ms'],
+  n: ['n', 'ten', 'chi_tieu', 'chitieu', 'ten_chi_tieu', 'name', 'label'],
+  v: ['v', 'ky_nay', 'nam_nay', 'so_cuoi_ky', 'so_cuoi_nam', 'cuoi_ky', 'cur', 'current', 'value'],
+  p: ['p', 'ky_truoc', 'nam_truoc', 'so_dau_nam', 'dau_nam', 'prev', 'previous'],
+};
+export function normItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.filter((x) => x && typeof x === 'object').map((x) => {
+    const out = {};
+    for (const [k, ds] of Object.entries(BI_DANH)) {
+      const hit = ds.find((d) => x[d] !== undefined && x[d] !== null);
+      out[k] = hit === undefined ? '' : x[hit];
+    }
+    return out;
+  });
+}
+
 // ─── Mã số & tên chỉ tiêu ─────────────────────────────────
 
 export function normCode(st, raw) {
@@ -218,6 +238,7 @@ function maTheoTen(st, tt99Code, label) {
  * @returns { cur, prev, unit, regime, unmapped: [..], warnings: [..] }   (cur/prev: { "BS:131": đồng })
  */
 export function statementToValues(st, ai, hint = {}) {
+  ai = { ...ai, items: normItems(ai.items) };
   // Ngân hàng: không có mã số, danh mục khác hẳn → bộ đọc riêng.
   if (hint.regime === 'TCTD' || (hint.regime == null && isBankStatement(ai.items))) {
     const r = bankToValues(st, ai);
