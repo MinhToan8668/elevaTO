@@ -161,9 +161,6 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
   });
   // Vào thẳng khu làm việc (trang chủ chọn công cụ có bài riêng ở cuối file).
   await page.addInitScript(() => { if (!window.name.includes('home')) sessionStorage.setItem('elevato-ai-view', 'work'); });
-  // Các bài e2e kiểm luồng đăng nhập + máy chủ: tắt chế độ thử không đăng nhập (js/direct.js).
-  await page.route('**/ai/js/direct.js', async (r) => r.fulfill({ status: 200, contentType: 'text/javascript',
-    body: (await readFile(join(ROOT, 'ai/js/direct.js'), 'utf8')).replace('export const NO_LOGIN = true;', 'export const NO_LOGIN = false;') }));
   // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
   await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
   dangMo.push(context);
@@ -1027,5 +1024,15 @@ test('trang chủ: chọn công cụ khi chưa có số → vào bước tải d
   assert.equal(await page.locator('#s3').isVisible(), false, 'chế độ đã có số liệu ẩn bước trích xuất');
   await page.locator('#homeBtn').click();
   assert.ok(await page.locator('#hero').isVisible());
+  assert.deepEqual(errors, []);
+});
+
+test('bản dùng API key (?local): không đăng nhập, góc trên là nút nạp key, trang cho phép gọi Google AI', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.goto(`${base}/ai/?local`);
+  await page.waitForSelector('#acct button');
+  assert.match(await page.locator('#acct').innerText(), /API key/);
+  const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
+  assert.match(csp, /generativelanguage\.googleapis\.com/);
   assert.deepEqual(errors, []);
 });
