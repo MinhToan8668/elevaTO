@@ -8,19 +8,20 @@ import { item } from '../core/statements.js';
 import { renderNotes, renderModel } from './notes.js';
 import { renderCharts } from './charts.js';
 import { renderAnalysis, renderReconcile, renderAiReview } from './analysis.js';
+import { renderDeal } from './deal.js';
 import { t, unitLabel, chartLabel } from '../i18n.js';
 
 export const UNITS = [1, 1e3, 1e6, 1e9];
 /** [bội số, nhãn] theo ngôn ngữ đang chọn — gọi lúc vẽ, không giữ sẵn. */
 export const unitOptions = () => UNITS.map((v) => [v, unitLabel(v)]);
-const ALL_TABS = ['BS', 'IS', 'CF', 'CHART', 'PT', 'TM', 'MODEL'];
+const ALL_TABS = ['BS', 'IS', 'CF', 'CHART', 'PT', 'DEAL', 'TM', 'MODEL'];
 // Tab xem trước model chỉ dành cho học viên / giảng viên.
 let TABS = ALL_TABS;
 const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
 
 export function initReview(store, ctx) {
   watch(store, ['sources', 'edits', 'lang'], () => renderSources(store));
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user', 'lang', 'aiReview', 'aiContext'], () => renderReview(store, ctx));
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user', 'lang', 'aiReview', 'aiContext', 'dealInputs'], () => renderReview(store, ctx));
 }
 
 // ─── Nguồn dữ liệu ─────────────────────────────────────────
@@ -110,6 +111,7 @@ function renderReview(store, ctx) {
   // renderCharts giữ lựa chọn kỳ / khoảng thời gian trong chính nó; bấm đổi thì nó gọi lại hàm này.
   if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, unitLabel(s.unit), () => renderReview(store, ctx));
   else if (ui.tab === 'PT') body = [renderReconcile(ds, s.unit), renderAnalysis(ds, s.unit), renderAiReview(store, ctx)];
+  else if (ui.tab === 'DEAL') body = renderDeal(store, () => renderReview(store, ctx));
   else if (ui.tab === 'TM') body = [renderReconcile(ds, s.unit), renderNotes(store)];
   else if (ui.tab === 'MODEL') body = renderModel(store);
   else body = [crossIssues(ds, checks, ui.tab), grid(store, ui.tab), legend()];

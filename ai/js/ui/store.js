@@ -21,6 +21,7 @@ export function initialState() {
     segmentNames: ['', '', '', '', ''],
     running: false,
     aiContext: {},       // bối cảnh doanh nghiệp người phân tích nhập (ngành, khách hàng, sự kiện…) — gửi kèm cho AI nhận định, lưu cùng phiên
+    dealInputs: null,    // tab M&A & định giá: bội số, đòn bẩy mục tiêu, điều chỉnh EBITDA tay (core/deal.js) — lưu cùng phiên
     aiReview: null,      // AI nhận định: { hash, lang, result, at } — hash theo bộ số đã phân tích, số đổi thì nhận định cũ bị đánh dấu lỗi thời
   };
 }

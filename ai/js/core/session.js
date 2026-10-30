@@ -3,6 +3,7 @@
 // File phiên có thể đến từ người khác gửi → đọc lại theo khuôn cố định, bỏ mọi khoá / giá trị lạ.
 
 import { t } from '../i18n.js';
+import { cleanInputs } from './deal.js';
 
 const APP = 'elevato-ai-bctc';
 const VERSION = 1;
@@ -18,6 +19,7 @@ export function serializeSession(s) {
   const data = {
     sources: s.sources, edits: s.edits, ticks: s.ticks, unit: s.unit,
     segmentMap: s.segmentMap, segmentNames: s.segmentNames, aiContext: s.aiContext || {},
+    dealInputs: s.dealInputs || null,
   };
   return JSON.stringify({ app: APP, v: VERSION, savedAt: new Date().toISOString(), data });
 }
@@ -36,6 +38,7 @@ export function parseSession(text) {
     segmentMap: Object.fromEntries(Object.entries(obj(d.segmentMap)).filter(([k, v]) => safeKey(k) && Number.isInteger(v) && v >= 0 && v < SLOTS).map(([k, v]) => [str(k, 120), v]).slice(0, 50)),
     segmentNames: Array.from({ length: SLOTS }, (_, i) => str(arr(d.segmentNames, SLOTS)[i], 60)),
     aiContext: Object.fromEntries(CONTEXT_KEYS.map((k) => [k, str(obj(d.aiContext)[k], 2000)]).filter(([, v]) => v)),
+    dealInputs: d.dealInputs ? cleanInputs(d.dealInputs) : null,
     savedAt: str(o.savedAt, 40),
   };
 }

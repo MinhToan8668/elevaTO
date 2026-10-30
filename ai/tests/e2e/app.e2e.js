@@ -984,3 +984,28 @@ async function readXlsxCell(page, path, sheet, refRe) {
     return Object.fromEntries(Object.entries(cells).filter(([k]) => rx.test(k)));
   }, { b64, sheet, re: refRe.source });
 }
+
+test('tab M&A & định giá: mở phiên có số, ra EBITDA chuẩn hoá, cầu nối, định giá; sửa bội số thì giá trị đổi', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('deal@elevato.vn', { ten: 'Deal', email: 'deal@elevato.vn', mk: 'x', token: TOKEN('deal@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Deal', email: 'deal@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:deal@elevato.vn', s);
+  }, [TOKEN('deal@elevato.vn'), phien]);
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('#tab-DEAL').click();
+  await page.waitForSelector('.deal .dl-sec');
+  const txt = await page.locator('.deal').textContent();
+  for (const s of ['EBITDA chuẩn hoá', 'Nợ ròng', 'Beneish', "Altman Z''", 'EV / EBITDA', 'Sức vay nợ']) assert.ok(txt.includes(s), `thiếu "${s}"`);
+  const truoc = await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") td').nth(5).innerText();
+  await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") input').nth(1).fill('10');
+  await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") input').nth(1).dispatchEvent('change');
+  await page.waitForFunction((cu) => document.querySelectorAll('.dl-t tbody tr')[0] && [...document.querySelectorAll('.dl-t tbody tr')].find((r) => r.innerText.includes('EV / EBITDA'))?.querySelectorAll('td')[5].innerText !== cu, truoc);
+  if (process.env.E2E_SHOT) await page.screenshot({ path: process.env.E2E_SHOT, fullPage: true });
+  assert.deepEqual(errors, []);
+});
