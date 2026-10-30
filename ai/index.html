@@ -57,7 +57,7 @@
     <a href="#s2" data-step="2"><span class="n">1</span><span class="t" data-t="rail.1">Tải BCTC</span></a>
     <a href="#s3" data-step="3"><span class="n">2</span><span class="t" data-t="rail.2">Chọn trang &amp; trích xuất</span></a>
     <a href="#s5" data-step="5"><span class="n">3</span><span class="t" data-t="rail.3">Rà soát &amp; xuất</span></a>
-    <div class="hint"><b data-t="rail.hint.b">AI chỉ chép số.</b> <span data-t="rail.hint">Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</span></div>
+    <div class="hint" hidden><b data-t="rail.hint.b">AI chỉ chép số.</b> <span data-t="rail.hint">Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</span></div>
   </nav>
 
   <main id="main" tabindex="-1">
@@ -68,10 +68,8 @@
         <span class="hero-badge" data-t="hero.badge">Mới · Tab M&amp;A &amp; định giá</span>
         <h1 id="heroH" data-t="hero.h">Từ BCTC đến định giá doanh nghiệp — trong vài phút</h1>
         <p class="hero-lead" data-t="hero.lead">Tải BCTC PDF / scan / Excel → AI đọc số theo mẫu Thông tư 99 → máy kiểm tra cộng dồn, phân tích, định giá và xuất Excel. Dành cho người làm đầu tư, M&amp;A và tín dụng doanh nghiệp.</p>
-        <div class="hero-cta">
-          <a class="btn" href="#s2" data-t="hero.cta">Bắt đầu — tải BCTC</a>
-          <a class="btn ghost" href="#heroFeat" data-t="hero.cta2">Xem tính năng</a>
-        </div>
+        <p class="mode-q" data-t="mode.q">Bạn đang có gì trong tay?</p>
+        <div id="modePick"></div>
         <ul class="hero-stats">
           <li><b>12s</b><span data-t="hero.st1">đọc 3 báo cáo chính</span></li>
           <li><b>32</b><span data-t="hero.st2">dấu hiệu bất thường</span></li>
@@ -100,6 +98,7 @@
         <small data-t="s1.drop.sub">PDF · Excel (.xlsx, .xls) · Ảnh JPG / PNG — chọn được nhiều file một lượt</small>
         <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xlsm,.xls,.csv,image/jpeg,image/png,image/webp" hidden>
       </label>
+      <div id="dataTpl"></div>
       <ul class="files" id="fileList"></ul>
       <div id="fileBar"></div>
     </section>

@@ -16,6 +16,16 @@ export const VI = {
   'app.err': 'Lỗi: {msg}',
 
   // ── Phần giới thiệu tính năng đầu trang ──
+  'mode.q': 'Bạn đang có gì trong tay?',
+  'mode.aria': 'Cách bắt đầu',
+  'mode.pdf': 'File BCTC PDF / scan / ảnh',
+  'mode.pdf.d': 'AI đọc số theo mẫu Thông tư 99, bạn tick trang và rà soát',
+  'mode.data': 'Đã có số liệu (Excel)',
+  'mode.data.d': 'Bỏ qua trích xuất — nạp Excel / file FinLens / phiên đã lưu là phân tích & định giá ngay',
+  'mode.tpl.lead': 'Nhận Excel BCTC có cột "Mã số", sheet "Lưu trữ" của FinLens, file phiên .json — hoặc điền số vào file mẫu:',
+  'mode.tpl.btn': 'Tải file Excel mẫu',
+  'mode.tpl.title': 'FILE MẪU NHẬP SỐ LIỆU — elevaTO AI BCTC',
+  'mode.tpl.note': 'Điền số theo ĐỒNG vào các cột kỳ (mã TT99). Chỉ cần dòng chi tiết, dòng tổng máy tự cộng. Đổi / thêm kỳ: sửa hai dòng mã và độ dài kỳ ngay bên dưới (ví dụ FY-2025 / 12, Q2-2026 / 6).',
   'hero.badge': 'Mới · Tab M&A & định giá',
   'hero.h': 'Từ BCTC đến định giá doanh nghiệp — trong vài phút',
   'hero.lead': 'Tải BCTC PDF / scan / Excel → AI đọc số theo mẫu Thông tư 99 → máy kiểm tra cộng dồn, phân tích, định giá và xuất Excel. Dành cho người làm đầu tư, M&A và tín dụng doanh nghiệp.',

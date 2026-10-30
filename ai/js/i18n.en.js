@@ -17,6 +17,16 @@ export const EN = {
 
   // ── Step rail ──
   // ── Feature showcase ──
+  'mode.q': 'What do you have?',
+  'mode.aria': 'How to start',
+  'mode.pdf': 'PDF / scanned / photo statements',
+  'mode.pdf.d': 'AI reads the figures into the Circular 99 template; you pick pages and review',
+  'mode.data': 'Figures already in Excel',
+  'mode.data.d': 'Skip extraction — load Excel / a FinLens file / a saved session and analyse & value right away',
+  'mode.tpl.lead': 'Accepts Excel statements with a "Mã số" (code) column, a FinLens "Lưu trữ" sheet, a .json session — or fill in the template:',
+  'mode.tpl.btn': 'Download Excel template',
+  'mode.tpl.title': 'DATA ENTRY TEMPLATE — elevaTO AI Statements',
+  'mode.tpl.note': 'Enter figures in VND into the period columns (Circular 99 codes). Detail lines only — totals are added up automatically. To change / add periods, edit the two code and length rows below (e.g. FY-2025 / 12, Q2-2026 / 6).',
   'hero.badge': 'New · M&A & valuation tab',
   'hero.h': 'From financial statements to valuation — in minutes',
   'hero.lead': 'Upload PDF / scanned / Excel statements → AI reads the figures into the Circular 99 template → the machine checks totals, analyses, values and exports to Excel. Built for investment, M&A and corporate-banking work.',

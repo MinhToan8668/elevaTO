@@ -5,6 +5,7 @@ import { createStore, initialState, watch } from './ui/store.js';
 import { initAuth } from './ui/auth.js';
 import { initDonate } from './ui/donate.js';
 import { initFiles } from './ui/files.js';
+import { initMode } from './ui/mode.js';
 import { initPages } from './ui/pages.js';
 import { initExtract } from './ui/extract.js';
 import { initReview } from './ui/review.js';
@@ -25,6 +26,7 @@ setLang(store.get().lang, { nho: false });   // mới mở trang: chưa phải l
 initTheme();
 initLangPicker();
 initFiles(store, ctx);
+initMode(store);
 initPages(store, ctx);
 initExtract(store, ctx);
 initReview(store, ctx);
