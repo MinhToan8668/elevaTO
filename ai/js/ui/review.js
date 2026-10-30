@@ -14,16 +14,19 @@ import { t, unitLabel, chartLabel } from '../i18n.js';
 export const UNITS = [1, 1e3, 1e6, 1e9];
 /** [bội số, nhãn] theo ngôn ngữ đang chọn — gọi lúc vẽ, không giữ sẵn. */
 export const unitOptions = () => UNITS.map((v) => [v, unitLabel(v)]);
-const ALL_TABS = ['BS', 'IS', 'CF', 'CHART', 'PT', 'DEAL', 'TM', 'MODEL'];
+const ALL_TABS = ['BS', 'IS', 'CF', 'CHART', 'TM', 'MODEL'];
+// Khu B (Phân tích & M&A) — tab riêng, vẽ vào #analysisBox, dùng chung bộ số với khu A.
+const B_TABS = ['PT', 'DEAL'];
+const uiB = { tab: 'PT' };
 // Tab xem trước model chỉ dành cho học viên / giảng viên.
 let TABS = ALL_TABS;
 const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
 
 export function initReview(store, ctx) {
   /** Trang chủ bấm một công cụ → mở thẳng tab đó (xem ui/mode.js). */
-  ctx.openTab = (k) => { ui.tab = k; renderReview(store, ctx); };
+  ctx.openTab = (k) => { if (B_TABS.includes(k)) { uiB.tab = k; renderB(store, ctx); return 's6'; } ui.tab = k; renderReview(store, ctx); return 's5'; };
   watch(store, ['sources', 'edits', 'lang'], () => renderSources(store));
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user', 'lang', 'aiReview', 'aiContext', 'dealInputs'], () => renderReview(store, ctx));
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user', 'lang', 'aiReview', 'aiContext', 'dealInputs'], () => { renderReview(store, ctx); renderB(store, ctx); });
 }
 
 // ─── Nguồn dữ liệu ─────────────────────────────────────────
@@ -112,8 +115,6 @@ function renderReview(store, ctx) {
   let body;
   // renderCharts giữ lựa chọn kỳ / khoảng thời gian trong chính nó; bấm đổi thì nó gọi lại hàm này.
   if (ui.tab === 'CHART') body = renderCharts(ds, s.unit, unitLabel(s.unit), () => renderReview(store, ctx));
-  else if (ui.tab === 'PT') body = [renderReconcile(ds, s.unit), renderAnalysis(ds, s.unit), renderAiReview(store, ctx)];
-  else if (ui.tab === 'DEAL') body = renderDeal(store, () => renderReview(store, ctx));
   else if (ui.tab === 'TM') body = [renderReconcile(ds, s.unit), renderNotes(store)];
   else if (ui.tab === 'MODEL') body = renderModel(store);
   else body = [crossIssues(ds, checks, ui.tab), grid(store, ui.tab), legend()];
@@ -223,4 +224,26 @@ function cell(store, p, r, issue) {
   td.addEventListener('click', edit);
   td.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); edit(); } });
   return td;
+}
+
+// ─── Khu B: Phân tích & M&A ────────────────────────────────
+
+function renderB(store, ctx) {
+  const box = $('#analysisBox');
+  if (!box) return;
+  const s = store.get();
+  const { ds } = store.data();
+  if (!ds.periods.length) {
+    mount(box, h('div', { class: 'empty' }, h('p', {}, t('s4.empty')),
+      h('button', { class: 'btn ghost sm', type: 'button', 'data-step-go': 's2', onclick: () => ctx.goStep?.('s2') }, t('s4.toA'))));
+    return;
+  }
+  const go = (k) => { uiB.tab = k; renderB(store, ctx); $(`#tabb-${k}`)?.focus(); };
+  const tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': t('tab.aria2') }, B_TABS.map((k) =>
+    h('button', { role: 'tab', id: `tabb-${k}`, 'aria-controls': 'tabpanelb', 'aria-selected': String(uiB.tab === k), tabindex: uiB.tab === k ? '0' : '-1', onclick: () => go(k) }, t(`tab.${k}`))));
+  const unitSel = h('select', { class: 'inp', style: { width: 'auto' }, 'aria-label': t('rv.unit.aria'), onchange: (e) => store.set({ unit: Number(e.target.value) }) },
+    unitOptions().map(([v, l]) => h('option', { value: String(v), selected: s.unit === v }, l)));
+  const body = uiB.tab === 'DEAL' ? renderDeal(store) : [renderReconcile(ds, s.unit), renderAnalysis(ds, s.unit), renderAiReview(store, ctx)];
+  keepFocus(box, () => mount(box, h('div', { class: 'bar' }, tabs, h('span', { class: 'sp' }), unitSel),
+    h('div', { id: 'tabpanelb', role: 'tabpanel', 'aria-labelledby': `tabb-${uiB.tab}` }, body)));
 }

@@ -87,6 +87,13 @@ export const EN = {
   'rail.1': 'Upload statements',
   'rail.2': 'Pick pages & extract',
   'rail.3': 'Review & export',
+  'rail.4': 'Analysis & M&A',
+  's4.h': 'Analysis & M&A',
+  's4.lead': 'Uses the extracted figures (or an existing Excel file) to analyse ratios, write commentary and run M&A — valuation.',
+  's4.go': 'Go to Analysis & M&A',
+  's4.empty': 'No figures yet. Extract statements in area A or load an existing Excel file.',
+  's4.toA': 'Back to extraction',
+  'tab.aria2': 'Analysis',
   'rail.hint.b': 'The AI only copies figures.',
   'rail.hint': 'Unit conversion, mapping Circular 200 codes to the 2026 format and the subtotal checks are done locally — mismatched cells turn red for you to fix.',
 

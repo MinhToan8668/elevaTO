@@ -31,7 +31,6 @@ initPages(store, ctx);
 initExtract(store, ctx);
 initReview(store, ctx);
 initExporter(store, ctx);
-railSpy();
 thanhDinh();
 initAuth(store, ctx, { onLogin: (me) => {
   offerRestore(me);
@@ -114,18 +113,6 @@ function thanhDinh() {
   doCao();
   if (window.ResizeObserver) new ResizeObserver(doCao).observe(thanh);
   else window.addEventListener('resize', doCao);
-}
-
-// Tô bước đang xem trên thanh bên trái.
-function railSpy() {
-  const links = [...document.querySelectorAll('.rail a')];
-  const io = new IntersectionObserver((entries) => {
-    for (const en of entries) {
-      if (!en.isIntersecting) continue;
-      links.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === `#${en.target.id}`));
-    }
-  }, { rootMargin: '-40% 0px -55% 0px' });
-  document.querySelectorAll('main > section.step').forEach((s) => io.observe(s));
 }
 
 // Nút sáng / tối: nhớ lựa chọn; chưa chọn thì theo máy.
