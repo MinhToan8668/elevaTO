@@ -20,6 +20,8 @@ let TABS = ALL_TABS;
 const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
 
 export function initReview(store, ctx) {
+  /** Trang chủ bấm một công cụ → mở thẳng tab đó (xem ui/mode.js). */
+  ctx.openTab = (k) => { ui.tab = k; renderReview(store, ctx); };
   watch(store, ['sources', 'edits', 'lang'], () => renderSources(store));
   watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user', 'lang', 'aiReview', 'aiContext', 'dealInputs'], () => renderReview(store, ctx));
 }

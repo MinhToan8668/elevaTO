@@ -26,7 +26,7 @@ setLang(store.get().lang, { nho: false });   // mới mở trang: chưa phải l
 initTheme();
 initLangPicker();
 initFiles(store, ctx);
-initMode(store);
+initMode(store, ctx);
 initPages(store, ctx);
 initExtract(store, ctx);
 initReview(store, ctx);
@@ -67,7 +67,7 @@ function offerRestore(user) {
     const when = data.savedAt ? t('ss.when', { d: new Date(data.savedAt).toLocaleString(locale()) }) : '';
     mount(box, h('div', { class: 'banner' },
       h('span', {}, t('ss.banner', { when, n: data.sources.length })),
-      h('button', { class: 'btn sm', onclick: () => { if (!applySession(store, data)) return; mount(box); toast(t('ss.opened')); $('#s5').scrollIntoView({ behavior: 'smooth' }); } }, t('ss.open')),
+      h('button', { class: 'btn sm', onclick: () => { if (!applySession(store, data)) return; mount(box); ctx.showWork?.(); toast(t('ss.opened')); $('#s5').scrollIntoView({ behavior: 'smooth' }); } }, t('ss.open')),
       h('button', { class: 'btn ghost sm', onclick: () => { try { localStorage.removeItem(LS_SESSION); } catch (e) { /* bỏ qua */ } mount(box); } }, t('ss.drop'))));
   }
 }

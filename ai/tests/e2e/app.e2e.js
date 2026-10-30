@@ -159,6 +159,8 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
+  // Vào thẳng khu làm việc (trang chủ chọn công cụ có bài riêng ở cuối file).
+  await page.addInitScript(() => { if (!window.name.includes('home')) sessionStorage.setItem('elevato-ai-view', 'work'); });
   // Các bài e2e kiểm luồng đăng nhập + máy chủ: tắt chế độ thử không đăng nhập (js/direct.js).
   await page.route('**/ai/js/direct.js', async (r) => r.fulfill({ status: 200, contentType: 'text/javascript',
     body: (await readFile(join(ROOT, 'ai/js/direct.js'), 'utf8')).replace('export const NO_LOGIN = true;', 'export const NO_LOGIN = false;') }));
@@ -1011,5 +1013,19 @@ test('tab M&A & định giá: mở phiên có số, ra EBITDA chuẩn hoá, cầ
   await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") input').nth(1).dispatchEvent('change');
   await page.waitForFunction((cu) => document.querySelectorAll('.dl-t tbody tr')[0] && [...document.querySelectorAll('.dl-t tbody tr')].find((r) => r.innerText.includes('EV / EBITDA'))?.querySelectorAll('td')[5].innerText !== cu, truoc);
   if (process.env.E2E_SHOT) await page.screenshot({ path: process.env.E2E_SHOT, fullPage: true });
+  assert.deepEqual(errors, []);
+});
+
+test('trang chủ: chọn công cụ khi chưa có số → vào bước tải dữ liệu, có lời nhắn; nút Trang chủ quay lại', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.addInitScript(() => { window.name = 'home'; sessionStorage.removeItem('elevato-ai-view'); });
+  await page.goto(`${base}/ai/`);
+  assert.equal(await page.locator('#s2').isVisible(), false, 'trang chủ chưa hiện các bước');
+  await page.locator('[data-go="DEAL"]').click();
+  assert.ok(await page.locator('#s2').isVisible());
+  assert.match(await page.locator('#goalNote').innerText(), /M&A/);
+  assert.equal(await page.locator('#s3').isVisible(), false, 'chế độ đã có số liệu ẩn bước trích xuất');
+  await page.locator('#homeBtn').click();
+  assert.ok(await page.locator('#hero').isVisible());
   assert.deepEqual(errors, []);
 });
