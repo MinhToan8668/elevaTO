@@ -159,6 +159,9 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
+  // Các bài e2e kiểm luồng đăng nhập + máy chủ: tắt chế độ thử không đăng nhập (js/direct.js).
+  await page.route('**/ai/js/direct.js', async (r) => r.fulfill({ status: 200, contentType: 'text/javascript',
+    body: (await readFile(join(ROOT, 'ai/js/direct.js'), 'utf8')).replace('export const NO_LOGIN = true;', 'export const NO_LOGIN = false;') }));
   // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
   await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
   dangMo.push(context);
@@ -256,6 +259,7 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   // Máy tick sẵn 3 bảng chính + trang thuyết minh nhận ra được (2–5), trang bìa không tick
   assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true]);
   assert.match(await page.locator('#pageMaps .found').innerText(), /CĐKT 2 · KQKD 3 · LCTT 4/);
+  await page.locator('#pageMaps').scrollIntoViewIfNeeded();   // ảnh thu nhỏ vẽ khi lướt tới (khối giới thiệu đầu trang đẩy xuống)
   await page.waitForFunction(() => [...document.querySelectorAll('#pageMaps .tile-img')].every((el) => el.style.backgroundImage || el.classList.contains('noimg')));
   const noimg = await page.locator('#pageMaps .tile-img.noimg').evaluateAll((els) => els.map((e) => e.title));
   assert.deepEqual(noimg, [], 'ảnh thu nhỏ vẽ được mọi trang');
