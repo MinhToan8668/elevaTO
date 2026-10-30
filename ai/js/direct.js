@@ -5,7 +5,7 @@
 
 export const NO_LOGIN = true;
 export const GUEST_NAME = 'Chế độ thử';
-export const keyBtnLabel = () => (hasKey() ? '🔑 API key' : '🔑 Nạp API key');
+export const keyBtnLabel = () => (hasKey() ? 'API key' : 'Nạp API key');
 
 const LS = 'finlens_ai_settings_v1';
 const LS_GW = 'elevato_ai_gateway';

@@ -19,6 +19,7 @@
 <link rel="preload" as="font" type="font/woff2" href="vendor/fonts/bvp-400-latin.woff2" crossorigin>
 <link rel="stylesheet" href="vendor/fonts/be-vietnam-pro.css">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="../links/fonts/plus-jakarta-sans.css">
 <link rel="stylesheet" href="../assets/hop.css?v=20261009b">
 <script src="js/theme.js"></script>
 <script type="module" src="js/app.js"></script>
@@ -46,7 +47,7 @@
     <select class="lang-sel" id="langSel" data-t-attr="aria-label:app.lang.aria" aria-label="Ngôn ngữ"></select>
     </div>
     <div class="top-g top-g-r">
-    <button class="btn ghost sm donate" id="donateBtn" type="button" data-t-attr="title:ug.btn.hint" title="Ủng hộ để tool chạy tiếp"><span aria-hidden="true">☕</span> <span class="donate-t" data-t="ug.btn">Ủng hộ</span></button>
+    <button class="btn ghost sm donate" id="donateBtn" type="button" data-t-attr="title:ug.btn.hint" title="Ủng hộ để tool chạy tiếp"><span class="donate-t" data-t="ug.btn">Ủng hộ</span></button>
     <div id="acct"></div>
     </div>
   </div>
@@ -66,22 +67,32 @@
 
     <section class="home" id="hero" aria-labelledby="heroH">
       <div class="hx">
-        <span class="hero-badge" data-t="hero.badge">.</span>
-        <h1 id="heroH" class="hx-h"><span data-t="hx.l1">Đọc BCTC.</span> <span data-t="hx.l2">Định giá.</span> <em data-t="hx.l3">Ra quyết định.</em></h1>
-        <p class="hx-sub" data-t="hx.sub">.</p>
-        <div class="hx-cta">
-          <button type="button" class="hx-btn" data-go="pdf"><span aria-hidden="true">📄</span><span data-t="hx.pdf">Tải BCTC PDF</span></button>
-          <button type="button" class="hx-btn alt" data-go="data"><span aria-hidden="true">📊</span><span data-t="hx.data">Đã có số liệu Excel</span></button>
+        <div class="hx-l">
+          <p class="eyebrow em" data-t="hx.eyebrow">AI BCTC · Mẫu Thông tư 99</p>
+          <h1 id="heroH" class="hx-h"><span data-t="hx.l1">Đọc BCTC.</span><br><span data-t="hx.l2a">Định giá</span> <em data-t="hx.l2b">nhanh.</em></h1>
+          <p class="hx-sub" data-t="hx.sub">.</p>
+          <div class="hx-cta">
+            <button type="button" class="hx-btn" data-go="pdf"><span data-t="hx.pdf">Tải BCTC PDF</span> <span aria-hidden="true">→</span></button>
+            <button type="button" class="hx-btn alt" data-go="data"><span data-t="hx.data">Đã có số liệu Excel</span></button>
+          </div>
         </div>
+        <button type="button" class="hx-card" data-go="DEAL">
+          <span class="hx-card-top"><span class="hx-card-k" data-t="hx.card.k">Mới</span><span class="hx-pill" data-t="hero.new">Mới</span></span>
+          <span class="hx-card-h" data-t="hero.f.deal">.</span>
+          <span class="hx-row"><span data-t="hx.r1">EBITDA chuẩn hoá</span><b>QoE</b></span>
+          <span class="hx-row"><span data-t="hx.r2">Nợ ròng → vốn chủ</span><b>EV bridge</b></span>
+          <span class="hx-row"><span data-t="hx.r3">Định giá bội số</span><b>EV/EBITDA · P/E</b></span>
+          <span class="hx-row"><span data-t="hx.r4">Sức vay nợ</span><b>DSCR</b></span>
+          <span class="hx-card-go" data-t="hx.card.go">Mở công cụ →</span>
+        </button>
       </div>
-      <div class="bento" id="heroFeat">
-        <button type="button" class="tile2 big" data-go="DEAL"><span class="feat-new" data-t="hero.new">Mới</span><span class="t2-ic" aria-hidden="true">💼</span><span class="t2-n" data-t="hero.f.deal">.</span><span class="t2-d" data-t="hx.deal.d">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
-        <button type="button" class="tile2 hot" data-go="AIR"><span class="t2-ic" aria-hidden="true">✨</span><span class="t2-n" data-t="hero.f.ai">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
-        <button type="button" class="tile2 " data-go="PT"><span class="t2-ic" aria-hidden="true">🩺</span><span class="t2-n" data-t="hero.f.pt">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
-        <button type="button" class="tile2 " data-go="CHART"><span class="t2-ic" aria-hidden="true">📊</span><span class="t2-n" data-t="hero.f.chart">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
-        <button type="button" class="tile2 " data-go="RC"><span class="t2-ic" aria-hidden="true">🔎</span><span class="t2-n" data-t="hero.f.rc">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
-        <button type="button" class="tile2 wide" data-go="Q"><span class="t2-ic" aria-hidden="true">🗓️</span><span class="t2-n" data-t="hero.f.q">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
-        <button type="button" class="tile2 wide" data-go="EXPORT"><span class="t2-ic" aria-hidden="true">📥</span><span class="t2-n" data-t="hero.f.xlsx">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
+      <div class="tls" id="heroFeat">
+        <button type="button" class="tl" data-go="AIR"><span class="tl-n">01</span><span class="tl-t" data-t="hero.f.ai">.</span><span class="tl-d" data-t="tl.ai">.</span><span class="tl-go" aria-hidden="true">→</span></button>
+        <button type="button" class="tl" data-go="PT"><span class="tl-n">02</span><span class="tl-t" data-t="hero.f.pt">.</span><span class="tl-d" data-t="tl.pt">.</span><span class="tl-go" aria-hidden="true">→</span></button>
+        <button type="button" class="tl" data-go="CHART"><span class="tl-n">03</span><span class="tl-t" data-t="hero.f.chart">.</span><span class="tl-d" data-t="tl.chart">.</span><span class="tl-go" aria-hidden="true">→</span></button>
+        <button type="button" class="tl" data-go="RC"><span class="tl-n">04</span><span class="tl-t" data-t="hero.f.rc">.</span><span class="tl-d" data-t="tl.rc">.</span><span class="tl-go" aria-hidden="true">→</span></button>
+        <button type="button" class="tl" data-go="Q"><span class="tl-n">05</span><span class="tl-t" data-t="hero.f.q">.</span><span class="tl-d" data-t="tl.q">.</span><span class="tl-go" aria-hidden="true">→</span></button>
+        <button type="button" class="tl" data-go="EXPORT"><span class="tl-n">06</span><span class="tl-t" data-t="hero.f.xlsx">.</span><span class="tl-d" data-t="tl.xlsx">.</span><span class="tl-go" aria-hidden="true">→</span></button>
       </div>
     </section>
 
