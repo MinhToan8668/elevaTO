@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
-from flask import Flask, abort, jsonify, request, send_file
+from flask import Flask, abort, jsonify, request, send_file, send_from_directory
 from rich.console import Console
 
 import app as core
@@ -336,6 +336,11 @@ def index():
     if request.args.get("t") != TOKEN:
         abort(403)
     return send_file(HERE / "ui" / "index.html")
+
+
+@web.get("/assets/<path:name>")
+def assets(name):
+    return send_from_directory(HERE / "ui" / "assets", name, max_age=86400)
 
 
 def body():
@@ -799,7 +804,7 @@ def main():
         except KeyboardInterrupt:
             return
     api = JsApi()
-    api.window = webview.create_window("TeleUploader", url, width=1180, height=780, min_size=(820, 560), js_api=api)
+    api.window = webview.create_window("elevaTO Media Hub", url, width=1180, height=780, min_size=(820, 560), js_api=api)
     webview.start()
 
 
