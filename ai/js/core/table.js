@@ -1,6 +1,10 @@
 // Dòng của một báo cáo theo mẫu 2026 để hiển thị / xuất file: mỗi dòng một chỉ tiêu, mỗi cột một kỳ.
 
-import { CHART } from '../chart2026.js';
+import { CHART as CHART_DN } from '../chart2026.js';
+import { CHART_TCTD } from '../chartTCTD.js';
+
+// Ngân hàng dùng danh mục riêng (mã N…): thiếu nó thì BCTC ngân hàng đọc đủ số mà bảng rà soát trống trơn.
+const laNganHang = (ds) => ds.periods.some((p) => Object.keys(ds.values[p.id] || {}).some((k) => /^(BS|IS|CF):N/.test(k)));
 import { computeTotals } from './statements.js';
 import { t, chartLabel } from '../i18n.js';
 
@@ -19,7 +23,7 @@ export function periodLabel(p) {
 export function statementRows(ds, st, { showEmpty = false } = {}) {
   const totals = Object.fromEntries(ds.periods.map((p) => [p.id, computeTotals(ds.values[p.id] || {})]));
   const rows = [];
-  for (const it of CHART) {
+  for (const it of laNganHang(ds) ? CHART_TCTD : CHART_DN) {
     if (it.st !== st) continue;
     const key = `${it.st}:${it.code}`;
     const values = {};

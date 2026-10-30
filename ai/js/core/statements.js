@@ -179,14 +179,22 @@ export function normalizeSigns(vals, fixes = null, opts = {}) {
   ghi('BS', daDoi.BS);
   ghi('TAX', daDoi.TAX);
 
-  // Thuế TNDN: 60 = 50 − 51 − 52 không khớp nhưng 60 = 50 + 51 + 52 khớp → thuế in ngược dấu.
+  // Thuế TNDN: chọn dấu của 51 / 52 sao cho 60 = 50 − 51 − 52. Hay gặp: in thuế ngược dấu với chi phí khác, hoặc
+  // chi phí in dương mà RIÊNG thuế hoãn lại in trong ngoặc vì là khoản được hoàn (HAX 2024: "(2.026.879.993)").
   const n50 = num('IS:50'), n60 = num('IS:60');
-  const thue = ['51', '52'].filter((c) => typeof out[`IS:${c}`] === 'number');
+  const thue = ['51', '52'].filter((c) => typeof out[`IS:${c}`] === 'number' && out[`IS:${c}`] !== 0);
   if (n50 !== null && n60 !== null && thue.length) {
-    const tong = thue.reduce((s, c) => s + out[`IS:${c}`], 0);
-    if (tong !== 0 && !near(n50 - tong, n60, 3) && near(n50 + tong, n60, 3)) {
-      for (const c of thue) out[`IS:${c}`] = -out[`IS:${c}`];
-      ghi('TAX', thue);
+    const tru = (dau) => thue.reduce((s, c, i) => s + dau[i] * out[`IS:${c}`], 0);
+    const khop = (dau) => near(n50 - tru(dau), n60, 3);
+    if (!khop(thue.map(() => 1))) {
+      // Ưu tiên đảo cả hai (in ngược dấu đồng loạt), rồi mới đảo riêng từng dòng.
+      const thu = thue.length === 2 ? [[-1, -1], [1, -1], [-1, 1]] : [[-1]];
+      const dau = thu.find(khop);
+      if (dau) {
+        const doi = thue.filter((c, i) => dau[i] === -1);
+        for (const c of doi) out[`IS:${c}`] = -out[`IS:${c}`];
+        ghi('TAX', doi);
+      }
     }
   }
 

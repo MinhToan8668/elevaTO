@@ -7,7 +7,10 @@ const EMPTY = /^[-–—]?$|^n\/?a$/i;
 export function parseVN(v) {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   if (v === null || v === undefined) return null;
-  let s = String(v).replace(/[\s  ]/g, '');
+  // AI đôi khi chép kèm đơn vị hay dấu chú thích ("4.650.582 VND", "1.234 đ", "12.345(*)", "−1.234"): bỏ đi,
+  // không thì cả cột ra null và báo cáo rỗng mà không có lời nào.
+  let s = String(v).replace(/[\s  ]/g, '')
+    .replace(/^[−‒–—]/, '-').replace(/\(\*+\)$|\*+$/, '').replace(/(?:vn[dđ]|đồng|dong|đ)$/i, '');
   if (EMPTY.test(s)) return null;
 
   let neg = false;

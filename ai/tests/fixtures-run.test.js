@@ -68,3 +68,17 @@ test('thuyết minh thống kê theo từng năm: khối năm trước ghi vào 
   ds = addExtraction(ds, { file: 'a.pdf', meta: { ngay_ket_thuc: '2025-12-31', so_thang: 12 }, statements: {}, notes, warnings: [] });
   assert.equal(ds.notes.FY2024.segments[0].revenue, 91);
 });
+
+test('HAX 2024: chi phí in dương, riêng thuế hoãn lại in trong ngoặc (khoản được hoàn) → giữ âm, LNST khớp', () => {
+  const r = statementToValues('IS', { meta, items: [
+    { c: '10', n: 'Doanh thu thuần', v: '', p: '5.513.287.344.174' },
+    { c: '11', n: 'Giá vốn hàng bán', v: '', p: '5.001.364.238.035' },
+    { c: '20', n: 'Lợi nhuận gộp', v: '', p: '511.923.106.139' },
+    { c: '50', n: 'Tổng lợi nhuận kế toán trước thuế', v: '', p: '258.356.507.150' },
+    { c: '51', n: 'Chi phí thuế TNDN hiện hành', v: '', p: '56.813.711.223' },
+    { c: '52', n: 'Chi phí thuế TNDN hoãn lại', v: '', p: '(2.026.879.993)' },
+    { c: '60', n: 'Lợi nhuận sau thuế TNDN', v: '', p: '203.569.675.920' },
+  ] });
+  assert.equal(r.prev['IS:52'], -2026879993);
+  assert.deepEqual(validate(r.prev).filter((x) => x.key === 'IS:60'), []);
+});

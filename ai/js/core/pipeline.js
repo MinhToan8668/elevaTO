@@ -102,6 +102,12 @@ export async function extractJob(job, io, opts = {}) {
     const r = statementToValues(st, results[st], st !== 'BS' && bsRegime && (bsRegime === 'TCTD' || st === 'IS' && !results[st].meta?.thong_tu) ? { regime: bsRegime } : {});
     if (st === 'BS') bsRegime = r.regime;
     statements[st] = { cur: r.cur, prev: r.prev };
+    // Có dòng mang số mà không dòng nào vào được danh mục: nói rõ và chép vài dòng AI trả để soát (trước đây bảng rỗng câm lặng).
+    if (!Object.keys(r.cur).length && !Object.keys(r.prev).length) {
+      const mau = (results[st].items || []).slice(0, 3).map((i) => `[${i.c}] ${String(i.n).slice(0, 30)} = ${i.v}`).join('; ');
+      warnings.push(t('w.noMapped', { st: NAME(st), n: (results[st].items || []).length, mau }));
+      delete statements[st];
+    }
     units[st] = r.unit;
     warnings.push(...r.warnings.map((w) => `${NAME(st)}: ${w}`));
     if (r.unmapped.length) warnings.push(t('w.unmapped', { st: NAME(st), codes: r.unmapped.map((k) => k.split(':')[1]).join(', ') }));

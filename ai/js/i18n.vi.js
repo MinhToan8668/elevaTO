@@ -932,6 +932,7 @@ export const VI = {
   'w.noPage': 'Không tìm thấy trang {st} — chỉnh lại ở bước chọn trang nếu file có bảng này.',
   'w.schema': '{st}: máy chủ AI từ chối khuôn JSON — đang thử lại bằng cách tả cấu trúc trong câu lệnh.',
   'w.noNumbers': '{st}: AI chép được {n} dòng nhưng không dòng nào có số — đã đọc lại bằng ảnh.',
+  'w.noMapped': '{st}: AI chép {n} dòng có số nhưng không dòng nào khớp mã hay tên chỉ tiêu của mẫu nên bảng trống. Vài dòng AI chép: {mau}',
   'w.retried': '{st}: lần đầu đọc không ra số nên đã gửi lại bằng ảnh và bỏ khuôn JSON.',
   'w.noTable': '{st}: không thấy bảng này trong các trang đã chọn (trang {pages}).',
   'w.unmapped': '{st}: mã không quy đổi được sang mẫu 2026: {codes}',

@@ -932,6 +932,7 @@ export const EN = {
   'w.noPage': 'No {st} page found — adjust the page selection if the file does contain this statement.',
   'w.schema': '{st}: the AI server rejected the JSON schema — retrying by describing the structure in the prompt instead.',
   'w.noNumbers': '{st}: the AI copied {n} lines but none had figures — read again as images.',
+  'w.noMapped': '{st}: the AI copied {n} lines with figures but none matched a code or line name of the template, so the table is empty. Sample lines: {mau}',
   'w.retried': '{st}: the first pass returned no figures, so it was sent again as images without the JSON schema.',
   'w.noTable': '{st}: this table is not on the selected pages (pages {pages}).',
   'w.unmapped': '{st}: codes that could not be mapped onto the 2026 format: {codes}',
