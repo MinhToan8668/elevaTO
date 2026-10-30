@@ -23,3 +23,17 @@ chrome.storage.sync.get({ mode: 'blur' }, ({ mode }) => {
     list.appendChild(b);
   }
 });
+
+// Thanh trượt độ mờ / độ sáng (đơn vị %, 100 = mặc định của chế độ)
+chrome.storage.sync.get({ blur: 100, light: 100 }, (s) => {
+  for (const key of ['blur', 'light']) {
+    const input = document.getElementById(key);
+    const out = document.getElementById(key + 'Val');
+    input.value = s[key];
+    out.textContent = s[key] + '%';
+    input.oninput = () => {
+      out.textContent = input.value + '%';
+      chrome.storage.sync.set({ [key]: Number(input.value) });
+    };
+  }
+});

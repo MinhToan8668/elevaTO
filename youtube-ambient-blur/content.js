@@ -6,10 +6,24 @@
   const SIZES = { pixel: [24, 14], mirror: [320, 180] };
   const DEFAULT = [64, 36];
   let mode = 'blur';
+  let blur = 100, light = 100; // phần trăm, chỉnh từ popup
   let canvas, ctx, last = 0;
 
-  chrome.storage.sync.get({ mode: 'blur' }, (s) => setMode(s.mode));
-  chrome.storage.onChanged.addListener((c) => c.mode && setMode(c.mode.newValue));
+  chrome.storage.sync.get({ mode: 'blur', blur: 100, light: 100 }, (s) => {
+    blur = s.blur; light = s.light;
+    setMode(s.mode);
+  });
+  chrome.storage.onChanged.addListener((c) => {
+    if (c.blur) blur = c.blur.newValue;
+    if (c.light) light = c.light.newValue;
+    if (c.mode) setMode(c.mode.newValue); else applyVars();
+  });
+
+  function applyVars() {
+    if (!canvas) return;
+    canvas.style.setProperty('--b', blur / 100);
+    canvas.style.setProperty('--l', light / 100);
+  }
 
   function setMode(m) {
     mode = m;
@@ -17,6 +31,7 @@
     canvas.className = 'ytbf-canvas ytbf-' + mode;
     [canvas.width, canvas.height] = SIZES[mode] || DEFAULT;
     canvas.parentNode?.classList.toggle('ytbf-grain', mode === 'vintage');
+    applyVars();
   }
 
   function ensureCanvas(player) {
@@ -49,13 +64,13 @@
     ctx.drawImage(video, x, y, dw, dh);
     if (x > 0.5) { // viền trái/phải
       ctx.save(); ctx.scale(-1, 1);
-      ctx.drawImage(video, -x, y, -dw, dh);           // trái
+      ctx.drawImage(video, -x, y, dw, dh);            // trái
       ctx.drawImage(video, -(x + dw) - dw, y, dw, dh); // phải
       ctx.restore();
     }
     if (y > 0.5) { // viền trên/dưới
       ctx.save(); ctx.scale(1, -1);
-      ctx.drawImage(video, x, -y, dw, -dh);
+      ctx.drawImage(video, x, -y, dw, dh);
       ctx.drawImage(video, x, -(y + dh) - dh, dw, dh);
       ctx.restore();
     }

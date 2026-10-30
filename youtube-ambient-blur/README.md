@@ -8,6 +8,10 @@ Extension Chrome/Edge thay viền đen quanh video YouTube (khi tỉ lệ video 
 3. Bấm **Load unpacked** → chọn thư mục `youtube-ambient-blur`.
 4. Mở/tải lại trang YouTube.
 
+## Preview
+![Các chế độ](preview.png)
+![Popup](popup.png)
+
 ## Chế độ
 Bấm icon extension trên thanh công cụ để chọn:
 - 🌫️ **Blur** – nền mờ dịu (mặc định)
@@ -18,6 +22,9 @@ Bấm icon extension trên thanh công cụ để chọn:
 - 🎞️ **Vintage Film** – sepia + hạt nhiễu phim
 - 🖤 **Noir** – đen trắng tương phản cao
 - ⛔ **Tắt**
+
+## Thanh trượt
+Trong popup có 2 thanh trượt **Độ mờ** (0–200%) và **Độ sáng** (20–200%), áp dụng ngay cho mọi chế độ.
 
 ## Tuỳ chỉnh
 - Độ mờ / độ sáng: sửa `filter` trong `style.css`.
