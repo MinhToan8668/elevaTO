@@ -8,6 +8,9 @@ import { VI } from './i18n.vi.js';
 import { EN } from './i18n.en.js';
 import { CHART_EN } from './chart2026.en.js';
 import { MODEL_EN } from './targets/model.en.js';
+import { CHART_TCTD } from './chartTCTD.js';
+
+const TCTD_EN = Object.fromEntries(CHART_TCTD.map((i) => [`${i.st}:${i.code}`, i.en]));
 
 // [mã, tên đầy đủ, nhãn ngắn dùng khi thanh đầu trang hẹp]
 export const LANGS = [['vi', 'Tiếng Việt', 'VI'], ['en', 'English', 'EN']];
@@ -56,7 +59,7 @@ export function t(key, vars) {
 }
 
 /** Tên chỉ tiêu BCTC: bản tiếng Anh nếu có, không thì giữ tên tiếng Việt trong CHART. */
-export const chartLabel = (key, vi) => (lang === 'en' && CHART_EN[key]) || vi;
+export const chartLabel = (key, vi) => (lang === 'en' && (CHART_EN[key] || TCTD_EN[key])) || vi;
 /** Tên dòng model forecast theo số dòng 03.Input_FS. */
 export const modelLabel = (row, vi) => (lang === 'en' && MODEL_EN[row]) || vi;
 /** Tên đầy đủ của nhóm dòng model (KQKD → "Kết quả kinh doanh" / "Income statement"). */

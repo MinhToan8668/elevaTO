@@ -933,6 +933,8 @@ export const VI = {
   'w.loose': 'Trang {pages}: thuyết minh nhưng không thuộc nhóm dữ liệu nào (TSCĐ, vay, vốn chủ…) — bỏ qua.',
   'w.noUnit': 'Không đọc được đơn vị tính ("{raw}") — tạm hiểu là đồng, cần xác nhận.',
   'w.noCode': 'Bỏ qua dòng không có mã và không khớp tên: "{name}"',
+  'w.signBank': 'BCTC ngân hàng: đã quy dấu chuẩn ở dòng {codes} (dự phòng / hao mòn ghi âm, chi phí ghi dương) — soát lại.',
+  'w.bank': 'Nhận ra mẫu BCTC tổ chức tín dụng (B02/B03/B04-TCTD): số được xếp vào danh mục chỉ tiêu ngân hàng; biểu đồ, chỉ số và form xuất theo mẫu doanh nghiệp chưa áp dụng cho ngân hàng.',
   'w.dup': 'Mã xuất hiện nhiều lần, giữ lần đầu: {codes}',
   'w.oldForm': 'Kỳ kết thúc {d} (năm 2025 trở về trước) nên đọc theo mẫu cũ TT200, nhưng báo cáo trông như mẫu mới TT99 — kiểm tra lại ngày kết thúc kỳ (có thể AI lấy nhầm ngày đầu kỳ).',
   'w.remap': 'Mã {from} in cạnh tên "{name}" không khớp mẫu — đã xếp theo tên vào mã {to} (mẫu 2026).',

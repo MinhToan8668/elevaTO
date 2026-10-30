@@ -933,6 +933,8 @@ export const EN = {
   'w.loose': 'Pages {pages}: notes, but not in any of the data groups (fixed assets, borrowings, equity…) — skipped.',
   'w.noUnit': 'The unit of measure could not be read ("{raw}") — assuming VND; please confirm.',
   'w.noCode': 'Skipped a line with no code and no matching name: "{name}"',
+  'w.signBank': 'Bank statements: signs normalised at lines {codes} (provisions / depreciation negative, expenses positive) — please review.',
+  'w.bank': 'Credit-institution format detected (B02/B03/B04-TCTD): figures are mapped to the bank chart of accounts; charts, ratios and the corporate export forms do not apply to banks yet.',
   'w.dup': 'Codes appearing more than once, the first was kept: {codes}',
   'w.oldForm': 'The period ends {d} (2025 or earlier), so it was read in the old Circular 200 format, but the report looks like the new Circular 99 one — check the period end date (the AI may have picked up the opening date).',
   'w.remap': 'Code {from} printed next to "{name}" does not match the template — filed by name under code {to} (2026 template).',

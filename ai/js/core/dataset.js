@@ -54,11 +54,59 @@ export function addExtraction(ds, ext) {
   }
   if (ext.notes && Object.keys(ext.notes).length) {
     if (!out.periods.some((x) => x.id === per.cur.id)) out.periods.push(per.cur);
-    out.notes[per.cur.id] = { ...(out.notes[per.cur.id] || {}), ...ext.notes };
+    const cu = out.notes[per.cur.id] || {};
+    // Thuyết minh của chính kỳ này thay phần đã suy từ năm sau (nếu có).
+    const muon = (cu._muon || []).filter((k) => !(k in ext.notes));
+    out.notes[per.cur.id] = { ...cu, ...ext.notes, ...(muon.length ? { _muon: muon } : {}) };
+    if (!muon.length) delete out.notes[per.cur.id]._muon;
+    // Thống kê theo từng năm: khối "năm trước" in trong thuyết minh → ghi luôn vào kỳ năm trước,
+    // để tab Thuyết minh / sheet thuyết minh / đối chiếu ngược có số cho cả hai năm. Không đè thuyết minh
+    // thật của kỳ đó (file năm trước nạp sau vẫn thay được, xem _muon).
+    for (const [p, tm] of notesNamTruoc(ext.notes, per)) {
+      const co = out.notes[p.id] || {};
+      const them = Object.entries(tm).filter(([k]) => !(k in co) || (co._muon || []).includes(k));
+      if (!them.length) continue;
+      if (!out.periods.some((x) => x.id === p.id)) out.periods.push(p);
+      out.notes[p.id] = { ...co, ...Object.fromEntries(them), _muon: [...new Set([...(co._muon || []), ...them.map(([k]) => k)])] };
+    }
   }
   out.warnings.push(...(ext.warnings || []).map((w) => `${ext.file}: ${w}`));
   out.periods.sort((a, b) => order(a) - order(b));
   out.conflicts.sort((a, b) => (a.period + a.key).localeCompare(b.period + b.key));
+  return out;
+}
+
+/**
+ * Phần "năm trước" của thuyết minh kỳ này, tách theo kỳ: [[kỳ, { segments | equity | fixedAssets | debt }]].
+ *  - báo cáo bộ phận: khối năm trước → kỳ cùng kỳ năm trước (prevFlow);
+ *  - biến động vốn chủ: khối năm trước → năm trước (chỉ báo cáo năm, bảng giữa niên độ không in đủ năm);
+ *  - TSCĐ: cột số đầu năm = số dư cuối năm trước (nguyên giá, hao mòn; không có phát sinh);
+ *  - vay: số dư đầu năm = số dư cuối năm trước.
+ */
+export function notesNamTruoc(notes, per) {
+  const flow = {}, bs = {};
+  const segs = (notes.segments || []).filter((s) => s.prev && Number.isFinite(s.prev.revenue)).map((s) => s.prev);
+  if (segs.length) flow.segments = segs;
+  if (per.cur.months === 12 && notes.equity?.prev && Object.keys(notes.equity.prev).length) flow.equity = notes.equity.prev;
+  const fa = notes.fixedAssets;
+  if (fa) {
+    const lay = (ds) => (ds || []).filter((x) => Number.isFinite(x.costOpen))
+      .map((x) => ({ cls: x.cls, name: x.name, cost: x.costOpen, accDep: x.accDepOpen || 0 }));
+    const tangible = lay(fa.tangible), intangible = lay(fa.intangible);
+    if (tangible.length || intangible.length) bs.fixedAssets = { tangible, intangible };
+  }
+  const d = notes.debt;
+  if (d && (Number.isFinite(d.stOpen) || Number.isFinite(d.ltOpen))) {
+    bs.debt = {};
+    if (Number.isFinite(d.stOpen)) bs.debt.stClose = d.stOpen;
+    if (Number.isFinite(d.ltOpen)) bs.debt.ltClose = d.ltOpen;
+  }
+  const out = [];
+  if (per.prevFlow.id === per.prevBS.id) { const all = { ...bs, ...flow }; if (Object.keys(all).length) out.push([per.prevFlow, all]); }
+  else {
+    if (Object.keys(flow).length) out.push([per.prevFlow, flow]);
+    if (Object.keys(bs).length) out.push([per.prevBS, bs]);
+  }
   return out;
 }
 

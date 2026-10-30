@@ -1,0 +1,823 @@
+{
+ "CF": {
+  "meta": {
+   "don_vi": "Triệu VND",
+   "ngay_ket_thuc": "2025-12-31",
+   "cot_luy_ke": true,
+   "cot_p": "2024 Triệu VND",
+   "cot_v": "2025 Triệu VND",
+   "hop_nhat": true,
+   "phuong_phap": "truc_tiep",
+   "so_thang": 12,
+   "so_thang_p": 12,
+   "ten_cong_ty": "Ngân hàng Thương mại Cổ phần Ngoại thương Việt Nam",
+   "thong_tu": "200"
+  },
+  "items": [
+   {
+    "c": "",
+    "n": "LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG KINH DOANH",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "",
+    "n": "01 Thu nhập lãi và các khoản thu nhập tương tự nhận được",
+    "v": "104.376.654",
+    "p": "93.772.270"
+   },
+   {
+    "c": "",
+    "n": "02 Chi phí lãi và các chi phí tương tự đã trả",
+    "v": "(44.982.264)",
+    "p": "(43.790.244)"
+   },
+   {
+    "c": "",
+    "n": "03 Thu nhập thuần từ hoạt động dịch vụ nhận được",
+    "v": "3.413.845",
+    "p": "3.523.997"
+   },
+   {
+    "c": "",
+    "n": "04 Chênh lệch số tiền thực thu và thực chi từ hoạt động kinh doanh (ngoại tệ, vàng bạc, chứng khoán)",
+    "v": "5.074.170",
+    "p": "4.094.518"
+   },
+   {
+    "c": "",
+    "n": "05 Chi phí khác",
+    "v": "(340.404)",
+    "p": "(1.390.558)"
+   },
+   {
+    "c": "",
+    "n": "06 Tiền thu các khoản nợ đã được xử lý xóa, bù đắp bằng nguồn rủi ro",
+    "v": "3.916.056",
+    "p": "3.751.009"
+   },
+   {
+    "c": "",
+    "n": "07 Tiền chi trả cho nhân viên và hoạt động quản lý, công vụ",
+    "v": "(23.796.457)",
+    "p": "(20.922.713)"
+   },
+   {
+    "c": "",
+    "n": "08 Tiền thuế thu nhập doanh nghiệp thực nộp trong năm",
+    "v": "(9.241.965)",
+    "p": "(8.854.401)"
+   },
+   {
+    "c": "",
+    "n": "Lưu chuyển tiền thuần từ hoạt động kinh doanh trước những thay đổi về tài sản và nợ hoạt động",
+    "v": "38.419.635",
+    "p": "30.183.878"
+   },
+   {
+    "c": "",
+    "n": "(Tăng)/giảm về tài sản hoạt động",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "",
+    "n": "09 Các khoản tiền gửi và cho vay các tổ chức tín dụng khác",
+    "v": "(9.827.563)",
+    "p": "18.021.934"
+   },
+   {
+    "c": "",
+    "n": "10 Các khoản về kinh doanh chứng khoán",
+    "v": "(4.827.811)",
+    "p": "(24.134.346)"
+   },
+   {
+    "c": "",
+    "n": "11 Các công cụ tài chính phái sinh và các tài sản tài chính khác",
+    "v": "939.516",
+    "p": "(1.314.434)"
+   },
+   {
+    "c": "",
+    "n": "12 Các khoản cho vay khách hàng",
+    "v": "(224.326.776)",
+    "p": "(178.839.881)"
+   },
+   {
+    "c": "",
+    "n": "13 Giảm nguồn dự phòng để xử lý rủi ro, xử lý, bù đắp tổn thất các khoản cho vay",
+    "v": "(7.287.783)",
+    "p": "(5.358.023)"
+   },
+   {
+    "c": "",
+    "n": "14 Tài sản hoạt động khác",
+    "v": "(2.952.444)",
+    "p": "496.225"
+   },
+   {
+    "c": "",
+    "n": "Tăng/(giảm) về nợ hoạt động",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "",
+    "n": "15 Các khoản nợ Chính phủ và NHNN",
+    "v": "81.890.988",
+    "p": "76.566.500"
+   },
+   {
+    "c": "",
+    "n": "16 Các khoản tiền gửi và vay các tổ chức tín dụng khác",
+    "v": "86.624.144",
+    "p": "20.694.977"
+   },
+   {
+    "c": "",
+    "n": "17 Các khoản tiền gửi của khách hàng",
+    "v": "157.869.996",
+    "p": "118.967.239"
+   },
+   {
+    "c": "",
+    "n": "18 Các khoản phát hành giấy tờ có giá",
+    "v": "2.976.037",
+    "p": "4.212.146"
+   },
+   {
+    "c": "",
+    "n": "19 Các khoản vốn tài trợ, ủy thác đầu tư, cho vay tổ chức tín dụng chịu rủi ro",
+    "v": "(529)",
+    "p": "164"
+   },
+   {
+    "c": "",
+    "n": "20 Các công cụ tài chính phái sinh và các khoản nợ tài chính khác",
+    "v": "",
+    "p": "(117.752)"
+   },
+   {
+    "c": "",
+    "n": "21 Công nợ hoạt động khác",
+    "v": "(641.807)",
+    "p": "2.620.930"
+   },
+   {
+    "c": "",
+    "n": "22 Chi từ các quỹ của tổ chức tín dụng",
+    "v": "(2.625.052)",
+    "p": "(2.876.726)"
+   },
+   {
+    "c": "I",
+    "n": "Lưu chuyển tiền thuần từ hoạt động kinh doanh",
+    "v": "116.230.551",
+    "p": "59.122.831"
+   },
+   {
+    "c": "",
+    "n": "LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG ĐẦU TƯ",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "",
+    "n": "01 Mua sắm tài sản cố định",
+    "v": "(1.453.488)",
+    "p": "(1.480.121)"
+   },
+   {
+    "c": "",
+    "n": "02 Tiền thu từ thanh lý, nhượng bán tài sản cố định",
+    "v": "17.231",
+    "p": "12.504"
+   },
+   {
+    "c": "",
+    "n": "03 Tiền chi cho thanh lý, nhượng bán tài sản cố định",
+    "v": "(1.288)",
+    "p": "(1.252)"
+   },
+   {
+    "c": "",
+    "n": "04 Tiền chi đầu tư, góp vốn vào các đơn vị khác",
+    "v": "(60.167)",
+    "p": ""
+   },
+   {
+    "c": "",
+    "n": "08 Tiền thu đầu tư, góp vốn vào các đơn vị khác",
+    "v": "",
+    "p": "747"
+   },
+   {
+    "c": "",
+    "n": "09 Tiền thu cổ tức và lợi nhuận được chia từ các khoản đầu tư, góp vốn dài hạn",
+    "v": "118.576",
+    "p": "160.709"
+   },
+   {
+    "c": "II",
+    "n": "Lưu chuyển tiền thuần cho hoạt động đầu tư",
+    "v": "(1.379.136)",
+    "p": "(1.307.413)"
+   },
+   {
+    "c": "",
+    "n": "LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG TÀI CHÍNH",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "",
+    "n": "04 Cổ tức trả cho cổ đông, lợi nhuận đã chia",
+    "v": "(3.776.798)",
+    "p": "(19.963)"
+   },
+   {
+    "c": "III",
+    "n": "Lưu chuyển tiền thuần cho hoạt động tài chính",
+    "v": "(3.776.798)",
+    "p": "(19.963)"
+   },
+   {
+    "c": "IV",
+    "n": "Lưu chuyển tiền thuần trong năm",
+    "v": "111.074.617",
+    "p": "57.795.455"
+   },
+   {
+    "c": "V",
+    "n": "Tiền và các khoản tương đương tiền tại thời điểm đầu năm",
+    "v": "430.614.185",
+    "p": "372.818.730"
+   },
+   {
+    "c": "VII",
+    "n": "Tiền và các khoản tương đương tiền tại thời điểm cuối năm (Thuyết minh 35)",
+    "v": "541.688.802",
+    "p": "430.614.185"
+   }
+  ]
+ },
+ "IS": {
+  "meta": {
+   "don_vi": "Triệu VND",
+   "ngay_ket_thuc": "2025-12-31",
+   "cot_luy_ke": true,
+   "cot_p": "2024",
+   "cot_v": "2025",
+   "hop_nhat": true,
+   "so_thang": 12,
+   "so_thang_p": 12,
+   "ten_cong_ty": "Ngân hàng Thương mại Cổ phần Ngoại thương Việt Nam",
+   "thong_tu": "200"
+  },
+  "items": [
+   {
+    "c": "1",
+    "n": "Thu nhập lãi và các khoản thu nhập tương tự",
+    "v": "105.216.484",
+    "p": "93.654.841"
+   },
+   {
+    "c": "2",
+    "n": "Chi phí lãi và các chi phí tương tự",
+    "v": "(46.445.074)",
+    "p": "(38.249.106)"
+   },
+   {
+    "c": "I",
+    "n": "Thu nhập lãi thuần",
+    "v": "58.771.410",
+    "p": "55.405.735"
+   },
+   {
+    "c": "3",
+    "n": "Thu nhập từ hoạt động dịch vụ",
+    "v": "11.854.532",
+    "p": "13.143.005"
+   },
+   {
+    "c": "4",
+    "n": "Chi phí hoạt động dịch vụ",
+    "v": "(8.384.665)",
+    "p": "(8.006.444)"
+   },
+   {
+    "c": "II",
+    "n": "Lãi thuần từ hoạt động dịch vụ",
+    "v": "3.469.867",
+    "p": "5.136.561"
+   },
+   {
+    "c": "III",
+    "n": "Lãi thuần từ hoạt động kinh doanh ngoại hối",
+    "v": "6.165.112",
+    "p": "5.291.751"
+   },
+   {
+    "c": "IV",
+    "n": "Lãi thuần từ mua bán chứng khoán kinh doanh",
+    "v": "171.160",
+    "p": "62.123"
+   },
+   {
+    "c": "V",
+    "n": "Lãi thuần từ mua bán chứng khoán đầu tư",
+    "v": "3.616",
+    "p": "3.444"
+   },
+   {
+    "c": "5",
+    "n": "Thu nhập từ hoạt động khác",
+    "v": "5.269.108",
+    "p": "4.468.806"
+   },
+   {
+    "c": "6",
+    "n": "Chi phí hoạt động khác",
+    "v": "(1.677.513)",
+    "p": "(2.097.103)"
+   },
+   {
+    "c": "VI",
+    "n": "Lãi thuần từ hoạt động khác",
+    "v": "3.591.595",
+    "p": "2.371.703"
+   },
+   {
+    "c": "VII",
+    "n": "Thu nhập từ góp vốn, mua cổ phần",
+    "v": "281.862",
+    "p": "307.179"
+   },
+   {
+    "c": "",
+    "n": "TỔNG THU NHẬP HOẠT ĐỘNG",
+    "v": "72.454.622",
+    "p": "68.578.496"
+   },
+   {
+    "c": "VIII",
+    "n": "CHI PHÍ HOẠT ĐỘNG",
+    "v": "(25.242.799)",
+    "p": "(23.027.363)"
+   },
+   {
+    "c": "IX",
+    "n": "Lợi nhuận thuần từ hoạt động kinh doanh trước chi phí dự phòng rủi ro tín dụng",
+    "v": "47.211.823",
+    "p": "45.551.133"
+   },
+   {
+    "c": "X",
+    "n": "Chi phí dự phòng rủi ro tín dụng",
+    "v": "(3.192.186)",
+    "p": "(3.314.998)"
+   },
+   {
+    "c": "XI",
+    "n": "TỔNG LỢI NHUẬN TRƯỚC THUẾ",
+    "v": "44.019.637",
+    "p": "42.236.135"
+   },
+   {
+    "c": "7",
+    "n": "Chi phí thuế thu nhập doanh nghiệp hiện hành",
+    "v": "(7.842.997)",
+    "p": "(8.526.496)"
+   },
+   {
+    "c": "8",
+    "n": "(Chi phí)/Thu nhập thuế thu nhập doanh nghiệp hoãn lại",
+    "v": "(978.700)",
+    "p": "143.478"
+   },
+   {
+    "c": "XII",
+    "n": "Chi phí thuế thu nhập doanh nghiệp",
+    "v": "(8.821.697)",
+    "p": "(8.383.018)"
+   },
+   {
+    "c": "XIII",
+    "n": "LỢI NHUẬN SAU THUẾ",
+    "v": "35.197.940",
+    "p": "33.853.117"
+   },
+   {
+    "c": "XIV",
+    "n": "Lợi ích của cổ đông không kiểm soát",
+    "v": "(20.277)",
+    "p": "(21.731)"
+   },
+   {
+    "c": "XV",
+    "n": "Lợi nhuận thuần của cổ đông Ngân hàng",
+    "v": "35.177.663",
+    "p": "33.831.386"
+   },
+   {
+    "c": "XVI",
+    "n": "Lãi cơ bản trên cổ phiếu (VND/cổ phiếu)",
+    "v": "3.854",
+    "p": "3.727"
+   }
+  ]
+ },
+ "BS": {
+  "meta": {
+   "don_vi": "Triệu VND",
+   "ngay_ket_thuc": "2025-12-31",
+   "cot_p": "31/12/2024",
+   "cot_v": "31/12/2025",
+   "hop_nhat": true,
+   "so_thang": 12,
+   "ten_cong_ty": "Ngân hàng Thương mại Cổ phần Ngoại thương Việt Nam",
+   "thong_tu": "200"
+  },
+  "items": [
+   {
+    "c": "A",
+    "n": "TÀI SẢN",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "I",
+    "n": "Tiền mặt, vàng bạc, đá quý",
+    "v": "15.542.769",
+    "p": "14.268.064"
+   },
+   {
+    "c": "II",
+    "n": "Tiền gửi tại Ngân hàng Nhà nước (\"NHNN\")",
+    "v": "37.445.504",
+    "p": "49.340.493"
+   },
+   {
+    "c": "III",
+    "n": "Tiền gửi và cho vay các tổ chức tín dụng khác",
+    "v": "522.474.362",
+    "p": "389.951.898"
+   },
+   {
+    "c": "1",
+    "n": "Tiền gửi tại các tổ chức tín dụng khác",
+    "v": "515.588.640",
+    "p": "384.031.890"
+   },
+   {
+    "c": "2",
+    "n": "Cho vay các tổ chức tín dụng khác",
+    "v": "6.885.722",
+    "p": "6.920.008"
+   },
+   {
+    "c": "3",
+    "n": "Dự phòng rủi ro",
+    "v": "",
+    "p": "(1.000.000)"
+   },
+   {
+    "c": "IV",
+    "n": "Chứng khoán kinh doanh",
+    "v": "11.832.577",
+    "p": "4.876.237"
+   },
+   {
+    "c": "1",
+    "n": "Chứng khoán kinh doanh",
+    "v": "11.900.000",
+    "p": "4.908.527"
+   },
+   {
+    "c": "2",
+    "n": "Dự phòng giảm giá chứng khoán kinh doanh",
+    "v": "(67.423)",
+    "p": "(32.290)"
+   },
+   {
+    "c": "V",
+    "n": "Các công cụ tài chính phái sinh và các tài sản tài chính khác",
+    "v": "374.918",
+    "p": "1.314.434"
+   },
+   {
+    "c": "VI",
+    "n": "Cho vay khách hàng",
+    "v": "1.648.549.996",
+    "p": "1.418.015.724"
+   },
+   {
+    "c": "1",
+    "n": "Cho vay khách hàng",
+    "v": "1.673.525.675",
+    "p": "1.449.198.899"
+   },
+   {
+    "c": "2",
+    "n": "Dự phòng rủi ro cho vay khách hàng",
+    "v": "(24.975.679)",
+    "p": "(31.183.175)"
+   },
+   {
+    "c": "VIII",
+    "n": "Chứng khoán đầu tư",
+    "v": "162.104.164",
+    "p": "167.383.349"
+   },
+   {
+    "c": "1",
+    "n": "Chứng khoán đầu tư sẵn sàng để bán",
+    "v": "143.080.817",
+    "p": "86.799.901"
+   },
+   {
+    "c": "2",
+    "n": "Chứng khoán đầu tư giữ đến ngày đáo hạn",
+    "v": "22.384.962",
+    "p": "80.829.540"
+   },
+   {
+    "c": "3",
+    "n": "Dự phòng rủi ro chứng khoán đầu tư",
+    "v": "(3.361.615)",
+    "p": "(246.092)"
+   },
+   {
+    "c": "IX",
+    "n": "Góp vốn, đầu tư dài hạn",
+    "v": "2.260.727",
+    "p": "2.228.098"
+   },
+   {
+    "c": "2",
+    "n": "Vốn góp liên doanh",
+    "v": "734.296",
+    "p": "763.736"
+   },
+   {
+    "c": "3",
+    "n": "Đầu tư vào công ty liên kết",
+    "v": "12.342",
+    "p": "10.440"
+   },
+   {
+    "c": "4",
+    "n": "Đầu tư dài hạn khác",
+    "v": "1.589.089",
+    "p": "1.528.922"
+   },
+   {
+    "c": "5",
+    "n": "Dự phòng giảm giá đầu tư dài hạn",
+    "v": "(75.000)",
+    "p": "(75.000)"
+   },
+   {
+    "c": "X",
+    "n": "Tài sản cố định",
+    "v": "8.163.312",
+    "p": "8.092.877"
+   },
+   {
+    "c": "1",
+    "n": "Tài sản cố định hữu hình",
+    "v": "5.618.793",
+    "p": "5.530.579"
+   },
+   {
+    "c": "a",
+    "n": "Nguyên giá tài sản cố định",
+    "v": "16.271.880",
+    "p": "15.808.302"
+   },
+   {
+    "c": "b",
+    "n": "Khấu hao tài sản cố định",
+    "v": "(10.653.087)",
+    "p": "(10.277.723)"
+   },
+   {
+    "c": "3",
+    "n": "Tài sản cố định vô hình",
+    "v": "2.544.519",
+    "p": "2.562.298"
+   },
+   {
+    "c": "a",
+    "n": "Nguyên giá tài sản cố định",
+    "v": "5.284.812",
+    "p": "5.072.735"
+   },
+   {
+    "c": "b",
+    "n": "Hao mòn tài sản cố định",
+    "v": "(2.740.293)",
+    "p": "(2.510.437)"
+   },
+   {
+    "c": "XII",
+    "n": "Tài sản Có khác",
+    "v": "33.530.837",
+    "p": "30.402.348"
+   },
+   {
+    "c": "1",
+    "n": "Các khoản phải thu",
+    "v": "17.577.148",
+    "p": "14.040.294"
+   },
+   {
+    "c": "2",
+    "n": "Các khoản lãi, phí phải thu",
+    "v": "10.007.221",
+    "p": "8.868.303"
+   },
+   {
+    "c": "3",
+    "n": "Tài sản thuế thu nhập doanh nghiệp hoãn lại",
+    "v": "13.072",
+    "p": "991.748"
+   },
+   {
+    "c": "4",
+    "n": "Tài sản Có khác",
+    "v": "5.951.102",
+    "p": "6.516.040"
+   },
+   {
+    "c": "5",
+    "n": "Các khoản dự phòng rủi ro cho các tài sản Có nội bảng khác",
+    "v": "(17.706)",
+    "p": "(14.037)"
+   },
+   {
+    "c": "",
+    "n": "TỔNG TÀI SẢN CÓ",
+    "v": "2.442.279.166",
+    "p": "2.085.873.522"
+   },
+   {
+    "c": "B",
+    "n": "NỢ PHẢI TRẢ VÀ VỐN CHỦ SỞ HỮU",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "I",
+    "n": "Các khoản nợ Chính phủ và NHNN",
+    "v": "160.128.325",
+    "p": "78.237.337"
+   },
+   {
+    "c": "1",
+    "n": "Tiền gửi và vay Chính phủ và NHNN",
+    "v": "160.128.325",
+    "p": "78.237.337"
+   },
+   {
+    "c": "II",
+    "n": "Tiền gửi và vay các tổ chức tín dụng khác",
+    "v": "321.158.102",
+    "p": "234.533.958"
+   },
+   {
+    "c": "1",
+    "n": "Tiền gửi của các tổ chức tín dụng khác",
+    "v": "305.902.847",
+    "p": "223.171.381"
+   },
+   {
+    "c": "2",
+    "n": "Vay các tổ chức tín dụng khác",
+    "v": "15.255.255",
+    "p": "11.362.577"
+   },
+   {
+    "c": "III",
+    "n": "Tiền gửi của khách hàng",
+    "v": "1.672.534.846",
+    "p": "1.514.664.850"
+   },
+   {
+    "c": "V",
+    "n": "Vốn tài trợ, ủy thác đầu tư, cho vay tổ chức tín dụng chịu rủi ro",
+    "v": "",
+    "p": "529"
+   },
+   {
+    "c": "VI",
+    "n": "Phát hành giấy tờ có giá",
+    "v": "27.101.221",
+    "p": "24.125.059"
+   },
+   {
+    "c": "VII",
+    "n": "Các khoản nợ khác",
+    "v": "36.797.946",
+    "p": "38.102.621"
+   },
+   {
+    "c": "1",
+    "n": "Các khoản lãi, phí phải trả",
+    "v": "15.457.974",
+    "p": "13.990.276"
+   },
+   {
+    "c": "3",
+    "n": "Các khoản phải trả và công nợ khác",
+    "v": "21.339.972",
+    "p": "24.112.345"
+   },
+   {
+    "c": "",
+    "n": "TỔNG NỢ PHẢI TRẢ",
+    "v": "2.217.720.440",
+    "p": "1.889.664.354"
+   },
+   {
+    "c": "VIII",
+    "n": "Vốn chủ sở hữu",
+    "v": "",
+    "p": ""
+   },
+   {
+    "c": "1",
+    "n": "Vốn của tổ chức tín dụng",
+    "v": "89.361.977",
+    "p": "61.696.139"
+   },
+   {
+    "c": "a",
+    "n": "Vốn điều lệ",
+    "v": "83.556.751",
+    "p": "55.890.913"
+   },
+   {
+    "c": "c",
+    "n": "Thặng dư vốn cổ phần",
+    "v": "4.995.389",
+    "p": "4.995.389"
+   },
+   {
+    "c": "g",
+    "n": "Vốn khác",
+    "v": "809.837",
+    "p": "809.837"
+   },
+   {
+    "c": "2",
+    "n": "Quỹ của tổ chức tín dụng",
+    "v": "48.221.262",
+    "p": "37.052.974"
+   },
+   {
+    "c": "3",
+    "n": "Chênh lệch tỷ giá hối đoái",
+    "v": "(918.676)",
+    "p": "(968.292)"
+   },
+   {
+    "c": "5",
+    "n": "Lợi nhuận chưa phân phối",
+    "v": "87.822.642",
+    "p": "98.332.086"
+   },
+   {
+    "c": "a",
+    "n": "Lợi nhuận để lại năm trước",
+    "v": "66.848.572",
+    "p": "74.498.539"
+   },
+   {
+    "c": "b",
+    "n": "Lợi nhuận để lại năm nay",
+    "v": "20.974.070",
+    "p": "23.833.547"
+   },
+   {
+    "c": "6",
+    "n": "Lợi ích của cổ đông không kiểm soát",
+    "v": "71.521",
+    "p": "96.261"
+   },
+   {
+    "c": "",
+    "n": "TỔNG VỐN CHỦ SỞ HỮU",
+    "v": "224.558.726",
+    "p": "196.209.168"
+   },
+   {
+    "c": "",
+    "n": "TỔNG NỢ PHẢI TRẢ VÀ VỐN CHỦ SỞ HỮU",
+    "v": "2.442.279.166",
+    "p": "2.085.873.522"
+   }
+  ]
+ }
+}

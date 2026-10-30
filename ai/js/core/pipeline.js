@@ -92,7 +92,7 @@ export async function extractJob(job, io, opts = {}) {
   let bsRegime;
   for (const st of STATEMENTS) {
     if (!results[st]) continue;
-    const r = statementToValues(st, results[st], st === 'IS' && bsRegime && !results[st].meta?.thong_tu ? { regime: bsRegime } : {});
+    const r = statementToValues(st, results[st], st !== 'BS' && bsRegime && (bsRegime === 'TCTD' || st === 'IS' && !results[st].meta?.thong_tu) ? { regime: bsRegime } : {});
     if (st === 'BS') bsRegime = r.regime;
     statements[st] = { cur: r.cur, prev: r.prev };
     units[st] = r.unit;

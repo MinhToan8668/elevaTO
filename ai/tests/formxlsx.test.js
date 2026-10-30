@@ -217,5 +217,8 @@ test('sheet TSCĐ bày theo đúng bảng biến động in trong BCTC, giữ t�
     .sort((a, b) => a[0] - b[0]).map(([, v]) => v).filter((v) => thuTu.includes(v));
   assert.deepEqual(dong.slice(0, 6), thuTu);
   const r = Object.entries(c).find(([k, v]) => /^A\d+$/.test(k) && v === 'Nguyên giá đầu năm')[0].slice(1);
-  assert.equal(c[`B${r}`], 318000, 'số đầu năm lấy đúng từ thuyết minh');
+  // Cột B là năm 2024 suy từ cột "số đầu năm" của thuyết minh 2025 (thống kê theo từng năm), cột C là 2025.
+  assert.equal(c[`C${r}`], 318000, 'số đầu năm lấy đúng từ thuyết minh');
+  const rCuoi = Object.entries(c).find(([k, v]) => /^A\d+$/.test(k) && v === 'Nguyên giá cuối năm')[0].slice(1);
+  assert.equal(c[`B${rCuoi}`], 318000, 'số cuối năm 2024 = số đầu năm 2025');
 });

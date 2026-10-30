@@ -1,7 +1,11 @@
 // Cây chỉ tiêu BCTC: tính dòng tổng, kiểm tra số, chuẩn hoá dấu, quy đổi mã TT200 → TT99.
 // Mọi số ở đây đã quy về ĐỒNG. Khoá dạng "BS:131", "IS:10", "CF:20".
 
-import { CHART } from '../chart2026.js';
+import { CHART as CHART_DN } from '../chart2026.js';
+import { CHART_TCTD } from '../chartTCTD.js';
+
+// Cây doanh nghiệp (TT99) + cây ngân hàng (mã N…, xem chartTCTD.js): hai bộ mã không đụng nhau nên kiểm tra chung một lượt.
+const CHART = [...CHART_DN, ...CHART_TCTD];
 import { t } from '../i18n.js';
 
 const BY_KEY = new Map(CHART.map((i) => [`${i.st}:${i.code}`, i]));
@@ -93,6 +97,7 @@ export function validate(vals, opts = {}) {
   if (opts.cashMatchesBS !== false) {
     cross('CF:70=BS:110', best('CF:70'), best('BS:110'), t('ck.cfCash'));
   }
+  if (has(vals, 'BS:N300') || has(vals, 'BS:N600')) cross('BS:N300=N600', best('BS:N300'), best('BS:N600'), t('ck.bsBalance'));
   if (has(vals, 'CF:01') && best('IS:50') !== null) {
     cross('CF:01=IS:50', vals['CF:01'], best('IS:50'), t('ck.cfPbt'));
   }

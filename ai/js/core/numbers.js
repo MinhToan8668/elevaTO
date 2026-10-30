@@ -62,6 +62,6 @@ export function unitScale(u) {
   if (/t[ỷỉ]/.test(s)) return 1e9;
   if (/tri[ệe]u|million/.test(s)) return 1e6;
   if (/ngh[ìi]n|ng[àa]n|thousand/.test(s)) return 1e3;
-  if (/đ[ồo]ng|vnd|dong/.test(s)) return 1;
+  if (/đ[ồo]ng|vn[dđ]|dong|(^|[\s:(])đ(?=$|[\s).])/.test(s)) return 1;
   return null;
 }

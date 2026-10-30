@@ -133,7 +133,9 @@ export function buildModel(ds, opts = {}) {
  * @returns Map<năm, { tm, muon }>  muon = true khi số lấy từ thuyết minh của năm liền sau
  */
 function muonNamTruoc(ds, years, kind, co, truoc) {
-  const cua = (p) => ((ds.notes && ds.notes[p.id]) || {})[kind];
+  // Thuyết minh dataset đã tách sẵn từ khối "năm trước" của năm sau (_muon) vẫn tính là mượn.
+  const no = (p) => (ds.notes && ds.notes[p.id]) || {};
+  const cua = (p) => ((no(p)._muon || []).includes(kind) ? undefined : no(p)[kind]);
   const ra = new Map();
   years.forEach((p, i) => {
     if (co(cua(p))) { ra.set(p.year, { tm: cua(p), muon: false }); return; }

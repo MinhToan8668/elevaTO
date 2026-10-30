@@ -79,7 +79,7 @@ test('không còn chuỗi tiếng Việt viết cứng — mọi chữ người 
   // chart2026.js / model.js giữ tên tiếng Việt làm bản gốc; chartLabel/modelLabel lo bản tiếng Anh.
   // sheets.js sinh tự động từ template elevaTO: nhãn trong đó là nhãn của model, phải giữ y nguyên
   // để file xuất ra dán được vào model — dịch là mất đối chiếu.
-  const BO_QUA = new Set(['direct.js', 'i18n.js', 'i18n.vi.js', 'i18n.en.js', 'prompts.js', 'aireview.js', 'chart2026.js', 'chart2026.en.js',
+  const BO_QUA = new Set(['direct.js', 'i18n.js', 'i18n.vi.js', 'i18n.en.js', 'prompts.js', 'aireview.js', 'chart2026.js', 'chart2026.en.js', 'chartTCTD.js',
     'model.js', 'model.en.js', 'sheets.js', 'config.js', 'theme.js']);
   // Khoá nội bộ / mã định dạng, không phải câu chữ.
   const KHONG_PHAI_CHU = /^(CF:60=BS:110\(năm trước\)|[#,.0;()"–\\]+|·|✕|🔒| · |CĐKT|Mảng|TSCĐ|Vốn chủ|Nợ vay|Tham số|triệu đồng|Chữ)$/;

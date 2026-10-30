@@ -6,6 +6,7 @@ import { CHART } from '../chart2026.js';
 import { parseVN, unitScale } from './numbers.js';
 import { fromTT200, normalizeSigns, detectRegime, toTT99Key, item as chartItem } from './statements.js';
 import { t } from '../i18n.js';
+import { isBankStatement, bankToValues } from './bank.js';
 
 // ─── JSON từ AI ────────────────────────────────────────────
 
@@ -181,11 +182,19 @@ const DAU_KHOI_TSCD = new Set(['221', '224', '227', '240']);
  * (hoặc bảng đồng nghĩa). Dòng tổng (có công thức) không bao giờ bị đổi: "I. Tiền" ở 110 vẫn là 110.
  * Trả mã TT99 mới hoặc null (giữ mã in).
  */
+// Dòng đề mục không phải chỉ tiêu: "2. Điều chỉnh cho các khoản" của LCTT gián tiếp. AI hay chép kèm số tổng
+// các điều chỉnh và gán luôn mã "02" (đẩy các mã bên dưới lệch một dòng) → số đề mục đè lên khấu hao.
+const DE_MUC = /^dieu chinh cho cac khoan\b/;
+
 function maTheoTen(st, tt99Code, label) {
-  if (!tt99Code) return null;
-  const cur = chartItem(st, tt99Code);
-  if (!cur) return null;
   const byName = matchLabel(st, label);
+  // Mã in không có trong mẫu (AI đọc nhầm "149" thành "142" của TT200, hay công ty tự đánh số): không quy đổi
+  // được thì dòng bị bỏ và dòng tổng lệch — xếp theo tên nếu tên khớp chắc một dòng nhập liệu.
+  if (!tt99Code || !chartItem(st, tt99Code)) {
+    const target = byName && chartItem(st, byName);
+    return target && target.kind === 'input' && labelSim(normLabel(label), normLabel(target.label)) >= 0.75 ? byName : null;
+  }
+  const cur = chartItem(st, tt99Code);
   if (!byName || byName === tt99Code) return null;
   const target = chartItem(st, byName);
   if (!target || target.kind === 'memo') return null;
@@ -205,6 +214,12 @@ function maTheoTen(st, tt99Code, label) {
  * @returns { cur, prev, unit, regime, unmapped: [..], warnings: [..] }   (cur/prev: { "BS:131": đồng })
  */
 export function statementToValues(st, ai, hint = {}) {
+  // Ngân hàng: không có mã số, danh mục khác hẳn → bộ đọc riêng.
+  if (hint.regime === 'TCTD' || (hint.regime == null && isBankStatement(ai.items))) {
+    const r = bankToValues(st, ai);
+    r.warnings.unshift(t('w.bank'));
+    return r;
+  }
   const meta = ai.meta || {};
   const warnings = [];
   let unit = unitScale(meta.don_vi);
@@ -218,6 +233,7 @@ export function statementToValues(st, ai, hint = {}) {
     const dup = new Set(), remap = [];
     let khoi = null;   // khối TSCĐ/BĐSĐT vừa bị đổi mã → dòng con "Nguyên giá"/"Hao mòn" đi theo
     for (const it of ai.items || []) {
+      if (DE_MUC.test(normLabel(it.n))) continue;
       const code = normCode(st, it.c);
       let target = code ? raw : byLabel;
       let key = code ? `${st}:${code}` : matchLabel(st, it.n) && `${st}:${matchLabel(st, it.n)}`;

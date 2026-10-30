@@ -63,6 +63,9 @@ export function createClient({ api, token, onWait, onAuth, direct = false } = {}
       let busy = 0;
       for (;;) {
         const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens };
+        // Chép số không cần suy nghĩ dài: để mặc định thì token "suy nghĩ" ăn vào maxOutputTokens và CĐKT ngân hàng
+        // (60+ dòng, hai trang) bị cắt MAX_TOKENS ngay cả khi đã chia đôi — gặp thật ở VCB 2025.
+        if (system === SYSTEM) generationConfig.thinkingConfig = { thinkingLevel: 'low' };
         if (schema) generationConfig.responseSchema = schema;
         let d;
         try {

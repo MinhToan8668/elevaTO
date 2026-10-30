@@ -101,6 +101,7 @@ export function statementTask(st, part = 'all', { moTaKhuon = false } = {}) {
       `Đọc ${TITLE[st]} trong các trang BCTC đính kèm (bảng có thể kéo dài nhiều trang — đọc hết).`,
       'Chép MỌI dòng có số theo đúng thứ tự in, gồm cả dòng tổng (A, B, I, II…, Tổng cộng) và dòng chi tiết a), b), - Nguyên giá, - Hao mòn…',
       'c = mã số in ở cột "Mã số" (ví dụ "131", "421a", "01"), chép đúng như in kể cả khi công ty đánh số khác mẫu; ô mã trống thì c = "" (KHÔNG lấy mã của dòng trên/dưới). KHÔNG lấy số ở cột "Thuyết minh" (dạng V.01, 5, 24.1) làm mã số hay làm giá trị.',
+      'BCTC ngân hàng / tổ chức tín dụng (mẫu B02, B03, B04/TCTD) không có cột "Mã số": c = "" và GIỮ số thứ tự in đầu dòng (I, II, 1, 2, a, b, 01) ở đầu n, ví dụ "VI. Cho vay khách hàng", "2. Dự phòng rủi ro cho vay khách hàng".',
       'Trang in "(tiếp theo)" là phần nối của cùng bảng: đọc tiếp, không lặp dòng đã lấy. Bỏ chữ ký, con dấu, số trang, dòng "Người lập / Kế toán trưởng / Giám đốc".',
       `Cột số: ${COLS[st]}`,
       'meta: chép đơn vị tính, ngày kết thúc kỳ, số tháng, thông tư của mẫu biểu, hợp nhất hay riêng.',
