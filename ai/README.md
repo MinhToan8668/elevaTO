@@ -27,6 +27,16 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 - **Thuyết minh của một năm đủ dùng cho hai năm**: bảng thuyết minh năm sau gần như luôn in kèm số năm trước
   (TSCĐ: cột "số đầu năm"; báo cáo bộ phận và bảng biến động vốn chủ: khối "Năm trước"), nên chỉ cần trích
   thuyết minh của năm mới nhất là năm liền trước cũng có số thật thay vì số ước tính.
+  Số năm trước còn được **thống kê theo từng năm**: khối "năm trước" của báo cáo bộ phận và bảng biến động vốn chủ,
+  cột "số đầu năm" của TSCĐ và số dư vay đầu năm được ghi luôn vào kỳ năm trước, nên tab *Thuyết minh*, các sheet
+  thuyết minh và phần đối chiếu ngược có số cho cả hai năm. Nạp thêm BCTC của năm trước thì thuyết minh thật của năm
+  đó thay phần suy ra, không bao giờ bị ghi đè ngược lại.
+- **BCTC ngân hàng** (mẫu B02/B03/B04-TCTD theo TT49/2014/TT-NHNN, ví dụ VCB): báo cáo không có cột "Mã số" nên máy
+  nhận mẫu theo tên dòng ("Tổng tài sản Có", "Thu nhập lãi thuần"…) rồi xếp từng dòng vào **danh mục chỉ tiêu ngân
+  hàng** (`js/chartTCTD.js`, mã `N…`) theo tên **và mục cha** — cùng tên "Dự phòng rủi ro" nằm dưới năm mục khác nhau.
+  Dấu chuẩn hoá như doanh nghiệp (dự phòng / hao mòn âm, chi phí dương, thuế hoãn lại thử cả hai chiều) và kiểm tra
+  cộng dồn đủ ba báo cáo (tổng tài sản Có = nợ + vốn chủ; LCTT trực tiếp 01–22 → I; I + II + III + V + VI = VII).
+  Biểu đồ, chỉ số và form xuất vẫn theo mẫu doanh nghiệp, chưa áp dụng cho ngân hàng.
 - **Theo mẫu Thông tư 99/2025/TT-BTC** (áp dụng từ 01/01/2026). BCTC có **ngày kết thúc kỳ từ năm 2025 trở về
   trước** luôn được hiểu là mẫu cũ TT200 và tự quy đổi mã sang mẫu mới (tổng tài sản 270 → 280, doanh thu tài
   chính 21 → 22, …), nên nhập chung một mẫu với BCTC 2026.
@@ -339,6 +349,21 @@ npm test                 # kiểm thử đơn vị: đọc số, cây cộng d�
 npm install && npm run e2e   # chạy trang thật trong Chromium, máy chủ AI giả lập
 # xem giao diện từng bước: E2E_SHOTS=/thư/mục npm run e2e
 ```
+
+Chạy **thật** phần trích xuất AI trên bốn BCTC mẫu trong `tests/fixtures/bctc/` (cần `GEMINI_API_KEY` và poppler-utils;
+không nằm trong `npm test`). Lời đáp của Gemini được nhớ trong `.cache/fixtures/` nên chạy lại chỉ tốn lượt khi câu lệnh đổi;
+gói miễn phí chỉ có 20 lượt/ngày mỗi model nên công cụ tự đổi model khi gặp 429/503:
+
+```bash
+GEMINI_API_KEY=… node tools/run-fixtures.mjs HAX                    # nhận trang bằng AI như trang web (tốn thêm lượt)
+GEMINI_API_KEY=… node tools/run-fixtures.mjs VCB --types BS=8-9,IS=11-12,CF=13-14
+GEMINI_API_KEY=… node tools/run-fixtures.mjs Q3_2026 --types BS=5-7,IS=8,CF=9-10 --rot 8-10=90
+GEMINI_API_KEY=… node tools/run-fixtures.mjs HAX --types BS=9-10,IS=11,CF=12 --tm fixedAssets=25,debt=27 --notes
+```
+
+Kết quả lần chạy gần nhất (model `gemini-3-flash-preview`): HAX 2025, DGW 2025, DGW Q3/2026 (trang in ngang, có xoay)
+và VCB 2025 đều ra đủ ba báo cáo, bộ kiểm tra cộng dồn khớp hết. Lời đáp thật của Gemini cho VCB được giữ ở
+`tests/fixtures/vcb-2025-ai.json` để `tests/bank.test.js` chạy không cần mạng.
 
 Template model elevaTO đổi (thêm / bớt / đổi thứ tự dòng trong `03.Input_FS`) thì sinh lại bố cục:
 

@@ -99,6 +99,7 @@ const DONG_NGHIA_GOC = {
   IS: {
     'doanh thu ban hang': '01', 'doanh thu ban hang va cung cap dich vu': '01', 'doanh thu': '01',
     'cac khoan giam tru doanh thu': '02', 'cac khoan giam tru': '02',
+    'phan lai hoac lo trong cong ty lien doanh lien ket': '27', 'phan lai lo trong cong ty lien doanh lien ket': '27', 'lai lo trong cong ty lien doanh lien ket': '27',
     'doanh thu thuan': '10', 'doanh thu thuan ve ban hang va cung cap dich vu': '10', 'doanh thu thuan ve cung cap dich vu': '10', 'doanh thu thuan ban hang va cung cap dich vu': '10',
     'gia von hang ban': '11', 'gia von': '11', 'gia von dich vu cung cap': '11', 'gia von hang ban va dich vu cung cap': '11',
     'loi nhuan gop': '20', 'loi nhuan gop ve ban hang va cung cap dich vu': '20', 'loi nhuan gop ve cung cap dich vu': '20', 'lai gop': '20',
@@ -182,9 +183,10 @@ const DAU_KHOI_TSCD = new Set(['221', '224', '227', '240']);
  * (hoặc bảng đồng nghĩa). Dòng tổng (có công thức) không bao giờ bị đổi: "I. Tiền" ở 110 vẫn là 110.
  * Trả mã TT99 mới hoặc null (giữ mã in).
  */
-// Dòng đề mục không phải chỉ tiêu: "2. Điều chỉnh cho các khoản" của LCTT gián tiếp. AI hay chép kèm số tổng
+// Dòng đề mục không phải chỉ tiêu: "2. Điều chỉnh cho các khoản" của LCTT gián tiếp (chỉ khi đứng riêng một dòng —
+// AI hay gộp đề mục với dòng đầu: "2. Điều chỉnh cho các khoản: - Khấu hao TSCĐ…", số là khấu hao, phải giữ). AI hay chép kèm số tổng
 // các điều chỉnh và gán luôn mã "02" (đẩy các mã bên dưới lệch một dòng) → số đề mục đè lên khấu hao.
-const DE_MUC = /^dieu chinh cho cac khoan\b/;
+const DE_MUC = /^dieu chinh cho cac khoan$/;
 
 function maTheoTen(st, tt99Code, label) {
   const byName = matchLabel(st, label);
@@ -202,7 +204,9 @@ function maTheoTen(st, tt99Code, label) {
   // là chỗ các công ty hay đánh số lẫn nhau; đổi được giữa chúng với nhau.
   const dauKhoi = (c) => DAU_KHOI_TSCD.has(c);
   if ((cur.sum || target.sum) && !(dauKhoi(tt99Code) && dauKhoi(byName))) return null;
-  if (labelSim(normLabel(label), normLabel(target.label)) < 0.75) return null;
+  // Tên nằm đúng trong bảng đồng nghĩa là chắc chắn (DGW Q3/2026 in "Phần lãi hoặc lỗ trong công ty liên doanh,
+  // liên kết" ở mã 26 — mã của chi phí QLDN — nên phải dời đi, không thì đè lên QLDN).
+  if (DONG_NGHIA[st]?.[normLabel(label)] !== byName && labelSim(normLabel(label), normLabel(target.label)) < 0.75) return null;
   return byName;
 }
 

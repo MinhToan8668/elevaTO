@@ -150,14 +150,20 @@ function moTaTrang(ds, xem) {
 
 /** Gọi AI một bảng; quá 60 giây / bị cắt → CĐKT chia tài sản / nguồn vốn, bảng khác chia đôi số trang. */
 async function statementWithSplit(st, pages, io, step, opt = {}) {
-  const once = async (pg, part) => {
+  const once = async (pg, part, think) => {
     const t = statementTask(st, part, { moTaKhuon: !!opt.moTaKhuon });
-    return io.ai.json({ parts: [...await io.parts(pg, opt), { text: t.prompt }], schema: t.schema });
+    return io.ai.json({ parts: [...await io.parts(pg, opt), { text: t.prompt }], schema: t.schema, ...(think ? { think } : {}) });
   };
   try {
     return await once(pages, 'all');
   } catch (e) {
     if (!io.isSplittable(e)) throw e;
+    // KQKD thường chỉ MỘT trang: bị cắt (MAX_TOKENS — phần lớn do token "suy nghĩ") thì không chia đôi được và
+    // mất trắng cả bảng (gặp ở HAX 2025). Gọi lại đúng trang đó với mức suy nghĩ thấp nhất trước khi bỏ cuộc.
+    if (st !== 'BS' && pages.length < 2) {
+      step({ key: st, state: 'split' });
+      return once(pages, 'all', 'minimal');
+    }
     step({ key: st, state: 'split' });
     if (st === 'BS') {
       const [a, b] = await Promise.all([once(pages, 'assets'), once(pages, 'sources')]);

@@ -326,3 +326,20 @@ test('bản scan: mapPagesWithAI trả luôn góc xoay từng trang', async () =
   const r = await mapPagesWithAI(2, io);
   assert.deepEqual(r.rot, { 1: 90 });
 });
+
+test('KQKD một trang bị cắt MAX_TOKENS (HAX 2025) → gọi lại đúng trang đó với mức suy nghĩ thấp nhất', async () => {
+  const io = makeIO();
+  const goc = io.ai.json;
+  const think = [];
+  io.ai.json = async (req) => {
+    if (req.parts[req.parts.length - 1].text.includes('KẾT QUẢ HOẠT ĐỘNG')) {
+      think.push(req.think || 'low');
+      if (req.think !== 'minimal') throw new E('truncated');
+    }
+    return goc(req);
+  };
+  const r = await extractJob(job, io, {});
+  assert.deepEqual(think, ['low', 'minimal']);
+  assert.equal(r.statements.IS.cur['IS:10'], 100);
+  assert.ok(!r.warnings.some((w) => /Kết quả kinh doanh:/.test(w) && /cắt|MAX/.test(w)), r.warnings.join('\n'));
+});

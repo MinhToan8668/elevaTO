@@ -55,17 +55,18 @@ export function createClient({ api, token, onWait, onAuth, direct = false } = {}
     /**
      * @param parts   [{ text } | { inlineData: { mimeType, data } }]
      * @param schema  khuôn JSON (responseSchema)
+     * @param think   mức suy nghĩ của Gemini cho lượt chép số ('low' / 'minimal')
      * @param system  câu lệnh hệ thống riêng (mặc định: SYSTEM "chỉ chép số" của phần trích xuất;
      *                phần AI nhận định gửi câu lệnh khác vì ở đó AI phải VIẾT chứ không chép)
      * @returns       đối tượng JSON AI trả
      */
-    async json({ parts, schema, maxOutputTokens = 32768, system = SYSTEM }) {
+    async json({ parts, schema, maxOutputTokens = 32768, system = SYSTEM, think = 'low' }) {
       let busy = 0;
       for (;;) {
         const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens };
         // Chép số không cần suy nghĩ dài: để mặc định thì token "suy nghĩ" ăn vào maxOutputTokens và CĐKT ngân hàng
         // (60+ dòng, hai trang) bị cắt MAX_TOKENS ngay cả khi đã chia đôi — gặp thật ở VCB 2025.
-        if (system === SYSTEM) generationConfig.thinkingConfig = { thinkingLevel: 'low' };
+        if (system === SYSTEM && think) generationConfig.thinkingConfig = { thinkingLevel: think };
         if (schema) generationConfig.responseSchema = schema;
         let d;
         try {

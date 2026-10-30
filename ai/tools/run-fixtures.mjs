@@ -27,7 +27,9 @@ const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args.splice(i
 const MODEL = opt('--model', process.env.GEMINI_MODEL || 'gemini-3.6-flash');
 const withNotes = args.includes('--notes') && args.splice(args.indexOf('--notes'), 1);
 const shared = opt('--shared', '');          // ví dụ --shared 9-12: như Form phổ thông — tick trang, không nhận trang
-const typesArg = opt('--types', '');        // ví dụ --types BS=8-9,IS=11-12,CF=13-14: trang đã biết, khỏi tốn lượt nhận trang
+const typesArg = opt('--types', '');
+const rotArg = opt('--rot', '');
+const tmArg = opt('--tm', '');              // ví dụ --tm fixedAssets=16,debt=27,equity=35: trang thuyết minh (đi kèm --types)        // ví dụ --types BS=8-9,IS=11-12,CF=13-14: trang đã biết, khỏi tốn lượt nhận trang
 const filter = args[0] || '';
 const log = (...a) => process.env.DEBUG && console.error(...a);
 const KEY = process.env.GEMINI_API_KEY;
@@ -67,11 +69,11 @@ async function generate(body) {
 }
 
 const ai = {
-  async json({ parts, schema, maxOutputTokens = 32768, system = SYSTEM }) {
+  async json({ parts, schema, maxOutputTokens = 32768, system = SYSTEM, think = 'low' }) {
     const generationConfig = { temperature: 0, responseMimeType: 'application/json', maxOutputTokens };
     // Chép số không cần suy nghĩ dài: để mặc định thì token "suy nghĩ" ăn vào maxOutputTokens và CĐKT ngân hàng
     // (60+ dòng, hai trang) bị cắt MAX_TOKENS ngay cả khi đã chia đôi — gặp thật ở VCB 2025.
-    if (system === SYSTEM) generationConfig.thinkingConfig = { thinkingLevel: 'low' };
+    if (system === SYSTEM && think) generationConfig.thinkingConfig = { thinkingLevel: think };
     if (schema) generationConfig.responseSchema = schema;
     const d = await generate({ contents: [{ role: 'user', parts }], systemInstruction: { parts: [{ text: system }] }, generationConfig });
     if (d.finishReason === 'MAX_TOKENS') throw new AIError('truncated', 'MAX_TOKENS');
@@ -112,6 +114,16 @@ async function runFile(name) {
   let map;
   if (typesArg) {
     map = { types: Array(total).fill('OTHER'), notes: {}, rot: {} };
+    for (const part of (tmArg ? tmArg.split(',') : [])) {
+      const [g, r] = part.split('='); const [a, b] = r.split('-').map(Number);
+      map.notes[g] = Array.from({ length: (b || a) - a + 1 }, (_, i) => a + i);
+      for (const p of map.notes[g]) map.types[p - 1] = 'NOTES';
+    }
+    // --rot 8-10=90: trang in ngang (như lượt nhận trang của AI trả về trong trường xoay)
+    for (const part of (rotArg ? rotArg.split(',') : [])) {
+      const [r, q] = part.split('='); const [a, b] = r.split('-').map(Number);
+      for (let p = a; p <= (b || a); p++) map.rot[p] = Number(q);
+    }
     for (const part of typesArg.split(',')) {
       const [k, r] = part.split('='); const [a, b] = r.split('-').map(Number);
       for (let p = a; p <= (b || a); p++) map.types[p - 1] = k;
@@ -131,7 +143,7 @@ async function runFile(name) {
     isFatal: () => false,
   };
   const job = { name, types: map.types, notes: map.notes, scanned: true, shared: map.shared };
-  const ext = await extractJob(job, io, { noteGroups: withNotes ? Object.keys(NOTE_TASKS) : [] });
+  const ext = await extractJob(job, io, { noteGroups: withNotes ? Object.keys(NOTE_TASKS).filter((g) => map.notes[g]?.length) : [] });
   const out = { file: name, secs: Math.round((Date.now() - t0) / 1000), map: { types: map.types, notes: map.notes, rot }, ext };
   writeFileSync(join(CACHE, `${basename(name, '.pdf')}.json`), JSON.stringify(out, null, 1));
 
