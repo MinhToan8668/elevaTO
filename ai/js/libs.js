@@ -6,7 +6,7 @@ const pending = new Map();
 
 function loadScript(file, globalName) {
   if (window[globalName]) return Promise.resolve(window[globalName]);
-  const src = new URL(`../vendor/${file}`, import.meta.url).href;
+  const src = globalThis.__ELEVATO_SCRIPT__?.(file) || new URL(`../vendor/${file}`, import.meta.url).href;
   if (!pending.has(src)) {
     pending.set(src, new Promise((ok, fail) => {
       const s = document.createElement('script');

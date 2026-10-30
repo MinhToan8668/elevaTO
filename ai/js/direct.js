@@ -5,7 +5,7 @@
 
 // Bản dùng API key riêng (như AI FinLens): mở trang với ?local, hoặc file ai/local.html (chỉ chuyển hướng sang đây).
 // Trang thường: đăng nhập / đăng ký, AI qua máy chủ elevaTO.
-export const NO_LOGIN = typeof location !== 'undefined' && new URLSearchParams(location.search).has('local');
+export const NO_LOGIN = !!globalThis.__ELEVATO_LOCAL__ || typeof location !== 'undefined' && new URLSearchParams(location.search).has('local');
 export const GUEST_NAME = 'Chế độ thử';
 export const keyBtnLabel = () => (hasKey() ? 'API key' : 'Nạp API key');
 
