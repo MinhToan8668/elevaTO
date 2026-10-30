@@ -12,32 +12,64 @@ import { CHART } from '../chart2026.js';
 import { loadXLSX } from '../libs.js';
 
 const LS = 'elevato-ai-mode';
+const LS_VIEW = 'elevato-ai-view';
 // Nhãn khuôn mà core/grid.js dò để nhận file (không phải câu chữ giao diện — giữ nguyên ở mọi ngôn ngữ).
 const GROUP = { BS: 'CĐKT', IS: 'KQKD', CF: 'LCTT' };
 const HDR = { ky: 'Ma ky', nhom: 'Nhom', muc: 'Khoan muc', nhan: 'Nhan ky', thang: 'So thang', sheet: 'Luu tru' };
 
-export function initMode(store) {
-  let mode = 'pdf';
+/** Công cụ trên trang chủ → tab ở bước rà soát. 'EXPORT' cuộn tới khối xuất file. */
+const TOOL_TAB = { DEAL: 'DEAL', AIR: 'PT', PT: 'PT', CHART: 'CHART', RC: 'PT', Q: 'CHART', EXPORT: null };
+const TOOL_NAME = { DEAL: 'hero.f.deal', AIR: 'hero.f.ai', PT: 'hero.f.pt', CHART: 'hero.f.chart', RC: 'hero.f.rc', Q: 'hero.f.q', EXPORT: 'hero.f.xlsx' };
+
+/**
+ * Hai màn: 'home' (trang chủ: chọn cách bắt đầu + các công cụ) và 'work' (khu làm việc theo bước).
+ * Bấm một công cụ khi chưa có số → vào khu làm việc ở bước tải dữ liệu, nạp xong tự mở đúng tab.
+ */
+export function initMode(store, ctx) {
+  let mode = 'pdf', muon = null;
   try { mode = localStorage.getItem(LS) === 'data' ? 'data' : 'pdf'; } catch (e) { /* bỏ qua */ }
-  const set = (m, cuon) => {
+  const coSo = () => store.data().ds.periods.length > 0;
+  const setMode = (m) => {
     mode = m;
     document.body.dataset.mode = m;
     try { localStorage.setItem(LS, m); } catch (e) { /* bỏ qua */ }
-    ve();
-    if (cuon) $('#s2')?.scrollIntoView({ behavior: 'smooth' });
   };
-  const the = (m, ic) => h('button', { type: 'button', class: `mode-card${mode === m ? ' on' : ''}`, 'aria-pressed': String(mode === m), onclick: () => set(m, true) },
-    h('span', { class: 'mode-ic', 'aria-hidden': 'true' }, ic),
-    h('span', { class: 'mode-tx' }, h('b', {}, t(`mode.${m}`)), h('small', {}, t(`mode.${m}.d`))),
-    h('span', { class: 'mode-go', 'aria-hidden': 'true' }, '→'));
+  // Màn đang xem nhớ theo TAB trình duyệt (sessionStorage): tải lại trang không bị đá về trang chủ.
+  const view = (v) => {
+    document.body.dataset.view = v;
+    try { sessionStorage.setItem(LS_VIEW, v); } catch (e) { /* bỏ qua */ }
+    window.scrollTo({ top: 0 });
+  };
+  const moTool = (k) => {
+    if (TOOL_TAB[k]) ctx.openTab?.(TOOL_TAB[k]);
+    const el = TOOL_TAB[k] ? $('#s5') : $('#exportBox');
+    setTimeout(() => el?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
+  function go(k) {
+    view('work');
+    if (k === 'pdf' || k === 'data') { setMode(k); muon = null; }
+    else if (coSo()) { muon = null; moTool(k); }
+    else { muon = k; setMode('data'); }
+    ve();
+  }
   function ve() {
-    mount($('#modePick'), h('div', { class: 'mode-pick', role: 'group', 'aria-label': t('mode.aria') }, the('pdf', '📄'), the('data', '📊')));
     mount($('#dataTpl'), mode === 'data'
       ? h('div', { class: 'tpl' }, h('span', {}, t('mode.tpl.lead')), h('button', { class: 'btn ghost sm', type: 'button', onclick: taiMau }, t('mode.tpl.btn')))
       : null);
+    mount($('#goalNote'), muon ? h('p', { class: 'msg warn' }, t('home.need', { f: t(TOOL_NAME[muon]) }),
+      ' ', mode === 'data' ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { setMode('pdf'); ve(); } }, t('home.go.pdf')) : null) : null);
   }
+  ctx.showWork = () => view('work');
+  document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
+  $('#homeBtn')?.addEventListener('click', () => view('home'));
+  // Có số rồi mà người dùng đang chờ mở một công cụ → mở luôn.
+  watch(store, ['sources'], () => { if (muon && coSo()) { const k = muon; muon = null; ve(); moTool(k); } });
   watch(store, ['lang'], ve);
-  set(mode, false);
+  setMode(mode);
+  let dau = 'home';
+  try { dau = sessionStorage.getItem(LS_VIEW) === 'work' ? 'work' : 'home'; } catch (e) { /* bỏ qua */ }
+  view(dau);
+  ve();
 }
 
 /** File mẫu: sheet "Lưu trữ" đúng khuôn grid.js đọc (Mã kỳ / Nhãn kỳ / Số tháng + dòng [nhóm, mã, tên, số…]). */

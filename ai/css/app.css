@@ -878,3 +878,29 @@ body[data-mode="data"] #s5 .step-h .k::after{content:"2";font-size:15px}
 .tpl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 12px;padding:12px 14px;border:1px dashed var(--em-line);border-radius:var(--r-sm);background:var(--em-soft);font-size:13.5px}
 .hero-top{max-width:none}
 .hero-lead{max-width:880px}
+
+/* ── Hai màn: trang chủ (công cụ) ⇄ khu làm việc (các bước) ── */
+body[data-view="home"] .rail,body[data-view="home"] .step{display:none}
+body[data-view="work"] #hero{display:none}
+.rail-home{font:inherit;font-size:14px;font-weight:600;color:var(--em-text);background:transparent;border:0;border-radius:99px;padding:6px 14px;cursor:pointer}
+.rail-home:hover{background:var(--surface)}
+.home{display:flex;flex-direction:column;gap:14px}
+.home-head{text-align:center;padding:30px 16px 10px;display:flex;flex-direction:column;align-items:center}
+.home-head h1{margin:14px 0 8px;font-size:clamp(28px,4vw,44px);line-height:1.12;font-weight:800;letter-spacing:-.025em;color:var(--strong);max-width:900px}
+.home-head .hero-lead{max-width:760px;font-size:16px}
+.home-head .hero-stats{justify-content:center}
+.home-h{display:flex;align-items:center;gap:10px;margin:22px 0 4px;font-size:18px;font-weight:800;color:var(--strong)}
+.home-h span:first-child{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--em);color:var(--em-ink);font-size:14px}
+.home-start{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:16px}
+.start-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:24px 26px;border-radius:var(--r);border:1.5px solid var(--em-line);background:linear-gradient(135deg,var(--em-soft),var(--surface) 70%);box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s}
+.start-card.alt{background:linear-gradient(135deg,var(--gold-soft),var(--surface) 70%);border-color:color-mix(in srgb,var(--gold) 35%,transparent)}
+.start-card:hover{transform:translateY(-3px)}
+.start-ic{font-size:30px}
+.start-card b{font-size:20px;color:var(--strong)}
+.start-card small{font-size:14px;color:var(--muted);line-height:1.5}
+.start-go{margin-top:10px;font-weight:800;color:var(--em-text)}
+.hero-feat{margin-top:4px}
+button.feat{display:flex;flex-direction:column;align-items:flex-start;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.feat-open{margin-top:auto;padding-top:12px;font-size:13px;font-weight:700;color:var(--em-text);opacity:.75}
+button.feat:hover .feat-open{opacity:1}
+.hero-feat{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}

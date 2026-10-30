@@ -54,6 +54,7 @@
 
 <div id="app" class="shell">
   <nav class="rail" data-t-attr="aria-label:rail.aria" aria-label="Các bước">
+    <button type="button" class="rail-home" id="homeBtn"><span aria-hidden="true">←</span> <span data-t="home.back">Trang chủ</span></button>
     <a href="#s2" data-step="2"><span class="n">1</span><span class="t" data-t="rail.1">Tải BCTC</span></a>
     <a href="#s3" data-step="3"><span class="n">2</span><span class="t" data-t="rail.2">Chọn trang &amp; trích xuất</span></a>
     <a href="#s5" data-step="5"><span class="n">3</span><span class="t" data-t="rail.3">Rà soát &amp; xuất</span></a>
@@ -63,29 +64,32 @@
   <main id="main" tabindex="-1">
     <div id="restore"></div>
 
-    <section class="hero" id="hero" aria-labelledby="heroH">
-      <div class="hero-top">
+    <section class="home" id="hero" aria-labelledby="heroH">
+      <header class="home-head">
         <span class="hero-badge" data-t="hero.badge">Mới · Tab M&amp;A &amp; định giá</span>
-        <h1 id="heroH" data-t="hero.h">Từ BCTC đến định giá doanh nghiệp — trong vài phút</h1>
-        <p class="hero-lead" data-t="hero.lead">Tải BCTC PDF / scan / Excel → AI đọc số theo mẫu Thông tư 99 → máy kiểm tra cộng dồn, phân tích, định giá và xuất Excel. Dành cho người làm đầu tư, M&amp;A và tín dụng doanh nghiệp.</p>
-        <p class="mode-q" data-t="mode.q">Bạn đang có gì trong tay?</p>
-        <div id="modePick"></div>
+        <h1 id="heroH" data-t="hero.h">.</h1>
+        <p class="hero-lead" data-t="hero.lead">.</p>
         <ul class="hero-stats">
-          <li><b>12s</b><span data-t="hero.st1">đọc 3 báo cáo chính</span></li>
-          <li><b>32</b><span data-t="hero.st2">dấu hiệu bất thường</span></li>
-          <li><b>22</b><span data-t="hero.st3">chỉ số tài chính</span></li>
-          <li><b>19</b><span data-t="hero.st4">phép đối chiếu thuyết minh</span></li>
+          <li><b>12s</b><span data-t="hero.st1">.</span></li>
+          <li><b>32</b><span data-t="hero.st2">.</span></li>
+          <li><b>22</b><span data-t="hero.st3">.</span></li>
+          <li><b>19</b><span data-t="hero.st4">.</span></li>
         </ul>
+      </header>
+      <h2 class="home-h"><span>1</span><span data-t="home.start">Bắt đầu với dữ liệu</span></h2>
+      <div class="home-start">
+        <button type="button" class="start-card" data-go="pdf"><span class="start-ic" aria-hidden="true">📄</span><b data-t="mode.pdf">.</b><small data-t="mode.pdf.d">.</small><span class="start-go" data-t="home.go.pdf">Tải PDF →</span></button>
+        <button type="button" class="start-card alt" data-go="data"><span class="start-ic" aria-hidden="true">📊</span><b data-t="mode.data">.</b><small data-t="mode.data.d">.</small><span class="start-go" data-t="home.go.data">Nạp Excel →</span></button>
       </div>
+      <h2 class="home-h"><span>2</span><span data-t="home.tools">Công cụ phân tích</span></h2>
       <div class="hero-feat" id="heroFeat">
-        <article class="feat new"><span class="feat-ic" aria-hidden="true">💼</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.deal">.</h3><p data-t="hero.f.deal.d">.</p></article>
-        <article class="feat new"><span class="feat-ic" aria-hidden="true">✨</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.ai">.</h3><p data-t="hero.f.ai.d">.</p></article>
-        <article class="feat"><span class="feat-ic" aria-hidden="true">🩺</span><h3 data-t="hero.f.pt">.</h3><p data-t="hero.f.pt.d">.</p></article>
-        <article class="feat"><span class="feat-ic" aria-hidden="true">📊</span><h3 data-t="hero.f.chart">.</h3><p data-t="hero.f.chart.d">.</p></article>
-        <article class="feat"><span class="feat-ic" aria-hidden="true">🔎</span><h3 data-t="hero.f.rc">.</h3><p data-t="hero.f.rc.d">.</p></article>
-        <article class="feat"><span class="feat-ic" aria-hidden="true">🗓️</span><h3 data-t="hero.f.q">.</h3><p data-t="hero.f.q.d">.</p></article>
-        <article class="feat"><span class="feat-ic" aria-hidden="true">📄</span><h3 data-t="hero.f.read">.</h3><p data-t="hero.f.read.d">.</p></article>
-        <article class="feat"><span class="feat-ic" aria-hidden="true">📥</span><h3 data-t="hero.f.xlsx">.</h3><p data-t="hero.f.xlsx.d">.</p></article>
+          <button type="button" class="feat new" data-go="DEAL"><span class="feat-ic" aria-hidden="true">💼</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.deal">.</h3><p data-t="hero.f.deal.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
+          <button type="button" class="feat new" data-go="AIR"><span class="feat-ic" aria-hidden="true">✨</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.ai">.</h3><p data-t="hero.f.ai.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
+          <button type="button" class="feat" data-go="PT"><span class="feat-ic" aria-hidden="true">🩺</span><h3 data-t="hero.f.pt">.</h3><p data-t="hero.f.pt.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
+          <button type="button" class="feat" data-go="CHART"><span class="feat-ic" aria-hidden="true">📊</span><h3 data-t="hero.f.chart">.</h3><p data-t="hero.f.chart.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
+          <button type="button" class="feat" data-go="RC"><span class="feat-ic" aria-hidden="true">🔎</span><h3 data-t="hero.f.rc">.</h3><p data-t="hero.f.rc.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
+          <button type="button" class="feat" data-go="Q"><span class="feat-ic" aria-hidden="true">🗓️</span><h3 data-t="hero.f.q">.</h3><p data-t="hero.f.q.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
+          <button type="button" class="feat" data-go="EXPORT"><span class="feat-ic" aria-hidden="true">📥</span><h3 data-t="hero.f.xlsx">.</h3><p data-t="hero.f.xlsx.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
       </div>
     </section>
 
@@ -98,6 +102,7 @@
         <small data-t="s1.drop.sub">PDF · Excel (.xlsx, .xls) · Ảnh JPG / PNG — chọn được nhiều file một lượt</small>
         <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xlsm,.xls,.csv,image/jpeg,image/png,image/webp" hidden>
       </label>
+      <div id="goalNote"></div>
       <div id="dataTpl"></div>
       <ul class="files" id="fileList"></ul>
       <div id="fileBar"></div>
