@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script>try{const t=localStorage.getItem("elevato-theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
-<link rel="icon" href="assets/logo-mark.svg">
-<title>elevaTO Media Hub</title>
+<title>Media Hub</title>
 <style>
 /* Liquid glass theo style elevaTO (assets/glass.css): nền xanh ngọc có quầng màu trôi, thẻ kính mờ,
    Plus Jakarta Sans (tiêu đề) + Be Vietnam Pro (chữ), nhúng sẵn — app chạy offline. */
@@ -80,11 +79,8 @@ h1,h3,.kpi .v,.brand,.btn,nav a{font-family:var(--ff-head)}
 .app{position:relative;z-index:1;display:grid;grid-template-columns:236px 1fr;gap:14px;height:100vh;padding:14px}
 aside{border-radius:var(--r);padding:18px 12px;display:flex;flex-direction:column;gap:3px;overflow:auto}
 .brand{display:flex;flex-direction:column;gap:4px;padding:2px 10px 18px}
-.brand img{height:30px;width:auto;align-self:flex-start}
-.brand .lt{display:block}.brand .dk{display:none}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand .lt{display:none}:root:not([data-theme="light"]) .brand .dk{display:block}}
-:root[data-theme="dark"] .brand .lt{display:none}:root[data-theme="dark"] .brand .dk{display:block}
-.brand small{font:600 11px/1 var(--ff-head);letter-spacing:.14em;text-transform:uppercase;color:var(--mut2)}
+.brand b{font:800 21px/1.1 var(--ff-head);letter-spacing:-.03em;color:var(--fg)}
+.brand small{font:500 12px/1.3 var(--ff-body);color:var(--mut2)}
 nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:13px;color:var(--text);text-decoration:none;cursor:pointer;user-select:none;font-weight:600;font-size:13.5px;transition:background .2s}
 nav a:hover{background:var(--hover)}
 nav a.on{background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .5),0 8px 20px -8px rgba(16,180,130,.6)}
@@ -121,7 +117,7 @@ header .sp{flex:1}
 .btn.pri{background:linear-gradient(180deg,#2ee0ad,#14c08f);border-color:transparent;color:var(--btn-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .5),0 8px 22px -8px rgba(16,180,130,.55)}
 .btn.pri:hover{background:linear-gradient(180deg,#45e8ba,#18cb96);color:var(--btn-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .6),0 12px 30px -8px rgba(16,180,130,.6)}
 .btn.dan{color:var(--bad)}.btn.dan:hover{border-color:var(--bad);color:var(--bad)}.btn.sm{padding:5px 12px;font-size:12.5px;border-radius:11px}
-input[type=text],input[type=number],input[type=password],select{border:1px solid var(--line2);background:var(--card2);color:var(--fg);border-radius:12px;padding:8px 12px;min-width:0;transition:all .2s}
+input[type=text],input[type=number],input[type=password],select,textarea{border:1px solid var(--line2);background:var(--card2);color:var(--fg);border-radius:12px;padding:8px 12px;min-width:0;transition:all .2s}
 input:focus,select:focus{outline:none;background:var(--card3);border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
 input[type=checkbox]{accent-color:#14c08f;width:15px;height:15px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut);font-weight:500}
@@ -182,6 +178,17 @@ code{font-size:12px;background:var(--hover);padding:1px 6px;border-radius:6px}
 .theme-tg{border:1px solid var(--g-rim);background:var(--card);width:36px;height:36px;border-radius:12px;cursor:pointer;display:grid;place-items:center;box-shadow:var(--g-hi);font-size:15px}
 .theme-tg:hover{background:var(--card3)}
 .hide{display:none!important}
+textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;width:100%}
+.seg{display:flex;flex-direction:column;gap:8px}
+.seg label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);cursor:pointer}
+.seg label:has(input:checked){border-color:var(--acc);background:var(--acc-soft)}
+.seg input[type=radio]{accent-color:#14c08f}
+.vinfo{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ord{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);padding:8px 10px;border-radius:12px}
+.ord .no{width:24px;height:24px;border-radius:50%;background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);font:700 11px/24px var(--ff-head);text-align:center;flex:none}
+.ord .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg)}
+.ord button{border:0;background:transparent;cursor:pointer;color:var(--mut);border-radius:7px;width:26px;height:26px}
+.ord button:hover{background:var(--hover);color:var(--fg)}
 @media (max-width:760px){.app{grid-template-columns:1fr;padding:10px}aside{display:none}}
 </style>
 </head>
@@ -189,11 +196,12 @@ code{font-size:12px;background:var(--hover);padding:1px 6px;border-radius:6px}
 <div class="bgx" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
 <div class="app">
   <aside>
-    <div class="brand"><img class="lt" src="assets/logo-on-light.svg" alt="elevaTO"><img class="dk" src="assets/logo-on-dark.svg" alt="elevaTO"><small>Media Hub</small></div>
+    <div class="brand"><b>Media Hub</b><small>Telegram · Video · Ổ cứng</small></div>
     <nav id="nav">
       <a data-v="home" class="on"><span class="ic">🏠</span>Tổng quan</a>
       <a data-v="upload"><span class="ic">☁️</span>Upload<span class="pill hide" id="pillUp">0</span></a>
       <a data-v="sort"><span class="ic">🎬</span>Sắp xếp video</a>
+      <a data-v="media"><span class="ic">✂️</span>Cắt &amp; gộp</a>
       <a data-v="disk"><span class="ic">💽</span>Ổ cứng</a>
       <a data-v="find"><span class="ic">🔎</span>Tìm &amp; tải</a>
       <a data-v="log"><span class="ic">📜</span>Nhật ký</a>
@@ -296,6 +304,69 @@ code{font-size:12px;background:var(--hover);padding:1px 6px;border-radius:6px}
           <button class="btn" id="sortUndo">↶ Hoàn tác lần gần nhất</button>
         </div>
         <div class="card"><h3 id="sortHead">Kế hoạch</h3><div id="sortTbl"><div class="empty">Chọn nguồn rồi bấm <b>Xem trước</b> — chưa có file nào bị đụng tới cho tới khi bạn bấm Thực hiện.</div></div></div>
+      </section>
+
+      <!-- ===== CẮT & GỘP ===== -->
+      <section class="view" id="v-media">
+        <div id="mediaBusy"></div>
+        <div class="card hide" id="mediaXferCard" style="margin-bottom:14px"><h3>Đang xử lý</h3><div id="xferMedia"></div></div>
+        <div class="tabs" data-tabs="md"><a data-t="cut" class="on">✂️ Cắt video</a><a data-t="merge">🔗 Gộp video</a><a data-t="file">🧩 Chia / ghép file</a></div>
+
+        <div data-pane="md-cut">
+          <div class="grid two">
+            <div class="card">
+              <h3>1. Chọn video</h3>
+              <button class="btn" id="cutPick">🎞 Chọn video…</button>
+              <div id="cutInfo" class="mut small" style="margin-top:10px">Chưa chọn video.</div>
+            </div>
+            <div class="card">
+              <h3>2. Cắt thế nào?</h3>
+              <div class="seg">
+                <label><input type="radio" name="cutMode" value="duration" checked> Mỗi đoạn <input type="number" id="cutMin" value="10" min="0.1" step="0.5" style="width:80px"> phút</label>
+                <label><input type="radio" name="cutMode" value="size"> Mỗi đoạn khoảng <input type="number" id="cutMb" value="1950" min="1" style="width:90px"> MB</label>
+                <label style="flex-direction:column;align-items:stretch"><span><input type="radio" name="cutMode" value="ranges"> Lấy các khoảng thời gian (mỗi dòng 1 đoạn)</span>
+                  <textarea id="cutRanges" rows="3" placeholder="0:00 - 1:30&#10;5:10 - 7:45&#10;12:00 -        (bỏ trống = tới hết)"></textarea></label>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px"><button class="btn pri" id="cutGo" disabled>✂️ Cắt video</button>
+            <span class="mut small">Cắt không nén lại → rất nhanh, giữ nguyên chất lượng. Điểm cắt có thể lệch ~1–2 giây (theo khung hình chính).</span></div>
+        </div>
+
+        <div data-pane="md-merge" class="hide">
+          <div class="card">
+            <h3>Các video sẽ gộp theo thứ tự<span class="sp"></span><button class="btn sm" id="mgAdd">＋ Thêm video…</button></h3>
+            <div class="chips" id="mgList"></div>
+            <div class="row" style="margin-top:12px;justify-content:space-between">
+              <label class="chk"><span class="switch"><input type="checkbox" id="mgRe"><span></span></span>
+                <span>Chuyển đổi cho khớp<br><span class="mut small">Bật khi các video khác máy quay / độ phân giải. Chậm hơn, có nén lại.</span></span></label>
+              <span class="mut small" id="mgTotal"></span>
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px"><button class="btn pri" id="mgGo" disabled>🔗 Gộp video</button>
+            <span class="mut small">File gộp lưu cạnh video đầu tiên, tên <code>…_gop</code>.</span></div>
+        </div>
+
+        <div data-pane="md-file" class="hide">
+          <div class="grid two">
+            <div class="card">
+              <h3>🧩 Chia file thành nhiều phần</h3>
+              <div class="mut small" style="margin-bottom:10px">Dùng cho file bất kỳ (zip, video, dmg…). Ra các phần <code>.part001</code>, <code>.part002</code>… ghép lại được bằng app hoặc lệnh <code>cat</code>.</div>
+              <div class="row"><button class="btn" id="sfPick">📄 Chọn file…</button><span class="small path" id="sfName"></span></div>
+              <div class="row" style="margin-top:12px"><label class="f" style="flex-direction:row;align-items:center;gap:6px">Mỗi phần<input type="number" id="sfMb" value="1950" min="1" style="width:100px">MB</label>
+                <button class="btn pri" id="sfGo" disabled>Chia file</button></div>
+            </div>
+            <div class="card">
+              <h3>🧷 Ghép các phần lại</h3>
+              <div class="mut small" style="margin-bottom:10px">Chọn 1 phần bất kỳ (<code>.part001</code>…) — app tự tìm đủ các phần cùng folder.</div>
+              <button class="btn" id="jfPick">📄 Chọn 1 phần…</button>
+              <div id="jfList" style="margin-top:10px"></div>
+              <button class="btn pri" id="jfGo" disabled style="margin-top:10px">Ghép file</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card hide" id="mediaOut" style="margin-top:14px"><h3>✅ Kết quả gần nhất</h3><div id="mediaOutList"></div></div>
       </section>
 
       <!-- ===== Ổ CỨNG ===== -->
@@ -414,6 +485,9 @@ async function api(path, data) {
   if (j && j.ok === false) { toast("Lỗi", j.error, "error"); throw new Error(j.error); }
   return j;
 }
+// gọi API không hiện thông báo lỗi (dùng cho hộp thoại chọn file: lỗi thì chuyển sang ô nhập đường dẫn)
+const quiet = (path, data) => fetch("/api/" + path, {method:"POST", headers:{"X-Token":TOKEN,"Content-Type":"application/json"},
+  body:JSON.stringify(data)}).then(r => r.json()).then(j => j.ok ? j : null).catch(() => null);
 function toast(title, text, level="info") {
   const d = document.createElement("div"); d.className = "toast " + level;
   d.innerHTML = `<b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}`;
@@ -421,12 +495,12 @@ function toast(title, text, level="info") {
 }
 async function pickFolder() {
   if (window.pywebview?.api?.pick_folder) return await window.pywebview.api.pick_folder();
-  try { const r = await api("pick_folder", {}); if (r.path) return r.path; } catch {}
+  const r = await quiet("pick_folder", {}); if (r?.path) return r.path; if (r?.ok) return null;
   return prompt("Nhập đường dẫn folder (VD: ~/Movies):");
 }
 
 /* ---------- điều hướng ---------- */
-const TITLES = {home:"Tổng quan", upload:"Upload", sort:"Sắp xếp video", disk:"Ổ cứng", find:"Tìm & tải", log:"Nhật ký", settings:"Cài đặt"};
+const TITLES = {home:"Tổng quan", upload:"Upload", sort:"Sắp xếp video", media:"Cắt & gộp", disk:"Ổ cứng", find:"Tìm & tải", log:"Nhật ký", settings:"Cài đặt"};
 function go(v) {
   $$("#nav a").forEach(a => a.classList.toggle("on", a.dataset.v === v));
   $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
@@ -477,13 +551,16 @@ function render(s) {
     const eta = t.speed > 0 ? dur((t.total - t.done) / t.speed) : "";
     return `<div class="xfer"><div class="top"><span title="${esc(t.desc)}">${esc(t.desc)}</span><span class="mut small">${pct.toFixed(0)}%</span></div>
       <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="row mut small" style="justify-content:space-between;margin-top:4px"><span>${human(t.done)} / ${human(t.total)}</span>
-      <span>${t.speed ? human(t.speed) + "/s" : ""}${eta ? " · còn " + eta : ""}</span></div></div>`; }).join("") : "";
+      <div class="row mut small" style="justify-content:space-between;margin-top:4px"><span>${t.media && /video/i.test(t.desc) ? fmtT(t.done) + " / " + fmtT(t.total) : human(t.done) + " / " + human(t.total)}</span>
+      <span>${t.speed && !(t.media && /video/i.test(t.desc)) ? human(t.speed) + "/s" : ""}${eta ? " · còn " + eta : ""}</span></div></div>`; }).join("") : "";
   const idle = s.last_round ? `<div class="mut small">Lượt gần nhất ${ago(s.last_round.at)}: ✅ ${s.last_round.done} file (${human(s.last_round.bytes)})${s.last_round.failed ? ` · ❌ ${s.last_round.failed} lỗi` : ""}</div>`
                             : `<div class="mut small">Chưa có lượt upload nào trong phiên này.</div>`;
   $("#xferHome").innerHTML = xhtml(ups) || (s.uploading ? `<div class="mut small">Đang chuẩn bị…</div>` : idle);
   $("#xferUp").innerHTML = xhtml(ups) || (s.uploading ? `<div class="mut small">Đang chuẩn bị…</div>` : idle);
   $("#dlCard").classList.toggle("hide", !dls.length); $("#xferDl").innerHTML = xhtml(dls);
+  const mds = s.transfers.filter(t => t.kind === "media");
+  $("#mediaXferCard").classList.toggle("hide", !mds.length); $("#xferMedia").innerHTML = xhtml(mds.map(t => ({...t, media: true})));
+  $("#mediaBusy").innerHTML = s.busy.media && !mds.length ? `<div class="busy"><span class="spin"></span>${esc(s.busy.media)}</div>` : "";
   $("#pillUp").classList.toggle("hide", !ups.length); $("#pillUp").textContent = ups.length;
   const errs = s.last_round?.errors || [];
   $("#lastErr").innerHTML = errs.length && !s.uploading ? `<div style="margin-top:10px" class="small"><b style="color:var(--bad)">File lỗi lượt trước</b> (sẽ thử lại lượt sau)<br>` +
@@ -496,6 +573,7 @@ function render(s) {
   const st = s.stamps || {};
   if (st.sort !== stamps.sort) loadSort();
   if (st.disk !== stamps.disk) loadDisk();
+  if (st.media !== stamps.media) loadMedia();
   stamps = st;
   if (wasUploading && !s.uploading) { loadScan(); loadHistory(); }
   wasBusy = {...s.busy}; wasUploading = s.uploading;
@@ -653,6 +731,72 @@ async function loadDisk() {
   $$("[data-trash1]").forEach(b => b.onclick = async () => { if (confirm("Chuyển file này vào Thùng rác?\n" + b.dataset.trash1)) { await api("trash", {paths: [b.dataset.trash1]}); b.closest(".row").remove(); } });
 }
 document.addEventListener("click", e => { const r = e.target.closest("[data-reveal]"); if (r) api("reveal", {path: r.dataset.reveal}); });
+
+/* ---------- cắt & gộp ---------- */
+const fmtT = s => { s = Math.max(0, Math.round(+s || 0)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(x).padStart(2,"0"); };
+async function pickFiles(multiple) {
+  if (window.pywebview?.api?.pick_files) return await window.pywebview.api.pick_files(multiple);
+  const r = await quiet("pick_files", {multiple}); if (r?.paths?.length) return r.paths; if (r?.ok) return [];
+  const p = prompt("Nhập đường dẫn file" + (multiple ? " (mỗi file cách nhau bằng dấu ;)" : "") + ":");
+  return p ? p.split(";").map(x => x.trim()).filter(Boolean) : [];
+}
+const vtag = i => `<div class="vinfo"><span class="tag acc">⏱ ${fmtT(i.duration)}</span>${i.width ? `<span class="tag">${i.width}×${i.height}</span>` : ""}
+  ${i.fps ? `<span class="tag">${i.fps} fps</span>` : ""}${i.vcodec ? `<span class="tag">${esc(i.vcodec)}${i.acodec ? " / " + esc(i.acodec) : " · không tiếng"}</span>` : ""}<span class="tag">${human(i.size)}</span></div>`;
+let cutVid = null;
+$("#cutPick").onclick = async () => {
+  const [p] = await pickFiles(false); if (!p) return;
+  const r = await api("media/probe", {paths: [p]}); cutVid = r.items[0];
+  $("#cutInfo").innerHTML = `<b style="color:var(--fg)">${esc(cutVid.name)}</b>${vtag(cutVid)}`; $("#cutGo").disabled = false;
+};
+$("#cutGo").onclick = () => {
+  const mode = document.querySelector("input[name=cutMode]:checked").value;
+  const value = mode === "duration" ? $("#cutMin").value : mode === "size" ? $("#cutMb").value : $("#cutRanges").value;
+  if (mode === "ranges" && !value.trim()) return toast("Nhập ít nhất 1 khoảng thời gian", "", "warn");
+  api("media/split_video", {path: cutVid.path, mode, value}).catch(() => {});
+};
+["#cutMin","#cutMb","#cutRanges"].forEach((id, i) => $(id).addEventListener("focus", () => document.querySelectorAll("input[name=cutMode]")[i].checked = true));
+
+let mg = [];
+function renderMerge() {
+  $("#mgList").innerHTML = mg.length ? mg.map((v, i) => `<div class="ord"><span class="no">${i + 1}</span><span class="nm" title="${esc(v.path)}">${esc(v.name)}</span>
+      <span class="mut small">${fmtT(v.duration)} · ${v.width ? v.width + "×" + v.height : ""}</span>
+      <button data-up="${i}" title="Lên">↑</button><button data-dn="${i}" title="Xuống">↓</button><button data-rm="${i}" title="Bỏ">✕</button></div>`).join("")
+    : `<div class="empty">Chưa có video. Bấm <b>＋ Thêm video</b> (chọn được nhiều file cùng lúc).</div>`;
+  const keys = new Set(mg.map(v => [v.vcodec, v.acodec, v.width, v.height].join("|")));
+  $("#mgTotal").innerHTML = mg.length ? `Tổng ${fmtT(mg.reduce((a, v) => a + v.duration, 0))} · ${human(mg.reduce((a, v) => a + v.size, 0))}` +
+    (keys.size > 1 ? ` · <span style="color:var(--warn)">khác định dạng → nên bật Chuyển đổi</span>` : "") : "";
+  if (keys.size > 1) $("#mgRe").checked = true;
+  $("#mgGo").disabled = mg.length < 2;
+  const mv = (i, j) => { if (j < 0 || j >= mg.length) return; [mg[i], mg[j]] = [mg[j], mg[i]]; renderMerge(); };
+  $$("[data-up]").forEach(b => b.onclick = () => mv(+b.dataset.up, +b.dataset.up - 1));
+  $$("[data-dn]").forEach(b => b.onclick = () => mv(+b.dataset.dn, +b.dataset.dn + 1));
+  $$("[data-rm]").forEach(b => b.onclick = () => { mg.splice(+b.dataset.rm, 1); renderMerge(); });
+}
+$("#mgAdd").onclick = async () => { const ps = await pickFiles(true); if (!ps.length) return; const r = await api("media/probe", {paths: ps});
+  mg.push(...r.items.sort((a, b) => a.name.localeCompare(b.name, "vi", {numeric: true}))); renderMerge(); };
+$("#mgGo").onclick = () => api("media/merge", {paths: mg.map(v => v.path), reencode: $("#mgRe").checked}).catch(() => {});
+renderMerge();
+
+let sfPath = null, jfParts = [];
+$("#sfPick").onclick = async () => { const [p] = await pickFiles(false); if (!p) return; sfPath = p; $("#sfName").textContent = p.split("/").pop(); $("#sfGo").disabled = false; };
+$("#sfGo").onclick = () => api("media/split_file", {path: sfPath, mb: +$("#sfMb").value}).catch(() => {});
+$("#jfPick").onclick = async () => {
+  const [p] = await pickFiles(false); if (!p) return;
+  try { const r = await api("media/parts", {path: p}); jfParts = r.items; } catch { jfParts = []; }
+  $("#jfList").innerHTML = jfParts.length ? `<div class="mut small" style="margin-bottom:6px">Tìm thấy ${jfParts.length} phần · ${human(jfParts.reduce((a, x) => a + x.size, 0))}</div>` +
+    jfParts.map(x => `<div class="small path">🧩 ${esc(x.name)} <span class="mut">${human(x.size)}</span></div>`).join("") : "";
+  $("#jfGo").disabled = !jfParts.length;
+};
+$("#jfGo").onclick = () => api("media/join", {paths: jfParts.map(x => x.path)}).catch(() => {});
+
+async function loadMedia() {
+  const m = await api("media/result");
+  if (!m.result) return;
+  $("#mediaOut").classList.remove("hide");
+  $("#mediaOutList").innerHTML = `<div class="tbl"><table>` + m.result.outputs.map(o => `<tr><td class="path">${esc(o.name)}</td><td class="n">${human(o.size)}</td>
+    <td style="width:1%"><button class="btn sm" data-reveal="${esc(o.path)}">Finder</button></td></tr>`).join("") + `</table></div>`;
+}
 
 /* ---------- tìm & tải ---------- */
 $("#findBtn").onclick = doFind; $("#q").onkeydown = e => e.key === "Enter" && doFind();

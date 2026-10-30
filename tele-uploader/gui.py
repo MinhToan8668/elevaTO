@@ -25,6 +25,7 @@ from rich.console import Console
 
 import app as core
 import disk_report as dr
+import media_tools as mt
 import video_sorter as vs
 
 HERE = Path(__file__).resolve().parent
@@ -688,6 +689,78 @@ def api_trash():
     return ok(trashed=n)
 
 
+# ---- cắt & gộp
+def media_job(label: str, fn):
+    """Chạy việc cắt/gộp ở nền, có thanh tiến độ; xong thì báo và mở Finder."""
+    def job():
+        prog = GuiProgress("media")
+        task = prog.add_task(label, total=1)
+        try:
+            outs = fn(lambda d, t, l: prog.update(task, description=l, completed=d, total=t))
+        finally:
+            prog.remove_task(task)
+        outs = outs if isinstance(outs, list) else [outs]
+        S.results["media"] = {"at": time.time(), "outputs": [{"path": str(o), "name": o.name, "size": o.stat().st_size}
+                                                             for o in outs]}
+        S.notify(label + " xong", f"{len(outs)} file · {core.human(sum(o.stat().st_size for o in outs))}", "success")
+        open_in_finder(outs[0])
+    if not background("media", label + "…", job):
+        return err("Đang xử lý một việc khác, chờ chút.")
+    return ok()
+
+
+@web.post("/api/media/probe")
+def api_media_probe():
+    try:
+        out = []
+        for p in body().get("paths") or []:
+            p = Path(p)
+            info = mt.probe(p) if p.suffix.lower().lstrip(".") in vs.VIDEO else {"size": p.stat().st_size}
+            out.append({"path": str(p), "name": p.name, **info})
+        return ok(items=out)
+    except Exception as e:  # noqa: BLE001
+        return err(e)
+
+
+@web.post("/api/media/split_video")
+def api_split_video():
+    b = body()
+    return media_job("Cắt video", lambda pr: mt.split_video(Path(b["path"]), b["mode"], str(b["value"]), progress=pr))
+
+
+@web.post("/api/media/merge")
+def api_merge():
+    b = body()
+    return media_job("Gộp video", lambda pr: mt.merge_videos([Path(p) for p in b["paths"]],
+                                                              reencode=bool(b.get("reencode")), progress=pr))
+
+
+@web.post("/api/media/split_file")
+def api_split_file():
+    b = body()
+    return media_job("Chia file", lambda pr: mt.split_file(Path(b["path"]), float(b["mb"]), progress=pr))
+
+
+@web.post("/api/media/join")
+def api_join():
+    b = body()
+    return media_job("Ghép file", lambda pr: mt.join_files([Path(p) for p in b["paths"]], progress=pr))
+
+
+@web.get("/api/media/result")
+def api_media_result():
+    return ok(result=S.results.get("media"))
+
+
+@web.post("/api/media/parts")
+def api_parts():
+    try:
+        parts = mt.find_parts(Path(body().get("path", "")))
+        return ok(items=[{"path": str(p), "name": p.name, "size": p.stat().st_size} for p in parts])
+    except Exception as e:  # noqa: BLE001
+        return err(e)
+
+
 # ---- tìm & tải
 @web.post("/api/find")
 def api_find():
@@ -754,6 +827,19 @@ def api_open_url():
     return ok()
 
 
+@web.post("/api/pick_files")
+def api_pick_files():
+    """Hộp thoại chọn file của macOS (dùng khi không chạy trong cửa sổ pywebview)."""
+    if platform.system() != "Darwin":
+        return err("Chỉ hỗ trợ trên macOS — hãy gõ đường dẫn.")
+    multi = "with multiple selections allowed" if body().get("multiple") else ""
+    script = (f'set fs to (choose file with prompt "Chọn file" {multi})\n'
+              'if class of fs is not list then set fs to {fs}\n'
+              'set out to ""\nrepeat with f in fs\nset out to out & POSIX path of f & linefeed\nend repeat\nreturn out')
+    r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    return ok(paths=[l for l in r.stdout.splitlines() if l.strip()])
+
+
 @web.post("/api/pick_folder")
 def api_pick_folder():
     """Hộp thoại chọn folder của macOS (dùng khi không chạy trong cửa sổ pywebview)."""
@@ -775,6 +861,11 @@ def free_port() -> int:
 class JsApi:
     """Hàm gọi được từ giao diện khi chạy trong cửa sổ pywebview."""
     window = None
+
+    def pick_files(self, multiple=False):
+        import webview
+        r = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=bool(multiple))
+        return list(r) if r else []
 
     def pick_folder(self):
         import webview

@@ -21,6 +21,10 @@ Trong app → **Cài đặt**:
 - **Tổng quan**: số file chờ, file cần split, tiến độ upload, công tắc *Tự động upload*, thông báo gần đây.
 - **Upload**: hàng chờ, tiến độ từng file (tốc độ, thời gian còn lại), lịch sử đã up, nút Dừng.
 - **Sắp xếp video**: chọn folder/thẻ nhớ → Xem trước → Thực hiện → (Hoàn tác nếu cần).
+- **Cắt & gộp** (cần `brew install ffmpeg`):
+  - *Cắt video*: mỗi đoạn N phút, mỗi đoạn khoảng N MB, hoặc lấy các khoảng thời gian (`0:10 - 1:25`). Không nén lại → nhanh, giữ nguyên chất lượng; điểm cắt có thể lệch 1–2 giây.
+  - *Gộp video*: chọn nhiều video, sắp thứ tự bằng ↑↓. Video khác máy quay/độ phân giải thì bật *Chuyển đổi cho khớp* (nén lại H.264, dùng chip đồ hoạ của Mac).
+  - *Chia / ghép file*: chia file bất kỳ thành `.part001`… và ghép lại (chọn 1 phần, app tự tìm đủ các phần).
 - **Ổ cứng**: quét → xem file nên dọn, file trùng, folder nặng → tick chọn → *Đưa lên Telegram & dọn* hoặc *Thùng rác*.
 - **Tìm & tải**: tìm file đã up, bấm Tải về (tự ghép file đã split).
 - **🔔 Thông báo**: mọi việc xong/lỗi đều báo trong app và thông báo của macOS.
