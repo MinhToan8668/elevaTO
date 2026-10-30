@@ -440,7 +440,8 @@ async def run_upload(cfg: dict, dry_run: bool = False) -> None:
 
 def notify_mac(title: str, text: str) -> None:
     if platform.system() == "Darwin":
-        subprocess.run(["osascript", "-e", f'display notification "{text}" with title "{title}"'],
+        clean = lambda x: x.replace("\\", "").replace('"', "'")
+        subprocess.run(["osascript", "-e", f'display notification "{clean(text)}" with title "{clean(title)}"'],
                        capture_output=True)
 
 
@@ -494,59 +495,67 @@ async def run_find(cfg: dict, query: str) -> None:
         await client.disconnect()
 
 
+async def fetch_file(client, entity, key: str, out_dir: Path, progress) -> Path:
+    """Tải 1 file (theo ID tin nhắn hoặc tên), tự ghép nếu bị split. Lỗi → ValueError."""
+    if key.isdigit():
+        msg = await client.get_messages(entity, ids=int(key))
+        if not msg or not msg.file:
+            raise ValueError(f"Tin nhắn {key} không có file.")
+        name, _, total = caption_info(msg)
+        msgs = [msg] if total == 1 else (await search_files(client, entity, name)).get(name, [])
+    else:
+        groups = await search_files(client, entity, key)
+        exact = {k: v for k, v in groups.items() if k.lower() == key.lower()}
+        groups = exact or groups
+        if len(groups) != 1:
+            raise ValueError(f"Có {len(groups)} file khớp — hãy tìm rồi tải theo ID.")
+        (name, msgs), = groups.items()
+        total = caption_info(msgs[0])[2]
+    if len(msgs) < total:
+        raise ValueError(f"Chỉ tìm thấy {len(msgs)}/{total} phần của {name}.")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dest = out_dir / name
+    i = 1
+    while dest.exists():
+        dest = out_dir / f"{Path(name).stem} ({i}){Path(name).suffix}"
+        i += 1
+    tmp = SPLIT_DIR / f"dl_{msgs[0].id}"
+    tmp.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for n, m in enumerate(msgs, 1):
+        task = progress.add_task(f"{name[:40]} ({n}/{len(msgs)})", total=m.file.size)
+        target = tmp / f"part{n:03d}"
+        if not (target.exists() and target.stat().st_size == m.file.size):  # tải tiếp nếu bị ngắt
+            await client.download_media(m, file=str(target),
+                                        progress_callback=lambda d, t_, k=task: progress.update(k, completed=d, total=t_))
+        progress.update(task, completed=m.file.size)
+        progress.remove_task(task)
+        paths.append(target)
+    if len(paths) == 1:
+        shutil.move(paths[0], dest)
+    else:
+        console.print(f"Ghép {len(paths)} phần…")
+        with open(dest, "wb") as out:
+            for p in paths:
+                with open(p, "rb") as src:
+                    shutil.copyfileobj(src, out, 8 * MiB)
+    shutil.rmtree(tmp, ignore_errors=True)
+    return dest
+
+
 async def run_get(cfg: dict, key: str, out_dir: Path) -> None:
     client = await get_client(cfg)
     try:
         entity = await resolve_target(client, cfg["target"])
-        if key.isdigit():
-            msg = await client.get_messages(entity, ids=int(key))
-            if not msg or not msg.file:
-                console.print(f"[red]Tin nhắn {key} không có file.[/]")
-                return
-            name, _, total = caption_info(msg)
-            msgs = [msg] if total == 1 else (await search_files(client, entity, name)).get(name, [])
-        else:
-            groups = await search_files(client, entity, key)
-            exact = {k: v for k, v in groups.items() if k.lower() == key.lower()}
-            groups = exact or groups
-            if len(groups) != 1:
-                console.print(f"[yellow]Có {len(groups)} file khớp — dùng ./run.sh find rồi get theo ID.[/]")
-                return
-            (name, msgs), = groups.items()
-            total = caption_info(msgs[0])[2]
-        if len(msgs) < total:
-            console.print(f"[red]Chỉ tìm thấy {len(msgs)}/{total} phần của {name}.[/]")
-            return
-
-        out_dir.mkdir(parents=True, exist_ok=True)
-        dest = out_dir / name
-        i = 1
-        while dest.exists():
-            dest = out_dir / f"{Path(name).stem} ({i}){Path(name).suffix}"
-            i += 1
         columns = (TextColumn("{task.description}"), BarColumn(), DownloadColumn(),
                    TransferSpeedColumn(), TimeRemainingColumn())
-        tmp = SPLIT_DIR / f"dl_{msgs[0].id}"
-        tmp.mkdir(parents=True, exist_ok=True)
         with Progress(*columns, console=console) as progress:
-            paths = []
-            for n, m in enumerate(msgs, 1):
-                task = progress.add_task(f"{name[:40]} ({n}/{len(msgs)})", total=m.file.size)
-                target = tmp / f"part{n:03d}"
-                if not (target.exists() and target.stat().st_size == m.file.size):  # tải tiếp nếu bị ngắt
-                    await client.download_media(m, file=str(target),
-                                                progress_callback=lambda d, t_, k=task: progress.update(k, completed=d, total=t_))
-                progress.update(task, completed=m.file.size)
-                paths.append(target)
-        if len(paths) == 1:
-            shutil.move(paths[0], dest)
-        else:
-            console.print(f"Ghép {len(paths)} phần…")
-            with open(dest, "wb") as out:
-                for p in paths:
-                    with open(p, "rb") as src:
-                        shutil.copyfileobj(src, out, 8 * MiB)
-        shutil.rmtree(tmp, ignore_errors=True)
+            try:
+                dest = await fetch_file(client, entity, key, out_dir, progress)
+            except ValueError as e:
+                console.print(f"[red]{e}[/]")
+                return
         console.print(f"[green]Đã tải:[/] {dest} ({human(dest.stat().st_size)})")
         if platform.system() == "Darwin":
             subprocess.run(["open", "-R", str(dest)])  # hiện file trong Finder

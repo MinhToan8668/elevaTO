@@ -199,6 +199,24 @@ def suggestions(files, args):
     return sorted((f for f in files if f[1] >= big_min and now - f[2] > old_s), key=lambda f: -f[1])[:200]
 
 
+def queue_files(paths: list[Path], q: Path) -> int:
+    """Chuyển file vào folder upload, giữ cây thư mục (tính từ home) để caption Telegram biết file từ đâu."""
+    n = 0
+    for p in paths:
+        p = Path(p)
+        if not p.exists():
+            continue
+        try:
+            rel = p.relative_to(Path.home())
+        except ValueError:
+            rel = Path(*p.parts[1:])
+        dst = q / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(p, dst)
+        n += 1
+    return n
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Báo cáo dung lượng ổ cứng")
     ap.add_argument("roots", nargs="*", type=Path, default=[Path("~")])
@@ -225,15 +243,7 @@ def main() -> None:
         sugg = [f for f in suggestions(files, args) if not str(f[0]).startswith(str(q))]
         console.print(f"Sẽ chuyển {len(sugg)} file ({human(sum(f[1] for f in sugg))}) vào {q}")
         if sugg and input("Gõ 'yes' để xác nhận: ").strip().lower() == "yes":
-            for p, *_ in sugg:
-                # giữ cây thư mục gốc (tính từ home) để caption Telegram vẫn biết file từ đâu
-                try:
-                    rel = p.relative_to(Path.home())
-                except ValueError:
-                    rel = Path(*p.parts[1:])
-                dst = q / rel
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(p, dst)
+            queue_files([p for p, *_ in sugg], q)
             console.print("[green]Đã chuyển.[/] TeleUploader sẽ up và đưa vào Thùng rác ở lượt kế tiếp.")
     if not args.no_open and sys.platform == "darwin":
         subprocess.run(["open", str(out)])

@@ -5,13 +5,32 @@ Gồm 3 công cụ: **TeleUploader** (đẩy lên Telegram + tìm/tải lại), 
 Tự động quét folder trên Mac → thống kê → upload lên Telegram theo cây thư mục → file > 2GB tự split → up xong tự chuyển file gốc vào **Thùng rác** (có thể *Put Back*).
 
 ## Cài đặt (1 lần)
+Mở Terminal, chạy:
 ```bash
 cd tele-uploader
 ./install.sh
 ```
-1. Vào https://my.telegram.org → *API development tools* → lấy `api_id`, `api_hash`.
-2. Mở `config.yaml`, điền `api_id`, `api_hash`, `folders` (các folder cần up), `target` (`me` = Saved Messages, hoặc `@kenh_cua_ban`).
-3. Đăng nhập: `./run.sh login` (nhập số điện thoại + mã OTP Telegram gửi về).
+Xong sẽ có **TeleUploader.app** trong `~/Applications` và app tự mở. Từ đó chỉ cần bấm đúp app (kéo vào Dock cho tiện).
+
+Trong app → **Cài đặt**:
+1. Vào https://my.telegram.org → *API development tools* → copy `api_id`, `api_hash` vào ô API → **Lưu cài đặt**.
+2. Nhập số điện thoại → **Gửi mã** → nhập mã Telegram gửi về (và mật khẩu 2 bước nếu có).
+3. Thêm folder cần upload, chọn nơi gửi tới (`me` = Saved Messages, hoặc `@kenh_cua_ban`) → **Lưu**.
+
+### Các màn hình trong app
+- **Tổng quan**: số file chờ, file cần split, tiến độ upload, công tắc *Tự động upload*, thông báo gần đây.
+- **Upload**: hàng chờ, tiến độ từng file (tốc độ, thời gian còn lại), lịch sử đã up, nút Dừng.
+- **Sắp xếp video**: chọn folder/thẻ nhớ → Xem trước → Thực hiện → (Hoàn tác nếu cần).
+- **Ổ cứng**: quét → xem file nên dọn, file trùng, folder nặng → tick chọn → *Đưa lên Telegram & dọn* hoặc *Thùng rác*.
+- **Tìm & tải**: tìm file đã up, bấm Tải về (tự ghép file đã split).
+- **🔔 Thông báo**: mọi việc xong/lỗi đều báo trong app và thông báo của macOS.
+
+Muốn app tự mở khi bật máy: System Settings → General → Login Items → thêm TeleUploader.
+
+> Không chạy song song app với `./run.sh watch` / `autostart.sh` (dùng chung phiên đăng nhập).
+
+### Dùng bằng Terminal (tuỳ chọn)
+Tất cả tính năng vẫn chạy được bằng lệnh như dưới đây.
 
 > Dùng tài khoản Telegram (không phải bot) vì bot chỉ up được 50MB. Thường 2GB/file, Premium 4GB/file (`premium: true`).
 

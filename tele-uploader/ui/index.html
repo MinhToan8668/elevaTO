@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TeleUploader</title>
+<style>
+:root{
+  --bg:#f5f5f7;--side:#ececef;--card:#ffffff;--fg:#1d1d1f;--mut:#6e6e73;--line:#e3e3e8;--hover:#f0f0f3;
+  --acc:#0a84ff;--acc-soft:#e6f0ff;--ok:#28a745;--ok-soft:#e5f6ea;--warn:#c77700;--warn-soft:#fff3dc;
+  --bad:#d70015;--bad-soft:#ffe5e7;--shadow:0 1px 2px rgba(0,0,0,.05),0 2px 10px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1c1c1e;--side:#232326;--card:#2a2a2d;--fg:#f5f5f7;--mut:#a1a1a6;--line:#3a3a3d;--hover:#333337;
+  --acc:#0a84ff;--acc-soft:#0a2a4d;--ok:#32d74b;--ok-soft:#173d22;--warn:#ffb340;--warn-soft:#4a3410;
+  --bad:#ff6961;--bad-soft:#4d1a1d;--shadow:none}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:13.5px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:220px 1fr;height:100vh}
+aside{background:var(--side);border-right:1px solid var(--line);padding:18px 10px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;font-weight:650;font-size:15px}
+.brand i{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2aabee,#0a84ff);display:grid;place-items:center;color:#fff;font-style:normal}
+nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;color:var(--fg);text-decoration:none;cursor:pointer;user-select:none}
+nav a:hover{background:var(--hover)}nav a.on{background:var(--acc);color:#fff}
+nav a .ic{width:18px;text-align:center}
+nav a .pill{margin-left:auto;font-size:11px;background:var(--acc);color:#fff;border-radius:9px;padding:0 6px}
+nav a.on .pill{background:#fff;color:var(--acc)}
+.who{margin-top:auto;padding:10px;border-top:1px solid var(--line);font-size:12px;color:var(--mut)}
+.who b{color:var(--fg);display:block;font-size:13px}
+main{overflow:auto;position:relative}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:14px 28px;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header h1{font-size:19px;margin:0;font-weight:650}
+header .sp{flex:1}
+.status{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--mut)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut)}.dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}.dot.run{background:var(--acc);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.bell{position:relative;border:0;background:transparent;font-size:17px;cursor:pointer;padding:4px 6px;border-radius:6px}
+.bell:hover{background:var(--hover)}
+.bell b{position:absolute;top:-2px;right:-3px;background:var(--bad);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 4px}
+.page{padding:22px 28px 60px;max-width:1200px}
+.view{display:none}.view.on{display:block}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h3 .sp{flex:1}
+.kpi .l{color:var(--mut);font-size:12px}.kpi .v{font-size:24px;font-weight:650;margin:2px 0;font-variant-numeric:tabular-nums}.kpi .s{color:var(--mut);font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--card);padding:6px 14px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--hover)}.btn:disabled{opacity:.45;cursor:default}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn.pri:hover{filter:brightness(1.08)}
+.btn.dan{color:var(--bad)}.btn.sm{padding:3px 10px;font-size:12.5px}
+input[type=text],input[type=number],input[type=password],select{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:6px 10px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--acc-soft);border-color:var(--acc)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mut)}
+label.f input,label.f select{color:var(--fg);font-size:13.5px}
+.chk{display:flex;align-items:center;gap:8px;cursor:pointer}
+.switch{position:relative;width:38px;height:22px;flex:none}.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:var(--line);border-radius:11px;transition:.2s;cursor:pointer}
+.switch span:before{content:"";position:absolute;width:18px;height:18px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.switch input:checked+span{background:var(--ok)}.switch input:checked+span:before{transform:translateX(16px)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-weight:500;color:var(--mut);font-size:12px;position:sticky;top:0;background:var(--card)}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tbl{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:9px}
+.path{word-break:break-all;font-size:12.5px}.mut{color:var(--mut)}.small{font-size:12px}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:9px;background:var(--hover);color:var(--mut);white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.bad{background:var(--bad-soft);color:var(--bad)}.tag.acc{background:var(--acc-soft);color:var(--acc)}
+.bar{height:6px;border-radius:3px;background:var(--hover);overflow:hidden}.bar i{display:block;height:100%;background:var(--acc);border-radius:3px;transition:width .4s}
+.xfer{padding:10px 0;border-bottom:1px solid var(--line)}.xfer:last-child{border:0}
+.xfer .top{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}.xfer .top span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{color:var(--mut);text-align:center;padding:26px 10px}
+.two{grid-template-columns:1fr 1fr}@media(max-width:900px){.two{grid-template-columns:1fr}}
+.chips{display:flex;flex-direction:column;gap:6px}
+.chipf{display:flex;align-items:center;gap:8px;background:var(--hover);padding:6px 10px;border-radius:7px}
+.chipf span{flex:1;word-break:break-all;font-size:12.5px}
+.chipf button{border:0;background:transparent;cursor:pointer;color:var(--mut);font-size:15px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.tabs a{padding:7px 12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mut)}.tabs a.on{color:var(--fg);border-color:var(--acc)}
+.log{font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:560px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.log div{padding:1px 0}.log .error{color:var(--bad)}.log .warn{color:var(--warn)}.log .success{color:var(--ok)}
+.log time{color:var(--mut);margin-right:8px}
+/* thông báo */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:100%;background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.12);transform:translateX(105%);transition:.25s;z-index:20;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer header{position:static;background:transparent;padding:14px 16px}
+.drawer .list{overflow:auto;flex:1;padding:0 12px 12px}
+.noti{padding:10px 12px;border-radius:9px;margin-bottom:6px;background:var(--bg);border-left:3px solid var(--mut)}
+.noti.success{border-color:var(--ok)}.noti.error{border-color:var(--bad)}.noti.warn{border-color:var(--warn)}.noti.info{border-color:var(--acc)}
+.noti b{display:block;font-size:13px}.noti p{margin:2px 0 0;font-size:12.5px;color:var(--mut);word-break:break-word}.noti time{font-size:11px;color:var(--mut)}
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:30}
+.toast{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);padding:10px 14px;border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.15);max-width:340px;animation:in .25s}
+.toast.success{border-left-color:var(--ok)}.toast.error{border-left-color:var(--bad)}.toast.warn{border-left-color:var(--warn)}
+.toast b{display:block}.toast p{margin:2px 0 0;color:var(--mut);font-size:12.5px;word-break:break-word}
+@keyframes in{from{transform:translateY(10px);opacity:0}}
+.busy{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--acc-soft);color:var(--acc);border-radius:9px;margin-bottom:14px}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.alert{padding:12px 14px;border-radius:9px;background:var(--warn-soft);color:var(--warn);margin-bottom:14px}
+.alert a{color:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.steps{counter-reset:s;margin:0;padding:0;list-style:none}.steps li{counter-increment:s;padding:4px 0 4px 28px;position:relative}
+.steps li:before{content:counter(s);position:absolute;left:0;top:4px;width:20px;height:20px;border-radius:50%;background:var(--acc-soft);color:var(--acc);font-size:11px;display:grid;place-items:center;font-weight:600}
+.hide{display:none!important}
+@media (max-width:760px){.app{grid-template-columns:1fr}aside{display:none}.page{padding:16px}header{padding:12px 16px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><i>➤</i>TeleUploader</div>
+    <nav id="nav">
+      <a data-v="home" class="on"><span class="ic">🏠</span>Tổng quan</a>
+      <a data-v="upload"><span class="ic">☁️</span>Upload<span class="pill hide" id="pillUp">0</span></a>
+      <a data-v="sort"><span class="ic">🎬</span>Sắp xếp video</a>
+      <a data-v="disk"><span class="ic">💽</span>Ổ cứng</a>
+      <a data-v="find"><span class="ic">🔎</span>Tìm &amp; tải</a>
+      <a data-v="log"><span class="ic">📜</span>Nhật ký</a>
+      <a data-v="settings"><span class="ic">⚙️</span>Cài đặt</a>
+    </nav>
+    <div class="who" id="who">Chưa đăng nhập Telegram</div>
+  </aside>
+
+  <main>
+    <header>
+      <h1 id="title">Tổng quan</h1>
+      <div class="sp"></div>
+      <div class="status"><span class="dot" id="stDot"></span><span id="stText">Đang chờ</span></div>
+      <button class="bell" id="bell" title="Thông báo">🔔<b id="bellN" class="hide">0</b></button>
+    </header>
+
+    <div class="page">
+      <div id="loginAlert" class="alert hide"></div>
+
+      <!-- ===== TỔNG QUAN ===== -->
+      <section class="view on" id="v-home">
+        <div class="grid kpis">
+          <div class="card kpi"><div class="l">File chờ upload</div><div class="v" id="kCount">–</div><div class="s" id="kSize">&nbsp;</div></div>
+          <div class="card kpi"><div class="l">File cần split (&gt;2GB)</div><div class="v" id="kBig">–</div><div class="s">tự cắt khi upload</div></div>
+          <div class="card kpi"><div class="l">Đã upload</div><div class="v" id="kDone">–</div><div class="s" id="kDoneSize">&nbsp;</div></div>
+          <div class="card kpi"><div class="l">Lượt gần nhất</div><div class="v" id="kLast">–</div><div class="s" id="kLastSub">&nbsp;</div></div>
+        </div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="card">
+            <h3>☁️ Upload lên Telegram</h3>
+            <div class="row" style="justify-content:space-between;margin-bottom:12px">
+              <label class="chk"><span class="switch"><input type="checkbox" id="watchSw"><span></span></span>
+                <span><b>Tự động upload</b><br><span class="mut small">Quét folder định kỳ, có file mới là tự up</span></span></label>
+            </div>
+            <div class="row">
+              <button class="btn pri" id="btnUp">▶ Upload ngay</button>
+              <button class="btn dan hide" id="btnStop">■ Dừng</button>
+              <button class="btn" data-go="upload">Xem chi tiết</button>
+            </div>
+            <div id="xferHome" style="margin-top:12px"></div>
+          </div>
+          <div class="card">
+            <h3>🔔 Thông báo gần đây<span class="sp"></span><button class="btn sm" id="seeAll">Xem tất cả</button></h3>
+            <div id="notiHome"></div>
+          </div>
+        </div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="card"><h3>📁 Theo folder</h3><div id="homeFolders"></div></div>
+          <div class="card"><h3>🗂 Theo loại</h3><div id="homeCats"></div></div>
+        </div>
+      </section>
+
+      <!-- ===== UPLOAD ===== -->
+      <section class="view" id="v-upload">
+        <div class="card" style="margin-bottom:14px">
+          <h3>Đang chạy<span class="sp"></span>
+            <button class="btn sm pri" id="btnUp2">▶ Upload ngay</button>
+            <button class="btn sm dan hide" id="btnStop2">■ Dừng</button></h3>
+          <div id="xferUp"></div>
+          <div id="lastErr"></div>
+        </div>
+        <div class="tabs" data-tabs="up"><a data-t="queue" class="on">Hàng chờ</a><a data-t="hist">Lịch sử đã up</a></div>
+        <div data-pane="up-queue" class="card">
+          <h3>File sẽ được upload<span class="sp"></span><button class="btn sm" id="rescan">↻ Quét lại</button></h3>
+          <div id="queueTbl"></div>
+        </div>
+        <div data-pane="up-hist" class="card hide"><div id="histTbl"></div></div>
+      </section>
+
+      <!-- ===== SẮP XẾP VIDEO ===== -->
+      <section class="view" id="v-sort">
+        <div id="sortBusy"></div>
+        <div class="grid two">
+          <div class="card">
+            <h3>1. Nguồn</h3>
+            <div class="chips" id="sortSrc"></div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn sm" id="sortAdd">＋ Thêm folder</button>
+              <label class="chk small"><input type="checkbox" id="sortCards"> Lấy từ thẻ nhớ đang cắm</label>
+            </div>
+          </div>
+          <div class="card">
+            <h3>2. Tuỳ chọn</h3>
+            <div class="grid" style="gap:10px">
+              <label class="f">Tên dự án<input type="text" id="sortProj" placeholder="VD: Vlog Đà Lạt"></label>
+              <div class="row">
+                <label class="chk small"><input type="checkbox" id="sortCopy"> Copy (giữ file gốc)</label>
+                <label class="f" style="flex-direction:row;align-items:center;gap:6px">File trùng:
+                  <select id="sortDups"><option value="move">Gom vào _Trung_lap</option><option value="skip">Để nguyên</option></select></label>
+              </div>
+              <div class="mut small">Thư viện: <span id="sortLib">~/Movies/Library</span> (đổi trong Cài đặt)</div>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin:14px 0">
+          <button class="btn pri" id="sortPrev">👁 Xem trước</button>
+          <button class="btn" id="sortApply" disabled>✔ Thực hiện sắp xếp</button>
+          <span class="sp" style="flex:1"></span>
+          <button class="btn" id="sortUndo">↶ Hoàn tác lần gần nhất</button>
+        </div>
+        <div class="card"><h3 id="sortHead">Kế hoạch</h3><div id="sortTbl"><div class="empty">Chọn nguồn rồi bấm <b>Xem trước</b> — chưa có file nào bị đụng tới cho tới khi bạn bấm Thực hiện.</div></div></div>
+      </section>
+
+      <!-- ===== Ổ CỨNG ===== -->
+      <section class="view" id="v-disk">
+        <div id="diskBusy"></div>
+        <div class="card" style="margin-bottom:14px">
+          <h3>Quét ổ cứng</h3>
+          <div class="chips" id="diskRoots"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm" id="diskAdd">＋ Thêm folder</button>
+            <label class="f" style="flex-direction:row;align-items:center;gap:6px">File lớn ≥<input type="number" id="diskBig" value="300" style="width:80px">MB</label>
+            <label class="f" style="flex-direction:row;align-items:center;gap:6px">không sửa ≥<input type="number" id="diskOld" value="90" style="width:70px">ngày</label>
+            <span style="flex:1"></span>
+            <button class="btn pri" id="diskScan">🔍 Quét</button>
+          </div>
+        </div>
+        <div id="diskOut"><div class="card empty">Chưa quét. Bấm <b>Quét</b> để xem ổ đang đầy vì cái gì.</div></div>
+      </section>
+
+      <!-- ===== TÌM & TẢI ===== -->
+      <section class="view" id="v-find">
+        <div class="card" style="margin-bottom:14px">
+          <div class="row">
+            <input type="text" id="q" placeholder="Tên file, tên folder, #hashtag…" style="flex:1;font-size:15px;padding:9px 12px">
+            <button class="btn pri" id="findBtn">Tìm trên Telegram</button>
+          </div>
+          <div class="mut small" style="margin-top:6px">File đã bị split sẽ được tải đủ các phần và tự ghép lại. Lưu vào <span id="dlDir">~/Downloads/TeleUploader</span>.</div>
+        </div>
+        <div class="card hide" id="dlCard" style="margin-bottom:14px"><h3>Đang tải</h3><div id="xferDl"></div></div>
+        <div class="card"><div id="findOut"><div class="empty">Nhập từ khoá để tìm.</div></div></div>
+      </section>
+
+      <!-- ===== NHẬT KÝ ===== -->
+      <section class="view" id="v-log">
+        <div class="card"><h3>Nhật ký hoạt động<span class="sp"></span><label class="chk small"><input type="checkbox" id="logFollow" checked> Tự cuộn</label></h3>
+          <div class="log" id="log"></div></div>
+      </section>
+
+      <!-- ===== CÀI ĐẶT ===== -->
+      <section class="view" id="v-settings">
+        <div class="grid two">
+          <div class="card">
+            <h3>✈️ Tài khoản Telegram</h3>
+            <div id="acct"></div>
+          </div>
+          <div class="card">
+            <h3>🔑 Telegram API</h3>
+            <ol class="steps small mut" style="margin-bottom:10px">
+              <li>Mở <b>my.telegram.org</b> → đăng nhập</li>
+              <li>Chọn <b>API development tools</b> → tạo app (tên bất kỳ)</li>
+              <li>Copy <b>api_id</b> và <b>api_hash</b> vào đây</li>
+            </ol>
+            <div class="grid" style="gap:10px">
+              <label class="f">API ID<input type="text" id="cApiId"></label>
+              <label class="f">API Hash<input type="text" id="cApiHash"></label>
+            </div>
+          </div>
+        </div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="card">
+            <h3>📁 Folder cần upload</h3>
+            <div class="chips" id="cFolders"></div>
+            <button class="btn sm" id="cAddFolder" style="margin-top:8px">＋ Thêm folder</button>
+            <div class="grid" style="gap:10px;margin-top:14px">
+              <label class="f">Gửi tới<input type="text" id="cTarget" placeholder="me = Saved Messages, hoặc @tenkenh"></label>
+            </div>
+          </div>
+          <div class="card">
+            <h3>⚙️ Tuỳ chọn upload</h3>
+            <div class="grid" style="gap:12px">
+              <label class="chk"><span class="switch"><input type="checkbox" id="cTrash"><span></span></span>Up xong chuyển file gốc vào Thùng rác</label>
+              <label class="chk"><span class="switch"><input type="checkbox" id="cPremium"><span></span></span>Tài khoản Premium (4GB/file)</label>
+              <label class="chk"><span class="switch"><input type="checkbox" id="cDoc"><span></span></span>Gửi dạng file (giữ nguyên chất lượng)</label>
+              <div class="row">
+                <label class="f">Quét lại mỗi (phút)<input type="number" id="cInterval" min="1" style="width:110px"></label>
+                <label class="f">Up song song<input type="number" id="cConc" min="1" max="4" style="width:90px"></label>
+                <label class="f">Bỏ qua file mới sửa (giây)<input type="number" id="cAge" min="0" style="width:120px"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3>🎬 Sắp xếp video</h3>
+          <div class="row">
+            <label class="f" style="flex:1">Thư viện đích<input type="text" id="cLib"></label>
+            <button class="btn sm" id="cPickLib" style="align-self:flex-end">Chọn…</button>
+            <label class="f" style="flex:1">Mẫu tên file<input type="text" id="cTpl"></label>
+          </div>
+          <div class="mut small" style="margin-top:6px">Biến dùng được: {date} {day} {project} {seq:03d} {orig} {cam}</div>
+        </div>
+        <div class="row" style="margin-top:16px"><button class="btn pri" id="cSave">💾 Lưu cài đặt</button><span class="mut small" id="cSaved"></span></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="drawer" id="drawer">
+  <header><h1 style="font-size:16px">Thông báo</h1><div class="sp"></div>
+    <button class="btn sm" id="notiClear">Xoá hết</button><button class="bell" id="drawerX">✕</button></header>
+  <div class="list" id="notiList"></div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get("t");
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const human = n => { n = +n || 0; for (const u of ["B","KB","MB","GB","TB"]) { if (n < 1024 || u === "TB") return (u === "B" ? n : n.toFixed(1)) + " " + u; n /= 1024; } };
+const ago = t => { const s = Date.now()/1000 - t; if (s < 60) return "vừa xong"; if (s < 3600) return Math.floor(s/60) + " phút trước"; if (s < 86400) return Math.floor(s/3600) + " giờ trước"; return new Date(t*1000).toLocaleDateString("vi-VN"); };
+const dur = s => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s/60)}m${String(Math.round(s%60)).padStart(2,"0")}` : `${Math.floor(s/3600)}h${String(Math.floor(s%3600/60)).padStart(2,"0")}`;
+
+async function api(path, data) {
+  const r = await fetch("/api/" + path, data === undefined ? {headers:{"X-Token":TOKEN}} :
+    {method:"POST", headers:{"X-Token":TOKEN,"Content-Type":"application/json"}, body:JSON.stringify(data)});
+  const j = await r.json().catch(() => ({ok:false, error:"Lỗi kết nối app"}));
+  if (j && j.ok === false) { toast("Lỗi", j.error, "error"); throw new Error(j.error); }
+  return j;
+}
+function toast(title, text, level="info") {
+  const d = document.createElement("div"); d.className = "toast " + level;
+  d.innerHTML = `<b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}`;
+  $("#toasts").append(d); setTimeout(() => d.remove(), 5000);
+}
+async function pickFolder() {
+  if (window.pywebview?.api?.pick_folder) return await window.pywebview.api.pick_folder();
+  try { const r = await api("pick_folder", {}); if (r.path) return r.path; } catch {}
+  return prompt("Nhập đường dẫn folder (VD: ~/Movies):");
+}
+
+/* ---------- điều hướng ---------- */
+const TITLES = {home:"Tổng quan", upload:"Upload", sort:"Sắp xếp video", disk:"Ổ cứng", find:"Tìm & tải", log:"Nhật ký", settings:"Cài đặt"};
+function go(v) {
+  $$("#nav a").forEach(a => a.classList.toggle("on", a.dataset.v === v));
+  $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
+  $("#title").textContent = TITLES[v];
+  store("view", v);
+  if (v === "upload" || v === "home") loadScan();
+  if (v === "upload") loadHistory();
+  if (v === "settings") loadSettings();
+  if (v === "disk") loadDisk();
+}
+$$("#nav a").forEach(a => a.onclick = () => go(a.dataset.v));
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
+$$("[data-tabs]").forEach(t => t.querySelectorAll("a").forEach(a => a.onclick = () => {
+  t.querySelectorAll("a").forEach(x => x.classList.toggle("on", x === a));
+  $$(`[data-pane^="${t.dataset.tabs}-"]`).forEach(p => p.classList.toggle("hide", p.dataset.pane !== `${t.dataset.tabs}-${a.dataset.t}`));
+}));
+
+/* ---------- trạng thái chung (poll mỗi giây) ---------- */
+let lastLog = 0, seenNoti = 0, firstPoll = true, ST = {};
+async function poll() {
+  try {
+    const s = await (await fetch(`/api/state?since=${lastLog}`, {headers:{"X-Token":TOKEN}})).json();
+    ST = s; render(s);
+  } catch {}
+  setTimeout(poll, 1000);
+}
+function render(s) {
+  // trạng thái header
+  const dot = $("#stDot");
+  dot.className = "dot" + (s.uploading ? " run" : s.watch ? " on" : "");
+  const busy = Object.values(s.busy || {});
+  $("#stText").textContent = s.uploading ? "Đang upload…" : busy[0] || (s.watch ? "Tự động upload: bật" : "Đang chờ");
+  $("#watchSw").checked = s.watch;
+  for (const id of ["#btnUp","#btnUp2"]) $(id).classList.toggle("hide", s.uploading);
+  for (const id of ["#btnStop","#btnStop2"]) $(id).classList.toggle("hide", !s.uploading);
+  // người dùng
+  $("#who").innerHTML = s.me ? `<b>${esc(s.me.name)}</b>${s.me.username ? "@" + esc(s.me.username) : ""}${s.me.premium ? " · ⭐ Premium" : ""}`
+                             : "Chưa đăng nhập Telegram";
+  const la = $("#loginAlert");
+  if (s.login_step === "ok") la.classList.add("hide");
+  else { la.classList.remove("hide"); la.innerHTML = s.login_step === "need_api"
+      ? `Chưa có API Telegram. <a data-go="settings">Vào Cài đặt</a> để nhập API ID / Hash.`
+      : `Chưa đăng nhập Telegram. <a data-go="settings">Đăng nhập ngay</a>.`; }
+  // tiến độ
+  const ups = s.transfers.filter(t => t.kind === "upload"), dls = s.transfers.filter(t => t.kind === "download");
+  const xhtml = list => list.length ? list.map(t => {
+    const pct = t.total ? Math.min(100, t.done / t.total * 100) : 0;
+    const eta = t.speed > 0 ? dur((t.total - t.done) / t.speed) : "";
+    return `<div class="xfer"><div class="top"><span title="${esc(t.desc)}">${esc(t.desc)}</span><span class="mut small">${pct.toFixed(0)}%</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="row mut small" style="justify-content:space-between;margin-top:4px"><span>${human(t.done)} / ${human(t.total)}</span>
+      <span>${t.speed ? human(t.speed) + "/s" : ""}${eta ? " · còn " + eta : ""}</span></div></div>`; }).join("") : "";
+  const idle = s.last_round ? `<div class="mut small">Lượt gần nhất ${ago(s.last_round.at)}: ✅ ${s.last_round.done} file (${human(s.last_round.bytes)})${s.last_round.failed ? ` · ❌ ${s.last_round.failed} lỗi` : ""}</div>`
+                            : `<div class="mut small">Chưa có lượt upload nào trong phiên này.</div>`;
+  $("#xferHome").innerHTML = xhtml(ups) || (s.uploading ? `<div class="mut small">Đang chuẩn bị…</div>` : idle);
+  $("#xferUp").innerHTML = xhtml(ups) || (s.uploading ? `<div class="mut small">Đang chuẩn bị…</div>` : idle);
+  $("#dlCard").classList.toggle("hide", !dls.length); $("#xferDl").innerHTML = xhtml(dls);
+  $("#pillUp").classList.toggle("hide", !ups.length); $("#pillUp").textContent = ups.length;
+  const errs = s.last_round?.errors || [];
+  $("#lastErr").innerHTML = errs.length && !s.uploading ? `<div style="margin-top:10px" class="small"><b style="color:var(--bad)">File lỗi lượt trước</b> (sẽ thử lại lượt sau)<br>` +
+    errs.map(e => `• ${esc(e.file)} — <span class="mut">${esc(e.error)}</span>`).join("<br>") + "</div>" : "";
+  if (s.last_round) { $("#kLast").textContent = s.last_round.done + " file"; $("#kLastSub").textContent = `${ago(s.last_round.at)} · ${dur(s.last_round.seconds)}`; }
+  // việc nặng
+  $("#sortBusy").innerHTML = s.busy.sort ? `<div class="busy"><span class="spin"></span>${esc(s.busy.sort)}</div>` : "";
+  $("#diskBusy").innerHTML = s.busy.disk ? `<div class="busy"><span class="spin"></span>${esc(s.busy.disk)}</div>` : "";
+  $("#sortPrev").disabled = !!s.busy.sort; $("#diskScan").disabled = !!s.busy.disk;
+  const st = s.stamps || {};
+  if (st.sort !== stamps.sort) loadSort();
+  if (st.disk !== stamps.disk) loadDisk();
+  stamps = st;
+  if (wasUploading && !s.uploading) { loadScan(); loadHistory(); }
+  wasBusy = {...s.busy}; wasUploading = s.uploading;
+  // nhật ký
+  if (s.log.length) {
+    const box = $("#log");
+    box.insertAdjacentHTML("beforeend", s.log.map(l => `<div class="${l.level}"><time>${new Date(l.t*1000).toLocaleTimeString("vi-VN")}</time>${esc(l.text)}</div>`).join(""));
+    while (box.children.length > 600) box.firstChild.remove();
+    lastLog = s.log[s.log.length - 1].t;
+    if ($("#logFollow").checked) box.scrollTop = box.scrollHeight;
+  }
+  // thông báo
+  const maxId = s.notifications[0]?.id || 0;
+  if (!firstPoll) s.notifications.filter(n => n.id > seenNoti).reverse().forEach(n => toast(n.title, n.text, n.level));
+  seenNoti = Math.max(seenNoti, maxId); firstPoll = false;
+  $("#bellN").classList.toggle("hide", !s.unread); $("#bellN").textContent = s.unread;
+  const nhtml = list => list.length ? list.map(n => `<div class="noti ${n.level}"><b>${esc(n.title)}</b><p>${esc(n.text)}</p><time>${ago(n.t)}</time></div>`).join("")
+                                    : `<div class="empty">Chưa có thông báo.</div>`;
+  $("#notiList").innerHTML = nhtml(s.notifications);
+  $("#notiHome").innerHTML = nhtml(s.notifications.slice(0, 5));
+}
+let wasBusy = {}, wasUploading = false, stamps = {};
+const openDrawer = () => { $("#drawer").classList.add("on"); api("notifications/read", {}); };
+$("#bell").onclick = openDrawer; $("#seeAll").onclick = openDrawer;
+$("#drawerX").onclick = () => $("#drawer").classList.remove("on");
+$("#notiClear").onclick = () => api("notifications/clear", {});
+
+/* ---------- upload ---------- */
+const startUp = () => api("upload/start", {}).then(() => toast("Bắt đầu upload", "", "info")).catch(() => {});
+const stopUp = () => api("upload/stop", {});
+$("#btnUp").onclick = $("#btnUp2").onclick = startUp;
+$("#btnStop").onclick = $("#btnStop2").onclick = stopUp;
+$("#watchSw").onchange = e => api("watch", {on: e.target.checked}).catch(() => e.target.checked = !e.target.checked);
+$("#rescan").onclick = () => loadScan();
+
+const CAT = {video:"🎞 Video", anh:"🖼 Ảnh", nhac:"🎵 Nhạc", tailieu:"📄 Tài liệu", nen:"🗜 File nén", code:"💻 Code", khac:"📦 Khác"};
+async function loadScan() {
+  let d; try { d = await api("scan", {}); } catch { return; }
+  $("#kCount").textContent = d.count.toLocaleString("vi-VN"); $("#kSize").textContent = human(d.total) + (d.fresh ? ` · ${d.fresh} file đang copy dở` : "");
+  $("#kBig").textContent = d.big;
+  const bars = (rows, label) => {
+    if (!rows.length) return `<div class="empty">${d.missing?.length ? "Folder không tồn tại: " + esc(d.missing.join(", ")) : "Không có file nào đang chờ. Thêm folder ở <a data-go='settings' style='color:var(--acc);cursor:pointer'>Cài đặt</a>."}</div>`;
+    const max = Math.max(...rows.map(r => r.size));
+    return `<table>${rows.map(r => `<tr><td style="width:45%">${label(r)}</td><td><div class="bar"><i style="width:${Math.max(2, r.size/max*100)}%"></i></div></td>
+      <td class="n mut">${r.count} file</td><td class="n">${human(r.size)}</td></tr>`).join("")}</table>`;
+  };
+  $("#homeFolders").innerHTML = bars(d.folders, r => `📁 ${esc(r.name)}${r.big ? ` <span class="tag warn">${r.big} cần split</span>` : ""}`);
+  $("#homeCats").innerHTML = bars(d.cats, r => CAT[r.name] || r.name);
+  $("#queueTbl").innerHTML = d.files?.length ? `<div class="tbl"><table><tr><th>File</th><th>Folder</th><th>Loại</th><th class="n">Dung lượng</th></tr>` +
+    d.files.map(f => `<tr><td class="path">${esc(f.rel)} ${f.split ? `<span class="tag warn">sẽ split</span>` : ""}</td><td class="mut small">${esc(f.root)}</td>
+      <td class="small">${CAT[f.cat] || f.cat}</td><td class="n">${human(f.size)}</td></tr>`).join("") + `</table></div>` +
+    (d.count > d.files.length ? `<div class="mut small" style="margin-top:6px">Hiện ${d.files.length}/${d.count} file.</div>` : "")
+    : `<div class="empty">Hàng chờ trống 🎉</div>`;
+}
+async function loadHistory() {
+  const rows = await api("history");
+  const total = rows.reduce((a, r) => a + r.size, 0);
+  $("#kDone").textContent = rows.length.toLocaleString("vi-VN"); $("#kDoneSize").textContent = human(total) + (rows.length >= 300 ? " (300 gần nhất)" : "");
+  $("#histTbl").innerHTML = rows.length ? `<div class="tbl"><table><tr><th>Thời gian</th><th>File</th><th class="n">Dung lượng</th><th>Phần</th><th>Thùng rác</th></tr>` +
+    rows.map(r => `<tr><td class="small mut">${esc(r.at.replace("T"," "))}</td><td class="path">${esc(r.root)}/${esc(r.rel)}</td><td class="n">${human(r.size)}</td>
+      <td>${r.parts > 1 ? `<span class="tag acc">${r.parts} phần</span>` : ""}</td><td>${r.trashed ? "🗑" : ""}</td></tr>`).join("") + `</table></div>`
+    : `<div class="empty">Chưa upload file nào.</div>`;
+}
+
+/* ---------- danh sách folder dạng chip ---------- */
+function chipList(el, list, onChange) {
+  el.innerHTML = list.length ? list.map((p, i) => `<div class="chipf">📁<span>${esc(p)}</span><button data-i="${i}" title="Bỏ">✕</button></div>`).join("")
+                             : `<div class="mut small">Chưa có folder nào.</div>`;
+  el.querySelectorAll("button").forEach(b => b.onclick = () => { list.splice(+b.dataset.i, 1); chipList(el, list, onChange); onChange?.(); });
+}
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+
+/* ---------- sắp xếp video ---------- */
+const sortSrc = load("sortSrc", []);
+chipList($("#sortSrc"), sortSrc);
+$("#sortProj").value = load("sortProj", "");
+$("#sortAdd").onclick = async () => { const p = await pickFolder(); if (p) { sortSrc.push(p); store("sortSrc", sortSrc); chipList($("#sortSrc"), sortSrc, () => store("sortSrc", sortSrc)); } };
+$("#sortPrev").onclick = () => {
+  store("sortProj", $("#sortProj").value);
+  api("sort/preview", {sources: sortSrc, cards: $("#sortCards").checked, project: $("#sortProj").value,
+                       copy: $("#sortCopy").checked, dups: $("#sortDups").value}).catch(() => {});
+};
+$("#sortApply").onclick = () => { if (confirm("Thực hiện sắp xếp theo kế hoạch?\n(Có thể Hoàn tác sau)")) api("sort/apply", {}).catch(() => {}); };
+$("#sortUndo").onclick = () => { if (confirm("Hoàn tác lần sắp xếp gần nhất?")) api("sort/undo", {}); };
+async function loadSort() {
+  const r = await api("sort/result");
+  if (!r.rows || !r.rows.length) { $("#sortTbl").innerHTML = `<div class="empty">${r.rows ? "Không có video/ảnh nào trong nguồn đã chọn." : "Chọn nguồn rồi bấm <b>Xem trước</b>."}</div>`; $("#sortApply").disabled = true; return; }
+  $("#sortLib").textContent = r.library;
+  const dups = r.rows.filter(x => x.status === "trùng").length, fin = r.rows.filter(x => x.status === "Final").length;
+  const guess = r.rows.filter(x => !["metadata","exif"].includes(x.source)).length;
+  $("#sortHead").innerHTML = `Kế hoạch: ${r.rows.length} file <span class="tag">${r.rows.length - dups - fin} Raw</span> <span class="tag acc">${fin} Final</span> <span class="tag bad">${dups} trùng</span>` +
+    (r.applied ? ` <span class="tag ok">✔ đã thực hiện</span>` : "");
+  $("#sortApply").disabled = r.applied || !r.rows.length;
+  $("#sortTbl").innerHTML = (r.ffprobe ? "" : `<div class="alert">Chưa cài ffmpeg nên ngày quay video có thể không chính xác. Mở Terminal chạy <b>brew install ffmpeg</b> một lần.</div>`) +
+    (guess ? `<div class="mut small" style="margin-bottom:8px">⚠️ ${guess} file không có ngày quay trong metadata → lấy theo ngày tạo file (đánh dấu vàng).</div>` : "") +
+    `<div class="tbl"><table><tr><th>File gốc</th><th>Ngày quay</th><th>→ Vị trí mới trong thư viện</th><th class="n">Dung lượng</th></tr>` +
+    r.rows.map(x => `<tr><td class="path">${esc(x.name)}</td>
+      <td class="small" style="white-space:nowrap">${esc(x.date)} ${["metadata","exif"].includes(x.source) ? "" : `<span class="tag warn">${esc(x.source)}</span>`}</td>
+      <td class="path">${x.status === "trùng" ? `<span class="tag bad">trùng</span> <span class="mut">với ${esc(x.dup_of)}</span>` :
+        `${x.status === "Final" ? `<span class="tag acc">Final</span> ` : ""}${esc(x.dst)}`}</td>
+      <td class="n">${human(x.size)}</td></tr>`).join("") + `</table></div>`;
+}
+
+/* ---------- ổ cứng ---------- */
+const diskRoots = load("diskRoots", ["~/Movies", "~/Downloads", "~/Desktop"]);
+chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots));
+$("#diskAdd").onclick = async () => { const p = await pickFolder(); if (p) { diskRoots.push(p); store("diskRoots", diskRoots); chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots)); } };
+$("#diskScan").onclick = () => api("disk/scan", {roots: diskRoots, min_big: +$("#diskBig").value, old_days: +$("#diskOld").value}).catch(() => {});
+let diskTab = "suggest";
+async function loadDisk() {
+  const {result: d} = await api("disk/result");
+  if (!d) return;
+  const daysAgo = m => Math.floor((Date.now()/1000 - m) / 86400);
+  const sel = (rows, key) => `<div class="row" style="margin-bottom:8px"><label class="chk small"><input type="checkbox" data-all="${key}"> Chọn tất cả</label><span style="flex:1"></span>
+      <span class="mut small" id="sel-${key}">0 file</span>
+      <button class="btn sm pri" data-act="queue" data-k="${key}">☁️ Đưa lên Telegram & dọn</button>
+      <button class="btn sm dan" data-act="trash" data-k="${key}">🗑 Chuyển vào Thùng rác</button></div>
+    <div class="tbl"><table><tr><th></th><th>File</th><th class="n">Dung lượng</th><th class="n">Sửa lần cuối</th><th></th></tr>` +
+    rows.map(f => `<tr><td><input type="checkbox" data-k="${key}" value="${esc(f.path)}" data-size="${f.size}"></td><td class="path">${esc(f.path)} ${f.uploaded ? `<span class="tag ok">đã up</span>` : ""}</td>
+      <td class="n">${human(f.size)}</td><td class="n mut">${daysAgo(f.mtime)} ngày</td><td><button class="btn sm" data-reveal="${esc(f.path)}">Finder</button></td></tr>`).join("") + `</table></div>`;
+  const maxDir = Math.max(1, ...d.top_dirs.map(x => x.size));
+  const panes = {
+    suggest: d.suggest.length ? `<div class="mut small" style="margin-bottom:8px">File lớn, lâu rồi không đụng tới. <b>Đưa lên Telegram</b> = chuyển vào folder upload, app sẽ up rồi tự đưa vào Thùng rác.</div>` + sel(d.suggest, "suggest")
+             : `<div class="empty">Không có file nào thoả điều kiện 👍</div>`,
+    dups: d.dups.length ? `<div class="mut small" style="margin-bottom:8px">Mỗi nhóm là các file giống hệt nhau. Bấm 🗑 ở bản thừa (giữ lại 1 bản).</div><div class="tbl"><table>` +
+      d.dups.map(g => `<tr><td>${g.paths.map(p => `<div class="row" style="gap:6px;padding:2px 0"><span class="path" style="flex:1">${esc(p)}</span>
+        <button class="btn sm" data-reveal="${esc(p)}">Finder</button><button class="btn sm dan" data-trash1="${esc(p)}">🗑</button></div>`).join("")}</td>
+        <td class="n" style="vertical-align:top">${human(g.size)}<br><span class="mut small">thừa ${human(g.waste)}</span></td></tr>`).join("") + `</table></div>`
+      : `<div class="empty">Không có file trùng (≥10MB) 👍</div>`,
+    dirs: `<table>` + d.top_dirs.map(x => `<tr><td class="path" style="width:55%">${esc(x.path)}</td><td><div class="bar"><i style="width:${Math.max(2, x.size/maxDir*100)}%"></i></div></td><td class="n">${human(x.size)}</td></tr>`).join("") + `</table>`,
+    big: sel(d.biggest, "big"),
+    types: `<table>` + d.types.map(x => `<tr><td>${esc(x.ext)}</td><td class="n">${human(x.size)}</td></tr>`).join("") + `</table>`,
+  };
+  const used = d.disk_total - d.free;
+  $("#diskOut").innerHTML = `<div class="grid kpis" style="margin-bottom:14px">
+      <div class="card kpi"><div class="l">Ổ đĩa còn trống</div><div class="v">${human(d.free)}</div><div class="bar" style="margin-top:6px"><i style="width:${used/d.disk_total*100}%;background:${d.free/d.disk_total < .1 ? "var(--bad)" : "var(--acc)"}"></i></div><div class="s">đã dùng ${human(used)} / ${human(d.disk_total)}</div></div>
+      <div class="card kpi"><div class="l">Đã quét</div><div class="v">${human(d.scanned)}</div><div class="s">${d.count.toLocaleString("vi-VN")} file · ${ago(d.at)}</div></div>
+      <div class="card kpi"><div class="l">File trùng lãng phí</div><div class="v" style="color:var(--bad)">${human(d.dup_waste)}</div><div class="s">${d.dups.length} nhóm</div></div>
+      <div class="card kpi"><div class="l">Có thể dọn (gợi ý)</div><div class="v" style="color:var(--ok)">${human(d.suggest.reduce((a, f) => a + f.size, 0))}</div><div class="s">${d.suggest.length} file</div></div></div>
+    <div class="card"><div class="tabs" id="diskTabs">${[["suggest","💡 Nên dọn"],["dups","♊ File trùng"],["dirs","📁 Folder nặng"],["big","🐘 File lớn nhất"],["types","🗂 Theo loại"]]
+      .map(([k, l]) => `<a data-t="${k}" class="${k === diskTab ? "on" : ""}">${l}</a>`).join("")}</div>
+      ${Object.entries(panes).map(([k, h]) => `<div data-dp="${k}" class="${k === diskTab ? "" : "hide"}">${h}</div>`).join("")}</div>`;
+  $$("#diskTabs a").forEach(a => a.onclick = () => { diskTab = a.dataset.t; $$("#diskTabs a").forEach(x => x.classList.toggle("on", x === a)); $$("[data-dp]").forEach(p => p.classList.toggle("hide", p.dataset.dp !== diskTab)); });
+  const upd = k => { const c = $$(`input[data-k="${k}"]:checked`); $(`#sel-${k}`).textContent = `${c.length} file · ${human(c.reduce((a, x) => a + +x.dataset.size, 0))}`; };
+  $$("[data-all]").forEach(a => a.onchange = () => { $$(`input[data-k="${a.dataset.all}"]`).forEach(x => x.checked = a.checked); upd(a.dataset.all); });
+  $$("input[data-k]").forEach(x => x.onchange = () => upd(x.dataset.k));
+  $$("[data-act]").forEach(b => b.onclick = async () => {
+    const paths = $$(`input[data-k="${b.dataset.k}"]:checked`).map(x => x.value);
+    if (!paths.length) return toast("Chưa chọn file nào", "", "warn");
+    if (b.dataset.act === "queue") { if (!confirm(`Chuyển ${paths.length} file vào folder upload?\nApp sẽ up lên Telegram rồi tự đưa vào Thùng rác.`)) return; await api("disk/queue", {paths}); }
+    else { if (!confirm(`Chuyển ${paths.length} file vào Thùng rác?`)) return; await api("trash", {paths}); }
+    paths.forEach(p => $$(`input[value="${CSS.escape(p)}"]`).forEach(x => x.closest("tr").remove()));
+  });
+  $$("[data-trash1]").forEach(b => b.onclick = async () => { if (confirm("Chuyển file này vào Thùng rác?\n" + b.dataset.trash1)) { await api("trash", {paths: [b.dataset.trash1]}); b.closest(".row").remove(); } });
+}
+document.addEventListener("click", e => { const r = e.target.closest("[data-reveal]"); if (r) api("reveal", {path: r.dataset.reveal}); });
+
+/* ---------- tìm & tải ---------- */
+$("#findBtn").onclick = doFind; $("#q").onkeydown = e => e.key === "Enter" && doFind();
+async function doFind() {
+  const q = $("#q").value.trim(); if (!q) return;
+  $("#findOut").innerHTML = `<div class="empty"><span class="spin" style="display:inline-block"></span> Đang tìm…</div>`;
+  let r; try { r = await api("find", {q}); } catch (e) { $("#findOut").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#findOut").innerHTML = r.items.length ? `<div class="tbl"><table><tr><th>File</th><th>Folder</th><th class="n">Dung lượng</th><th>Phần</th><th>Ngày up</th><th></th></tr>` +
+    r.items.map(x => `<tr><td class="path"><b>${esc(x.name)}</b></td><td class="small mut">${esc(x.folder)}</td><td class="n">${human(x.size)}</td>
+      <td>${x.total > 1 ? `<span class="tag ${x.parts < x.total ? "bad" : "acc"}">${x.parts}/${x.total}</span>` : ""}</td><td class="small">${esc(x.date)}</td>
+      <td style="white-space:nowrap"><button class="btn sm pri" data-dl="${x.id}" ${x.parts < x.total ? "disabled title='Thiếu phần'" : ""}>⬇ Tải về</button>
+      ${x.link ? `<button class="btn sm" data-link="${esc(x.link)}">Mở Telegram</button>` : ""}</td></tr>`).join("") + `</table></div>`
+    : `<div class="empty">Không tìm thấy “${esc(q)}”.</div>`;
+  $$("[data-dl]").forEach(b => b.onclick = () => api("get", {id: b.dataset.dl}).then(() => toast("Bắt đầu tải", "", "info")).catch(() => {}));
+  $$("[data-link]").forEach(b => b.onclick = () => api("open_url", {url: b.dataset.link}));
+}
+
+/* ---------- cài đặt ---------- */
+let CFG = {}, cFolders = [];
+async function loadSettings() {
+  CFG = await api("config");
+  $("#cApiId").value = CFG.api_id && CFG.api_id != 123456 ? CFG.api_id : "";
+  $("#cApiHash").value = CFG.api_hash && !/^0123456789/.test(CFG.api_hash) ? CFG.api_hash : "";
+  $("#cTarget").value = CFG.target ?? "me";
+  cFolders = [...(CFG.folders || [])]; chipList($("#cFolders"), cFolders);
+  $("#cTrash").checked = CFG.move_to_trash ?? true; $("#cPremium").checked = !!CFG.premium; $("#cDoc").checked = CFG.send_as_document ?? true;
+  $("#cInterval").value = Math.round((CFG.watch_interval_seconds ?? 300) / 60); $("#cConc").value = CFG.concurrency ?? 2; $("#cAge").value = CFG.min_file_age_seconds ?? 120;
+  const v = CFG.video_sorter || {}; $("#cLib").value = v.library ?? "~/Movies/Library"; $("#cTpl").value = v.name_template ?? "{date}_{project}_{seq:03d}";
+  renderAcct();
+}
+$("#cAddFolder").onclick = async () => { const p = await pickFolder(); if (p) { cFolders.push(p); chipList($("#cFolders"), cFolders); } };
+$("#cPickLib").onclick = async () => { const p = await pickFolder(); if (p) $("#cLib").value = p; };
+$("#cSave").onclick = async () => {
+  await api("config", {
+    api_id: $("#cApiId").value.trim(), api_hash: $("#cApiHash").value.trim(), target: $("#cTarget").value.trim() || "me",
+    folders: cFolders, move_to_trash: $("#cTrash").checked, premium: $("#cPremium").checked, send_as_document: $("#cDoc").checked,
+    watch_interval_seconds: Math.max(1, +$("#cInterval").value) * 60, concurrency: Math.min(4, Math.max(1, +$("#cConc").value)),
+    min_file_age_seconds: Math.max(0, +$("#cAge").value),
+    video_sorter: {...(CFG.video_sorter || {}), library: $("#cLib").value.trim(), name_template: $("#cTpl").value.trim()},
+  });
+  $("#cSaved").textContent = "✔ Đã lưu"; setTimeout(() => $("#cSaved").textContent = "", 2500);
+  toast("Đã lưu cài đặt", "", "success");
+  api("login/check", {}).then(renderAcct).catch(() => {});
+  loadScan();
+};
+function renderAcct() {
+  const s = ST.login_step, el = $("#acct");
+  if (ST.me) {
+    el.innerHTML = `<div class="row"><div style="flex:1"><b style="font-size:15px">${esc(ST.me.name)}</b><div class="mut small">${ST.me.username ? "@" + esc(ST.me.username) : ""}${ST.me.premium ? " · ⭐ Premium" : ""}</div></div>
+      <span class="tag ok">Đã kết nối</span></div><div class="row" style="margin-top:12px"><button class="btn sm dan" id="logout">Đăng xuất</button></div>`;
+    $("#logout").onclick = async () => { if (confirm("Đăng xuất Telegram khỏi app?")) { await api("logout", {}); setTimeout(renderAcct, 300); } };
+  } else if (s === "need_api") {
+    el.innerHTML = `<div class="mut">Nhập API ID và API Hash bên cạnh, bấm <b>Lưu cài đặt</b>, rồi đăng nhập ở đây.</div>`;
+  } else if (s === "need_code") {
+    el.innerHTML = `<div class="mut small" style="margin-bottom:8px">Telegram vừa gửi mã đăng nhập vào app Telegram của bạn.</div>
+      <div class="row"><input type="text" id="lgCode" placeholder="Mã 5 số" style="width:140px"><button class="btn pri" id="lgGo">Xác nhận</button></div>`;
+    $("#lgGo").onclick = () => api("login/code", {code: $("#lgCode").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
+  } else if (s === "need_password") {
+    el.innerHTML = `<div class="mut small" style="margin-bottom:8px">Tài khoản có bật xác minh 2 bước — nhập mật khẩu.</div>
+      <div class="row"><input type="password" id="lgPw" placeholder="Mật khẩu 2 bước"><button class="btn pri" id="lgGo">Đăng nhập</button></div>`;
+    $("#lgGo").onclick = () => api("login/password", {password: $("#lgPw").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
+  } else {
+    el.innerHTML = `<div class="mut small" style="margin-bottom:8px">Đăng nhập bằng tài khoản Telegram của bạn (bot chỉ up được 50MB).</div>
+      <div class="row"><input type="text" id="lgPhone" placeholder="+84 912 345 678" style="width:200px"><button class="btn pri" id="lgGo">Gửi mã</button></div>`;
+    $("#lgGo").onclick = () => api("login/phone", {phone: $("#lgPhone").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
+  }
+}
+
+/* ---------- khởi động ---------- */
+poll();
+setTimeout(() => { go(load("view", "home") in TITLES ? load("view", "home") : "home"); loadHistory(); loadSort(); }, 300);
+</script>
+</body>
+</html>
