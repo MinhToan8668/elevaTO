@@ -904,3 +904,35 @@ button.feat{display:flex;flex-direction:column;align-items:flex-start;text-align
 .feat-open{margin-top:auto;padding-top:12px;font-size:13px;font-weight:700;color:var(--em-text);opacity:.75}
 button.feat:hover .feat-open{opacity:1}
 .hero-feat{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+
+/* ── Trang chủ v3: chữ lớn, 2 nút chính, ô công cụ kiểu bento ── */
+.hx{display:flex;flex-direction:column;align-items:center;text-align:center;padding:clamp(36px,7vh,84px) 12px clamp(28px,5vh,52px)}
+.hx-h{margin:18px 0 14px;font-size:clamp(38px,6.4vw,84px);line-height:1.02;font-weight:800;letter-spacing:-.045em;color:var(--strong);max-width:1100px}
+.hx-h span{display:inline-block}
+.hx-h em{font-style:normal;display:inline-block;background:linear-gradient(100deg,var(--em) 10%,#0ea5a4 55%,var(--em-text));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hx-sub{font-size:clamp(16px,1.6vw,19px);color:var(--muted);max-width:560px}
+.hx-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:30px}
+.hx-btn{display:inline-flex;align-items:center;gap:10px;font:inherit;font-size:17px;font-weight:800;cursor:pointer;padding:16px 28px;border-radius:99px;border:0;background:var(--em);color:var(--em-ink);box-shadow:0 10px 30px -8px var(--em-line);transition:transform .15s,box-shadow .15s}
+.hx-btn:hover{transform:translateY(-2px);box-shadow:0 16px 36px -8px var(--em-line)}
+.hx-btn.alt{background:var(--surface);color:var(--strong);border:1.5px solid var(--line-2);box-shadow:none}
+.bento{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(118px,auto);gap:14px;max-width:1240px;width:100%;margin:0 auto}
+.tile2{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:20px 22px;border-radius:22px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(10px);transition:transform .18s,box-shadow .18s,border-color .18s}
+.tile2:hover{transform:translateY(-3px);border-color:var(--em-line);box-shadow:var(--shadow)}
+.t2-ic{position:absolute;top:18px;left:20px;font-size:24px}
+.t2-n{font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--strong)}
+.t2-a{position:absolute;top:16px;right:18px;font-size:17px;font-weight:800;color:var(--muted);transition:color .18s,transform .18s}
+.tile2:hover .t2-a{color:var(--em-text);transform:translate(2px,-2px)}
+.tile2.big{grid-column:span 2;grid-row:span 2;padding:28px;background:linear-gradient(150deg,#0b3d2e,#0f5c45 55%,#18cb96);border:0;color:#eafff6}
+.tile2.big .t2-n{font-size:clamp(26px,2.6vw,36px);color:#fff}
+.tile2.big .t2-d{font-size:14.5px;color:rgba(234,255,246,.8)}
+.tile2.big .t2-ic{font-size:34px;top:26px;left:28px}
+.tile2.big .t2-a{color:#fff;top:auto;bottom:26px;right:28px;font-size:26px}
+.tile2.big .feat-new{top:28px;right:28px}
+.tile2.hot{background:linear-gradient(150deg,var(--em-soft),var(--surface))}
+.tile2.big:hover{box-shadow:0 22px 50px -18px rgba(11,61,46,.6)}
+@media (max-width:900px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.hx-btn{width:100%;justify-content:center}.tile2.big{grid-row:span 1;min-height:180px}}
+.tile2.wide{grid-column:span 2}
+.tile2{min-height:128px;padding-top:58px}
+.tile2.big{padding-top:28px}
+@media (max-width:900px){.tile2.wide{grid-column:span 1}}

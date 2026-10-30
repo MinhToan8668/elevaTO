@@ -65,31 +65,23 @@
     <div id="restore"></div>
 
     <section class="home" id="hero" aria-labelledby="heroH">
-      <header class="home-head">
-        <span class="hero-badge" data-t="hero.badge">Mới · Tab M&amp;A &amp; định giá</span>
-        <h1 id="heroH" data-t="hero.h">.</h1>
-        <p class="hero-lead" data-t="hero.lead">.</p>
-        <ul class="hero-stats">
-          <li><b>12s</b><span data-t="hero.st1">.</span></li>
-          <li><b>32</b><span data-t="hero.st2">.</span></li>
-          <li><b>22</b><span data-t="hero.st3">.</span></li>
-          <li><b>19</b><span data-t="hero.st4">.</span></li>
-        </ul>
-      </header>
-      <h2 class="home-h"><span>1</span><span data-t="home.start">Bắt đầu với dữ liệu</span></h2>
-      <div class="home-start">
-        <button type="button" class="start-card" data-go="pdf"><span class="start-ic" aria-hidden="true">📄</span><b data-t="mode.pdf">.</b><small data-t="mode.pdf.d">.</small><span class="start-go" data-t="home.go.pdf">Tải PDF →</span></button>
-        <button type="button" class="start-card alt" data-go="data"><span class="start-ic" aria-hidden="true">📊</span><b data-t="mode.data">.</b><small data-t="mode.data.d">.</small><span class="start-go" data-t="home.go.data">Nạp Excel →</span></button>
+      <div class="hx">
+        <span class="hero-badge" data-t="hero.badge">.</span>
+        <h1 id="heroH" class="hx-h"><span data-t="hx.l1">Đọc BCTC.</span> <span data-t="hx.l2">Định giá.</span> <em data-t="hx.l3">Ra quyết định.</em></h1>
+        <p class="hx-sub" data-t="hx.sub">.</p>
+        <div class="hx-cta">
+          <button type="button" class="hx-btn" data-go="pdf"><span aria-hidden="true">📄</span><span data-t="hx.pdf">Tải BCTC PDF</span></button>
+          <button type="button" class="hx-btn alt" data-go="data"><span aria-hidden="true">📊</span><span data-t="hx.data">Đã có số liệu Excel</span></button>
+        </div>
       </div>
-      <h2 class="home-h"><span>2</span><span data-t="home.tools">Công cụ phân tích</span></h2>
-      <div class="hero-feat" id="heroFeat">
-          <button type="button" class="feat new" data-go="DEAL"><span class="feat-ic" aria-hidden="true">💼</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.deal">.</h3><p data-t="hero.f.deal.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
-          <button type="button" class="feat new" data-go="AIR"><span class="feat-ic" aria-hidden="true">✨</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.ai">.</h3><p data-t="hero.f.ai.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
-          <button type="button" class="feat" data-go="PT"><span class="feat-ic" aria-hidden="true">🩺</span><h3 data-t="hero.f.pt">.</h3><p data-t="hero.f.pt.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
-          <button type="button" class="feat" data-go="CHART"><span class="feat-ic" aria-hidden="true">📊</span><h3 data-t="hero.f.chart">.</h3><p data-t="hero.f.chart.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
-          <button type="button" class="feat" data-go="RC"><span class="feat-ic" aria-hidden="true">🔎</span><h3 data-t="hero.f.rc">.</h3><p data-t="hero.f.rc.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
-          <button type="button" class="feat" data-go="Q"><span class="feat-ic" aria-hidden="true">🗓️</span><h3 data-t="hero.f.q">.</h3><p data-t="hero.f.q.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
-          <button type="button" class="feat" data-go="EXPORT"><span class="feat-ic" aria-hidden="true">📥</span><h3 data-t="hero.f.xlsx">.</h3><p data-t="hero.f.xlsx.d">.</p><span class="feat-open" data-t="home.open">Mở →</span></button>
+      <div class="bento" id="heroFeat">
+        <button type="button" class="tile2 big" data-go="DEAL"><span class="feat-new" data-t="hero.new">Mới</span><span class="t2-ic" aria-hidden="true">💼</span><span class="t2-n" data-t="hero.f.deal">.</span><span class="t2-d" data-t="hx.deal.d">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
+        <button type="button" class="tile2 hot" data-go="AIR"><span class="t2-ic" aria-hidden="true">✨</span><span class="t2-n" data-t="hero.f.ai">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
+        <button type="button" class="tile2 " data-go="PT"><span class="t2-ic" aria-hidden="true">🩺</span><span class="t2-n" data-t="hero.f.pt">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
+        <button type="button" class="tile2 " data-go="CHART"><span class="t2-ic" aria-hidden="true">📊</span><span class="t2-n" data-t="hero.f.chart">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
+        <button type="button" class="tile2 " data-go="RC"><span class="t2-ic" aria-hidden="true">🔎</span><span class="t2-n" data-t="hero.f.rc">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
+        <button type="button" class="tile2 wide" data-go="Q"><span class="t2-ic" aria-hidden="true">🗓️</span><span class="t2-n" data-t="hero.f.q">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
+        <button type="button" class="tile2 wide" data-go="EXPORT"><span class="t2-ic" aria-hidden="true">📥</span><span class="t2-n" data-t="hero.f.xlsx">.</span><span class="t2-a" aria-hidden="true">↗</span></button>
       </div>
     </section>
 
