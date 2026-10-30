@@ -57,11 +57,37 @@
     <a href="#s2" data-step="2"><span class="n">1</span><span class="t" data-t="rail.1">Tải BCTC</span></a>
     <a href="#s3" data-step="3"><span class="n">2</span><span class="t" data-t="rail.2">Chọn trang &amp; trích xuất</span></a>
     <a href="#s5" data-step="5"><span class="n">3</span><span class="t" data-t="rail.3">Rà soát &amp; xuất</span></a>
-    <div class="hint"><b data-t="rail.hint.b">AI chỉ chép số.</b> <span data-t="rail.hint">Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</span></div>
+    <div class="hint" hidden><b data-t="rail.hint.b">AI chỉ chép số.</b> <span data-t="rail.hint">Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.</span></div>
   </nav>
 
   <main id="main" tabindex="-1">
     <div id="restore"></div>
+
+    <section class="hero" id="hero" aria-labelledby="heroH">
+      <div class="hero-top">
+        <span class="hero-badge" data-t="hero.badge">Mới · Tab M&amp;A &amp; định giá</span>
+        <h1 id="heroH" data-t="hero.h">Từ BCTC đến định giá doanh nghiệp — trong vài phút</h1>
+        <p class="hero-lead" data-t="hero.lead">Tải BCTC PDF / scan / Excel → AI đọc số theo mẫu Thông tư 99 → máy kiểm tra cộng dồn, phân tích, định giá và xuất Excel. Dành cho người làm đầu tư, M&amp;A và tín dụng doanh nghiệp.</p>
+        <p class="mode-q" data-t="mode.q">Bạn đang có gì trong tay?</p>
+        <div id="modePick"></div>
+        <ul class="hero-stats">
+          <li><b>12s</b><span data-t="hero.st1">đọc 3 báo cáo chính</span></li>
+          <li><b>32</b><span data-t="hero.st2">dấu hiệu bất thường</span></li>
+          <li><b>22</b><span data-t="hero.st3">chỉ số tài chính</span></li>
+          <li><b>19</b><span data-t="hero.st4">phép đối chiếu thuyết minh</span></li>
+        </ul>
+      </div>
+      <div class="hero-feat" id="heroFeat">
+        <article class="feat new"><span class="feat-ic" aria-hidden="true">💼</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.deal">.</h3><p data-t="hero.f.deal.d">.</p></article>
+        <article class="feat new"><span class="feat-ic" aria-hidden="true">✨</span><span class="feat-new" data-t="hero.new">Mới</span><h3 data-t="hero.f.ai">.</h3><p data-t="hero.f.ai.d">.</p></article>
+        <article class="feat"><span class="feat-ic" aria-hidden="true">🩺</span><h3 data-t="hero.f.pt">.</h3><p data-t="hero.f.pt.d">.</p></article>
+        <article class="feat"><span class="feat-ic" aria-hidden="true">📊</span><h3 data-t="hero.f.chart">.</h3><p data-t="hero.f.chart.d">.</p></article>
+        <article class="feat"><span class="feat-ic" aria-hidden="true">🔎</span><h3 data-t="hero.f.rc">.</h3><p data-t="hero.f.rc.d">.</p></article>
+        <article class="feat"><span class="feat-ic" aria-hidden="true">🗓️</span><h3 data-t="hero.f.q">.</h3><p data-t="hero.f.q.d">.</p></article>
+        <article class="feat"><span class="feat-ic" aria-hidden="true">📄</span><h3 data-t="hero.f.read">.</h3><p data-t="hero.f.read.d">.</p></article>
+        <article class="feat"><span class="feat-ic" aria-hidden="true">📥</span><h3 data-t="hero.f.xlsx">.</h3><p data-t="hero.f.xlsx.d">.</p></article>
+      </div>
+    </section>
 
     <section class="step" id="s2" aria-labelledby="h2">
       <div class="step-h"><span class="k">1</span><div><h2 id="h2" data-t="s1.h">Tải báo cáo tài chính</h2>
@@ -72,6 +98,7 @@
         <small data-t="s1.drop.sub">PDF · Excel (.xlsx, .xls) · Ảnh JPG / PNG — chọn được nhiều file một lượt</small>
         <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xlsm,.xls,.csv,image/jpeg,image/png,image/webp" hidden>
       </label>
+      <div id="dataTpl"></div>
       <ul class="files" id="fileList"></ul>
       <div id="fileBar"></div>
     </section>

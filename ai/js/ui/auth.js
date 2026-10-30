@@ -7,6 +7,7 @@ import { ROLE_KEY, watch } from './store.js';
 import { t } from '../i18n.js';
 import { API } from '../config.js';
 import { callApi, createClient } from '../ai.js';
+import { NO_LOGIN, hasKey, openKeySettings, GUEST_NAME, keyBtnLabel } from '../direct.js';
 
 const LS = 'elevato-ai-phien';
 
@@ -33,6 +34,7 @@ export function quotaText(me) {
 }
 
 export function initAuth(store, ctx, { onLogin }) {
+  if (NO_LOGIN) return initGuest(store, ctx, { onLogin });
   let session = readSession();
 
   ctx.client = (onWait) => (session ? createClient({ api: API, token: session.token, onWait, onAuth: () => ctx.logout(t('au.expired')) }) : null);
@@ -367,4 +369,22 @@ function closeMenuOutside() {
   const close = () => document.querySelectorAll('details.acct[open]').forEach((d) => { d.open = false; });
   document.addEventListener('click', (e) => { if (!e.target.closest?.('details.acct')) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+}
+
+/**
+ * Chế độ thử (js/direct.js → NO_LOGIN): không đăng nhập, mở đủ tính năng như giảng viên, AI gọi thẳng
+ * Gemini bằng key nạp ở Alt+F9. Góc trên thay nút đăng nhập bằng nút nạp key.
+ */
+function initGuest(store, ctx, { onLogin }) {
+  const me = { ten: GUEST_NAME, email: 'thu@local', vaitro: 'gv', luot: null };
+  ctx.client = (onWait) => createClient({ direct: true, onWait });
+  ctx.canDo = () => true;
+  ctx.refreshQuota = () => {};
+  ctx.logout = () => location.reload();
+  store.set({ user: me });
+  const ve = () => mount($('#acct'), h('button', { class: `btn sm ${hasKey() ? 'ghost' : ''}`, type: 'button', title: 'Alt+F9',
+    onclick: () => { openKeySettings(); const tick = setInterval(() => { if (!document.getElementById('dk-modal')) { clearInterval(tick); ve(); } }, 400); } },
+    keyBtnLabel()));
+  ve();
+  onLogin(me);
 }

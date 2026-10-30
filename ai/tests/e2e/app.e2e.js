@@ -159,6 +159,9 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
     const body = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
+  // Các bài e2e kiểm luồng đăng nhập + máy chủ: tắt chế độ thử không đăng nhập (js/direct.js).
+  await page.route('**/ai/js/direct.js', async (r) => r.fulfill({ status: 200, contentType: 'text/javascript',
+    body: (await readFile(join(ROOT, 'ai/js/direct.js'), 'utf8')).replace('export const NO_LOGIN = true;', 'export const NO_LOGIN = false;') }));
   // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
   await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
   dangMo.push(context);
@@ -256,6 +259,7 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   // Máy tick sẵn 3 bảng chính + trang thuyết minh nhận ra được (2–5), trang bìa không tick
   assert.deepEqual(await page.locator('#pageMaps .tile').evaluateAll((ts) => ts.map((t) => t.classList.contains('on'))), [false, true, true, true, true]);
   assert.match(await page.locator('#pageMaps .found').innerText(), /CĐKT 2 · KQKD 3 · LCTT 4/);
+  await page.locator('#pageMaps').scrollIntoViewIfNeeded();   // ảnh thu nhỏ vẽ khi lướt tới (khối giới thiệu đầu trang đẩy xuống)
   await page.waitForFunction(() => [...document.querySelectorAll('#pageMaps .tile-img')].every((el) => el.style.backgroundImage || el.classList.contains('noimg')));
   const noimg = await page.locator('#pageMaps .tile-img.noimg').evaluateAll((els) => els.map((e) => e.title));
   assert.deepEqual(noimg, [], 'ảnh thu nhỏ vẽ được mọi trang');
@@ -984,3 +988,28 @@ async function readXlsxCell(page, path, sheet, refRe) {
     return Object.fromEntries(Object.entries(cells).filter(([k]) => rx.test(k)));
   }, { b64, sheet, re: refRe.source });
 }
+
+test('tab M&A & định giá: mở phiên có số, ra EBITDA chuẩn hoá, cầu nối, định giá; sửa bội số thì giá trị đổi', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('deal@elevato.vn', { ten: 'Deal', email: 'deal@elevato.vn', mk: 'x', token: TOKEN('deal@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Deal', email: 'deal@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:deal@elevato.vn', s);
+  }, [TOKEN('deal@elevato.vn'), phien]);
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('#tab-DEAL').click();
+  await page.waitForSelector('.deal .dl-sec');
+  const txt = await page.locator('.deal').textContent();
+  for (const s of ['EBITDA chuẩn hoá', 'Nợ ròng', 'Beneish', "Altman Z''", 'EV / EBITDA', 'Sức vay nợ']) assert.ok(txt.includes(s), `thiếu "${s}"`);
+  const truoc = await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") td').nth(5).innerText();
+  await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") input').nth(1).fill('10');
+  await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") input').nth(1).dispatchEvent('change');
+  await page.waitForFunction((cu) => document.querySelectorAll('.dl-t tbody tr')[0] && [...document.querySelectorAll('.dl-t tbody tr')].find((r) => r.innerText.includes('EV / EBITDA'))?.querySelectorAll('td')[5].innerText !== cu, truoc);
+  if (process.env.E2E_SHOT) await page.screenshot({ path: process.env.E2E_SHOT, fullPage: true });
+  assert.deepEqual(errors, []);
+});

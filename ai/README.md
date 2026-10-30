@@ -102,6 +102,15 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   mới biết. AI dùng bối cảnh để diễn giải con số (tồn kho lớn có thể là bình thường với bất động sản), không
   dùng để thay số, và phải chỉ ra khi lời giải thích của doanh nghiệp mâu thuẫn với số liệu. Bối cảnh lưu cùng
   phiên làm việc; đổi bối cảnh thì nhận định cũ cũng được đánh dấu lỗi thời.
+- **M&A & định giá** (tab mới, máy tính hết, không tốn lượt AI): góc nhìn thẩm định giao dịch và tín dụng doanh nghiệp.
+  **LTM** tự ghép (năm gần nhất + lũy kế năm nay − lũy kế cùng kỳ năm trước) khi có báo cáo quý; **EBITDA chuẩn hoá**
+  (bỏ thu nhập tài chính, lãi/lỗ liên doanh liên kết, lợi nhuận khác, lãi BĐS đầu tư; cộng lại chi phí tài chính ngoài
+  lãi vay) cộng **điều chỉnh tay** từng khoản; **cầu nối EV → vốn chủ** (nợ vay, tiền & tương đương tiền, khoản tương
+  đương nợ, lợi ích CĐKKS, tài sản ngoài hoạt động); **vốn lưu động** thương mại / hoạt động và mức peg bình quân;
+  **FCFF / FCFE**; **chất lượng lợi nhuận** (CFO/EBITDA, dồn tích Sloan, Beneish M-score, Altman Z'' thị trường mới nổi);
+  **định giá bội số** EV/EBITDA, P/E, P/B ba mức kèm football field và giá mỗi cổ phiếu (khi có số cổ phiếu ở thuyết
+  minh); **sức vay nợ** theo nợ ròng / EBITDA mục tiêu và DSCR xấp xỉ. Bội số và điều chỉnh lưu cùng phiên.
+  Logic ở `js/core/deal.js`, kiểm ở `tests/deal.test.js`.
 - **Đối chiếu ngược thuyết minh** (hiện ở cả tab *Thuyết minh* và tab *Phân tích*): thuyết minh là bảng ma trận
   in nhỏ, hay kéo dài sang trang sau — chỗ AI đọc sai nhiều nhất mà không có gì tự phát hiện. **19 chỗ kiểm
   tra** cộng số thuyết minh rồi so với đúng dòng trên ba bảng chính: nguyên giá / hao mòn / giá trị còn lại

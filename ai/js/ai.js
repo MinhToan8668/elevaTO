@@ -3,6 +3,7 @@
 import { parseAIJson } from './core/extract.js';
 import { SYSTEM } from './core/prompts.js';
 import { t } from './i18n.js';
+import { directGenerate } from './direct.js';
 
 export class AIError extends Error {
   constructor(code, message, extra = {}) { super(message); this.code = code; Object.assign(this, extra); }
@@ -38,8 +39,13 @@ export async function callApi(api, body, { keepalive = false } = {}) {
  * @param onWait  (giây, lời nhắn) khi máy chủ báo bận và trang tự chờ
  * @param onAuth  gọi khi phiên hết hạn (để trang đưa về màn đăng nhập)
  */
-export function createClient({ api, token, onWait, onAuth } = {}) {
+export function createClient({ api, token, onWait, onAuth, direct = false } = {}) {
   const call = async (body) => {
+    if (direct) {
+      if (body.action !== 'generate') return { me: null };
+      const { action, ...req } = body;
+      try { return await directGenerate(req); } catch (e) { throw new AIError(e.code || 'upstream', e.message, { retryAfter: e.retryAfter }); }
+    }
     try { return await callApi(api, { ...body, token }); }
     catch (e) { if (e.code === 'auth') onAuth?.(e); throw e; }
   };

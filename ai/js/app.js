@@ -5,6 +5,7 @@ import { createStore, initialState, watch } from './ui/store.js';
 import { initAuth } from './ui/auth.js';
 import { initDonate } from './ui/donate.js';
 import { initFiles } from './ui/files.js';
+import { initMode } from './ui/mode.js';
 import { initPages } from './ui/pages.js';
 import { initExtract } from './ui/extract.js';
 import { initReview } from './ui/review.js';
@@ -25,6 +26,7 @@ setLang(store.get().lang, { nho: false });   // mới mở trang: chưa phải l
 initTheme();
 initLangPicker();
 initFiles(store, ctx);
+initMode(store);
 initPages(store, ctx);
 initExtract(store, ctx);
 initReview(store, ctx);
@@ -73,7 +75,7 @@ function offerRestore(user) {
 function autosave(user) {
   const LS_SESSION = sessionKey(user);
   let t, first = true;
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'aiContext'], (s) => {
+  watch(store, ['sources', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'aiContext', 'dealInputs'], (s) => {
     if (first) { first = false; return; }
     // Chỉ ghi khi đã có dữ liệu; không bao giờ tự xoá — phiên cũ chỉ mất khi người dùng bấm "Bỏ" ở banner
     // hoặc có dữ liệu mới thay thế.
