@@ -87,6 +87,13 @@ export const VI = {
   'rail.1': 'Tải BCTC',
   'rail.2': 'Chọn trang & trích xuất',
   'rail.3': 'Rà soát & xuất',
+  'rail.4': 'Phân tích & M&A',
+  's4.h': 'Phân tích & M&A',
+  's4.lead': 'Lấy số đã trích (hoặc file Excel số liệu có sẵn) để phân tích chỉ số, viết nhận định và tính M&A — định giá.',
+  's4.go': 'Sang Phân tích & M&A',
+  's4.empty': 'Chưa có số liệu. Trích xuất BCTC ở khu A hoặc nạp file Excel số liệu có sẵn.',
+  's4.toA': 'Về khu trích xuất',
+  'tab.aria2': 'Phân tích',
   'rail.hint.b': 'AI chỉ chép số.',
   'rail.hint': 'Đổi đơn vị, quy đổi mã TT200 → mẫu 2026 và kiểm tra cộng dồn do máy làm — ô lệch tô đỏ để bạn sửa.',
 

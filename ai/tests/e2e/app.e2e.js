@@ -160,7 +160,7 @@ async function newPage({ configured = true, locale = 'vi-VN' } = {}) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeAI(body)) });
   });
   // Vào thẳng khu làm việc (trang chủ chọn công cụ có bài riêng ở cuối file).
-  await page.addInitScript(() => { if (!window.name.includes('home')) sessionStorage.setItem('elevato-ai-view', 'work'); });
+  await page.addInitScript(() => { if (!window.name.includes('home')) sessionStorage.setItem('elevato-ai-view', 'work'); if (!window.name.includes('steps')) { const dat = () => document.documentElement?.setAttribute('data-all-steps', ''); dat(); document.addEventListener('DOMContentLoaded', dat); } });
   // Test luôn gắn link máy chủ giả (hoặc để trống) thay cho link thật trong js/config.js.
   await page.route('**/ai/js/config.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: `export const API = '${configured ? API : ''}';` }));
   dangMo.push(context);
@@ -348,13 +348,13 @@ test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuấ
   await shot(page, '2b-bieu-do');
 
   // Tab Phân tích & đề xuất: sức khoẻ tài chính + việc nên làm, tất cả do máy tính
-  await page.click('#review [role=tab]:has-text("Phân tích")');
-  await page.waitForSelector('#tabpanel .health .hbox b');
-  assert.ok((await page.locator('#tabpanel .health .hbox b').innerText()).trim().length > 0, 'có mức sức khoẻ');
-  assert.equal(await page.locator('#tabpanel .hsubs li').count(), 4, 'bốn nhóm điểm thành phần');
-  assert.ok((await page.locator('#tabpanel section.advice ol li').count()) >= 1, 'có ít nhất một việc nên làm');
+  await page.click('#analysisBox [role=tab]:has-text("Phân tích")');   // khu B
+  await page.waitForSelector('#tabpanelb .health .hbox b');
+  assert.ok((await page.locator('#tabpanelb .health .hbox b').innerText()).trim().length > 0, 'có mức sức khoẻ');
+  assert.equal(await page.locator('#tabpanelb .hsubs li').count(), 4, 'bốn nhóm điểm thành phần');
+  assert.ok((await page.locator('#tabpanelb section.advice ol li').count()) >= 1, 'có ít nhất một việc nên làm');
   // Nhận định phải điền hết chỗ trống — sót một {var} là người dùng đọc thấy đúng chữ "{v}".
-  const chu = await page.locator('#tabpanel').innerText();
+  const chu = await page.locator('#tabpanelb').innerText();
   assert.doesNotMatch(chu, /\{[a-z]\w*\}/, chu.slice(0, 400));
   await shot(page, '2c-phan-tich');
   await page.click('#review [role=tab]:has-text("Tình hình tài chính")');
@@ -1001,7 +1001,8 @@ test('tab M&A & định giá: mở phiên có số, ra EBITDA chuẩn hoá, cầ
   }, [TOKEN('deal@elevato.vn'), phien]);
   await page.goto(`${base}/ai/`);
   await page.locator('#restore button.btn.sm').first().click();
-  await page.locator('#tab-DEAL').click();
+  await page.locator('.rail a[data-step="6"]').click();
+  await page.locator('#tabb-DEAL').click();
   await page.waitForSelector('.deal .dl-sec');
   const txt = await page.locator('.deal').textContent();
   for (const s of ['EBITDA chuẩn hoá', 'Nợ ròng', 'Beneish', "Altman Z''", 'EV / EBITDA', 'Sức vay nợ']) assert.ok(txt.includes(s), `thiếu "${s}"`);
@@ -1034,5 +1035,21 @@ test('bản dùng API key (?local): không đăng nhập, góc trên là nút n�
   assert.match(await page.locator('#acct').innerText(), /API key/);
   const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
   assert.match(csp, /generativelanguage\.googleapis\.com/);
+  assert.deepEqual(errors, []);
+});
+
+test('khu làm việc từng bước: chỉ hiện một bước, thêm PDF tự sang chọn trang, thanh bước chuyển được sang khu B', { timeout: 60_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.addInitScript(() => { window.name = 'steps'; sessionStorage.removeItem('elevato-ai-view'); });
+  await page.goto(`${base}/ai/`);
+  await page.evaluate(() => document.documentElement.removeAttribute('data-all-steps'));
+  await page.locator('[data-go="pdf"]').click();
+  const hien = () => page.evaluate(() => ['s2', 's3', 's5', 's6'].filter((id) => getComputedStyle(document.getElementById(id)).display !== 'none'));
+  assert.deepEqual(await hien(), ['s2']);
+  await page.locator('.rail a[data-step="6"]').click();
+  assert.deepEqual(await hien(), ['s6']);
+  assert.match(await page.locator('#analysisBox').innerText(), /Chưa có số liệu|No figures/);
+  await page.locator('.rail a[data-step="2"]').click();
+  assert.deepEqual(await hien(), ['s2']);
   assert.deepEqual(errors, []);
 });

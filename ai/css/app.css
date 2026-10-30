@@ -997,3 +997,17 @@ button.feat:hover .feat-open{opacity:1}
 @media (min-width:901px){.home{max-width:1320px}.hx-h{font-size:clamp(44px,min(5.3vw,10.5vh),84px)}}
 @media (min-width:901px){.hx-h{white-space:nowrap;font-size:clamp(44px,min(5.1vw,10.5vh),78px)}}
 @media (min-width:901px){.home{min-height:calc(100vh - 190px);justify-content:center}}
+
+/* ── Khu làm việc: mỗi lúc một bước, thanh bước là tab (không nổi đè lên nội dung) ── */
+body[data-view="work"] .step{display:none}
+body[data-view="work"][data-step="s2"] #s2,body[data-view="work"][data-step="s3"] #s3,
+body[data-view="work"][data-step="s5"] #s5,body[data-view="work"][data-step="s6"] #s6{display:block}
+.rail{position:static;top:auto;margin:4px auto 6px}
+.rail-sep{width:1px;align-self:stretch;margin:6px 4px;background:var(--line-2)}
+.rail-b .n{border-style:dashed}
+.rail a.active .n{background:var(--em);border-color:var(--em);color:var(--em-ink)}
+.k-b{background:var(--gold-soft)!important;color:var(--gold)!important}
+.step-next{display:flex;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+@media (max-width:700px){.rail-sep{display:none}}
+/* Chỉ dùng trong test e2e kiểm luồng nghiệp vụ từng phần: hiện đủ các bước một lúc (chế độ từng bước có bài riêng). */
+html[data-all-steps] body[data-view="work"] .step{display:block}
