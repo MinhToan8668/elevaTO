@@ -3,7 +3,9 @@
 // Key chỉ lưu trong localStorage của máy này, dùng chung kho với AI FinLens / e-Invoice (cùng github.io).
 // Bật / tắt cả chế độ ở NO_LOGIN; tắt thì trang quay lại đăng nhập + máy chủ như cũ.
 
-export const NO_LOGIN = true;
+// Bản dùng API key riêng (như AI FinLens): mở trang với ?local, hoặc file ai/local.html (chỉ chuyển hướng sang đây).
+// Trang thường: đăng nhập / đăng ký, AI qua máy chủ elevaTO.
+export const NO_LOGIN = typeof location !== 'undefined' && new URLSearchParams(location.search).has('local');
 export const GUEST_NAME = 'Chế độ thử';
 export const keyBtnLabel = () => (hasKey() ? 'API key' : 'Nạp API key');
 
