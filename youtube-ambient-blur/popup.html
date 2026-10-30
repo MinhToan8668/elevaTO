@@ -11,6 +11,8 @@
   button.on { border-color: #ff4e45; background: #2a1514; }
   small { display: block; color: #999; }
   label { display: flex; justify-content: space-between; margin-top: 12px; }
+  .chk { align-items: center; gap: 8px; cursor: pointer; }
+  .chk input { accent-color: #ff4e45; width: 16px; height: 16px; }
   input[type=range] { width: 100%; accent-color: #ff4e45; }
 </style>
 </head>
@@ -21,6 +23,7 @@
   <input type="range" id="blur" min="0" max="200" step="5">
   <label>Độ sáng <span id="lightVal"></span></label>
   <input type="range" id="light" min="20" max="200" step="5">
+  <label class="chk"><span>Loe sáng xuống dưới (chế độ rạp)</span><input type="checkbox" id="spill"></label>
   <script src="popup.js"></script>
 </body>
 </html>

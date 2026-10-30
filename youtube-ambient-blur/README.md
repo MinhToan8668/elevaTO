@@ -26,6 +26,11 @@ Bấm icon extension trên thanh công cụ để chọn:
 ## Thanh trượt
 Trong popup có 2 thanh trượt **Độ mờ** (0–200%) và **Độ sáng** (20–200%), áp dụng ngay cho mọi chế độ.
 
+## Chế độ rạp (theater)
+Khi bật chế độ rạp (phím `t`), ánh sáng từ video loe xuống phần tiêu đề, mô tả, bình luận và video đề xuất rồi mờ dần. Bật/tắt bằng ô "Loe sáng xuống dưới" trong popup. Hiệu ứng dùng `mix-blend-mode: screen` nên rõ nhất ở giao diện tối (dark theme); chữ vẫn giữ nguyên độ đọc.
+
+![Chế độ rạp](preview-theater.png)
+
 ## Tuỳ chỉnh
 - Độ mờ / độ sáng: sửa `filter` trong `style.css`.
 - Tốc độ cập nhật: sửa `FPS` trong `content.js` (thấp hơn = nhẹ máy hơn).

@@ -7,22 +7,55 @@
   const DEFAULT = [64, 36];
   let mode = 'blur';
   let blur = 100, light = 100; // phần trăm, chỉnh từ popup
+  let spillOn = true;           // loe ánh sáng xuống dưới ở chế độ rạp
   let canvas, ctx, last = 0;
+  let spill, sctx;
 
-  chrome.storage.sync.get({ mode: 'blur', blur: 100, light: 100 }, (s) => {
-    blur = s.blur; light = s.light;
+  chrome.storage.sync.get({ mode: 'blur', blur: 100, light: 100, spill: true }, (s) => {
+    blur = s.blur; light = s.light; spillOn = s.spill;
     setMode(s.mode);
   });
   chrome.storage.onChanged.addListener((c) => {
     if (c.blur) blur = c.blur.newValue;
     if (c.light) light = c.light.newValue;
+    if (c.spill) spillOn = c.spill.newValue;
     if (c.mode) setMode(c.mode.newValue); else applyVars();
   });
 
   function applyVars() {
-    if (!canvas) return;
-    canvas.style.setProperty('--b', blur / 100);
-    canvas.style.setProperty('--l', light / 100);
+    for (const el of [canvas, spill]) {
+      if (!el) continue;
+      el.style.setProperty('--b', blur / 100);
+      el.style.setProperty('--l', light / 100);
+    }
+    if (spill) spill.className = 'ytbf-spill ytbf-' + mode;
+  }
+
+  // Chế độ rạp: canvas thứ 2 nằm ngay dưới player, phủ lên phần tiêu đề,
+  // bình luận, đề xuất với mix-blend-mode: screen -> nền tối được nhuộm màu
+  // video, chữ trắng vẫn giữ nguyên, rồi mờ dần xuống dưới.
+  function updateSpill(player, video) {
+    const flexy = document.querySelector('ytd-watch-flexy');
+    const show = spillOn && mode !== 'off' && flexy?.hasAttribute('theater')
+      && !document.fullscreenElement;
+    if (!show) { if (spill) spill.style.display = 'none'; return; }
+    if (!spill) {
+      spill = document.createElement('canvas');
+      spill.width = 64; spill.height = 36;
+      sctx = spill.getContext('2d', { alpha: false });
+      document.body.appendChild(spill);
+      applyVars();
+    }
+    const r = player.getBoundingClientRect();
+    Object.assign(spill.style, {
+      display: 'block',
+      left: r.left + scrollX + 'px',
+      top: r.bottom + scrollY + 'px',
+      width: r.width + 'px',
+    });
+    // Lấy dải dưới cùng của khung hình để ánh sáng "chảy" liền mạch từ video xuống
+    const vw = video.videoWidth, vh = video.videoHeight;
+    sctx.drawImage(video, 0, vh * 0.6, vw, vh * 0.4, 0, 0, spill.width, spill.height);
   }
 
   function setMode(m) {
@@ -87,6 +120,7 @@
     if (video.readyState < 2 || !video.videoWidth) return;
     try {
       mode === 'mirror' ? drawMirror(video) : drawCover(video);
+      updateSpill(player, video);
     } catch (_) { /* bỏ qua khung chưa sẵn sàng */ }
   }
 

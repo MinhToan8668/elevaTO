@@ -37,3 +37,9 @@ chrome.storage.sync.get({ blur: 100, light: 100 }, (s) => {
     };
   }
 });
+
+chrome.storage.sync.get({ spill: true }, ({ spill }) => {
+  const cb = document.getElementById('spill');
+  cb.checked = spill;
+  cb.onchange = () => chrome.storage.sync.set({ spill: cb.checked });
+});
