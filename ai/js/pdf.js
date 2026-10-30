@@ -4,8 +4,10 @@
 import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
 import { loadPdfLib } from './libs.js';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
-const V = (p) => new URL(`../vendor/pdfjs/${p}`, import.meta.url).href;
+// Bản một file (tools/build-local.mjs) đặt sẵn __ELEVATO_VENDOR__ (gốc thư viện nhúng) và __ELEVATO_PDF_WORKER__.
+const VENDOR = globalThis.__ELEVATO_VENDOR__ || new URL('../vendor/', import.meta.url).href;
+pdfjs.GlobalWorkerOptions.workerSrc = globalThis.__ELEVATO_PDF_WORKER__ || `${VENDOR}pdfjs/pdf.worker.min.mjs`;
+const V = (p) => `${VENDOR}pdfjs/${p}`;
 
 export async function openPdf(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
