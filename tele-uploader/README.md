@@ -1,5 +1,7 @@
 # TeleUploader (macOS)
 
+Gồm 3 công cụ: **TeleUploader** (đẩy lên Telegram + tìm/tải lại), **Video Sorter** (`./sort.sh`), **Disk Report** (`./disk.sh`). Nên cài thêm `brew install ffmpeg` để đọc ngày quay video chính xác.
+
 Tự động quét folder trên Mac → thống kê → upload lên Telegram theo cây thư mục → file > 2GB tự split → up xong tự chuyển file gốc vào **Thùng rác** (có thể *Put Back*).
 
 ## Cài đặt (1 lần)
@@ -21,6 +23,8 @@ cd tele-uploader
 | `./run.sh upload` | Up 1 lượt |
 | `./run.sh watch` | Chạy liên tục, cứ thả file vào folder là tự up |
 | `./run.sh history` | Lịch sử đã up |
+| `./run.sh find "từ khoá"` | Tìm file trên Telegram theo tên, folder, `#hashtag` |
+| `./run.sh get <ID or tên>` | Tải về `~/Downloads/TeleUploader`, tự ghép file đã split |
 | `./autostart.sh on` / `off` | Tự chạy `watch` khi mở Mac |
 
 ## Logic sắp xếp trên Telegram
@@ -39,3 +43,29 @@ cd tele-uploader
 - Ghi nhớ file đã up trong `state.db` → không up trùng.
 - Lần đầu chạy, macOS sẽ hỏi quyền cho Terminal điều khiển **Finder** (để move to Trash) — bấm *OK*. Nếu folder nằm trong Documents/Desktop/Downloads, cấp *Full Disk Access* cho Terminal (System Settings → Privacy & Security).
 - `config.yaml` và `*.session` chứa thông tin đăng nhập — đừng chia sẻ.
+
+## 🎬 Video Sorter — `./sort.sh`
+Đọc ngày quay gốc (metadata video/EXIF ảnh, thiếu thì lấy ngày tạo file), đổi tên và xếp:
+```
+~/Movies/Library/2026/10/2026-10-30_Vlog-Da-Lat/Raw/Video/2026-10-30_143012_Vlog-Da-Lat_001.mp4
+                                               /Final/Video/...   (tên có final/export/render)
+```
+| Lệnh | Việc làm |
+|---|---|
+| `./sort.sh ~/Desktop/Quay -p "Vlog Đà Lạt"` | Xem trước, chưa đụng file |
+| `./sort.sh ~/Desktop/Quay -p "Vlog Đà Lạt" --apply` | Thực hiện |
+| `./sort.sh --cards -p "Event" --apply` | Lấy từ thẻ nhớ đang cắm (luôn **copy** + kiểm tra, không xoá thẻ) |
+| `./sort.sh --undo` | Hoàn tác lần chạy gần nhất |
+
+- File trùng (so nội dung, kể cả khác tên) được gom vào `_Trung_lap/`, thêm `--dups skip` nếu muốn để yên.
+- File phụ đi kèm (`.SRT` của DJI, `.LRF`, `.THM`, `.XMP`…) đi theo file chính.
+- Đổi thư mục đích/mẫu tên trong `config.yaml` → `video_sorter`.
+- Muốn đẩy lên Telegram thì để `library` (hoặc 1 folder con) trong `folders` của TeleUploader.
+
+## 🗂 Disk Report — `./disk.sh`
+```bash
+./disk.sh ~/Movies ~/Downloads ~/Desktop
+```
+Tạo trang HTML (tự mở) gồm: dung lượng trống, folder nặng nhất, file lớn nhất, file lâu không đụng, **file trùng** và **gợi ý file nên đẩy lên Telegram** (mặc định ≥ 300MB và không sửa trong 90 ngày, đổi bằng `--min-big 500 --old-days 180`). File đã up được đánh dấu.
+
+`./disk.sh ~/Movies --queue` → chuyển các file gợi ý vào folder upload (hỏi xác nhận trước); TeleUploader up xong sẽ tự đưa vào Thùng rác.

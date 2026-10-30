@@ -8,6 +8,8 @@ Lệnh:
   python app.py upload [--dry-run]  upload 1 lượt
   python app.py watch            chạy liên tục, tự quét lại theo chu kỳ
   python app.py history          xem các file đã upload
+  python app.py find "từ khoá"    tìm file trên Telegram (tên, folder, #hashtag)
+  python app.py get <ID|tên>     tải về, tự ghép nếu file đã bị split
 """
 from __future__ import annotations
 
@@ -442,6 +444,116 @@ def notify_mac(title: str, text: str) -> None:
                        capture_output=True)
 
 
+# ---------------------------------------------------------------- tìm & tải lại
+PART_RE = re.compile(r"phần (\d+)/(\d+)")
+
+
+def caption_info(msg) -> tuple[str, int, int]:
+    """(tên file gốc, phần, tổng số phần) đọc từ caption do app tạo."""
+    text = msg.message or ""
+    name = next((l[2:].strip() for l in text.splitlines() if l.startswith("📄")), None)
+    if not name and msg.file and msg.file.name:
+        name = re.sub(r"\.part\d{3}$", "", msg.file.name)
+    m = PART_RE.search(text)
+    return name or f"file_{msg.id}", int(m.group(1)) if m else 1, int(m.group(2)) if m else 1
+
+
+async def search_files(client, entity, query: str, limit: int = 100) -> dict[str, list]:
+    """Gom kết quả theo file gốc: {tên: [msg phần 1, phần 2, ...]}."""
+    groups: dict[str, dict[int, object]] = defaultdict(dict)
+    async for msg in client.iter_messages(entity, search=query, limit=limit):
+        if not msg.file:
+            continue
+        name, part, _ = caption_info(msg)
+        groups[name].setdefault(part, msg)
+    return {k: [v[i] for i in sorted(v)] for k, v in groups.items()}
+
+
+async def run_find(cfg: dict, query: str) -> None:
+    client = await get_client(cfg)
+    try:
+        entity = await resolve_target(client, cfg["target"])
+        groups = await search_files(client, entity, query)
+        if not groups:
+            console.print(f"Không tìm thấy “{query}” trên Telegram.")
+            return
+        t = Table(title=f"Kết quả “{query}” trong {cfg['target']}")
+        for col in ("ID", "File", "Folder", "Size", "Phần", "Ngày up", "Link"):
+            t.add_column(col, overflow="fold")
+        for name, msgs in sorted(groups.items()):
+            first = msgs[0]
+            _, _, total = caption_info(first)
+            folder = next((l[2:].strip() for l in (first.message or "").splitlines() if l.startswith("📁")), "")
+            size = sum(m.file.size or 0 for m in msgs)
+            parts = f"{len(msgs)}/{total}" + (" [red]thiếu[/]" if len(msgs) < total else "")
+            t.add_row(str(first.id), name, folder, human(size), parts,
+                      f"{first.date.astimezone():%d/%m/%Y}", message_link(entity, first.id) or "")
+        console.print(t)
+        console.print("Tải về: [cyan]./run.sh get <ID>[/] hoặc [cyan]./run.sh get \"tên file\"[/]")
+    finally:
+        await client.disconnect()
+
+
+async def run_get(cfg: dict, key: str, out_dir: Path) -> None:
+    client = await get_client(cfg)
+    try:
+        entity = await resolve_target(client, cfg["target"])
+        if key.isdigit():
+            msg = await client.get_messages(entity, ids=int(key))
+            if not msg or not msg.file:
+                console.print(f"[red]Tin nhắn {key} không có file.[/]")
+                return
+            name, _, total = caption_info(msg)
+            msgs = [msg] if total == 1 else (await search_files(client, entity, name)).get(name, [])
+        else:
+            groups = await search_files(client, entity, key)
+            exact = {k: v for k, v in groups.items() if k.lower() == key.lower()}
+            groups = exact or groups
+            if len(groups) != 1:
+                console.print(f"[yellow]Có {len(groups)} file khớp — dùng ./run.sh find rồi get theo ID.[/]")
+                return
+            (name, msgs), = groups.items()
+            total = caption_info(msgs[0])[2]
+        if len(msgs) < total:
+            console.print(f"[red]Chỉ tìm thấy {len(msgs)}/{total} phần của {name}.[/]")
+            return
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / name
+        i = 1
+        while dest.exists():
+            dest = out_dir / f"{Path(name).stem} ({i}){Path(name).suffix}"
+            i += 1
+        columns = (TextColumn("{task.description}"), BarColumn(), DownloadColumn(),
+                   TransferSpeedColumn(), TimeRemainingColumn())
+        tmp = SPLIT_DIR / f"dl_{msgs[0].id}"
+        tmp.mkdir(parents=True, exist_ok=True)
+        with Progress(*columns, console=console) as progress:
+            paths = []
+            for n, m in enumerate(msgs, 1):
+                task = progress.add_task(f"{name[:40]} ({n}/{len(msgs)})", total=m.file.size)
+                target = tmp / f"part{n:03d}"
+                if not (target.exists() and target.stat().st_size == m.file.size):  # tải tiếp nếu bị ngắt
+                    await client.download_media(m, file=str(target),
+                                                progress_callback=lambda d, t_, k=task: progress.update(k, completed=d, total=t_))
+                progress.update(task, completed=m.file.size)
+                paths.append(target)
+        if len(paths) == 1:
+            shutil.move(paths[0], dest)
+        else:
+            console.print(f"Ghép {len(paths)} phần…")
+            with open(dest, "wb") as out:
+                for p in paths:
+                    with open(p, "rb") as src:
+                        shutil.copyfileobj(src, out, 8 * MiB)
+        shutil.rmtree(tmp, ignore_errors=True)
+        console.print(f"[green]Đã tải:[/] {dest} ({human(dest.stat().st_size)})")
+        if platform.system() == "Darwin":
+            subprocess.run(["open", "-R", str(dest)])  # hiện file trong Finder
+    finally:
+        await client.disconnect()
+
+
 # ---------------------------------------------------------------- commands
 def cmd_history() -> None:
     conn = db()
@@ -463,6 +575,11 @@ def main() -> None:
     up.add_argument("--dry-run", action="store_true", help="chỉ xem trước, không upload")
     sub.add_parser("watch")
     sub.add_parser("history")
+    fd = sub.add_parser("find", help="tìm file đã up trên Telegram")
+    fd.add_argument("query")
+    gt = sub.add_parser("get", help="tải file về (tự ghép nếu bị split)")
+    gt.add_argument("key", help="ID tin nhắn hoặc tên file")
+    gt.add_argument("--to", type=Path, default=Path("~/Downloads/TeleUploader").expanduser())
     args = ap.parse_args()
 
     if args.cmd == "history":
@@ -481,6 +598,10 @@ def main() -> None:
         console.print(f"Đã lưu báo cáo CSV: {save_report(items)}")
     elif args.cmd == "upload":
         asyncio.run(run_upload(cfg, args.dry_run))
+    elif args.cmd == "find":
+        asyncio.run(run_find(cfg, args.query))
+    elif args.cmd == "get":
+        asyncio.run(run_get(cfg, args.key, args.to.expanduser()))
     elif args.cmd == "watch":
         console.print(f"[bold]Watch mode[/] — quét mỗi {cfg['watch_interval_seconds']}s. Ctrl+C để dừng.")
         while True:

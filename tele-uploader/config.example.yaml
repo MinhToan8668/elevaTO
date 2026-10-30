@@ -36,3 +36,11 @@ concurrency: 2
 
 # Chế độ watch: quét lại mỗi N giây
 watch_interval_seconds: 300
+
+# ---- Video Sorter (./sort.sh) ----
+video_sorter:
+  library: "~/Movies/Library"          # thư viện đích: Năm/Tháng/Ngày_DuAn/Raw|Final/Video|Anh|Audio
+  name_template: "{date}_{project}_{seq:03d}"   # biến: date, day, project, seq, orig, cam
+  move: true                           # false = copy (thẻ nhớ luôn copy + kiểm tra)
+  include_photos: true
+  include_audio: true

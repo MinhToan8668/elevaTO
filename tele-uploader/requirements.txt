@@ -3,3 +3,4 @@ cryptg>=0.4
 rich>=13.7
 PyYAML>=6.0
 send2trash>=1.8
+Pillow>=10.0
