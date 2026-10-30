@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Blur Fill",
+  "version": "1.0.0",
+  "description": "Thay viền đen quanh video YouTube bằng nền mờ (blur) lấy từ chính video.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"],
+      "css": ["style.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
