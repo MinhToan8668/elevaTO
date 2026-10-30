@@ -1,0 +1,9 @@
+config.yaml
+*.session
+*.session-journal
+state.db
+.venv/
+__pycache__/
+_split_tmp/
+reports/
+watch.log

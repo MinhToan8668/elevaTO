@@ -1,0 +1,5 @@
+telethon>=1.36
+cryptg>=0.4
+rich>=13.7
+PyYAML>=6.0
+send2trash>=1.8
