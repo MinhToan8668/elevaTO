@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { giaCoPhieu } from '../worker/src/gia.js';
 
 const ngay = (i) => Date.UTC(2026, 0, 1 + i) / 1000;
-const gia = (sym) => (u) => {
+const gia = (sym) => (u, init) => {
+  // Nguồn thật trả 406 khi thấy accept: application/json — giả lập đúng hành vi đó.
+  if (/application\/json/.test(init?.headers?.accept || '')) return Promise.resolve(new Response('', { status: 406 }));
   const s = new URL(u).searchParams.get('symbol');
   const n = 40;
   const t = Array.from({ length: n }, (_, i) => ngay(i));
