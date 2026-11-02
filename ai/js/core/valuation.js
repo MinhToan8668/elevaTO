@@ -37,17 +37,19 @@ export const DEFAULT_VAL = {
   capex: null,            // capex thuần / doanh thu
   nwc: null,              // vốn lưu động thương mại / doanh thu
   exit: null,             // bội số EV/EBITDA lúc thoát để đối chiếu — mặc định = mức giữa tab bội số
-  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0 },
+  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0, sotp: 0 },
   revMode: 'growth',      // cách dự phóng doanh thu: growth · volprice (sản lượng × giá) · stores (cửa hàng × DT/cửa hàng) · manual
   rev: { vol: 0.03, price: 0.02, stores0: null, storesAdd: 0, perStore: 0.03, manual: [] },
   tvMethod: 'gordon',     // giá trị cuối kỳ: gordon · exit (bội số EV/EBITDA lúc thoát) · blend (bình quân hai cách)
   scen: { on: false, baseP: 50, bull: { growth: 0.03, margin: 0.01, wacc: -0.01, p: 25 }, bear: { growth: -0.03, margin: -0.01, wacc: 0.01, p: 25 } },
   preset: '',             // mẫu ngành đang dùng (core/presets.js)
+  segs: [],               // dự phóng doanh thu theo mảng: [{ name, rev0 (đồng, null = theo thuyết minh), g (tăng trưởng chung, null = như cả công ty), gy: [từng năm] }]
+  others: [],             // phương pháp định giá khác đưa vào giá mục tiêu: [{ name, ps (đồng / cổ phiếu), w (trọng số) }] — RNAV, DDM, đồng thuận CTCK…
   byYear: {},             // ghi đè theo năm: { growth: [năm1, năm2, …], margin: […], … } — null = dùng số chung   // evRev: theo trung vị peer (bảng so sánh)
 };
 /** Tham số sửa được theo từng năm dự phóng. */
 export const BY_YEAR = ['growth', 'margin', 'da', 'capex', 'nwc', 'tax', 'vol', 'price', 'storesAdd', 'perStore'];
-export const REV_MODES = ['growth', 'volprice', 'stores', 'manual'];
+export const REV_MODES = ['growth', 'volprice', 'stores', 'manual', 'segments'];
 export const TV_METHODS = ['gordon', 'exit', 'blend'];
 const KHOA_TY_LE = ['rf', 'erp', 'extra', 'kd', 'tax', 'g', 'growth', 'margin', 'da', 'capex', 'nwc'];
 
@@ -93,6 +95,18 @@ export function cleanVal(x) {
     p: Number.isFinite(+x?.p) && +x.p >= 0 && +x.p <= 100 ? +x.p : d.p });
   out.scen = { on: sc.on === true, baseP: Number.isFinite(+sc.baseP) && +sc.baseP >= 0 && +sc.baseP <= 100 ? +sc.baseP : 50,
     bull: kb(sc.bull, DEFAULT_VAL.scen.bull), bear: kb(sc.bear, DEFAULT_VAL.scen.bear) };
+  const tlN = (x) => (x !== null && x !== '' && Number.isFinite(+x) && +x > -1 && +x < 5 ? +x : null);
+  out.segs = (Array.isArray(o.segs) ? o.segs : []).slice(0, 12).map((x) => ({
+    name: String(x?.name || '').slice(0, 60),
+    rev0: x?.rev0 !== null && x?.rev0 !== '' && Number.isFinite(+x?.rev0) && +x.rev0 >= 0 && +x.rev0 < 1e18 ? +x.rev0 : null,
+    g: tlN(x?.g),
+    gy: (Array.isArray(x?.gy) ? x.gy : []).slice(0, 10).map(tlN),
+  }));
+  out.others = (Array.isArray(o.others) ? o.others : []).slice(0, 8).map((x) => ({
+    name: String(x?.name || '').slice(0, 60),
+    ps: Number.isFinite(+x?.ps) && +x.ps > 0 && +x.ps < 1e9 ? +x.ps : null,
+    w: Number.isFinite(+x?.w) && +x.w >= 0 && +x.w <= 100 ? +x.w : 0,
+  }));
   const w = o.weights && typeof o.weights === 'object' ? o.weights : {};
   for (const k of Object.keys(DEFAULT_VAL.weights)) if (Number.isFinite(+w[k]) && +w[k] >= 0 && +w[k] <= 100) out.weights[k] = +w[k];
   return out;
@@ -162,7 +176,7 @@ export function wacc({ rf, erp, beta, blume, extra, kd, tax, debt, equityMkt, eq
  * Dự phóng FCFF N năm từ doanh thu năm gốc.
  * @returns [{ t, rev, growth, ebit, nopat, da, capex, nwc, dNwc, ebitda, fcff }]
  */
-export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, nwc, tax, byYear = {}, nwc0 = null, revMode = 'growth', rev: R = {}, adj = {} }) {
+export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, nwc, tax, byYear = {}, nwc0 = null, revMode = 'growth', rev: R = {}, adj = {}, segs = null }) {
   const out = [];
   // Ghi đè từng năm (như cột OVERRIDE của sheet 04.Drivers): byYear[k][t − 1] là số của năm t, null = dùng số chung.
   const lay = (k, t, chung) => (Number.isFinite(byYear[k]?.[t - 1]) ? byYear[k][t - 1] : chung);
@@ -170,6 +184,9 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
   let rev = rev0, nwcTruoc = nwc0 ?? rev0 * nwc;
   // Mô hình cửa hàng (21.Tpl_Retail): doanh thu = số cửa hàng × doanh thu bình quân một cửa hàng.
   let cuaHang = R.stores0 || null, dtCh = cuaHang ? rev0 / cuaHang : null;
+  // Theo mảng: mỗi mảng tăng trưởng riêng; tổng doanh thu = Σ mảng × hệ số khớp với doanh thu hợp nhất năm gốc
+  // (doanh thu bộ phận thường chưa loại trừ giao dịch nội bộ — giữ nguyên tỷ lệ loại trừ của năm gốc).
+  const dtMang = segs?.list?.length ? segs.list.map((x) => x.rev0) : null;
   for (let t = 1; t <= years; t++) {
     const gChung = fade && years > 1 ? growth + (g - growth) * (t - 1) / (years - 1) : growth;
     const m = lay('margin', t, margin) + dM, d = lay('da', t, da), c = lay('capex', t, capex), n = lay('nwc', t, nwc), tx = lay('tax', t, tax);
@@ -185,6 +202,10 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
       dtCh *= 1 + lay('perStore', t, R.perStore ?? 0) + dG;
       rev = cuaHang * dtCh;
       extra = { stores: cuaHang, perStore: dtCh };
+    } else if (revMode === 'segments' && dtMang) {
+      segs.list.forEach((x, i) => { dtMang[i] *= 1 + (Number.isFinite(x.gy[t - 1]) ? x.gy[t - 1] : Number.isFinite(x.g) ? x.g : gChung) + dG; });
+      rev = dtMang.reduce((a, b) => a + b, 0) * segs.k;
+      extra = { segs: dtMang.slice() };
     } else if (revMode === 'manual' && Number.isFinite(R.manual?.[t - 1])) {
       rev = R.manual[t - 1] * (1 + dG);
     } else rev *= 1 + lay('growth', t, gChung) + dG;
@@ -252,8 +273,15 @@ export function dcfValuation(a, inputs, adj = {}) {
   if (inp.g > inp.rf) out.issues.push('gOverRf');
   if (W.wacc < inp.rf + 0.02) out.issues.push('lowWacc');
 
+  // Mảng kinh doanh: người dùng nhập, không có thì lấy theo thuyết minh báo cáo bộ phận.
+  const nguonMang = inp.segs.length ? inp.segs : (a.segments || []).map((x) => ({ name: x.name, rev0: null, g: null, gy: [] }));
+  const list = nguonMang.map((x) => ({ ...x, rev0: x.rev0 ?? (a.segments || []).find((y) => y.name === x.name)?.revenue ?? 0 }));
+  const tongMang = list.reduce((s, x) => s + x.rev0, 0);
+  const segs = inp.revMode === 'segments' && tongMang > 0 ? { list, k: rev0 / tongMang, sum: tongMang } : null;
+  out.segs = segs;
+  if (inp.revMode === 'segments' && !segs) out.issues.push('noSegs');
   const flows = projectFcff({ rev0, years: inp.years, growth: d.growth, fade: inp.fade, g: inp.g, margin: d.margin, da: d.da, capex: d.capex, nwc: d.nwc, tax: d.tax,
-    byYear: inp.byYear, revMode: inp.revMode, rev: inp.rev, adj });
+    byYear: inp.byYear, revMode: inp.revMode, rev: inp.rev, adj, segs });
   if (inp.revMode === 'stores' && !inp.rev.stores0) out.issues.push('noStores');
   const exitM = inp.exit ?? a.inputs.evEbitda[1];
   const r = evAt(flows, W.wacc, inp.g, { method: inp.tvMethod, exit: exitM });
@@ -341,7 +369,11 @@ export function blendedTarget(a, dcf, extra = {}) {
     { key: 'evEbitda', equity: giua('evEbitda') },
     { key: 'pb', equity: giua('pb') },
     { key: 'evRev', equity: extra.evRev ?? null },
-  ].map((r) => ({ ...r, weight: w[r.key] || 0, price: r.equity !== null && v.shares ? r.equity / v.shares : null }));
+    { key: 'sotp', equity: extra.sotp ?? null },
+  ].map((r) => ({ ...r, weight: w[r.key] || 0, price: r.equity !== null && v.shares ? r.equity / v.shares : null }))
+    // Phương pháp khác người dùng thêm (RNAV, DDM, đồng thuận CTCK…): nhập giá / cổ phiếu và trọng số.
+    .concat((dcf.inputs.others || []).map((o, i) => ({ key: `o${i}`, name: o.name, other: i, weight: o.w,
+      equity: o.ps && v.shares ? o.ps * v.shares : null, price: o.ps })));
   const co = rows.filter((r) => r.equity !== null && r.equity > 0 && r.weight > 0);
   const tong = co.reduce((s, r) => s + r.weight, 0);
   if (!tong) return { rows, equity: null, price: null, upside: null, rec: null };
