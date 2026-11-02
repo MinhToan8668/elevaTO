@@ -345,3 +345,14 @@ test('trang được nhận là KQKD nhưng AI không thấy dòng tổng nào �
   assert.ok(r.statements.IS.cur['IS:10'] || Object.keys(r.statements.IS.cur).length, 'lấy kết quả lần đọc lại');
   assert.match(r.warnings.join('\n'), /đọc lại trên cả các trang bảng/);
 });
+
+test('góp ý của người dùng được gửi kèm câu lệnh đọc bảng liên quan', async () => {
+  const io = makeIO();
+  const seen = [];
+  const goc = io.ai.json;
+  io.ai.json = async (req) => { seen.push(req.parts.at(-1).text); return goc(req); };
+  io.gopY = [{ text: 'LCTT in hai cột quý cùng năm', vung: 'CF' }];
+  await extractJob({ name: 'x.pdf', ...job }, io, { noteGroups: [] });
+  assert.ok(seen.some((p) => /LƯU CHUYỂN/.test(p) && /LCTT in hai cột quý cùng năm/.test(p)));
+  assert.ok(!seen.some((p) => /KẾT QUẢ HOẠT ĐỘNG/.test(p) && /hai cột quý/.test(p)));
+});

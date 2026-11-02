@@ -50,8 +50,11 @@ export function addExtraction(ds, ext) {
   for (const st of ['BS', 'IS', 'CF']) {
     const s = ext.statements?.[st];
     if (!s) continue;
-    place(per.cur, s.cur, 'cur');
-    place(st === 'BS' ? per.prevBS : per.prevFlow, s.prev, 'prev');
+    // KQKD / LCTT có kỳ riêng của từng cột (đọc từ tiêu đề cột) thì dùng kỳ đó — ví dụ LCTT in
+    // "Quý III / Quý II" cùng năm: cột thứ hai là Quý II năm nay, không phải 9 tháng năm trước.
+    const k = st === 'BS' ? null : s.periods;
+    place(k?.cur || per.cur, s.cur, 'cur');
+    place(st === 'BS' ? per.prevBS : (k?.prev || per.prevFlow), s.prev, 'prev');
   }
   if (ext.notes && Object.keys(ext.notes).length) {
     if (!out.periods.some((x) => x.id === per.cur.id)) out.periods.push(per.cur);
@@ -131,7 +134,12 @@ export function buildDataset(sources, edits = [], opts = {}) {
     if (skip.has(s.id) || s.off) continue;                             // công ty khác / người dùng bỏ tick
     try {
       if (s.kind === 'period') ds = addPeriodValues(ds, s);
-      else ds = addExtraction(ds, { ...s.ext, meta: { ...s.ext.meta, ...definedOnly(s.meta) } });
+      else {
+        // Người dùng sửa tay ngày / số tháng của file → kỳ theo tiêu đề cột không còn đáng tin, bỏ.
+        const sua = Object.keys(definedOnly(s.meta)).length > 0;
+        const statements = sua ? Object.fromEntries(Object.entries(s.ext.statements || {}).map(([k, v]) => [k, { cur: v.cur, prev: v.prev }])) : s.ext.statements;
+        ds = addExtraction(ds, { ...s.ext, statements, meta: { ...s.ext.meta, ...definedOnly(s.meta) } });
+      }
       for (const u of Object.values(s.ext?.units || {})) if (u > unit) unit = u;
     } catch (e) {
       errors.push({ id: s.id, file: s.ext?.file || s.file, message: e.message });

@@ -1140,3 +1140,48 @@ test('trang chủ máy tính: thấy cả chân trang ngay khi mở, không ph�
     assert.deepEqual(errors, []);
   }
 });
+
+test('tải lại trang (tab bị trình duyệt cho ngủ): file đã mở và các trang đã tick vẫn còn; góp ý lưu lại trên máy', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  await page.goto(`${base}/ai/`);
+  await page.setInputFiles('#fileInput', await bctcPdf());
+  await page.waitForSelector('#pageMaps input[type=checkbox]');
+  const truoc = await page.locator('#pageMaps input[type=checkbox]:checked').count();
+  assert.ok(truoc > 0, 'có trang được gợi ý tick');
+  await page.locator('#pageMaps input[type=checkbox]').first().click();      // sửa tay một ô
+  const muon = await page.locator('#pageMaps input[type=checkbox]:checked').count();
+  await page.waitForTimeout(800);                                            // chờ ghi xuống IndexedDB
+  await page.reload();
+  await page.waitForSelector('#pageMaps input[type=checkbox]');
+  await page.waitForFunction((n) => document.querySelectorAll('#pageMaps input[type=checkbox]:checked').length === n, muon);
+  assert.match(await page.locator('#fileList').innerText(), /BCTC-2025\.pdf/);
+  // Bỏ file → không còn sau khi tải lại
+  await page.locator('#fileList button', { hasText: 'Bỏ' }).first().click();
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('#fileList li').count(), 0);
+
+  // Góp ý: mở phiên có số, ghi một góp ý, tải lại vẫn còn
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('gy@elevato.vn', { ten: 'Gy', email: 'gy@elevato.vn', mk: 'x', token: TOKEN('gy@elevato.vn') });
+  await page.evaluate(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Gy', email: 'gy@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:gy@elevato.vn', s);
+  }, [TOKEN('gy@elevato.vn'), phien]);
+  await page.reload();
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('#sources summary').click();
+  await page.locator('#sources .gy button', { hasText: 'Góp ý' }).click();
+  await page.locator('#sources .gy-f select').first().selectOption('CF');
+  await page.locator('#sources .gy-f textarea').fill('LCTT quý in Quý III / Quý II cùng năm');
+  await page.locator('#sources .gy-f button', { hasText: 'Lưu góp ý' }).click();
+  await page.waitForSelector('#sources .gy-l li');
+  const luu = await page.evaluate(() => JSON.parse(localStorage.getItem('elevato-ai-gopy')));
+  assert.equal(luu.length, 1);
+  assert.equal(luu[0].vung, 'CF');
+  assert.deepEqual(errors, []);
+});

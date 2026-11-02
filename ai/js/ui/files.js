@@ -10,6 +10,7 @@ import { NOTE_TASKS } from '../core/prompts.js';
 import { suggestPicks } from '../core/pipeline.js';
 import { openZip, loadXLSX } from '../libs.js';
 import { t } from '../i18n.js';
+import { luuFile, luuJob, xoaFile, xoaHetFile, docFile } from './filestore.js';
 
 const MAX_FILE = 200 * 1024 * 1024;
 /**
@@ -44,6 +45,8 @@ export function initFiles(store, ctx) {
       const laPdf = /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
       const laExcel = /\.(xlsx|xlsm|xls|csv)$/i.test(f.name);
       if (!laPdf && !laExcel) { toast(t('file.skip', { name: f.name })); continue; }
+      // File vừa tự mở lại sau khi tải lại trang mà người dùng tải lên lần nữa (chưa biết là nó còn) → không mở trùng.
+      if (store.get().jobs.some((j) => j.name === f.name && ctx.media.get(j.id)?.khoiPhuc && ctx.media.get(j.id)?.file?.size === f.size)) { toast(t('file.dup', { name: f.name })); continue; }
       if (con <= 0) { bo += 1; continue; }
       con -= 1;
       if (laPdf) await addPdf(f); else await addExcel(f);
@@ -53,19 +56,28 @@ export function initFiles(store, ctx) {
     if (bo) toast(t('file.tooMany', { max: MAX_JOB, n: bo }));
   }
 
-  async function addPdf(file) {
-    const id = uid('j');
-    ctx.media.set(id, { file });
+  /** @param cu job đã lưu từ lần trước (trang tải lại) — giữ nguyên id, trang đã tick, góc xoay. */
+  async function addPdf(file, cu = null) {
+    const id = cu?.id || uid('j');
+    ctx.media.set(id, { file, khoiPhuc: !!cu });
+    if (!cu) luuFile(id, 'pdf', file.name, [file]);
     store.set((s) => ({ jobs: [...s.jobs, { id, name: file.name, kind: 'pdf', status: 'reading', progress: { k: 'file.opening' } }] }));
     try {
       const { openPdf, pageTexts } = await import('../pdf.js');
       const pdf = await openPdf(file);
       if (!alive(id)) { pdf.doc.destroy(); return; }
-      ctx.media.set(id, { file, pdf });
+      ctx.media.set(id, { file, pdf, khoiPhuc: !!cu });
       const texts = await pageTexts(pdf.doc, (i, n) => { if (i % 5 === 0 || i === n) patchJob(id, { progress: { k: 'file.readingText', v: { i, n } } }); });
       if (!alive(id)) return;
       const c = classifyPages(texts);
       const job = { kind: 'pdf', numPages: pdf.numPages, types: c.types, notes: c.notes, scanned: c.scanned };
+      if (cu?.numPages === pdf.numPages) {
+        // Mở lại sau khi trang tải lại: trả đúng các trang đã tick / loại trang đã sửa / góc xoay như trước.
+        // Luôn về "sẵn sàng": số đã trích nằm ở phiên làm việc (mở lại ở dải trên cùng), file thì trích lại được.
+        patchJob(id, { status: 'ready', progress: '', ...job, types: cu.types || job.types, notes: cu.notes || job.notes,
+          picked: cu.picked || [], goiY: cu.goiY || [], rot: cu.rot || {} });
+        return;
+      }
       const goiY = suggestPicks(job);
       patchJob(id, { status: 'ready', progress: '', ...job, picked: goiY, goiY });    // goiY: người dùng chưa sửa tay thì đổi form sẽ gợi ý lại
     } catch (e) {
@@ -74,15 +86,17 @@ export function initFiles(store, ctx) {
     }
   }
 
-  function addImages(files) {
-    const id = uid('j');
+  function addImages(files, cu = null) {
+    const id = cu?.id || uid('j');
     const sorted = [...files].sort((a, b) => a.name.localeCompare(b.name, 'vi', { numeric: true }));
     ctx.media.set(id, { images: sorted, urls: sorted.map((f) => URL.createObjectURL(f)) });
     const name = sorted.length > 1 ? t('file.images', { n: sorted.length, first: sorted[0].name }) : sorted[0].name;   // tên file, không dịch lại
+    if (!cu) luuFile(id, 'img', name, sorted);
     store.set((s) => ({ jobs: [...s.jobs, {
       id, name, kind: 'img', status: 'ready', numPages: sorted.length, scanned: true,
       types: sorted.map(() => 'UNKNOWN'), notes: Object.fromEntries(Object.keys(NOTE_TASKS).map((k) => [k, []])),
       picked: sorted.map((_, i) => i + 1), goiY: sorted.map((_, i) => i + 1),
+      ...(cu ? { status: 'ready', types: cu.types, notes: cu.notes, picked: cu.picked || [], goiY: cu.goiY || [], rot: cu.rot || {} } : {}),
     }] }));
   }
 
@@ -112,6 +126,7 @@ export function initFiles(store, ctx) {
     m?.pdf?.doc?.destroy?.();
     ctx.media.delete(id);
     ctx.forgetThumbs?.(id);
+    xoaFile(id);
     store.set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id), sources: s.sources.filter((x) => x.jobId !== id) }));
   };
 
@@ -124,12 +139,29 @@ export function initFiles(store, ctx) {
       ctx.forgetThumbs?.(j.id);
     }
     ctx.media.clear();
+    xoaHetFile();
     // Bỏ cả phiên đã lưu: không thì tải lại trang là công ty cũ hiện về ở dải "mở lại phiên".
     ctx.quenPhien?.();
     store.set({ jobs: [], sources: [], company: '', edits: [], ticks: null, segmentMap: {}, segmentNames: ['', '', '', '', ''] });
   };
 
   watch(store, ['jobs', 'running', 'lang'], (s) => renderList(s, ctx));
+
+  // Ghi lại trang đã tick / loại trang / góc xoay mỗi khi đổi (gom lại, tối đa một lần mỗi nửa giây).
+  let hen = null;
+  watch(store, ['jobs'], (s) => {
+    clearTimeout(hen);
+    hen = setTimeout(() => s.jobs.filter((j) => j.kind !== 'xls' && j.status !== 'reading').forEach(luuJob), 500);
+  });
+
+  // Mở lại file của lần trước (trang vừa tải lại, hoặc tab bị trình duyệt cho ngủ rồi đánh thức).
+  ctx.filesReady = (async () => {
+    for (const f of await docFile()) {
+      if (store.get().jobs.length >= MAX_JOB) break;
+      if (f.kind === 'pdf' && f.files?.[0]) await addPdf(f.files[0], { ...(f.job || {}), id: f.id });
+      else if (f.kind === 'img' && f.files?.length) addImages(f.files, { ...(f.job || { types: f.files.map(() => 'UNKNOWN'), notes: {} }), id: f.id });
+    }
+  })();
 }
 
 /** .xlsx/.xlsm đọc bằng JSZip + bộ đọc XML riêng; .xls/.csv (định dạng cũ) mới cần SheetJS. */

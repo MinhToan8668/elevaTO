@@ -50,6 +50,16 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 - **Nhiều file, nhiều kỳ**: mỗi BCTC có sẵn cột kỳ trước. Nên tải BCTC năm gần nhất + các năm trước
   (model cần ≥ 4 năm), thêm báo cáo quý mới nhất nếu có. Hai báo cáo cùng kỳ khác số → dùng số của báo cáo
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.
+- **Kỳ của từng cột theo tiêu đề cột** (KQKD, LCTT): AI ghi khoảng ngày thật của mỗi cột số (`tu_ngay_v`…`den_ngay_p`),
+  máy xếp số vào đúng kỳ theo hai ngày đó thay vì mặc định "cột thứ hai là cùng kỳ năm trước". Báo cáo quý in
+  "Quý III / Quý II" cùng năm → số vào Q3 và Q2 năm nay, không còn báo lệch LNTT giữa LCTT và KQKD. Sửa tay
+  ngày / số tháng của file ở *Nguồn dữ liệu* thì máy bỏ kỳ theo tiêu đề cột, dùng kỳ bạn nhập.
+- **File không mất khi tải lại trang**: PDF / ảnh đang mở và các trang đã tick được giữ trong IndexedDB của trình
+  duyệt (chỉ trên máy, không gửi đi), nên tab bị trình duyệt cho ngủ rồi tải lại vẫn còn nguyên. "Bỏ" / "Xoá hết"
+  là xoá luôn.
+- **Góp ý chỗ đọc chưa đúng** (*Nguồn dữ liệu* → 💬): ghi chỗ AI đọc sai theo phần (KQKD / CĐKT / LCTT / chọn cột-kỳ /
+  chung). Góp ý lưu trên máy và được gửi kèm câu lệnh đọc bảng liên quan ở MỌI lần trích xuất sau; có nút trích
+  xuất lại ngay file đó và nút sao chép để gửi người phát triển sửa logic.
 - **Không mất bảng vì nhận nhầm trang**: trang đã tick mà AI xem ảnh nhỏ không nhận ra vẫn được gửi kèm cho cả
   ba bảng. Bảng nào không được trang nào, hoặc đọc ra mà không có dòng tổng nào (KQKD: 01/10/20/30/50/60…),
   thì máy đọc lại một lần trên cả các trang bảng đã tick để AI tự tìm — như FinLens. PDF có chữ: trang bảng

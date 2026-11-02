@@ -10,6 +10,7 @@ import { renderCharts } from './charts.js';
 import { renderAnalysis, renderReconcile, renderAiReview } from './analysis.js';
 import { renderDeal } from './deal.js';
 import { t, unitLabel, chartLabel } from '../i18n.js';
+import { docGopY, luuGopY, VUNG } from '../core/gopy.js';
 
 export const UNITS = [1, 1e3, 1e6, 1e9];
 /** [bội số, nhãn] theo ngôn ngữ đang chọn — gọi lúc vẽ, không giữ sẵn. */
@@ -25,13 +26,13 @@ const ui = { tab: 'BS', showEmpty: false, focus: null, nextEdit: null };
 export function initReview(store, ctx) {
   /** Trang chủ bấm một công cụ → mở thẳng tab đó (xem ui/mode.js). */
   ctx.openTab = (k) => { if (B_TABS.includes(k)) { uiB.tab = k; renderB(store, ctx); return 's6'; } ui.tab = k; renderReview(store, ctx); return 's5'; };
-  watch(store, ['sources', 'edits', 'lang', 'company'], () => renderSources(store));
+  watch(store, ['sources', 'edits', 'lang', 'company'], () => renderSources(store, ctx));
   watch(store, ['sources', 'company', 'edits', 'ticks', 'unit', 'segmentMap', 'segmentNames', 'user', 'lang', 'aiReview', 'aiContext', 'dealInputs'], () => { renderReview(store, ctx); renderB(store, ctx); });
 }
 
 // ─── Nguồn dữ liệu ─────────────────────────────────────────
 
-function renderSources(store) {
+function renderSources(store, ctx) {
   const s = store.get();
   const { ds, errors, companies, main, skipped } = store.data();
   const box = $('#sources');
@@ -90,9 +91,53 @@ function renderSources(store) {
         nhieuCty && !gop ? h('span', { class: 'co-sum' }, t('co.sum', { n: companies.length })) : null)),
       coNote,
       h('table', { class: 'k' }, h('thead', {}, h('tr', {}, h('th', { class: 'chk-c' }, t('src.useH')), h('th', {}, t('src.file')), h('th', {}, t('src.period')), h('th', {}, t('src.date')), h('th', {}, ''))), h('tbody', {}, rows)),
-      s.edits.length ? h('p', { class: 'priv' }, t('src.edits', { n: s.edits.length }), h('button', { class: 'btn ghost sm', onclick: () => { if (confirm(t('src.editsAsk'))) store.set({ edits: [] }); } }, t('src.editsDrop'))) : null),
+      s.edits.length ? h('p', { class: 'priv' }, t('src.edits', { n: s.edits.length }), h('button', { class: 'btn ghost sm', onclick: () => { if (confirm(t('src.editsAsk'))) store.set({ edits: [] }); } }, t('src.editsDrop'))) : null,
+      gopYBox(store, ctx)),
     warn, conf));
 }
+// ─── Góp ý chỗ đọc chưa đúng (lưu trên máy, gửi kèm mọi lần đọc bảng sau — xem core/gopy.js) ───
+const uiGop = { open: false, vung: 'IS', file: '' };
+function gopYBox(store, ctx) {
+  const ve = () => renderSources(store, ctx);
+  const list = docGopY();
+  const nut = h('button', { type: 'button', class: 'btn ghost sm', 'aria-expanded': String(uiGop.open), onclick: () => { uiGop.open = !uiGop.open; ve(); } },
+    t('gy.btn'), list.length ? ` (${list.length})` : '');
+  if (!uiGop.open) return h('div', { class: 'gy' }, nut);
+  const files = [...new Set(store.get().sources.map((x) => x.ext?.file || x.file).filter(Boolean))];
+  const o = h('textarea', { rows: 3, maxlength: 400, placeholder: t('gy.ph'), 'aria-label': t('gy.ph') });
+  const luu = (docLai) => {
+    const text = o.value.trim();
+    if (!text) { o.focus(); return; }
+    luuGopY([...docGopY(), { text, vung: uiGop.vung, file: uiGop.file, at: Date.now() }]);
+    if (docLai && uiGop.file) {
+      const src = store.get().sources.find((x) => (x.ext?.file || x.file) === uiGop.file);
+      const job = src && store.get().jobs.find((j) => j.id === src.jobId && j.kind !== 'xls');
+      if (job) { ctx.patchJob?.(job.id, { status: 'ready' }); ctx.goStep?.('s3'); toast(t('gy.rerun', { file: uiGop.file })); }
+      else toast(t('gy.noFile'));
+    } else toast(t('gy.saved'));
+    ve();
+  };
+  return h('div', { class: 'gy' }, nut,
+    h('div', { class: 'gy-f' },
+      h('p', { class: 'priv' }, t('gy.lead')),
+      h('div', { class: 'row' },
+        h('select', { 'aria-label': t('gy.vung'), onchange: (e) => { uiGop.vung = e.target.value; } },
+          VUNG.map((v) => h('option', { value: v, selected: uiGop.vung === v }, t(`gy.v.${v}`)))),
+        h('select', { 'aria-label': t('gy.file'), onchange: (e) => { uiGop.file = e.target.value; } },
+          h('option', { value: '' }, t('gy.allFiles')), files.map((f) => h('option', { value: f, selected: uiGop.file === f }, f)))),
+      o,
+      h('div', { class: 'row' },
+        h('button', { type: 'button', class: 'btn sm', onclick: () => luu(false) }, t('gy.save')),
+        h('button', { type: 'button', class: 'btn ghost sm', onclick: () => luu(true) }, t('gy.saveRerun')),
+        list.length ? h('button', { type: 'button', class: 'btn ghost sm', onclick: async () => {
+          const txt = list.map((g) => `[${t(`gy.v.${g.vung}`)}]${g.file ? ` ${g.file}:` : ''} ${g.text}`).join('\n');
+          try { await navigator.clipboard.writeText(txt); toast(t('gy.copied')); } catch (e) { toast(t('gy.copyFail')); }
+        } }, t('gy.copy')) : null),
+      list.length ? h('ul', { class: 'gy-l' }, list.map((g, i) => h('li', {},
+        h('span', { class: 'tag' }, t(`gy.v.${g.vung}`)), g.file ? h('small', {}, `${g.file} · `) : null, g.text, ' ',
+        h('button', { type: 'button', class: 'linkb', 'aria-label': t('gy.del'), onclick: () => { luuGopY(list.filter((_, k) => k !== i)); ve(); } }, '×')))) : null));
+}
+
 const isoDate = (d) => { const s = String(d || ''); const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s) || /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
   if (!m) return ''; return m[1].length === 4 ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; };
 const labelOf = (key) => { const [st, code] = key.split(':'); const it = item(st, code); return it ? `${code} ${chartLabel(key, it.label)}` : key; };
