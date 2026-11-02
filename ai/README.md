@@ -154,6 +154,10 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     lãi vay tự tính không thấp hơn Rf + 1%. Giá trị cuối kỳ Gordon, đối chiếu bội số EV/EBITDA lúc thoát (bội số
     ngầm định và g ngầm định), cảnh báo TV > 75% EV, g > Rf, g ≥ WACC, WACC thấp bất thường; **bảng độ nhạy 7 × 7**
     WACC × g (± 1,5 điểm %, bước 0,5) như model.
+    **Bảng dự phóng** như sheet 04.Drivers: cột các năm actual (A, tối đa 5 năm, đúng các tỷ lệ máy dùng làm mặc định)
+    đứng cạnh cột dự phóng (F, đặt nhãn theo năm); 6 tham số (tăng trưởng, biên EBIT, khấu hao, capex, vốn lưu động,
+    thuế suất) **sửa được riêng từng năm** — ô trống dùng số chung, ô ghi đè tô vàng, nút bỏ hết ghi đè; dòng công thức
+    giải thích từng dòng. Thuế suất suy từ BCTC ngoài 5–35% thì dùng 20% và báo rõ.
   - **Giá mục tiêu gia quyền & khuyến nghị**: DCF 50% · P/E 25% · EV/EBITDA 15% · P/B 10% (sửa được; phương pháp
     thiếu số thì chia lại), thang MUA / TÍCH LUỸ / NẮM GIỮ / KÉM KHẢ QUAN / BÁN theo ±10% / ±20%.
   - **Định giá nhanh**: EPV = EPS / Ke, P/B hợp lý = (ROE − g)/(Ke − g), Graham number, g ngầm định trong giá thị

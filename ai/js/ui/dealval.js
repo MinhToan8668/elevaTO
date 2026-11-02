@@ -72,13 +72,7 @@ export function dcfBlock(a, inp, save, money, ul) {
   const loi = r.issues.map((k) => h('p', { class: `msg ${['noBase', 'gOverWacc'].includes(k) ? 'err' : 'warn'}` }, t(`dv.issue.${k}`)));
   if (!r.flows) return sec('dv', thamSo, betaBox, ghiChu, waccCards, ...loi);
 
-  const bang = h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' },
-    h('thead', {}, h('tr', {}, h('th', {}, ul), r.flows.map((f) => h('th', { class: 'num' }, t('dv.yearN', { n: f.t }))))),
-    h('tbody', {},
-      [['rev', (f) => money(f.rev)], ['growthRow', (f) => pc(f.growth)], ['ebit', (f) => money(f.ebit)], ['nopat', (f) => money(f.nopat)],
-        ['daRow', (f) => money(f.da)], ['capexRow', (f) => money(-f.capex)], ['dNwc', (f) => money(-f.dNwc)], ['fcff', (f) => money(f.fcff), true],
-        ['pv', (f) => money(f.fcff / (1 + W.wacc) ** f.t)]]
-        .map(([k, g, dam]) => h('tr', { class: dam ? 'dl-tot' : '' }, h('td', {}, t(`dv.r.${k}`)), r.flows.map((f) => h('td', { class: 'num' }, g(f))))))));
+  const bang = bangDuPhong(a, r, V, dat, money, ul);
   const up = r.price !== null && V.price ? r.price / V.price - 1 : null;
   const ketQua = h('div', { class: 'dl-cards' },
     card(t('dv.ev'), money(r.ev), '', t('dv.ev.hint', { pv: money(r.pv), tv: money(r.pvTv) })),
@@ -169,6 +163,46 @@ function betaBlock(V, dat) {
       r.r2 < 0.1 ? h('p', { class: 'msg warn' }, t('bt.lowR2')) : null,
       h('button', { type: 'button', class: 'btn sm', disabled: Math.abs((V.beta || 0) - r.beta) < 1e-9, onclick: () => dat({ beta: Math.round(r.beta * 10000) / 10000 }) },
         t('bt.use', { b: r.beta.toFixed(4) }))) : null);
+}
+
+// ─── Bảng dự phóng: năm actual (A) cạnh năm dự phóng (F), tham số sửa được từng năm ─────────
+
+const DRIVERS = ['growth', 'margin', 'da', 'capex', 'nwc', 'tax'];
+function bangDuPhong(a, r, V, dat, money, ul) {
+  const H = r.hist || [], F = r.flows;
+  const namGoc = a.base.months === 12 && !a.base.ltm ? a.base.year : null;
+  const nhanF = (f) => (namGoc ? `${namGoc + f.t}F` : t('dv.yearN', { n: f.t }));
+  const setBy = (k, i, v) => {
+    const arr = Array.from({ length: Math.max(V.byYear[k]?.length || 0, F.length) }, (_, j) => V.byYear[k]?.[j] ?? null);
+    arr[i] = v;
+    dat({ byYear: { ...V.byYear, [k]: arr } });
+  };
+  const oF = (k, f) => h('input', { type: 'number', step: '0.1', class: `dv-yr${f.ghiDe[k] ? ' on' : ''}`, 'aria-label': `${t(`dv.r.${k}`)} ${nhanF(f)}`,
+    value: f.ghiDe[k] ? String(+(V.byYear[k][f.t - 1] * 100).toFixed(4)) : '',
+    placeholder: (f[{ growth: 'growth', margin: 'margin', da: 'daPct', capex: 'capexPct', nwc: 'nwcPct', tax: 'tax' }[k]] * 100).toFixed(1),
+    onchange: (e) => setBy(k, f.t - 1, e.target.value === '' ? null : +e.target.value / 100) });
+  const histPct = { growth: 'growth', margin: 'margin', da: 'da', capex: 'capex', nwc: 'nwc', tax: 'tax' };
+  const dong = (nhan, hv, fv, cls = '') => h('tr', { class: cls }, h('td', {}, nhan), H.map((x) => h('td', { class: 'num dv-a' }, hv(x))), F.map((f) => h('td', { class: 'num' }, fv(f))));
+  const coGhiDe = DRIVERS.some((k) => V.byYear[k]?.some((x) => x !== null));
+  return h('div', {},
+    h('p', { class: 'priv' }, t('dv.tbl.lead', { base: a.base.label, rev: money(r.rev0), unit: ul })),
+    h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-proj' },
+      h('thead', {}, h('tr', {}, h('th', {}, ul), H.map((x) => h('th', { class: 'num dv-a' }, `${x.label} A`)), F.map((f) => h('th', { class: 'num' }, nhanF(f))))),
+      h('tbody', {},
+        h('tr', { class: 'dv-grp' }, h('td', { colspan: String(1 + H.length + F.length) }, t('dv.grp.drivers'))),
+        DRIVERS.map((k) => dong(t(`dv.r.${k}`), (x) => pc(x[histPct[k]]), (f) => oF(k, f))),
+        h('tr', { class: 'dv-grp' }, h('td', { colspan: String(1 + H.length + F.length) }, t('dv.grp.calc'))),
+        dong(t('dv.r.rev'), (x) => money(x.rev), (f) => money(f.rev)),
+        dong(t('dv.r.ebit'), (x) => money(x.ebit), (f) => money(f.ebit)),
+        dong(t('dv.r.nopat'), () => '', (f) => money(f.nopat)),
+        dong(t('dv.r.daRow'), () => '', (f) => money(f.da)),
+        dong(t('dv.r.capexRow'), () => '', (f) => money(-f.capex)),
+        dong(t('dv.r.dNwc'), () => '', (f) => money(-f.dNwc)),
+        dong(t('dv.r.fcff'), (x) => money(x.fcff), (f) => money(f.fcff), 'dl-tot'),
+        dong(t('dv.r.df'), () => '', (f) => (1 / (1 + r.W.wacc) ** f.t).toFixed(4)),
+        dong(t('dv.r.pv'), () => '', (f) => money(f.fcff / (1 + r.W.wacc) ** f.t))))),
+    h('p', { class: 'priv dv-how' }, t('dv.how')),
+    coGhiDe ? h('button', { type: 'button', class: 'btn ghost sm', onclick: () => dat({ byYear: {} }) }, t('dv.clearYear')) : null);
 }
 
 function sensTable(r, money) {
