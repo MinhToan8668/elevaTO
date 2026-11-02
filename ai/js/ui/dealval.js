@@ -20,6 +20,8 @@ const vnd = (x) => (Number.isFinite(x) ? t('dv.vnd', { v: dong(x) }) : '—');
 const sec = (key, ...kids) => h('section', { class: 'dl-sec' }, h('h3', {}, t(`${key}.h`)), h('p', { class: 'priv', style: { marginTop: 0 } }, t(`${key}.lead`)), ...kids);
 const card = (label, val, tone = '', hint = '') => h('div', { class: `hbox ${tone}` }, h('span', { class: 'hlbl' }, label), h('b', {}, val),
   hint ? h('small', { class: 'priv', style: { marginTop: '2px' } }, hint) : null);
+/** Tiêu đề bước con trong một bước của lộ trình định giá (vd. 3.2 Forecast drivers). */
+export const subHead = (so, ...kids) => h('h4', { class: 'dv-sub' }, h('span', { class: 'dv-num' }, so), ...kids);
 const REC_TONE = { buy: 'em', accumulate: 'em', hold: 'gold', underperform: 'red', sell: 'red' };
 
 /** Ô nhập %: hiện số ×100; bỏ trống = máy tự tính (placeholder là số máy đang dùng). */
@@ -43,7 +45,7 @@ export function dcfBlock(a, inp, save, money, ul) {
   const dat = (patch) => save({ val: { ...V, ...patch } });
   const r = dcfValuation(a, V);
   const nguon = (k) => (r.used[k] === 'user' ? '' : r.used[k] === 'hist' ? t('dv.src.hist', { n: r.his.n }) : t('dv.src.def'));
-  const thamSo = h('div', { class: 'dv-grid' },
+  const waccGrid = h('div', { class: 'dv-grid' },
     oNum(t('dv.price'), V.price, (v) => dat({ price: v }), { suffix: t('dv.cur') }),
     oNum(t('dv.shares'), V.shares, (v) => dat({ shares: v }), { step: '1', placeholder: a.cols.map((c) => c.m.shares).filter(Boolean).pop()?.toString() || '' }),
     oPct(t('dv.rf'), V.rf, null, (v) => dat({ rf: v ?? 0.0437 })),
@@ -52,8 +54,8 @@ export function dcfBlock(a, inp, save, money, ul) {
     h('label', { class: 'dv-f dv-chk' }, h('input', { type: 'checkbox', checked: V.blume, onchange: (e) => dat({ blume: e.target.checked }) }), h('span', {}, t('dv.blume'))),
     oPct(t('dv.extra'), V.extra, null, (v) => dat({ extra: v ?? 0 })),
     oPct(t('dv.kd'), V.kd, r.d.kd, (v) => dat({ kd: v })),
-    oPct(t('dv.tax'), V.tax, r.d.tax, (v) => dat({ tax: v })),
-    oPct(t('dv.g'), V.g, null, (v) => dat({ g: v ?? 0.03 })),
+    oPct(t('dv.tax'), V.tax, r.d.tax, (v) => dat({ tax: v })));
+  const driverGrid = h('div', { class: 'dv-grid' },
     oNum(t('dv.years'), V.years, (v) => dat({ years: v ?? 5 }), { step: '1' }),
     oPct(t('dv.growth'), V.growth, r.d.growth, (v) => dat({ growth: v })),
     h('label', { class: 'dv-f dv-chk' }, h('input', { type: 'checkbox', checked: V.fade, onchange: (e) => dat({ fade: e.target.checked }) }), h('span', {}, t('dv.fade'))),
@@ -61,7 +63,9 @@ export function dcfBlock(a, inp, save, money, ul) {
     oPct(t('dv.da'), V.da, r.d.da, (v) => dat({ da: v })),
     oPct(t('dv.capex'), V.capex, r.d.capex, (v) => dat({ capex: v })),
     oPct(t('dv.nwc'), V.nwc, r.d.nwc, (v) => dat({ nwc: v })),
+    oPct(t('dv.g'), V.g, null, (v) => dat({ g: v ?? 0.03 })),
     oNum(t('dv.exit'), V.exit, (v) => dat({ exit: v }), { step: '0.1', suffix: '×', placeholder: String(a.inputs.evEbitda[1]) }));
+  const lead = (k) => h('p', { class: 'priv dv-sublead' }, t(k));
   const betaBox = betaBlock(V, dat);
   const thietLap = setupBlock(a, r, V, dat, money, ul);
   const ghiChu = h('p', { class: 'priv' }, t('dv.auto'), ' ',
@@ -73,7 +77,11 @@ export function dcfBlock(a, inp, save, money, ul) {
     card(t('dv.weights'), `${pc(W.wd, 0)} / ${pc(W.we, 0)}`, '', t(W.eBasis === 'market' ? 'dv.wMarket' : 'dv.wBook')),
     card('WACC', pc(W.wacc, 2), 'em'));
   const loi = r.issues.map((k) => h('p', { class: `msg ${['noBase', 'gOverWacc'].includes(k) ? 'err' : 'warn'}` }, t(`dv.issue.${k}`)));
-  if (!r.flows) return sec('dv', thietLap, thamSo, betaBox, ghiChu, waccCards, ...loi);
+  const dau = [
+    subHead('3.1', t('dv.sub.setup')), lead('dv.sub.setup.lead'), thietLap,
+    subHead('3.2', t('dv.sub.drivers')), lead('dv.sub.drivers.lead'), driverGrid, ghiChu,
+    subHead('3.3', t('dv.sub.wacc')), lead('dv.sub.wacc.lead'), waccGrid, betaBox, waccCards, ...loi];
+  if (!r.flows) return sec('dv', ...dau);
 
   const bang = bangDuPhong(a, r, V, dat, money, ul);
   const up = r.price !== null && V.price ? r.price / V.price - 1 : null;
@@ -85,7 +93,9 @@ export function dcfBlock(a, inp, save, money, ul) {
     card(t('dv.tvShare'), pc(r.tvShare, 0), r.tvShare > 0.75 ? 'gold' : ''));
   const doiChieu = h('p', { class: 'msg' }, t('dv.exitCheck', {
     m: r.exit.mult, p: r.exit.price !== null ? vnd(r.exit.price) : money(r.exit.equity), ig: pc(r.exit.impliedG, 2), im: lan(r.impliedExit) }));
-  return sec('dv', thietLap, thamSo, betaBox, ghiChu, waccCards, ...loi, bang, ketQua, doiChieu, sensTable(r, money, V.price));
+  return sec('dv', ...dau,
+    subHead('3.4', t('dv.sub.fcff')), lead('dv.sub.fcff.lead'), bang, ketQua, doiChieu,
+    sensTable(r, money, V.price));
 }
 
 // ─── Hồi quy beta (20.Beta_Data) ───────────────────────────
@@ -225,7 +235,7 @@ function sensTable(r, money, gia) {
   const S = r.sens;
   const o = (v) => (S.perShare ? dong(v) : money(v));
   return h('div', {},
-    h('h4', {}, t('dv.sens'), h('small', { class: 'priv' }, ` (${t(S.perShare ? 'dv.sens.ps' : 'dv.sens.eq')})`)),
+    subHead('3.5', t('dv.sens'), h('small', { class: 'priv' }, ` (${t(S.perShare ? 'dv.sens.ps' : 'dv.sens.eq')})`)),
     h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-sens' },
       h('thead', {}, h('tr', {}, h('th', {}, 'g \\ WACC'), S.w.map((w, j) => h('th', { class: `num${j === 3 ? ' dl-base' : ''}` }, pc(w, 2))))),
       h('tbody', {}, S.g.map((g, i) => h('tr', {}, h('th', { class: i === 3 ? 'dl-base' : '' }, pc(g, 2)),
@@ -452,7 +462,6 @@ function setupBlock(a, r, V, dat, money, ul) {
     h('td', { class: 'num' }, h('input', { type: 'number', step: '5', min: '0', max: '100', class: 'dv-yr', value: String(S[k].p), onchange: (e) => datS(k, { p: +e.target.value || 0 }) })),
     h('td', { class: 'num' }, kb ? vnd(kb.rows.find((x) => x.key === k)?.price) : '—'));
   return h('div', { class: 'dv-setup' },
-    h('h4', {}, t('dv.setup')),
     h('div', { class: 'dv-grid' },
       chon(t('dv.preset'), V.preset, [['', t('dv.preset.none')], ...PRESETS.map((p) => [p.id, t(`preset.${p.id}.name`)])], (v) => dat(v ? applyPreset(V, v) : { preset: '' })),
       chon(t('dv.revMode'), V.revMode, REV_MODES.map((m) => [m, t(`dv.rm.${m}`)]), (v) => dat({ revMode: v })),
@@ -478,15 +487,23 @@ function setupBlock(a, r, V, dat, money, ul) {
 
 // ─── Bảng điều khiển định giá: thẻ số chính + football field + thác nước + doanh thu & FCFF ─────────
 
-export function dvDashboard(a, inp, money, ul) {
-  const V = inp.val, v = a.valuation, B = a.base.m, sh = v.shares;
+/** Số tổng hợp dùng chung cho bảng điều khiển và lộ trình định giá: DCF, peer, giá mục tiêu gia quyền, kịch bản. */
+export function dvSummary(a, inp) {
+  const V = inp.val, v = a.valuation, B = a.base.m;
   const r = dcfValuation(a, V);
   if (!r) return null;
   const nam = 12 / (a.base.months || 12);
-  const cp = compsAnalysis(inp.peers, { rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent, shares: sh,
+  const cp = compsAnalysis(inp.peers, { rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent, shares: v.shares,
     bridge: (ev) => ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum });
   const b = blendedTarget(a, r, { evRev: cp.implied.find((x) => x.key === 'evRev')?.equity ?? null });
-  const kb = scenarioValuation(a, V);
+  return { r, cp, b, kb: scenarioValuation(a, V) };
+}
+
+export function dvDashboard(a, inp, money, ul) {
+  const V = inp.val, v = a.valuation, sh = v.shares;
+  const S = dvSummary(a, inp);
+  if (!S) return null;
+  const { r, cp, b, kb } = S;
   const q = quickAnchors(a, r);
   const ps = (eq) => (eq === null || eq === undefined ? null : sh ? eq / sh : eq);
   const gia = sh ? V.price : null;

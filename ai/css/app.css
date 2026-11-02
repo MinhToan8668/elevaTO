@@ -1139,3 +1139,34 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-sel{flex-direction:column;align-items:stretch;gap:3px}
 .dv-sel select{max-width:none;width:100%}
 .dv-scen .dv-yr{width:72px;background:var(--surface);border:1px dashed var(--line-2);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;text-align:right;color:var(--strong)}
+/* Lộ trình định giá (ui/dvguide.js) */
+.dv-road .dv-flow{list-style:none;margin:12px 0 4px;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:22px 26px;counter-reset:none}
+.dv-road .dv-flow li{position:relative}
+.dv-road .dv-flow li:not(:last-child)::after{content:"→";position:absolute;right:-20px;top:50%;transform:translateY(-50%);color:var(--em-text);font-weight:800;font-size:16px}
+.dv-node{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:5px;width:100%;height:100%;padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);border-top:3px solid var(--em);transition:transform .15s,box-shadow .15s}
+.dv-node:hover,.dv-node:focus-visible{transform:translateY(-2px);box-shadow:var(--shadow);outline:none}
+.dv-node.side{border-top-color:var(--gold)}
+.dv-node b{color:var(--strong);font-size:13.5px}
+.dv-node-f{color:var(--muted);font-size:11.5px;line-height:1.35}
+.dv-node-v{margin-top:auto;font-size:12.5px;color:var(--strong);font-weight:700}
+.dv-node-v em{font-style:normal;font-weight:500;color:var(--muted)}
+.dv-badge{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 8px;border-radius:99px;background:var(--em);color:var(--em-ink);font-size:12px;font-weight:800;white-space:nowrap;align-self:flex-start}
+.dv-node.side .dv-badge{background:var(--gold)}
+.dv-road-note{margin-top:10px}
+.dv-step{margin:26px 0 8px;padding:16px 16px 12px;border-radius:16px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 45%,transparent);scroll-margin-top:96px}
+.dv-step-h{display:flex;gap:12px;align-items:flex-start;margin-bottom:6px}
+.dv-step-h h2{margin:0;font-size:18px;color:var(--strong)}
+.dv-step-h .dv-badge{height:28px;font-size:13px;margin-top:2px}
+.dv-why{margin:4px 0 6px;color:var(--text);font-size:13.5px}
+.dv-formula{display:inline-block;padding:4px 10px;border-radius:8px;background:var(--em-soft,var(--surface-2));color:var(--em-text);font-size:12.5px;white-space:normal}
+.dv-step>.dl-sec{margin-top:12px}
+.dv-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line-2);font-size:12.5px}
+.dv-lk{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.dv-lk b{color:var(--muted);font-weight:600}
+.dv-chip{all:unset;cursor:pointer;padding:3px 10px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--strong)}
+.dv-chip.out{border-color:var(--em);color:var(--em-text)}
+.dv-chip:hover,.dv-chip:focus-visible{background:var(--surface-2);outline:none}
+.dv-sub{display:flex;align-items:center;gap:8px;margin:18px 0 4px;font-size:15px;color:var(--strong)}
+.dv-num{display:inline-flex;padding:1px 8px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line-2);font-size:12px;font-weight:800;color:var(--em-text)}
+.dv-sublead{margin:0 0 6px}
+@media (max-width:640px){.dv-road .dv-flow{grid-template-columns:1fr;gap:20px}.dv-road .dv-flow li:not(:last-child)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-19px;transform:translateX(-50%)}}
