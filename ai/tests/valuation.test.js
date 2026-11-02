@@ -150,12 +150,12 @@ const A = () => {
     valuation: { shares: 100e6, netDebt: 50e9, debtLikeSum: 0, minority: 0, nonOpSum: 0, methods: [] }, inputs: { evEbitda: [5, 7, 9] } };
 };
 
-test('kịch bản Bi quan / Cơ sở / Lạc quan: giá tăng dần, giá trị kỳ vọng theo xác suất', () => {
+test('kịch bản Bear / Base / Bull: giá tăng dần, giá trị kỳ vọng theo xác suất', () => {
   const inp = { price: 50000, beta: 1, scen: { on: true, baseP: 50, bull: { growth: 0.03, margin: 0.01, wacc: -0.01, p: 25 }, bear: { growth: -0.03, margin: -0.01, wacc: 0.01, p: 25 } } };
   const s = scenarioValuation(A(), inp);
   const [bear, mid, bull] = s.rows;
   assert.ok(bear.price < mid.price && mid.price < bull.price, `${bear.price} < ${mid.price} < ${bull.price}`);
-  gan(mid.price, dcfValuation(A(), inp).price, 1e-12, 'kịch bản cơ sở = DCF chính');
+  gan(mid.price, dcfValuation(A(), inp).price, 1e-12, 'Base case = DCF chính');
   gan(s.expected.price, bear.price * 0.25 + mid.price * 0.5 + bull.price * 0.25, 1e-9, 'kỳ vọng');
   assert.equal(scenarioValuation(A(), { ...inp, scen: { on: false } }), null);
 });

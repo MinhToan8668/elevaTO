@@ -166,7 +166,7 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
   const out = [];
   // Ghi đè từng năm (như cột OVERRIDE của sheet 04.Drivers): byYear[k][t − 1] là số của năm t, null = dùng số chung.
   const lay = (k, t, chung) => (Number.isFinite(byYear[k]?.[t - 1]) ? byYear[k][t - 1] : chung);
-  const dG = adj.growth || 0, dM = adj.margin || 0;            // chênh của kịch bản (lạc quan / bi quan)
+  const dG = adj.growth || 0, dM = adj.margin || 0;            // chênh của kịch bản (Bull / Bear)
   let rev = rev0, nwcTruoc = nwc0 ?? rev0 * nwc;
   // Mô hình cửa hàng (21.Tpl_Retail): doanh thu = số cửa hàng × doanh thu bình quân một cửa hàng.
   let cuaHang = R.stores0 || null, dtCh = cuaHang ? rev0 / cuaHang : null;

@@ -503,7 +503,7 @@ export function dvDashboard(a, inp, money, ul) {
   for (const x of cp.implied) rows.push({ label: t('dv.ff.peer', { m: t(`cp.m.${x.key}`) }), mid: ps(x.equity) });
   if (q?.epv) rows.push({ label: t('tg.epv'), mid: sh ? q.epv : null });
   if (q?.graham) rows.push({ label: t('tg.graham'), mid: sh ? q.graham : null });
-  if (kb) rows.push({ label: t('dv.sc.h'), lo: ps(kb.rows[0].equity), mid: ps(kb.expected.equity), hi: ps(kb.rows[2].equity), hl: true });
+  if (kb) rows.push({ label: t('dv.ff.scen'), lo: ps(kb.rows[0].equity), mid: ps(kb.expected.equity), hi: ps(kb.rows[2].equity), hl: true });
   const ff = footballChart(rows, { price: gia, target: sh ? b?.price : b?.equity, labels: { price: t('dv.ff.price'), target: t('dv.ff.target'), title: t('dv.ff.h') } });
 
   const wf = r.flows ? waterfallChart([

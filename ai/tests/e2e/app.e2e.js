@@ -1255,9 +1255,9 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.waitForSelector('.dv-proj tr:has-text("Cửa hàng mở thêm")');
   assert.ok(await page.locator('.dv-proj tr', { hasText: 'Số cửa hàng cuối năm' }).count() >= 1);
 
-  // Kịch bản: bật → thẻ giá trị kỳ vọng, bi quan < lạc quan
+  // Kịch bản: bật → thẻ giá trị kỳ vọng, Bear < Bull
   await page.locator('.dv-scen summary input[type=checkbox]').check();
-  await page.waitForSelector('.dv-kpi :text("Giá trị kỳ vọng")');
+  await page.waitForSelector('.dv-kpi :text("Expected value")');
   assert.equal(await page.locator('.dv-scen tbody tr').count(), 3);
   if (process.env.E2E_SHOTS) await page.locator('.dv-setup').screenshot({ path: join(process.env.E2E_SHOTS, 'thiet-lap.png') });
   if (process.env.E2E_SHOTS) await page.locator('.deal').screenshot({ path: join(process.env.E2E_SHOTS, 'dinh-gia.png') });

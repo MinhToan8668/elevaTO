@@ -170,8 +170,8 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     · bẫy hay gặp"; sửa tiếp được mọi thứ. **4 cách dự phóng doanh thu**: % tăng trưởng; sản lượng × giá bán; số cửa
     hàng × doanh thu / cửa hàng; nhập tay từng năm (theo kế hoạch / tiến độ bàn giao) — tham số của từng cách cũng
     sửa riêng được từng năm trong bảng dự phóng. **3 cách tính giá trị cuối kỳ**: Gordon, bội số EV/EBITDA lúc thoát,
-    bình quân hai cách. **Kịch bản Bi quan / Cơ sở / Lạc quan** (như 02.Control): chênh lệch tăng trưởng, biên EBIT,
-    WACC và xác suất; ra giá từng kịch bản và giá trị kỳ vọng.
+    bình quân hai cách. **Scenario analysis Bear / Base / Bull** (như 02.Control): chênh lệch tăng trưởng, biên EBIT,
+    WACC và xác suất; ra giá từng kịch bản và expected value (probability-weighted).
   - **Giá mục tiêu gia quyền & khuyến nghị**: DCF 50% · P/E 25% · EV/EBITDA 15% · P/B 10% (sửa được; phương pháp
     thiếu số thì chia lại), thang MUA / TÍCH LUỸ / NẮM GIỮ / KÉM KHẢ QUAN / BÁN theo ±10% / ±20%.
   - **Định giá nhanh**: EPV = EPS / Ke, P/B hợp lý = (ROE − g)/(Ke − g), Graham number, g ngầm định trong giá thị
