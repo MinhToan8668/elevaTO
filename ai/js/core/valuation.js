@@ -36,7 +36,7 @@ export const DEFAULT_VAL = {
   capex: null,            // capex thuần / doanh thu
   nwc: null,              // vốn lưu động thương mại / doanh thu
   exit: null,             // bội số EV/EBITDA lúc thoát để đối chiếu — mặc định = mức giữa tab bội số
-  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10 },
+  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0 },   // evRev: theo trung vị peer (bảng so sánh)
 };
 const KHOA_TY_LE = ['rf', 'erp', 'extra', 'kd', 'tax', 'g', 'growth', 'margin', 'da', 'capex', 'nwc'];
 
@@ -226,10 +226,10 @@ export function quickAnchors(a, dcf) {
 }
 
 /**
- * Giá mục tiêu bình quân gia quyền (17.Valuation): DCF + các bội số mức giữa. Phương pháp nào không có
- * số thì bỏ và chia lại trọng số cho các phương pháp còn lại.
+ * Giá mục tiêu bình quân gia quyền (17.Valuation): DCF + các bội số mức giữa (+ EV/Doanh thu theo trung vị
+ * peer nếu có bảng so sánh, extra.evRev). Phương pháp nào không có số thì bỏ và chia lại trọng số.
  */
-export function blendedTarget(a, dcf) {
+export function blendedTarget(a, dcf, extra = {}) {
   if (!dcf) return null;
   const w = dcf.inputs.weights, v = a.valuation;
   const giua = (key) => v.methods.find((m) => m.key === key)?.equity[1] ?? null;
@@ -238,6 +238,7 @@ export function blendedTarget(a, dcf) {
     { key: 'pe', equity: giua('pe') },
     { key: 'evEbitda', equity: giua('evEbitda') },
     { key: 'pb', equity: giua('pb') },
+    { key: 'evRev', equity: extra.evRev ?? null },
   ].map((r) => ({ ...r, weight: w[r.key] || 0, price: r.equity !== null && v.shares ? r.equity / v.shares : null }));
   const co = rows.filter((r) => r.equity !== null && r.equity > 0 && r.weight > 0);
   const tong = co.reduce((s, r) => s + r.weight, 0);

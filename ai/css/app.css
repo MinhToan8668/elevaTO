@@ -1078,3 +1078,11 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-sens td.dv-mid{font-weight:800;outline:2px solid var(--em);outline-offset:-2px}
 .dv-mna>summary{cursor:pointer;font-size:16px}
 .dv-wide span{flex:0 0 auto;min-width:160px}
+/* Bảng peer (ui/dealval.js compsBlock) */
+.cp-t th,.cp-t td{white-space:nowrap}
+.cp-t .cp-in{width:92px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px;font:inherit;font-size:12.5px;text-align:right;color:var(--strong)}
+.cp-t .cp-name{width:170px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px;font:inherit;font-size:12.5px;color:var(--strong)}
+.cp-t tr.cp-me td{font-weight:700;background:var(--em-soft)}
+.cp-bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.cp-t td:nth-child(5) .cp-in{width:120px}
+.cp-r tr.cp-me td{font-weight:700;background:var(--em-soft)}

@@ -1227,3 +1227,40 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   if (process.env.E2E_SHOTS) await page.locator('.deal').screenshot({ path: join(process.env.E2E_SHOTS, 'dinh-gia.png') });
   assert.deepEqual(errors, []);
 });
+
+test('bảng peer (16.Comps): dán từ Excel ra bội số, trung vị, giá ngầm định; dùng tứ phân vị làm dải bội số', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('cp@elevato.vn', { ten: 'Cp', email: 'cp@elevato.vn', mk: 'x', token: TOKEN('cp@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Cp', email: 'cp@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:cp@elevato.vn', s);
+  }, [TOKEN('cp@elevato.vn'), phien]);
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('.rail a[data-step="6"]').click();
+  await page.locator('#tabb-DEAL').click();
+  await page.waitForSelector('.cp-bar');
+  await page.locator('.cp-bar button', { hasText: 'Dán từ Excel' }).click();
+  await page.locator('.dl-sec textarea').fill([
+    'Tên\tGiá\tTỷ giá\tSố CP',
+    'FRT\t185.000\t1\t136214832\t1.850\t5.420\t35.000\t1.120\t630\t3.500',
+    'MWG\t77000\t1\t1462238655\t25600\t22800\t140000\t7140\t3220\t25000',
+    'PET\t26000\t1\t108000000\t900\t4100\t18000\t432\t198\t2000',
+  ].join('\n'));
+  await page.locator('.dl-sec button', { hasText: 'Thêm vào bảng' }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.cp-t tbody tr').length === 3);
+  const median = await page.locator('.cp-r tr', { hasText: 'Trung vị' }).innerText();
+  assert.match(median, /15[.,]38/, 'trung vị EV/EBITDA của FRT 25,69 · MWG 15,38 · PET 13,91 = 15,38');
+  assert.ok(await page.locator('.dl-sec h4', { hasText: 'Định giá ngầm định theo trung vị peer' }).count());
+  if (process.env.E2E_SHOTS) await page.locator('.dl-sec', { has: page.locator('.cp-t') }).screenshot({ path: join(process.env.E2E_SHOTS, 'peer.png') });
+  await page.locator('.cp-bar button', { hasText: 'Dùng tứ phân vị' }).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('.dl-mult')].some((i) => i.value === '15.4'));
+  // Bỏ tick một peer → trung vị đổi
+  await page.locator('.cp-t tbody tr').first().locator('input[type=checkbox]').uncheck();
+  await page.waitForFunction(() => !/15[.,]38/.test([...document.querySelectorAll('.cp-r tr')].find((r) => r.innerText.includes('Trung vị'))?.innerText || ''));
+  assert.deepEqual(errors, []);
+});

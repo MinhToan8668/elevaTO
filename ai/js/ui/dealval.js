@@ -5,6 +5,7 @@
 import { h } from './dom.js';
 import { dcfValuation, quickAnchors, blendedTarget, piotroski } from '../core/valuation.js';
 import { mnaAnalysis } from '../core/mna.js';
+import { compsAnalysis, peerMultiples, parsePeers, MULTS } from '../core/comps.js';
 import { t } from '../i18n.js';
 
 const pc = (x, d = 1) => (Number.isFinite(x) ? `${(x * 100).toFixed(d)}%` : '—');
@@ -102,7 +103,10 @@ function sensTable(r, money) {
 export function targetBlock(a, inp, save, money) {
   const V = inp.val;
   const r = dcfValuation(a, V);
-  const b = blendedTarget(a, r);
+  const B = a.base.m, v = a.valuation, nam = 12 / (a.base.months || 12);
+  const cp = compsAnalysis(inp.peers, { rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent, shares: v.shares,
+    bridge: (ev) => ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum });
+  const b = blendedTarget(a, r, { evRev: cp.implied.find((x) => x.key === 'evRev')?.equity ?? null });
   if (!b) return null;
   const datW = (k, v) => save({ val: { ...V, weights: { ...V.weights, [k]: v } } });
   const q = quickAnchors(a, r);
@@ -200,4 +204,88 @@ export function mnaBlock(a, inp, save, money, unit, ul) {
       card(t('ma.fin'), money(r.finCost), '', t('ma.fin.hint', { d: money(r.debtRaised), c: money(r.cashUsed), n: dong(r.newShares) })),
       card(t('ma.lev'), `${lan(r.leverage.before)} → ${lan(r.leverage.after)}`, r.leverage.after > a.inputs.targetLev ? 'red' : '', t('ma.lev.hint', { t: a.inputs.targetLev })),
       card(t('ma.value'), r.valueCreated === null ? '—' : money(r.valueCreated), r.valueCreated === null ? '' : r.valueCreated >= 0 ? 'em' : 'red', t(r.valueCreated === null ? 'ma.value.need' : 'ma.value.hint'))));
+}
+
+// ─── So sánh cùng ngành (16.Comps) ─────────────────────────
+
+const uiComps = { paste: false };
+export function compsBlock(a, inp, save, money, unit, ul) {
+  const v = a.valuation, B = a.base.m;
+  const peers = inp.peers;
+  const datP = (list) => save({ peers: list });
+  const sua = (i, patch) => datP(peers.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  const nam = 12 / (a.base.months || 12);
+  const bridge = (ev) => ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum;
+  const r = compsAnalysis(peers, { rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent, shares: v.shares, bridge });
+  const dcf = dcfValuation(a, inp.val);
+  // Dòng của chính công ty đang phân tích (như dòng DGW của model) — cần giá thị trường + số cổ phiếu.
+  const me = inp.val.price && v.shares ? peerMultiples({ price: inp.val.price, fx: 1, shares: v.shares, cash: B.cash || 0, debt: B.debt || 0,
+    rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent }) : null;
+
+  const oTien = (p, i, k) => h('input', { type: 'number', step: 'any', class: 'cp-in', 'aria-label': `${t(`cp.c.${k}`)} — ${p.name}`,
+    value: Number.isFinite(p[k]) ? String(+(p[k] / unit).toFixed(4)) : '', onchange: (e) => sua(i, { [k]: e.target.value === '' ? null : +e.target.value * unit }) });
+  const oSo = (p, i, k, step = 'any') => h('input', { type: 'number', step, class: 'cp-in', 'aria-label': `${t(`cp.c.${k}`)} — ${p.name}`,
+    value: Number.isFinite(p[k]) ? String(p[k]) : '', onchange: (e) => sua(i, { [k]: e.target.value === '' ? null : +e.target.value }) });
+  const x = (n) => (Number.isFinite(n) ? n.toFixed(2) : '—');
+  const nhom = MULTS.map((k) => h('th', { class: 'num' }, t(`cp.m.${k}`)));
+  const head = h('tr', {}, h('th', {}, ''), h('th', {}, t('cp.c.name')),
+    ['price', 'fx', 'shares'].map((k) => h('th', { class: 'num' }, t(`cp.c.${k}`))),
+    ['cash', 'debt', 'rev', 'ebitda', 'npat', 'equity'].map((k) => h('th', { class: 'num' }, `${t(`cp.c.${k}`)} (${ul})`)),
+    h('th', {}, ''));
+  const dongPeer = r.rows.map((p, i) => h('tr', { class: p.off ? 'src-off' : '' },
+    h('td', { class: 'chk-c' }, h('input', { type: 'checkbox', checked: !p.off, 'aria-label': t('cp.use', { name: p.name }), onchange: (e) => sua(i, { off: !e.target.checked }) })),
+    h('td', {}, h('input', { type: 'text', class: 'cp-name', value: p.name, maxlength: 80, 'aria-label': t('cp.c.name'), onchange: (e) => sua(i, { name: e.target.value }) })),
+    h('td', { class: 'num' }, oSo(p, i, 'price')), h('td', { class: 'num' }, oSo(p, i, 'fx')), h('td', { class: 'num' }, oSo(p, i, 'shares', '1')),
+    ['cash', 'debt', 'rev', 'ebitda', 'npat', 'equity'].map((k) => h('td', { class: 'num' }, oTien(p, i, k))),
+    h('td', {}, h('button', { type: 'button', class: 'btn ghost sm', 'aria-label': t('cp.del', { name: p.name }), onclick: () => datP(peers.filter((_, j) => j !== i)) }, '✕'))));
+  // Bảng kết quả tách riêng khỏi bảng nhập: bội số và trung vị luôn thấy ngay, không phải cuộn ngang.
+  const dongKq = r.rows.map((p) => h('tr', { class: p.off ? 'src-off' : '' }, h('td', {}, p.name),
+    h('td', { class: 'num' }, money(p.m.cap)), h('td', { class: 'num' }, money(p.m.ev)), MULTS.map((k) => h('td', { class: 'num' }, x(p.m[k])))));
+  const thongKe = ['median', 'mean', 'q1', 'q3'].map((s) => h('tr', { class: s === 'median' ? 'dl-tot' : 'dl-sub' },
+    h('td', { colspan: '3' }, t(`cp.s.${s}`)), MULTS.map((k) => h('td', { class: 'num' }, x(r.stats[k][s])))));
+  const dongMe = me ? h('tr', { class: 'cp-me' }, h('td', {}, t('cp.me')),
+    h('td', { class: 'num' }, money(me.cap)), h('td', { class: 'num' }, money(me.ev)), MULTS.map((k) => h('td', { class: 'num' }, x(me[k])))) : null;
+  const bangKq = peers.length ? h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t cp-r' },
+    h('thead', {}, h('tr', {}, h('th', {}, t('cp.c.name')), h('th', { class: 'num' }, `${t('cp.cap')} (${ul})`), h('th', { class: 'num' }, `EV (${ul})`), nhom)),
+    h('tbody', {}, dongKq, thongKe, dongMe))) : null;
+
+  const dan = uiComps.paste ? (() => {
+    const o = h('textarea', { rows: 5, placeholder: t('cp.paste.ph', { unit: ul }), 'aria-label': t('cp.paste') });
+    return h('div', { class: 'gy-f' }, h('p', { class: 'priv' }, t('cp.paste.lead', { unit: ul })), o,
+      h('div', { class: 'row' }, h('button', { type: 'button', class: 'btn sm', onclick: () => {
+        const moi = parsePeers(o.value, unit);
+        if (!moi.length) { o.focus(); return; }
+        uiComps.paste = false;
+        datP([...peers, ...moi]);
+      } }, t('cp.paste.go'))));
+  })() : null;
+
+  const duDai = MULTS.filter((k) => k !== 'evRev').every((k) => r.stats[k].n >= 2 || r.stats[k].n === 0) && ['evEbitda', 'pe', 'pb'].some((k) => r.stats[k].n >= 2);
+  const lam = (k) => [r.stats[k].q1, r.stats[k].median, r.stats[k].q3].map((n) => Math.round(n * 10) / 10);
+  const apDung = () => {
+    const patch = {};
+    for (const k of ['evEbitda', 'pe', 'pb']) if (r.stats[k].n >= 2) patch[k] = lam(k);
+    save(patch);
+  };
+  const ngam = r.implied.length ? h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' },
+    h('thead', {}, h('tr', {}, h('th', {}, t('dl.m.method')), h('th', { class: 'num' }, t('cp.i.mult')), h('th', { class: 'num' }, t('cp.i.metric')),
+      h('th', { class: 'num' }, t('cp.i.ev')), h('th', { class: 'num' }, t('dl.m.eq')), h('th', { class: 'num' }, t('dl.m.ps')), h('th', { class: 'num' }, t('cp.i.vsDcf')))),
+    h('tbody', {}, r.implied.map((m) => h('tr', {},
+      h('td', {}, t(`cp.m.${m.key}`)), h('td', { class: 'num' }, x(m.mult)), h('td', { class: 'num' }, money(m.metric)),
+      h('td', { class: 'num' }, m.ev === null ? '—' : money(m.ev)), h('td', { class: 'num' }, money(m.equity)),
+      h('td', { class: 'num' }, vnd(m.price)),
+      h('td', { class: 'num' }, dcf?.price && m.price !== null ? pc(m.price / dcf.price - 1) : '—')))))) : null;
+
+  return sec('cp',
+    h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t cp-t' }, h('thead', {}, head), h('tbody', {}, dongPeer))),
+    !peers.length ? h('p', { class: 'msg' }, t('cp.empty')) : null,
+    h('div', { class: 'row cp-bar' },
+      h('button', { type: 'button', class: 'btn ghost sm', onclick: () => datP([...peers, { name: t('cp.new'), fx: 1 }]) }, t('cp.add')),
+      h('button', { type: 'button', class: 'btn ghost sm', 'aria-expanded': String(uiComps.paste), onclick: () => { uiComps.paste = !uiComps.paste; save({}); } }, t('cp.paste')),
+      h('button', { type: 'button', class: 'btn sm', disabled: !duDai, title: t('cp.apply.hint'), onclick: apDung }, t('cp.apply'))),
+    dan,
+    bangKq ? h('h4', {}, t('cp.mults')) : null,
+    bangKq,
+    ngam ? h('h4', {}, t('cp.implied')) : null,
+    ngam);
 }

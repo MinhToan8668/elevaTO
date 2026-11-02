@@ -146,6 +146,12 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     thiếu số thì chia lại), thang MUA / TÍCH LUỸ / NẮM GIỮ / KÉM KHẢ QUAN / BÁN theo ±10% / ±20%.
   - **Định giá nhanh**: EPV = EPS / Ke, P/B hợp lý = (ROE − g)/(Ke − g), Graham number, g ngầm định trong giá thị
     trường; thêm **Piotroski F-score** vào khối chất lượng lợi nhuận.
+  - **So sánh cùng ngành – peer** (`js/core/comps.js`, như sheet 16.Comps): nhập từng peer hoặc dán bảng từ Excel
+    (Tên · Giá · Tỷ giá · Số CP · Tiền · Nợ vay · Doanh thu · EBITDA · LNST · Vốn chủ); máy tính vốn hoá, EV = vốn hoá
+    + nợ − tiền, EV/Doanh thu, EV/EBITDA, P/E, P/B; trung vị / trung bình / tứ phân vị 25–75% (bỏ bội số âm hoặc
+    > 200 lần); dòng của chính công ty theo giá thị trường; giá ngầm định theo trung vị peer (so với DCF). Nút "Dùng
+    tứ phân vị làm dải bội số" đặt mức thấp / giữa / cao của tab bội số; EV/Doanh thu theo trung vị peer vào được giá
+    mục tiêu gia quyền (trọng số mặc định 0). Kiểm bằng số peer của model DGW ở `tests/comps.test.js`.
   - **Thương vụ mua cổ phần** (`js/core/mna.js`): lợi thế thương mại theo phần sở hữu (VAS 11; âm = lãi mua giá rẻ),
     phân bổ ≤ 10 năm, NCI, hợp nhất theo số tháng năm mua, P/E · P/B · EV/EBITDA đã trả, chi phí nguồn tiền
     (tiền mặt / vay / phát hành cổ phiếu), **EPS trước / sau** (cả năm và năm mua), **giá mua hoà vốn EPS**, nợ
