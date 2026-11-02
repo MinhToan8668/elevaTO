@@ -787,6 +787,7 @@ footer a:hover{color:var(--emerald)}
       </div>
       <p class="hero-alt" data-show="pricing.showSelfPaced">Ngân sách gọn hơn? Có gói <b>tự học</b> chỉ <b data-bind="computed.price.selfPaced">—</b> — chọn ngay trong form đăng ký.</p>
       <div class="hero-meta">
+        <span data-show="computed.startDate.has">🚀 Khai giảng <b data-bind="computed.startDate.text">—</b></span>
         <span>⏱ <b>60 giây</b> để điền</span>
         <span>📅 <b data-bind="computed.scheduleShort">—</b></span>
         <span>🎓 <b data-tpl="{{schedule.modules}} module · {{schedule.sessions}} buổi live"></b></span>
@@ -813,6 +814,7 @@ footer a:hover{color:var(--emerald)}
           <b><i class="thr" data-bind="computed.price.regular"></i><span data-bind="computed.price.earlyBird"></span></b>
         </div>
         <div class="slot-row" data-show="pricing.showSelfPaced"><span>Gói tự học (recorded)</span><b data-bind="computed.price.selfPaced"></b></div>
+        <div class="slot-row" data-show="computed.startDate.has"><span>Khai giảng dự kiến</span><b data-tpl="{{computed.startDate.text}}{{computed.startDate.left}}"></b></div>
         <div class="slot-row"><span>Lịch học</span><b data-bind="computed.scheduleShort"></b></div>
         <div class="slot-row"><span>Số buổi</span><b data-tpl="{{schedule.sessions}} buổi × {{schedule.hoursPerSession}} tiếng"></b></div>
       </div>
@@ -1110,6 +1112,7 @@ footer a:hover{color:var(--emerald)}
       <div class="prog" id="ctaProg"><i></i></div>
     </div>
     <button class="btn btn-em btn-xl" data-open data-cta>Đăng ký giữ chỗ ngay <span class="arw">→</span></button>
+    <p class="cta-sub" data-show="computed.startDate.has" data-tpl="🚀 Khai giảng dự kiến {{computed.startDate.text}}{{computed.startDate.left}}"></p>
     <p class="cta-sub" data-tpl="{{computed.scheduleShort}} · Chỉ mất 60 giây · Mình sẽ tư vấn định hướng cho bạn trước khi học"></p>
     <div class="cta-live"><span class="dot"></span><span id="ctaLive">—</span></div>
   </div>
@@ -1269,7 +1272,7 @@ var CACHE_KEY = 'elevato_cfg_v2';
 
 /* ── Config dự phòng: dùng khi chưa cấu hình API hoặc mạng lỗi ── */
 var FALLBACK = {
-  cohort:{number:7,status:'open',openText:'Sắp mở'},
+  cohort:{number:7,status:'open',openText:'Sắp mở',startDate:''},
   slots:{max:10,base:4,registered:0},
   pricing:{earlyBird:3000000,regular:4000000,selfPaced:1500000,showSelfPaced:true,
            note:'Học thử 1 buổi rồi mới quyết định đóng học phí.'},
@@ -1481,6 +1484,21 @@ function esc(s){
 
 /* ══════════════ 3. TÍNH TOÁN DẪN XUẤT ══════════════
    Client tự tính lại để trang vẫn đúng ngay cả khi offline. */
+/* Ngày khai giảng dự kiến (cohort.startDate, YYYY-MM-DD — bot đặt bằng /khaigiang) → chữ hiện trên trang.
+   Cùng cách viết với máy chủ (ai/worker/src/khoahoc.js moTaNgay). Số ngày còn lại tính theo giờ Việt Nam. */
+function moTaNgay(iso){
+  var k=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  var rong={has:false,text:'',short:'',left:'',daysLeft:null};
+  if(!k) return rong;
+  var t=Date.UTC(+k[1],+k[2]-1,+k[3]), d=new Date(t);
+  if(d.getUTCDate()!==+k[3]) return rong;
+  var vn=new Date(Date.now()+7*3600e3);                 // giờ Việt Nam (UTC+7, không đổi giờ)
+  var con=Math.round((t-Date.UTC(vn.getUTCFullYear(),vn.getUTCMonth(),vn.getUTCDate()))/864e5);
+  var thu=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getUTCDay()];
+  return {has:true, text:thu+', '+k[3]+'/'+k[2]+'/'+k[1], short:k[3]+'/'+k[2], daysLeft:con,
+    left: con>0?' · còn '+con+' ngày' : con===0?' · hôm nay' : ''};
+}
+
 function compute(c){
   var base=Number(c.slots.base)||0, reg=Number(c.slots.registered)||0;
   var max=Math.max(1,Number(c.slots.max)||1);
@@ -1501,6 +1519,7 @@ function compute(c){
     percent:Math.min(100,Math.round(total/max*100)),
     statusLabel: isClosed?'Đã đóng' : isFull?'Đã đủ chỗ' : (c.cohort.openText||'Đang mở'),
     scheduleShort:c.schedule.days+' · '+c.schedule.time,
+    startDate:moTaNgay(c.cohort.startDate),
     price:{
       earlyBird:money(eb), earlyBirdShort:moneyShort(eb),
       regular:money(reg2), regularShort:moneyShort(reg2),
@@ -1598,7 +1617,7 @@ function render(cfg){
 
   /* modal */
   var mc=$('#mCohort');
-  if(mc) mc.textContent=C.cohortLabel+' · Financial Modeling · elevaTO';
+  if(mc) mc.textContent=C.cohortLabel+(C.startDate.has?' · khai giảng '+C.startDate.short:'')+' · Financial Modeling · elevaTO';
 
   /* lưới giá co lại khi ẩn gói Self-paced */
   var pg=$('.price-grid');

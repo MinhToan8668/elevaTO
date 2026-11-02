@@ -187,6 +187,29 @@ test('/cohortmoi tăng số cohort, đếm lại từ 0, giữ nguyên đăng k�
   } finally { f.thoi(); }
 });
 
+test('/khaigiang lưu ngày khai giảng, web nhận được, /khaigiang xoá bỏ đi', async () => {
+  const env = env0();
+  const r = await chayLenhEl(env, '/khaigiang', ['15/11/2099']);
+  assert.match(r.text, /✅/);
+  assert.equal((await docCauHinh(env.DB)).cohort.startDate, '2099-11-15');
+  const c = await cauHinh(env);
+  assert.equal(c.cohort.startDate, '2099-11-15');
+  assert.equal(c.computed.startDate.has, true);
+  assert.match(c.computed.startDate.text, /15\/11\/2099/);
+  assert.match((await chayLenhEl(env, '/khaigiang', ['31/02/2099'])).text, /khaigiang/i, 'ngày sai phải được nhắc cú pháp');
+  assert.equal((await docCauHinh(env.DB)).cohort.startDate, '2099-11-15', 'ngày sai không được ghi đè');
+  await chayLenhEl(env, '/khaigiang', ['xoá']);
+  assert.equal((await docCauHinh(env.DB)).cohort.startDate, '');
+  assert.equal((await cauHinh(env)).computed.startDate.has, false);
+});
+
+test('/cohortmoi xoá ngày khai giảng của cohort cũ', async () => {
+  const env = env0();
+  await chayLenhEl(env, '/khaigiang', ['2099-01-05']);
+  await chayLenhEl(env, '/cohortmoi', []);
+  assert.equal((await docCauHinh(env.DB)).cohort.startDate, '');
+});
+
 test('/ds liệt kê đăng ký, /duyet và /tuchoi đổi trạng thái', async () => {
   const f = moFetch();
   try {
@@ -566,7 +589,7 @@ test('bảng câu hỏi: lệnh nào cũng có thật, câu nào cũng đủ ch�
     }
     // Lệnh nào cần giá trị mà không có trong bảng thì người dùng lại phải tự nhớ cú pháp.
     const CAN_GIA_TRI = ['cohort', 'slot', 'base', 'giasom', 'giagoc', 'giatuhoc',
-      'lich', 'buoi', 'kinhnghiem', 'thongbao', 'video', 'duyet', 'tuchoi'];
+      'lich', 'buoi', 'kinhnghiem', 'thongbao', 'video', 'duyet', 'tuchoi', 'khaigiang'];
     for (const c of CAN_GIA_TRI) {
       assert.ok(HOI_EL[`/${c}`], `/${c} cần giá trị mà chưa có câu hỏi`);
       assert.ok(MENU_EL.some((x) => x.command === c), `/${c} có câu hỏi mà thiếu trong menu`);

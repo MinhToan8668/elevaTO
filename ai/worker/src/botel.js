@@ -5,8 +5,8 @@
 // (tg.js) đặt parse_mode HTML cho cả hai bot.
 
 import {
-  cauHinhDayDu, cohortLabel, datTrangThai, docCauHinh, ghiCauHinh,
-  gioVN, maDangKy, soDienThoai, tien, tienNgan, timDangKy,
+  cauHinhDayDu, cohortLabel, datTrangThai, docCauHinh, docNgay, ghiCauHinh,
+  gioVN, maDangKy, moTaNgay, soDienThoai, tien, tienNgan, timDangKy,
 } from './khoahoc.js';
 import { linksKey } from './links.js';
 import { esc, laChatQuanTri, taoBot } from './tg.js';
@@ -83,6 +83,7 @@ const MENU = [
   { command: 'giagoc', description: '💰 Giá gốc' },
   { command: 'giatuhoc', description: '🎧 Giá gói Self-paced' },
   { command: 'lich', description: '📅 Lịch học (ngày | giờ)' },
+  { command: 'khaigiang', description: '🚀 Ngày khai giảng dự kiến' },
   { command: 'buoi', description: '🕐 Số buổi: tổng, lý thuyết, thực hành' },
   { command: 'kinhnghiem', description: '🎓 Số năm kinh nghiệm hiện trên trang' },
   { command: 'chiso', description: '🧮 Sửa 4 ô số liệu dưới đầu trang' },
@@ -136,6 +137,7 @@ async function huongDan(env) {
 
     `📅 ${b('Lịch học & hồ sơ')}`,
     `/lich ${ma(`${s.days} | ${s.time}`)}`,
+    `/khaigiang ${ma(c.computed.startDate.has ? c.computed.startDate.short : '15/11')} — ngày khai giảng dự kiến${c.computed.startDate.has ? ` (đang là ${esc(c.computed.startDate.text)})` : ' (chưa đặt)'}`,
     `/buoi ${ma(`${s.sessions} ${s.theory} ${s.practice}`)} — tổng buổi, lý thuyết, thực hành`,
     `/kinhnghiem ${ma(c.stats.years)} — số năm kinh nghiệm hiện đầu trang`,
     '/chiso — sửa 4 ô số liệu dưới đầu trang (số, tiêu đề, dòng nhỏ từng ô)', '',
@@ -179,6 +181,7 @@ async function lenhStatus(env) {
     `💰 Early Bird ${b(c.computed.price.earlyBird)}  (gốc <s>${esc(c.computed.price.regular)}</s>, tiết kiệm ${c.computed.price.savePercent}%)`,
     `   Self-paced: ${esc(c.computed.price.selfPaced)}${c.pricing.showSelfPaced ? '' : ` ${ng('(đang ẩn)')}`}`, '',
     `📅 ${esc(c.schedule.detail)}`,
+    `🚀 Khai giảng dự kiến: ${c.computed.startDate.has ? `${b(c.computed.startDate.text)}${demNgay(c.computed.startDate.daysLeft)}` : `${ng('chưa đặt')} — /khaigiang`}`,
     `📚 ${c.schedule.sessions} buổi (${c.schedule.theory} lý thuyết + ${c.schedule.practice} thực hành)`,
     `🎓 Đã hoàn thành: ${c.stats.cohortsDone} cohort`, '',
     `🎬 Video học thử: ${c.media.videoUrl ? '✅ đang bật' : '— chưa có'}`,
@@ -310,6 +313,7 @@ async function chayLenh(env, lenh, arg, ctx = {}) {
   if (c === 'slots' || SO_LENH[c]) return datSo(env, c === 'slots' ? 'slot' : c, args);
   if (['kinhnghiem', 'nam'].includes(c)) return lenhNam(env, args);
   if (c === 'lich') return lenhLich(env, args);
+  if (c === 'khaigiang') return lenhKhaiGiang(env, args);
   if (c === 'buoi') return lenhBuoi(env, args);
   if (c === 'chiso') return lenhChiSo(env, args);
   const csm = c.match(/^cs([1-4])(so|td|phu)$/);
@@ -357,6 +361,34 @@ async function lenhLich(env, args) {
   cfg.schedule.detail = `${cfg.schedule.days}, ${cfg.schedule.time} (GMT+7, Việt Nam)`;
   await ghiCauHinh(env.DB, cfg);
   return { text: `✅ Lịch học: ${b(`${cfg.schedule.days} · ${cfg.schedule.time}`)}` };
+}
+
+const demNgay = (n) => (n == null ? '' : n > 0 ? ` (còn ${n} ngày)` : n === 0 ? ' (hôm nay)' : ' (đã qua)');
+const XOA_NGAY = /^(xoá|xoa|xóa|bỏ|bo|chưa|chua|tắt|tat|off|-)$/i;
+
+/** /khaigiang 15/11 — ngày khai giảng dự kiến, hiện trên trang khoá học lẫn ô khoá học ở link-bio. */
+async function lenhKhaiGiang(env, args) {
+  const cfg = await docCauHinh(env.DB);
+  const v = String(args || '').trim();
+  const dang = moTaNgay(cfg.cohort.startDate);
+  if (!v) {
+    return goiY(dang.has ? `Khai giảng dự kiến đang là ${b(dang.text)}${demNgay(dang.daysLeft)}`
+      : `${cohortLabel(cfg.cohort.number)} ${b('chưa có')} ngày khai giảng`, '/khaigiang 15/11',
+    'Gõ ngày/tháng (thêm năm nếu cần): 15/11 · 15/11/2026. Gõ /khaigiang xoá để ẩn ngày khỏi web.');
+  }
+  if (XOA_NGAY.test(v)) {
+    cfg.cohort.startDate = '';
+    await ghiCauHinh(env.DB, cfg);
+    return { text: '✅ Đã ẩn ngày khai giảng khỏi trang khoá học và link-bio.' };
+  }
+  const iso = docNgay(v);
+  if (!iso) return goiY(`Không đọc được ngày ${ma(v)}`, '/khaigiang 15/11', 'Dạng ngày/tháng hoặc ngày/tháng/năm, vd 15/11 · 15/11/2026');
+  cfg.cohort.startDate = iso;
+  await ghiCauHinh(env.DB, cfg);
+  const m = moTaNgay(iso);
+  return { text: `✅ ${esc(cohortLabel(cfg.cohort.number))} khai giảng dự kiến ${b(m.text)}${demNgay(m.daysLeft)}\n\n`
+    + `Trang khoá học và ô khoá học ở link-bio tự cập nhật trong ~1 phút.`
+    + (m.daysLeft < 0 ? `\n\n⚠️ ${ng('Ngày này đã qua — kiểm tra lại năm nhé.')}` : '') };
 }
 
 async function lenhBuoi(env, args) {
@@ -474,12 +506,14 @@ async function lenhCohortMoi(env) {
   cfg.cohort.number = Number(cfg.cohort.number) + 1;
   cfg.cohort.status = 'open';
   cfg.slots.base = 0;
+  cfg.cohort.startDate = '';              // ngày khai giảng là của cohort cũ — cohort mới chốt lại bằng /khaigiang
   await ghiCauHinh(env.DB, cfg);          // cohortsDone tự suy ra, không cộng tay ở đây
   const st = await lenhStatus(env);
   return { text: `🚀 Đã mở ${b(cohortLabel(cfg.cohort.number))}\n\n`
     + `• ${esc(cu)} vẫn còn nguyên trong cơ sở dữ liệu (không mất dữ liệu)\n`
     + '• Bộ đếm reset về 0, trạng thái 🟢 mở\n'
-    + `• Số cohort đã hoàn thành: ${Math.max(0, cfg.cohort.number - 1)}\n\n`
+    + `• Số cohort đã hoàn thành: ${Math.max(0, cfg.cohort.number - 1)}\n`
+    + '• Ngày khai giảng đã xoá — đặt ngày mới bằng /khaigiang\n\n'
     + `Web tự cập nhật — ${b('không cần sửa dòng code nào.')}\n\n${st.text}`, nut: st.nut };
 }
 
@@ -643,6 +677,16 @@ const HOI = {
       { hoi: 'Mấy giờ?', vd: '20h–22h', goi: dangLa((c) => c.schedule.time) },
     ],
     ghep: (d) => `${d[0]} | ${d[1]}`,          // lenhLich tách ngày với giờ bằng dấu gạch đứng
+  },
+  '/khaigiang': {
+    buoc: [{
+      hoi: 'Khai giảng dự kiến ngày nào? (gõ "xoá" để ẩn ngày)',
+      vd: '15/11',
+      goi: async (env) => {
+        const m = moTaNgay((await docCauHinh(env.DB)).cohort.startDate);
+        return m.has ? `Đang là ${b(m.text)}${demNgay(m.daysLeft)}.` : ng('Chưa đặt ngày nào.');
+      },
+    }],
   },
   '/buoi': {
     buoc: [

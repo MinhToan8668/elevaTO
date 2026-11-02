@@ -475,7 +475,16 @@ export function cohortInfo(cfg) {
     percent: Math.min(100, Math.round((total / max) * 100)),
     earlyBird: cfg.pricing && cfg.pricing.earlyBird ? moneyShort(cfg.pricing.earlyBird) : '',
     schedule: cfg.schedule ? [cfg.schedule.days, cfg.schedule.time].filter(Boolean).join(' · ') : '',
+    start: ngayKhaiGiang(cfg.cohort.startDate),
   };
+}
+
+/** Ngày khai giảng dự kiến (YYYY-MM-DD, bot đặt bằng /khaigiang) → "15/11"; không có / sai dạng → ''. */
+function ngayKhaiGiang(iso) {
+  const k = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!k) return '';
+  const d = new Date(Date.UTC(+k[1], +k[2] - 1, +k[3]));
+  return d.getUTCDate() === +k[3] ? `${k[3]}/${k[2]}` : '';
 }
 
 /** Chuỗi UTF-8 → base64 (GitHub API đòi nội dung file ở dạng này; btoa thẳng sẽ hỏng với chữ có dấu). */
