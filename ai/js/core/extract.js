@@ -322,6 +322,32 @@ export function periodsFromMeta(meta = {}) {
 const soThang = (v) => ([3, 6, 9, 12].includes(Number(v)) ? Number(v) : 0);
 
 /**
+ * Kỳ của từng cột KQKD / LCTT theo khoảng ngày AI đọc từ tiêu đề cột (tu_ngay_v…den_ngay_p).
+ * Dùng thay cho giả định "cột p là cùng kỳ năm trước": báo cáo quý có công ty in "Quý III / Quý II"
+ * cùng năm — xếp Quý II vào ô 9 tháng năm trước là LNTT trên LCTT lệch hẳn với KQKD.
+ * Chỉ nhận kỳ có nghĩa trong bộ dữ liệu: lũy kế từ 01/01 (3/6/9/12 tháng) hoặc một quý tròn.
+ * @returns { cur, prev } — phần nào không đọc được ngày thì null
+ */
+export function columnPeriods(meta = {}) {
+  const ky = (tu, den) => {
+    const a = ngay(tu), b = ngay(den);
+    if (!a || !b) return null;
+    const months = (b.y * 12 + b.m) - (a.y * 12 + a.m) + 1;
+    if (months === 12 || (a.m === 1 && [3, 6, 9].includes(months))) return mkPeriod(b.y, months, b.m);
+    if (months === 3 && b.m % 3 === 0) return mkPeriod(b.y, 3, b.m);
+    return null;
+  };
+  return { cur: ky(meta.tu_ngay_v, meta.den_ngay_v), prev: ky(meta.tu_ngay_p, meta.den_ngay_p) };
+}
+function ngay(s) {
+  const d = String(s || '');
+  let x = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(d);
+  if (x) return { y: +x[1], m: +x[2] };
+  if ((x = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(d))) return { y: +x[3], m: +x[2] };
+  return null;
+}
+
+/**
  * Một kỳ: mã, năm, số tháng kỳ bao trùm, tháng kết thúc.
  * Mã phải phân biệt được QUÝ LẺ với LŨY KẾ cùng ngày kết thúc — chín tháng đầu năm và riêng quý 3
  * đều kết thúc 30/9 nhưng là hai kỳ khác nhau, trộn vào một ô là cộng dồn sai:

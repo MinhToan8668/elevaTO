@@ -5,9 +5,10 @@
 //   io.parts(pages)  → Promise<[{inlineData}…]>   (cắt trang PDF / ảnh JPEG)
 //   io.ai.json({parts, schema}) → Promise<object>  (xem ai.js; ném AIError)
 //   io.isSplittable(err), io.isFatal(err)
+//   io.gopY  góp ý của người dùng (core/gopy.js) — gửi kèm câu lệnh đọc bảng
 
-import { statementTask, NOTE_TASKS } from './prompts.js';
-import { statementToValues, noteToModel } from './extract.js';
+import { statementTask, NOTE_TASKS, gopYPrompt } from './prompts.js';
+import { statementToValues, noteToModel, columnPeriods } from './extract.js';
 import { t } from '../i18n.js';
 
 const STATEMENTS = ['BS', 'IS', 'CF'];
@@ -117,6 +118,12 @@ export async function extractJob(job, io, opts = {}) {
     const r = statementToValues(st, results[st], st === 'IS' && bsRegime && !results[st].meta?.thong_tu ? { regime: bsRegime } : {});
     if (st === 'BS') bsRegime = r.regime;
     statements[st] = { cur: r.cur, prev: r.prev };
+    // KQKD / LCTT: kỳ thật của từng cột theo tiêu đề cột (xem columnPeriods). Thiếu ngày thì để
+    // dataset dùng kỳ chung của cả file như trước.
+    if (st !== 'BS') {
+      const k = columnPeriods(results[st].meta);
+      if (k.cur || k.prev) statements[st].periods = k;
+    }
     units[st] = r.unit;
     warnings.push(...r.warnings.map((w) => `${NAME(st)}: ${w}`));
     if (r.unmapped.length) warnings.push(t('w.unmapped', { st: NAME(st), codes: r.unmapped.map((k) => k.split(':')[1]).join(', ') }));
@@ -173,7 +180,7 @@ function moTaTrang(ds, xem) {
 /** Gọi AI một bảng; quá 60 giây / bị cắt → CĐKT chia tài sản / nguồn vốn, bảng khác chia đôi số trang. */
 async function statementWithSplit(st, pages, io, step, opt = {}) {
   const once = async (pg, part) => {
-    const t = statementTask(st, part, { moTaKhuon: !!opt.moTaKhuon });
+    const t = statementTask(st, part, { moTaKhuon: !!opt.moTaKhuon, gopY: gopYPrompt(io.gopY, st) });
     return io.ai.json({ parts: [...await io.parts(pg, opt), { text: t.prompt }], schema: t.schema });
   };
   try {

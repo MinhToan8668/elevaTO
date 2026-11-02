@@ -5,6 +5,7 @@ import { NOTE_KEYS, uid, watch } from './store.js';
 import { extractJob, planPicked, needsMap } from '../core/pipeline.js';
 import { isSplittable, isFatal } from '../ai.js';
 import { t } from '../i18n.js';
+import { docGopY } from '../core/gopy.js';
 
 const HAS_PICK = (j) => (j.picked?.length || 0) > 0;
 // Trang đã tick mà máy chưa biết loại (hay nhóm thuyết minh) → AI phải nhận trang trước (12 trang / lượt).
@@ -76,7 +77,7 @@ async function run(store, ctx) {
       const rot = () => store.get().jobs.find((x) => x.id === j.id)?.rot || {};
       // Bản scan: gửi ảnh cả lúc đọc bảng lẫn lúc nhận diện trang (gửi PDF scan hay ra kết quả rỗng).
       const io = { parts: (pages, o) => ctx.io.pageParts(j.id, pages, { anh: !!o?.anh, rot: rot() }),
-        images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6, rot()), ai: client, isSplittable, isFatal };
+        images: (pages) => ctx.pageImages(j.id, pages, 900, 0.6, rot()), ai: client, isSplittable, isFatal, gopY: docGopY() };
       try {
         // Trang đã tick: trang máy biết loại giữ nguyên, trang chưa rõ nhờ AI nhận bảng; chỉ gửi đúng các trang này.
         const plan = await planPicked(j, j.picked, io, { onStep });

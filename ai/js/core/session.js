@@ -4,6 +4,7 @@
 
 import { t } from '../i18n.js';
 import { cleanInputs } from './deal.js';
+import { mkPeriod } from './extract.js';
 
 const APP = 'elevato-ai-bctc';
 const VERSION = 1;
@@ -63,6 +64,17 @@ function period(p) {
   return { id: p.id, year: p.year, months: p.months, endMonth: p.endMonth };
 }
 
+/** Kỳ riêng của từng cột KQKD / LCTT: dựng lại mã kỳ từ năm / số tháng / tháng cuối, không tin mã trong file. */
+function colPeriods(k) {
+  const one = (p) => {
+    p = obj(p);
+    if (!(Number.isInteger(p.year) && p.year > 1990 && p.year < 2100 && [3, 6, 9, 12].includes(p.months) && Number.isInteger(p.endMonth) && p.endMonth >= 1 && p.endMonth <= 12)) return null;
+    return mkPeriod(p.year, p.months, p.endMonth);
+  };
+  const out = { cur: one(k.cur), prev: one(k.prev) };
+  return out.cur || out.prev ? out : null;
+}
+
 function meta(m) {
   m = obj(m);
   const out = {};
@@ -84,7 +96,11 @@ function source(s) {
   const statements = {};
   for (const st of ['BS', 'IS', 'CF']) {
     const x = obj(e.statements)[st];
-    if (x) statements[st] = { cur: values(x.cur), prev: values(x.prev) };
+    if (x) {
+      statements[st] = { cur: values(x.cur), prev: values(x.prev) };
+      const k = colPeriods(obj(obj(x).periods));
+      if (st !== 'BS' && k) statements[st].periods = k;
+    }
   }
   const units = {};
   for (const st of ['BS', 'IS', 'CF']) if (UNITS.includes(obj(e.units)[st])) units[st] = e.units[st];

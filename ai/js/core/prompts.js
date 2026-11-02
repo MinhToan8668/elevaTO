@@ -31,6 +31,12 @@ const META = obj({
   hop_nhat: B,
   cot_v: { type: 'STRING', description: 'Tiêu đề cột đã lấy làm kỳ này' },
   cot_p: { type: 'STRING', description: 'Tiêu đề cột đã lấy làm kỳ trước' },
+  // Khoảng thời gian THẬT của từng cột, đọc từ tiêu đề cột — máy xếp số vào đúng kỳ theo hai ngày này,
+  // không đoán "cột thứ hai là cùng kỳ năm trước" (có báo cáo in "Quý III / Quý II" cùng một năm).
+  tu_ngay_v: { type: 'STRING', description: 'Chỉ KQKD/LCTT: ngày đầu của khoảng thời gian cột kỳ này, YYYY-MM-DD (lũy kế từ đầu năm: 01/01; Quý III: 01/07)' },
+  den_ngay_v: { type: 'STRING', description: 'Chỉ KQKD/LCTT: ngày cuối của khoảng thời gian cột kỳ này, YYYY-MM-DD' },
+  tu_ngay_p: { type: 'STRING', description: 'Chỉ KQKD/LCTT: ngày đầu của khoảng thời gian cột kỳ trước, YYYY-MM-DD — đúng như tiêu đề cột, kể cả khi đó là quý liền trước của CÙNG năm' },
+  den_ngay_p: { type: 'STRING', description: 'Chỉ KQKD/LCTT: ngày cuối của khoảng thời gian cột kỳ trước, YYYY-MM-DD' },
 }, ['don_vi', 'ngay_ket_thuc']);
 
 const ITEM = obj({
@@ -66,6 +72,11 @@ const LUY_KE = [
   'Tiêu đề cột đã lấy chép vào cot_v / cot_p để người đọc kiểm lại được.',
   'so_thang = số tháng cột v bao trùm (quý 1 = 3, bán niên = 6, 9 tháng = 9, cả năm = 12; cột quý lẻ = 3).',
   'so_thang_p = số tháng cột p bao trùm (cùng kỳ năm trước nên thường bằng so_thang).',
+  'Ghi KHOẢNG THỜI GIAN THẬT của từng cột đã lấy theo tiêu đề cột: tu_ngay_v/den_ngay_v cho cột v, tu_ngay_p/den_ngay_p cho cột p',
+  '(ví dụ "Lũy kế 9 tháng năm 2026" → 2026-01-01 / 2026-09-30; "Quý III năm 2025" → 2025-07-01 / 2025-09-30).',
+  'CÓ công ty in cột so sánh là QUÝ LIỀN TRƯỚC của cùng năm ("Quý III" / "Quý II"), hoặc chỉ in cột của năm nay:',
+  'khi đó ghi đúng ngày như tiêu đề (Quý II năm nay = 01/04 → 30/06 năm nay), TUYỆT ĐỐI không tự coi là cùng kỳ năm trước.',
+  'Tiêu đề cột không ghi năm thì lấy năm của kỳ báo cáo.',
 ].join('\n');
 const COLS = {
   BS: 'v = cột "Số cuối kỳ/cuối năm", p = cột "Số đầu năm" (số tại ngày 31/12 năm trước, KHÔNG phải cùng kỳ năm trước). Bỏ trường so_thang_p.',
@@ -93,8 +104,9 @@ const MO_TA_KHUON = [
  * @param st 'BS'|'IS'|'CF'
  * @param part 'all'|'assets'|'sources' (chỉ BS)
  * @param opts { moTaKhuon } — true: không gửi responseSchema, tả cấu trúc bằng lời trong câu lệnh
+ *             { gopY } — đoạn góp ý của người dùng (core/gopy.js) gửi kèm
  */
-export function statementTask(st, part = 'all', { moTaKhuon = false } = {}) {
+export function statementTask(st, part = 'all', { moTaKhuon = false, gopY = '' } = {}) {
   return {
     schema: moTaKhuon ? null : STATEMENT_SCHEMA,
     prompt: [
@@ -105,6 +117,7 @@ export function statementTask(st, part = 'all', { moTaKhuon = false } = {}) {
       `Cột số: ${COLS[st]}`,
       'meta: chép đơn vị tính, ngày kết thúc kỳ, số tháng, thông tư của mẫu biểu, hợp nhất hay riêng.',
       moTaKhuon ? MO_TA_KHUON : '',
+      gopY,
     ].filter(Boolean).join('\n') + PART[part],
   };
 }
@@ -255,4 +268,19 @@ export function pageMapTask(pages) {
       '"180" nếu chữ ngược đầu; "270" nếu chữ chạy từ trên xuống dưới. Không chắc thì ghi "0".',
     ].join('\n'),
   };
+}
+
+// ─── Góp ý của người dùng (core/gopy.js lưu) ─────────────
+
+const VUNG_TEN = { IS: 'Kết quả kinh doanh', BS: 'Tình hình tài chính', CF: 'Lưu chuyển tiền tệ', KY: 'Chọn cột / kỳ báo cáo', KHAC: 'Chung' };
+
+/**
+ * Đoạn gửi kèm câu lệnh đọc bảng `st`: góp ý chung, về kỳ / cột, và về đúng bảng này.
+ * Rỗng khi không có góp ý nào liên quan.
+ */
+export function gopYPrompt(list, st) {
+  const dung = (list || []).filter((g) => g.text && (g.vung === st || g.vung === 'KY' || g.vung === 'KHAC'));
+  if (!dung.length) return '';
+  return ['LƯU Ý TỪ NGƯỜI DÙNG — những chỗ đã bị đọc sai ở các BCTC trước. Áp dụng khi bảng này có tình huống tương tự (các quy tắc ở trên vẫn giữ nguyên):',
+    ...dung.map((g) => `- [${VUNG_TEN[g.vung] || VUNG_TEN.KHAC}] ${g.text}`)].join('\n');
 }

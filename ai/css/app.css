@@ -1055,3 +1055,14 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .ch-close{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--strong);font-size:20px;line-height:1;cursor:pointer}
 @media (max-width:600px){dialog.chart-zoom{width:100vw;max-height:100dvh;border-radius:0;padding:14px}}
 .chart.big .chart-data .gridwrap{max-height:none}
+
+/* Góp ý chỗ đọc chưa đúng (ui/review.js gopYBox) */
+.gy{margin-top:10px}
+.gy-f{margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2)}
+.gy-f .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.gy-f select{background:var(--surface);border:1px solid var(--line-2);border-radius:7px;padding:5px 7px;font-size:13px;max-width:100%}
+.gy-f textarea{width:100%;font:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);color:var(--text);resize:vertical}
+.gy-l{margin:6px 0 0 0;padding:0;list-style:none;font-size:13px}
+.gy-l li{padding:6px 0;border-top:1px solid var(--line)}
+.gy-l small{color:var(--muted)}
+.gy .linkb{font:inherit;font-weight:700;color:var(--muted);background:none;border:0;cursor:pointer;padding:0 4px}
