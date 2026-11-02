@@ -23,7 +23,9 @@ const loi = (code, error, status = 200) => tl({ ok: false, code, error }, status
 
 async function lay(fetchFn, ma, tu, den) {
   const u = `${NGUON}?resolution=D&symbol=${encodeURIComponent(ma)}&from=${tu}&to=${den}`;
-  const r = await fetchFn(u, { headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0 (elevaTO)' }, cf: { cacheTtl: DEM_GIAY } });
+  // KHÔNG gửi "accept: application/json": API này trả 406 cho tiêu đề đó (dù thân vẫn là JSON) — đã gặp thật
+  // ở lần triển khai đầu. Gửi */* như trình duyệt thì trả 200.
+  const r = await fetchFn(u, { headers: { accept: '*/*', 'user-agent': 'Mozilla/5.0 (compatible; elevaTO)' }, cf: { cacheTtl: DEM_GIAY } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const d = await r.json();
   if (!d || !Array.isArray(d.t) || !Array.isArray(d.c) || d.t.length !== d.c.length) return new Map();
