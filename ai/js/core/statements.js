@@ -205,6 +205,56 @@ export function normalizeSigns(vals, fixes = null, opts = {}) {
   return out;
 }
 
+/**
+ * TỰ KIỂM CHỨNG theo công thức của mẫu biểu, sau normalizeSigns: với mỗi dòng tổng CÓ SỐ IN mà cộng / trừ các
+ * dòng con không ra đúng số in, thử đổi dấu 1 rồi 2 dòng con là số nhập (không đổi dòng tổng con). Chỉ sửa khi
+ * có ĐÚNG MỘT cách đổi khớp số in (hai cách cùng khớp là không đủ căn cứ, để nguyên cho người soát).
+ *
+ * Bắt được các lỗi dấu mà quy ước chung không đoán ra, ví dụ VNM 2025: "Lợi ích thuế TNDN hoãn lại
+ * (20.970.420.316)" in trong ngoặc trên một KQKD in chi phí số dương — tức là khoản GIẢM chi phí thuế; lấy trị
+ * tuyệt đối thì 60 = 50 − 51 − 52 lệch đúng 2 × 20,97 tỷ. Thử đổi dấu 52 → khớp 9.359.349.635.629 in trên báo cáo.
+ * Làm từ dòng sâu lên dòng nông (sửa dòng con trước), chỉ với KQKD và LCTT — CĐKT đã có quy tắc (*) chắc chắn.
+ * @param fixes ghi lại { kind: 'FORMULA', codes: ['IS:52', …], total: 'IS:60' }
+ */
+export function reconcileByFormula(vals, fixes = null, opts = {}) {
+  const unit = opts.unit || 1;
+  const out = { ...vals };
+  const tong = CHART.filter((it) => it.sum && it.st !== 'BS' && has(out, keyOf(it))).sort((a, b) => b.lvl - a.lvl);
+  for (const it of tong) {
+    const k = keyOf(it);
+    const memo = new Map();
+    const c = evalKey(out, k, true, memo);
+    if (!c || Math.abs(out[k] - c.v) <= tolFor(unit, c.leaves)) continue;
+    // Thiếu hẳn một dòng tổng con (không in, không cộng được từ dòng nào) thì phép thử vô căn cứ — bỏ qua.
+    if (it.sum.some(([code]) => BY_KEY.get(`${it.st}:${code}`)?.sum && !evalKey(out, `${it.st}:${code}`, false, memo))) continue;
+    // Ứng viên đổi dấu: dòng con có số khác 0 là số nhập; hoặc là dòng tổng con mà không có dòng con nào để
+    // cộng (lúc đó nó như số nhập — LCTT rút gọn chỉ in 20 / 30 / 40), hay đổi dấu xong mới khớp với chính các
+    // dòng con của nó (AI làm rơi ngoặc của dòng tổng).
+    const doiDuoc = (key) => {
+      const ci = BY_KEY.get(key);
+      if (!ci?.sum) return true;
+      const m = new Map();
+      if (!ci.sum.some(([code]) => evalKey(out, `${ci.st}:${code}`, false, m))) return true;    // không có dòng con nào
+      const cc = evalKey(out, key, true, m);
+      return Math.abs(-out[key] - cc.v) <= tolFor(unit, cc.leaves);
+    };
+    const con = it.sum.map(([code, sign]) => ({ key: `${it.st}:${code}`, sign }))
+      .filter((x) => has(out, x.key) && out[x.key] !== 0 && doiDuoc(x.key));
+    const lech = out[k] - c.v;
+    const khop = (ds) => Math.abs(lech + ds.reduce((s, x) => s + 2 * x.sign * out[x.key], 0)) <= tolFor(unit, c.leaves);
+    let chon = null;
+    for (const nhom of [con.map((x) => [x]), con.flatMap((x, i) => con.slice(i + 1).map((y) => [x, y]))]) {
+      const dung = nhom.filter(khop);
+      if (dung.length === 1) { chon = dung[0]; break; }
+      if (dung.length > 1) break;
+    }
+    if (!chon) continue;
+    for (const x of chon) out[x.key] = -out[x.key];
+    if (fixes) fixes.push({ kind: 'FORMULA', codes: chon.map((x) => x.key.split(':')[1]), total: it.code });
+  }
+  return out;
+}
+
 /** Khoá TT99 tương ứng của một khoá TT200 ("BS:270" → "BS:280"); không có thì null. LCTT giữ nguyên. */
 export function toTT99Key(k) {
   const st = k.split(':')[0];

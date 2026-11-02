@@ -4,7 +4,7 @@
 
 import { CHART } from '../chart2026.js';
 import { parseVN, unitScale } from './numbers.js';
-import { fromTT200, normalizeSigns, detectRegime, toTT99Key, item as chartItem } from './statements.js';
+import { fromTT200, normalizeSigns, reconcileByFormula, detectRegime, toTT99Key, item as chartItem } from './statements.js';
 import { t } from '../i18n.js';
 
 // ─── JSON từ AI ────────────────────────────────────────────
@@ -204,6 +204,13 @@ function maTheoTen(st, tt99Code, label) {
  * @param ai { meta: { don_vi, thong_tu, phuong_phap, … }, items: [{ c, n, v, p }] }
  * @returns { cur, prev, unit, regime, unmapped: [..], warnings: [..] }   (cur/prev: { "BS:131": đồng })
  */
+// Tên dòng chắc chắn thuộc bảng KHÁC (đã bỏ dấu, chữ thường) — dùng để loại dòng AI chép lẫn.
+const LAC_BANG = {
+  IS: /luu chuyen tien|tien va (cac khoan )?tuong duong tien|tien thu tu|tien chi (tra|cho|mua|de)|anh huong cua thay doi ty gia/,
+  CF: /^(\d+\.?\s*)?(doanh thu thuan|gia von hang ban|loi nhuan gop|chi phi ban hang|chi phi quan ly doanh nghiep|lai co ban tren co phieu|tong cong (tai san|nguon von))/,
+  BS: /luu chuyen tien|^(\d+\.?\s*)?(doanh thu thuan|gia von hang ban|loi nhuan gop|lai co ban tren co phieu)/,
+};
+
 export function statementToValues(st, ai, hint = {}) {
   const meta = ai.meta || {};
   const warnings = [];
@@ -213,11 +220,21 @@ export function statementToValues(st, ai, hint = {}) {
 
   // Gom số theo mã (raw, mã như in) và theo tên (byLabel, mã TT99). regime = null ở lượt đầu (chỉ để đoán mẫu),
   // lượt sau mới sửa mã in lệch theo tên — vì muốn so tên phải biết mã in thuộc mẫu nào.
+  // Dòng lạc bảng: trang gửi AI có thể in chung hai bảng (KQKD + đầu LCTT), AI chép lẫn dòng của bảng kia —
+  // VNM 2025: dòng "Lưu chuyển tiền thuần từ HĐTC" (mã 40), "Tiền và tương đương tiền đầu năm" (mã 60) của LCTT
+  // lọt vào KQKD, đè số của "Lợi nhuận khác" / "LNST" cùng mã. Tên rõ ràng thuộc bảng khác thì bỏ.
+  const lac = [];
+  const items = (ai.items || []).filter((it) => {
+    const n = normLabel(it.n);
+    if (n && LAC_BANG[st]?.test(n)) { lac.push(`${String(it.c || '').trim() || '—'} ${String(it.n).trim().slice(0, 40)}`); return false; }
+    return true;
+  });
+  if (lac.length) warnings.push(t('w.foreign', { rows: lac.join('; ') }));
   const gom = (regime) => {
     const raw = { cur: {}, prev: {} }, byLabel = { cur: {}, prev: {} };
     const dup = new Set(), remap = [];
     let khoi = null;   // khối TSCĐ/BĐSĐT vừa bị đổi mã → dòng con "Nguyên giá"/"Hao mòn" đi theo
-    for (const it of ai.items || []) {
+    for (const it of items) {
       const code = normCode(st, it.c);
       let target = code ? raw : byLabel;
       let key = code ? `${st}:${code}` : matchLabel(st, it.n) && `${st}:${matchLabel(st, it.n)}`;
@@ -243,7 +260,7 @@ export function statementToValues(st, ai, hint = {}) {
     }
     return { raw, byLabel, dup, remap };
   };
-  const regime = hint.regime || regimeFrom(st, meta, gom(null).raw.cur, ai.items || []);
+  const regime = hint.regime || regimeFrom(st, meta, gom(null).raw.cur, items);
   const { raw, byLabel, dup, remap } = gom(regime);
   if (dup.size) warnings.push(t('w.dup', { codes: [...dup].map((k) => k.split(':')[1]).join(', ') }));
   for (const r of remap) warnings.push(t('w.remap', r));
@@ -262,7 +279,8 @@ export function statementToValues(st, ai, hint = {}) {
   let suy01 = false;
   for (const side of ['cur', 'prev']) {
     const labeled = direct ? Object.fromEntries(Object.entries(byLabel[side]).map(([k, x]) => [k.replace(/^CF:(\d)/, 'CF:T$1'), x])) : byLabel[side];
-    const v = normalizeSigns({ ...labeled, ...conv(raw[side]) }, fixes, { unit });   // dòng có mã được ưu tiên
+    // Dòng có mã được ưu tiên; xong quy ước dấu chung thì tự kiểm chứng lại bằng công thức của mẫu biểu.
+    const v = reconcileByFormula(normalizeSigns({ ...labeled, ...conv(raw[side]) }, fixes, { unit }), fixes, { unit });
     // BCTC dịch vụ hay in KQKD từ "Doanh thu thuần" (mã 10), không có 01/02. Dòng 10 là dòng tổng (10 = 01 − 02)
     // nên mọi chỗ cộng dồn / tính tăng trưởng doanh thu sẽ hụt → suy 01 = 10 + 02 và nói rõ.
     if (st === 'IS' && typeof v['IS:10'] === 'number' && typeof v['IS:01'] !== 'number') {
@@ -275,7 +293,8 @@ export function statementToValues(st, ai, hint = {}) {
   // Chỗ đã đổi dấu theo quy ước của báo cáo: gộp theo loại, mỗi loại một dòng cảnh báo để người dùng soát.
   const daDoi = {};
   for (const f of fixes) { daDoi[f.kind] ||= new Set(); f.codes.forEach((c) => daDoi[f.kind].add(c)); }
-  for (const [kind, codes] of Object.entries(daDoi)) warnings.push(t(`w.sign${kind}`, { codes: [...codes].join(', ') }));
+  for (const [kind, codes] of Object.entries(daDoi)) if (kind !== 'FORMULA') warnings.push(t(`w.sign${kind}`, { codes: [...codes].join(', ') }));
+  for (const f of fixes.filter((x) => x.kind === 'FORMULA')) warnings.push(t('w.signFORMULA', { codes: f.codes.join(', '), total: f.total }));
   return { cur: out.cur, prev: out.prev, unit, regime, direct, unmapped: [...unmapped], warnings, meta };
 }
 

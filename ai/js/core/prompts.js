@@ -114,6 +114,7 @@ export function statementTask(st, part = 'all', { moTaKhuon = false, gopY = '' }
       'Chép MỌI dòng có số theo đúng thứ tự in, gồm cả dòng tổng (A, B, I, II…, Tổng cộng) và dòng chi tiết a), b), - Nguyên giá, - Hao mòn…',
       'c = mã số in ở cột "Mã số" (ví dụ "131", "421a", "01"), chép đúng như in kể cả khi công ty đánh số khác mẫu; ô mã trống thì c = "" (KHÔNG lấy mã của dòng trên/dưới). KHÔNG lấy số ở cột "Thuyết minh" (dạng V.01, 5, 24.1) làm mã số hay làm giá trị.',
       'Trang in "(tiếp theo)" là phần nối của cùng bảng: đọc tiếp, không lặp dòng đã lấy. Bỏ chữ ký, con dấu, số trang, dòng "Người lập / Kế toán trưởng / Giám đốc".',
+      `CHỈ chép dòng của ${TITLE[st]}. Trang đính kèm có thể in thêm bảng khác (ví dụ phần đầu Lưu chuyển tiền tệ ngay dưới Kết quả kinh doanh, hay trang thuyết minh): bỏ qua mọi dòng của bảng đó, kể cả khi mã số trùng (40, 50, 60…).`,
       `Cột số: ${COLS[st]}`,
       'meta: chép đơn vị tính, ngày kết thúc kỳ, số tháng, thông tư của mẫu biểu, hợp nhất hay riêng.',
       moTaKhuon ? MO_TA_KHUON : '',
@@ -284,3 +285,14 @@ export function gopYPrompt(list, st) {
   return ['LƯU Ý TỪ NGƯỜI DÙNG — những chỗ đã bị đọc sai ở các BCTC trước. Áp dụng khi bảng này có tình huống tương tự (các quy tắc ở trên vẫn giữ nguyên):',
     ...dung.map((g) => `- [${VUNG_TEN[g.vung] || VUNG_TEN.KHAC}] ${g.text}`)].join('\n');
 }
+
+// ─── Đọc lại có trọng tâm khi tự kiểm chứng thấy dòng tổng không khớp (core/pipeline.js) ─
+
+const so = (v) => Math.round(v).toLocaleString('vi-VN');
+/** Đoạn thêm vào câu lệnh khi đọc lại: liệt kê đúng các dòng lệch (số theo đơn vị in trên báo cáo). */
+export function soatLaiPrompt(lech) {
+  return ['KIỂM TRA LẠI — lần đọc trước có dòng tổng không khớp với các dòng con của nó (theo công thức in trên mẫu biểu):',
+    ...lech.slice(0, 12).map((x) => `- Mã ${x.code}, cột ${x.col === 'v' ? 'kỳ này' : 'kỳ trước'}: in ${so(x.reported)} nhưng cộng các dòng con ra ${so(x.computed)}.`),
+    'Đọc thật kỹ lại SỐ và DẤU của các dòng con thuộc các dòng tổng trên (số trong ngoặc là số âm; đừng bỏ sót dòng; đừng lấy nhầm số của bảng khác hay cột khác). Chép lại TOÀN BỘ bảng.'].join('\n');
+}
+
