@@ -28,3 +28,17 @@ test('dữ liệu giá đóng cửa (số lớn, chấm ngăn nghìn): tự tín
   assert.equal(regressBeta(dong.slice(0, 10).join('\n')), null, 'dưới 20 quan sát → không tính');
   assert.equal(parseSeries('a\tb\tc').rows.length, 0);
 });
+
+import { regressRows } from '../js/core/beta.js';
+test('dữ liệu tải từ sàn (dãy số, giá có 3 số lẻ như 21.523 nghìn đồng) hồi quy đúng, không bị hiểu nhầm chấm ngăn nghìn', () => {
+  const rows = [];
+  let p = 21.523, x = 1200.25;
+  for (let i = 0; i < 80; i++) {
+    const m = (i % 3 ? 0.006 : -0.009) + (i % 5) * 0.0007;
+    rows.push([new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10), +p.toFixed(3), +x.toFixed(2)]);
+    p *= 1 + 0.8 * m; x *= 1 + m;
+  }
+  const r = regressRows(rows.reverse());
+  assert.ok(Math.abs(r.beta - 0.8) < 0.02, `beta ${r.beta}`);
+  assert.equal(regressRows([]), null);
+});

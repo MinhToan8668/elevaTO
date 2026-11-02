@@ -203,6 +203,7 @@ thì lỗi chỉ hiện trong lúc đang mở log stream, sau đó mất hẳn. 
 | Khoá học (đăng ký Financial Modeling) | `/` | `GET ?action=config` · `POST action=register` — `src/khoahoc.js` |
 | Link-in-bio | `/links/` | `GET /links` · `saveLinks` · `checkKey` — `src/links.js` |
 | AI BCTC | `/ai/` | `dangky` · `dangnhap` · `generate` … — `src/auth.js`, `src/gemini.js` |
+| AI BCTC — giá cổ phiếu | `/ai/` (hồi quy beta) | `GET /gia?ma=DGW&nam=5` — `src/gia.js`: giá đóng cửa mã + VN-Index từ API biểu đồ công khai của VNDirect, ghép theo ngày, nhớ đệm 6 giờ, không đụng D1, không cần secret |
 
 Trang upload (`/upload/`) vẫn chạy trên Apps Script ở **chiều lên**: nó đẩy file lên Google Drive
 bằng quyền sẵn có của Apps Script, bê sang đây phải dựng OAuth service account — rắc rối hơn hẳn
@@ -325,5 +326,6 @@ worker/
     ├── quenmk.js      mã đặt lại mật khẩu
     ├── mail.js        gửi thư qua Brevo
     ├── taive.js       POST /taive — nối các phần từ Telegram về máy, bỏ qua Drive
+    ├── gia.js         GET /gia — giá cổ phiếu + VN-Index (VNDirect) để hồi quy beta
     └── ungho.js       số tài khoản nhận ủng hộ + bảng BIN ngân hàng
 ```

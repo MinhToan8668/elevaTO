@@ -1288,3 +1288,37 @@ test('hồi quy beta từ file dữ liệu giá: ra β như model (1,3364), bấ
   await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.includes('Beta (hồi quy'))?.querySelector('input').value === '1.3364');
   assert.deepEqual(errors, []);
 });
+
+test('tải giá từ sàn để hồi quy beta: gọi máy chủ /gia, ra beta, dùng giá đóng cửa làm giá thị trường', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('gia@elevato.vn', { ten: 'Gia', email: 'gia@elevato.vn', mk: 'x', token: TOKEN('gia@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Gia', email: 'gia@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:gia@elevato.vn', s);
+  }, [TOKEN('gia@elevato.vn'), phien]);
+  let goi = '';
+  await page.route('**/gia?**', (route) => {
+    goi = route.request().url();
+    const rows = [];
+    let p = 40.123, x = 1200;
+    for (let i = 0; i < 60; i++) { const m = (i % 2 ? 0.01 : -0.008) + (i % 7) * 0.001; rows.push([new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10), +p.toFixed(3), +x.toFixed(2)]); p *= 1 + 1.2 * m; x *= 1 + m; }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { ma: 'DGW', nguon: 'VNDirect', rows, gia: 45600, ngay: '2026-03-01' } }) });
+  });
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('.rail a[data-step="6"]').click();
+  await page.locator('#tabb-DEAL').click();
+  await page.locator('.dv-beta summary').click();
+  await page.locator('.dv-beta .bt-ma').fill('dgw');
+  await page.locator('.dv-beta button', { hasText: 'Tải giá từ sàn' }).click();
+  await page.waitForSelector('.dv-beta .msg.ok');
+  assert.match(goi, /\/gia\?ma=DGW&nam=5$/);
+  assert.match(await page.locator('.dv-beta').innerText(), /1[.,]2\d/);
+  await page.locator('.dv-beta .linkb', { hasText: 'Dùng giá đóng cửa' }).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.startsWith('Giá thị trường'))?.querySelector('input').value === '45600');
+  assert.deepEqual(errors, []);
+});

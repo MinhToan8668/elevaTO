@@ -6,7 +6,8 @@ import { h } from './dom.js';
 import { dcfValuation, quickAnchors, blendedTarget, piotroski } from '../core/valuation.js';
 import { mnaAnalysis } from '../core/mna.js';
 import { compsAnalysis, peerMultiples, parsePeers, MULTS } from '../core/comps.js';
-import { regressBeta } from '../core/beta.js';
+import { regressBeta, regressRows } from '../core/beta.js';
+import { API } from '../config.js';
 import { t } from '../i18n.js';
 
 const pc = (x, d = 1) => (Number.isFinite(x) ? `${(x * 100).toFixed(d)}%` : '—');
@@ -92,16 +93,45 @@ export function dcfBlock(a, inp, save, money, ul) {
 // ─── Hồi quy beta (20.Beta_Data) ───────────────────────────
 
 // Chuỗi dữ liệu không lưu vào phiên (có thể vài nghìn dòng) — chỉ giữ trong trang tới khi tải lại.
-const uiBeta = { open: false, text: '', step: 1, res: undefined };
+const uiBeta = { open: false, text: '', step: 1, res: undefined, years: 5, rows: null, src: null, err: '', busy: false };
+/** Tính lại theo nguồn đang có: dữ liệu tải từ sàn (dãy số) hoặc chữ dán / file. */
+const tinhLai = () => { uiBeta.res = uiBeta.rows ? regressRows(uiBeta.rows, uiBeta.step) : uiBeta.text ? regressBeta(uiBeta.text, uiBeta.step) : undefined; };
+
+/** Tải giá cổ phiếu + VN-Index từ sàn qua Worker (GET /gia — xem worker/src/gia.js). */
+async function taiGia(ma, dat) {
+  uiBeta.busy = true; uiBeta.err = ''; dat({ ticker: ma });
+  try {
+    const r = await fetch(`${API}/gia?ma=${encodeURIComponent(ma)}&nam=${uiBeta.years}`);
+    const b = await r.json().catch(() => null);
+    if (!b?.ok) throw new Error(b?.error || `HTTP ${r.status}`);
+    uiBeta.rows = b.data.rows; uiBeta.text = '';
+    uiBeta.src = { ma: b.data.ma, n: b.data.rows.length, gia: b.data.gia, ngay: b.data.ngay, nguon: b.data.nguon };
+    tinhLai();
+  } catch (e) { uiBeta.err = t('bt.dl.err', { msg: e.message }); }
+  finally { uiBeta.busy = false; dat({}); }
+}
+
 function betaBlock(V, dat) {
   const o = h('textarea', { rows: 5, placeholder: t('bt.ph'), 'aria-label': t('bt.h') });
   o.value = uiBeta.text;
-  const tinh = () => { uiBeta.text = o.value; uiBeta.res = regressBeta(o.value, uiBeta.step); dat({}); };
+  const tinh = () => { uiBeta.text = o.value; uiBeta.rows = null; uiBeta.src = null; tinhLai(); dat({}); };
+  const maIn = h('input', { type: 'text', class: 'bt-ma', value: V.ticker || '', maxlength: 10, placeholder: 'DGW', 'aria-label': t('bt.ma'),
+    onkeydown: (e) => { if (e.key === 'Enter' && e.target.value.trim()) taiGia(e.target.value.trim().toUpperCase(), dat); } });
+  const tai = h('div', { class: 'row cp-bar' },
+    h('label', { class: 'dv-f' }, h('span', {}, t('bt.ma')), maIn),
+    h('label', { class: 'dv-f' }, h('span', {}, t('bt.years')),
+      h('select', { onchange: (e) => { uiBeta.years = +e.target.value; } }, [1, 2, 3, 5].map((n) => h('option', { value: String(n), selected: uiBeta.years === n }, t('bt.nYears', { n }))))),
+    h('button', { type: 'button', class: 'btn sm', disabled: uiBeta.busy, onclick: () => { const ma = maIn.value.trim().toUpperCase(); if (ma) taiGia(ma, dat); else maIn.focus(); } },
+      t(uiBeta.busy ? 'bt.dl.busy' : 'bt.dl')));
+  const daTai = uiBeta.src ? h('p', { class: 'msg ok' }, t('bt.dl.done', { ma: uiBeta.src.ma, n: uiBeta.src.n, nguon: uiBeta.src.nguon }), ' ',
+    uiBeta.src.gia && uiBeta.src.gia !== V.price ? h('button', { type: 'button', class: 'linkb', onclick: () => dat({ price: uiBeta.src.gia }) },
+      t('bt.usePrice', { p: Math.round(uiBeta.src.gia).toLocaleString('vi-VN'), d: uiBeta.src.ngay })) : null) : null;
   const file = h('input', { type: 'file', accept: '.csv,.txt,.tsv,text/csv,text/plain', 'aria-label': t('bt.file'), onchange: async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
     uiBeta.text = (await f.text()).slice(0, 2_000_000);
-    uiBeta.res = regressBeta(uiBeta.text, uiBeta.step);
+    uiBeta.rows = null; uiBeta.src = null;
+    tinhLai();
     dat({});
   } });
   const r = uiBeta.res;
@@ -109,11 +139,15 @@ function betaBlock(V, dat) {
   return h('details', { class: 'dv-beta', open: uiBeta.open },
     h('summary', { onclick: (e) => { uiBeta.open = !e.currentTarget.parentElement.open; } }, h('b', {}, t('bt.h')),
       r ? h('span', { class: 'tag em' }, `β ${r.beta.toFixed(2)}`) : null),
+    h('p', { class: 'priv' }, t('bt.dl.lead')),
+    tai,
+    uiBeta.err ? h('p', { class: 'msg warn' }, uiBeta.err) : null,
+    daTai,
     h('p', { class: 'priv' }, t('bt.lead')),
     o,
     h('div', { class: 'row cp-bar' },
       h('label', { class: 'dv-f' }, h('span', {}, t('bt.freq')),
-        h('select', { onchange: (e) => { uiBeta.step = +e.target.value; } },
+        h('select', { onchange: (e) => { uiBeta.step = +e.target.value; if (uiBeta.rows) { tinhLai(); dat({}); } } },
           [[1, 'bt.f.d'], [5, 'bt.f.w'], [21, 'bt.f.m']].map(([v, k]) => h('option', { value: String(v), selected: uiBeta.step === v }, t(k))))),
       h('button', { type: 'button', class: 'btn sm', onclick: tinh }, t('bt.run')),
       h('label', { class: 'btn ghost sm bt-file' }, t('bt.file'), file)),
