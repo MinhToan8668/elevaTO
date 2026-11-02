@@ -17,6 +17,7 @@ import { computeTotals } from './statements.js';
 import { periodLabel } from './table.js';
 import { cleanVal } from './valuation.js';
 import { cleanMna } from './mna.js';
+import { cleanSotp } from './sotp.js';
 import { cleanPeers } from './comps.js';
 
 const num = (v) => (Number.isFinite(v) ? v : null);
@@ -46,7 +47,7 @@ export function cleanInputs(x) {
     .filter((a) => a.label || a.amount);
   // val: thông số DCF / giá mục tiêu (core/valuation.js) · mna: thương vụ mua cổ phần (core/mna.js)
   return { evEbitda: ba(o.evEbitda, DEFAULT_INPUTS.evEbitda), pe: ba(o.pe, DEFAULT_INPUTS.pe), pb: ba(o.pb, DEFAULT_INPUTS.pb), targetLev: lev, adjustments,
-    val: cleanVal(o.val), mna: cleanMna(o.mna), peers: cleanPeers(o.peers) };
+    val: cleanVal(o.val), mna: cleanMna(o.mna), peers: cleanPeers(o.peers), sotp: cleanSotp(o.sotp) };
 }
 
 // ─── Kỳ phân tích ──────────────────────────────────────────
@@ -335,5 +336,16 @@ export function dealAnalysis(ds, inputs) {
   if (wcPeg !== null && B.tradeWc !== null && wcPeg && (B.tradeWc - wcPeg) / Math.abs(wcPeg) < -0.2) bat('wcBelowPeg', { v: B.tradeWc - wcPeg });
   if (B.minority && B.equity && B.minority / B.equity > 0.3) bat('minority', { v: (B.minority / B.equity) * 100 });
 
-  return { cols, base, baseIdx, valuation, capacity, quality, wcAvg, wcPeg, flags, inputs: inp };
+  // Doanh thu theo mảng (thuyết minh báo cáo bộ phận) của kỳ gần nhất có số — gợi ý ban đầu cho dự phóng theo mảng.
+  const segments = (() => {
+    for (let i = periods.length - 1; i >= 0; i--) {
+      const p = periods[i], sg = notesOf(p.ltm ? p.from[1] : p.id).segments;
+      if (Array.isArray(sg) && sg.some((x) => Number.isFinite(x.revenue))) {
+        return sg.filter((x) => Number.isFinite(x.revenue)).map((x) => ({ name: x.name, revenue: x.revenue, gross: Number.isFinite(x.gross) ? x.gross : null, label: p.label }));
+      }
+    }
+    return [];
+  })();
+
+  return { cols, base, baseIdx, valuation, capacity, quality, wcAvg, wcPeg, flags, segments, inputs: inp };
 }

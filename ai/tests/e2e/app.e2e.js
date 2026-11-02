@@ -1271,6 +1271,44 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.waitForSelector('.dv-kpi :text("Expected value")');
   assert.equal(await page.locator('.dv-scen tbody tr').count(), 3);
   if (process.env.E2E_SHOTS) await page.locator('.dv-setup').screenshot({ path: join(process.env.E2E_SHOTS, 'thiet-lap.png') });
+
+  // Revenue build-up theo mảng: thêm 2 mảng, nhập doanh thu gốc → có dòng tổng khớp revenue hợp nhất
+  await sel('Forecast revenue by').selectOption('segments');
+  await page.waitForSelector('.dv-segs');
+  await page.locator('.dv-segs button', { hasText: '+ Thêm mảng' }).click();
+  await page.locator('.dv-segs button', { hasText: '+ Thêm mảng' }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.dv-segt tr.dv-seg').length === 2);
+  for (const [i, v] of [[0, '3000'], [1, '2000']]) {
+    const o3 = page.locator('.dv-segt tr.dv-seg').nth(i).locator('td').nth(1).locator('input');
+    await o3.fill(v);
+    await o3.dispatchEvent('change');
+  }
+  await page.waitForSelector('.dv-segt tr:has-text("Total revenue (consolidated)")');
+  assert.match(await page.locator('.dv-segt').innerText(), /Intersegment/);
+  if (process.env.E2E_SHOTS) await page.locator('.dv-segs').screenshot({ path: join(process.env.E2E_SHOTS, 'theo-mang.png') });
+
+  // SOTP: một phần EV/EBITDA × EBITDA → equity value SOTP; đặt weight → vào target price
+  await page.locator('.dv-sotpsec button', { hasText: '+ Thêm phần' }).click();
+  await page.waitForSelector('.dv-sotp');
+  for (const [lbl, v] of [['Metric', '1000'], ['Multiple', '8']]) {
+    const o4 = page.locator('.dv-sotp tbody tr').first().locator(`input[aria-label*="${lbl}"]`);
+    await o4.fill(v);
+    await o4.dispatchEvent('change');
+  }
+  await page.waitForFunction(() => /SOTP equity value\s+[\d.,]+/.test(document.querySelector('.dv-sotp').innerText));
+  const wSotp = page.locator('#dv-step-6 input[aria-label="Weight SOTP"]');
+  await wSotp.fill('20');
+  await wSotp.dispatchEvent('change');
+  await page.locator('#dv-step-6 button', { hasText: '+ Thêm phương pháp khác' }).click();
+  const ten = page.locator('#dv-step-6 input[aria-label="Tên phương pháp"]');
+  await ten.fill('RNAV');
+  await ten.dispatchEvent('change');
+  await page.waitForSelector('#dv-step-6 input[aria-label="Per share RNAV"]');
+  await page.locator('#dv-step-6 input[aria-label="Per share RNAV"]').fill('40000');
+  await page.locator('#dv-step-6 input[aria-label="Per share RNAV"]').dispatchEvent('change');
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'RNAV') && [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'SOTP'));
+  if (process.env.E2E_SHOTS) await page.locator('#dv-step-5 .dv-sotpsec').screenshot({ path: join(process.env.E2E_SHOTS, 'sotp.png') });
+  if (process.env.E2E_SHOTS) await page.locator('#dv-step-6').screenshot({ path: join(process.env.E2E_SHOTS, 'buoc-6.png') });
   if (process.env.E2E_SHOTS) await page.locator('.deal').screenshot({ path: join(process.env.E2E_SHOTS, 'dinh-gia.png') });
   assert.deepEqual(errors, []);
 });

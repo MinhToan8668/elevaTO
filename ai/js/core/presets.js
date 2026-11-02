@@ -13,6 +13,7 @@ export const PRESETS = [
   { id: 'tech', revMode: 'growth', tvMethod: 'exit', weights: { dcf: 50, pe: 15, evEbitda: 20, pb: 0, evRev: 15 } },
   { id: 'construction', revMode: 'growth', tvMethod: 'gordon', weights: { dcf: 30, pe: 20, evEbitda: 25, pb: 25, evRev: 0 } },
   { id: 'realestate', revMode: 'manual', tvMethod: 'gordon', weights: { dcf: 30, pe: 10, evEbitda: 0, pb: 60, evRev: 0 } },
+  { id: 'holding', revMode: 'segments', tvMethod: 'gordon', weights: { dcf: 30, pe: 10, evEbitda: 10, pb: 0, evRev: 0, sotp: 50 } },
   { id: 'bank', revMode: 'growth', tvMethod: 'gordon', weights: { dcf: 0, pe: 30, evEbitda: 0, pb: 70, evRev: 0 } },
 ];
 
@@ -22,5 +23,5 @@ export const presetOf = (id) => PRESETS.find((p) => p.id === id) || null;
 export function applyPreset(val, id) {
   const p = presetOf(id);
   if (!p) return val;
-  return { ...val, preset: id, revMode: p.revMode, tvMethod: p.tvMethod, weights: { ...p.weights } };
+  return { ...val, preset: id, revMode: p.revMode, tvMethod: p.tvMethod, weights: { evRev: 0, sotp: 0, ...p.weights } };
 }

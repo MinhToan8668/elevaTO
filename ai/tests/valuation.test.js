@@ -168,3 +168,46 @@ test('mẫu ngành: đặt cách dự phóng doanh thu, phương pháp giá tr�
   assert.equal(applyPreset({}, 'bank').weights.dcf, 0);
   for (const p of PRESETS) assert.equal(Object.values(p.weights).reduce((s, x) => s + x, 0), 100, `${p.id}: trọng số cộng 100`);
 });
+
+import { sotpValuation, cleanSotp } from '../js/core/sotp.js';
+
+test('dự phóng theo mảng: mỗi mảng tăng riêng, tổng khớp doanh thu hợp nhất năm gốc (giữ tỷ lệ loại trừ nội bộ)', () => {
+  const a = { ...A(), segments: [{ name: 'Bán lẻ', revenue: 700e9 }, { name: 'Phân phối', revenue: 400e9 }] };   // Σ 1.100 > 1.000 hợp nhất
+  const inp = { revMode: 'segments', years: 2, segs: [{ name: 'Bán lẻ', rev0: null, g: 0.2, gy: [] }, { name: 'Phân phối', rev0: null, g: null, gy: [0.05] }], growth: 0.1, fade: false };
+  const r = dcfValuation(a, inp);
+  gan(r.segs.k, 1000 / 1100, 1e-12, 'hệ số khớp');
+  gan(r.flows[0].segs[0], 700e9 * 1.2, 1e-12, 'mảng 1 năm 1');
+  gan(r.flows[0].segs[1], 400e9 * 1.05, 1e-12, 'mảng 2 năm 1 = ghi đè 5%');
+  gan(r.flows[1].segs[1], 400e9 * 1.05 * 1.1, 1e-12, 'mảng 2 năm 2 = tăng trưởng cả công ty');
+  gan(r.flows[0].rev, (840e9 + 420e9) * (1000 / 1100), 1e-12, 'tổng × hệ số khớp');
+  // Chưa nhập mảng nào: tự lấy theo thuyết minh, tăng trưởng như cả công ty → giống cách % tăng trưởng.
+  const r2 = dcfValuation(a, { revMode: 'segments', years: 3, growth: 0.1, fade: false });
+  gan(r2.flows[2].rev, dcfValuation(a, { revMode: 'growth', years: 3, growth: 0.1, fade: false }).flows[2].rev, 1e-9, 'mặc định = % tăng trưởng');
+  assert.ok(dcfValuation(A(), { revMode: 'segments' }).issues.includes('noSegs'), 'không có mảng → báo');
+});
+
+test('SOTP: phần EV trừ nợ hợp nhất một lần, phần equity cộng thẳng, × sở hữu, trừ holding discount', () => {
+  const a = A();
+  const S = { items: [
+    { name: 'Mảng A', kind: 'mult', basis: 'ev', metric: 100e9, mult: 8 },
+    { name: 'Mảng B', kind: 'mult', basis: 'ev', metric: 50e9, mult: 6, own: 0.6 },
+    { name: 'Cổ phần niêm yết', kind: 'value', basis: 'equity', value: 300e9, own: 0.2 },
+  ], disc: 0.1 };
+  const r = sotpValuation(a, S);
+  gan(r.evSum, 800e9 + 180e9, 1e-12, 'Σ EV');
+  gan(r.eqSum, 60e9, 1e-12, 'Σ equity');
+  gan(r.less, 50e9, 1e-12, 'trừ net debt');
+  gan(r.equity, (980e9 + 60e9 - 50e9) * 0.9, 1e-12, 'equity sau discount');
+  gan(r.price, r.equity / 100e6, 1e-12, 'giá / cp');
+  assert.equal(sotpValuation(a, { items: [] }).equity, null);
+  assert.equal(sotpValuation(a, { items: [{ kind: 'value', basis: 'equity', value: 10e9 }] }).less, 0, 'chỉ có phần equity thì không trừ nợ');
+  assert.equal(cleanSotp({ items: [{ kind: 'x', basis: 'y', own: 5 }] }).items[0].kind, 'mult');
+});
+
+test('giá mục tiêu: SOTP và phương pháp khác (RNAV…) vào bình quân gia quyền theo trọng số', () => {
+  const a = A();
+  const dcf = { equity: 1000e9, inputs: cleanVal({ price: 10000, weights: { dcf: 50, pe: 0, evEbitda: 0, pb: 0, evRev: 0, sotp: 25 }, others: [{ name: 'RNAV', ps: 20000, w: 25 }] }) };
+  const b = blendedTarget(a, dcf, { sotp: 1200e9 });
+  gan(b.equity, (1000e9 * 50 + 1200e9 * 25 + 2000e9 * 25) / 100, 1e-12, 'bình quân');
+  assert.equal(b.rows.find((x) => x.key === 'o0').name, 'RNAV');
+});

@@ -8,6 +8,7 @@ import { dealAnalysis, cleanInputs, DEFAULT_INPUTS } from '../core/deal.js';
 import { t, unitLabel } from '../i18n.js';
 import { dcfBlock, targetBlock, piotroskiCard, mnaBlock, compsBlock, dvDashboard, dvSummary } from './dealval.js';
 import { roadmap, stepWrap } from './dvguide.js';
+import { sotpBlock } from './dvparts.js';
 
 const pc = (x) => (Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : '—');
 const lan = (x) => (Number.isFinite(x) ? t('ch.times', { v: x.toFixed(2) }) : '—');
@@ -35,7 +36,7 @@ export function renderDeal(store) {
     stepWrap(2, wcTable(a, money), cashTable(a, money)),
     stepWrap(3, dcfBlock(a, inp, save, money, ul)),
     stepWrap(4, bridge(a, money)),
-    stepWrap(5, valuation(a, inp, save, money, ul), compsBlock(a, inp, save, money, unit, ul)),
+    stepWrap(5, valuation(a, inp, save, money, ul), compsBlock(a, inp, save, money, unit, ul), sotpBlock(a, inp, save, money, unit, ul)),
     stepWrap(6, targetBlock(a, inp, save, money)),
     stepWrap(7, capacity(a, inp, save, money)),
     stepWrap(8, mnaBlock(a, inp, save, money, unit, ul)),
@@ -53,7 +54,8 @@ function soBuoc(a, inp, money, ul) {
     2: `${pc(a.wcAvg)} · FCFF ${tien(a.base.m.fcff)}`,
     3: r ? `${tien(r.ev)} · WACC ${pc(r.W.wacc)}` : '—',
     4: r ? ps(r.price) || tien(r.equity) : '—',
-    5: t('dv.step.5.v', { m: v.methods.length, p: (inp.peers || []).filter((x) => !x.off).length }),
+    5: S?.so?.equity !== null && S?.so?.equity !== undefined ? `${t('dv.step.5.v', { m: v.methods.length, p: (inp.peers || []).filter((x) => !x.off).length })} · SOTP ${ps(S.so.price) || tien(S.so.equity)}`
+      : t('dv.step.5.v', { m: v.methods.length, p: (inp.peers || []).filter((x) => !x.off).length }),
     6: b ? `${ps(b.price) || tien(b.equity)}${b.rec ? ` · ${t(`tg.rec.${b.rec}`)}` : ''}` : '—',
     7: a.capacity ? tien(a.capacity.headroom) : '—',
     8: inp.mna?.price ? t('dv.step.8.v', { s: pc(inp.mna.stake) }) : t('dv.step.8.opt'),

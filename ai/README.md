@@ -163,6 +163,14 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     3.3 WACC · 3.4 FCFF → EV · 3.5 Sensitivity) → ④ EV → equity bridge → ⑤ Relative valuation (multiples & peers)
     → ⑥ Target price & recommendation; thêm ⑦ Debt capacity và ⑧ M&A. Đầu tab là sơ đồ các bước (công thức + số
     kết quả chính, bấm để nhảy tới); mỗi bước có mục đích, công thức và thanh "Đầu vào ← / chuyển sang →".
+  - **Doanh thu theo mảng & SOTP** (`js/ui/dvparts.js`, `js/core/sotp.js`): cách dự phóng thứ 5 "theo từng mảng kinh
+    doanh" (revenue build-up) — mỗi mảng doanh thu năm gốc (mặc định theo thuyết minh báo cáo bộ phận) và tăng trưởng
+    riêng, ghi đè được từng năm; tổng các mảng khớp revenue hợp nhất (giữ tỷ lệ loại trừ nội bộ năm gốc).
+    **Sum-of-the-parts**: mỗi phần (mảng, công ty con, cổ phần niêm yết, quỹ đất…) định giá bằng multiple × chỉ tiêu
+    hoặc nhập thẳng giá trị (DCF / RNAV riêng), × tỷ lệ sở hữu; phần basis EV trừ một lần net debt + debt-like + NCI
+    hợp nhất, trừ holding discount. SOTP và **phương pháp khác** (RNAV, DDM, consensus… nhập giá / cổ phiếu) có weight
+    riêng trong target price và hiện trên football field. Thêm mẫu ngành tập đoàn đa ngành (theo mảng + SOTP 50%).
+    Ô nhập gom theo nhóm có tiêu đề (Market data, Cost of equity, Deal terms, Funding structure…), nhãn nằm trên ô.
   - **Bảng điều khiển định giá** (`js/ui/dvcharts.js`, SVG vẽ tay): thẻ số chính (giá mục tiêu gia quyền, upside,
     khuyến nghị, giá DCF kèm tỷ trọng giá trị cuối kỳ, WACC / g, giá trị kỳ vọng theo kịch bản); **football field**
     (DCF lấy dải từ bảng độ nhạy WACC ± 0,5 / g ± 0,5, DCF bội số thoát, bội số thấp / giữa / cao, trung vị peer, EPV,

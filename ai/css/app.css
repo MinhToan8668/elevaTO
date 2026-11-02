@@ -1067,17 +1067,27 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .gy-l small{color:var(--muted)}
 .gy .linkb{font:inherit;font-weight:700;color:var(--muted);background:none;border:0;cursor:pointer;padding:0 4px}
 /* DCF · giá mục tiêu · thương vụ M&A (ui/dealval.js) */
-.dv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px 14px;margin:10px 0}
-.dv-f{display:flex;align-items:center;gap:6px;font-size:13px}
-.dv-f span{flex:1;color:var(--muted)}
-.dv-f input[type=number],.dv-f input[type=text]{width:110px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;padding:5px 7px;font:inherit;font-size:13px;color:var(--strong);text-align:right}
-.dv-f input[type=text]{width:100%;text-align:left}
+.dv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px 16px;margin:10px 0}
+/* Ô nhập: nhãn nằm TRÊN ô (đọc là biết ô thuộc nhãn nào), đơn vị là đuôi bên phải ô. */
+.dv-f{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 6px;font-size:13px;align-content:start}
+.dv-f>span{grid-column:1/-1;color:var(--muted);font-size:12.5px;line-height:1.3}
+.dv-f>select{grid-column:1/-1}
+.dv-f input[type=number],.dv-f input[type=text]{width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--line-2);border-radius:7px;padding:6px 8px;font:inherit;font-size:13px;color:var(--strong);text-align:right}
+.dv-f input[type=text]{text-align:left}
+.dv-f.dv-chk{display:flex;gap:8px;align-self:end;padding-bottom:6px}
+.dv-f.dv-chk>span{color:var(--text)}
+/* Nhóm ô nhập có tiêu đề (Deal terms, Cost of equity…) */
+.dv-fs{border:1px solid var(--line);border-radius:12px;padding:6px 14px 4px;margin:10px 0;background:var(--surface)}
+.dv-fs>legend{padding:0 6px;font-weight:700;font-size:13px;color:var(--strong)}
+.dv-fs>legend small{font-weight:500;color:var(--muted);margin-left:6px}
+.dv-fs .dv-grid{margin:6px 0 8px}
+.dv-fsrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 14px}
 .dv-f i{font-style:normal;color:var(--muted);min-width:14px}
 .dv-wide{grid-column:1/-1}
 .dv-chk input{accent-color:var(--em)}
 .dv-sens td.dv-mid{font-weight:800;outline:2px solid var(--em);outline-offset:-2px}
 .dv-mna>summary{cursor:pointer;font-size:16px}
-.dv-wide span{flex:0 0 auto;min-width:160px}
+.dv-wide>span{min-width:0}
 /* Bảng peer (ui/dealval.js compsBlock) */
 .cp-t th,.cp-t td{white-space:nowrap}
 .cp-t .cp-in{width:92px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:6px;padding:4px 6px;font:inherit;font-size:12.5px;text-align:right;color:var(--strong)}
@@ -1170,3 +1180,17 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-num{display:inline-flex;padding:1px 8px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line-2);font-size:12px;font-weight:800;color:var(--em-text)}
 .dv-sublead{margin:0 0 6px}
 @media (max-width:640px){.dv-road .dv-flow{grid-template-columns:1fr;gap:20px}.dv-road .dv-flow li:not(:last-child)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-19px;transform:translateX(-50%)}}
+/* Revenue build-up theo mảng · SOTP · phương pháp khác (ui/dvparts.js) */
+.dv-name{width:100%;min-width:140px;box-sizing:border-box;background:var(--surface);border:1px dashed var(--line-2);border-radius:6px;padding:4px 7px;font:inherit;font-size:12.5px;color:var(--strong)}
+.dv-segn{display:flex;align-items:center;gap:4px}
+.dv-segt .dv-yr,.dv-sotp .dv-yr{width:78px;background:var(--surface);border:1px dashed var(--line-2);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;text-align:right;color:var(--strong)}
+.dv-segt .dv-yr.on{border:1.5px solid var(--gold);background:var(--gold-soft)}
+.dv-segt tr.dv-seg td{border-top:2px solid var(--line)}
+.dv-sotp .dv-yr{width:100px}
+.dv-mini{background:var(--surface-2);border:1px solid var(--line-2);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;color:var(--strong)}
+.dv-inl{display:inline-flex;align-items:center;gap:6px}
+.dv-inl .dv-yr{width:64px}
+.dv-ps{width:100px}
+.dv-tipsl{margin:4px 0 8px;padding-left:18px}
+.dv-tipsl li{margin:2px 0}
+.dv-segs{margin-top:6px}
