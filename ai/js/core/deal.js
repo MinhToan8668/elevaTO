@@ -17,6 +17,7 @@ import { computeTotals } from './statements.js';
 import { periodLabel } from './table.js';
 import { cleanVal } from './valuation.js';
 import { cleanMna } from './mna.js';
+import { cleanPeers } from './comps.js';
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 const abs = (v) => (v === null ? null : Math.abs(v));
@@ -45,7 +46,7 @@ export function cleanInputs(x) {
     .filter((a) => a.label || a.amount);
   // val: thông số DCF / giá mục tiêu (core/valuation.js) · mna: thương vụ mua cổ phần (core/mna.js)
   return { evEbitda: ba(o.evEbitda, DEFAULT_INPUTS.evEbitda), pe: ba(o.pe, DEFAULT_INPUTS.pe), pb: ba(o.pb, DEFAULT_INPUTS.pb), targetLev: lev, adjustments,
-    val: cleanVal(o.val), mna: cleanMna(o.mna) };
+    val: cleanVal(o.val), mna: cleanMna(o.mna), peers: cleanPeers(o.peers) };
 }
 
 // ─── Kỳ phân tích ──────────────────────────────────────────

@@ -6,7 +6,7 @@
 import { h, fmt } from './dom.js';
 import { dealAnalysis, cleanInputs, DEFAULT_INPUTS } from '../core/deal.js';
 import { t, unitLabel } from '../i18n.js';
-import { dcfBlock, targetBlock, piotroskiCard, mnaBlock } from './dealval.js';
+import { dcfBlock, targetBlock, piotroskiCard, mnaBlock, compsBlock } from './dealval.js';
 
 const pc = (x) => (Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : '—');
 const lan = (x) => (Number.isFinite(x) ? t('ch.times', { v: x.toFixed(2) }) : '—');
@@ -34,6 +34,7 @@ export function renderDeal(store) {
     quality(a),
     bridge(a, money),
     valuation(a, inp, save, money, ul),
+    compsBlock(a, inp, save, money, unit, ul),
     dcfBlock(a, inp, save, money, ul),
     targetBlock(a, inp, save, money),
     capacity(a, inp, save, money),
