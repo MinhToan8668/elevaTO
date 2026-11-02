@@ -1005,7 +1005,7 @@ test('tab M&A & định giá: mở phiên có số, ra EBITDA chuẩn hoá, cầ
   await page.locator('#tabb-DEAL').click();
   await page.waitForSelector('.deal .dl-sec');
   const txt = await page.locator('.deal').textContent();
-  for (const s of ['EBITDA chuẩn hoá', 'Nợ ròng', 'Beneish', "Altman Z''", 'EV / EBITDA', 'Sức vay nợ']) assert.ok(txt.includes(s), `thiếu "${s}"`);
+  for (const s of ['Normalised EBITDA', 'Net debt', 'Beneish', "Altman Z''", 'EV / EBITDA', 'Debt capacity']) assert.ok(txt.includes(s), `thiếu "${s}"`);
   const truoc = await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") td').nth(5).innerText();
   await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") input').nth(1).fill('10');
   await page.locator('.dl-t tbody tr:has-text("EV / EBITDA") input').nth(1).dispatchEvent('change');
@@ -1203,22 +1203,22 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.locator('#tabb-DEAL').click();
   await page.waitForSelector('.deal .dv-grid');
   const txt = await page.locator('.deal').innerText();
-  for (const s of ['Định giá DCF (FCFF)', 'WACC', 'Giá mục tiêu & khuyến nghị', 'Piotroski']) assert.ok(txt.toLowerCase().includes(s.toLowerCase()), `thiếu "${s}"`);
+  for (const s of ['DCF valuation (FCFF)', 'WACC', 'Target price & recommendation', 'Piotroski']) assert.ok(txt.toLowerCase().includes(s.toLowerCase()), `thiếu "${s}"`);
   assert.equal(await page.locator('.dv-sens tbody tr').count(), 7, 'bảng độ nhạy 7 × 7');
 
   const o = (lbl) => page.locator('.dv-f', { hasText: lbl }).locator('input');
-  await o('Số cổ phiếu lưu hành').fill('100000000');
-  await o('Số cổ phiếu lưu hành').dispatchEvent('change');
-  await o('Giá thị trường').fill('30000');
-  await o('Giá thị trường').dispatchEvent('change');
-  await page.waitForFunction(() => /KHUYẾN NGHỊ|MUA|TÍCH LUỸ|NẮM GIỮ|KÉM KHẢ QUAN|BÁN/.test(document.querySelector('.deal').innerText) && /vốn chủ theo giá thị trường/.test(document.querySelector('.deal').innerText));
+  await o('Shares outstanding').fill('100000000');
+  await o('Shares outstanding').dispatchEvent('change');
+  await o('Market price').fill('30000');
+  await o('Market price').dispatchEvent('change');
+  await page.waitForFunction(() => /BUY|ACCUMULATE|HOLD|UNDERPERFORM|SELL/.test(document.querySelector('.deal').innerText) && /equity theo market price/.test(document.querySelector('.deal').innerText));
 
   // Bảng dự phóng: cột A (thực tế) cạnh cột F; sửa tăng trưởng riêng năm thứ 2 → ô được đánh dấu ghi đè, FCFF đổi
   assert.ok(await page.locator('.dv-proj th', { hasText: ' A' }).count() >= 1, 'có cột năm actual');
   if (process.env.E2E_SHOTS) await page.locator('.dv-proj').evaluate((el) => el.closest('div').parentElement.scrollIntoView());
   if (process.env.E2E_SHOTS) await page.locator('.dv-proj').locator('xpath=../..').screenshot({ path: join(process.env.E2E_SHOTS, 'du-phong.png') });
   const fcffTruoc = await page.locator('.dv-proj tr', { hasText: 'FCFF' }).first().innerText();
-  const o2 = page.locator('.dv-proj tr', { hasText: 'Tăng trưởng doanh thu' }).locator('input.dv-yr').nth(1);
+  const o2 = page.locator('.dv-proj tr', { hasText: 'Revenue growth' }).locator('input.dv-yr').nth(1);
   await o2.fill('30');
   await o2.dispatchEvent('change');
   await page.waitForSelector('.dv-proj input.dv-yr.on');
@@ -1227,16 +1227,16 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.waitForFunction(() => !document.querySelector('.dv-proj input.dv-yr.on'));
 
   await page.locator('.dv-mna summary').click();
-  await o('Tỷ lệ sở hữu sau giao dịch').fill('60');
-  await o('Tỷ lệ sở hữu sau giao dịch').dispatchEvent('change');
-  for (const [lbl, v] of [['Giá mua phần sở hữu', '300'], ['Vốn chủ sở hữu mục tiêu', '200'], ['LNST một năm', '40']]) {
+  await o('Stake after the deal').fill('60');
+  await o('Stake after the deal').dispatchEvent('change');
+  for (const [lbl, v] of [['Price paid for the stake', '300'], [/^Target equity/, '200'], ['Annual net profit', '40']]) {
     await o(lbl).fill(v);
     await o(lbl).dispatchEvent('change');
   }
-  await page.waitForSelector('.dv-mna .hbox:has-text("Lợi thế thương mại")');
-  const gw = await page.locator('.dv-mna .hbox', { hasText: 'Lợi thế thương mại' }).first().locator('b').innerText();
+  await page.waitForSelector('.dv-mna .hbox:has-text("Goodwill")');
+  const gw = await page.locator('.dv-mna .hbox', { hasText: 'Goodwill' }).first().locator('b').innerText();
   assert.match(gw, /180/, 'lợi thế thương mại = 300 − 60% × 200 = 180 tỷ');
-  assert.match(await page.locator('.dv-mna').innerText(), /EPS sau/i);
+  assert.match(await page.locator('.dv-mna').innerText(), /EPS after/i);
 
   // Bảng điều khiển: football field + thác nước + doanh thu & FCFF; bảng độ nhạy tô màu theo giá thị trường
   await page.waitForSelector('.dv-dash .dv-kpi');
@@ -1247,13 +1247,13 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
 
   // Mẫu ngành Bán lẻ → dự phóng theo số cửa hàng, có dòng cửa hàng mở thêm từng năm
   const sel = (lbl) => page.locator('.dv-sel', { hasText: lbl }).locator('select');
-  await sel('Mẫu ngành').selectOption('retail');
-  await page.waitForFunction(() => [...document.querySelectorAll('.dv-sel')].find((l) => l.innerText.includes('Dự phóng doanh thu theo'))?.querySelector('select')?.value === 'stores');
+  await sel('Industry template').selectOption('retail');
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-sel')].find((l) => l.innerText.includes('Forecast revenue by'))?.querySelector('select')?.value === 'stores');
   await page.waitForSelector('.dv-tips');
-  await o('Số cửa hàng năm gốc').fill('100');
-  await o('Số cửa hàng năm gốc').dispatchEvent('change');
-  await page.waitForSelector('.dv-proj tr:has-text("Cửa hàng mở thêm")');
-  assert.ok(await page.locator('.dv-proj tr', { hasText: 'Số cửa hàng cuối năm' }).count() >= 1);
+  await o('Stores in base year').fill('100');
+  await o('Stores in base year').dispatchEvent('change');
+  await page.waitForSelector('.dv-proj tr:has-text("Net new stores")');
+  assert.ok(await page.locator('.dv-proj tr', { hasText: 'Stores at year end' }).count() >= 1);
 
   // Kịch bản: bật → thẻ giá trị kỳ vọng, Bear < Bull
   await page.locator('.dv-scen summary input[type=checkbox]').check();
@@ -1289,15 +1289,15 @@ test('bảng peer (16.Comps): dán từ Excel ra bội số, trung vị, giá ng
   ].join('\n'));
   await page.locator('.dl-sec button', { hasText: 'Thêm vào bảng' }).click();
   await page.waitForFunction(() => document.querySelectorAll('.cp-t tbody tr').length === 3);
-  const median = await page.locator('.cp-r tr', { hasText: 'Trung vị' }).innerText();
+  const median = await page.locator('.cp-r tr', { hasText: 'Median' }).innerText();
   assert.match(median, /15[.,]38/, 'trung vị EV/EBITDA của FRT 25,69 · MWG 15,38 · PET 13,91 = 15,38');
-  assert.ok(await page.locator('.dl-sec h4', { hasText: 'Định giá ngầm định theo trung vị peer' }).count());
+  assert.ok(await page.locator('.dl-sec h4', { hasText: 'Implied valuation at peer medians' }).count());
   if (process.env.E2E_SHOTS) await page.locator('.dl-sec', { has: page.locator('.cp-t') }).screenshot({ path: join(process.env.E2E_SHOTS, 'peer.png') });
-  await page.locator('.cp-bar button', { hasText: 'Dùng tứ phân vị' }).click();
+  await page.locator('.cp-bar button', { hasText: 'Use quartiles' }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('.dl-mult')].some((i) => i.value === '15.4'));
   // Bỏ tick một peer → trung vị đổi
   await page.locator('.cp-t tbody tr').first().locator('input[type=checkbox]').uncheck();
-  await page.waitForFunction(() => !/15[.,]38/.test([...document.querySelectorAll('.cp-r tr')].find((r) => r.innerText.includes('Trung vị'))?.innerText || ''));
+  await page.waitForFunction(() => !/15[.,]38/.test([...document.querySelectorAll('.cp-r tr')].find((r) => r.innerText.includes('Median'))?.innerText || ''));
   assert.deepEqual(errors, []);
 });
 
@@ -1321,7 +1321,7 @@ test('hồi quy beta từ file dữ liệu giá: ra β như model (1,3364), bấ
   await page.waitForSelector('.dv-beta .hbox');
   assert.match(await page.locator('.dv-beta').innerText(), /1[.,]336/);
   await page.locator('.dv-beta button', { hasText: 'Dùng beta' }).click();
-  await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.includes('Beta (hồi quy'))?.querySelector('input').value === '1.3364');
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.includes('Beta (regressed'))?.querySelector('input').value === '1.3364');
   assert.deepEqual(errors, []);
 });
 
@@ -1354,8 +1354,8 @@ test('tải giá từ sàn để hồi quy beta: gọi máy chủ /gia, ra beta,
   await page.waitForSelector('.dv-beta .msg.ok');
   assert.match(goi, /\/gia\?ma=DGW&nam=5$/);
   assert.match(await page.locator('.dv-beta').innerText(), /1[.,]2\d/);
-  await page.locator('.dv-beta .linkb', { hasText: 'Dùng giá đóng cửa' }).click();
-  await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.startsWith('Giá thị trường'))?.querySelector('input').value === '45600');
+  await page.locator('.dv-beta .linkb', { hasText: 'Dùng closing price' }).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.startsWith('Market price'))?.querySelector('input').value === '45600');
   assert.deepEqual(errors, []);
 });
 
