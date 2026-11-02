@@ -186,6 +186,11 @@ nav.stuck{border-bottom-color:var(--border);background:rgba(8,8,8,.92)}
 .slot-row > span{color:var(--muted)}
 .slot-row b{color:var(--white);font-weight:500}
 .slot-row b span{color:var(--white)}
+/* Ngày khai giảng: ngày một dòng, "còn N ngày" dòng riêng bên dưới — không để chữ tự gãy giữa chừng */
+.slot-row.kg > span{white-space:nowrap}
+.slot-row.kg b{display:flex;flex-direction:column;align-items:flex-end;text-align:right;white-space:nowrap}
+.slot-row.kg b small{font-size:11.5px;font-weight:600;color:var(--emerald);margin-top:2px}
+.slot-row.kg b small:empty{display:none}
 .slot-row .thr{color:var(--muted2);text-decoration:line-through;font-weight:400;margin-right:6px}
 
 /* ═══════════════ TRUST ═══════════════ */
@@ -814,7 +819,7 @@ footer a:hover{color:var(--emerald)}
           <b><i class="thr" data-bind="computed.price.regular"></i><span data-bind="computed.price.earlyBird"></span></b>
         </div>
         <div class="slot-row" data-show="pricing.showSelfPaced"><span>Gói tự học (recorded)</span><b data-bind="computed.price.selfPaced"></b></div>
-        <div class="slot-row" data-show="computed.startDate.has"><span>Khai giảng dự kiến</span><b data-tpl="{{computed.startDate.text}}{{computed.startDate.left}}"></b></div>
+        <div class="slot-row kg" data-show="computed.startDate.has"><span>Khai giảng dự kiến</span><b><span data-bind="computed.startDate.text"></span><small data-bind="computed.startDate.con"></small></b></div>
         <div class="slot-row"><span>Lịch học</span><b data-bind="computed.scheduleShort"></b></div>
         <div class="slot-row"><span>Số buổi</span><b data-tpl="{{schedule.sessions}} buổi × {{schedule.hoursPerSession}} tiếng"></b></div>
       </div>
@@ -1489,7 +1494,7 @@ function esc(s){
    Cùng cách viết với máy chủ (ai/worker/src/khoahoc.js moTaNgay). Số ngày còn lại tính theo giờ Việt Nam. */
 function moTaNgay(iso){
   var k=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  var rong={has:false,text:'',short:'',left:'',daysLeft:null};
+  var rong={has:false,text:'',short:'',left:'',con:'',daysLeft:null};
   if(!k) return rong;
   var t=Date.UTC(+k[1],+k[2]-1,+k[3]), d=new Date(t);
   if(d.getUTCDate()!==+k[3]) return rong;
@@ -1497,7 +1502,8 @@ function moTaNgay(iso){
   var con=Math.round((t-Date.UTC(vn.getUTCFullYear(),vn.getUTCMonth(),vn.getUTCDate()))/864e5);
   var thu=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getUTCDay()];
   return {has:true, text:thu+', '+k[3]+'/'+k[2]+'/'+k[1], short:k[3]+'/'+k[2], daysLeft:con,
-    left: con>0?' · còn '+con+' ngày' : con===0?' · hôm nay' : ''};
+    left: con>0?' · còn '+con+' ngày' : con===0?' · hôm nay' : '',
+    con: con>0?'còn '+con+' ngày' : con===0?'hôm nay' : ''};
 }
 
 function compute(c){
