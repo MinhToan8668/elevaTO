@@ -113,7 +113,8 @@ function card(c, periods, unit, unitLabel, big = false) {
           e.target.closest('figure.chart').replaceWith(moi);
         } },
       h('i', { style: { background: mau[ser.key] } }), serName(ser))))),
-    dataTable(c, periods, unit, kieu, big));
+    // Bảng số chỉ hiện khi phóng to — trong lưới thẻ nó chỉ làm thẻ dài ra, dư khoảng trắng.
+    big ? dataTable(c, periods, unit, kieu) : null);
   // Bấm vào vùng vẽ (chỗ không phải nút) cũng phóng to.
   if (!big) { wrap.classList.add('zoomable'); wrap.addEventListener('click', () => zoom(c, periods, unit, unitLabel)); }
   return fig;
@@ -274,9 +275,9 @@ function plot(c, hien, periods, unit, kieu, mau, tip) {
 // ─── Bảng số kèm biểu đồ ───────────────────────────────────
 
 /** Đọc được bằng trình đọc màn hình, và xem nhanh khi không phân biệt được màu. */
-function dataTable(c, periods, unit, kieu, open = false) {
-  return h('details', { class: 'chart-data', open },
-    h('summary', {}, t('ch.data')),
+function dataTable(c, periods, unit, kieu) {
+  return h('div', { class: 'chart-data' },
+    h('p', { class: 'priv' }, t('ch.data')),
     h('div', { class: 'gridwrap' }, h('table', { class: 'k' },
       h('thead', {}, h('tr', {}, h('th', {}, t('ch.item')), periods.map((p) => h('th', { class: 'num' }, p.label)))),
       h('tbody', {}, c.series.map((ser) => h('tr', {}, h('td', {}, serName(ser)),

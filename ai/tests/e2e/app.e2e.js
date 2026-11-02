@@ -1075,33 +1075,44 @@ test('BCTC của hai công ty khác nhau: báo đỏ, không gộp số; chọn 
   }, [TOKEN('co2@elevato.vn'), phien]);
   await page.goto(`${base}/ai/`);
   await page.locator('#restore button.btn.sm').first().click();
-  await page.waitForSelector('#sources .co-warn');
-  const canh = await page.locator('#sources .co-warn').innerText();
-  assert.match(canh, /2 công ty khác nhau/);
-  assert.match(canh, /SỮA VIỆT NAM/);
-  assert.match(canh, /Bus Thaco/);
+  await page.waitForSelector('#sources .co-note');
+  assert.match(await page.locator('#sources .co-note').innerText(), /2 công ty khác nhau/);
+  assert.equal(await page.locator('.co-warn').count(), 0, 'không có khung đỏ riêng ngoài phần Nguồn dữ liệu');
   const ky = () => page.locator('#sources summary h3').innerText();
-  assert.match(await ky(), /FY2024, FY2025$/, 'chỉ có kỳ của VNM, không lẫn kỳ 9T-2026 của BUS');
+  assert.match(await ky(), /FY2024, FY2025/, 'chỉ có kỳ của VNM, không lẫn kỳ 9T-2026 của BUS');
+  const hang = (ten) => page.locator('#sources tbody tr', { hasText: ten }).locator('input[type=checkbox]');
+  assert.equal(await hang('VNM_').isChecked(), true);
+  assert.equal(await hang('BUS_').isChecked(), false);
+  await page.locator('#sources').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await khungHinh(page);
   await shot(page, 'cong-ty-khac-nhau', { fullPage: false });
 
-  // Chọn công ty kia → chỉ còn kỳ của BUS
-  await page.locator('#sources .co-warn select').selectOption({ label: 'Công ty TNHH Bus Thaco' });
-  // (CĐKT quý 3/2026 có cột "đầu năm" = cuối 2025 nên FY2025 vẫn có thể còn; FY2024 của VNM thì phải mất.)
+  // Tick file của công ty kia → chuyển sang dùng công ty đó (FY2024 của VNM mất; CĐKT quý 3/2026 có
+  // cột "đầu năm" = cuối 2025 nên FY2025 vẫn có thể còn).
+  await hang('BUS_').check();
   await page.waitForFunction(() => !/FY2024/.test(document.querySelector('#sources summary h3').innerText));
   assert.match(await ky(), /2026/);
+  assert.equal(await hang('VNM_').isChecked(), false);
 
-  // Xác nhận là cùng một công ty → gộp đủ các kỳ
+  // Xác nhận là cùng một công ty → gộp đủ các kỳ; rồi tách lại
   page.once('dialog', (d) => d.accept());
-  await page.locator('#sources .co-warn button').click();
-  await page.waitForSelector('#sources .co-warn.warn');
+  await page.locator('#sources .co-note .linkb').click();
+  await page.waitForFunction(() => /FY2024/.test(document.querySelector('#sources summary h3').innerText));
   assert.match(await ky(), /FY2024.*2026/);
-  await page.locator('#sources .co-warn button').click();               // tách lại
-  await page.waitForSelector('#sources .co-warn.err');
+  await page.locator('#sources .co-note .linkb').click();
+  await page.waitForFunction(() => !/FY2024/.test(document.querySelector('#sources summary h3').innerText) || !/2026/.test(document.querySelector('#sources summary h3').innerText));
+
+  // Bỏ tick một file cùng công ty → số của file đó không được dùng
+  await hang('BUS_').uncheck();
+  await page.waitForFunction(() => !/2026/.test(document.querySelector('#sources summary h3').innerText));
 
   // Biểu đồ: phóng to, tải PNG và Excel
   await page.locator('#tab-CHART').click();
+  await hang('VNM_').check();
   await page.waitForSelector('figure.chart');
+  assert.equal(await page.locator('#tabpanel .chart-data').count(), 0, 'bảng số chỉ hiện khi phóng to');
   await page.locator('figure.chart .cvwrap').first().click();
+  await page.waitForSelector('dialog.chart-zoom .chart-data table');
   await page.waitForSelector('dialog.chart-zoom[open] figure.chart.big svg.cv');
   await shot(page, 'bieu-do-phong-to', { fullPage: false });
   const png = await download(page, () => page.locator('dialog.chart-zoom .ch-btn', { hasText: 'PNG' }).click());

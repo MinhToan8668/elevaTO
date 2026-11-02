@@ -422,3 +422,13 @@ test('báo cáo in mọi thứ dương (chi phí, dự phòng, tiền chi): máy
   assert.match(cf.warnings.join('\n'), /tiền chi mã 21/);
   assert.deepEqual(validate(cf.cur, { unit: 1e6 }), []);
 });
+
+test('trang KQKD không có tiêu đề ở đầu (chữ pdf.js lệch thứ tự) ngay sau CĐKT → nhận đúng là KQKD theo các dòng đặc trưng', () => {
+  const r = classifyPages([
+    'BẢNG CÂN ĐỐI KẾ TOÁN\n100 110 111 112 120 TÀI SẢN NGẮN HẠN',
+    '300 310 311 400 410 411 NỢ PHẢI TRẢ VỐN CHỦ SỞ HỮU TỔNG CỘNG NGUỒN VỐN 440',
+    '01 02 10 11 20 21 22 23 25 26 30 Doanh thu thuần Giá vốn hàng bán Lợi nhuận gộp Chi phí bán hàng Chi phí quản lý doanh nghiệp Lợi nhuận kế toán trước thuế 50 51 52 60 70 Lãi cơ bản trên cổ phiếu BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH',
+    '01 02 03 08 20 21 22 30 Tiền thu từ bán hàng Tiền chi trả cho người cung cấp Lưu chuyển tiền thuần từ hoạt động kinh doanh 40 50 60 70 Tiền và tương đương tiền cuối năm',
+  ]);
+  assert.deepEqual(r.types, ['BS', 'BS', 'IS', 'CF']);
+});

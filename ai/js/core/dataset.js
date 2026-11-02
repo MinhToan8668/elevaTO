@@ -128,7 +128,7 @@ export function buildDataset(sources, edits = [], opts = {}) {
   const { main, skip } = pickCompany(companies, opts.company);
   if (main) ds.company = main.name;
   for (const s of sources) {
-    if (skip.has(s.id)) continue;
+    if (skip.has(s.id) || s.off) continue;                             // công ty khác / người dùng bỏ tick
     try {
       if (s.kind === 'period') ds = addPeriodValues(ds, s);
       else ds = addExtraction(ds, { ...s.ext, meta: { ...s.ext.meta, ...definedOnly(s.meta) } });

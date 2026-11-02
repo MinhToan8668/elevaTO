@@ -340,6 +340,18 @@ const TITLES = [
   ['CF', /LUU CHUYEN TIEN TE/],
   ['NOTES', /THUYET MINH BAO CAO TAI CHINH/],
 ];
+// Dòng chỉ có ở một báo cáo — đếm để đoán trang bảng không có tiêu đề.
+const DAU_HIEU = {
+  BS: /TONG CONG TAI SAN|TAI SAN NGAN HAN|TAI SAN DAI HAN|TONG CONG NGUON VON|VON CHU SO HUU|NO PHAI TRA/g,
+  IS: /GIA VON HANG BAN|LOI NHUAN GOP|CHI PHI BAN HANG|CHI PHI QUAN LY DOANH NGHIEP|LOI NHUAN KE TOAN TRUOC THUE|LAI CO BAN TREN CO PHIEU|DOANH THU THUAN/g,
+  CF: /LUU CHUYEN TIEN THUAN|TIEN THU TU|TIEN CHI (TRA|MUA|CHO)|TIEN VA TUONG DUONG TIEN (DAU|CUOI)/g,
+};
+/** Loại bảng có ≥ 3 dòng đặc trưng và vượt hẳn hai loại kia; không rõ thì null. */
+function dauHieu(t) {
+  const diem = Object.entries(DAU_HIEU).map(([k, re]) => [k, new Set(t.match(re) || []).size]).sort((a, b) => b[1] - a[1]);
+  return diem[0][1] >= 3 && diem[0][1] >= 2 * diem[1][1] ? diem[0][0] : null;
+}
+
 export const NOTE_GROUPS = {
   fixedAssets: /TAI SAN CO DINH (HUU HINH|VO HINH|THUE TAI CHINH)/,
   debt: /VAY VA NO THUE TAI CHINH|CAC KHOAN VAY\b/,
@@ -366,7 +378,12 @@ export function classifyPages(texts) {
       type = (TITLES.find(([, re]) => re.test(head)) || [])[0];
       if (!type) {
         const codes = (t.match(/(?:^|\s)\d{2,3}(?=\s|$)/g) || []).length;
-        if (['BS', 'IS', 'CF'].includes(prev) && codes >= 5) type = prev;
+        // Trang bảng không có tiêu đề ở đầu (pdf.js trả chữ lệch thứ tự, tiêu đề nằm cuối) — xem các
+        // dòng đặc trưng trước khi coi là trang tiếp của bảng trước: KQKD in liền sau CĐKT không bị
+        // nhận nhầm thành CĐKT nữa.
+        const sig = codes >= 5 ? dauHieu(t) : null;
+        if (sig) type = sig;
+        else if (['BS', 'IS', 'CF'].includes(prev) && codes >= 5) type = prev;
         else type = prev === 'NOTES' ? 'NOTES' : 'OTHER';
       }
     }

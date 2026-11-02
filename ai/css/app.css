@@ -1030,13 +1030,17 @@ body[data-view="work"][data-step="s5"] #s5,body[data-view="work"][data-step="s6"
 @media (max-width:700px){.rail-sep{display:none}}
 /* Chỉ dùng trong test e2e kiểm luồng nghiệp vụ từng phần: hiện đủ các bước một lúc (chế độ từng bước có bài riêng). */
 html[data-all-steps] body[data-view="work"] .step{display:block}
-/* Các file thuộc nhiều công ty (xem ui/review.js companyWarn) */
-.co-warn{margin:0 0 12px}
-.co-warn ul{margin:6px 0 6px 18px}
-.co-warn li .tag{margin-left:8px}
-.co-warn .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
-.co-warn select{margin-left:4px}
-tr.src-off td{opacity:.6}
+/* Nguồn dữ liệu: cột tick "Dùng", ghi chú khi các file thuộc nhiều công ty (xem ui/review.js) */
+tr.src-off td:not(.chk-c){opacity:.5}
+.chk-c{width:44px;text-align:center}
+/* Cột file đứng sau cột tick: vẫn căn trái, chữ thường như cột đầu của bảng k */
+#sources table.k th:nth-child(2),#sources table.k td:nth-child(2){text-align:left;font-family:inherit}
+table.k th.chk-c,table.k td.chk-c{text-align:center}
+.chk-c input{width:16px;height:16px;accent-color:var(--em)}
+.src-co{display:block;color:var(--muted);font-size:11.5px}
+.co-sum{color:var(--gold);font-weight:700}
+.co-note{margin:8px 0 4px;font-size:13px;color:var(--gold)}
+.co-note .linkb{font:inherit;font-weight:700;color:var(--em-text);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
 /* Biểu đồ: nút phóng to / PNG / Excel, khung phóng to (xem ui/charts.js zoom) */
 .ch-tools{display:inline-flex;align-items:center;gap:6px}
 .ch-btn{font:700 11.5px/1 var(--ff-ui,inherit);padding:5px 8px;border-radius:7px;border:1px solid var(--line-2);background:transparent;color:var(--muted);cursor:pointer}
@@ -1050,3 +1054,4 @@ dialog.chart-zoom .chart.big figcaption b{font-size:18px}
 dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .ch-close{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--strong);font-size:20px;line-height:1;cursor:pointer}
 @media (max-width:600px){dialog.chart-zoom{width:100vw;max-height:100dvh;border-radius:0;padding:14px}}
+.chart.big .chart-data .gridwrap{max-height:none}

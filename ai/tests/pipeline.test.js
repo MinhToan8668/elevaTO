@@ -79,7 +79,9 @@ test('hết lượt / sai mã → dừng cả file, không nuốt lỗi', async 
 
 test('không có trang của một bảng → cảnh báo cách sửa', async () => {
   const r = await extractJob({ ...job, types: ['BS', 'IS'] }, makeIO(), {});
-  assert.ok(r.warnings.some((w) => /Không tìm thấy trang Lưu chuyển tiền tệ/.test(w)));
+  assert.ok(r.warnings.some((w) => /Không có trang nào được nhận là Lưu chuyển tiền tệ/.test(w)), 'gửi cả các trang bảng đã tick cho LCTT');
+  const r0 = await extractJob({ ...job, types: ['NOTES', 'NOTES'], notes: {} }, makeIO(), {});
+  assert.ok(r0.warnings.some((w) => /Không tìm thấy trang Lưu chuyển tiền tệ/.test(w)), 'không có trang bảng nào → cảnh báo cách sửa');
 });
 
 import { mapPagesWithAI } from '../js/core/pipeline.js';
@@ -151,7 +153,8 @@ test('trang thuyết minh đã tick mà máy không rõ nhóm → nhờ AI xếp
   assert.deepEqual(r.notes.fixedAssets, [8]);
   assert.deepEqual(r.notes.debt, [7]);
   const w = r.warnings.join('\n');
-  assert.match(w, /Trang 1, 9: AI thấy không phải/, 'trang 1 AI bảo không phải bảng; trang 9 AI không trả lời');
+  assert.match(w, /Trang 1, 9: AI xem ảnh nhỏ không nhận ra/, 'trang 1 AI bảo không phải bảng; trang 9 AI không trả lời');
+  assert.deepEqual(r.shared, [1, 9], 'trang đã tick vẫn được gửi kèm cho cả ba bảng, không bỏ');
   assert.doesNotMatch(w, /\b(2|7|8)\b/);
 });
 
@@ -325,4 +328,20 @@ test('bản scan: mapPagesWithAI trả luôn góc xoay từng trang', async () =
   };
   const r = await mapPagesWithAI(2, io);
   assert.deepEqual(r.rot, { 1: 90 });
+});
+
+test('KQKD in liền sau CĐKT bị nhận nhầm là trang CĐKT → KQKD không có trang riêng nhưng vẫn đọc được trên cả cụm trang', async () => {
+  const io = makeIO();
+  const r = await extractJob({ name: 'vnm.pdf', types: ['OTHER', 'BS', 'BS', 'BS', 'CF'], notes: {} }, io, { noteGroups: [] });
+  assert.ok(r.statements.IS, 'có KQKD');
+  assert.equal(io.calls.find((c) => c.prompt.includes('KẾT QUẢ')).pages, 'p2,3,4,5', 'KQKD được gửi cả các trang bảng đã tick');
+});
+
+test('trang được nhận là KQKD nhưng AI không thấy dòng tổng nào → đọc lại một lần trên cả cụm trang', async () => {
+  const io = makeIO({ 'KẾT QUẢ HOẠT ĐỘNG': (pr, pages) => (pages === 'p4' ? { meta: {}, items: [{ c: '', n: 'Chi phí theo yếu tố', v: '1', p: '1' }] } : null) });
+  const r = await extractJob({ name: 'x.pdf', types: ['OTHER', 'BS', 'BS', 'IS', 'CF'], notes: {} }, io, { noteGroups: [] });
+  const is = io.calls.filter((c) => c.prompt.includes('KẾT QUẢ')).map((c) => c.pages);
+  assert.deepEqual(is, ['p4', 'p2,3,4,5']);
+  assert.ok(r.statements.IS.cur['IS:10'] || Object.keys(r.statements.IS.cur).length, 'lấy kết quả lần đọc lại');
+  assert.match(r.warnings.join('\n'), /đọc lại trên cả các trang bảng/);
 });

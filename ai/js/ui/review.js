@@ -36,7 +36,14 @@ function renderSources(store) {
   const { ds, errors, companies, main, skipped } = store.data();
   const box = $('#sources');
   if (!s.sources.length) { mount(box, h('p', { class: 'empty' }, t('src.empty'))); return; }
-  const coBox = companyWarn(store, companies, main, skipped);
+  const nhieuCty = companies.length > 1;
+  const ctyCua = (id) => companies.find((g) => g.ids.includes(id));
+  // Tick = dùng số của file này. Tick một file của công ty đang để riêng → chuyển sang dùng công ty đó.
+  const tick = (src, on) => store.set((st) => {
+    const sources = st.sources.map((x) => (x.id === src.id ? { ...x, off: on ? undefined : true } : x));
+    const g = ctyCua(src.id);
+    return on && skipped.includes(src.id) && g ? { sources, company: g.key } : { sources };
+  });
   const setMeta = (id, patch) => store.set((st) => ({ sources: st.sources.map((x) => (x.id === id ? { ...x, meta: { ...x.meta, ...patch } } : x)) }));
   const rows = s.sources.map((src) => {
     const err = errors.find((e) => e.id === src.id);
@@ -49,10 +56,11 @@ function renderSources(store) {
     const monIn = src.kind === 'ext' ? h('select', { 'aria-label': t('src.months.aria', { file }), onchange: (e) => setMeta(src.id, { so_thang: Number(e.target.value) || undefined }) },
       h('option', { value: '' }, t('src.months.auto')),
       [3, 6, 9, 12].map((m) => h('option', { value: String(m), selected: Number(cur.so_thang) === m }, t('src.months', { n: m })))) : null;
-    const khac = skipped.includes(src.id);
-    return h('tr', { class: khac ? 'src-off' : null },
+    const dung = !skipped.includes(src.id) && !src.off;
+    return h('tr', { class: dung ? null : 'src-off' },
+      h('td', { class: 'chk-c' }, h('input', { type: 'checkbox', checked: dung, 'aria-label': t('src.use', { file }), onchange: (e) => tick(src, e.target.checked) })),
       h('td', {}, file, err ? h('div', { class: 'tag red' }, err.message) : null,
-        khac ? h('div', { class: 'tag red' }, t('co.offTag', { name: src.ext?.company || '' })) : null),
+        nhieuCty && src.ext?.company ? h('small', { class: 'src-co' }, src.ext.company) : null),
       h('td', {}, periodTxt),
       h('td', {}, dateIn, ' ', monIn),
       h('td', {}, h('button', { class: 'btn ghost sm', onclick: () => {
@@ -71,39 +79,20 @@ function renderSources(store) {
   const conf = ds.conflicts.length ? h('details', { class: 'msg warn' }, h('summary', {}, t('src.conflict', { n: ds.conflicts.length })),
     h('ul', {}, ds.conflicts.slice(0, 200).map((c) => h('li', {}, t('src.conflictRow', {
       period: c.period, label: labelOf(c.key), kept: fmt(c.kept, 1e6), keptFile: c.keptFile, other: fmt(c.other, 1e6), otherFile: c.otherFile }))))) : null;
-  keepFocus(box, () => mount(box, coBox,
-    h('details', { class: 'pmap', open: errors.length > 0 || skipped.length > 0 || box.querySelector('details.pmap')?.open },
-      h('summary', {}, h('h3', {}, t('src.h', { n: s.sources.length, k: ds.periods.length, ids: ds.periods.map((p) => p.id).join(', ') || '—' }))),
-      h('table', { class: 'k' }, h('thead', {}, h('tr', {}, h('th', {}, t('src.file')), h('th', {}, t('src.period')), h('th', {}, t('src.date')), h('th', {}, ''))), h('tbody', {}, rows)),
+  const gop = s.company === '*';
+  const coNote = !nhieuCty ? null : h('p', { class: 'co-note' },
+    gop ? t('co.merged', { n: companies.length }) : t('co.note', { n: companies.length, name: companies.find((g) => g.key === main)?.name || '' }), ' ',
+    gop ? h('button', { type: 'button', class: 'linkb', onclick: () => store.set({ company: '' }) }, t('co.split'))
+      : h('button', { type: 'button', class: 'linkb', onclick: () => { if (confirm(t('co.sameAsk'))) store.set({ company: '*' }); } }, t('co.same')));
+  keepFocus(box, () => mount(box,
+    h('details', { class: 'pmap', open: errors.length > 0 || (nhieuCty && !gop) || box.querySelector('details.pmap')?.open },
+      h('summary', {}, h('h3', {}, t('src.h', { n: s.sources.length, k: ds.periods.length, ids: ds.periods.map((p) => p.id).join(', ') || '—' }),
+        nhieuCty && !gop ? h('span', { class: 'co-sum' }, t('co.sum', { n: companies.length })) : null)),
+      coNote,
+      h('table', { class: 'k' }, h('thead', {}, h('tr', {}, h('th', { class: 'chk-c' }, t('src.useH')), h('th', {}, t('src.file')), h('th', {}, t('src.period')), h('th', {}, t('src.date')), h('th', {}, ''))), h('tbody', {}, rows)),
       s.edits.length ? h('p', { class: 'priv' }, t('src.edits', { n: s.edits.length }), h('button', { class: 'btn ghost sm', onclick: () => { if (confirm(t('src.editsAsk'))) store.set({ edits: [] }); } }, t('src.editsDrop'))) : null),
     warn, conf));
 }
-/**
- * Các file thuộc nhiều công ty: báo đỏ, chỉ dùng số của một công ty, cho chọn công ty khác
- * hoặc xác nhận "là cùng một công ty" (AI đọc tên khác nhau, ví dụ tên tiếng Anh) để gộp lại.
- */
-let soCtyDaBao = 0;
-function companyWarn(store, companies, main, skipped) {
-  const gop = store.get().company === '*';
-  if (companies.length < 2) { soCtyDaBao = 0; return null; }
-  if (!gop && companies.length > soCtyDaBao) toast(t('co.toast', { n: companies.length }), 7000);
-  soCtyDaBao = companies.length;
-  if (gop) {
-    return h('div', { class: 'msg warn co-warn' }, t('co.merged', { n: companies.length }), ' ',
-      h('button', { class: 'btn ghost sm', onclick: () => store.set({ company: '' }) }, t('co.split')));
-  }
-  return h('div', { class: 'msg err co-warn', role: 'alert' },
-    h('b', {}, t('co.h', { n: companies.length })),
-    h('ul', {}, companies.map((c) => h('li', {}, h('b', {}, c.name), ` — ${c.files.join(', ')}`,
-      c.key === main ? h('span', { class: 'tag' }, t('co.using')) : h('span', { class: 'tag red' }, t('co.notUsed'))))),
-    h('p', {}, t('co.lead', { n: skipped.length })),
-    h('div', { class: 'row' },
-      h('label', {}, t('co.pick'), ' ',
-        h('select', { onchange: (e) => store.set({ company: e.target.value }) },
-          companies.map((c) => h('option', { value: c.key, selected: c.key === main }, c.name)))),
-      h('button', { class: 'btn ghost sm', onclick: () => { if (confirm(t('co.sameAsk'))) store.set({ company: '*' }); } }, t('co.same'))));
-}
-
 const isoDate = (d) => { const s = String(d || ''); const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s) || /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
   if (!m) return ''; return m[1].length === 4 ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; };
 const labelOf = (key) => { const [st, code] = key.split(':'); const it = item(st, code); return it ? `${code} ${chartLabel(key, it.label)}` : key; };
