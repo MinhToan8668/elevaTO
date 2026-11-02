@@ -5,9 +5,11 @@ workers_dev = true
 
 # Ghi log mỗi yêu cầu, xem bằng `npx wrangler tail` hoặc trong bảng điều khiển → Workers → Logs.
 # Không bật thì lỗi chỉ hiện trong 30 giây đang mở `tail`, sau đó mất hẳn — dò bug là vô vọng.
-# Lịch chạy định kỳ: soát webhook Telegram 5 phút một lần (src/index.js → scheduled).
-[triggers]
-crons = ["*/5 * * * *"]
+# Lịch chạy định kỳ (src/index.js → scheduled) để soát webhook Telegram: CHƯA BẬT vì tài khoản
+# Cloudflare gói Free đã dùng hết 5 cron. Không có lịch thì Worker vẫn soát mỗi khi có người mở
+# trang khoá học / link-bio. Còn trống chỗ (hoặc lên gói Paid) thì bỏ dấu # hai dòng dưới:
+# [triggers]
+# crons = ["*/5 * * * *"]
 
 [observability]
 enabled = true

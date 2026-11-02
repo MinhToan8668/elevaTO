@@ -44,7 +44,7 @@ const json = (obj, status = 200, them) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS, ...them } });
 
 export default {
-  // Lịch 5 phút một lần (wrangler.toml → [triggers]): soát webhook Telegram kể cả lúc không ai mở trang.
+  // Lịch chạy định kỳ nếu bật trong wrangler.toml → [triggers] (gói Free đang hết chỗ cron): soát webhook Telegram kể cả lúc không ai mở trang.
   // Bot bị chỗ khác giành webhook thì tin nhắn không tới Worker nữa — đợi có yêu cầu mới soát là muộn.
   async scheduled(ev, env, ctx) {
     if (!env.DB) return;
