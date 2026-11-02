@@ -93,6 +93,7 @@ function source(s) {
     notes: clean(e.notes, 0), warnings: arr(e.warnings, 500).map((w) => str(w, 500)),
   } };
   if (s.meta) out.meta = meta(s.meta);
+  if (s.off === true) out.off = true;
   if (base.jobId === undefined) delete out.jobId;
   return out;
 }

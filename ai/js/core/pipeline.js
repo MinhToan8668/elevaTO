@@ -11,6 +11,10 @@ import { statementToValues, noteToModel } from './extract.js';
 import { t } from '../i18n.js';
 
 const STATEMENTS = ['BS', 'IS', 'CF'];
+// Dòng tổng mà bảng nào đọc đúng cũng phải có ít nhất một (mã TT200 và TT99). Không có dòng nào
+// trong số này là AI đã đọc nhầm sang trang khác (ví dụ chỉ chép được vài dòng thuyết minh).
+const DONG_CHINH = { BS: [270, 280, 300, 400, 440], IS: [1, 10, 20, 30, 50, 60], CF: [20, 30, 40, 50, 60, 70] };
+const thieuDongChinh = (st, res) => !(res?.items || []).some((r) => DONG_CHINH[st].includes(Number(String(r.c ?? '').trim())));
 
 /**
  * @param job { name, types: [...per page], notes: {group: [pages]}, shared?: [pages] }
@@ -28,8 +32,16 @@ export async function extractJob(job, io, opts = {}) {
   const results = {};
   const trong = [];                       // bảng AI xem mà không thấy — để đoán xem các trang đó thật ra là gì
   let goiY = '';                          // lời chỉ dẫn khi không đọc nổi bảng nào (giao diện hiện thay lỗi khô khan)
+  // Mọi trang bảng đã tick (CĐKT + KQKD + LCTT + trang chưa rõ): dùng khi một bảng không được trang nào,
+  // hoặc đọc ra quá ít dòng — thường do trang bị nhận nhầm loại (KQKD in liền sau CĐKT bị coi là
+  // trang tiếp của CĐKT). Như FinLens: đưa AI cả cụm trang, AI tự tìm đúng bảng cần đọc.
+  const tatCa = [...new Set([...STATEMENTS.flatMap(pagesOf), ...shared])].sort((a, b) => a - b);
   const runSt = async (st) => {
-    const pages = pagesFor(st);
+    let pages = pagesFor(st);
+    if (!pages.length && tatCa.length) {
+      pages = tatCa;
+      warnings.push(t('w.allPages', { st: NAME(st), pages: list(pages) }));
+    }
     if (!pages.length) { warnings.push(t('w.noPage', { st: NAME(st) })); return; }
     step({ key: st, state: 'run', label: t('step.run', { st: NAME(st), pages: list(pages) }) });
     try {
@@ -51,6 +63,16 @@ export async function extractJob(job, io, opts = {}) {
         if ((lai?.items || []).length) {
           warnings.push(t('w.retried', { st: NAME(st) }));
           res = lai;
+        }
+      }
+      // Không có dòng tổng nào của bảng mà còn trang bảng khác chưa gửi → đọc lại trên cả cụm trang.
+      const it = (res?.items || []).length;
+      if (thieuDongChinh(st, res) && tatCa.some((p) => !pages.includes(p))) {
+        step({ key: st, state: 'run', label: t('step.retryAll', { st: NAME(st), pages: list(tatCa) }) });
+        const rong = await statementWithSplit(st, tatCa, io, step).catch(() => null);
+        if (!thieuDongChinh(st, rong) || (rong?.items || []).length > it) {
+          warnings.push(t('w.allPagesFew', { st: NAME(st), n: it, pages: list(tatCa) }));
+          res = rong;
         }
       }
       if (!(res?.items || []).length) {
@@ -266,6 +288,7 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
   // Không lấy thuyết minh và ít trang chưa rõ: khỏi tốn lượt nhận trang — gửi thẳng các trang đó vào lượt đọc từng bảng.
   if (!wantNotes && unknown.length <= batch) return { types, notes, rot, aiCalls: 0, warnings, shared: unknown };
   let aiCalls = 0;
+  const shared = [];
   if (unknown.length) {
     const { pageMapTask } = await import('./prompts.js');
     for (let i = 0; i < unknown.length; i += batch) {
@@ -284,15 +307,18 @@ export async function planPicked(job, picked, io, { batch = 12, onStep, notes: w
     }
     onStep?.({ key: 'map', state: 'done' });
     const inGroup = new Set(Object.values(notes).flat());
+    // Trang người dùng ĐÃ TICK mà AI xem ảnh nhỏ cho là "trang khác": không bỏ, mà gửi kèm cho cả ba
+    // bảng (AI đọc bảng nhìn ảnh rõ hơn nhiều). Bỏ đi là mất hẳn KQKD khi AI đoán nhầm đúng trang đó.
     const skip = unknown.filter((p) => types[p - 1] === 'OTHER');
     const loose = unknown.filter((p) => types[p - 1] === 'NOTES' && !inGroup.has(p));
     if (skip.length) warnings.push(t('w.skipped', { pages: list(skip) }));
+    shared.push(...skip);
     if (loose.length) warnings.push(t('w.loose', { pages: list(loose) }));
   }
   for (const g of Object.keys(notes)) notes[g].sort((a, b) => a - b);
   const nghieng = Object.keys(rot).map(Number).sort((a, b) => a - b);
   if (nghieng.length) warnings.push(t('w.xoay', { pages: list(nghieng), n: nghieng.length }));
-  return { types, notes, rot, aiCalls, warnings, shared: [] };
+  return { types, notes, rot, aiCalls, warnings, shared };
 }
 
 /** Trang đã tick cần AI nhận diện: máy chưa rõ loại, hoặc là thuyết minh nhưng chưa rõ thuộc nhóm nào. */

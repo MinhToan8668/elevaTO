@@ -50,11 +50,17 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 - **Nhiều file, nhiều kỳ**: mỗi BCTC có sẵn cột kỳ trước. Nên tải BCTC năm gần nhất + các năm trước
   (model cần ≥ 4 năm), thêm báo cáo quý mới nhất nếu có. Hai báo cáo cùng kỳ khác số → dùng số của báo cáo
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.
+- **Không mất bảng vì nhận nhầm trang**: trang đã tick mà AI xem ảnh nhỏ không nhận ra vẫn được gửi kèm cho cả
+  ba bảng. Bảng nào không được trang nào, hoặc đọc ra mà không có dòng tổng nào (KQKD: 01/10/20/30/50/60…),
+  thì máy đọc lại một lần trên cả các trang bảng đã tick để AI tự tìm — như FinLens. PDF có chữ: trang bảng
+  không có tiêu đề được nhận theo các dòng đặc trưng (giá vốn, lợi nhuận gộp…), không mặc định là trang tiếp
+  của bảng trước.
 - **Không gộp nhầm hai công ty**: mỗi file mang tên công ty AI đọc ở đầu báo cáo. Tên khác nhau (sau khi bỏ
   "Công ty cổ phần / TNHH / CTCP…", dấu và hoa thường) thì máy coi là hai công ty, báo đỏ ở phần *Nguồn dữ liệu*
   và chỉ dùng số của một công ty (mặc định công ty có nhiều file hơn). Chọn được công ty kia, hoặc bấm
   "Đây là cùng một công ty" khi AI đọc tên lệch (tên tiếng Anh, tên viết tắt). File không có tên công ty
-  (Excel FinLens) luôn được gộp như trước. Logic ở `js/core/company.js`.
+  (Excel FinLens) luôn được gộp như trước. Cột **Dùng** ở *Nguồn dữ liệu*: bỏ tick một file là không dùng số
+  của file đó; tick file của công ty kia là chuyển sang công ty đó. Logic ở `js/core/company.js`.
 - **Hai form** (chọn ở bước 3):
 
   | | Form phổ thông | Form riêng elevaTO |
@@ -79,7 +85,7 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   (số ngày tồn kho / phải thu / phải trả + chu kỳ tiền), khả năng thanh toán ngắn hạn, và dòng tiền thuần
   cho doanh nghiệp (NOPAT + khấu hao − đầu tư ± thay đổi vốn lưu động). Trỏ chuột vào một kỳ là hiện bảng
   nhỏ đủ mọi đường của kỳ đó; bấm chú giải để tắt / bật một đường; Tab bằng bàn phím cũng đọc được từng kỳ.
-  Bấm vào biểu đồ (hoặc nút ⤢) để **phóng to** kèm bảng số; nút **PNG** tải ảnh biểu đồ (có tên, đơn vị,
+  Bảng số của từng biểu đồ chỉ hiện khi **phóng to** (bấm vào biểu đồ hoặc nút ⤢); nút **PNG** tải ảnh biểu đồ (có tên, đơn vị,
   chú giải, đúng màu giao diện đang dùng), nút **Excel** tải số liệu của biểu đồ theo đơn vị đang xem.
   Ba cách xem kỳ — **theo kỳ đã trích / chỉ kỳ năm / riêng từng quý** — và bộ chọn 3 năm / 5 năm / tất cả.
   "Riêng từng quý" do máy suy ra bằng cách **trừ hai kỳ lũy kế liền nhau** (quý 3 = lũy kế 9 tháng − lũy kế
