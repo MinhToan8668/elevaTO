@@ -5,6 +5,10 @@ workers_dev = true
 
 # Ghi log mỗi yêu cầu, xem bằng `npx wrangler tail` hoặc trong bảng điều khiển → Workers → Logs.
 # Không bật thì lỗi chỉ hiện trong 30 giây đang mở `tail`, sau đó mất hẳn — dò bug là vô vọng.
+# Lịch chạy định kỳ: soát webhook Telegram 5 phút một lần (src/index.js → scheduled).
+[triggers]
+crons = ["*/5 * * * *"]
+
 [observability]
 enabled = true
 head_sampling_rate = 1

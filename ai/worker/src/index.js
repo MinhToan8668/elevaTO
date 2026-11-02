@@ -44,6 +44,13 @@ const json = (obj, status = 200, them) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS, ...them } });
 
 export default {
+  // Lịch 5 phút một lần (wrangler.toml → [triggers]): soát webhook Telegram kể cả lúc không ai mở trang.
+  // Bot bị chỗ khác giành webhook thì tin nhắn không tới Worker nữa — đợi có yêu cầu mới soát là muộn.
+  async scheduled(ev, env, ctx) {
+    if (!env.DB) return;
+    const goc = await docCaiDat(env.DB, 'goc');
+    if (goc) ctx.waitUntil(nen(env, { origin: goc }));
+  },
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -110,6 +117,8 @@ function tinhTrang(env) {
 /** Việc chạy ngầm sau khi đã trả lời: nối webhook từng bot và dọn dòng hết hạn. */
 async function nen(env, url) {
   try {
+    // Nhớ địa chỉ của chính Worker để lịch chạy định kỳ (không có yêu cầu nào kèm URL) vẫn biết webhook phải trỏ về đâu.
+    if (await docCaiDat(env.DB, 'goc') !== url.origin) await ghiCaiDat(env.DB, 'goc', url.origin);
     for (const bot of BOT) await bot.ngo(env, url.origin);
     const lan = Number(await docCaiDat(env.DB, 'don_luc') || 0);
     if (giay() - lan > 3600) { await ghiCaiDat(env.DB, 'don_luc', String(giay())); await don(env.DB); }

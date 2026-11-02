@@ -102,13 +102,44 @@ export function taoBot({ ten, bien, nhan, menu: menu0, lenh, nut, hoi = {} }) {
       });
       if (!r || !r.ok) { console.error(`setWebhook ${ten}: ${(r && r.description) || 'không gọi được Telegram'}`); return; }
       await ghiCaiDat(env.DB, `tg_webhook_${ten}`, dau);
-    }
+      await ghiCaiDat(env.DB, `tg_kiem_${ten}`, String(Math.floor(Date.now() / 1000)));   // vừa nối xong, khỏi soát ngay
+    } else await kiemWebhook(env, url);
     await ngoMenu(env);
     const admins = tgAdmins(env);
     if (!admins.length || await docCaiDat(env.DB, `tg_chao_${ten}`) === dau) return;
     if (await bao(env, `✅ Bot <b>${esc(nhan)}</b> đã kết nối (Cloudflare Workers).\nGõ /help để xem các lệnh.`)) {
       await ghiCaiDat(env.DB, `tg_chao_${ten}`, dau);
     }
+  }
+
+  /**
+   * Mốc nhớ trong D1 chỉ nói "đã từng nối", không nói "vẫn đang nối". Chỗ khác dùng chung token
+   * (Apps Script cũ có lịch canhWebhook nửa tiếng một lần) có thể giành webhook đi — khi đó mọi
+   * lệnh mới đều bị code cũ trả "Không hiểu lệnh" mà Worker không hề biết. Nên cứ KIEM_GIAY giây
+   * hỏi thẳng Telegram một lần; webhook trỏ chỗ khác thì lấy lại và nhắn admin biết thủ phạm.
+   */
+  const KIEM_GIAY = 240;
+  async function kiemWebhook(env, url) {
+    const bay = Math.floor(Date.now() / 1000);
+    if (bay - Number(await docCaiDat(env.DB, `tg_kiem_${ten}`) || 0) < KIEM_GIAY) return;
+    await ghiCaiDat(env.DB, `tg_kiem_${ten}`, String(bay));
+    const info = await api(env, 'getWebhookInfo', {});
+    if (!info || !info.ok || !info.result) return;          // mạng lỗi — để lượt sau
+    const cu = String(info.result.url || '');
+    if (cu === url) return;
+    const r = await api(env, 'setWebhook', {
+      url, secret_token: env.TG_SECRET, allowed_updates: ['message', 'callback_query'], drop_pending_updates: false,
+    });
+    if (!r || !r.ok) { console.error(`setWebhook ${ten}: ${(r && r.description) || 'không gọi được Telegram'}`); return; }
+    console.warn(`Webhook ${ten} bị giành (${cu || 'trống'}) — đã lấy lại`);
+    // Nhắn tối đa 6 tiếng một lần, không thì giằng co với Apps Script sẽ thành spam.
+    if (bay - Number(await docCaiDat(env.DB, `tg_cuop_${ten}`) || 0) < 6 * 3600) return;
+    await ghiCaiDat(env.DB, `tg_cuop_${ten}`, String(bay));
+    const noi = !cu ? 'đang để trống (có nơi khác hỏi tin bằng getUpdates)'
+      : /script\.google/.test(cu) ? 'đang trỏ về <b>Apps Script cũ</b>' : `đang trỏ về <code>${esc(cu.replace(/\?.*$/, ''))}</code>`;
+    await bao(env, `⚠️ Webhook bot <b>${esc(nhan)}</b> ${noi} — đã lấy lại về Cloudflare, lệnh mới chạy lại bình thường.\n\n`
+      + 'Nếu tin này lặp lại: vào script.google.com → dự án Apps Script cũ → ⏰ Trình kích hoạt → xoá '
+      + '<code>canhWebhook</code> và <code>hoiTelegram</code>.');
   }
 
   /** Menu lệnh: nút "Menu" cạnh ô soạn tin và gõ "/" ra gợi ý. Chỉ đặt cho riêng chat quản trị. */
