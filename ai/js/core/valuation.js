@@ -37,8 +37,11 @@ export const DEFAULT_VAL = {
   capex: null,            // capex thuần / doanh thu
   nwc: null,              // vốn lưu động thương mại / doanh thu
   exit: null,             // bội số EV/EBITDA lúc thoát để đối chiếu — mặc định = mức giữa tab bội số
-  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0 },   // evRev: theo trung vị peer (bảng so sánh)
+  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0 },
+  byYear: {},             // ghi đè theo năm: { growth: [năm1, năm2, …], margin: […], … } — null = dùng số chung   // evRev: theo trung vị peer (bảng so sánh)
 };
+/** Tham số sửa được theo từng năm dự phóng. */
+export const BY_YEAR = ['growth', 'margin', 'da', 'capex', 'nwc', 'tax'];
 const KHOA_TY_LE = ['rf', 'erp', 'extra', 'kd', 'tax', 'g', 'growth', 'margin', 'da', 'capex', 'nwc'];
 
 /** Làm sạch thông số (từ phiên lưu / ô nhập): số lạ → mặc định; ô bỏ trống → null (máy tự tính). */
@@ -58,6 +61,13 @@ export function cleanVal(x) {
   if (typeof o.blume === 'boolean') out.blume = o.blume;
   if (typeof o.ticker === 'string' && /^[A-Za-z0-9]{0,10}$/.test(o.ticker.trim())) out.ticker = o.ticker.trim().toUpperCase();
   if (typeof o.fade === 'boolean') out.fade = o.fade;
+  const by = o.byYear && typeof o.byYear === 'object' ? o.byYear : {};
+  out.byYear = {};
+  for (const k of BY_YEAR) {
+    if (!Array.isArray(by[k])) continue;
+    const a = by[k].slice(0, 10).map((x) => (x !== null && x !== '' && Number.isFinite(+x) && +x > -1 && +x < 1 ? +x : null));
+    if (a.some((x) => x !== null)) out.byYear[k] = a;
+  }
   const w = o.weights && typeof o.weights === 'object' ? o.weights : {};
   for (const k of Object.keys(DEFAULT_VAL.weights)) if (Number.isFinite(+w[k]) && +w[k] >= 0 && +w[k] <= 100) out.weights[k] = +w[k];
   return out;
@@ -102,6 +112,17 @@ export function historyDrivers(years) {
   };
 }
 
+/** Các năm actual (tối đa 5 năm gần nhất) với đúng các tỷ lệ mà phần dự phóng dùng — để người dùng thấy số lấy từ đâu. */
+function lichSu(years) {
+  return years.slice(-5).map((c, i, a) => {
+    const m = c.m, rev = m.rev;
+    const truoc = i ? a[i - 1].m.rev : null;
+    const ebit = m.adjEbitda === null ? null : m.adjEbitda - (m.kh || 0);
+    return { label: c.label, rev, growth: truoc > 0 && rev > 0 ? rev / truoc - 1 : null, ebit, margin: rev ? div(ebit, rev) : null,
+      da: rev ? div(m.kh, rev) : null, capex: rev ? div(m.capexNet, rev) : null, nwc: rev ? div(m.tradeWc, rev) : null, tax: thueSuat(c.v), fcff: m.fcff };
+  });
+}
+
 /** WACC theo CAPM. E theo giá thị trường khi có giá × số cổ phiếu, không thì vốn chủ sổ sách. */
 export function wacc({ rf, erp, beta, blume, extra, kd, tax, debt, equityMkt, equityBook }) {
   const betaAdj = blume ? beta * 2 / 3 + 1 / 3 : beta;
@@ -116,17 +137,21 @@ export function wacc({ rf, erp, beta, blume, extra, kd, tax, debt, equityMkt, eq
  * Dự phóng FCFF N năm từ doanh thu năm gốc.
  * @returns [{ t, rev, growth, ebit, nopat, da, capex, nwc, dNwc, ebitda, fcff }]
  */
-export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, nwc, tax }) {
+export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, nwc, tax, byYear = {}, nwc0 = null }) {
   const out = [];
-  let rev = rev0, nwcTruoc = rev0 * nwc;
+  // Ghi đè từng năm (như cột OVERRIDE của sheet 04.Drivers): byYear[k][t − 1] là số của năm t, null = dùng số chung.
+  const lay = (k, t, chung) => (Number.isFinite(byYear[k]?.[t - 1]) ? byYear[k][t - 1] : chung);
+  let rev = rev0, nwcTruoc = nwc0 ?? rev0 * nwc;
   for (let t = 1; t <= years; t++) {
-    const gt = fade && years > 1 ? growth + (g - growth) * (t - 1) / (years - 1) : growth;
+    const gChung = fade && years > 1 ? growth + (g - growth) * (t - 1) / (years - 1) : growth;
+    const gt = lay('growth', t, gChung), m = lay('margin', t, margin), d = lay('da', t, da), c = lay('capex', t, capex), n = lay('nwc', t, nwc), tx = lay('tax', t, tax);
     rev *= 1 + gt;
-    const ebit = rev * margin, khau = rev * da, cx = rev * capex, wc = rev * nwc;
-    const nopat = ebit * (1 - tax);
+    const ebit = rev * m, khau = rev * d, cx = rev * c, wc = rev * n;
+    const nopat = ebit * (1 - tx);
     const dNwc = wc - nwcTruoc;
     nwcTruoc = wc;
-    out.push({ t, rev, growth: gt, ebit, nopat, da: khau, capex: cx, nwc: wc, dNwc, ebitda: ebit + khau, fcff: nopat + khau - cx - dNwc });
+    out.push({ t, rev, growth: gt, margin: m, daPct: d, capexPct: c, nwcPct: n, tax: tx, ebit, nopat, da: khau, capex: cx, nwc: wc, dNwc, ebitda: ebit + khau, fcff: nopat + khau - cx - dNwc,
+      ghiDe: Object.fromEntries(['growth', 'margin', 'da', 'capex', 'nwc', 'tax'].map((k) => [k, Number.isFinite(byYear[k]?.[t - 1])])) });
   }
   return out;
 }
@@ -163,18 +188,23 @@ export function dcfValuation(a, inputs) {
   // Lãi vay suy từ BCTC hay thấp giả (lãi vốn hoá vào tài sản, vay ưu đãi, nợ vay cuối năm phình to):
   // không để thấp hơn Rf + 1 điểm % — doanh nghiệp không vay rẻ hơn Chính phủ.
   if (inp.kd === null && d.kd < inp.rf + 0.01) d.kd = inp.rf + 0.01;
+  // Thuế suất suy từ BCTC lệch khỏi khoảng hợp lý (số trích sai / năm lỗ / ưu đãi thuế đặc biệt) → dùng 20%
+  // (thuế suất TNDN phổ thông), báo rõ để người dùng tự nhập nếu doanh nghiệp được ưu đãi thật.
+  const thueLa = inp.tax === null && his.tax !== null && (his.tax < 0.05 || his.tax > 0.35);
+  if (thueLa) d.tax = 0.2;
   const used = Object.fromEntries(Object.keys(d).map((k) => [k, inp[k] !== null && inp[k] !== undefined ? 'user' : his[k] !== null && his[k] !== undefined ? 'hist' : 'default']));
   const shares = v.shares;
   const equityMkt = inp.price && shares ? inp.price * shares : null;
   const W = wacc({ rf: inp.rf, erp: inp.erp, beta: inp.beta, blume: inp.blume, extra: inp.extra, kd: d.kd, tax: d.tax,
     debt: B.debt || 0, equityMkt, equityBook: B.equityParent });
-  const out = { inputs: inp, his, d, used, W, rev0, shares, marketCap: equityMkt, issues: [] };
+  const out = { inputs: inp, his, d, used, W, rev0, shares, marketCap: equityMkt, issues: thueLa ? ['taxOdd'] : [], hist: lichSu(years) };
+  if (thueLa) used.tax = 'default';
   if (!rev0 || rev0 <= 0 || d.margin === null) { out.issues.push('noBase'); return out; }
   if (!(W.wacc > inp.g)) { out.issues.push('gOverWacc'); return out; }
   if (inp.g > inp.rf) out.issues.push('gOverRf');
   if (W.wacc < inp.rf + 0.02) out.issues.push('lowWacc');
 
-  const flows = projectFcff({ rev0, years: inp.years, growth: d.growth, fade: inp.fade, g: inp.g, margin: d.margin, da: d.da, capex: d.capex, nwc: d.nwc, tax: d.tax });
+  const flows = projectFcff({ rev0, years: inp.years, growth: d.growth, fade: inp.fade, g: inp.g, margin: d.margin, da: d.da, capex: d.capex, nwc: d.nwc, tax: d.tax, byYear: inp.byYear });
   const r = evAt(flows, W.wacc, inp.g);
   const toEq = (ev) => (ev === null ? null : ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum);
   const perShare = (eq) => (eq === null || !shares ? null : eq / shares);

@@ -1094,3 +1094,10 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .bt-file{position:relative;overflow:hidden}
 .bt-file input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .bt-ma{width:90px;background:var(--surface);border:1px solid var(--line-2);border-radius:7px;padding:5px 7px;font:inherit;font-size:13px;text-transform:uppercase;color:var(--strong)}
+/* Bảng dự phóng DCF (ui/dealval.js bangDuPhong) */
+.dv-proj th,.dv-proj td{white-space:nowrap}
+.dv-proj .dv-a{color:var(--muted);background:color-mix(in srgb,var(--surface-2) 70%,transparent)}
+.dv-proj tr.dv-grp td{font-weight:700;color:var(--strong);background:var(--surface-2);font-size:12px;letter-spacing:.02em}
+.dv-proj .dv-yr{width:70px;background:var(--surface);border:1px dashed var(--line-2);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;text-align:right;color:var(--strong)}
+.dv-proj .dv-yr.on{border:1.5px solid var(--gold);background:var(--gold-soft)}
+.dv-how{font-size:12.5px}

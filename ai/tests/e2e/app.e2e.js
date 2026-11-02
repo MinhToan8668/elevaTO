@@ -1213,6 +1213,19 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await o('Giá thị trường').dispatchEvent('change');
   await page.waitForFunction(() => /KHUYẾN NGHỊ|MUA|TÍCH LUỸ|NẮM GIỮ|KÉM KHẢ QUAN|BÁN/.test(document.querySelector('.deal').innerText) && /vốn chủ theo giá thị trường/.test(document.querySelector('.deal').innerText));
 
+  // Bảng dự phóng: cột A (thực tế) cạnh cột F; sửa tăng trưởng riêng năm thứ 2 → ô được đánh dấu ghi đè, FCFF đổi
+  assert.ok(await page.locator('.dv-proj th', { hasText: ' A' }).count() >= 1, 'có cột năm actual');
+  if (process.env.E2E_SHOTS) await page.locator('.dv-proj').evaluate((el) => el.closest('div').parentElement.scrollIntoView());
+  if (process.env.E2E_SHOTS) await page.locator('.dv-proj').locator('xpath=../..').screenshot({ path: join(process.env.E2E_SHOTS, 'du-phong.png') });
+  const fcffTruoc = await page.locator('.dv-proj tr', { hasText: 'FCFF' }).first().innerText();
+  const o2 = page.locator('.dv-proj tr', { hasText: 'Tăng trưởng doanh thu' }).locator('input.dv-yr').nth(1);
+  await o2.fill('30');
+  await o2.dispatchEvent('change');
+  await page.waitForSelector('.dv-proj input.dv-yr.on');
+  assert.notEqual(await page.locator('.dv-proj tr', { hasText: 'FCFF' }).first().innerText(), fcffTruoc);
+  await page.locator('.dl-sec button', { hasText: 'Bỏ hết ghi đè từng năm' }).click();
+  await page.waitForFunction(() => !document.querySelector('.dv-proj input.dv-yr.on'));
+
   await page.locator('.dv-mna summary').click();
   await o('Tỷ lệ sở hữu sau giao dịch').fill('60');
   await o('Tỷ lệ sở hữu sau giao dịch').dispatchEvent('change');

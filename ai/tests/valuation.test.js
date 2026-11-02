@@ -105,3 +105,15 @@ test('M&A: EPS tăng/pha loãng có tính chi phí vốn; giá hoà vốn cho EP
   assert.ok(mnaAnalysis(acq, { ...deal, stake: 0.3 }).issues.includes('associate'));
   assert.equal(cleanMna({ cash: 0.6, debt: 0.6 }).cash, 0.5, 'cơ cấu nguồn tiền tự quy về 100%');
 });
+
+test('ghi đè tham số từng năm: chỉ năm được ghi đè đổi, các năm khác dùng số chung; đánh dấu ô ghi đè', () => {
+  const chung = { rev0: 1000, years: 3, growth: 0.1, fade: false, g: 0.03, margin: 0.1, da: 0.02, capex: 0.03, nwc: 0.2, tax: 0.2 };
+  const a = projectFcff(chung);
+  const b = projectFcff({ ...chung, byYear: { growth: [null, 0.3, null], tax: [0.1] } });
+  gan(b[0].rev, a[0].rev, 1e-12, 'năm 1 doanh thu không đổi');
+  gan(b[1].growth, 0.3, 1e-12, 'năm 2 tăng trưởng ghi đè');
+  gan(b[0].nopat, b[0].ebit * 0.9, 1e-12, 'năm 1 thuế ghi đè 10%');
+  gan(b[2].growth, 0.1, 1e-12, 'năm 3 dùng số chung');
+  assert.deepEqual([b[0].ghiDe.tax, b[1].ghiDe.growth, b[2].ghiDe.growth], [true, true, false]);
+  assert.deepEqual(cleanVal({ byYear: { growth: [null, 5, 0.2], xau: [1] } }).byYear, { growth: [null, null, 0.2] }, 'số lạ / khoá lạ bị bỏ');
+});
