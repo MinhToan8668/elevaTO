@@ -1595,6 +1595,15 @@ function canhWebhook() {
   var w = info.result;
   var url = String(WEBAPP_URL || '').trim();
 
+  // Bot đã chuyển sang máy chủ Cloudflare Workers → script này nghỉ hẳn: gỡ mọi lịch chạy rồi thôi.
+  // Không có dòng này thì cứ nửa tiếng lịch canh lại giành webhook về đây, bot trả lời bằng code
+  // cũ ("Không hiểu lệnh" với mọi lệnh mới như /khaigiang) cho tới khi Worker lấy lại.
+  if (/\.workers\.dev\//.test(String(w.url || ''))) {
+    try { goLichCanh(); } catch (err) {}
+    try { goLichHoi(); } catch (err) {}
+    return;
+  }
+
   // Không còn ở chế độ webhook (đã lùi về lịch hỏi) → lịch canh hết việc.
   if (!w.url) { try { goLichCanh(); } catch (err) {} return; }
 

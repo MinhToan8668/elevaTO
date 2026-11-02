@@ -83,6 +83,60 @@ test('bot tự nối webhook một lần rồi thôi', async () => {
   } finally { f.thoi(); }
 });
 
+test('webhook bị Apps Script cũ giành mất: lịch 5 phút soát Telegram, lấy lại và báo admin một lần', async () => {
+  const that = globalThis.fetch;
+  const tg = [];
+  let dangTro = '';                              // webhook Telegram đang giữ, theo từng token
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    const than = init && init.body ? JSON.parse(init.body) : {};
+    if (!u.includes('api.telegram.org')) return new Response('{}');
+    const method = u.split('/').pop();
+    tg.push({ method, tok: u.split('/')[3], ...than });
+    if (method === 'getWebhookInfo') return new Response(JSON.stringify({ ok: true, result: { url: dangTro } }));
+    return new Response('{"ok":true,"result":{}}');
+  };
+  try {
+    const env = env0();
+    await goi(env, { action: 'ungho' });                       // nối lần đầu
+    assert.equal(tg.filter((x) => x.method === 'getWebhookInfo').length, 0, 'vừa nối xong thì chưa soát');
+    // Apps Script giành webhook; 5 phút sau lịch chạy định kỳ.
+    dangTro = 'https://script.google.com/macros/s/abc/exec';
+    await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%'").run();
+    tg.length = 0;
+    const ctx = moCtx();
+    await worker.scheduled({}, env, ctx);
+    await ctx.xong();
+    const lay = tg.filter((x) => x.method === 'setWebhook');
+    assert.deepEqual(lay.map((x) => x.url).sort(), [`${API}tg/ai`, `${API}tg/el`], 'lấy lại cả hai bot');
+    assert.ok(lay.every((x) => x.secret_token === 'bimat'));
+    const bao = tg.filter((x) => x.method === 'sendMessage').map((x) => x.text).join('\n');
+    assert.match(bao, /Apps Script cũ/);
+    assert.match(bao, /canhWebhook/);
+    // Giành tiếp ngay sau đó: lấy lại nữa nhưng KHÔNG nhắn lại (tránh spam khi giằng co).
+    await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%'").run();
+    tg.length = 0;
+    const ctx2 = moCtx();
+    await worker.scheduled({}, env, ctx2);
+    await ctx2.xong();
+    assert.equal(tg.filter((x) => x.method === 'setWebhook').length, 2);
+    assert.equal(tg.filter((x) => x.method === 'sendMessage').length, 0);
+    // Webhook đúng chỗ thì chỉ hỏi, không đặt lại.
+    await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%'").run();
+    tg.length = 0;
+    globalThis.fetch = async (url) => {
+      const u = String(url); const m = u.split('/').pop(); tg.push({ method: m });
+      const duong = u.includes('token-ai') ? 'tg/ai' : 'tg/el';
+      return new Response(JSON.stringify({ ok: true, result: m === 'getWebhookInfo' ? { url: API + duong } : {} }));
+    };
+    const ctx3 = moCtx();
+    await worker.scheduled({}, env, ctx3);
+    await ctx3.xong();
+    assert.equal(tg.filter((x) => x.method === 'getWebhookInfo').length, 2);
+    assert.equal(tg.filter((x) => x.method === 'setWebhook').length, 0);
+  } finally { globalThis.fetch = that; }
+});
+
 // ─── Lệnh quản trị ──────────────────────────────────────────
 
 test('xếp vai trò học viên bằng lệnh, hạn lượt đổi theo ngay', async () => {
