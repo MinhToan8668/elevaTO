@@ -17,7 +17,7 @@ let ctx = {};
 
 export function initExporter(store, _ctx) {
   ctx = _ctx;
-  watch(store, ['sources', 'edits', 'ticks', 'unit', 'running', 'user', 'lang'], () => render(store));
+  watch(store, ['sources', 'company', 'edits', 'ticks', 'unit', 'running', 'user', 'lang'], () => render(store));
 }
 
 function render(store) {

@@ -9,6 +9,7 @@
 import { periodsFromMeta } from './extract.js';
 import { validate } from './statements.js';
 import { interimIssues } from './interim.js';
+import { groupCompanies, pickCompany } from './company.js';
 import { t } from '../i18n.js';
 
 export function emptyDataset() {
@@ -113,13 +114,21 @@ function splitByStatement(values) {
  * @param sources [{ id, kind: 'ext', ext, meta? } | { id, kind: 'period', period, values, file }]
  *        meta (tuỳ chọn): ngày kết thúc / số tháng người dùng nhập, đè lên meta AI đọc được
  * @param edits   [{ period, key, v }]  (v = null: xoá ô)
- * @returns { ds, errors: [{ id, file, message }], unit }  unit = đơn vị in lớn nhất (sai số làm tròn khi kiểm tra)
+ * @param opts.company khoá công ty người dùng chọn khi các file thuộc nhiều công ty ('*' = gộp hết)
+ * @returns { ds, errors: [{ id, file, message }], unit, companies, skipped }
+ *          unit = đơn vị in lớn nhất (sai số làm tròn khi kiểm tra)
+ *          companies = các công ty nhận ra trong nguồn (xem core/company.js); skipped = id nguồn của
+ *          công ty khác, không được gộp vào bộ dữ liệu
  */
-export function buildDataset(sources, edits = []) {
+export function buildDataset(sources, edits = [], opts = {}) {
   let ds = emptyDataset();
   const errors = [];
   let unit = 1;
+  const companies = groupCompanies(sources);
+  const { main, skip } = pickCompany(companies, opts.company);
+  if (main) ds.company = main.name;
   for (const s of sources) {
+    if (skip.has(s.id)) continue;
     try {
       if (s.kind === 'period') ds = addPeriodValues(ds, s);
       else ds = addExtraction(ds, { ...s.ext, meta: { ...s.ext.meta, ...definedOnly(s.meta) } });
@@ -129,6 +138,6 @@ export function buildDataset(sources, edits = []) {
     }
   }
   for (const e of edits) ds = setValue(ds, e.period, e.key, e.v);
-  return { ds, errors, unit };
+  return { ds, errors, unit, companies, main: main?.key || '', skipped: [...skip] };
 }
 const definedOnly = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== undefined && v !== null && v !== ''));

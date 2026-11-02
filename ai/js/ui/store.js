@@ -12,6 +12,7 @@ export function initialState() {
   return {
     user: null,          // tài khoản đang đăng nhập: { ten, email, vaitro, luot: { dung, han } }
     jobs: [],            // file đang mở: { id, name, kind: 'pdf'|'img'|'xls', status, error, numPages, types, notes, scanned }
+    company: '',         // khi các file thuộc nhiều công ty: khoá công ty đang dùng ('' = tự chọn, '*' = gộp hết)
     sources: [],         // dữ liệu đã trích: { id, jobId, kind: 'ext'|'period', ext | period+values, meta? }
     edits: [],           // số sửa tay: { period, key, v }
     ticks: null,         // null = mọi dòng có số; mảng khoá = chỉ các dòng này
@@ -43,10 +44,10 @@ export function createStore(init) {
      * Có cả lang vì nhãn chỗ lệch (checkDataset) và lời báo lỗi nguồn đều theo ngôn ngữ.
      */
     data() {
-      if (!derived || derived.sources !== state.sources || derived.edits !== state.edits || derived.lang !== state.lang) {
+      if (!derived || derived.sources !== state.sources || derived.edits !== state.edits || derived.lang !== state.lang || derived.company !== state.company) {
         // unit = đơn vị in trên BCTC (bội số lớn nhất trong các nguồn) — file xuất ra dùng đúng đơn vị này.
-        const { ds, errors, unit } = buildDataset(state.sources, state.edits);
-        derived = { sources: state.sources, edits: state.edits, lang: state.lang, ds, errors, unit, checks: checkDataset(ds, { unit }) };
+        const { ds, errors, unit, companies, main, skipped } = buildDataset(state.sources, state.edits, { company: state.company });
+        derived = { sources: state.sources, edits: state.edits, lang: state.lang, company: state.company, ds, errors, unit, companies, main, skipped, checks: checkDataset(ds, { unit }) };
       }
       return derived;
     },
