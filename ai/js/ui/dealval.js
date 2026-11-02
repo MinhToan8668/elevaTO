@@ -8,6 +8,7 @@ import { mnaAnalysis } from '../core/mna.js';
 import { compsAnalysis, peerMultiples, parsePeers, MULTS } from '../core/comps.js';
 import { regressBeta, regressRows } from '../core/beta.js';
 import { API } from '../config.js';
+import { layGiaSan } from '../core/giasan.js';
 import { t } from '../i18n.js';
 
 const pc = (x, d = 1) => (Number.isFinite(x) ? `${(x * 100).toFixed(d)}%` : '—');
@@ -97,13 +98,20 @@ const uiBeta = { open: false, text: '', step: 1, res: undefined, years: 5, rows:
 /** Tính lại theo nguồn đang có: dữ liệu tải từ sàn (dãy số) hoặc chữ dán / file. */
 const tinhLai = () => { uiBeta.res = uiBeta.rows ? regressRows(uiBeta.rows, uiBeta.step) : uiBeta.text ? regressBeta(uiBeta.text, uiBeta.step) : undefined; };
 
-/** Tải giá cổ phiếu + VN-Index từ sàn qua Worker (GET /gia — xem worker/src/gia.js). */
+/**
+ * Tải giá cổ phiếu + VN-Index từ sàn: qua Worker trước (GET /gia — nhớ đệm 6 giờ); không tới được Worker
+ * (mạng công ty hay chặn *.workers.dev → "Failed to fetch") hoặc Worker không lấy được giá thì trang gọi
+ * thẳng VNDirect (core/giasan.js — cùng một logic với Worker).
+ */
 async function taiGia(ma, dat) {
   uiBeta.busy = true; uiBeta.err = ''; dat({ ticker: ma });
   try {
-    const r = await fetch(`${API}/gia?ma=${encodeURIComponent(ma)}&nam=${uiBeta.years}`);
-    const b = await r.json().catch(() => null);
-    if (!b?.ok) throw new Error(b?.error || `HTTP ${r.status}`);
+    let b = null;
+    if (API) {
+      try { b = await (await fetch(`${API}/gia?ma=${encodeURIComponent(ma)}&nam=${uiBeta.years}`)).json(); } catch (e) { b = null; }
+    }
+    if (!b?.ok && !['bad', 'khong_co'].includes(b?.code)) b = await layGiaSan(ma, uiBeta.years);
+    if (!b?.ok) throw new Error(t(`bt.e.${b?.code || 'upstream'}`, { ma, n: b?.info?.n ?? 0, msg: b?.info?.msg || b?.error || '' }));
     uiBeta.rows = b.data.rows; uiBeta.text = '';
     uiBeta.src = { ma: b.data.ma, n: b.data.rows.length, gia: b.data.gia, ngay: b.data.ngay, nguon: b.data.nguon };
     tinhLai();
