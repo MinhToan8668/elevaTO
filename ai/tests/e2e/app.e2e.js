@@ -1245,7 +1245,7 @@ test('bảng peer (16.Comps): dán từ Excel ra bội số, trung vị, giá ng
   await page.locator('#tabb-DEAL').click();
   await page.waitForSelector('.cp-bar');
   await page.locator('.cp-bar button', { hasText: 'Dán từ Excel' }).click();
-  await page.locator('.dl-sec textarea').fill([
+  await page.locator('textarea[aria-label="Dán từ Excel"]').fill([
     'Tên\tGiá\tTỷ giá\tSố CP',
     'FRT\t185.000\t1\t136214832\t1.850\t5.420\t35.000\t1.120\t630\t3.500',
     'MWG\t77000\t1\t1462238655\t25600\t22800\t140000\t7140\t3220\t25000',
@@ -1262,5 +1262,29 @@ test('bảng peer (16.Comps): dán từ Excel ra bội số, trung vị, giá ng
   // Bỏ tick một peer → trung vị đổi
   await page.locator('.cp-t tbody tr').first().locator('input[type=checkbox]').uncheck();
   await page.waitForFunction(() => !/15[.,]38/.test([...document.querySelectorAll('.cp-r tr')].find((r) => r.innerText.includes('Trung vị'))?.innerText || ''));
+  assert.deepEqual(errors, []);
+});
+
+test('hồi quy beta từ file dữ liệu giá: ra β như model (1,3364), bấm dùng thì ô beta của DCF đổi theo', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('bt@elevato.vn', { ten: 'Bt', email: 'bt@elevato.vn', mk: 'x', token: TOKEN('bt@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Bt', email: 'bt@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:bt@elevato.vn', s);
+  }, [TOKEN('bt@elevato.vn'), phien]);
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('.rail a[data-step="6"]').click();
+  await page.locator('#tabb-DEAL').click();
+  await page.locator('.dv-beta summary').click();
+  await page.setInputFiles('.dv-beta input[type=file]', fileURLToPath(new URL('../fixtures/dgw-beta.tsv', import.meta.url)));
+  await page.waitForSelector('.dv-beta .hbox');
+  assert.match(await page.locator('.dv-beta').innerText(), /1[.,]336/);
+  await page.locator('.dv-beta button', { hasText: 'Dùng beta' }).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.includes('Beta (hồi quy'))?.querySelector('input').value === '1.3364');
   assert.deepEqual(errors, []);
 });

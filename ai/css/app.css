@@ -1086,3 +1086,10 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .cp-bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .cp-t td:nth-child(5) .cp-in{width:120px}
 .cp-r tr.cp-me td{font-weight:700;background:var(--em-soft)}
+/* Hồi quy beta (ui/dealval.js betaBlock) */
+.dv-beta{margin:4px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2)}
+.dv-beta summary{cursor:pointer}
+.dv-beta summary .tag{margin-left:8px}
+.dv-beta textarea{width:100%;font:12.5px var(--mono);padding:8px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);color:var(--text)}
+.bt-file{position:relative;overflow:hidden}
+.bt-file input{position:absolute;inset:0;opacity:0;cursor:pointer}

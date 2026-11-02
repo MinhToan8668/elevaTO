@@ -8,7 +8,7 @@ const job = {
   types: ['OTHER', 'BS', 'BS', 'IS', 'CF', 'NOTES', 'NOTES', 'NOTES'],
   notes: { debt: [7], fixedAssets: [], segments: [6] },
 };
-const BS_ITEMS = [{ c: '111', n: 'Tiền', v: '10', p: '8' }, { c: '270', n: 'Tổng cộng tài sản', v: '10', p: '8' }, { c: '421', n: 'LNST chưa PP', v: '3', p: '2' }];
+const BS_ITEMS = [{ c: '111', n: 'Tiền', v: '10', p: '8' }, { c: '270', n: 'Tổng cộng tài sản', v: '10', p: '8' }, { c: '421', n: 'LNST chưa PP', v: '3', p: '2' }, { c: '440', n: 'Tổng cộng nguồn vốn', v: '10', p: '8' }];
 
 function makeIO(behaviour = {}) {
   const calls = [];
@@ -24,8 +24,8 @@ function makeIO(behaviour = {}) {
       if (hit) { const r = hit[1](prompt, pages); if (r instanceof Error) throw r; if (r) return r; }
       const meta = { don_vi: 'VND', ngay_ket_thuc: '2025-12-31', so_thang: 12, ten_cong_ty: 'CTCP ABC' };
       if (prompt.includes('TÌNH HÌNH TÀI CHÍNH')) return { meta, items: BS_ITEMS };
-      if (prompt.includes('KẾT QUẢ HOẠT ĐỘNG')) return { meta, items: [{ c: '10', n: 'Doanh thu thuần', v: '100', p: '90' }, { c: '21', n: 'Doanh thu hoạt động tài chính', v: '5', p: '4' }] };
-      if (prompt.includes('LƯU CHUYỂN')) return { meta: { ...meta, phuong_phap: 'gian_tiep' }, items: [{ c: '20', n: 'LCT HĐKD', v: '7', p: '6' }] };
+      if (prompt.includes('KẾT QUẢ HOẠT ĐỘNG')) return { meta, items: [{ c: '10', n: 'Doanh thu thuần', v: '100', p: '90' }, { c: '21', n: 'Doanh thu hoạt động tài chính', v: '5', p: '4' }, { c: '60', n: 'LNST', v: '20', p: '18' }] };
+      if (prompt.includes('LƯU CHUYỂN')) return { meta: { ...meta, phuong_phap: 'gian_tiep' }, items: [{ c: '20', n: 'LCT HĐKD', v: '7', p: '6' }, { c: '70', n: 'Tiền cuối kỳ', v: '10', p: '8' }] };
       if (prompt.includes('VAY VÀ NỢ')) return { meta: { don_vi: 'VND' }, vay_ngan_han: { vay_trong_ky: '100', tra_trong_ky: '(80)' } };
       if (prompt.includes('BỘ PHẬN')) return { meta: { don_vi: 'VND' }, segments: [{ ten: 'A', doanh_thu: '100', loi_nhuan_gop: '20' }] };
       throw new Error('prompt lạ: ' + prompt.slice(0, 60));
@@ -40,8 +40,8 @@ test('bình thường: 3 bảng + thuyết minh đã chọn; KQKD theo mẫu TT2
   const r = await extractJob(job, io, { noteGroups: ['debt', 'segments', 'fixedAssets'], onStep: (s) => steps.push(s) });
   assert.equal(r.company, 'CTCP ABC');
   assert.deepEqual(r.meta, { ngay_ket_thuc: '2025-12-31', so_thang: 12 });
-  assert.deepEqual(r.statements.BS.cur, { 'BS:111': 10, 'BS:280': 10, 'BS:420': 3 });   // TT200 → TT99
-  assert.deepEqual(r.statements.IS.cur, { 'IS:01': 100, 'IS:10': 100, 'IS:22': 5 });   // 21 (TT200) → 22; 01 suy từ 10 vì báo cáo không in dòng 01
+  assert.deepEqual(r.statements.BS.cur, { 'BS:111': 10, 'BS:280': 10, 'BS:420': 3, 'BS:440': 10 });   // TT200 → TT99
+  assert.deepEqual(r.statements.IS.cur, { 'IS:01': 100, 'IS:10': 100, 'IS:22': 5, 'IS:60': 20 });   // 21 (TT200) → 22; 01 suy từ 10 vì báo cáo không in dòng 01
   assert.deepEqual(r.notes.debt, { stProceeds: 100, stRepay: 80, ltProceeds: 0, ltRepay: 0 });
   assert.deepEqual(r.notes.segments, [{ name: 'A', revenue: 100, gross: 20 }]);
   assert.ok(r.warnings.some((w) => /Tài sản cố định/.test(w)), 'nhóm được chọn mà không có trang → cảnh báo');
@@ -355,4 +355,14 @@ test('góp ý của người dùng được gửi kèm câu lệnh đọc bảng
   await extractJob({ name: 'x.pdf', ...job }, io, { noteGroups: [] });
   assert.ok(seen.some((p) => /LƯU CHUYỂN/.test(p) && /LCTT in hai cột quý cùng năm/.test(p)));
   assert.ok(!seen.some((p) => /KẾT QUẢ HOẠT ĐỘNG/.test(p) && /hai cột quý/.test(p)));
+});
+
+test('LCTT bị cắt cuối (khối hoạt động tài chính ở trang sau, thiếu dòng 70) → đọc lại kèm trang kế tiếp', async () => {
+  const io = makeIO({ 'LƯU CHUYỂN': (pr, pages) => (pages === 'p5'
+    ? { meta: { don_vi: 'VND', ngay_ket_thuc: '2025-12-31', so_thang: 12 }, items: [{ c: '20', n: 'LCT HĐKD', v: '7', p: '6' }, { c: '30', n: 'LCT HĐĐT', v: '-2', p: '1' }] }
+    : { meta: { don_vi: 'VND', ngay_ket_thuc: '2025-12-31', so_thang: 12 }, items: [{ c: '20', n: 'LCT HĐKD', v: '7', p: '6' }, { c: '30', n: 'LCT HĐĐT', v: '-2', p: '1' }, { c: '40', n: 'LCT HĐTC', v: '-4', p: '-3' }, { c: '70', n: 'Tiền cuối kỳ', v: '10', p: '8' }] }) });
+  const r = await extractJob({ name: 'vnm.pdf', types: ['OTHER', 'BS', 'BS', 'IS', 'CF', 'OTHER'], notes: {} }, io, { noteGroups: [] });
+  assert.deepEqual(io.calls.filter((c) => c.prompt.includes('LƯU CHUYỂN')).map((c) => c.pages), ['p5', 'p5,6']);
+  assert.ok(r.statements.CF.cur['CF:40'] !== undefined, 'có khối hoạt động tài chính');
+  assert.match(r.warnings.join('\n'), /đọc lại kèm trang 6/);
 });

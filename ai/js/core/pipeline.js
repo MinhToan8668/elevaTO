@@ -15,6 +15,10 @@ const STATEMENTS = ['BS', 'IS', 'CF'];
 // Dòng tổng mà bảng nào đọc đúng cũng phải có ít nhất một (mã TT200 và TT99). Không có dòng nào
 // trong số này là AI đã đọc nhầm sang trang khác (ví dụ chỉ chép được vài dòng thuyết minh).
 const DONG_CHINH = { BS: [270, 280, 300, 400, 440], IS: [1, 10, 20, 30, 50, 60], CF: [20, 30, 40, 50, 60, 70] };
+// Dòng CHỐT cuối bảng. Thiếu dòng này mà vẫn có dòng tổng khác nghĩa là bảng bị cắt ở cuối — thường do
+// phần còn lại (ví dụ khối hoạt động tài chính của LCTT) nằm ở trang kế tiếp mà trang đó không được gửi.
+const DONG_CUOI = { BS: [440], IS: [60], CF: [70] };
+const thieuDongCuoi = (st, res) => !(res?.items || []).some((r) => DONG_CUOI[st].includes(Number(String(r.c ?? '').trim())));
 const thieuDongChinh = (st, res) => !(res?.items || []).some((r) => DONG_CHINH[st].includes(Number(String(r.c ?? '').trim())));
 
 /**
@@ -76,6 +80,20 @@ export async function extractJob(job, io, opts = {}) {
           res = rong;
         }
       }
+      // Bảng bị cắt cuối (thiếu dòng chốt 440 / 60 / 70): đọc lại kèm 1 trang ngay sau trang cuối đã gửi.
+      const cuoi = Math.max(...pages);
+      const tong = job.numPages || job.types.length;
+      if ((res?.items || []).length && thieuDongCuoi(st, res) && cuoi < tong && !pages.includes(cuoi + 1)) {
+        const them = [...pages, cuoi + 1];
+        step({ key: st, state: 'run', label: t('step.retryNext', { st: NAME(st), page: cuoi + 1 }) });
+        const noi = await statementWithSplit(st, them, io, step).catch(() => null);
+        if (noi && (!thieuDongCuoi(st, noi) || (noi.items || []).length > res.items.length)) {
+          warnings.push(t('w.nextPage', { st: NAME(st), page: cuoi + 1 }));
+          res = noi;
+          pages = them;
+        }
+      }
+      if ((res?.items || []).length && thieuDongCuoi(st, res)) warnings.push(t('w.noClose', { st: NAME(st), code: DONG_CUOI[st][0] }));
       if (!(res?.items || []).length) {
         trong.push(st);
         warnings.push(t('w.noTable', { st: NAME(st), pages: list(pages) }));
