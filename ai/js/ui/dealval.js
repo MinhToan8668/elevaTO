@@ -1,0 +1,203 @@
+// Tab "M&A & định giá" — phần DCF (FCFF), giá mục tiêu gia quyền, định giá nhanh và phân tích thương vụ
+// mua cổ phần. Số do core/valuation.js và core/mna.js tính; ở đây chỉ vẽ và nhận thông số người dùng
+// nhập (lưu vào store.dealInputs.val / .mna, đi cùng phiên làm việc).
+
+import { h } from './dom.js';
+import { dcfValuation, quickAnchors, blendedTarget, piotroski } from '../core/valuation.js';
+import { mnaAnalysis } from '../core/mna.js';
+import { t } from '../i18n.js';
+
+const pc = (x, d = 1) => (Number.isFinite(x) ? `${(x * 100).toFixed(d)}%` : '—');
+const lan = (x) => (Number.isFinite(x) ? t('ch.times', { v: x.toFixed(2) }) : '—');
+const dong = (x) => (Number.isFinite(x) ? Math.round(x).toLocaleString('vi-VN') : '—');
+const vnd = (x) => (Number.isFinite(x) ? t('dv.vnd', { v: dong(x) }) : '—');
+const sec = (key, ...kids) => h('section', { class: 'dl-sec' }, h('h3', {}, t(`${key}.h`)), h('p', { class: 'priv', style: { marginTop: 0 } }, t(`${key}.lead`)), ...kids);
+const card = (label, val, tone = '', hint = '') => h('div', { class: `hbox ${tone}` }, h('span', { class: 'hlbl' }, label), h('b', {}, val),
+  hint ? h('small', { class: 'priv', style: { marginTop: '2px' } }, hint) : null);
+const REC_TONE = { buy: 'em', accumulate: 'em', hold: 'gold', underperform: 'red', sell: 'red' };
+
+/** Ô nhập %: hiện số ×100; bỏ trống = máy tự tính (placeholder là số máy đang dùng). */
+function oPct(label, val, auto, onSet, step = '0.1') {
+  return h('label', { class: 'dv-f' }, h('span', {}, label),
+    h('input', { type: 'number', step, value: val === null || val === undefined ? '' : String(+(val * 100).toFixed(4)),
+      placeholder: Number.isFinite(auto) ? (auto * 100).toFixed(2) : '', onchange: (e) => onSet(e.target.value === '' ? null : +e.target.value / 100) }),
+    h('i', {}, '%'));
+}
+function oNum(label, val, onSet, { step = 'any', suffix = '', placeholder = '' } = {}) {
+  return h('label', { class: 'dv-f' }, h('span', {}, label),
+    h('input', { type: 'number', step, value: val === null || val === undefined || val === 0 ? '' : String(val), placeholder,
+      onchange: (e) => onSet(e.target.value === '' ? null : +e.target.value) }),
+    suffix ? h('i', {}, suffix) : null);
+}
+
+// ─── DCF ───────────────────────────────────────────────────
+
+export function dcfBlock(a, inp, save, money, ul) {
+  const V = inp.val;
+  const dat = (patch) => save({ val: { ...V, ...patch } });
+  const r = dcfValuation(a, V);
+  const nguon = (k) => (r.used[k] === 'user' ? '' : r.used[k] === 'hist' ? t('dv.src.hist', { n: r.his.n }) : t('dv.src.def'));
+  const thamSo = h('div', { class: 'dv-grid' },
+    oNum(t('dv.price'), V.price, (v) => dat({ price: v }), { suffix: t('dv.cur') }),
+    oNum(t('dv.shares'), V.shares, (v) => dat({ shares: v }), { step: '1', placeholder: a.cols.map((c) => c.m.shares).filter(Boolean).pop()?.toString() || '' }),
+    oPct(t('dv.rf'), V.rf, null, (v) => dat({ rf: v ?? 0.0437 })),
+    oPct(t('dv.erp'), V.erp, null, (v) => dat({ erp: v ?? 0.0813 })),
+    oNum(t('dv.beta'), V.beta, (v) => dat({ beta: v ?? 1 }), { step: '0.01' }),
+    h('label', { class: 'dv-f dv-chk' }, h('input', { type: 'checkbox', checked: V.blume, onchange: (e) => dat({ blume: e.target.checked }) }), h('span', {}, t('dv.blume'))),
+    oPct(t('dv.extra'), V.extra, null, (v) => dat({ extra: v ?? 0 })),
+    oPct(t('dv.kd'), V.kd, r.d.kd, (v) => dat({ kd: v })),
+    oPct(t('dv.tax'), V.tax, r.d.tax, (v) => dat({ tax: v })),
+    oPct(t('dv.g'), V.g, null, (v) => dat({ g: v ?? 0.03 })),
+    oNum(t('dv.years'), V.years, (v) => dat({ years: v ?? 5 }), { step: '1' }),
+    oPct(t('dv.growth'), V.growth, r.d.growth, (v) => dat({ growth: v })),
+    h('label', { class: 'dv-f dv-chk' }, h('input', { type: 'checkbox', checked: V.fade, onchange: (e) => dat({ fade: e.target.checked }) }), h('span', {}, t('dv.fade'))),
+    oPct(t('dv.margin'), V.margin, r.d.margin, (v) => dat({ margin: v })),
+    oPct(t('dv.da'), V.da, r.d.da, (v) => dat({ da: v })),
+    oPct(t('dv.capex'), V.capex, r.d.capex, (v) => dat({ capex: v })),
+    oPct(t('dv.nwc'), V.nwc, r.d.nwc, (v) => dat({ nwc: v })),
+    oNum(t('dv.exit'), V.exit, (v) => dat({ exit: v }), { step: '0.1', suffix: '×', placeholder: String(a.inputs.evEbitda[1]) }));
+  const ghiChu = h('p', { class: 'priv' }, t('dv.auto'), ' ',
+    ['growth', 'margin', 'da', 'capex', 'nwc', 'tax', 'kd'].filter((k) => r.used[k] !== 'user').map((k) => `${t(`dv.${k}`)}: ${nguon(k)}`).join(' · '));
+  const W = r.W;
+  const waccCards = h('div', { class: 'dl-cards' },
+    card(t('dv.ke'), pc(W.ke, 2), '', t('dv.ke.hint', { b: W.betaAdj.toFixed(2) })),
+    card(t('dv.kdAfter'), pc(W.kdSau, 2)),
+    card(t('dv.weights'), `${pc(W.wd, 0)} / ${pc(W.we, 0)}`, '', t(W.eBasis === 'market' ? 'dv.wMarket' : 'dv.wBook')),
+    card('WACC', pc(W.wacc, 2), 'em'));
+  const loi = r.issues.map((k) => h('p', { class: `msg ${['noBase', 'gOverWacc'].includes(k) ? 'err' : 'warn'}` }, t(`dv.issue.${k}`)));
+  if (!r.flows) return sec('dv', thamSo, ghiChu, waccCards, ...loi);
+
+  const bang = h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' },
+    h('thead', {}, h('tr', {}, h('th', {}, ul), r.flows.map((f) => h('th', { class: 'num' }, t('dv.yearN', { n: f.t }))))),
+    h('tbody', {},
+      [['rev', (f) => money(f.rev)], ['growthRow', (f) => pc(f.growth)], ['ebit', (f) => money(f.ebit)], ['nopat', (f) => money(f.nopat)],
+        ['daRow', (f) => money(f.da)], ['capexRow', (f) => money(-f.capex)], ['dNwc', (f) => money(-f.dNwc)], ['fcff', (f) => money(f.fcff), true],
+        ['pv', (f) => money(f.fcff / (1 + W.wacc) ** f.t)]]
+        .map(([k, g, dam]) => h('tr', { class: dam ? 'dl-tot' : '' }, h('td', {}, t(`dv.r.${k}`)), r.flows.map((f) => h('td', { class: 'num' }, g(f))))))));
+  const up = r.price !== null && V.price ? r.price / V.price - 1 : null;
+  const ketQua = h('div', { class: 'dl-cards' },
+    card(t('dv.ev'), money(r.ev), '', t('dv.ev.hint', { pv: money(r.pv), tv: money(r.pvTv) })),
+    card(t('dv.equity'), money(r.equity)),
+    card(t('dv.target'), r.price !== null ? vnd(r.price) : '—', 'em', r.shares ? '' : t('dv.noShares')),
+    card(t('dv.upside'), pc(up), up === null ? '' : up >= 0 ? 'em' : 'red'),
+    card(t('dv.tvShare'), pc(r.tvShare, 0), r.tvShare > 0.75 ? 'gold' : ''));
+  const doiChieu = h('p', { class: 'msg' }, t('dv.exitCheck', {
+    m: r.exit.mult, p: r.exit.price !== null ? vnd(r.exit.price) : money(r.exit.equity), ig: pc(r.exit.impliedG, 2), im: lan(r.impliedExit) }));
+  return sec('dv', thamSo, ghiChu, waccCards, ...loi, bang, ketQua, doiChieu, sensTable(r, money));
+}
+
+function sensTable(r, money) {
+  const S = r.sens;
+  const o = (v) => (S.perShare ? dong(v) : money(v));
+  return h('div', {},
+    h('h4', {}, t('dv.sens'), h('small', { class: 'priv' }, ` (${t(S.perShare ? 'dv.sens.ps' : 'dv.sens.eq')})`)),
+    h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-sens' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'g \\ WACC'), S.w.map((w, j) => h('th', { class: `num${j === 3 ? ' dl-base' : ''}` }, pc(w, 2))))),
+      h('tbody', {}, S.g.map((g, i) => h('tr', {}, h('th', { class: i === 3 ? 'dl-base' : '' }, pc(g, 2)),
+        S.grid[i].map((v, j) => h('td', { class: `num${i === 3 && j === 3 ? ' dv-mid' : ''}` }, v === null ? '—' : o(v)))))))));
+}
+
+// ─── Giá mục tiêu gia quyền + định giá nhanh ───────────────
+
+export function targetBlock(a, inp, save, money) {
+  const V = inp.val;
+  const r = dcfValuation(a, V);
+  const b = blendedTarget(a, r);
+  if (!b) return null;
+  const datW = (k, v) => save({ val: { ...V, weights: { ...V.weights, [k]: v } } });
+  const q = quickAnchors(a, r);
+  const tong = Object.values(V.weights).reduce((s, x) => s + x, 0);
+  return sec('tg',
+    h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' },
+      h('thead', {}, h('tr', {}, h('th', {}, t('dl.m.method')), h('th', { class: 'num' }, t('tg.weight')), h('th', { class: 'num' }, t('tg.used')),
+        h('th', { class: 'num' }, t('dl.m.eq')), h('th', { class: 'num' }, t('dl.m.ps')))),
+      h('tbody', {}, b.rows.map((x) => h('tr', { class: x.used ? '' : 'src-off' },
+        h('td', {}, t(`tg.m.${x.key}`)),
+        h('td', { class: 'num' }, h('input', { type: 'number', min: '0', max: '100', step: '5', class: 'dl-mult', value: String(V.weights[x.key]), onchange: (e) => datW(x.key, +e.target.value || 0) })),
+        h('td', { class: 'num' }, pc(x.share, 0)),
+        h('td', { class: 'num' }, money(x.equity)),
+        h('td', { class: 'num' }, x.price === null ? '—' : dong(x.price))))))),
+    tong !== 100 ? h('p', { class: 'priv' }, t('tg.renorm', { n: tong })) : null,
+    h('div', { class: 'dl-cards' },
+      card(t('tg.price'), b.price !== null ? vnd(b.price) : money(b.equity), 'em'),
+      card(t('dv.upside'), pc(b.upside), b.upside === null ? '' : b.upside >= 0 ? 'em' : 'red', V.price ? t('tg.vs', { p: dong(V.price) }) : t('tg.needPrice')),
+      card(t('tg.rec'), b.rec ? t(`tg.rec.${b.rec}`) : '—', b.rec ? REC_TONE[b.rec] : '', t('tg.scale'))),
+    q ? h('div', {},
+      h('h4', {}, t('tg.quick')),
+      h('p', { class: 'priv' }, t('tg.quick.lead')),
+      h('div', { class: 'dl-cards' },
+        card(t('tg.epv'), vnd(q.epv), '', t('tg.epv.hint')),
+        card(t('tg.jpb'), vnd(q.pbPrice), '', t('tg.jpb.hint', { v: lan(q.justPb), roe: pc(q.roe) })),
+        card(t('tg.graham'), vnd(q.graham), '', t('tg.graham.hint')),
+        card(t('tg.impliedG'), pc(q.impliedG), '', t('tg.impliedG.hint')))) : null);
+}
+
+/** Piotroski F-score giữa hai năm gần nhất (thêm vào khối chất lượng lợi nhuận). */
+export function piotroskiCard(a, ZONE_TONE) {
+  const ys = a.cols.filter((c) => c.months === 12 && !c.ltm);
+  const c = ys[ys.length - 1], p = ys[ys.length - 2];
+  const f = c && p ? piotroski(c.v, p.v, c.m.shares, p.m.shares) : null;
+  return h('div', { class: `hbox ${f ? ZONE_TONE[f.zone] : ''}` },
+    h('span', { class: 'hlbl' }, t('dl.q.piotroski')),
+    h('b', {}, f ? `${f.score}/${f.max}` : '—'),
+    f ? h('span', { class: `tag ${ZONE_TONE[f.zone]}` }, t(`dl.zone.${f.zone}`)) : null,
+    h('small', { class: 'priv', style: { marginTop: '2px' } }, f ? (f.missing.length ? t('dl.q.missing', { v: f.missing.join(', ') }) : t('dl.q.piotroski.hint')) : t('dl.q.need2y')));
+}
+
+// ─── Thương vụ mua cổ phần ─────────────────────────────────
+
+const uiMna = { open: false };
+export function mnaBlock(a, inp, save, money, unit, ul) {
+  const M = inp.mna;
+  const dat = (patch) => save({ mna: { ...M, ...patch } });
+  const v = a.valuation, B = a.base.m;
+  const r0 = dcfValuation(a, inp.val);
+  const acq = { npat: v.earnings, shares: v.shares, price: inp.val.price, netDebt: B.netDebt, ebitda: v.ebitdaAnnual, tax: r0?.d?.tax };
+  const tien = (label, k) => oNum(`${label} (${ul})`, M[k] ? +(M[k] / unit).toFixed(4) : null, (x) => dat({ [k]: (x || 0) * unit }));
+  const thamSo = h('div', { class: 'dv-grid' },
+    h('label', { class: 'dv-f dv-wide' }, h('span', {}, t('ma.name')), h('input', { type: 'text', value: M.name, maxlength: 120, onchange: (e) => dat({ name: e.target.value }) })),
+    oPct(t('ma.stake'), M.stake, null, (x) => dat({ stake: x ?? 0.51 })),
+    tien(t('ma.price'), 'price'),
+    tien(t('ma.equity'), 'equity'),
+    tien(t('ma.fvAdj'), 'fvAdj'),
+    tien(t('ma.npat'), 'npat'),
+    tien(t('ma.ebitda'), 'ebitda'),
+    tien(t('ma.netDebt'), 'netDebt'),
+    oNum(t('ma.months'), M.months, (x) => dat({ months: x ?? 12 }), { step: '1' }),
+    oNum(t('ma.gwYears'), M.gwYears, (x) => dat({ gwYears: x ?? 10 }), { step: '1' }),
+    oPct(t('ma.cash'), M.cash, null, (x) => dat({ cash: x ?? 0 }), '5'),
+    oPct(t('ma.debt'), M.debt, null, (x) => dat({ debt: x ?? 0 }), '5'),
+    oPct(t('ma.shares'), M.shares, null, (x) => dat({ shares: x ?? 0 }), '5'),
+    oPct(t('ma.kd'), M.kd, null, (x) => dat({ kd: x ?? 0.08 })),
+    oPct(t('ma.cashYield'), M.cashYield, null, (x) => dat({ cashYield: x ?? 0.04 })),
+    oNum(t('ma.issuePrice'), M.issuePrice, (x) => dat({ issuePrice: x || 0 }), { suffix: t('dv.cur'), placeholder: inp.val.price ? String(inp.val.price) : '' }),
+    tien(t('ma.intrinsic'), 'intrinsic'));
+  // Ghi trạng thái ngay lúc bấm (đồng bộ): ô nhập kế tiếp vẽ lại khối thì vẫn mở đúng như người dùng để.
+  const head = h('summary', { onclick: (e) => { uiMna.open = !e.currentTarget.parentElement.open; } }, h('b', {}, t('ma.h')), ' ', h('span', { class: 'tag' }, M.name || t('ma.tag')));
+  // Mở / đóng khối nhớ trong biến của trang, không ghi vào thông số: sự kiện "toggle" đến SAU lần lưu
+  // ô nhập, ghi thông số từ đó là ghi đè bằng bản cũ (mất số vừa nhập).
+  const khung = (...kids) => h('details', { class: 'dl-sec dv-mna', open: uiMna.open }, head, ...kids);
+  if (!M.price || !M.stake) return khung(h('p', { class: 'priv' }, t('ma.lead')), thamSo, h('p', { class: 'msg' }, t('ma.need')));
+  const r = mnaAnalysis(acq, M);
+  const ia = r.implied;
+  return khung(
+    h('p', { class: 'priv' }, t('ma.lead')),
+    thamSo,
+    r.issues.map((k) => h('p', { class: `msg ${['dilutive', 'overpay', 'noIssuePrice'].includes(k) ? 'warn' : ''}` }, t(`ma.issue.${k}`, { y: M.gwYears }))),
+    h('h4', {}, t('ma.acct')),
+    h('div', { class: 'dl-cards' },
+      card(t('ma.gw'), money(r.goodwill), r.goodwill < 0 ? 'gold' : '', t('ma.gw.hint', { fv: money(r.fvNet), s: pc(M.stake, 0), share: money(r.share) })),
+      card(t('ma.gwAmort'), money(r.gwAmort), '', t('ma.gwAmort.hint', { y: M.gwYears })),
+      card(t('ma.nci'), money(r.nci), '', t(r.control ? 'ma.nci.hint' : 'ma.nci.none')),
+      card(t('ma.paid'), `${lan(ia.pe)} · ${lan(ia.pb)}`, '', t('ma.paid.hint', { ev: lan(ia.evEbitda), eq: money(ia.equity100) }))),
+    h('h4', {}, t('ma.eps')),
+    h('div', { class: 'dl-cards' },
+      card(t('ma.epsBefore'), vnd(r.epsBefore)),
+      card(t('ma.epsAfter'), vnd(r.epsAfter), r.accretion === null ? '' : r.accretion >= 0 ? 'em' : 'red', t('ma.acc', { v: pc(r.accretion) })),
+      card(t('ma.epsY1'), vnd(r.epsAfterY1), '', t('ma.acc1', { v: pc(r.accretionY1), m: M.months })),
+      card(t('ma.breakeven'), money(r.breakeven), r.breakeven !== null && M.price > r.breakeven ? 'gold' : 'em', t('ma.breakeven.hint'))),
+    h('div', { class: 'dl-cards' },
+      card(t('ma.fin'), money(r.finCost), '', t('ma.fin.hint', { d: money(r.debtRaised), c: money(r.cashUsed), n: dong(r.newShares) })),
+      card(t('ma.lev'), `${lan(r.leverage.before)} → ${lan(r.leverage.after)}`, r.leverage.after > a.inputs.targetLev ? 'red' : '', t('ma.lev.hint', { t: a.inputs.targetLev })),
+      card(t('ma.value'), r.valueCreated === null ? '—' : money(r.valueCreated), r.valueCreated === null ? '' : r.valueCreated >= 0 ? 'em' : 'red', t(r.valueCreated === null ? 'ma.value.need' : 'ma.value.hint'))));
+}

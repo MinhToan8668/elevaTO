@@ -1185,3 +1185,45 @@ test('tải lại trang (tab bị trình duyệt cho ngủ): file đã mở và 
   assert.equal(luu[0].vung, 'CF');
   assert.deepEqual(errors, []);
 });
+
+test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nhập giá thị trường ra giá mục tiêu, khuyến nghị; nhập thương vụ ra lợi thế thương mại, EPS sau', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('dcf@elevato.vn', { ten: 'Dcf', email: 'dcf@elevato.vn', mk: 'x', token: TOKEN('dcf@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Dcf', email: 'dcf@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:dcf@elevato.vn', s);
+  }, [TOKEN('dcf@elevato.vn'), phien]);
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('.rail a[data-step="6"]').click();
+  await page.locator('#tabb-DEAL').click();
+  await page.waitForSelector('.deal .dv-grid');
+  const txt = await page.locator('.deal').innerText();
+  for (const s of ['Định giá DCF (FCFF)', 'WACC', 'Giá mục tiêu & khuyến nghị', 'Piotroski']) assert.ok(txt.toLowerCase().includes(s.toLowerCase()), `thiếu "${s}"`);
+  assert.equal(await page.locator('.dv-sens tbody tr').count(), 7, 'bảng độ nhạy 7 × 7');
+
+  const o = (lbl) => page.locator('.dv-f', { hasText: lbl }).locator('input');
+  await o('Số cổ phiếu lưu hành').fill('100000000');
+  await o('Số cổ phiếu lưu hành').dispatchEvent('change');
+  await o('Giá thị trường').fill('30000');
+  await o('Giá thị trường').dispatchEvent('change');
+  await page.waitForFunction(() => /KHUYẾN NGHỊ|MUA|TÍCH LUỸ|NẮM GIỮ|KÉM KHẢ QUAN|BÁN/.test(document.querySelector('.deal').innerText) && /vốn chủ theo giá thị trường/.test(document.querySelector('.deal').innerText));
+
+  await page.locator('.dv-mna summary').click();
+  await o('Tỷ lệ sở hữu sau giao dịch').fill('60');
+  await o('Tỷ lệ sở hữu sau giao dịch').dispatchEvent('change');
+  for (const [lbl, v] of [['Giá mua phần sở hữu', '300'], ['Vốn chủ sở hữu mục tiêu', '200'], ['LNST một năm', '40']]) {
+    await o(lbl).fill(v);
+    await o(lbl).dispatchEvent('change');
+  }
+  await page.waitForSelector('.dv-mna .hbox:has-text("Lợi thế thương mại")');
+  const gw = await page.locator('.dv-mna .hbox', { hasText: 'Lợi thế thương mại' }).first().locator('b').innerText();
+  assert.match(gw, /180/, 'lợi thế thương mại = 300 − 60% × 200 = 180 tỷ');
+  assert.match(await page.locator('.dv-mna').innerText(), /EPS sau/i);
+  if (process.env.E2E_SHOTS) await page.locator('.deal').screenshot({ path: join(process.env.E2E_SHOTS, 'dinh-gia.png') });
+  assert.deepEqual(errors, []);
+});
