@@ -3,7 +3,9 @@
 // nhập (lưu vào store.dealInputs.val / .mna, đi cùng phiên làm việc).
 
 import { h } from './dom.js';
-import { dcfValuation, quickAnchors, blendedTarget, piotroski } from '../core/valuation.js';
+import { dcfValuation, quickAnchors, blendedTarget, piotroski, scenarioValuation, REV_MODES, TV_METHODS } from '../core/valuation.js';
+import { PRESETS, applyPreset } from '../core/presets.js';
+import { footballChart, waterfallChart, revFcffChart, heatStyle } from './dvcharts.js';
 import { mnaAnalysis } from '../core/mna.js';
 import { compsAnalysis, peerMultiples, parsePeers, MULTS } from '../core/comps.js';
 import { regressBeta, regressRows } from '../core/beta.js';
@@ -61,6 +63,7 @@ export function dcfBlock(a, inp, save, money, ul) {
     oPct(t('dv.nwc'), V.nwc, r.d.nwc, (v) => dat({ nwc: v })),
     oNum(t('dv.exit'), V.exit, (v) => dat({ exit: v }), { step: '0.1', suffix: '×', placeholder: String(a.inputs.evEbitda[1]) }));
   const betaBox = betaBlock(V, dat);
+  const thietLap = setupBlock(a, r, V, dat, money, ul);
   const ghiChu = h('p', { class: 'priv' }, t('dv.auto'), ' ',
     ['growth', 'margin', 'da', 'capex', 'nwc', 'tax', 'kd'].filter((k) => r.used[k] !== 'user').map((k) => `${t(`dv.${k}`)}: ${nguon(k)}`).join(' · '));
   const W = r.W;
@@ -70,7 +73,7 @@ export function dcfBlock(a, inp, save, money, ul) {
     card(t('dv.weights'), `${pc(W.wd, 0)} / ${pc(W.we, 0)}`, '', t(W.eBasis === 'market' ? 'dv.wMarket' : 'dv.wBook')),
     card('WACC', pc(W.wacc, 2), 'em'));
   const loi = r.issues.map((k) => h('p', { class: `msg ${['noBase', 'gOverWacc'].includes(k) ? 'err' : 'warn'}` }, t(`dv.issue.${k}`)));
-  if (!r.flows) return sec('dv', thamSo, betaBox, ghiChu, waccCards, ...loi);
+  if (!r.flows) return sec('dv', thietLap, thamSo, betaBox, ghiChu, waccCards, ...loi);
 
   const bang = bangDuPhong(a, r, V, dat, money, ul);
   const up = r.price !== null && V.price ? r.price / V.price - 1 : null;
@@ -82,7 +85,7 @@ export function dcfBlock(a, inp, save, money, ul) {
     card(t('dv.tvShare'), pc(r.tvShare, 0), r.tvShare > 0.75 ? 'gold' : ''));
   const doiChieu = h('p', { class: 'msg' }, t('dv.exitCheck', {
     m: r.exit.mult, p: r.exit.price !== null ? vnd(r.exit.price) : money(r.exit.equity), ig: pc(r.exit.impliedG, 2), im: lan(r.impliedExit) }));
-  return sec('dv', thamSo, betaBox, ghiChu, waccCards, ...loi, bang, ketQua, doiChieu, sensTable(r, money));
+  return sec('dv', thietLap, thamSo, betaBox, ghiChu, waccCards, ...loi, bang, ketQua, doiChieu, sensTable(r, money, V.price));
 }
 
 // ─── Hồi quy beta (20.Beta_Data) ───────────────────────────
@@ -168,6 +171,9 @@ function betaBlock(V, dat) {
 // ─── Bảng dự phóng: năm actual (A) cạnh năm dự phóng (F), tham số sửa được từng năm ─────────
 
 const DRIVERS = ['growth', 'margin', 'da', 'capex', 'nwc', 'tax'];
+/** Dòng tham số doanh thu của từng cách dự phóng (dòng "tăng trưởng" thành số tính ra khi không ở cách % tăng trưởng). */
+const dong0 = (x) => (Number.isFinite(x) ? Math.round(x).toLocaleString('vi-VN') : '—');
+const DRIVERS_DT = { growth: ['growth'], volprice: ['vol', 'price'], stores: ['storesAdd', 'perStore'], manual: [] };
 function bangDuPhong(a, r, V, dat, money, ul) {
   const H = r.hist || [], F = r.flows;
   const namGoc = a.base.months === 12 && !a.base.ltm ? a.base.year : null;
@@ -177,20 +183,30 @@ function bangDuPhong(a, r, V, dat, money, ul) {
     arr[i] = v;
     dat({ byYear: { ...V.byYear, [k]: arr } });
   };
-  const oF = (k, f) => h('input', { type: 'number', step: '0.1', class: `dv-yr${f.ghiDe[k] ? ' on' : ''}`, 'aria-label': `${t(`dv.r.${k}`)} ${nhanF(f)}`,
-    value: f.ghiDe[k] ? String(+(V.byYear[k][f.t - 1] * 100).toFixed(4)) : '',
-    placeholder: (f[{ growth: 'growth', margin: 'margin', da: 'daPct', capex: 'capexPct', nwc: 'nwcPct', tax: 'tax' }[k]] * 100).toFixed(1),
-    onchange: (e) => setBy(k, f.t - 1, e.target.value === '' ? null : +e.target.value / 100) });
+  const TRUONG = { growth: 'growth', margin: 'margin', da: 'daPct', capex: 'capexPct', nwc: 'nwcPct', tax: 'tax', vol: 'vol', price: 'price', perStore: null, storesAdd: null };
+  const laSo = (k) => k === 'storesAdd';                                  // số cửa hàng mở thêm: số nguyên, không phải %
+  const oF = (k, f) => h('input', { type: 'number', step: laSo(k) ? '1' : '0.1', class: `dv-yr${f.ghiDe[k] ? ' on' : ''}`, 'aria-label': `${t(`dv.r.${k}`)} ${nhanF(f)}`,
+    value: f.ghiDe[k] ? String(laSo(k) ? V.byYear[k][f.t - 1] : +(V.byYear[k][f.t - 1] * 100).toFixed(4)) : '',
+    placeholder: laSo(k) ? String(V.rev.storesAdd) : k === 'perStore' ? (V.rev.perStore * 100).toFixed(1) : Number.isFinite(f[TRUONG[k]]) ? (f[TRUONG[k]] * 100).toFixed(1) : '',
+    onchange: (e) => setBy(k, f.t - 1, e.target.value === '' ? null : laSo(k) ? Math.round(+e.target.value) : +e.target.value / 100) });
+  const oTay = (f) => h('input', { type: 'number', step: 'any', class: `dv-yr${Number.isFinite(V.rev.manual[f.t - 1]) ? ' on' : ''}`, 'aria-label': `${t('dv.r.manual')} ${nhanF(f)}`,
+    value: Number.isFinite(V.rev.manual[f.t - 1]) ? String(+(V.rev.manual[f.t - 1] / a.unitDong).toFixed(2)) : '', placeholder: (f.rev / a.unitDong).toFixed(0),
+    onchange: (e) => { const m = Array.from({ length: F.length }, (_, j) => V.rev.manual[j] ?? null); m[f.t - 1] = e.target.value === '' ? null : +e.target.value * a.unitDong; dat({ rev: { ...V.rev, manual: m } }); } });
   const histPct = { growth: 'growth', margin: 'margin', da: 'da', capex: 'capex', nwc: 'nwc', tax: 'tax' };
   const dong = (nhan, hv, fv, cls = '') => h('tr', { class: cls }, h('td', {}, nhan), H.map((x) => h('td', { class: 'num dv-a' }, hv(x))), F.map((f) => h('td', { class: 'num' }, fv(f))));
-  const coGhiDe = DRIVERS.some((k) => V.byYear[k]?.some((x) => x !== null));
+  const coGhiDe = Object.values(V.byYear).some((arr) => arr?.some((x) => x !== null)) || V.rev.manual.some((x) => x !== null);
   return h('div', {},
     h('p', { class: 'priv' }, t('dv.tbl.lead', { base: a.base.label, rev: money(r.rev0), unit: ul })),
     h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-proj' },
       h('thead', {}, h('tr', {}, h('th', {}, ul), H.map((x) => h('th', { class: 'num dv-a' }, `${x.label} A`)), F.map((f) => h('th', { class: 'num' }, nhanF(f))))),
       h('tbody', {},
         h('tr', { class: 'dv-grp' }, h('td', { colspan: String(1 + H.length + F.length) }, t('dv.grp.drivers'))),
-        DRIVERS.map((k) => dong(t(`dv.r.${k}`), (x) => pc(x[histPct[k]]), (f) => oF(k, f))),
+        (DRIVERS_DT[V.revMode] || []).filter((k) => k !== 'growth').map((k) => dong(t(`dv.r.${k}`), () => '', (f) => oF(k, f))),
+        V.revMode === 'manual' ? dong(`${t('dv.r.manual')} (${ul})`, (x) => money(x.rev), (f) => oTay(f)) : null,
+        V.revMode === 'stores' ? dong(t('dv.r.stores'), () => '', (f) => dong0(f.stores)) : null,
+        DRIVERS.map((k) => (k === 'growth' && V.revMode !== 'growth'
+          ? dong(t('dv.r.growth'), (x) => pc(x.growth), (f) => pc(f.growth))
+          : dong(t(`dv.r.${k}`), (x) => pc(x[histPct[k]]), (f) => oF(k, f)))),
         h('tr', { class: 'dv-grp' }, h('td', { colspan: String(1 + H.length + F.length) }, t('dv.grp.calc'))),
         dong(t('dv.r.rev'), (x) => money(x.rev), (f) => money(f.rev)),
         dong(t('dv.r.ebit'), (x) => money(x.ebit), (f) => money(f.ebit)),
@@ -202,10 +218,10 @@ function bangDuPhong(a, r, V, dat, money, ul) {
         dong(t('dv.r.df'), () => '', (f) => (1 / (1 + r.W.wacc) ** f.t).toFixed(4)),
         dong(t('dv.r.pv'), () => '', (f) => money(f.fcff / (1 + r.W.wacc) ** f.t))))),
     h('p', { class: 'priv dv-how' }, t('dv.how')),
-    coGhiDe ? h('button', { type: 'button', class: 'btn ghost sm', onclick: () => dat({ byYear: {} }) }, t('dv.clearYear')) : null);
+    coGhiDe ? h('button', { type: 'button', class: 'btn ghost sm', onclick: () => dat({ byYear: {}, rev: { ...V.rev, manual: [] } }) }, t('dv.clearYear')) : null);
 }
 
-function sensTable(r, money) {
+function sensTable(r, money, gia) {
   const S = r.sens;
   const o = (v) => (S.perShare ? dong(v) : money(v));
   return h('div', {},
@@ -213,7 +229,8 @@ function sensTable(r, money) {
     h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-sens' },
       h('thead', {}, h('tr', {}, h('th', {}, 'g \\ WACC'), S.w.map((w, j) => h('th', { class: `num${j === 3 ? ' dl-base' : ''}` }, pc(w, 2))))),
       h('tbody', {}, S.g.map((g, i) => h('tr', {}, h('th', { class: i === 3 ? 'dl-base' : '' }, pc(g, 2)),
-        S.grid[i].map((v, j) => h('td', { class: `num${i === 3 && j === 3 ? ' dv-mid' : ''}` }, v === null ? '—' : o(v)))))))));
+        S.grid[i].map((v, j) => h('td', { class: `num${i === 3 && j === 3 ? ' dv-mid' : ''}`, style: S.perShare ? heatStyle(v, gia) : null }, v === null ? '—' : o(v))))))),
+      S.perShare && gia ? h('p', { class: 'priv' }, t('dv.sens.heat', { p: dong(gia) })) : null));
 }
 
 // ─── Giá mục tiêu gia quyền + định giá nhanh ───────────────
@@ -406,4 +423,114 @@ export function compsBlock(a, inp, save, money, unit, ul) {
     bangKq,
     ngam ? h('h4', {}, t('cp.implied')) : null,
     ngam);
+}
+
+// ─── Thiết lập mô hình: mẫu ngành · cách dự phóng doanh thu · giá trị cuối kỳ · kịch bản ─────────
+
+function setupBlock(a, r, V, dat, money, ul) {
+  const chon = (label, val, opts, onSet) => h('label', { class: 'dv-f dv-sel' }, h('span', {}, label),
+    h('select', { onchange: (e) => onSet(e.target.value) }, opts.map(([v, l]) => h('option', { value: v, selected: v === val }, l))));
+  const preset = V.preset ? PRESETS.find((p) => p.id === V.preset) : null;
+  const R = V.rev;
+  const datR = (patch) => dat({ rev: { ...R, ...patch } });
+  const cheDo = {
+    growth: () => h('p', { class: 'priv' }, t('dv.rm.growth.hint')),
+    volprice: () => h('div', { class: 'dv-grid' }, oPct(t('dv.r.vol'), R.vol, null, (v) => datR({ vol: v ?? 0 })), oPct(t('dv.r.price'), R.price, null, (v) => datR({ price: v ?? 0 }))),
+    stores: () => h('div', { class: 'dv-grid' },
+      oNum(t('dv.stores0'), R.stores0, (v) => datR({ stores0: v }), { step: '1' }),
+      oNum(t('dv.r.storesAdd'), R.storesAdd, (v) => datR({ storesAdd: v ?? 0 }), { step: '1' }),
+      oPct(t('dv.r.perStore'), R.perStore, null, (v) => datR({ perStore: v ?? 0 })),
+      R.stores0 && r.rev0 ? h('p', { class: 'priv dv-wide' }, t('dv.perStore0', { v: money(r.rev0 / R.stores0), unit: ul })) : null),
+    manual: () => h('p', { class: 'priv' }, t('dv.rm.manual.hint')),
+  };
+  const S = V.scen;
+  const datS = (k, patch) => dat({ scen: { ...S, [k]: k === 'on' || k === 'baseP' ? patch : { ...S[k], ...patch } } });
+  const kb = scenarioValuation(a, V);
+  const scenRow = (k) => h('tr', {}, h('td', {}, t(`dv.sc.${k}`)),
+    ['growth', 'margin', 'wacc'].map((f) => h('td', { class: 'num' }, h('input', { type: 'number', step: '0.5', class: 'dv-yr', value: String(+(S[k][f] * 100).toFixed(2)),
+      'aria-label': `${t(`dv.sc.${k}`)} ${t(`dv.sc.${f}`)}`, onchange: (e) => datS(k, { [f]: (+e.target.value || 0) / 100 }) }))),
+    h('td', { class: 'num' }, h('input', { type: 'number', step: '5', min: '0', max: '100', class: 'dv-yr', value: String(S[k].p), onchange: (e) => datS(k, { p: +e.target.value || 0 }) })),
+    h('td', { class: 'num' }, kb ? vnd(kb.rows.find((x) => x.key === k)?.price) : '—'));
+  return h('div', { class: 'dv-setup' },
+    h('h4', {}, t('dv.setup')),
+    h('div', { class: 'dv-grid' },
+      chon(t('dv.preset'), V.preset, [['', t('dv.preset.none')], ...PRESETS.map((p) => [p.id, t(`preset.${p.id}.name`)])], (v) => dat(v ? applyPreset(V, v) : { preset: '' })),
+      chon(t('dv.revMode'), V.revMode, REV_MODES.map((m) => [m, t(`dv.rm.${m}`)]), (v) => dat({ revMode: v })),
+      chon(t('dv.tvMethod'), V.tvMethod, TV_METHODS.map((m) => [m, t(`dv.tv.${m}`)]), (v) => dat({ tvMethod: v }))),
+    preset ? h('div', { class: 'dv-tips' },
+      h('p', {}, h('b', {}, t('dv.tip.rev')), ' ', t(`preset.${preset.id}.rev`)),
+      h('p', {}, h('b', {}, t('dv.tip.val')), ' ', t(`preset.${preset.id}.val`)),
+      h('p', { class: 'dv-trap' }, h('b', {}, t('dv.tip.trap')), ' ', t(`preset.${preset.id}.trap`))) : null,
+    cheDo[V.revMode]?.(),
+    h('details', { class: 'dv-scen', open: S.on },
+      h('summary', {}, h('label', { onclick: (e) => e.stopPropagation() }, h('input', { type: 'checkbox', checked: S.on, onchange: (e) => datS('on', e.target.checked) }), ' ', h('b', {}, t('dv.sc.h'))),
+        kb?.expected.price ? h('span', { class: 'tag em' }, t('dv.sc.exp', { p: dong(kb.expected.price) })) : null),
+      h('p', { class: 'priv' }, t('dv.sc.lead')),
+      S.on ? h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' },
+        h('thead', {}, h('tr', {}, h('th', {}, ''), ['growth', 'margin', 'wacc'].map((f) => h('th', { class: 'num' }, t(`dv.sc.${f}`))), h('th', { class: 'num' }, t('dv.sc.p')), h('th', { class: 'num' }, t('dl.m.ps')))),
+        h('tbody', {}, scenRow('bear'),
+          h('tr', {}, h('td', {}, t('dv.sc.base')), h('td', { colspan: '3', class: 'priv' }, t('dv.sc.baseHint')),
+            h('td', { class: 'num' }, h('input', { type: 'number', step: '5', min: '0', max: '100', class: 'dv-yr', value: String(S.baseP), onchange: (e) => datS('baseP', +e.target.value || 0) })),
+            h('td', { class: 'num' }, kb ? vnd(kb.rows.find((x) => x.key === 'base')?.price) : '—')),
+          scenRow('bull')))) : null,
+      kb && kb.pSum !== 100 ? h('p', { class: 'priv' }, t('dv.sc.renorm', { n: kb.pSum })) : null));
+}
+
+// ─── Bảng điều khiển định giá: thẻ số chính + football field + thác nước + doanh thu & FCFF ─────────
+
+export function dvDashboard(a, inp, money, ul) {
+  const V = inp.val, v = a.valuation, B = a.base.m, sh = v.shares;
+  const r = dcfValuation(a, V);
+  if (!r) return null;
+  const nam = 12 / (a.base.months || 12);
+  const cp = compsAnalysis(inp.peers, { rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent, shares: sh,
+    bridge: (ev) => ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum });
+  const b = blendedTarget(a, r, { evRev: cp.implied.find((x) => x.key === 'evRev')?.equity ?? null });
+  const kb = scenarioValuation(a, V);
+  const q = quickAnchors(a, r);
+  const ps = (eq) => (eq === null || eq === undefined ? null : sh ? eq / sh : eq);
+  const gia = sh ? V.price : null;
+  const veGia = (x) => (sh ? vnd(x) : money(x));
+
+  // Football field: DCF (dải = độ nhạy WACC ± 0,5 / g ± 0,5), bội số (thấp / giữa / cao), peer, định giá nhanh, kịch bản.
+  const rows = [];
+  if (r.sens) {
+    const o = r.sens.grid.slice(2, 5).flatMap((row) => row.slice(2, 5)).filter(Number.isFinite);
+    rows.push({ label: t('tg.m.dcf'), lo: Math.min(...o), mid: r.sens.grid[3][3], hi: Math.max(...o), hl: true });
+  }
+  if (r.exit?.equity !== null && r.exit) rows.push({ label: t('dv.ff.exit'), mid: ps(r.exit.equity) });
+  for (const m of v.methods) rows.push({ label: t(`dl.m.${m.key}`), lo: ps(m.equity[0]), mid: ps(m.equity[1]), hi: ps(m.equity[2]) });
+  for (const x of cp.implied) rows.push({ label: t('dv.ff.peer', { m: t(`cp.m.${x.key}`) }), mid: ps(x.equity) });
+  if (q?.epv) rows.push({ label: t('tg.epv'), mid: sh ? q.epv : null });
+  if (q?.graham) rows.push({ label: t('tg.graham'), mid: sh ? q.graham : null });
+  if (kb) rows.push({ label: t('dv.sc.h'), lo: ps(kb.rows[0].equity), mid: ps(kb.expected.equity), hi: ps(kb.rows[2].equity), hl: true });
+  const ff = footballChart(rows, { price: gia, target: sh ? b?.price : b?.equity, labels: { price: t('dv.ff.price'), target: t('dv.ff.target'), title: t('dv.ff.h') } });
+
+  const wf = r.flows ? waterfallChart([
+    { label: t('dv.wf.pv'), v: r.pv / a.unitDong }, { label: t('dv.wf.tv'), v: r.pvTv / a.unitDong }, { label: 'EV', v: r.ev / a.unitDong, total: true },
+    { label: t('dv.wf.nd'), v: -(v.netDebt || 0) / a.unitDong }, { label: t('dv.wf.dl'), v: -v.debtLikeSum / a.unitDong },
+    { label: t('dv.wf.nci'), v: -(v.minority || 0) / a.unitDong }, { label: t('dv.wf.no'), v: v.nonOpSum / a.unitDong },
+    { label: t('dv.wf.eq'), v: r.equity / a.unitDong, total: true },
+  ].filter((x) => x.total || Math.abs(x.v) > 1e-9), { title: t('dv.wf.h') }) : null;
+
+  const nhanF = (f) => (a.base.months === 12 && !a.base.ltm ? `${a.base.year + f.t}F` : t('dv.yearN', { n: f.t }));
+  const rf = revFcffChart([
+    ...(r.hist || []).map((x) => ({ label: `${String(x.label).replace(/\D+/g, '')}A`, actual: true, rev: x.rev / a.unitDong, fcff: Number.isFinite(x.fcff) ? x.fcff / a.unitDong : null })),
+    ...(r.flows || []).map((f) => ({ label: nhanF(f), actual: false, rev: f.rev / a.unitDong, fcff: f.fcff / a.unitDong })),
+  ], { names: [t('dv.r.rev'), 'FCFF'], title: t('dv.rf.h') });
+
+  const up = b?.upside ?? null;
+  return h('section', { class: 'dl-sec dv-dash' },
+    h('h3', {}, t('dv.dash.h')),
+    h('div', { class: 'dv-kpi' },
+      card(t('tg.price'), b?.price !== null && b?.price !== undefined ? vnd(b.price) : money(b?.equity), 'em', t('dv.dash.blend')),
+      card(t('dv.upside'), pc(up), up === null ? '' : up >= 0 ? 'em' : 'red', V.price ? t('tg.vs', { p: dong(V.price) }) : t('tg.needPrice')),
+      card(t('tg.rec'), b?.rec ? t(`tg.rec.${b.rec}`) : '—', b?.rec ? REC_TONE[b.rec] : ''),
+      card(t('dv.target'), r.price !== null ? vnd(r.price) : money(r.equity), '', t('dv.dash.tv', { m: t(`dv.tv.${V.tvMethod}`), s: pc(r.tvShare, 0) })),
+      card('WACC', pc(r.W.wacc, 2), '', `g ${pc(V.g, 1)}`),
+      kb ? card(t('dv.sc.exp2'), sh ? vnd(kb.expected.price) : money(kb.expected.equity), 'gold', t('dv.sc.range', { lo: veGia(ps(kb.rows[0].equity)), hi: veGia(ps(kb.rows[2].equity)) })) : null),
+    h('div', { class: 'dv-charts' },
+      ff ? h('figure', { class: 'chart dv-wide' }, h('figcaption', {}, h('b', {}, t('dv.ff.h')), h('span', { class: 'priv' }, sh ? t('dl.m.ps') : ul)), ff) : null,
+      wf ? h('figure', { class: 'chart' }, h('figcaption', {}, h('b', {}, t('dv.wf.h')), h('span', { class: 'priv' }, ul)), wf) : null,
+      rf ? h('figure', { class: 'chart' }, h('figcaption', {}, h('b', {}, t('dv.rf.h')), h('span', { class: 'priv' }, ul)), rf) : null));
 }

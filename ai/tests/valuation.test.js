@@ -117,3 +117,54 @@ test('ghi đè tham số từng năm: chỉ năm được ghi đè đổi, các 
   assert.deepEqual([b[0].ghiDe.tax, b[1].ghiDe.growth, b[2].ghiDe.growth], [true, true, false]);
   assert.deepEqual(cleanVal({ byYear: { growth: [null, 5, 0.2], xau: [1] } }).byYear, { growth: [null, null, 0.2] }, 'số lạ / khoá lạ bị bỏ');
 });
+
+import { evAt as evAt2, scenarioValuation, dcfValuation } from '../js/core/valuation.js';
+import { PRESETS, applyPreset } from '../js/core/presets.js';
+
+const base = { rev0: 1000, years: 3, growth: 0.1, fade: false, g: 0.03, margin: 0.1, da: 0.02, capex: 0.03, nwc: 0.2, tax: 0.2 };
+test('dự phóng doanh thu: sản lượng × giá, cửa hàng × doanh thu/cửa hàng, nhập tay từng năm', () => {
+  const vp = projectFcff({ ...base, revMode: 'volprice', rev: { vol: 0.05, price: 0.02 }, byYear: { price: [null, 0.1] } });
+  gan(vp[0].rev, 1000 * 1.05 * 1.02, 1e-12, 'năm 1 = (1+5%)(1+2%)');
+  gan(vp[1].growth, 1.05 * 1.1 - 1, 1e-12, 'năm 2 giá ghi đè 10%');
+  const ch = projectFcff({ ...base, revMode: 'stores', rev: { stores0: 100, storesAdd: 10, perStore: 0.05 }, byYear: { storesAdd: [null, -5] } });
+  gan(ch[0].rev, 110 * 10 * 1.05, 1e-9, 'năm 1: 110 cửa hàng × DT/cửa hàng 10 × 1,05');
+  assert.equal(ch[1].stores, 105, 'năm 2 đóng 5 cửa hàng');
+  const tay = projectFcff({ ...base, revMode: 'manual', rev: { manual: [1500, null] } });
+  assert.equal(tay[0].rev, 1500);
+  gan(tay[1].rev, 1650, 1e-12, 'năm không nhập tay thì dùng tăng trưởng');
+});
+
+test('giá trị cuối kỳ: Gordon, bội số thoát, bình quân hai cách', () => {
+  const f = projectFcff(base);
+  const g = evAt2(f, 0.12, 0.03), e = evAt2(f, 0.12, 0.03, { method: 'exit', exit: 8 }), b = evAt2(f, 0.12, 0.03, { method: 'blend', exit: 8 });
+  gan(e.tv, f[2].ebitda * 8, 1e-12, 'exit = EBITDA năm cuối × bội số');
+  gan(b.tv, (g.tv + e.tv) / 2, 1e-12, 'blend');
+  assert.equal(evAt2(f, 0.12, 0.03, { method: 'exit', exit: 0 }), null);
+});
+
+// Bộ số tối thiểu của dealAnalysis để chạy dcfValuation.
+const A = () => {
+  const m = { rev: 1000e9, adjEbitda: 150e9, kh: 20e9, capexNet: 30e9, tradeWc: 200e9, debt: 100e9, laiVay: 8e9, equityParent: 800e9, netDebt: 50e9 };
+  const y = (rev) => ({ months: 12, ltm: false, label: 'Năm', m: { ...m, rev, adjEbitda: rev * 0.15, kh: rev * 0.02, capexNet: rev * 0.03, tradeWc: rev * 0.2 }, v: { 'IS:50': 100, 'IS:60': 80 } });
+  return { cols: [y(830e9), y(910e9), y(1000e9)], base: { months: 12, year: 2025, label: 'Năm 2025', m, v: {} },
+    valuation: { shares: 100e6, netDebt: 50e9, debtLikeSum: 0, minority: 0, nonOpSum: 0, methods: [] }, inputs: { evEbitda: [5, 7, 9] } };
+};
+
+test('kịch bản Bi quan / Cơ sở / Lạc quan: giá tăng dần, giá trị kỳ vọng theo xác suất', () => {
+  const inp = { price: 50000, beta: 1, scen: { on: true, baseP: 50, bull: { growth: 0.03, margin: 0.01, wacc: -0.01, p: 25 }, bear: { growth: -0.03, margin: -0.01, wacc: 0.01, p: 25 } } };
+  const s = scenarioValuation(A(), inp);
+  const [bear, mid, bull] = s.rows;
+  assert.ok(bear.price < mid.price && mid.price < bull.price, `${bear.price} < ${mid.price} < ${bull.price}`);
+  gan(mid.price, dcfValuation(A(), inp).price, 1e-12, 'kịch bản cơ sở = DCF chính');
+  gan(s.expected.price, bear.price * 0.25 + mid.price * 0.5 + bull.price * 0.25, 1e-9, 'kỳ vọng');
+  assert.equal(scenarioValuation(A(), { ...inp, scen: { on: false } }), null);
+});
+
+test('mẫu ngành: đặt cách dự phóng doanh thu, phương pháp giá trị cuối kỳ, trọng số; ngân hàng không dùng DCF', () => {
+  assert.ok(PRESETS.length >= 8);
+  const v = applyPreset({ price: 1, weights: {} }, 'retail');
+  assert.equal(v.revMode, 'stores');
+  assert.equal(v.price, 1, 'giữ số người dùng đã nhập');
+  assert.equal(applyPreset({}, 'bank').weights.dcf, 0);
+  for (const p of PRESETS) assert.equal(Object.values(p.weights).reduce((s, x) => s + x, 0), 100, `${p.id}: trọng số cộng 100`);
+});
