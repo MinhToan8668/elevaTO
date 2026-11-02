@@ -366,3 +366,17 @@ test('LCTT bị cắt cuối (khối hoạt động tài chính ở trang sau, t
   assert.ok(r.statements.CF.cur['CF:40'] !== undefined, 'có khối hoạt động tài chính');
   assert.match(r.warnings.join('\n'), /đọc lại kèm trang 6/);
 });
+
+test('tự kiểm chứng: dòng tổng không khớp (AI đọc sai một dòng con) → đọc lại có trọng tâm, nói rõ dòng lệch; giữ lần ít lệch hơn', async () => {
+  const meta = { don_vi: 'VND', ngay_ket_thuc: '2025-12-31', so_thang: 12 };
+  const dung = [{ c: '31', n: 'Thu nhập khác', v: '116.653.846.969', p: '110.508.071.750' }, { c: '32', n: 'Chi phí khác', v: '26.649.261.729', p: '21.592.652.515' },
+    { c: '40', n: 'Lợi nhuận khác', v: '90.004.585.240', p: '88.915.419.235' }, { c: '60', n: 'LNST', v: '1', p: '1' }];
+  const sai = dung.map((x) => (x.c === '32' ? { ...x, v: '26.849.261.729' } : x));     // đọc nhầm 6 → 8
+  const prompts = [];
+  const io = makeIO({ 'KẾT QUẢ HOẠT ĐỘNG': (pr) => { prompts.push(pr); return { meta, items: /KIỂM TRA LẠI/.test(pr) ? dung : sai }; } });
+  const r = await extractJob({ name: 'x.pdf', types: ['OTHER', 'BS', 'IS', 'CF'], notes: {} }, io, { noteGroups: [] });
+  assert.equal(prompts.length, 2, 'đọc lại đúng một lần');
+  assert.match(prompts[1], /Mã 40, cột kỳ này: in 90\.004\.585\.240 nhưng cộng các dòng con ra 89\.804\.585\.240/);
+  assert.equal(r.statements.IS.cur['IS:32'], 26649261729);
+  assert.match(r.warnings.join('\n'), /đã đọc lại có trọng tâm/);
+});

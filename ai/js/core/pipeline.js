@@ -7,8 +7,9 @@
 //   io.isSplittable(err), io.isFatal(err)
 //   io.gopY  góp ý của người dùng (core/gopy.js) — gửi kèm câu lệnh đọc bảng
 
-import { statementTask, NOTE_TASKS, gopYPrompt } from './prompts.js';
+import { statementTask, NOTE_TASKS, gopYPrompt, soatLaiPrompt } from './prompts.js';
 import { statementToValues, noteToModel, columnPeriods } from './extract.js';
+import { validate } from './statements.js';
 import { t } from '../i18n.js';
 
 const STATEMENTS = ['BS', 'IS', 'CF'];
@@ -94,6 +95,18 @@ export async function extractJob(job, io, opts = {}) {
         }
       }
       if ((res?.items || []).length && thieuDongCuoi(st, res)) warnings.push(t('w.noClose', { st: NAME(st), code: DONG_CUOI[st][0] }));
+      // TỰ KIỂM CHỨNG: dòng tổng in trên báo cáo mà cộng / trừ dòng con (sau khi máy đã tự sửa dấu) vẫn không
+      // ra → đọc lại đúng bảng này MỘT lần, nói rõ dòng nào lệch bao nhiêu; lần nào ít chỗ lệch hơn thì giữ.
+      const lech = (res?.items || []).length ? lechCongThuc(st, res) : [];
+      if (lech.length) {
+        step({ key: st, state: 'run', label: t('step.recheck2', { st: NAME(st), n: lech.length }) });
+        const soat = await statementWithSplit(st, pages, io, step, { soatLai: soatLaiPrompt(lech) }).catch(() => null);
+        const lech2 = (soat?.items || []).length ? lechCongThuc(st, soat) : null;
+        if (lech2 && lech2.length < lech.length) {
+          warnings.push(t('w.recheckOk', { st: NAME(st), a: lech.length, b: lech2.length }));
+          res = soat;
+        } else warnings.push(t('w.recheckSame', { st: NAME(st), n: lech.length }));
+      }
       if (!(res?.items || []).length) {
         trong.push(st);
         warnings.push(t('w.noTable', { st: NAME(st), pages: list(pages) }));
@@ -195,10 +208,25 @@ function moTaTrang(ds, xem) {
   return t('diag.head', { list: dong.join('; ') }) + t(bang.length ? 'diag.retick' : 'diag.elsewhere');
 }
 
+/**
+ * Các dòng tổng không khớp công thức sau khi máy đã chuẩn hoá và tự sửa dấu (cả hai cột).
+ * @returns [{ col: 'v'|'p', code, reported, computed }] — mã theo mẫu 2026
+ */
+function lechCongThuc(st, res) {
+  let r;
+  try { r = statementToValues(st, res); } catch (e) { return []; }
+  const out = [];
+  for (const [side, col] of [['cur', 'v'], ['prev', 'p']]) {
+    for (const x of validate(r[side] || {}, { unit: r.unit, cashMatchesBS: false })) {
+      if (x.kind === 'sum' && x.key.startsWith(`${st}:`)) out.push({ col, code: x.key.split(':')[1], reported: x.reported / r.unit, computed: x.computed / r.unit });
+    }
+  }
+  return out;
+}
 /** Gọi AI một bảng; quá 60 giây / bị cắt → CĐKT chia tài sản / nguồn vốn, bảng khác chia đôi số trang. */
 async function statementWithSplit(st, pages, io, step, opt = {}) {
   const once = async (pg, part) => {
-    const t = statementTask(st, part, { moTaKhuon: !!opt.moTaKhuon, gopY: gopYPrompt(io.gopY, st) });
+    const t = statementTask(st, part, { moTaKhuon: !!opt.moTaKhuon, gopY: [gopYPrompt(io.gopY, st), opt.soatLai || ''].filter(Boolean).join('\n') });
     return io.ai.json({ parts: [...await io.parts(pg, opt), { text: t.prompt }], schema: t.schema });
   };
   try {

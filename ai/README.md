@@ -50,6 +50,15 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 - **Nhiều file, nhiều kỳ**: mỗi BCTC có sẵn cột kỳ trước. Nên tải BCTC năm gần nhất + các năm trước
   (model cần ≥ 4 năm), thêm báo cáo quý mới nhất nếu có. Hai báo cáo cùng kỳ khác số → dùng số của báo cáo
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.
+- **Tự kiểm chứng số trích được bằng công thức của mẫu biểu** (`reconcileByFormula` ở `js/core/statements.js`,
+  `lechCongThuc` ở `js/core/pipeline.js`):
+  1. Dòng lạc bảng (AI chép lẫn dòng LCTT "Lưu chuyển tiền thuần…", "Tiền… đầu năm" vào KQKD vì mã 40 / 50 / 60 trùng)
+     bị loại theo tên, câu lệnh cũng dặn chỉ chép dòng của đúng bảng.
+  2. Sau quy ước dấu chung, mỗi dòng tổng có số in (60 = 50 − 51 − 52, 40 = 31 − 32, 50 = 20 + 30 + 40 của LCTT…)
+     mà không khớp thì thử đổi dấu 1–2 dòng con; chỉ sửa khi có ĐÚNG MỘT cách khớp số in, và ghi rõ đã đổi dòng nào
+     (ví dụ VNM 2025: "Lợi ích thuế TNDN hoãn lại (20.970.420.316)" là khoản giảm chi phí thuế).
+  3. Vẫn còn dòng tổng lệch → AI đọc lại bảng đó một lần, câu lệnh liệt kê đúng dòng / cột lệch bao nhiêu; lần nào
+     ít chỗ lệch hơn thì giữ. Còn lệch thì ô đỏ + lưu ý để người dùng soát. Kiểm bằng số thật VNM ở `tests/selfcheck.test.js`.
 - **Bảng bị cắt cuối thì đọc kèm trang sau**: đọc xong mà thiếu dòng chốt (CĐKT 440, KQKD 60, LCTT 70) — thường do
   phần cuối bảng (ví dụ khối hoạt động tài chính của LCTT) nằm ở trang kế tiếp chưa được gửi — máy đọc lại một
   lần kèm trang ngay sau trang cuối; vẫn thiếu thì báo trong "lưu ý khi đọc".
