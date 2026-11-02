@@ -13,7 +13,8 @@ export function macDinh() {
   return {
     version: 1,
     updatedAt: '',
-    cohort: { number: 7, status: 'open', openText: 'Sắp mở' },
+    // startDate: ngày khai giảng dự kiến dạng YYYY-MM-DD ('' = chưa chốt). Bot đặt bằng /khaigiang.
+    cohort: { number: 7, status: 'open', openText: 'Sắp mở', startDate: '' },
     slots: { max: 10, base: 4, registered: 0 },
     pricing: {
       earlyBird: 3000000, regular: 4000000, selfPaced: 1500000, showSelfPaced: true,
@@ -89,6 +90,52 @@ export function maDangKy(d = new Date()) {
 
 export const soDienThoai = (p) => String(p || '').replace(/\D/g, '');
 
+// ─── Ngày khai giảng ────────────────────────────────────────
+
+const THU = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+const hopLe = (y, m, d) => {
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+};
+/** Hôm nay theo giờ Việt Nam, dạng YYYY-MM-DD. */
+export function homNayVN(d = new Date()) {
+  const p = phanGio(d);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+/**
+ * Đọc ngày chủ trang gõ: 15/11 · 15/11/2026 · 15-11-26 · 15.11.2026 · 2026-11-15.
+ * Không ghi năm thì lấy lần tới gần nhất (đã qua trong năm nay thì sang năm sau).
+ * Không đọc được hoặc ngày không có thật (31/02) thì trả '' để chỗ gọi báo ra, không đoán bừa.
+ */
+export function docNgay(s, homNay = homNayVN()) {
+  const t = String(s || '').trim();
+  let y; let m; let d;
+  let k = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (k) { y = +k[1]; m = +k[2]; d = +k[3]; } else {
+    k = t.match(/^(\d{1,2})[/.\-](\d{1,2})(?:[/.\-](\d{2}|\d{4}))?$/);
+    if (!k) return '';
+    d = +k[1]; m = +k[2];
+    if (k[3]) y = k[3].length === 2 ? 2000 + +k[3] : +k[3];
+    else {
+      y = +homNay.slice(0, 4);
+      const iso0 = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (iso0 < homNay) y += 1;
+    }
+  }
+  if (!hopLe(y, m, d)) return '';
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+/** YYYY-MM-DD → các dạng hiện trên trang, kèm số ngày còn lại tính theo giờ Việt Nam. */
+export function moTaNgay(iso, homNay = homNayVN()) {
+  const k = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!k || !hopLe(+k[1], +k[2], +k[3])) return { has: false, iso: '', text: '', short: '', daysLeft: null };
+  const t = Date.UTC(+k[1], +k[2] - 1, +k[3]);
+  const h = homNay.split('-').map(Number);
+  const con = Math.round((t - Date.UTC(h[0], h[1] - 1, h[2])) / 864e5);
+  const thu = THU[new Date(t).getUTCDay()];
+  return { has: true, iso, text: `${thu}, ${k[3]}/${k[2]}/${k[1]}`, short: `${k[3]}/${k[2]}`, daysLeft: con };
+}
+
 // ─── Đăng ký ────────────────────────────────────────────────
 
 /** Chỉ đếm đăng ký của cohort hiện tại, chưa bị từ chối. Gói tự học không chiếm suất lớp live. */
@@ -139,6 +186,7 @@ export async function cauHinhDayDu(db, cfg) {
         ? Math.round(((c.pricing.regular - c.pricing.earlyBird) / c.pricing.regular) * 100) : 0,
     },
     scheduleShort: `${c.schedule.days} · ${c.schedule.time}`,
+    startDate: moTaNgay(c.cohort.startDate),
   };
   return c;
 }

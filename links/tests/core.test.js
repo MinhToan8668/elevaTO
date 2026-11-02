@@ -423,3 +423,11 @@ test('số chỗ Financial Modeling: Apps Script cũ tự đổi sang máy chủ
   const tmxk = 'https://script.google.com/macros/s/AKfycbyxe1nWupAl6VheDZHaU3Ojm-d6c8F_khhUMtkehNCLh5OnGW6f2uF0PKPYZ4eYUqyGjQ/exec';
   assert.equal(mot({ live: { enabled: true, api: tmxk } }).live.api, tmxk);
 });
+
+test('cohortInfo: ngày khai giảng (cohort.startDate) → "15/11"; không có hoặc sai thì rỗng', () => {
+  const cfg = (startDate) => ({ cohort: { number: 8, status: 'open', startDate }, slots: { max: 10, base: 2, registered: 0 } });
+  assert.equal(cohortInfo(cfg('2026-11-15')).start, '15/11');
+  assert.equal(cohortInfo(cfg('')).start, '');
+  assert.equal(cohortInfo(cfg('2026-02-31')).start, '');
+  assert.equal(cohortInfo(cfg(undefined)).start, '');
+});

@@ -101,7 +101,9 @@ function liveBlock(l) {
   const left = cohort.isOpen ? `còn ${cohort.remaining}/${cohort.max} suất` : cohort.status;
   return h('div', { class: 'live' },
     h('div', { class: 'live-row' },
-      h('span', { class: 'live-tag' + (cohort.isOpen ? '' : ' off') }, h('span', { class: 'pulse' }), cohort.label + ' · ' + cohort.status),
+      // Có ngày khai giảng mà lớp đang mở → hiện ngày thay cho chữ trạng thái (chấm xanh nhấp nháy đã nói "đang mở").
+      h('span', { class: 'live-tag' + (cohort.isOpen ? '' : ' off') }, h('span', { class: 'pulse' }),
+        cohort.label + ' · ' + (cohort.isOpen && cohort.start ? 'Khai giảng ' + cohort.start : cohort.status)),
       cohort.earlyBird ? h('span', { class: 'live-price' }, 'Early bird ', h('b', {}, cohort.earlyBird)) : null),
     h('div', { class: 'meter', role: 'img', 'aria-label': `${cohort.total} trên ${cohort.max} chỗ đã được giữ` },
       h('i', { class: 'meter-fill', 'data-pct': String(cohort.percent) })),
