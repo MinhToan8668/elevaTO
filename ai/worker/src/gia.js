@@ -1,17 +1,11 @@
-// Giá đóng cửa hằng ngày của một mã cổ phiếu và VN-Index, ghép theo ngày — để trang AI BCTC tự hồi
-// quy beta (xem ai/js/core/beta.js) mà người dùng không phải đi chép dữ liệu giá.
-//
-// GET /gia?ma=DGW&nam=5  →  { ok:true, data:{ ma, nguon, rows:[[ngày 'YYYY-MM-DD', giá CP, VN-Index]…], gia } }
-//   rows: chỉ các phiên CẢ HAI cùng có giá, cũ trước mới sau · gia: giá đóng cửa gần nhất (đồng / cổ phiếu)
-//
-// Nguồn: API biểu đồ công khai của VNDirect (định dạng TradingView: t / c / o / h / l / v), giá cổ phiếu
-// tính bằng NGHÌN đồng và đã điều chỉnh chia tách / cổ tức — đúng thứ cần để tính lợi suất. Trang không
-// gọi thẳng được vì CSP chỉ cho nói chuyện với Worker này. Nhớ đệm 6 giờ (giá ngày không đổi trong phiên).
+// GET /gia?ma=DGW&nam=5 — giá đóng cửa cổ phiếu + VN-Index (VNDirect) ghép theo ngày, để trang AI BCTC tự hồi
+// quy beta. Phần lấy và ghép giá dùng chung với trang: ai/js/core/giasan.js (trang gọi thẳng khi mạng chặn
+// Worker). Ở đây chỉ thêm kiểm tham số, mã lỗi HTTP và nhớ đệm 6 giờ (giá ngày không đổi trong phiên).
+//   → { ok:true, data:{ ma, nguon, donVi, rows:[[ngày 'YYYY-MM-DD', giá CP, VN-Index]…], gia, ngay } }
 
-const NGUON = 'https://dchart-api.vndirect.com.vn/dchart/history';
-const CHI_SO = 'VNINDEX';
+import { layGiaSan, maHopLe } from '../../js/core/giasan.js';
+
 const DEM_GIAY = 6 * 3600;
-
 const tl = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status,
   headers: {
@@ -19,34 +13,19 @@ const tl = (obj, status = 200) => new Response(JSON.stringify(obj), {
     'cache-control': status === 200 && obj.ok ? `public, max-age=${DEM_GIAY}` : 'no-store',
   },
 });
-const loi = (code, error, status = 200) => tl({ ok: false, code, error }, status);
-
-async function lay(fetchFn, ma, tu, den) {
-  const u = `${NGUON}?resolution=D&symbol=${encodeURIComponent(ma)}&from=${tu}&to=${den}`;
-  // KHÔNG gửi "accept: application/json": API này trả 406 cho tiêu đề đó (dù thân vẫn là JSON) — đã gặp thật
-  // ở lần triển khai đầu. Gửi */* như trình duyệt thì trả 200.
-  const r = await fetchFn(u, { headers: { accept: '*/*', 'user-agent': 'Mozilla/5.0 (compatible; elevaTO)' }, cf: { cacheTtl: DEM_GIAY } });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const d = await r.json();
-  if (!d || !Array.isArray(d.t) || !Array.isArray(d.c) || d.t.length !== d.c.length) return new Map();
-  const m = new Map();
-  d.t.forEach((t, i) => { const c = Number(d.c[i]); if (Number.isFinite(c) && c > 0) m.set(new Date(t * 1000).toISOString().slice(0, 10), c); });
-  return m;
-}
 
 /** @param fetchFn để kiểm thử thay bằng hàm giả */
 export async function giaCoPhieu(req, { fetchFn = fetch, now = Date.now() } = {}) {
   const url = new URL(req.url);
   const ma = String(url.searchParams.get('ma') || '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{3,10}$/.test(ma)) return loi('bad', 'Mã cổ phiếu không hợp lệ (3–10 chữ / số, ví dụ DGW)', 400);
-  const nam = Math.min(10, Math.max(1, Math.round(Number(url.searchParams.get('nam')) || 5)));
-  const den = Math.floor(now / 1000), tu = den - Math.round(nam * 365.25 * 86400);
-  let cp, cs;
-  try { [cp, cs] = await Promise.all([lay(fetchFn, ma, tu, den), lay(fetchFn, CHI_SO, tu, den)]); }
-  catch (e) { return loi('upstream', `Không lấy được giá từ VNDirect (${e.message}) — thử lại sau`); }
-  if (!cp.size) return loi('khong_co', `Không có dữ liệu giá cho mã ${ma}`);
-  const rows = [...cp.keys()].filter((d) => cs.has(d)).sort().map((d) => [d, cp.get(d), cs.get(d)]);
-  if (rows.length < 21) return loi('khong_co', `Mã ${ma} chỉ có ${rows.length} phiên trùng với VN-Index — quá ít để hồi quy`);
-  const cuoi = [...cp.keys()].sort().pop();
-  return tl({ ok: true, data: { ma, nguon: 'VNDirect', donVi: 'nghìn đồng', rows, gia: Math.round(cp.get(cuoi) * 1000), ngay: cuoi } });
+  if (!maHopLe(ma)) return tl({ ok: false, code: 'bad', error: 'Mã cổ phiếu không hợp lệ (3–10 chữ / số, ví dụ DGW)' }, 400);
+  const r = await layGiaSan(ma, url.searchParams.get('nam'), { fetchFn, now, headers: { 'user-agent': 'Mozilla/5.0 (compatible; elevaTO)' } });
+  return tl(r.ok ? r : { ok: false, code: r.code === 'it_phien' ? 'khong_co' : r.code, error: CAU[r.code](r.info) });
 }
+
+const CAU = {
+  bad: () => 'Mã cổ phiếu không hợp lệ (3–10 chữ / số, ví dụ DGW)',
+  upstream: (i) => `Không lấy được giá từ VNDirect (${i.msg}) — thử lại sau`,
+  khong_co: (i) => `Không có dữ liệu giá cho mã ${i.ma}`,
+  it_phien: (i) => `Mã ${i.ma} chỉ có ${i.n} phiên trùng với VN-Index — quá ít để hồi quy`,
+};

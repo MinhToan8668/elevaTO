@@ -1322,3 +1322,38 @@ test('tải giá từ sàn để hồi quy beta: gọi máy chủ /gia, ra beta,
   await page.waitForFunction(() => [...document.querySelectorAll('.dv-f')].find((l) => l.innerText.startsWith('Giá thị trường'))?.querySelector('input').value === '45600');
   assert.deepEqual(errors, []);
 });
+
+test('mạng chặn máy chủ (Failed to fetch) → trang tự gọi thẳng VNDirect để tải giá, vẫn ra beta', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const P = { FY2025: { id: 'FY2025', year: 2025, months: 12, endMonth: 12 }, 'Q2-2026': { id: 'Q2-2026', year: 2026, months: 6, endMonth: 6 } };
+  const sources = f.periods.map((p, i) => ({ id: `s${i}`, kind: 'period', file: 'dnp.xlsx', period: P[p], values: f.input[p] }));
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('vnd@elevato.vn', { ten: 'Vnd', email: 'vnd@elevato.vn', mk: 'x', token: TOKEN('vnd@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Vnd', email: 'vnd@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:vnd@elevato.vn', s);
+  }, [TOKEN('vnd@elevato.vn'), phien]);
+  await page.route('**/gia?**', (route) => route.abort('blockedbyclient'));
+  const goi = [];
+  await page.route('https://dchart-api.vndirect.com.vn/**', (route) => {
+    const u = new URL(route.request().url());
+    const sym = u.searchParams.get('symbol');
+    goi.push(sym);
+    const t = Array.from({ length: 60 }, (_, i) => Date.UTC(2026, 0, 1 + i) / 1000);
+    let x = sym === 'VNINDEX' ? 1200 : 40.123;
+    const c = t.map((_, i) => { const m = (i % 2 ? 0.01 : -0.008) + (i % 7) * 0.001; x *= 1 + (sym === 'VNINDEX' ? 1 : 0.9) * m; return +x.toFixed(3); });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ s: 'ok', t, c }) });
+  });
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.locator('.rail a[data-step="6"]').click();
+  await page.locator('#tabb-DEAL').click();
+  await page.locator('.dv-beta summary').click();
+  await page.locator('.dv-beta .bt-ma').fill('dgw');
+  await page.locator('.dv-beta button', { hasText: 'Tải giá từ sàn' }).click();
+  await page.waitForSelector('.dv-beta .msg.ok');
+  assert.deepEqual(goi.sort(), ['DGW', 'VNINDEX']);
+  assert.match(await page.locator('.dv-beta').innerText(), /0[.,]9\d/);
+  assert.deepEqual(errors.filter((e) => !/blockedbyclient|ERR_BLOCKED|Failed to load resource/i.test(e)), []);
+});
