@@ -1237,6 +1237,29 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   const gw = await page.locator('.dv-mna .hbox', { hasText: 'Lợi thế thương mại' }).first().locator('b').innerText();
   assert.match(gw, /180/, 'lợi thế thương mại = 300 − 60% × 200 = 180 tỷ');
   assert.match(await page.locator('.dv-mna').innerText(), /EPS sau/i);
+
+  // Bảng điều khiển: football field + thác nước + doanh thu & FCFF; bảng độ nhạy tô màu theo giá thị trường
+  await page.waitForSelector('.dv-dash .dv-kpi');
+  assert.ok(await page.locator('.dv-dash svg.dvc').count() >= 3, 'đủ 3 biểu đồ');
+  assert.match(await page.locator('.dv-dash').innerText(), /Football field/);
+  assert.ok(await page.locator('.dv-sens td').evaluateAll((tds) => tds.filter((td) => td.style.background).length) > 10, 'ô độ nhạy có màu');
+  if (process.env.E2E_SHOTS) await page.locator('.dv-dash').screenshot({ path: join(process.env.E2E_SHOTS, 'dashboard.png') });
+
+  // Mẫu ngành Bán lẻ → dự phóng theo số cửa hàng, có dòng cửa hàng mở thêm từng năm
+  const sel = (lbl) => page.locator('.dv-sel', { hasText: lbl }).locator('select');
+  await sel('Mẫu ngành').selectOption('retail');
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-sel')].find((l) => l.innerText.includes('Dự phóng doanh thu theo'))?.querySelector('select')?.value === 'stores');
+  await page.waitForSelector('.dv-tips');
+  await o('Số cửa hàng năm gốc').fill('100');
+  await o('Số cửa hàng năm gốc').dispatchEvent('change');
+  await page.waitForSelector('.dv-proj tr:has-text("Cửa hàng mở thêm")');
+  assert.ok(await page.locator('.dv-proj tr', { hasText: 'Số cửa hàng cuối năm' }).count() >= 1);
+
+  // Kịch bản: bật → thẻ giá trị kỳ vọng, bi quan < lạc quan
+  await page.locator('.dv-scen summary input[type=checkbox]').check();
+  await page.waitForSelector('.dv-kpi :text("Giá trị kỳ vọng")');
+  assert.equal(await page.locator('.dv-scen tbody tr').count(), 3);
+  if (process.env.E2E_SHOTS) await page.locator('.dv-setup').screenshot({ path: join(process.env.E2E_SHOTS, 'thiet-lap.png') });
   if (process.env.E2E_SHOTS) await page.locator('.deal').screenshot({ path: join(process.env.E2E_SHOTS, 'dinh-gia.png') });
   assert.deepEqual(errors, []);
 });

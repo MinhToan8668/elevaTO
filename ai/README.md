@@ -158,6 +158,20 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     đứng cạnh cột dự phóng (F, đặt nhãn theo năm); 6 tham số (tăng trưởng, biên EBIT, khấu hao, capex, vốn lưu động,
     thuế suất) **sửa được riêng từng năm** — ô trống dùng số chung, ô ghi đè tô vàng, nút bỏ hết ghi đè; dòng công thức
     giải thích từng dòng. Thuế suất suy từ BCTC ngoài 5–35% thì dùng 20% và báo rõ.
+  - **Bảng điều khiển định giá** (`js/ui/dvcharts.js`, SVG vẽ tay): thẻ số chính (giá mục tiêu gia quyền, upside,
+    khuyến nghị, giá DCF kèm tỷ trọng giá trị cuối kỳ, WACC / g, giá trị kỳ vọng theo kịch bản); **football field**
+    (DCF lấy dải từ bảng độ nhạy WACC ± 0,5 / g ± 0,5, DCF bội số thoát, bội số thấp / giữa / cao, trung vị peer, EPV,
+    Graham, kịch bản) với vạch giá thị trường và giá mục tiêu; **thác nước** PV FCFF + PV giá trị cuối kỳ = EV − nợ
+    ròng − tương đương nợ − cổ đông không kiểm soát + tài sản ngoài hoạt động = vốn chủ; **doanh thu & FCFF** các
+    năm actual cạnh năm dự phóng. Bảng độ nhạy tô màu theo % chênh với giá thị trường.
+  - **Thiết lập mô hình** (`js/core/presets.js`, từ sheet 19.Playbook): **10 mẫu ngành** (chung, phân phối, bán lẻ
+    chuỗi, sản xuất, tiêu dùng, tiện ích, công nghệ, xây dựng, bất động sản, ngân hàng) — mỗi mẫu đặt cách dự phóng
+    doanh thu, cách tính giá trị cuối kỳ, trọng số giá mục tiêu và hiện ghi chú "dự phóng thế nào · định giá ưu tiên
+    · bẫy hay gặp"; sửa tiếp được mọi thứ. **4 cách dự phóng doanh thu**: % tăng trưởng; sản lượng × giá bán; số cửa
+    hàng × doanh thu / cửa hàng; nhập tay từng năm (theo kế hoạch / tiến độ bàn giao) — tham số của từng cách cũng
+    sửa riêng được từng năm trong bảng dự phóng. **3 cách tính giá trị cuối kỳ**: Gordon, bội số EV/EBITDA lúc thoát,
+    bình quân hai cách. **Kịch bản Bi quan / Cơ sở / Lạc quan** (như 02.Control): chênh lệch tăng trưởng, biên EBIT,
+    WACC và xác suất; ra giá từng kịch bản và giá trị kỳ vọng.
   - **Giá mục tiêu gia quyền & khuyến nghị**: DCF 50% · P/E 25% · EV/EBITDA 15% · P/B 10% (sửa được; phương pháp
     thiếu số thì chia lại), thang MUA / TÍCH LUỸ / NẮM GIỮ / KÉM KHẢ QUAN / BÁN theo ±10% / ±20%.
   - **Định giá nhanh**: EPV = EPS / Ke, P/B hợp lý = (ROE − g)/(Ke − g), Graham number, g ngầm định trong giá thị

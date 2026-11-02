@@ -6,7 +6,7 @@
 import { h, fmt } from './dom.js';
 import { dealAnalysis, cleanInputs, DEFAULT_INPUTS } from '../core/deal.js';
 import { t, unitLabel } from '../i18n.js';
-import { dcfBlock, targetBlock, piotroskiCard, mnaBlock, compsBlock } from './dealval.js';
+import { dcfBlock, targetBlock, piotroskiCard, mnaBlock, compsBlock, dvDashboard } from './dealval.js';
 
 const pc = (x) => (Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : '—');
 const lan = (x) => (Number.isFinite(x) ? t('ch.times', { v: x.toFixed(2) }) : '—');
@@ -19,6 +19,7 @@ export function renderDeal(store) {
   const a = dealAnalysis(ds, inp);
   if (!a) return h('p', { class: 'empty' }, t('ch.none'));
   const unit = s.unit, ul = unitLabel(unit);
+  a.unitDong = unit;                    // đơn vị đang xem — biểu đồ / ô nhập tay doanh thu theo đơn vị này
   const money = (v) => (Number.isFinite(v) ? fmt(v, unit) || '0' : '—');
   const save = (patch) => store.set({ dealInputs: cleanInputs({ ...inp, ...patch }) });
   const ltm = a.cols.find((c) => c.ltm);
@@ -26,6 +27,7 @@ export function renderDeal(store) {
   return h('div', { class: 'deal' },
     h('p', { class: 'priv' }, t('dl.lead', { p: a.base.label, unit: ul }),
       ltm ? ' ' + t('dl.ltm', { p: ltm.label }) : ' ' + t('dl.noLtm')),
+    dvDashboard(a, inp, money, ul),
     flagBox(a, money),
     ebitdaTable(a, money, ul),
     manualAdj(inp, save, unit, money),
