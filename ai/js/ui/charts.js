@@ -3,7 +3,8 @@
 // phần việc nó làm). Màu lấy từ biến CSS nên tự đổi theo giao diện sáng / tối.
 // Số do js/core/metrics.js tính từ BCTC đã trích — AI không tham gia.
 
-import { h, mount, fmt } from './dom.js';
+import { h, mount, fmt, toast } from './dom.js';
+import { chartPng, chartXlsx } from './chartout.js';
 import { buildMetrics, RATIO_GROUPS, SPANS } from '../core/metrics.js';
 import { assess, LEVELS } from '../core/analysis.js';
 import { t } from '../i18n.js';
@@ -84,7 +85,7 @@ function scale(values, { t: top, h: height }) {
 
 // ─── Một thẻ biểu đồ ───────────────────────────────────────
 
-function card(c, periods, unit, unitLabel) {
+function card(c, periods, unit, unitLabel, big = false) {
   const an = (ui.hidden[c.id] ||= new Set());
   const hien = c.series.filter((ser) => !an.has(ser.key));
   const kieu = c.kind === 'share' ? '%' : (c.unit || '');
@@ -92,9 +93,14 @@ function card(c, periods, unit, unitLabel) {
   const wrap = h('div', { class: 'cvwrap' });
   const tip = h('div', { class: 'cvtip', hidden: true, role: 'status', 'aria-live': 'polite' });
   mount(wrap, plot(c, hien, periods, unit, kieu, mau, tip), tip);
-  return h('figure', { class: 'chart' },
+  const donVi = kieu === '%' ? '%' : kieu === 'd' ? t('ch.unit.days') : kieu === 'x' ? t('ch.unit.times') : unitLabel;
+  const fig = h('figure', { class: `chart${big ? ' big' : ''}` },
     h('figcaption', {}, h('b', {}, chartTitle(c)),
-      h('span', { class: 'priv' }, kieu === '%' ? '%' : kieu === 'd' ? t('ch.unit.days') : kieu === 'x' ? t('ch.unit.times') : unitLabel)),
+      h('span', { class: 'ch-tools' },
+        h('span', { class: 'priv' }, donVi),
+        big ? null : h('button', { type: 'button', class: 'ch-btn', title: t('ch.zoom'), 'aria-label': t('ch.zoom'), onclick: () => zoom(c, periods, unit, unitLabel) }, '⤢'),
+        h('button', { type: 'button', class: 'ch-btn', title: t('ch.png'), onclick: () => xuatPng(fig, c, hien, mau, donVi) }, 'PNG'),
+        h('button', { type: 'button', class: 'ch-btn', title: t('ch.xlsx'), onclick: () => xuatXlsx(c, periods, unit, kieu, donVi) }, 'Excel'))),
     wrap,
     c.negative ? h('p', { class: 'msg warn' }, t('chart.negative', { list: c.negative.map((k) => t(`ser.${k}`).toLowerCase()).join(', ') })) : null,
     h('ul', { class: 'legend' }, c.series.map((ser) => h('li', {},
@@ -103,11 +109,52 @@ function card(c, periods, unit, unitLabel) {
         onclick: (e) => {
           if (an.has(ser.key)) an.delete(ser.key); else an.add(ser.key);
           // Vẽ lại đúng một thẻ, không dựng lại cả tab — giữ nguyên chỗ cuộn và các thẻ khác.
-          const moi = card(c, periods, unit, unitLabel);
+          const moi = card(c, periods, unit, unitLabel, big);
           e.target.closest('figure.chart').replaceWith(moi);
         } },
       h('i', { style: { background: mau[ser.key] } }), serName(ser))))),
-    dataTable(c, periods, unit, kieu));
+    dataTable(c, periods, unit, kieu, big));
+  // Bấm vào vùng vẽ (chỗ không phải nút) cũng phóng to.
+  if (!big) { wrap.classList.add('zoomable'); wrap.addEventListener('click', () => zoom(c, periods, unit, unitLabel)); }
+  return fig;
+}
+
+// ─── Phóng to · xuất PNG / Excel ───────────────────────────
+
+/** Mở biểu đồ ở khung lớn, kèm bảng số; Esc hoặc bấm ra ngoài để đóng. */
+function zoom(c, periods, unit, unitLabel) {
+  const dlg = h('dialog', { class: 'chart-zoom', 'aria-label': chartTitle(c) },
+    h('button', { type: 'button', class: 'ch-close', 'aria-label': t('ch.close'), onclick: () => dlg.close() }, '×'),
+    card(c, periods, unit, unitLabel, true));
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener('close', () => dlg.remove());
+  document.body.append(dlg);
+  dlg.showModal();
+}
+
+const tenFile = (c) => `${chartTitle(c)} - elevaTO`;
+
+async function xuatPng(fig, c, hien, mau, donVi) {
+  try {
+    await chartPng(fig.querySelector('svg.cv'), { title: chartTitle(c), unit: donVi, file: tenFile(c),
+      legend: hien.map((ser) => ({ name: serName(ser), color: mau[ser.key] })) });
+  } catch (e) { toast(t('ch.exportErr')); }
+}
+
+/** Số tiền xuất theo đơn vị đang xem (giống trên biểu đồ); %, ngày, lần giữ nguyên. */
+async function xuatXlsx(c, periods, unit, kieu, donVi) {
+  try {
+    await chartXlsx({
+      title: chartTitle(c), sub: t('ch.xlsxSub', { unit: donVi }), itemLabel: t('ch.item'), file: tenFile(c),
+      heads: periods.map((p) => p.label),
+      rows: c.series.map((ser) => {
+        // Biểu đồ tỷ trọng: xuất số tiền gốc (tỷ trọng % tính lại được ngay trong Excel).
+        const k = ser.axis === 'right' ? (c.right || 'x') : c.kind === 'share' ? (c.unit || '') : kieu;
+        const dv = k === '%' ? ' (%)' : k === 'd' ? ` (${t('ch.unit.days')})` : k === 'x' ? ` (${t('ch.unit.times')})` : '';
+        return { name: serName(ser) + dv, values: ser.values.map((v) => (Number.isFinite(v) ? (k ? v : v / unit) : null)) };
+      }),
+    });
+  } catch (e) { toast(t('ch.exportErr')); }
 }
 
 /**
@@ -227,8 +274,8 @@ function plot(c, hien, periods, unit, kieu, mau, tip) {
 // ─── Bảng số kèm biểu đồ ───────────────────────────────────
 
 /** Đọc được bằng trình đọc màn hình, và xem nhanh khi không phân biệt được màu. */
-function dataTable(c, periods, unit, kieu) {
-  return h('details', { class: 'chart-data' },
+function dataTable(c, periods, unit, kieu, open = false) {
+  return h('details', { class: 'chart-data', open },
     h('summary', {}, t('ch.data')),
     h('div', { class: 'gridwrap' }, h('table', { class: 'k' },
       h('thead', {}, h('tr', {}, h('th', {}, t('ch.item')), periods.map((p) => h('th', { class: 'num' }, p.label)))),

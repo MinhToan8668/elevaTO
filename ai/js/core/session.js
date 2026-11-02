@@ -17,7 +17,7 @@ export const CONTEXT_KEYS = ['nganh', 'thi_truong', 'su_kien', 'tu_doanh_nghiep'
 
 export function serializeSession(s) {
   const data = {
-    sources: s.sources, edits: s.edits, ticks: s.ticks, unit: s.unit,
+    sources: s.sources, company: s.company || '', edits: s.edits, ticks: s.ticks, unit: s.unit,
     segmentMap: s.segmentMap, segmentNames: s.segmentNames, aiContext: s.aiContext || {},
     dealInputs: s.dealInputs || null,
   };
@@ -32,6 +32,7 @@ export function parseSession(text) {
   const d = o.data;
   return {
     sources: uniqueIds(arr(d.sources, 200).map(source).filter(Boolean)),
+    company: str(d.company, 200).replace(/[^a-z0-9 *]/g, ''),
     edits: arr(d.edits, 5000).map(edit).filter(Boolean),
     ticks: Array.isArray(d.ticks) ? d.ticks.filter((k) => typeof k === 'string' && KEY_RE.test(k)).slice(0, 2000) : null,
     unit: UNITS.includes(d.unit) ? d.unit : 1e6,

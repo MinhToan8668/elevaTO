@@ -126,7 +126,7 @@ export function initFiles(store, ctx) {
     ctx.media.clear();
     // Bỏ cả phiên đã lưu: không thì tải lại trang là công ty cũ hiện về ở dải "mở lại phiên".
     ctx.quenPhien?.();
-    store.set({ jobs: [], sources: [], edits: [], ticks: null, segmentMap: {}, segmentNames: ['', '', '', '', ''] });
+    store.set({ jobs: [], sources: [], company: '', edits: [], ticks: null, segmentMap: {}, segmentNames: ['', '', '', '', ''] });
   };
 
   watch(store, ['jobs', 'running', 'lang'], (s) => renderList(s, ctx));

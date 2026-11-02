@@ -1053,3 +1053,79 @@ test('khu làm việc từng bước: chỉ hiện một bước, thêm PDF tự
   assert.deepEqual(await hien(), ['s2']);
   assert.deepEqual(errors, []);
 });
+
+test('BCTC của hai công ty khác nhau: báo đỏ, không gộp số; chọn công ty khác hoặc xác nhận cùng công ty; biểu đồ phóng to, xuất PNG / Excel', { timeout: 90_000 }, async () => {
+  const { page, errors } = await newPage();
+  const f = JSON.parse(await readFile(new URL('../fixtures/dnp.json', import.meta.url), 'utf8'));
+  const tach = (vals, k = 1) => {
+    const out = {};
+    for (const [key, v] of Object.entries(vals)) { const st = key.split(':')[0]; (out[st] ||= { cur: {}, prev: {} }).cur[key] = v * k; out[st].prev[key] = v * k * 0.9; }
+    return out;
+  };
+  const ext = (file, company, end, months, k) => ({ file, company, meta: { ngay_ket_thuc: end, so_thang: months }, statements: tach(f.input.FY2025, k), units: {}, notes: {}, warnings: [] });
+  const sources = [
+    { id: 'a', kind: 'ext', ext: ext('VNM_Baocaotaichinh_2025.pdf', 'CÔNG TY CỔ PHẦN SỮA VIỆT NAM', '2025-12-31', 12, 1) },
+    { id: 'b', kind: 'ext', ext: ext('BUS_BCTC QUY 3-2026.pdf', 'Công ty TNHH Bus Thaco', '2026-09-30', 9, 0.01) },
+  ];
+  const phien = JSON.stringify({ app: 'elevato-ai-bctc', v: 1, savedAt: new Date().toISOString(), data: { sources, edits: [], ticks: null, unit: 1e9, segmentMap: {}, segmentNames: [], aiContext: {} } });
+  accounts.set('co2@elevato.vn', { ten: 'Co2', email: 'co2@elevato.vn', mk: 'x', token: TOKEN('co2@elevato.vn') });
+  await page.addInitScript(([t, s]) => {
+    localStorage.setItem('elevato-ai-phien', JSON.stringify({ token: t, me: { ten: 'Co2', email: 'co2@elevato.vn', luot: { dung: 0, han: 5 } } }));
+    localStorage.setItem('elevato-ai-session:co2@elevato.vn', s);
+  }, [TOKEN('co2@elevato.vn'), phien]);
+  await page.goto(`${base}/ai/`);
+  await page.locator('#restore button.btn.sm').first().click();
+  await page.waitForSelector('#sources .co-warn');
+  const canh = await page.locator('#sources .co-warn').innerText();
+  assert.match(canh, /2 công ty khác nhau/);
+  assert.match(canh, /SỮA VIỆT NAM/);
+  assert.match(canh, /Bus Thaco/);
+  const ky = () => page.locator('#sources summary h3').innerText();
+  assert.match(await ky(), /FY2024, FY2025$/, 'chỉ có kỳ của VNM, không lẫn kỳ 9T-2026 của BUS');
+  await shot(page, 'cong-ty-khac-nhau', { fullPage: false });
+
+  // Chọn công ty kia → chỉ còn kỳ của BUS
+  await page.locator('#sources .co-warn select').selectOption({ label: 'Công ty TNHH Bus Thaco' });
+  // (CĐKT quý 3/2026 có cột "đầu năm" = cuối 2025 nên FY2025 vẫn có thể còn; FY2024 của VNM thì phải mất.)
+  await page.waitForFunction(() => !/FY2024/.test(document.querySelector('#sources summary h3').innerText));
+  assert.match(await ky(), /2026/);
+
+  // Xác nhận là cùng một công ty → gộp đủ các kỳ
+  page.once('dialog', (d) => d.accept());
+  await page.locator('#sources .co-warn button').click();
+  await page.waitForSelector('#sources .co-warn.warn');
+  assert.match(await ky(), /FY2024.*2026/);
+  await page.locator('#sources .co-warn button').click();               // tách lại
+  await page.waitForSelector('#sources .co-warn.err');
+
+  // Biểu đồ: phóng to, tải PNG và Excel
+  await page.locator('#tab-CHART').click();
+  await page.waitForSelector('figure.chart');
+  await page.locator('figure.chart .cvwrap').first().click();
+  await page.waitForSelector('dialog.chart-zoom[open] figure.chart.big svg.cv');
+  await shot(page, 'bieu-do-phong-to', { fullPage: false });
+  const png = await download(page, () => page.locator('dialog.chart-zoom .ch-btn', { hasText: 'PNG' }).click());
+  if (process.env.E2E_SHOTS) await writeFile(join(process.env.E2E_SHOTS, 'bieu-do-xuat.png'), await readFile(png.path));
+  assert.match(png.name, /\.png$/);
+  const sig = (await readFile(png.path)).subarray(0, 8).toString('hex');
+  assert.equal(sig, '89504e470d0a1a0a', 'đúng file PNG');
+  const xl = await download(page, () => page.locator('dialog.chart-zoom .ch-btn', { hasText: 'Excel' }).click());
+  assert.match(xl.name, /\.xlsx$/);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('dialog.chart-zoom'));
+  assert.deepEqual(errors, []);
+});
+
+test('trang chủ máy tính: thấy cả chân trang ngay khi mở, không phải cuộn', { timeout: 60_000 }, async () => {
+  for (const [w, hgt] of [[1366, 620], [1536, 730], [1920, 950]]) {
+    const { page, errors } = await newPage();
+    await page.setViewportSize({ width: w, height: hgt });
+    await page.addInitScript(() => { window.name = 'home'; sessionStorage.removeItem('elevato-ai-view'); });
+    await page.goto(`${base}/ai/`);
+    await page.waitForSelector('#hero');
+    const r = await page.evaluate(() => ({ chan: document.querySelector('.foot').getBoundingClientRect().bottom, cao: innerHeight, cuon: document.documentElement.scrollHeight }));
+    assert.ok(r.chan <= r.cao + 1, `${w}×${hgt}: chân trang ở ${r.chan}px, màn cao ${r.cao}px`);
+    assert.ok(r.cuon <= r.cao + 1, `${w}×${hgt}: trang dài ${r.cuon}px > màn ${r.cao}px`);
+    assert.deepEqual(errors, []);
+  }
+});

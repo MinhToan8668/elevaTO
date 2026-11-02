@@ -996,7 +996,26 @@ button.feat:hover .feat-open{opacity:1}
 }
 @media (min-width:901px){.home{max-width:1320px}.hx-h{font-size:clamp(44px,min(5.3vw,10.5vh),84px)}}
 @media (min-width:901px){.hx-h{white-space:nowrap;font-size:clamp(44px,min(5.1vw,10.5vh),78px)}}
-@media (min-width:901px){.home{min-height:calc(100vh - 190px);justify-content:center}}
+/* Trang chủ máy tính: thanh đầu + nội dung + chân trang vừa đúng một màn hình. Trước đây .home tự
+   đòi cao (100vh − 190px) nên chân trang luôn bị đẩy xuống dưới mép, phải cuộn mới thấy. Giờ để
+   .home lấp chỗ trống còn lại (body đã là cột flex cao tối thiểu 100vh) và căn nội dung vào giữa. */
+@media (min-width:901px){
+  body[data-view="home"]{min-height:100dvh}
+  body[data-view="home"] .shell{padding-bottom:8px}
+  body[data-view="home"] main{flex:1}
+  .home{flex:1;justify-content:center}
+  body[data-view="home"] .foot{padding:8px 20px 12px}
+}
+/* Laptop màn thấp (1366×768 trừ thanh trình duyệt còn ~620–700px): ép gọn thêm để vẫn thấy chân trang. */
+@media (min-width:901px) and (max-height:780px){
+  body[data-view="home"] .shell{padding-top:6px}
+  .hx{padding:6px 0 16px}
+  .hx-h{margin:10px 0 14px}
+  .hx-sub{font-size:15px;line-height:1.5}
+  .hx-cta{margin-top:14px}.hx-btn{padding:14px 24px}
+  .hx-card{padding:16px 20px}.hx-card-h{font-size:26px;margin:8px 0 8px;padding-bottom:8px}.hx-row{padding:4px 0}.hx-card-go{margin-top:8px}
+  .tl{padding:12px 16px 12px}.tl-n{font-size:22px;margin-bottom:2px}.tl-go{top:12px}
+}
 
 /* ── Khu làm việc: mỗi lúc một bước, thanh bước là tab (không nổi đè lên nội dung) ── */
 body[data-view="work"] .step{display:none}
@@ -1011,3 +1030,23 @@ body[data-view="work"][data-step="s5"] #s5,body[data-view="work"][data-step="s6"
 @media (max-width:700px){.rail-sep{display:none}}
 /* Chỉ dùng trong test e2e kiểm luồng nghiệp vụ từng phần: hiện đủ các bước một lúc (chế độ từng bước có bài riêng). */
 html[data-all-steps] body[data-view="work"] .step{display:block}
+/* Các file thuộc nhiều công ty (xem ui/review.js companyWarn) */
+.co-warn{margin:0 0 12px}
+.co-warn ul{margin:6px 0 6px 18px}
+.co-warn li .tag{margin-left:8px}
+.co-warn .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.co-warn select{margin-left:4px}
+tr.src-off td{opacity:.6}
+/* Biểu đồ: nút phóng to / PNG / Excel, khung phóng to (xem ui/charts.js zoom) */
+.ch-tools{display:inline-flex;align-items:center;gap:6px}
+.ch-btn{font:700 11.5px/1 var(--ff-ui,inherit);padding:5px 8px;border-radius:7px;border:1px solid var(--line-2);background:transparent;color:var(--muted);cursor:pointer}
+.ch-btn:hover{color:var(--em-text);border-color:var(--em-line);background:var(--em-soft)}
+.cvwrap.zoomable{cursor:zoom-in}
+dialog.chart-zoom{width:min(1280px,96vw);max-width:none;max-height:94vh;margin:auto;padding:22px;border:0;border-radius:20px;background:var(--surface);color:var(--text);overflow:auto;box-shadow:var(--shadow)}
+dialog.chart-zoom::backdrop{background:rgba(4,10,8,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+dialog.chart-zoom .chart.big{border:0;padding:0;background:transparent}
+dialog.chart-zoom .chart.big figcaption{padding-right:44px}
+dialog.chart-zoom .chart.big figcaption b{font-size:18px}
+dialog.chart-zoom .chart.big .lbl{font-size:10px}
+.ch-close{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--strong);font-size:20px;line-height:1;cursor:pointer}
+@media (max-width:600px){dialog.chart-zoom{width:100vw;max-height:100dvh;border-radius:0;padding:14px}}
