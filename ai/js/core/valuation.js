@@ -19,6 +19,7 @@ const kep = (x, lo, hi) => (x === null ? null : Math.min(hi, Math.max(lo, x)));
 /** Thông số mặc định. null = máy tự tính từ BCTC (trung bình 3 năm gần nhất). */
 export const DEFAULT_VAL = {
   price: null,            // giá thị trường hiện tại, đồng / cổ phiếu
+  ticker: '',             // mã cổ phiếu (để tải giá từ sàn khi hồi quy beta)
   shares: null,           // số cổ phiếu lưu hành — ghi đè số đọc từ thuyết minh (null = dùng thuyết minh)
   rf: 0.0437,             // lợi suất TPCP 10 năm
   erp: 0.0813,            // phần bù rủi ro vốn cổ phần — Damodaran, Việt Nam
@@ -55,6 +56,7 @@ export function cleanVal(x) {
   if (Number.isInteger(+o.years) && +o.years >= 1 && +o.years <= 10) out.years = +o.years;
   if (Number.isFinite(+o.exit) && +o.exit > 0 && +o.exit < 100) out.exit = +o.exit;
   if (typeof o.blume === 'boolean') out.blume = o.blume;
+  if (typeof o.ticker === 'string' && /^[A-Za-z0-9]{0,10}$/.test(o.ticker.trim())) out.ticker = o.ticker.trim().toUpperCase();
   if (typeof o.fade === 'boolean') out.fade = o.fade;
   const w = o.weights && typeof o.weights === 'object' ? o.weights : {};
   for (const k of Object.keys(DEFAULT_VAL.weights)) if (Number.isFinite(+w[k]) && +w[k] >= 0 && +w[k] <= 100) out.weights[k] = +w[k];

@@ -12,6 +12,8 @@
 //   /tg/ai  bot AI BCTC            (TG_AI_TOKEN)
 //   /tg/el  bot khoá học + link    (TG_EL_TOKEN)
 //
+// GET /gia?ma=DGW&nam=5 (src/gia.js): giá đóng cửa cổ phiếu + VN-Index từ VNDirect để hồi quy beta.
+//
 // Một đường nữa không theo giao thức JSON ở trên — POST /taive (xem src/taive.js): trang
 // upload gửi một "vé" đã ký sang, Worker kéo các phần từ Telegram nối thành một luồng trả
 // về máy, để file khỏi phải đi vòng qua Google Drive ở chiều tải xuống.
@@ -30,6 +32,7 @@ import { quenMK, datLaiMKBangMa } from './quenmk.js';
 import { thongTinUngHo } from './ungho.js';
 import { linksChoWeb, linksKiemKey, linksLuu } from './links.js';
 import { taiThang } from './taive.js';
+import { giaCoPhieu } from './gia.js';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -53,6 +56,8 @@ export default {
     // gọi, chứ không rơi xuống nhánh GET bên dưới mà trả về tình trạng máy chủ — nhìn như đã chạy
     // xong mà thật ra chẳng tải gì.
     if (url.pathname === '/taive') return json(loi('bad', 'Tải thẳng chỉ nhận POST kèm vé đã ký (xem README của worker)'), 405, { allow: 'POST, OPTIONS' });
+    // Giá cổ phiếu + VN-Index để hồi quy beta (src/gia.js): công khai, không đụng D1.
+    if (url.pathname === '/gia' && req.method === 'GET') return giaCoPhieu(req);
     // Nội dung trang link-in-bio: đọc công khai, không nhớ đệm — chủ trang bấm Đăng là đổi ngay.
     if (url.pathname === '/links' && req.method === 'GET') {
       if (!env.DB) return json(loi('setup', 'Máy chủ chưa nối cơ sở dữ liệu D1 (xem README của worker)'));

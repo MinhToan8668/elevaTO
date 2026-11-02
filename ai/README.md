@@ -152,6 +152,9 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   - **Hồi quy beta** (`js/core/beta.js`, như sheet 20.Beta_Data): dán từ Excel hoặc chọn file CSV (Ngày · Giá cổ
     phiếu · VN-Index, giá đóng cửa hoặc lợi suất); β = SLOPE theo phiên / tuần / tháng, kèm R², số quan sát, β Blume;
     bấm "Dùng beta" là điền vào WACC. Kiểm bằng chuỗi 1.250 phiên của model DGW (β = 1,3364).
+    **Tự tải giá từ sàn**: gõ mã, chọn 1–5 năm, bấm "Tải giá từ sàn" — máy chủ (`GET /gia`, `worker/src/gia.js`) lấy giá
+    đóng cửa đã điều chỉnh của mã và VN-Index từ VNDirect, trang hồi quy ngay và gợi ý dùng giá đóng cửa gần nhất
+    làm giá thị trường.
   - **So sánh cùng ngành – peer** (`js/core/comps.js`, như sheet 16.Comps): nhập từng peer hoặc dán bảng từ Excel
     (Tên · Giá · Tỷ giá · Số CP · Tiền · Nợ vay · Doanh thu · EBITDA · LNST · Vốn chủ); máy tính vốn hoá, EV = vốn hoá
     + nợ − tiền, EV/Doanh thu, EV/EBITDA, P/E, P/B; trung vị / trung bình / tứ phân vị 25–75% (bỏ bội số âm hoặc

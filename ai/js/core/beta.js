@@ -46,8 +46,21 @@ export function parseSeries(text) {
  * @param step 1 = theo phiên (ngày), 5 = theo tuần, 21 = theo tháng — lấy mẫu giá cách đều rồi tính lợi suất
  * @returns null nếu không đủ 20 quan sát, hoặc { beta, alpha, r2, n, from, to, kind, corr }
  */
-export function regressBeta(text, step = 1) {
-  const { rows, kind } = parseSeries(text);
+export const regressBeta = (text, step = 1) => regress(parseSeries(text), step);
+
+/**
+ * Hồi quy thẳng trên dãy số (dữ liệu tải từ sàn qua Worker): KHÔNG đi qua bước đọc chữ, vì giá đã điều
+ * chỉnh có 3 số lẻ ("21.523" nghìn đồng) sẽ bị hiểu nhầm là chấm ngăn nghìn kiểu Việt.
+ * @param rows [[ngày 'YYYY-MM-DD', giá CP, chỉ số]…]
+ */
+export function regressRows(rows, step = 1) {
+  const r = (rows || []).filter((x) => Array.isArray(x) && fin(+x[1]) && fin(+x[2]))
+    .map(([d, a, b]) => ({ t: /^\d{4}-\d{2}-\d{2}$/.test(d) ? Date.parse(`${d}T00:00:00Z`) : null, a: +a, b: +b }));
+  if (r.every((x) => x.t !== null)) r.sort((x, y) => x.t - y.t);
+  return regress({ rows: r, kind: 'price' }, step);
+}
+
+function regress({ rows, kind }, step) {
   let ra = [], rb = [];
   if (kind === 'return') { ra = rows.map((r) => r.a); rb = rows.map((r) => r.b); }
   else {
