@@ -50,6 +50,9 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
 - **Nhiều file, nhiều kỳ**: mỗi BCTC có sẵn cột kỳ trước. Nên tải BCTC năm gần nhất + các năm trước
   (model cần ≥ 4 năm), thêm báo cáo quý mới nhất nếu có. Hai báo cáo cùng kỳ khác số → dùng số của báo cáo
   mới hơn (đã điều chỉnh hồi tố) và liệt kê chỗ khác nhau.
+- **Bảng bị cắt cuối thì đọc kèm trang sau**: đọc xong mà thiếu dòng chốt (CĐKT 440, KQKD 60, LCTT 70) — thường do
+  phần cuối bảng (ví dụ khối hoạt động tài chính của LCTT) nằm ở trang kế tiếp chưa được gửi — máy đọc lại một
+  lần kèm trang ngay sau trang cuối; vẫn thiếu thì báo trong "lưu ý khi đọc".
 - **Kỳ của từng cột theo tiêu đề cột** (KQKD, LCTT): AI ghi khoảng ngày thật của mỗi cột số (`tu_ngay_v`…`den_ngay_p`),
   máy xếp số vào đúng kỳ theo hai ngày đó thay vì mặc định "cột thứ hai là cùng kỳ năm trước". Báo cáo quý in
   "Quý III / Quý II" cùng năm → số vào Q3 và Q2 năm nay, không còn báo lệch LNTT giữa LCTT và KQKD. Sửa tay
@@ -146,6 +149,9 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     thiếu số thì chia lại), thang MUA / TÍCH LUỸ / NẮM GIỮ / KÉM KHẢ QUAN / BÁN theo ±10% / ±20%.
   - **Định giá nhanh**: EPV = EPS / Ke, P/B hợp lý = (ROE − g)/(Ke − g), Graham number, g ngầm định trong giá thị
     trường; thêm **Piotroski F-score** vào khối chất lượng lợi nhuận.
+  - **Hồi quy beta** (`js/core/beta.js`, như sheet 20.Beta_Data): dán từ Excel hoặc chọn file CSV (Ngày · Giá cổ
+    phiếu · VN-Index, giá đóng cửa hoặc lợi suất); β = SLOPE theo phiên / tuần / tháng, kèm R², số quan sát, β Blume;
+    bấm "Dùng beta" là điền vào WACC. Kiểm bằng chuỗi 1.250 phiên của model DGW (β = 1,3364).
   - **So sánh cùng ngành – peer** (`js/core/comps.js`, như sheet 16.Comps): nhập từng peer hoặc dán bảng từ Excel
     (Tên · Giá · Tỷ giá · Số CP · Tiền · Nợ vay · Doanh thu · EBITDA · LNST · Vốn chủ); máy tính vốn hoá, EV = vốn hoá
     + nợ − tiền, EV/Doanh thu, EV/EBITDA, P/E, P/B; trung vị / trung bình / tứ phân vị 25–75% (bỏ bội số âm hoặc

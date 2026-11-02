@@ -6,6 +6,7 @@ import { h } from './dom.js';
 import { dcfValuation, quickAnchors, blendedTarget, piotroski } from '../core/valuation.js';
 import { mnaAnalysis } from '../core/mna.js';
 import { compsAnalysis, peerMultiples, parsePeers, MULTS } from '../core/comps.js';
+import { regressBeta } from '../core/beta.js';
 import { t } from '../i18n.js';
 
 const pc = (x, d = 1) => (Number.isFinite(x) ? `${(x * 100).toFixed(d)}%` : '—');
@@ -57,6 +58,7 @@ export function dcfBlock(a, inp, save, money, ul) {
     oPct(t('dv.capex'), V.capex, r.d.capex, (v) => dat({ capex: v })),
     oPct(t('dv.nwc'), V.nwc, r.d.nwc, (v) => dat({ nwc: v })),
     oNum(t('dv.exit'), V.exit, (v) => dat({ exit: v }), { step: '0.1', suffix: '×', placeholder: String(a.inputs.evEbitda[1]) }));
+  const betaBox = betaBlock(V, dat);
   const ghiChu = h('p', { class: 'priv' }, t('dv.auto'), ' ',
     ['growth', 'margin', 'da', 'capex', 'nwc', 'tax', 'kd'].filter((k) => r.used[k] !== 'user').map((k) => `${t(`dv.${k}`)}: ${nguon(k)}`).join(' · '));
   const W = r.W;
@@ -66,7 +68,7 @@ export function dcfBlock(a, inp, save, money, ul) {
     card(t('dv.weights'), `${pc(W.wd, 0)} / ${pc(W.we, 0)}`, '', t(W.eBasis === 'market' ? 'dv.wMarket' : 'dv.wBook')),
     card('WACC', pc(W.wacc, 2), 'em'));
   const loi = r.issues.map((k) => h('p', { class: `msg ${['noBase', 'gOverWacc'].includes(k) ? 'err' : 'warn'}` }, t(`dv.issue.${k}`)));
-  if (!r.flows) return sec('dv', thamSo, ghiChu, waccCards, ...loi);
+  if (!r.flows) return sec('dv', thamSo, betaBox, ghiChu, waccCards, ...loi);
 
   const bang = h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' },
     h('thead', {}, h('tr', {}, h('th', {}, ul), r.flows.map((f) => h('th', { class: 'num' }, t('dv.yearN', { n: f.t }))))),
@@ -84,7 +86,47 @@ export function dcfBlock(a, inp, save, money, ul) {
     card(t('dv.tvShare'), pc(r.tvShare, 0), r.tvShare > 0.75 ? 'gold' : ''));
   const doiChieu = h('p', { class: 'msg' }, t('dv.exitCheck', {
     m: r.exit.mult, p: r.exit.price !== null ? vnd(r.exit.price) : money(r.exit.equity), ig: pc(r.exit.impliedG, 2), im: lan(r.impliedExit) }));
-  return sec('dv', thamSo, ghiChu, waccCards, ...loi, bang, ketQua, doiChieu, sensTable(r, money));
+  return sec('dv', thamSo, betaBox, ghiChu, waccCards, ...loi, bang, ketQua, doiChieu, sensTable(r, money));
+}
+
+// ─── Hồi quy beta (20.Beta_Data) ───────────────────────────
+
+// Chuỗi dữ liệu không lưu vào phiên (có thể vài nghìn dòng) — chỉ giữ trong trang tới khi tải lại.
+const uiBeta = { open: false, text: '', step: 1, res: undefined };
+function betaBlock(V, dat) {
+  const o = h('textarea', { rows: 5, placeholder: t('bt.ph'), 'aria-label': t('bt.h') });
+  o.value = uiBeta.text;
+  const tinh = () => { uiBeta.text = o.value; uiBeta.res = regressBeta(o.value, uiBeta.step); dat({}); };
+  const file = h('input', { type: 'file', accept: '.csv,.txt,.tsv,text/csv,text/plain', 'aria-label': t('bt.file'), onchange: async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    uiBeta.text = (await f.text()).slice(0, 2_000_000);
+    uiBeta.res = regressBeta(uiBeta.text, uiBeta.step);
+    dat({});
+  } });
+  const r = uiBeta.res;
+  const ngay = (ms) => (ms === null ? '' : new Date(ms).toLocaleDateString('vi-VN', { timeZone: 'UTC' }));
+  return h('details', { class: 'dv-beta', open: uiBeta.open },
+    h('summary', { onclick: (e) => { uiBeta.open = !e.currentTarget.parentElement.open; } }, h('b', {}, t('bt.h')),
+      r ? h('span', { class: 'tag em' }, `β ${r.beta.toFixed(2)}`) : null),
+    h('p', { class: 'priv' }, t('bt.lead')),
+    o,
+    h('div', { class: 'row cp-bar' },
+      h('label', { class: 'dv-f' }, h('span', {}, t('bt.freq')),
+        h('select', { onchange: (e) => { uiBeta.step = +e.target.value; } },
+          [[1, 'bt.f.d'], [5, 'bt.f.w'], [21, 'bt.f.m']].map(([v, k]) => h('option', { value: String(v), selected: uiBeta.step === v }, t(k))))),
+      h('button', { type: 'button', class: 'btn sm', onclick: tinh }, t('bt.run')),
+      h('label', { class: 'btn ghost sm bt-file' }, t('bt.file'), file)),
+    r === null ? h('p', { class: 'msg warn' }, t('bt.none')) : null,
+    r ? h('div', {},
+      h('div', { class: 'dl-cards' },
+        card(t('bt.raw'), r.beta.toFixed(4), 'em', t('bt.raw.hint', { n: r.n, from: ngay(r.from), to: ngay(r.to) })),
+        card(t('bt.adj'), (r.beta * 2 / 3 + 1 / 3).toFixed(4), '', t('bt.adj.hint')),
+        card('R²', r.r2.toFixed(3), r.r2 < 0.1 ? 'gold' : '', t('bt.r2.hint')),
+        card(t('bt.kind'), t(r.kind === 'return' ? 'bt.k.ret' : 'bt.k.price'))),
+      r.r2 < 0.1 ? h('p', { class: 'msg warn' }, t('bt.lowR2')) : null,
+      h('button', { type: 'button', class: 'btn sm', disabled: Math.abs((V.beta || 0) - r.beta) < 1e-9, onclick: () => dat({ beta: Math.round(r.beta * 10000) / 10000 }) },
+        t('bt.use', { b: r.beta.toFixed(4) }))) : null);
 }
 
 function sensTable(r, money) {
