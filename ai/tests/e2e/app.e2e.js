@@ -1238,6 +1238,17 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   assert.match(gw, /180/, 'lợi thế thương mại = 300 − 60% × 200 = 180 tỷ');
   assert.match(await page.locator('.dv-mna').innerText(), /EPS after/i);
 
+  // Lộ trình định giá: 8 bước nối nhau, mỗi bước có công thức và thanh liên kết; bấm bước 4 nhảy tới EV → equity bridge
+  assert.equal(await page.locator('.dv-road .dv-node').count(), 8);
+  assert.equal(await page.locator('.dv-step').count(), 8);
+  assert.match(await page.locator('#dv-step-3').innerText(), /3\.1[\s\S]*3\.2[\s\S]*3\.3[\s\S]*3\.4[\s\S]*3\.5/);
+  assert.ok(await page.locator('#dv-step-4 .dv-chip.in', { hasText: 'Bước 3' }).count() === 1, 'bước 4 lấy đầu vào từ bước 3');
+  await page.locator('.dv-road .dv-node').nth(3).click();
+  await page.waitForFunction(() => { const y = document.getElementById('dv-step-4').getBoundingClientRect().top; return y >= 0 && y < 200; });
+  if (process.env.E2E_SHOTS) await page.locator('.dv-road').screenshot({ path: join(process.env.E2E_SHOTS, 'lo-trinh.png') });
+  if (process.env.E2E_SHOTS) await page.locator('#dv-step-3').screenshot({ path: join(process.env.E2E_SHOTS, 'buoc-3.png') });
+  if (process.env.E2E_SHOTS) await page.locator('#dv-step-4').screenshot({ path: join(process.env.E2E_SHOTS, 'buoc-4.png') });
+
   // Bảng điều khiển: football field + thác nước + doanh thu & FCFF; bảng độ nhạy tô màu theo giá thị trường
   await page.waitForSelector('.dv-dash .dv-kpi');
   assert.ok(await page.locator('.dv-dash svg.dvc').count() >= 3, 'đủ 3 biểu đồ');
@@ -1279,7 +1290,7 @@ test('bảng peer (16.Comps): dán từ Excel ra bội số, trung vị, giá ng
   await page.locator('#restore button.btn.sm').first().click();
   await page.locator('.rail a[data-step="6"]').click();
   await page.locator('#tabb-DEAL').click();
-  await page.waitForSelector('.cp-bar');
+  await page.waitForSelector('.cp-bar button:has-text("Dán từ Excel")');
   await page.locator('.cp-bar button', { hasText: 'Dán từ Excel' }).click();
   await page.locator('textarea[aria-label="Dán từ Excel"]').fill([
     'Tên\tGiá\tTỷ giá\tSố CP',

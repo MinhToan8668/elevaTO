@@ -158,6 +158,11 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     đứng cạnh cột dự phóng (F, đặt nhãn theo năm); 6 tham số (tăng trưởng, biên EBIT, khấu hao, capex, vốn lưu động,
     thuế suất) **sửa được riêng từng năm** — ô trống dùng số chung, ô ghi đè tô vàng, nút bỏ hết ghi đè; dòng công thức
     giải thích từng dòng. Thuế suất suy từ BCTC ngoài 5–35% thì dùng 20% và báo rõ.
+  - **Lộ trình định giá** (`js/ui/dvguide.js`): cả tab trình bày thành 8 bước nối nhau như một model bài bản —
+    ① Quality of Earnings → ② Working capital & FCF lịch sử → ③ DCF (3.1 Model setup · 3.2 Forecast drivers ·
+    3.3 WACC · 3.4 FCFF → EV · 3.5 Sensitivity) → ④ EV → equity bridge → ⑤ Relative valuation (multiples & peers)
+    → ⑥ Target price & recommendation; thêm ⑦ Debt capacity và ⑧ M&A. Đầu tab là sơ đồ các bước (công thức + số
+    kết quả chính, bấm để nhảy tới); mỗi bước có mục đích, công thức và thanh "Đầu vào ← / chuyển sang →".
   - **Bảng điều khiển định giá** (`js/ui/dvcharts.js`, SVG vẽ tay): thẻ số chính (giá mục tiêu gia quyền, upside,
     khuyến nghị, giá DCF kèm tỷ trọng giá trị cuối kỳ, WACC / g, giá trị kỳ vọng theo kịch bản); **football field**
     (DCF lấy dải từ bảng độ nhạy WACC ± 0,5 / g ± 0,5, DCF bội số thoát, bội số thấp / giữa / cao, trung vị peer, EPV,
