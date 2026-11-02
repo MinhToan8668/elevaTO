@@ -37,10 +37,20 @@ function append(el, children) {
   }
 }
 
-/** Thay toàn bộ nội dung một phần tử. */
+/**
+ * Thay toàn bộ nội dung một phần tử.
+ * Gỡ ô đang focus ra khỏi trang làm trình duyệt bắn "blur" — và "change" nếu ô vừa sửa — NGAY GIỮA lúc
+ * replaceChildren; handler đó lại vẽ lại đúng vùng này, replaceChildren lồng nhau và lần ngoài báo lỗi
+ * "node to be removed is no longer a child". Lần vẽ lồng nên được dời ra sau, khi lần đang vẽ xong.
+ */
+const dangVe = new WeakSet();
 export function mount(el, ...children) {
-  el.replaceChildren();
-  append(el, children);
+  if (dangVe.has(el)) { queueMicrotask(() => mount(el, ...children)); return el; }
+  dangVe.add(el);
+  try {
+    el.replaceChildren();
+    append(el, children);
+  } finally { dangVe.delete(el); }
   return el;
 }
 

@@ -6,6 +6,7 @@
 import { h, fmt } from './dom.js';
 import { dealAnalysis, cleanInputs, DEFAULT_INPUTS } from '../core/deal.js';
 import { t, unitLabel } from '../i18n.js';
+import { dcfBlock, targetBlock, piotroskiCard, mnaBlock } from './dealval.js';
 
 const pc = (x) => (Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : '—');
 const lan = (x) => (Number.isFinite(x) ? t('ch.times', { v: x.toFixed(2) }) : '—');
@@ -33,7 +34,10 @@ export function renderDeal(store) {
     quality(a),
     bridge(a, money),
     valuation(a, inp, save, money, ul),
+    dcfBlock(a, inp, save, money, ul),
+    targetBlock(a, inp, save, money),
     capacity(a, inp, save, money),
+    mnaBlock(a, inp, save, money, unit, ul),
     h('p', { class: 'priv' }, t('dl.note')));
 }
 
@@ -124,7 +128,8 @@ function quality(a) {
     card('cashConv', pc(q.cashConv), zConv),
     card('accrual', pc(q.accrual), zAcc),
     card('beneish', bn ? bn.score.toFixed(2) : '—', bn?.zone, bn ? (bn.missing.length ? t('dl.q.missing', { v: bn.missing.join(', ') }) : t('dl.q.beneish.hint')) : t('dl.q.need2y')),
-    card('altman', q.altman ? q.altman.score.toFixed(2) : '—', q.altman?.zone)));
+    card('altman', q.altman ? q.altman.score.toFixed(2) : '—', q.altman?.zone),
+    piotroskiCard(a, ZONE_TONE)));
 }
 
 function bridge(a, money) {

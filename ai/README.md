@@ -134,6 +134,23 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
   **định giá bội số** EV/EBITDA, P/E, P/B ba mức kèm football field và giá mỗi cổ phiếu (khi có số cổ phiếu ở thuyết
   minh); **sức vay nợ** theo nợ ròng / EBITDA mục tiêu và DSCR xấp xỉ. Bội số và điều chỉnh lưu cùng phiên.
   Logic ở `js/core/deal.js`, kiểm ở `tests/deal.test.js`.
+  **Định giá & M&A theo model elevaTO** (học từ model DGW: sheet 15.DCF, 16.Comps, 17.Valuation, 25.Quant_Checks và
+  model hợp nhất Consolidation_Model / Goodwill / NCI), kiểm bằng chính số của model ở `tests/valuation.test.js`:
+  - **DCF – FCFF**: WACC = Wd × Kd(1 − t) + We × Ke, Ke = Rf + β Blume (⅔β + ⅓) × ERP (+ phần bù riêng), tỷ trọng
+    theo giá thị trường khi có giá × số cổ phiếu. FCFF = EBIT × (1 − t) + khấu hao − capex thuần − Δ vốn lưu động,
+    dự phóng 1–10 năm, tăng trưởng giảm dần về g. Tham số để trống = trung bình 3 năm actual gần nhất (tự trượt);
+    lãi vay tự tính không thấp hơn Rf + 1%. Giá trị cuối kỳ Gordon, đối chiếu bội số EV/EBITDA lúc thoát (bội số
+    ngầm định và g ngầm định), cảnh báo TV > 75% EV, g > Rf, g ≥ WACC, WACC thấp bất thường; **bảng độ nhạy 7 × 7**
+    WACC × g (± 1,5 điểm %, bước 0,5) như model.
+  - **Giá mục tiêu gia quyền & khuyến nghị**: DCF 50% · P/E 25% · EV/EBITDA 15% · P/B 10% (sửa được; phương pháp
+    thiếu số thì chia lại), thang MUA / TÍCH LUỸ / NẮM GIỮ / KÉM KHẢ QUAN / BÁN theo ±10% / ±20%.
+  - **Định giá nhanh**: EPV = EPS / Ke, P/B hợp lý = (ROE − g)/(Ke − g), Graham number, g ngầm định trong giá thị
+    trường; thêm **Piotroski F-score** vào khối chất lượng lợi nhuận.
+  - **Thương vụ mua cổ phần** (`js/core/mna.js`): lợi thế thương mại theo phần sở hữu (VAS 11; âm = lãi mua giá rẻ),
+    phân bổ ≤ 10 năm, NCI, hợp nhất theo số tháng năm mua, P/E · P/B · EV/EBITDA đã trả, chi phí nguồn tiền
+    (tiền mặt / vay / phát hành cổ phiếu), **EPS trước / sau** (cả năm và năm mua), **giá mua hoà vốn EPS**, nợ
+    ròng / EBITDA sau thương vụ, giá trị tạo thêm so với định giá riêng mục tiêu. Sở hữu 20–50% / < 20% được
+    báo là công ty liên kết / khoản đầu tư (không hợp nhất).
 - **Đối chiếu ngược thuyết minh** (hiện ở cả tab *Thuyết minh* và tab *Phân tích*): thuyết minh là bảng ma trận
   in nhỏ, hay kéo dài sang trang sau — chỗ AI đọc sai nhiều nhất mà không có gì tự phát hiện. **19 chỗ kiểm
   tra** cộng số thuyết minh rồi so với đúng dòng trên ba bảng chính: nguyên giá / hao mòn / giá trị còn lại

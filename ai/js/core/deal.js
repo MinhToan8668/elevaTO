@@ -15,6 +15,8 @@
 
 import { computeTotals } from './statements.js';
 import { periodLabel } from './table.js';
+import { cleanVal } from './valuation.js';
+import { cleanMna } from './mna.js';
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 const abs = (v) => (v === null ? null : Math.abs(v));
@@ -41,7 +43,9 @@ export function cleanInputs(x) {
   const adjustments = (Array.isArray(o.adjustments) ? o.adjustments : []).slice(0, 20)
     .map((a) => ({ label: String(a?.label || '').slice(0, 120), amount: Number.isFinite(+a?.amount) ? +a.amount : 0 }))
     .filter((a) => a.label || a.amount);
-  return { evEbitda: ba(o.evEbitda, DEFAULT_INPUTS.evEbitda), pe: ba(o.pe, DEFAULT_INPUTS.pe), pb: ba(o.pb, DEFAULT_INPUTS.pb), targetLev: lev, adjustments };
+  // val: thông số DCF / giá mục tiêu (core/valuation.js) · mna: thương vụ mua cổ phần (core/mna.js)
+  return { evEbitda: ba(o.evEbitda, DEFAULT_INPUTS.evEbitda), pe: ba(o.pe, DEFAULT_INPUTS.pe), pb: ba(o.pb, DEFAULT_INPUTS.pb), targetLev: lev, adjustments,
+    val: cleanVal(o.val), mna: cleanMna(o.mna) };
 }
 
 // ─── Kỳ phân tích ──────────────────────────────────────────
@@ -240,7 +244,8 @@ export function dealAnalysis(ds, inputs) {
   const base = cols[baseIdx];
   const B = base.m;
   // Số cổ phiếu: kỳ gốc, không có thì kỳ gần nhất có ghi.
-  const shares = B.shares ?? [...cols].reverse().find((c) => c.m.shares)?.m.shares ?? null;
+  // Người dùng nhập số cổ phiếu ở khối DCF thì dùng số đó (đã gồm đợt phát hành mới nhất).
+  const shares = inp.val.shares ?? B.shares ?? [...cols].reverse().find((c) => c.m.shares)?.m.shares ?? null;
   const manual = inp.adjustments.reduce((a, x) => a + x.amount, 0);
   const ebitdaVal = B.adjEbitda === null ? null : B.adjEbitda + manual;
   // Thu nhập trên năm: kỳ giữa niên độ không có LTM thì quy năm cho P/E.
