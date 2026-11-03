@@ -404,6 +404,8 @@ export const NOTE_GROUPS = {
   segments: /BAO CAO BO PHAN|THONG TIN BO PHAN|THEO (LINH VUC|BO PHAN) KINH DOANH/,
   goodwill: /LOI THE THUONG MAI/,
   params: /CO PHIEU DANG LUU HANH|SO LUONG CO PHIEU/,
+  // Chính sách kế toán TSCĐ: "thời gian khấu hao / hữu dụng ước tính", bảng số năm theo nhóm.
+  lives: /THOI GIAN (KHAU HAO|HUU DUNG|SU DUNG)( (UOC TINH|CUA TAI SAN))?\b|SO NAM KHAU HAO|TY LE KHAU HAO/,
 };
 
 /**
@@ -517,6 +519,35 @@ function equityMove(rows, so) {
   return out;
 }
 
+// ── Thời gian khấu hao theo nhóm (chính sách kế toán) ──────
+const LIFE_CLS = ['buildings', 'machinery', 'transport', 'office', 'other', 'land', 'software'];
+const soNam = (x) => { const v = parseVN(String(x ?? '').replace(/[^\d.,-]/g, '')); return v === null ? null : Math.abs(v); };
+
+/**
+ * Khung số năm sử dụng theo nhóm TSCĐ → { nhóm: { min, max, names: [] } }. Tỷ lệ khấu hao %/năm được đổi ra năm
+ * (100 / tỷ lệ — tỷ lệ cao là số năm ít); nhiều dòng cùng nhóm thì lấy khung bao (min nhỏ nhất, max lớn nhất).
+ */
+export function livesFrom(ai) {
+  const out = {};
+  for (const r of ai?.nhom_tai_san || []) {
+    if (laCotTong(r.ten)) continue;
+    const cls = LIFE_CLS.includes(r.nhom) ? r.nhom : /\bdat\b/.test(normLabel(r.ten)) ? 'land' : /phan mem|vo hinh|ban quyen|thuong hieu/.test(normLabel(r.ten)) ? 'software' : guessTangible(r.ten);
+    let lo = soNam(r.tu_nam), hi = soNam(r.den_nam);
+    if (lo === null && hi === null) {
+      const a = soNam(r.ty_le_tu), b = soNam(r.ty_le_den);
+      const nam = [a, b].filter((x) => x > 0).map((x) => 100 / (x > 1 ? x : x * 100));
+      if (nam.length) { lo = Math.min(...nam); hi = Math.max(...nam); }
+    }
+    if (lo === null && hi === null) continue;
+    lo = lo ?? hi; hi = hi ?? lo;
+    if (lo > hi) [lo, hi] = [hi, lo];
+    if (hi > 100) continue;                                        // chép nhầm số tiền / năm dương lịch
+    const cu = out[cls];
+    out[cls] = cu ? { min: Math.min(cu.min, lo), max: Math.max(cu.max, hi), names: [...cu.names, String(r.ten)] } : { min: lo, max: hi, names: [String(r.ten)] };
+  }
+  return out;
+}
+
 /** Kết quả AI cho một nhóm thuyết minh → dạng model.js cần (đơn vị đồng). */
 export function noteToModel(kind, ai) {
   const unit = unitScale(ai.meta?.don_vi) || 1;
@@ -582,6 +613,7 @@ export function noteToModel(kind, ai) {
   if (kind === 'goodwill') {
     return { cost: opt(ai.nguyen_gia), accAmort: neg(n(ai.phan_bo_luy_ke)), additions: n(ai.tang), amortization: neg(n(ai.phan_bo_trong_ky)) };
   }
+  if (kind === 'lives') return livesFrom(ai);
   if (kind === 'params') {
     const out = {};
     const sh = parseVN(ai.so_co_phieu_luu_hanh);

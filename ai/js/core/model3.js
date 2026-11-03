@@ -156,15 +156,22 @@ export function driverTable(inputFs, fs, N) {
   return out;
 }
 
-/** Số năm sử dụng của từng nhóm TSCĐ: TB nguyên giá / TB khấu hao các năm actual, chặn [min; max] (như cột AD). */
-export function usefulLives(inputFs, fs) {
+/**
+ * Số năm sử dụng của từng nhóm TSCĐ: TB nguyên giá / TB khấu hao các năm actual, chặn [min; max] (như cột AD / AB / AC
+ * của 10.FA_SCHED). Khung lấy từ thuyết minh chính sách kế toán khi đã trích (ranges), không thì khung chung TT45.
+ * @param ranges { nhóm: { min, max } } — notes.lives của năm gần nhất
+ */
+export function usefulLives(inputFs, fs, ranges = {}) {
   const { years, cells } = inputFs;
   const out = {};
   for (const c of FA_CLS) {
     const cost = avg(years.map((y) => num(cells[y][c.row])).filter((x) => x)), dep = avg(years.map((y) => num(cells[y][c.row + 3])).filter((x) => x));
     const est = cost && dep ? Math.abs(cost / dep) : null;
-    const clamp = est === null ? (c.max ? Math.round((c.min + c.max) / 2) : 0) : Math.min(c.max, Math.max(c.min, est));
-    out[c.cls] = { est, applied: fs.life[c.cls] ?? clamp, user: fs.life[c.cls] !== undefined };
+    const k = ranges?.[c.cls];
+    const tm = k && Number.isFinite(k.min) && Number.isFinite(k.max);
+    const lo = tm ? k.min : c.min, hi = tm ? k.max : c.max;
+    const clamp = est === null ? (hi ? Math.round((lo + hi) / 2) : 0) : Math.min(hi, Math.max(lo, est));
+    out[c.cls] = { est, applied: fs.life[c.cls] ?? clamp, user: fs.life[c.cls] !== undefined, min: lo, max: hi, src: tm ? 'tm' : 'md' };
   }
   return out;
 }
@@ -185,7 +192,7 @@ export function model3(a, flows, ctx) {
   if (!A0.assets) return { issue: 'noBs' };
   const N = flows.length;
   const D = driverTable(F, fs, N);
-  const lives = usefulLives(F, fs);
+  const lives = usefulLives(F, fs, a.faLives);
   const g0 = (r) => num(c0[r]) ?? 0;
   const issues = [];
 

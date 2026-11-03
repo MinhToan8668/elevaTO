@@ -3,7 +3,7 @@
 
 import { buildDataset, checkDataset } from '../core/dataset.js';
 
-export const NOTE_KEYS = ['segments', 'fixedAssets', 'equity', 'debt', 'goodwill', 'params'];
+export const NOTE_KEYS = ['segments', 'fixedAssets', 'lives', 'equity', 'debt', 'goodwill', 'params'];
 /** Form chi tiết elevaTO chỉ dành cho học viên và giảng viên. */
 export const canUseModel = (user) => ['hv', 'gv'].includes(user?.vaitro);
 export const ROLE_KEY = { free: 'role.free', hv: 'role.hv', gv: 'role.gv' };

@@ -27,7 +27,10 @@ export function renderDeal(store) {
   const unit = s.unit, ul = unitLabel(unit);
   a.unitDong = unit;
   // 03.Input_FS các năm actual (như model elevaTO) — nguồn của mô hình ba báo cáo tích hợp (core/model3.js).
-  try { a.inputFs = inputFsFrom(buildModel(ds, { segmentMap: s.segmentMap }).byYear); } catch (e) { a.inputFs = null; }                    // đơn vị đang xem — biểu đồ / ô nhập tay doanh thu theo đơn vị này
+  try { a.inputFs = inputFsFrom(buildModel(ds, { segmentMap: s.segmentMap }).byYear); } catch (e) { a.inputFs = null; }
+  // Khung số năm khấu hao theo nhóm từ thuyết minh chính sách kế toán — năm gần nhất có trích.
+  a.faLives = [...(ds.periods || [])].sort((x, y) => y.year - x.year || (y.months || 12) - (x.months || 12))
+    .map((p) => ds.notes?.[p.id]?.lives).find((x) => x && Object.keys(x).length) || null;                    // đơn vị đang xem — biểu đồ / ô nhập tay doanh thu theo đơn vị này
   const money = (v) => (Number.isFinite(v) ? fmt(v, unit) || '0' : '—');
   const save = (patch) => store.set({ dealInputs: cleanInputs({ ...inp, ...patch }) });
   const ltm = a.cols.find((c) => c.ltm);

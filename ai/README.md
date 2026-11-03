@@ -176,7 +176,9 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     vốn, các khoản khác % doanh thu, XDCB dở dang / đầu tư dài hạn khác theo mức bình quân), mặc định = bình quân 3 năm
     actual gần nhất, ghi đè cả giai đoạn hoặc từng năm; *10.FA_SCHED* theo 7 nhóm TSCĐ (capex nhập theo nhóm — trống thì
     capex % doanh thu × tỷ trọng tăng TSCĐ lịch sử; khấu hao = MIN(nguyên giá cuối / số năm sử dụng, giá trị còn lại);
-    số năm sử dụng = TB nguyên giá / TB khấu hao, chặn khung) + lợi thế thương mại phân bổ 10 năm; *11.Debt* vay ngắn
+    số năm sử dụng = TB nguyên giá / TB khấu hao, chặn trong khung [min; max] **trích từ thuyết minh chính sách kế
+    toán** — nhóm thuyết minh mới *Thời gian khấu hao TSCĐ* (`livesFrom` ở `js/core/extract.js`: khung năm theo nhóm,
+    tỷ lệ %/năm đổi ra năm, đất không thời hạn = 0; chưa trích thì khung chung TT45/2013) + lợi thế thương mại phân bổ 10 năm; *11.Debt* vay ngắn
     hạn = % giá vốn, vay dài hạn theo lịch, lãi trên dư nợ đầu kỳ; *12.Equity* cổ tức = tỷ lệ × LNST cty mẹ năm trước,
     NCI theo tỷ lệ, phát hành theo bình quân; *08.CF* gián tiếp từ biến động CĐKT, tiền là số cân, revolver khi thiếu
     tiền. **FCFF = CFO + lãi vay × (1 − t) + capex + Δ đầu tư NH → DCF** (mặc định; chọn được "driver đơn giản").

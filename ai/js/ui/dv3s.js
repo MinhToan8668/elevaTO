@@ -93,12 +93,13 @@ export function threeBlock(a, inp, save, money, ul) {
   // ── Tab Fixed assets (10.FA_SCHED) ──
   const datCapex = (cls, i, v) => { const arr = Array.from({ length: Y.length }, (_, j) => F.capex[cls]?.[j] ?? null); arr[i] = v; dat({ capex: { ...F.capex, [cls]: arr } }); };
   const capexPlan = h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-3t' },
-    h('thead', {}, h('tr', {}, h('th', {}, t('fs.fa.cls')), h('th', { class: 'num' }, t('fs.fa.lifeEst')), h('th', { class: 'num' }, t('fs.fa.life')),
+    h('thead', {}, h('tr', {}, h('th', {}, t('fs.fa.cls')), h('th', { class: 'num' }, t('fs.fa.lifeEst')), h('th', { class: 'num' }, t('fs.fa.range')), h('th', { class: 'num' }, t('fs.fa.life')),
       h('th', { class: 'num' }, t('fs.fa.mix')), Y.map((y) => h('th', { class: 'num' }, `${t('fs.fa.capex')} ${nhanF(y)}`)))),
     h('tbody', {},
       FA_CLS.map((c, j) => h('tr', {},
         h('td', {}, t(`fs.fa.${c.cls}`)),
         h('td', { class: 'num dv-a' }, Number.isFinite(M.lives[c.cls].est) ? M.lives[c.cls].est.toFixed(1) : '—'),
+        h('td', { class: 'num' }, `${M.lives[c.cls].min}–${M.lives[c.cls].max} `, h('span', { class: `tag ${M.lives[c.cls].src === 'tm' ? 'em' : ''}`, title: t(`fs.fa.src.${M.lives[c.cls].src}.h`) }, t(`fs.fa.src.${M.lives[c.cls].src}`))),
         h('td', { class: 'num' }, h('input', { type: 'number', step: '1', min: '0', class: `dv-yr${M.lives[c.cls].user ? ' on' : ''}`, 'aria-label': `${t(`fs.fa.${c.cls}`)} ${t('fs.fa.life')}`,
           value: M.lives[c.cls].user ? String(M.lives[c.cls].applied) : '', placeholder: String(+M.lives[c.cls].applied.toFixed(1)),
           onchange: (e) => dat({ life: { ...F.life, [c.cls]: e.target.value === '' ? undefined : +e.target.value } }) })),
@@ -106,7 +107,7 @@ export function threeBlock(a, inp, save, money, ul) {
         Y.map((y, i) => h('td', { class: 'num' }, h('input', { type: 'number', step: 'any', class: `dv-yr${Number.isFinite(F.capex[c.cls]?.[i]) ? ' on' : ''}`, 'aria-label': `${t(`fs.fa.${c.cls}`)} capex ${nhanF(y)}`,
           value: Number.isFinite(F.capex[c.cls]?.[i]) ? String(+(F.capex[c.cls][i] / u).toFixed(2)) : '', placeholder: (y.fa[j].add / u).toFixed(1),
           onchange: (e) => datCapex(c.cls, i, e.target.value === '' ? null : +e.target.value * u) }))))),
-      h('tr', { class: 'dl-tot' }, h('td', { colspan: '4' }, t('fs.fa.total')), Y.map((y) => h('td', { class: 'num' }, money(-y.cf.capex)))))));
+      h('tr', { class: 'dl-tot' }, h('td', { colspan: '5' }, t('fs.fa.total')), Y.map((y) => h('td', { class: 'num' }, money(-y.cf.capex)))))));
   const lanFA = (j) => [
     [t(`fs.fa.${FA_CLS[j].cls}`), 'grp'],
     [t('fs.fa.cost'), tienA((y) => cellsA(y)[FA_CLS[j].row]), tienF((y) => y.fa[j].cost)],
