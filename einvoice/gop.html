@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gộp PDF hoá đơn</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--text:#1e293b;--muted:#64748b;--line:#dce3ec;--pri:#0b5fb3;--pri-l:#e6f0fb;--ok:#15803d;--ok-l:#e8f6ed;--warn:#c2410c;--warn-l:#fff4e8;--err:#b91c1c;--err-l:#fdecec}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f172a;--card:#16213a;--text:#e2e8f0;--muted:#94a3b8;--line:#2b3a55;--pri:#5aa2f0;--pri-l:#1c2f4d;--ok:#4ade80;--ok-l:#163326;--warn:#fb923c;--warn-l:#3a2614;--err:#f87171;--err-l:#3a1a1a}}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:34px 16px;text-align:center;cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--pri);background:var(--pri-l)}
+.drop b{display:block;font-size:15px;margin-bottom:4px}
+.drop span{color:var(--muted);font-size:12.5px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+label{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input[type=number],input[type=text],select{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:7px;padding:7px 9px;font:inherit;width:150px}
+input[type=text]{width:200px}
+select{width:auto}
+.btn{border:1px solid var(--pri);background:var(--card);color:var(--pri);border-radius:7px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.pri{background:var(--pri);color:#fff}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.stats{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0 0;color:var(--muted)}
+.stats strong{color:var(--text)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:12px;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--pri);transition:width .15s}
+.msg{margin-top:10px;font-size:13px}
+.parts{display:flex;flex-direction:column;gap:8px}
+.part{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.part .n{flex:1;min-width:0}
+.part .n b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.part .n span{color:var(--muted);font-size:12.5px}
+.note{background:var(--warn-l);border-left:3px solid var(--warn);padding:8px 12px;border-radius:6px;font-size:13px;margin-top:10px}
+.note.ok{background:var(--ok-l);border-color:var(--ok)}
+.note.err{background:var(--err-l);border-color:var(--err)}
+details{margin-top:8px;font-size:12.5px;color:var(--muted)}
+details li{word-break:break-all}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Gộp PDF hoá đơn</h1>
+  <p class="sub">Chọn một lần vài trăm file PDF (hoặc file .zip khách gửi). Tool tự chia thành các bản gộp vừa giới hạn upload rồi gộp. <b>Mọi thứ chạy trên máy bạn</b>, không có file nào bị gửi lên mạng.</p>
+
+  <div class="card">
+    <div class="drop" id="drop">
+      <b>Kéo thả file PDF / ZIP / cả thư mục vào đây, hoặc nhấn để chọn</b>
+      <span>Không giới hạn số file. File trùng nội dung sẽ tự bỏ.</span>
+    </div>
+    <input type="file" id="fin" multiple accept=".pdf,.zip" hidden>
+    <input type="file" id="fdir" webkitdirectory hidden>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm" id="btnDir">Chọn cả thư mục</button>
+      <button class="btn sm" id="btnClear" disabled>Xoá danh sách</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="bar" id="bar"><i></i></div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label>Tối đa file mỗi bản gộp<input type="number" id="maxFiles" min="1" value="100"></label>
+      <label>Tối đa dung lượng mỗi bản (MB)<input type="number" id="maxMB" min="1" step="1" value="20"></label>
+      <label>Thứ tự<select id="order"><option value="name">Theo tên file (1, 2, … 10)</option><option value="pick">Theo thứ tự đã chọn</option></select></label>
+      <label>Tên file đầu ra<input type="text" id="prefix" placeholder="vd: KH_ABC_T10"></label>
+      <button class="btn pri" id="btnGo" disabled>Gộp</button>
+    </div>
+    <div class="note">Bản gộp quá nặng là lý do hay bị lỗi khi upload. Nếu vẫn lỗi, giảm <b>dung lượng mỗi bản</b> (vd 10 MB). Tool sẽ chia ra nhiều bản hơn.</div>
+  </div>
+
+  <div class="card hide" id="outCard">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <b id="outTitle"></b>
+      <button class="btn sm pri" id="btnZip">Tải tất cả (.zip)</button>
+    </div>
+    <div class="parts" id="parts"></div>
+    <div id="bad"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let items = [];          // {name, file, size, hash}
+let seen = new Set();    // hash nội dung để bỏ file trùng
+let dupes = 0;
+let outputs = [];        // {name, blob, url}
+
+const fmtMB = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + ' MB';
+const natCmp = new Intl.Collator('vi', { numeric: true, sensitivity: 'base' }).compare;
+const tick = () => new Promise(r => setTimeout(r, 0));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function setBar(p) { $('bar').style.display = p == null ? 'none' : 'block'; $('bar').firstElementChild.style.width = (p || 0) + '%'; }
+function msg(html) { $('msg').innerHTML = html || ''; }
+
+function refresh() {
+  const total = items.reduce((s, x) => s + x.size, 0);
+  $('stats').innerHTML = items.length
+    ? `<span>Đã chọn <strong>${items.length}</strong> file PDF</span><span>Tổng <strong>${fmtMB(total)}</strong></span>` +
+      (dupes ? `<span>Bỏ trùng <strong>${dupes}</strong></span>` : '') +
+      `<span>Dự kiến <strong>${plan().length}</strong> bản gộp</span>`
+    : '';
+  $('btnGo').disabled = !items.length;
+  $('btnClear').disabled = !items.length;
+}
+
+async function hashOf(buf) {
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h.slice(0, 12)), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function addOne(name, blob) {
+  const buf = await blob.arrayBuffer();
+  const hash = await hashOf(buf);
+  if (seen.has(hash)) { dupes++; return; }
+  seen.add(hash);
+  items.push({ name, file: blob, size: blob.size, hash });
+}
+
+async function addFiles(list) {
+  const files = Array.from(list);
+  if (!files.length) return;
+  setBar(0); msg('Đang đọc danh sách file…');
+  let i = 0;
+  for (const f of files) {
+    i++;
+    const lower = f.name.toLowerCase();
+    try {
+      if (lower.endsWith('.zip')) {
+        const zip = await JSZip.loadAsync(f);
+        const entries = Object.values(zip.files).filter(e => !e.dir && /\.pdf$/i.test(e.name) && !/(^|\/)__MACOSX\//.test(e.name));
+        for (const e of entries) await addOne(e.name.split('/').pop(), await e.async('blob'));
+      } else if (lower.endsWith('.pdf')) {
+        await addOne(f.webkitRelativePath || f.name, f);
+      }
+    } catch (e) { console.error(f.name, e); }
+    if (i % 20 === 0) { setBar(i / files.length * 100); await tick(); }
+  }
+  setBar(null); msg('');
+  refresh();
+}
+
+// Chia nhóm: đủ maxFiles file hoặc sắp vượt maxMB thì sang bản mới
+function sorted() {
+  return $('order').value === 'name' ? items.slice().sort((a, b) => natCmp(a.name, b.name)) : items.slice();
+}
+function plan() {
+  const maxFiles = Math.max(1, parseInt($('maxFiles').value) || 100);
+  const maxBytes = Math.max(1, parseFloat($('maxMB').value) || 20) * 1048576;
+  const groups = [];
+  let cur = [], size = 0;
+  for (const it of sorted()) {
+    if (cur.length && (cur.length >= maxFiles || size + it.size > maxBytes)) { groups.push(cur); cur = []; size = 0; }
+    cur.push(it); size += it.size;
+  }
+  if (cur.length) groups.push(cur);
+  return groups;
+}
+
+function clearOutputs() {
+  outputs.forEach(o => URL.revokeObjectURL(o.url));
+  outputs = [];
+  $('parts').innerHTML = ''; $('bad').innerHTML = '';
+  $('outCard').classList.add('hide');
+}
+
+async function merge() {
+  const groups = plan();
+  clearOutputs();
+  $('btnGo').disabled = true;
+  const prefix = ($('prefix').value.trim() || 'HoaDon_gop').replace(/[\\/:*?"<>|]+/g, '_');
+  const pad = String(groups.length).length < 2 ? 2 : String(groups.length).length;
+  const bad = [];
+  const total = items.length;
+  let done = 0, startNo = 1;
+  const t0 = Date.now();
+  setBar(0);
+  for (let g = 0; g < groups.length; g++) {
+    const out = await PDFLib.PDFDocument.create();
+    let pages = 0, okCount = 0;
+    for (const it of groups[g]) {
+      try {
+        const src = await PDFLib.PDFDocument.load(await it.file.arrayBuffer(), { ignoreEncryption: true });
+        const copied = await out.copyPages(src, src.getPageIndices());
+        copied.forEach(p => out.addPage(p));
+        pages += copied.length; okCount++;
+      } catch (e) {
+        bad.push(it.name + ' — ' + (e.message || e));
+      }
+      done++;
+      if (done % 5 === 0) { setBar(done / total * 100); msg(`Đang gộp bản ${g + 1}/${groups.length} — ${done}/${total} file…`); await tick(); }
+    }
+    const endNo = startNo + groups[g].length - 1;
+    if (okCount) {
+      const bytes = await out.save();
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const name = `${prefix}_${String(g + 1).padStart(pad, '0')}_(file ${startNo}-${endNo}).pdf`;
+      const o = { name, blob, url: URL.createObjectURL(blob) };
+      outputs.push(o);
+      const div = document.createElement('div');
+      div.className = 'part';
+      div.innerHTML = `<div class="n"><b>${esc(name)}</b><span>${okCount} file · ${pages} trang · ${fmtMB(blob.size)}</span></div>` +
+        `<a class="btn sm" href="${o.url}" download="${esc(name)}">Tải</a>`;
+      $('parts').appendChild(div);
+      $('outCard').classList.remove('hide');
+    }
+    startNo = endNo + 1;
+  }
+  setBar(null);
+  const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  $('outTitle').textContent = `${outputs.length} bản gộp từ ${total - bad.length} file — ${secs}s`;
+  msg(`<div class="note ok">Xong. Upload lần lượt từng bản gộp lên hệ thống (mỗi bản là 1 file).</div>`);
+  if (bad.length) {
+    $('bad').innerHTML = `<div class="note err">${bad.length} file không đọc được (hỏng hoặc không phải PDF), đã bỏ ra. Nhờ khách gửi lại các file này.</div>` +
+      `<details open><summary>Danh sách</summary><ul>${bad.map(b => '<li>' + esc(b) + '</li>').join('')}</ul></details>`;
+  }
+  $('btnGo').disabled = false;
+}
+
+async function zipAll() {
+  if (!outputs.length) return;
+  $('btnZip').disabled = true; msg('Đang nén…');
+  const zip = new JSZip();
+  outputs.forEach(o => zip.file(o.name, o.blob));
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (($('prefix').value.trim() || 'HoaDon_gop').replace(/[\\/:*?"<>|]+/g, '_')) + '.zip';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  $('btnZip').disabled = false; msg('');
+}
+
+// Kéo thả: đọc cả thư mục con
+async function walkEntry(entry, out) {
+  if (entry.isFile) { out.push(await new Promise((res, rej) => entry.file(res, rej))); return; }
+  if (entry.isDirectory) {
+    const reader = entry.createReader();
+    let batch;
+    do {
+      batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+      for (const e of batch) await walkEntry(e, out);
+    } while (batch.length);
+  }
+}
+
+const drop = $('drop');
+drop.onclick = () => $('fin').click();
+$('btnDir').onclick = () => $('fdir').click();
+$('fin').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+$('fdir').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = async e => {
+  e.preventDefault(); drop.classList.remove('over');
+  const entries = Array.from(e.dataTransfer.items || []).map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (entries.length) { const files = []; for (const en of entries) await walkEntry(en, files); addFiles(files); }
+  else addFiles(e.dataTransfer.files);
+};
+$('btnClear').onclick = () => { items = []; seen = new Set(); dupes = 0; clearOutputs(); msg(''); refresh(); };
+$('btnGo').onclick = merge;
+$('btnZip').onclick = zipAll;
+['maxFiles', 'maxMB', 'order'].forEach(id => $(id).addEventListener('input', refresh));
+</script>
+</body>
+</html>
