@@ -8,6 +8,9 @@
 import { h } from './dom.js';
 import { t } from '../i18n.js';
 import { sotpValuation, SOTP_KINDS, SOTP_BASIS } from '../core/sotp.js';
+import { gmMang } from '../core/valuation.js';
+
+const uiSeg = { detail: false };
 
 const pc = (x, d = 1) => (Number.isFinite(x) ? `${(x * 100).toFixed(d)}%` : '—');
 const dong = (x) => (Number.isFinite(x) ? Math.round(x).toLocaleString('vi-VN') : '—');
@@ -35,11 +38,13 @@ export function segBuild(a, r, V, dat, money, ul) {
   const them = h('button', { type: 'button', class: 'btn ghost sm', onclick: () => dat({ segs: [...ds, { name: t('dv.seg.new', { n: ds.length + 1 }), rev0: 0, g: null, gy: [] }] }) }, t('dv.seg.add'));
   const layTm = a.segments?.length ? h('button', { type: 'button', class: 'btn ghost sm', onclick: () => dat({ segs: a.segments.map((x) => ({ name: x.name, rev0: null, g: null, gy: [] })) }) },
     t('dv.seg.fromNote', { p: a.segments[0].label })) : null;
-  const dau = h('div', { class: 'row cp-bar' }, them, layTm);
+  const chiTiet = h('button', { type: 'button', class: `btn ghost sm${uiSeg.detail ? ' on' : ''}`, 'aria-pressed': String(uiSeg.detail),
+    onclick: () => { uiSeg.detail = !uiSeg.detail; dat({}); } }, t(uiSeg.detail ? 'dv.seg.detail.off' : 'dv.seg.detail'));
+  const dau = h('div', { class: 'row cp-bar' }, them, layTm, ds.length ? chiTiet : null);
   if (!ds.length) return h('div', { class: 'dv-segs' }, h('p', { class: 'msg warn' }, t('dv.seg.none')), dau);
 
   const S = r.segs;
-  const coGm = r.mods?.gm;
+  const coGm = r.mods?.gm || r.fcffSrc === 'model';             // mô hình tích hợp: lợi nhuận gộp theo biên từng mảng
   const gmTm = (x) => (a.segments || []).find((y) => y.name === x.name)?.gm ?? null;
   const tong = S ? S.sum : ds.reduce((s, x) => s + (x.rev0 ?? theoTm(x) ?? 0), 0);
   const cot = 4 + F.length + (coGm ? 1 : 0);
@@ -47,6 +52,26 @@ export function segBuild(a, r, V, dat, money, ul) {
     { step: '1', aria: `${x.name} GM`, placeholder: gmTm(x) !== null ? (gmTm(x) * 100).toFixed(1) : Number.isFinite(r.d?.gm) ? (r.d.gm * 100).toFixed(1) : '' })) : null);
   const trong = () => (coGm ? h('td', {}) : null);
   const gyAt = (i, j, v) => { const gy = Array.from({ length: Math.max(ds[i].gy.length, F.length) }, (_, k) => ds[i].gy[k] ?? null); gy[j] = v; ghi(i, { gy }); };
+  // Chi tiết như 04.Drivers A–B: biên gộp từng năm (Base), tăng trưởng & biên gộp từng năm cho Bull / Bear, ghi chú căn cứ.
+  const dM = r.scenKey && r.scenKey !== 'base' ? V.scen[r.scenKey]?.margin ?? 0 : 0;
+  const datMang = (i, f, j, v) => {
+    const x = ds[i];
+    const sua = (arr) => { const a2 = Array.from({ length: Math.max(arr?.length || 0, F.length) }, (_, k) => arr?.[k] ?? null); a2[j] = v; return a2; };
+    if (f === 'gmy') ghi(i, { gmy: sua(x.gmy) });
+    else { const [k, g] = f.split('.'); ghi(i, { sc: { ...x.sc, [k]: { ...(x.sc?.[k] || {}), [g]: sua(x.sc?.[k]?.[g]) } } }); }
+  };
+  const giaTri = (x, f, j) => (f === 'gmy' ? x.gmy?.[j] : x.sc?.[f.split('.')[0]]?.[f.split('.')[1]]?.[j]);
+  const dongCT = (x, i, f, nhan) => h('tr', { class: 'dv-segd' }, h('td', {}, `↳ ${nhan}`), h('td', {}), h('td', {}), h('td', {}), trong(),
+    F.map((ff, j) => { const v = giaTri(x, f, j); return h('td', { class: 'num' }, oIn(Number.isFinite(v) ? +(v * 100).toFixed(3) : null, (z) => datMang(i, f, j, z === null ? null : z / 100),
+      { step: '0.5', cls: `dv-yr${Number.isFinite(v) ? ' on' : ''}`, aria: `${x.name} ${nhan} ${nhanF(ff)}` })); }));
+  const chiTietMang = (x, i) => [
+    coGm ? dongCT(x, i, 'gmy', t('dv.seg.gmy')) : null,
+    dongCT(x, i, 'bull.gy', t('dv.seg.bullG')), coGm ? dongCT(x, i, 'bull.gmy', t('dv.seg.bullGm')) : null,
+    dongCT(x, i, 'bear.gy', t('dv.seg.bearG')), coGm ? dongCT(x, i, 'bear.gmy', t('dv.seg.bearGm')) : null,
+    h('tr', { class: 'dv-segd' }, h('td', {}, `↳ ${t('dv.seg.note')}`), h('td', { colspan: String(3 + (coGm ? 1 : 0) + F.length) },
+      h('input', { type: 'text', class: 'dv-name dv-note', value: x.note || '', maxlength: 300, 'aria-label': `${x.name} ${t('dv.seg.note')}`, placeholder: t('dv.seg.note.ph'),
+        onchange: (e) => ghi(i, { note: e.target.value }) }))),
+  ];
   const hang = ds.map((x, i) => {
     const goc = x.rev0 ?? theoTm(x) ?? 0;
     return [
@@ -64,7 +89,8 @@ export function segBuild(a, r, V, dat, money, ul) {
       h('tr', { class: 'dl-sub' }, h('td', {}, `↳ ${t('dv.seg.rev')}`), h('td', { class: 'num' }, money(goc)), h('td', {}), h('td', {}), trong(),
         F.map((f) => h('td', { class: 'num' }, Number.isFinite(f.segs?.[i]) ? money(f.segs[i]) : '—'))),
       coGm && S ? h('tr', { class: 'dl-sub' }, h('td', {}, `↳ ${t('dv.seg.gp')}`), h('td', {}), h('td', {}), h('td', {}), trong(),
-        F.map((f) => h('td', { class: 'num' }, Number.isFinite(f.segs?.[i]) ? money(f.segs[i] * (Number.isFinite(S.list[i].gm) ? S.list[i].gm : r.d.gm)) : '—'))) : null,
+        F.map((f) => h('td', { class: 'num' }, Number.isFinite(f.segs?.[i]) ? money(f.segs[i] * gmMang(S.list[i], f.t, r.d.gm ?? 0, dM, r.scenKey)) : '—'))) : null,
+      ...(uiSeg.detail ? chiTietMang(x, i) : []),
     ];
   });
   const lech = S ? r.rev0 - S.sum : null;

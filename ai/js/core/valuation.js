@@ -10,7 +10,7 @@
 // Giả định mặc định giống model: trung bình 3 năm actual GẦN NHẤT (tự trượt khi thêm năm), người dùng
 // ghi đè ô nào thì ô đó dùng số của người dùng. MÁY tính, AI không tham gia.
 
-import { cleanFs, DEFAULT_FS, model3, actualRow } from './model3.js';
+import { cleanFs, DEFAULT_FS, model3, actualRow, waccFrom3 } from './model3.js';
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 const abs = (v) => (v === null ? null : Math.abs(v));
@@ -39,7 +39,11 @@ export const DEFAULT_VAL = {
   capex: null,            // capex thuần / doanh thu
   nwc: null,              // vốn lưu động thương mại / doanh thu
   exit: null,             // bội số EV/EBITDA lúc thoát để đối chiếu — mặc định = mức giữa tab bội số
-  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0, sotp: 0, lbo: 0 },
+  // Trọng số giá mục tiêu như 17.Valuation của model: DCF 50 · P/E 25 · EV/EBITDA 10 · EV/Doanh thu 10 · P/B 5.
+  weights: { dcf: 50, pe: 25, evEbitda: 10, pb: 5, evRev: 10, sotp: 0, lbo: 0 },
+  // Cầu nối EV → giá trị vốn chủ: 'model' như 15.DCF (EV + tiền − nợ vay − NCI) · 'full' (thêm đầu tư NH, khoản tương
+  // đương nợ, tài sản ngoài hoạt động).
+  bridge: 'model',
   revMode: 'growth',      // cách dự phóng doanh thu: growth · volprice (sản lượng × giá) · stores (cửa hàng × DT/cửa hàng) · manual
   rev: { vol: 0.03, price: 0.02, stores0: null, storesAdd: 0, perStore: 0.03, manual: [] },
   tvMethod: 'gordon',     // giá trị cuối kỳ: gordon · exit (bội số EV/EBITDA lúc thoát) · blend (bình quân hai cách)
@@ -105,7 +109,7 @@ export function cleanVal(x) {
   const sc = o.scen && typeof o.scen === 'object' ? o.scen : {};
   const kb = (x, d) => ({ growth: tl(x?.growth, d.growth), margin: tl(x?.margin, d.margin), wacc: tl(x?.wacc, d.wacc),
     p: Number.isFinite(+x?.p) && +x.p >= 0 && +x.p <= 100 ? +x.p : d.p });
-  out.scen = { on: sc.on === true, baseP: Number.isFinite(+sc.baseP) && +sc.baseP >= 0 && +sc.baseP <= 100 ? +sc.baseP : 50,
+  out.scen = { on: sc.on === true, pick: ['bull', 'bear'].includes(sc.pick) ? sc.pick : 'base', baseP: Number.isFinite(+sc.baseP) && +sc.baseP >= 0 && +sc.baseP <= 100 ? +sc.baseP : 50,
     bull: kb(sc.bull, DEFAULT_VAL.scen.bull), bear: kb(sc.bear, DEFAULT_VAL.scen.bear) };
   const tlN = (x) => (x !== null && x !== '' && Number.isFinite(+x) && +x > -1 && +x < 5 ? +x : null);
   const tl1 = (x) => (x !== null && x !== undefined && x !== '' && Number.isFinite(+x) && +x > -1 && +x < 1 ? +x : null);
@@ -117,6 +121,13 @@ export function cleanVal(x) {
     g: tlN(x?.g),
     gy: (Array.isArray(x?.gy) ? x.gy : []).slice(0, 10).map(tlN),
     gm: tl1(x?.gm),
+    gmy: (Array.isArray(x?.gmy) ? x.gmy : []).slice(0, 10).map(tl1),          // biên gộp từng năm (Base)
+    // Kịch bản theo mảng như 04.Drivers mục A–B: Bull / Bear nhập tăng trưởng & biên gộp từng năm; trống = Base + chênh chung.
+    sc: Object.fromEntries(['bull', 'bear'].map((k) => [k, {
+      gy: (Array.isArray(x?.sc?.[k]?.gy) ? x.sc[k].gy : []).slice(0, 10).map(tlN),
+      gmy: (Array.isArray(x?.sc?.[k]?.gmy) ? x.sc[k].gmy : []).slice(0, 10).map(tl1),
+    }])),
+    note: String(x?.note || '').slice(0, 300),                                   // căn cứ giả định
   }));
   const md = o.mods && typeof o.mods === 'object' ? o.mods : {};
   out.mods = { gm: md.gm === true, wcDays: md.wcDays === true, fa: md.fa === true };
@@ -146,6 +157,7 @@ export function cleanVal(x) {
     w: Number.isFinite(+x?.w) && +x.w >= 0 && +x.w <= 100 ? +x.w : 0,
   }));
   out.fs = cleanFs(o.fs);
+  out.bridge = o.bridge === 'full' ? 'full' : 'model';
   const w = o.weights && typeof o.weights === 'object' ? o.weights : {};
   for (const k of Object.keys(DEFAULT_VAL.weights)) if (Number.isFinite(+w[k]) && +w[k] >= 0 && +w[k] <= 100) out.weights[k] = +w[k];
   return out;
@@ -262,7 +274,11 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
       rev = cuaHang * dtCh;
       extra = { stores: cuaHang, perStore: dtCh };
     } else if (revMode === 'segments' && dtMang) {
-      segs.list.forEach((x, i) => { dtMang[i] *= 1 + (Number.isFinite(x.gy[t - 1]) ? x.gy[t - 1] : Number.isFinite(x.g) ? x.g : gChung) + dG; });
+      segs.list.forEach((x, i) => {
+        const k = adj.key && x.sc?.[adj.key];
+        const gK = k && Number.isFinite(k.gy?.[t - 1]) ? k.gy[t - 1] : null;      // kịch bản nhập riêng cho mảng: không cộng chênh chung
+        dtMang[i] *= 1 + (gK ?? (Number.isFinite(x.gy[t - 1]) ? x.gy[t - 1] : Number.isFinite(x.g) ? x.g : gChung) + dG);
+      });
       rev = dtMang.reduce((a, b) => a + b, 0) * segs.k;
       extra = { segs: dtMang.slice() };
     } else if (revMode === 'projects' && proj) {
@@ -278,7 +294,7 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
     // Lợi nhuận gộp: theo từng mảng / dự án khi có biên riêng, phần còn lại theo biên gộp chung.
     const gmT = lay('gm', t, P.gm ?? 0) + dM;
     let gp = rev * gmT;
-    if (extra.segs) gp = extra.segs.reduce((s2, v, i) => s2 + v * (Number.isFinite(segs.list[i].gm) ? segs.list[i].gm + dM : gmT), 0) * segs.k;
+    if (extra.segs) gp = extra.segs.reduce((s2, v, i) => s2 + v * gmMang(segs.list[i], t, gmT, dM, adj.key), 0) * segs.k;
     if (extra.proj) gp = extra.proj.reduce((s2, v, i) => s2 + v * (Number.isFinite(proj.items[i].gm) ? proj.items[i].gm + dM : gmT), 0) + extra.core * gmT;
     const sgaT = lay('sga', t, P.sga ?? 0);
     // EBIT trước lịch khấu hao: gm bật → lợi nhuận gộp − SG&A; không thì doanh thu × EBIT margin.
@@ -323,6 +339,14 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
   return out;
 }
 
+/** Biên gộp một mảng năm t: kịch bản nhập riêng → biên từng năm → biên chung của mảng → biên chung công ty (+ chênh kịch bản). */
+export function gmMang(x, t, gmT, dM, key) {
+  const k = key && x.sc?.[key];
+  if (k && Number.isFinite(k.gmy?.[t - 1])) return k.gmy[t - 1];
+  if (Number.isFinite(x.gmy?.[t - 1])) return x.gmy[t - 1] + dM;
+  return Number.isFinite(x.gm) ? x.gm + dM : gmT;
+}
+
 /** EV theo Gordon với dòng FCFF đã có (giữ nguyên dòng tiền, chỉ đổi WACC / g — như bảng độ nhạy của model). */
 export function evAt(flows, w, g, { method = 'gordon', exit = null } = {}) {
   const n = flows.length;
@@ -343,9 +367,12 @@ export const recommend = (up) => (up === null ? null : up > 0.2 ? 'buy' : up > 0
  * @param a  kết quả dealAnalysis (dùng chung cột kỳ, cầu nối nợ ròng, bội số)
  * @param inputs thông số (xem DEFAULT_VAL)
  */
-export function dcfValuation(a, inputs, adj = {}) {
+export function dcfValuation(a, inputs, adj0 = {}) {
   const inp = cleanVal(inputs);
   if (!a) return null;
+  // Công tắc kịch bản như 02.Control: định giá chính chạy theo kịch bản đang chọn (Base / Bull / Bear).
+  const adj = adj0.key ? (adj0.key === 'base' ? {} : adj0)
+    : inp.scen.pick !== 'base' && !adj0.growth && !adj0.margin && !adj0.wacc ? { ...inp.scen[inp.scen.pick], key: inp.scen.pick } : adj0;
   const B = a.base.m, v = a.valuation;
   const years = a.cols.filter((c) => c.months === 12 && !c.ltm);
   const his = historyDrivers(years);
@@ -366,10 +393,15 @@ export function dcfValuation(a, inputs, adj = {}) {
   const used = Object.fromEntries(Object.keys(d).map((k) => [k, inp[k] !== null && inp[k] !== undefined ? 'user' : his[k] !== null && his[k] !== undefined ? 'hist' : 'default']));
   const shares = v.shares;
   const equityMkt = inp.price && shares ? inp.price * shares : null;
-  const W = wacc({ rf: inp.rf, erp: inp.erp, beta: inp.beta, blume: inp.blume, extra: inp.extra, kd: d.kd, tax: d.tax,
+  // Mô hình tích hợp: Kd = lãi suất bình quân năm dự phóng đầu (11.Debt), thuế = thuế suất hiệu dụng năm actual cuối (như 15.DCF).
+  const tichHop = inp.fs.src === 'model' && a.inputFs?.years?.length > 0;
+  const w3 = tichHop ? waccFrom3(a.inputFs, inp.fs, d.kd) : null;
+  const kdW = inp.kd ?? (w3 && Number.isFinite(w3.kd) && w3.kd > 0 ? w3.kd : d.kd);
+  const taxW = inp.tax ?? (w3 && Number.isFinite(w3.tax) && w3.tax >= 0 && w3.tax < 0.5 ? w3.tax : d.tax);
+  const W = wacc({ rf: inp.rf, erp: inp.erp, beta: inp.beta, blume: inp.blume, extra: inp.extra, kd: kdW, tax: taxW,
     debt: B.debt || 0, equityMkt, equityBook: B.equityParent });
   if (adj.wacc) W.wacc += adj.wacc;
-  const out = { inputs: inp, his, d, used, W, rev0, shares, marketCap: equityMkt, issues: thueLa ? ['taxOdd'] : [], hist: lichSu(years) };
+  const out = { inputs: inp, his, d, used, W, rev0, shares, marketCap: equityMkt, issues: thueLa ? ['taxOdd'] : [], hist: lichSu(years), scenKey: adj.key || 'base' };
   if (thueLa) used.tax = 'default';
   if (!rev0 || rev0 <= 0 || d.margin === null) { out.issues.push('noBase'); return out; }
   if (!(W.wacc > inp.g)) { out.issues.push('gOverWacc'); return out; }
@@ -388,7 +420,6 @@ export function dcfValuation(a, inputs, adj = {}) {
   const mods = { ...inp.mods };
   // FCFF từ mô hình ba báo cáo tích hợp (như 08.CF → 15.DCF): vốn lưu động & TSCĐ do bảng driver / lịch TSCĐ của mô hình
   // đảm nhận, nên hai module đơn giản tương ứng không dùng.
-  const tichHop = inp.fs.src === 'model' && a.inputFs?.years?.length > 0;
   if (tichHop) { mods.wcDays = false; mods.fa = false; }
   const P = {
     gm: inp.gmb.gm ?? his.gm, sga: inp.gmb.sga ?? his.sga,
@@ -417,6 +448,8 @@ export function dcfValuation(a, inputs, adj = {}) {
       // Capex, khấu hao, Δ vốn lưu động (ngầm) và FCFF lấy từ mô hình — cùng một bộ số với ba báo cáo.
       flows.forEach((f, i) => {
         const y = m3.years[i];
+        // KQKD như 06.IS (EBIT = LNTT + lãi vay), thuế suất hiệu dụng; capex, khấu hao, FCFF như 08.CF.
+        f.ebit = y.is.ebit; f.tax = y.is.taxRate; f.nopat = f.ebit * (1 - f.tax); f.margin = f.rev ? f.ebit / f.rev : null;
         f.capex = -y.cf.capex; f.da = y.cf.da; f.fcff = y.cf.fcff;
         f.ebitda = f.ebit + f.da; f.dNwc = f.nopat + f.da - f.capex - f.fcff;
         f.capexPct = f.rev ? f.capex / f.rev : null; f.daPct = f.rev ? f.da / f.rev : null; f.src3 = true;
@@ -428,7 +461,9 @@ export function dcfValuation(a, inputs, adj = {}) {
   if (inp.revMode === 'stores' && !inp.rev.stores0) out.issues.push('noStores');
   const exitM = inp.exit ?? a.inputs.evEbitda[1];
   const r = evAt(flows, W.wacc, inp.g, { method: inp.tvMethod, exit: exitM });
-  const toEq = (ev) => (ev === null ? null : ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum);
+  // Cầu nối như 15.DCF: EV + tiền − tổng nợ vay − NCI; hoặc đầy đủ (net debt gồm đầu tư NH, khoản tương đương nợ, tài sản ngoài HĐ).
+  const toEq = (ev) => (ev === null ? null : inp.bridge === 'model' ? ev + (B.cash || 0) - (B.debt || 0) - (v.minority || 0)
+    : ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum);
   const perShare = (eq) => (eq === null || !shares ? null : eq / shares);
   const last = flows[flows.length - 1];
   const exit = exitM;
@@ -464,7 +499,7 @@ export function scenarioValuation(a, inputs) {
   if (!inp.scen.on) return null;
   const S = inp.scen;
   const rows = [['bear', S.bear, S.bear.p], ['base', {}, S.baseP], ['bull', S.bull, S.bull.p]].map(([key, d, p]) => {
-    const r = dcfValuation(a, inputs, { growth: d.growth || 0, margin: d.margin || 0, wacc: d.wacc || 0 });
+    const r = dcfValuation(a, inputs, { growth: d.growth || 0, margin: d.margin || 0, wacc: d.wacc || 0, key });
     return { key, p, price: r?.price ?? null, equity: r?.equity ?? null, adj: d };
   });
   const co = rows.filter((r) => r.equity !== null && r.p > 0);

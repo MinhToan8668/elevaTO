@@ -7,7 +7,7 @@
 import { h } from './dom.js';
 import { t } from '../i18n.js';
 import { dcfValuation } from '../core/valuation.js';
-import { model3, actualRow, BS_DRIVERS, FIN_DRIVERS, FA_CLS } from '../core/model3.js';
+import { model3, actualRow, BS_DRIVERS, FIN_DRIVERS, PL_DRIVERS, FA_CLS } from '../core/model3.js';
 import { oPct, oNum, nhom, subHead } from './dealval.js';
 
 const pc = (x, d = 1) => (Number.isFinite(x) ? `${(x * 100).toFixed(d)}%` : '—');
@@ -17,11 +17,12 @@ const uiFs = { tab: 'drv' };
 
 // Nhóm driver hiển thị (thứ tự như 04.Drivers C2 → C3).
 const NHOM_DRV = [
+  ['fs.g.pl', ['selling', 'ga', 'otherFin', 'otherInc', 'otherExp', 'yield', 'intRate', 'taxRate']],
   ['fs.g.wc', ['ar', 'inv', 'invProv', 'ap', 'prepay', 'loanRec', 'otherRec', 'provRec', 'stPrepaid', 'vat', 'taxRec', 'otherCa', 'advCust', 'taxPay', 'empPay', 'accrued', 'unearned', 'otherPay']],
   ['fs.g.lt', ['stInv', 'ltRec', 'cip', 'otherLtInv', 'ltPrepaid', 'dta', 'otherLt', 'dtl', 'otherLtL']],
-  ['fs.g.fin', ['stDebt', 'payout', 'nci', 'issue', 'assocProfit']],
+  ['fs.g.fin', ['stDebt', 'stNew', 'payout', 'nci', 'issue', 'assocProfit']],
 ];
-const DEF = Object.fromEntries([...BS_DRIVERS, ...FIN_DRIVERS].map((d) => [d.k, d]));
+const DEF = Object.fromEntries([...BS_DRIVERS, ...FIN_DRIVERS, ...PL_DRIVERS].map((d) => [d.k, d]));
 
 export function threeBlock(a, inp, save, money, ul) {
   const V = inp.val, F = V.fs;
@@ -52,7 +53,7 @@ export function threeBlock(a, inp, save, money, ul) {
     nhom(t('fs.fs.fin'), t('fs.fs.fin.h'),
       oPct(t('fs.stRate'), F.stRate, M.stRate, (v) => dat({ stRate: v })),
       oPct(t('fs.ltRate'), F.ltRate, M.ltRate, (v) => dat({ ltRate: v })),
-      oPct(t('fs.cashRate'), F.cashRate, null, (v) => dat({ cashRate: v ?? 0 })),
+      oPct(t('fs.cashRate'), F.cashRate, M.drivers.yield.applied[0], (v) => dat({ cashRate: v })),
       oNum(t('fs.minCash'), F.minCash === null ? null : +(F.minCash / u).toFixed(2), (v) => dat({ minCash: v === null ? null : v * u }), { suffix: ul, placeholder: '0' }),
       oNum(t('fs.gwYears'), F.gwYears, (v) => dat({ gwYears: v }), { step: '1', suffix: t('dv.years.u'), placeholder: String(M.gwYears) })));
 
@@ -88,6 +89,12 @@ export function threeBlock(a, inp, save, money, ul) {
         FY.map((_, j) => h('td', { class: 'num dv-a' }, fmtD(d, M.drivers[k].hist[iA + j]))),
         h('td', { class: 'num' }, oAll(d)),
         Y.map((_, i) => h('td', { class: 'num' }, oY(d, i)))); }),
+      // 04.Drivers C4: lãi suất vay ngắn / dài hạn ghi đè TỪNG NĂM (trên dư nợ đầu kỳ).
+      ...(nk === 'fs.g.pl' ? ['stRateY', 'ltRateY'].map((k) => h('tr', {},
+        h('td', {}, t(`fs.${k}`)), h('td', { class: 'priv' }, t('fs.b.pct')), FY.map(() => h('td', { class: 'num dv-a' }, '')), h('td', { class: 'num priv' }, pc(k === 'stRateY' ? M.stRate : M.ltRate, 2)),
+        Y.map((y, i) => h('td', { class: 'num' }, h('input', { type: 'number', step: '0.1', class: `dv-yr${Number.isFinite(F[k][i]) ? ' on' : ''}`, 'aria-label': `${t(`fs.${k}`)} ${nhanF(y)}`,
+          value: Number.isFinite(F[k][i]) ? String(+(F[k][i] * 100).toFixed(3)) : '', placeholder: (100 * (k === 'stRateY' ? y.is.rST : y.is.rLT)).toFixed(2),
+          onchange: (e) => { const arr = Array.from({ length: Y.length }, (_, j) => F[k][j] ?? null); arr[i] = e.target.value === '' ? null : +e.target.value / 100; dat({ [k]: arr }); } }))))) : []),
     ]))));
 
   // ── Tab Fixed assets (10.FA_SCHED) ──
@@ -138,20 +145,27 @@ export function threeBlock(a, inp, save, money, ul) {
     [t('fs.is.cogs'), tienA((y) => -ac(y).cogs), tienF((y) => y.is.cogs)],
     [t('fs.is.gp'), tienA((y) => ac(y).gp), tienF((y) => y.is.gp), 'dl-tot'],
     [t('fs.is.gm'), (y) => pc(ac(y).gp / ac(y).rev), (y) => pc(y.is.gp / y.is.rev)],
-    [t('fs.is.opex'), null, tienF((y) => y.is.ebit - y.is.gp)],
-    [t('fs.is.ebit'), null, tienF((y) => y.is.ebit), 'dl-tot'],
-    [t('fs.is.intIncome'), null, tienF((y) => y.is.intIncome)],
+    [t('fs.is.intIncome'), tienA((y) => cellsA(y)[12]), tienF((y) => y.is.intIncome)],
     [t('fs.is.interest'), tienA((y) => cellsA(y)[13]), tienF((y) => y.is.interest)],
+    [t('fs.is.otherFin'), tienA((y) => cellsA(y)[14]), tienF((y) => y.is.otherFin)],
     [t('fs.is.assoc'), tienA((y) => cellsA(y)[16]), tienF((y) => y.is.assoc)],
+    [t('fs.is.selling'), tienA((y) => cellsA(y)[17]), tienF((y) => y.is.selling)],
+    [t('fs.is.ga'), tienA((y) => cellsA(y)[18]), tienF((y) => y.is.ga)],
+    [t('fs.is.op'), null, tienF((y) => y.is.opProfit), 'dl-tot'],
+    [t('fs.is.otherInc'), tienA((y) => cellsA(y)[20]), tienF((y) => y.is.otherInc)],
+    [t('fs.is.otherExp'), tienA((y) => cellsA(y)[21]), tienF((y) => y.is.otherExp)],
     [t('fs.is.ebt'), tienA((y) => ac(y).pbt), tienF((y) => y.is.pbt), 'dl-tot'],
     [t('fs.is.tax'), tienA((y) => ac(y).tax), tienF((y) => y.is.tax)],
+    [t('fs.tx.eff'), (y) => pc(ac(y).pbt ? -ac(y).tax / ac(y).pbt : null), (y) => pc(y.is.taxRate)],
     [t('fs.is.npat'), tienA((y) => ac(y).npat), tienF((y) => y.is.npat), 'dl-tot'],
     [t('fs.is.nci'), tienA((y) => -ac(y).nci), tienF((y) => y.is.nci)],
     [t('fs.is.npatP'), tienA((y) => ac(y).npatP), tienF((y) => y.is.npatP), 'dl-tot'],
+    [t('fs.is.shares'), (y) => (cellsA(y)[214] ? `${cellsA(y)[214].toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tr` : ''), (y) => (y.is.shares ? `${(y.is.shares / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tr` : '—')],
     [t('fs.is.eps'), null, (y) => dong(y.is.eps)],
     [t('fs.memo'), 'grp'],
-    ['EBITDA', null, tienF((y) => y.is.ebitda)],
+    [t('fs.is.ebit'), null, tienF((y) => y.is.ebit), 'dl-tot'],
     [t('fs.is.da'), null, tienF((y) => y.is.da)],
+    ['EBITDA', null, tienF((y) => y.is.ebitda)],
   ]);
   const ga = (rows) => (y) => money(rows.reduce((s, k) => s + (cellsA(y)[k] ?? 0), 0));
   const BS = bang([
@@ -204,7 +218,8 @@ export function threeBlock(a, inp, save, money, ul) {
     [t('fs.cf.cfi'), cfA(116), tienF((y) => y.cf.cfi), 'dl-tot'],
     [t('fs.cf.cffH'), 'grp'],
     [t('fs.cf.issue'), cfA(118), tienF((y) => y.cf.issue)],
-    [t('fs.cf.stDebt'), () => '', tienF((y) => y.cf.stDebt)],
+    [t('fs.cf.stVay'), cfA(208), tienF((y) => y.cf.stVay)],
+    [t('fs.cf.stTra'), cfA(209), tienF((y) => y.cf.stTra)],
     [`${t('fs.ltNew')} (${ul})`, cfA(210), (y) => oYr('ltNew', y)],
     [`${t('fs.ltRepay')} (${ul})`, cfA(211), (y) => oYr('ltRepay', y)],
     [t('fs.cf.revolver'), () => '', tienF((y) => y.cf.revolver)],

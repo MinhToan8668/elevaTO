@@ -1286,6 +1286,19 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.waitForSelector('.dv-segt tr:has-text("Total revenue (consolidated)")');
   assert.match(await page.locator('.dv-segt').innerText(), /Intersegment/);
   if (process.env.E2E_SHOTS) await page.locator('.dv-segs').screenshot({ path: join(process.env.E2E_SHOTS, 'theo-mang.png') });
+  // Kịch bản theo mảng (04.Drivers A–B) và công tắc kịch bản áp dụng (02.Control)
+  await page.locator('.dv-segs button', { hasText: 'Chi tiết từng năm & Bull / Bear' }).click();
+  await page.waitForSelector('.dv-segt tr:has-text("Bull — tăng trưởng %")');
+  assert.equal(await page.locator('.dv-segt tr', { hasText: 'Bull — tăng trưởng %' }).count(), 2);
+  const bullG = page.locator('.dv-segt tr', { hasText: 'Bull — tăng trưởng %' }).first().locator('input').first();
+  await bullG.fill('30'); await bullG.dispatchEvent('change');
+  await page.waitForSelector('.dv-segt tr.dv-segd input.dv-yr.on');
+  const giaTruoc = await page.locator('.dv-dash .dv-kpi .hbox').nth(3).innerText();
+  await page.locator('.dv-src label', { hasText: 'Bull case' }).locator('input').check();
+  await page.waitForFunction((cu) => document.querySelectorAll('.dv-dash .dv-kpi .hbox')[3]?.innerText !== cu, giaTruoc);
+  if (process.env.E2E_SHOTS) await page.locator('.dv-segs').screenshot({ path: join(process.env.E2E_SHOTS, 'mang-kich-ban.png') });
+  await page.locator('.dv-src label', { hasText: 'Base case' }).locator('input').check();
+  await page.waitForFunction((cu) => document.querySelectorAll('.dv-dash .dv-kpi .hbox')[3]?.innerText === cu, giaTruoc);
 
   // SOTP: một phần EV/EBITDA × EBITDA → equity value SOTP; đặt weight → vào target price
   await page.locator('.dv-sotpsec button', { hasText: '+ Thêm phần' }).click();
@@ -1309,7 +1322,7 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.waitForFunction(() => [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'RNAV') && [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'SOTP'));
   // Module đơn giản (WC theo ngày, lịch TSCĐ gộp) chỉ dùng khi FCFF theo driver đơn giản → chuyển nguồn trước
   await page.locator('.dv-src label', { hasText: 'Driver đơn giản' }).locator('input').check();
-  await page.waitForFunction(() => document.querySelector('.dv-src label.on')?.innerText.includes('Driver đơn giản'));
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-src label.on')].some((l) => l.innerText.includes('Driver đơn giản')));
   // Module dự phóng: bật Gross margin & SG&A, Working capital by days, Fixed asset schedule → bảng dự phóng có dòng tương ứng
   for (const ten of ['Gross margin & SG&A', 'Working capital by days', 'Fixed asset schedule']) {
     await page.locator('.dv-mod', { hasText: ten }).locator('input[type=checkbox]').check();
@@ -1321,10 +1334,12 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   if (process.env.E2E_SHOTS) await page.locator('#dv-step-3').screenshot({ path: join(process.env.E2E_SHOTS, 'modules.png') });
 
   await page.locator('.dv-src label', { hasText: 'Mô hình 3 báo cáo' }).locator('input').check();
-  await page.waitForFunction(() => document.querySelector('.dv-src label.on')?.innerText.includes('Mô hình 3 báo cáo'));
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-src label.on')].some((l) => l.innerText.includes('Mô hình 3 báo cáo')));
   // Ba báo cáo liên kết: cân mọi năm (cả khi bật module), đổi tab, nhập vay mới vẫn cân
   await page.waitForSelector('.dv-3s .msg.ok');
   if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-is.png') });
+  await page.locator('.dv-3s .dv-tab', { hasText: 'Income statement' }).click();
+  for (const s2 of ['Selling expenses', 'G&A expenses', 'Other financial expenses', 'Operating profit', 'Shares outstanding']) assert.ok(await page.locator('.dv-3s .dv-3t tr', { hasText: s2 }).count() >= 1, `IS thiếu "${s2}"`);
   await page.locator('.dv-3s .dv-tab', { hasText: 'Balance sheet' }).click();
   const kt = await page.locator('.dv-3s tr.dv-check td').allInnerTexts();
   assert.equal(kt.filter((x) => x.startsWith('✓')).length, 5, `balance check 5 năm dự phóng: ${kt.join(' | ')}`);
@@ -1346,7 +1361,7 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.locator('.dv-3s .dv-tab', { hasText: 'Fixed assets' }).click();
   await page.waitForSelector('.dv-3s td:has-text("Total capex")');
   if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-fa.png') });
-  assert.ok(await page.locator('.dv-src input[type=radio]').first().isChecked(), 'FCFF từ mô hình tích hợp là mặc định');
+  assert.ok(await page.locator('.dv-3s .dv-src input[type=radio]').first().isChecked(), 'FCFF từ mô hình tích hợp là mặc định');
   // Thuế & công ty liên kết (13.Tax_JV_Sched): đầu tư mới vào LDLK → số dư cuối tăng, vẫn cân
   await page.locator('.dv-3s .dv-tab', { hasText: 'Tax & associates' }).click();
   await page.waitForSelector('.dv-3s tr:has-text("Income tax paid")');
