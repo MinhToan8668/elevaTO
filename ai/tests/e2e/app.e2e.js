@@ -1347,6 +1347,14 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.waitForSelector('.dv-3s td:has-text("Total capex")');
   if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-fa.png') });
   assert.ok(await page.locator('.dv-src input[type=radio]').first().isChecked(), 'FCFF từ mô hình tích hợp là mặc định');
+  // Thuế & công ty liên kết (13.Tax_JV_Sched): đầu tư mới vào LDLK → số dư cuối tăng, vẫn cân
+  await page.locator('.dv-3s .dv-tab', { hasText: 'Tax & associates' }).click();
+  await page.waitForSelector('.dv-3s tr:has-text("Income tax paid")');
+  const lkMoi = page.locator('.dv-3s input[aria-label^="(+) New investment"]').first();
+  await lkMoi.fill('100'); await lkMoi.dispatchEvent('change');
+  await page.waitForSelector('.dv-3s input.dv-yr.on[aria-label^="(+) New investment"]');
+  assert.equal(await page.locator('.dv-3s .msg.ok').count(), 1, 'đầu tư LDLK vẫn cân');
+  if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-tax.png') });
 
   // LBO: chạy trên dòng tiền dự phóng → IRR, MOIC, giá tối đa; football field có dòng LBO
   await page.waitForSelector('#dv-step-9 .dv-lbo .hbox:has-text("IRR")');

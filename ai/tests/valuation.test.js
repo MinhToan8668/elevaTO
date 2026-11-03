@@ -345,3 +345,19 @@ test('khung số năm khấu hao lấy từ thuyết minh (như cột AB / AC c�
   assert.equal(m2.lives.buildings.src, 'md');
 });
 const FA_LIVES = (m) => ['buildings', 'machinery', 'transport', 'office', 'other', 'land', 'software'].map((k) => +m.lives[k].applied.toFixed(4));
+
+test('đầu tư công ty liên kết như 13.Tax_JV_Sched: đầu kỳ + phần lãi (bình quân 3 năm) — khớp model DGW; đầu tư mới, cổ tức nhận về vẫn cân', () => {
+  const m = dgwChay();
+  gan(m.drivers.assocProfit.applied[0], -89.5e6, 1e-9, 'phần lãi LDLK applied = TB 3 năm');
+  gan(m.years[0].jv.close, 12910.5e6, 1e-9, 'LDLK 2026F');
+  gan(m.years[1].jv.close, 12821e6, 1e-9, 'LDLK 2027F');
+  gan(m.years[0].cf.assoc, 89.5e6, 1e-9, 'CFO trừ phần lãi không bằng tiền');
+  // Thuế đã nộp = đầu kỳ + thuế trong năm − cuối kỳ.
+  for (const y of m.years) gan(y.tax.paid, y.tax.open + y.tax.charge - y.tax.close, 1e-9, 'thuế đã nộp');
+  const a = { inputFs: inputFsFrom(DGW3.byYear), valuation: { shares: null } };
+  const flows = DGW3.is.map((x, i) => ({ t: i + 1, rev: x.rev * 1e6, cogs: -x.cogs * 1e6, gp: (x.rev + x.cogs) * 1e6, ebit: 1e12, tax: 0.2 }));
+  const m2 = model3(a, flows, { fs: cleanFs({ assocNew: [50e9], assocDiv: 0.5, drv: { assocProfit: { all: 10e9 } } }), kd: 0.07, capexPct: 0.001, shares: null });
+  gan(m2.years[0].jv.close, 13000e6 + 50e9 + 10e9 - 5e9, 1e-9, 'đầu kỳ + mới + lãi − cổ tức');
+  gan(m2.years[0].cf.assocInv + m2.years[0].cf.assocDiv, -50e9 + 5e9, 1e-9, 'CFI');
+  assert.ok(m2.ok, m2.years.map((y) => y.check).join(', '));
+});

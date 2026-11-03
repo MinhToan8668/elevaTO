@@ -180,7 +180,9 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     toán** — nhóm thuyết minh mới *Thời gian khấu hao TSCĐ* (`livesFrom` ở `js/core/extract.js`: khung năm theo nhóm,
     tỷ lệ %/năm đổi ra năm, đất không thời hạn = 0; chưa trích thì khung chung TT45/2013) + lợi thế thương mại phân bổ 10 năm; *11.Debt* vay ngắn
     hạn = % giá vốn, vay dài hạn theo lịch, lãi trên dư nợ đầu kỳ; *12.Equity* cổ tức = tỷ lệ × LNST cty mẹ năm trước,
-    NCI theo tỷ lệ, phát hành theo bình quân; *08.CF* gián tiếp từ biến động CĐKT, tiền là số cân, revolver khi thiếu
+    NCI theo tỷ lệ, phát hành theo bình quân; *13.Tax_JV_Sched* thuế = thuế suất hiệu dụng × LNTT, thuế đã nộp theo cuộn số dư thuế phải nộp, vị thế thuế hoãn
+    lại, đầu tư công ty liên kết = đầu kỳ + đầu tư mới + phần lãi (bình quân 3 năm) − cổ tức nhận về (phần lãi trừ khỏi
+    CFO, đầu tư & cổ tức vào CFI); *08.CF* gián tiếp từ biến động CĐKT, tiền là số cân, revolver khi thiếu
     tiền. **FCFF = CFO + lãi vay × (1 − t) + capex + Δ đầu tư NH → DCF** (mặc định; chọn được "driver đơn giản").
     Kiểm bằng chính số của model DGW (`tests/fixtures/dgw-3s.json`): DSO / DIO / DPO, phải thu, tồn kho, phải trả, vay
     NH, khấu hao gồm lợi thế thương mại, TSCĐ thuần 2026F–2027F khớp file Excel.
