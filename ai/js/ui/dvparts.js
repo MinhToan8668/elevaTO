@@ -148,7 +148,8 @@ export function modPanel(V, r, dat) {
         h('span', { class: 'dv-modh' }, h('input', { type: 'checkbox', checked: on, onchange: (e) => dat({ mods: { ...V.mods, [k]: e.target.checked } }) }), h('b', {}, t(`dv.mod.${k}`))),
         h('small', {}, t(`dv.mod.${k}.d`)),
         h('span', { class: 'dv-modlk' }, t(`dv.mod.${k}.lk`)),
-        loi ? h('span', { class: 'dv-moderr' }, t(`dv.issue.${MOD_ISSUE[k]}`)) : null);
+        loi ? h('span', { class: 'dv-moderr' }, t(`dv.issue.${MOD_ISSUE[k]}`)) : null,
+        r.fcffSrc === 'model' && k !== 'gm' ? h('span', { class: 'dv-moderr' }, t(`dv.mod.by3s.${k}`)) : null);
     })));
 }
 

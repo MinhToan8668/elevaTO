@@ -276,41 +276,54 @@ test('LBO: không quét tiền trả nợ khi tiền mặt tích luỹ còn âm'
   assert.ok(k.issues.includes('shortfall'));
 });
 
-import { threeStatement } from '../js/core/threestmt.js';
+import { model3, inputFsFrom, cleanFs } from '../js/core/model3.js';
+import { readFileSync } from 'node:fs';
 
-// Năm gốc có đủ CĐKT (đồng) để chạy mô hình ba báo cáo.
-const A3 = () => {
-  const a = A();
-  a.base.v = { 'BS:280': 2000e9, 'BS:110': 100e9, 'BS:131': 150e9, 'BS:140': 200e9, 'BS:311': 150e9, 'BS:400': 900e9, 'IS:60': 80e9, 'IS:61': 72e9, 'CF:36': -36e9 };
-  a.base.m = { ...a.base.m, ppe: 600e9, debt: 400e9, minority: 50e9, cashLike: 0, tradeWc: 200e9 };
-  return a;
+// Số của chính model DGW (03.Input_FS 2019–2025A, 06.IS 2026F–2027F, capex theo nhóm ở 10.FA_SCHED mục A), triệu đồng.
+const DGW3 = JSON.parse(readFileSync(new URL('./fixtures/dgw-3s.json', import.meta.url), 'utf8'));
+const dgwChay = () => {
+  const a = { inputFs: inputFsFrom(DGW3.byYear), valuation: { shares: null } };
+  const flows = DGW3.is.map((x, i) => ({ t: i + 1, rev: x.rev * 1e6, cogs: -x.cogs * 1e6, gp: (x.rev + x.cogs) * 1e6, ebit: 1e12, tax: 0.2 }));
+  const capex = Object.fromEntries(Object.entries(DGW3.capex).map(([k, v]) => [k, v.map((x) => x * 1e6)]));
+  // Số năm sử dụng như model (chặn theo khung thuyết minh của DGW): nhà 25, máy 7, xe 6, VP 5, khác 6, QSDĐ 0, phần mềm 6.
+  const life = { buildings: 25, machinery: 7, transport: 6, office: 5, other: 6, land: 0, software: 6 };
+  return model3(a, flows, { fs: cleanFs({ capex, life }), kd: 0.07, capexPct: 0, shares: null });
 };
 
-test('ba báo cáo: CĐKT cân mọi năm, tiền cuối kỳ = tiền đầu kỳ + LCTT, vốn chủ = đầu kỳ + LNST − cổ tức', () => {
-  const a = A3();
-  for (const mods of [{}, { fa: true }, { gm: true, wcDays: true }]) {
-    const r = dcfValuation(a, { years: 5, growth: 0.08, margin: 0.1, gmb: { gm: 0.25, sga: 0.1 }, wcd: { dso: 40, dio: 60, dpo: 45 }, mods, fs: { amort: 0.1, newDebt: [50e9], issue: [0, 20e9] } });
-    const m = threeStatement(a, r);
-    assert.ok(m.ok, `cân đối (${JSON.stringify(mods)}): ${m.years.map((y) => y.check).join(', ')}`);
-    let truoc = m.base;
-    for (const y of m.years) {
-      gan(y.bs.cash, truoc.cash + y.cf.net, 1e-9, 'tiền');
-      gan(y.bs.equityParent, truoc.equityParent + y.is.npatP + y.cf.div + y.cf.issue, 1e-9, 'vốn chủ');
-      gan(y.bs.ppe, truoc.ppe - y.cf.capex - y.cf.da, 1e-9, 'TSCĐ');
-      truoc = y.bs;
-    }
-  }
+test('mô hình ba báo cáo khớp model DGW: driver = bình quân 3 năm; phải thu, tồn kho, phải trả, vay NH 2026F–2027F', () => {
+  const m = dgwChay();
+  gan(m.drivers.ar.applied[0], DGW3.drv.dso, 1e-9, 'DSO applied');
+  gan(m.drivers.inv.applied[0], DGW3.drv.dio, 1e-9, 'DIO applied');
+  gan(m.drivers.ap.applied[0], DGW3.drv.dpo, 1e-9, 'DPO applied');
+  gan(m.drivers.stDebt.applied[0], DGW3.drv.stDebt, 1e-9, 'vay NH / giá vốn');
+  const [y1, y2] = m.years;
+  for (const [k, x] of [['ar', 'ar'], ['prepay', 'prepay'], ['inv', 'inv'], ['invProv', 'invProv'], ['ap', 'ap'], ['accrued', 'accrued']]) gan(y1.bs[k], DGW3.f2026[x] * 1e6, 1e-6, `${k} 2026F`);
+  gan(y2.bs.ar, DGW3.f2027.ar * 1e6, 1e-6, 'AR 2027F');
+  gan(y1.bs.stDebt, DGW3.stDebt[0] * 1e6, 1e-6, 'vay NH 2026F');
+  gan(y2.bs.stDebt, DGW3.stDebt[1] * 1e6, 1e-6, 'vay NH 2027F');
 });
 
-test('ba báo cáo: lãi vay trên dư nợ đầu năm; cổ tức theo tỷ lệ chi trả năm gốc; revolver khi thiếu tiền', () => {
-  const a = A3();
-  const r = dcfValuation(a, { years: 2, growth: 0, margin: 0.1, kd: 0.1 });
-  const m = threeStatement(a, r);
-  gan(-m.years[0].is.interest, 400e9 * 0.1, 1e-12, 'lãi vay năm 1');
-  gan(m.fs.payout, 36 / 72, 1e-12, 'payout = cổ tức / LNST cty mẹ');
-  gan(m.fs.nciPct, 8 / 80, 1e-12, 'tỷ lệ NCI');
-  const r2 = dcfValuation(a, { years: 2, growth: 0, margin: 0.1, kd: 0.1, fs: { minCash: 5000e9 } });
-  const m2 = threeStatement(a, r2);
-  gan(m2.years[0].bs.cash, 5000e9, 1e-12, 'revolver kéo tiền lên mức tối thiểu');
-  assert.ok(m2.years[0].bs.revolver > 0 && m2.ok);
+test('mô hình ba báo cáo khớp model DGW: lịch TSCĐ theo nhóm, khấu hao gồm lợi thế thương mại', () => {
+  const m = dgwChay();
+  const [y1, y2] = m.years;
+  gan(y1.cf.da, DGW3.da[0] * 1e6, 1e-6, 'D&A 2026F');
+  gan(y2.cf.da, DGW3.da[1] * 1e6, 1e-6, 'D&A 2027F');
+  gan(y1.bs.gwNet, DGW3.f2026.gw * 1e6, 1e-6, 'goodwill 2026F');
+  gan(y1.bs.faNet, (DGW3.f2026.tang + DGW3.f2026.intang) * 1e6, 1e-6, 'TSCĐ thuần 2026F');
+  gan(y2.bs.faNet, (DGW3.f2027.tang + DGW3.f2027.intang) * 1e6, 1e-6, 'TSCĐ thuần 2027F');
+});
+
+test('mô hình ba báo cáo: cân mọi năm, tiền LCTT = tiền CĐKT; FCFF như 08.CF dòng 47', () => {
+  const m = dgwChay();
+  assert.ok(m.ok, m.years.map((y) => y.check).join(', '));
+  for (const y of m.years) {
+    gan(y.cf.close, y.bs.cash, 1e-12, 'tiền');
+    gan(y.cf.fcff, y.cf.cfo - y.is.interest * (1 - 0.2) + y.cf.capex + y.cf.stInv, 1e-12, 'FCFF');
+  }
+  // Revolver kéo tiền lên mức tối thiểu, vẫn cân.
+  const a = { inputFs: inputFsFrom(DGW3.byYear), valuation: { shares: null } };
+  const flows = DGW3.is.map((x, i) => ({ t: i + 1, rev: x.rev * 1e6, cogs: -x.cogs * 1e6, gp: (x.rev + x.cogs) * 1e6, ebit: 1e11, tax: 0.2 }));
+  const m2 = model3(a, flows, { fs: cleanFs({ minCash: 1e16 }), kd: 0.07, capexPct: 0.001, shares: null });
+  gan(m2.years[0].bs.cash, 1e16, 1e-12, 'revolver');
+  assert.ok(m2.ok);
 });

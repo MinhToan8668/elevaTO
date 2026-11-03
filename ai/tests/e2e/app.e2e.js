@@ -1307,6 +1307,9 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.locator('#dv-step-6 input[aria-label="Per share RNAV"]').fill('40000');
   await page.locator('#dv-step-6 input[aria-label="Per share RNAV"]').dispatchEvent('change');
   await page.waitForFunction(() => [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'RNAV') && [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'SOTP'));
+  // Module đơn giản (WC theo ngày, lịch TSCĐ gộp) chỉ dùng khi FCFF theo driver đơn giản → chuyển nguồn trước
+  await page.locator('.dv-src label', { hasText: 'Driver đơn giản' }).locator('input').check();
+  await page.waitForFunction(() => document.querySelector('.dv-src label.on')?.innerText.includes('Driver đơn giản'));
   // Module dự phóng: bật Gross margin & SG&A, Working capital by days, Fixed asset schedule → bảng dự phóng có dòng tương ứng
   for (const ten of ['Gross margin & SG&A', 'Working capital by days', 'Fixed asset schedule']) {
     await page.locator('.dv-mod', { hasText: ten }).locator('input[type=checkbox]').check();
@@ -1317,19 +1320,33 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   assert.ok(await page.locator('.dv-wire .dv-w.on', { hasText: 'FA schedule' }).count() >= 1, 'wiring tô module đang bật');
   if (process.env.E2E_SHOTS) await page.locator('#dv-step-3').screenshot({ path: join(process.env.E2E_SHOTS, 'modules.png') });
 
+  await page.locator('.dv-src label', { hasText: 'Mô hình 3 báo cáo' }).locator('input').check();
+  await page.waitForFunction(() => document.querySelector('.dv-src label.on')?.innerText.includes('Mô hình 3 báo cáo'));
   // Ba báo cáo liên kết: cân mọi năm (cả khi bật module), đổi tab, nhập vay mới vẫn cân
   await page.waitForSelector('.dv-3s .msg.ok');
   if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-is.png') });
   await page.locator('.dv-3s .dv-tab', { hasText: 'Balance sheet' }).click();
   const kt = await page.locator('.dv-3s tr.dv-check td').allInnerTexts();
-  assert.ok(kt.slice(1).filter((x) => x).every((x) => x.startsWith('✓')), `balance check: ${kt.join(' | ')}`);
+  assert.equal(kt.filter((x) => x.startsWith('✓')).length, 5, `balance check 5 năm dự phóng: ${kt.join(' | ')}`);
   if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-bs.png') });
   await page.locator('.dv-3s .dv-tab', { hasText: 'Cash flow' }).click();
-  const vay = page.locator('.dv-3s input[aria-label^="(+) Vay mới"]').first();
+  const vay = page.locator('.dv-3s input[aria-label^="(+) LT borrowings — proceeds"]').first();
   await vay.fill('500'); await vay.dispatchEvent('change');
   await page.waitForSelector('.dv-3s input.dv-yr.on');
   assert.equal(await page.locator('.dv-3s .msg.ok').count(), 1, 'vay mới vẫn cân');
   if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-cf.png') });
+  // Drivers (04.Drivers) và lịch TSCĐ theo nhóm (10.FA_SCHED); FCFF của DCF lấy từ mô hình tích hợp
+  await page.locator('.dv-3s .dv-tab', { hasText: 'Drivers' }).click();
+  assert.ok(await page.locator('.dv-3s .dv-drv tr', { hasText: 'Trade receivables (DSO)' }).count() === 1);
+  const dso = page.locator('.dv-3s input[aria-label="Trade receivables (DSO) Applied (TB 3 năm)"]');
+  await dso.fill('20'); await dso.dispatchEvent('change');
+  await page.waitForSelector('.dv-3s .dv-drv input.dv-yr.on');
+  assert.equal(await page.locator('.dv-3s .msg.ok').count(), 1, 'đổi DSO vẫn cân');
+  if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-drv.png') });
+  await page.locator('.dv-3s .dv-tab', { hasText: 'Fixed assets' }).click();
+  await page.waitForSelector('.dv-3s td:has-text("Total capex")');
+  if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-fa.png') });
+  assert.ok(await page.locator('.dv-src input[type=radio]').first().isChecked(), 'FCFF từ mô hình tích hợp là mặc định');
 
   // LBO: chạy trên dòng tiền dự phóng → IRR, MOIC, giá tối đa; football field có dòng LBO
   await page.waitForSelector('#dv-step-9 .dv-lbo .hbox:has-text("IRR")');

@@ -170,13 +170,18 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     theo lịch). Thiếu số lịch sử thì máy báo và tạm tắt module. Sơ đồ *model wiring* cho thấy module nào đang chạy vào
     dòng nào. Cách dự phóng doanh thu thứ 6 *theo dự án* (giá trị × % ghi nhận từng năm + doanh thu nền) cho bất
     động sản / xây dựng. Mẫu ngành tự bật module hợp ngành (sản xuất, bán lẻ: cả ba; tiện ích: lịch TSCĐ…).
-  - **Mô hình ba báo cáo liên kết** (`js/core/threestmt.js`, `js/ui/dv3s.js`, mục 3.6): Income statement · Balance sheet
-    · Cash flow · Ratios, cột actual cạnh cột dự phóng. Lấy đúng các dòng forecast (kể cả các module) và số dư thật năm
-    gốc: lãi vay trên dư nợ đầu năm, lãi tiền gửi, thuế trên LNTT, phần NCI và tỷ lệ cổ tức theo năm gốc; CFO = LNST +
-    D&A − ΔNWC, CFI = − capex, CFF = vay mới − trả gốc ± revolver + phát hành − cổ tức; tiền cuối kỳ → bảng cân đối,
-    TSCĐ = đầu kỳ + capex − khấu hao, vốn chủ = đầu kỳ + LNST cty mẹ − cổ tức + phát hành; revolver tự vay khi tiền
-    xuống dưới mức tối thiểu. Dòng Balance check từng năm; Ratios: net debt / EBITDA, ROE, EBIT / interest, DPS, BVPS,
-    P/E và P/B theo giá thị trường.
+  - **Mô hình ba báo cáo tích hợp** (`js/core/model3.js`, `js/ui/dv3s.js`, mục 3.6) — port đúng model elevaTO, chạy
+    trên 03.Input_FS các năm actual mà app dựng từ BCTC: *04.Drivers* mỗi dòng CĐKT một driver (phải thu = DSO × doanh
+    thu, tồn kho gộp = DIO × giá vốn, dự phòng HTK = % tồn kho gộp, phải trả = DPO × giá vốn, chi phí trả trước NH % giá
+    vốn, các khoản khác % doanh thu, XDCB dở dang / đầu tư dài hạn khác theo mức bình quân), mặc định = bình quân 3 năm
+    actual gần nhất, ghi đè cả giai đoạn hoặc từng năm; *10.FA_SCHED* theo 7 nhóm TSCĐ (capex nhập theo nhóm — trống thì
+    capex % doanh thu × tỷ trọng tăng TSCĐ lịch sử; khấu hao = MIN(nguyên giá cuối / số năm sử dụng, giá trị còn lại);
+    số năm sử dụng = TB nguyên giá / TB khấu hao, chặn khung) + lợi thế thương mại phân bổ 10 năm; *11.Debt* vay ngắn
+    hạn = % giá vốn, vay dài hạn theo lịch, lãi trên dư nợ đầu kỳ; *12.Equity* cổ tức = tỷ lệ × LNST cty mẹ năm trước,
+    NCI theo tỷ lệ, phát hành theo bình quân; *08.CF* gián tiếp từ biến động CĐKT, tiền là số cân, revolver khi thiếu
+    tiền. **FCFF = CFO + lãi vay × (1 − t) + capex + Δ đầu tư NH → DCF** (mặc định; chọn được "driver đơn giản").
+    Kiểm bằng chính số của model DGW (`tests/fixtures/dgw-3s.json`): DSO / DIO / DPO, phải thu, tồn kho, phải trả, vay
+    NH, khấu hao gồm lợi thế thương mại, TSCĐ thuần 2026F–2027F khớp file Excel.
   - **LBO** (`js/core/lbo.js`, bước 9): dùng EBITDA, capex, ΔNWC, thuế đã dự phóng; sources & uses, nợ senior (trả
     góp + cash sweep) / mezzanine, lịch nợ và credit stats, IRR / MOIC, bảng IRR entry × exit, bội số vào tối đa để đạt
     IRR mục tiêu → giá / cổ phiếu đưa sang football field và weight "LBO" của target price.

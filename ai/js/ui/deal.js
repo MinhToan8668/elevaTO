@@ -5,6 +5,8 @@
 
 import { h, fmt } from './dom.js';
 import { dealAnalysis, cleanInputs, DEFAULT_INPUTS } from '../core/deal.js';
+import { buildModel } from '../targets/model.js';
+import { inputFsFrom } from '../core/model3.js';
 import { t, unitLabel } from '../i18n.js';
 import { dcfBlock, targetBlock, piotroskiCard, mnaBlock, compsBlock, dvDashboard, dvSummary } from './dealval.js';
 import { roadmap, stepWrap } from './dvguide.js';
@@ -23,7 +25,9 @@ export function renderDeal(store) {
   const a = dealAnalysis(ds, inp);
   if (!a) return h('p', { class: 'empty' }, t('ch.none'));
   const unit = s.unit, ul = unitLabel(unit);
-  a.unitDong = unit;                    // đơn vị đang xem — biểu đồ / ô nhập tay doanh thu theo đơn vị này
+  a.unitDong = unit;
+  // 03.Input_FS các năm actual (như model elevaTO) — nguồn của mô hình ba báo cáo tích hợp (core/model3.js).
+  try { a.inputFs = inputFsFrom(buildModel(ds, { segmentMap: s.segmentMap }).byYear); } catch (e) { a.inputFs = null; }                    // đơn vị đang xem — biểu đồ / ô nhập tay doanh thu theo đơn vị này
   const money = (v) => (Number.isFinite(v) ? fmt(v, unit) || '0' : '—');
   const save = (patch) => store.set({ dealInputs: cleanInputs({ ...inp, ...patch }) });
   const ltm = a.cols.find((c) => c.ltm);
