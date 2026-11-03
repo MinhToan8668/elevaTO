@@ -10,7 +10,7 @@
 // Giả định mặc định giống model: trung bình 3 năm actual GẦN NHẤT (tự trượt khi thêm năm), người dùng
 // ghi đè ô nào thì ô đó dùng số của người dùng. MÁY tính, AI không tham gia.
 
-import { cleanFs, DEFAULT_FS } from './threestmt.js';
+import { cleanFs, DEFAULT_FS, model3, actualRow } from './model3.js';
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 const abs = (v) => (v === null ? null : Math.abs(v));
@@ -54,7 +54,7 @@ export const DEFAULT_VAL = {
   fa: { life0: null, life: 10, amt: [] },       // tuổi còn lại TSCĐ hiện có · thời gian khấu hao TSCĐ mới · capex từng năm (đồng)
   proj: { items: [], core: null, coreG: null },  // dự án: [{ name, total (đồng), pct: [% ghi nhận từng năm], gm }] + doanh thu nền
   lbo: { entry: null, exit: null, years: null, fees: 0.02, sX: 3, sRate: 0.09, sAmort: 0.1, mX: 1, mRate: 0.12, sweep: 0.75, irr: 0.2 },
-  fs: DEFAULT_FS,         // giả định tài chính của mô hình ba báo cáo (core/threestmt.js): lãi tiền gửi, cổ tức, nợ, phát hành
+  fs: DEFAULT_FS,         // giả định của mô hình ba báo cáo tích hợp (core/model3.js): nguồn FCFF, driver CĐKT, capex theo nhóm, nợ vay
   others: [],             // phương pháp định giá khác đưa vào giá mục tiêu: [{ name, ps (đồng / cổ phiếu), w (trọng số) }] — RNAV, DDM, đồng thuận CTCK…
   byYear: {},             // ghi đè theo năm: { growth: [năm1, năm2, …], margin: […], … } — null = dùng số chung   // evRev: theo trung vị peer (bảng so sánh)
 };
@@ -386,12 +386,21 @@ export function dcfValuation(a, inputs, adj = {}) {
   if (inp.revMode === 'segments' && !segs) out.issues.push('noSegs');
   // Module chi tiết: thiếu số lịch sử để làm thì tắt module đó và báo.
   const mods = { ...inp.mods };
+  // FCFF từ mô hình ba báo cáo tích hợp (như 08.CF → 15.DCF): vốn lưu động & TSCĐ do bảng driver / lịch TSCĐ của mô hình
+  // đảm nhận, nên hai module đơn giản tương ứng không dùng.
+  const tichHop = inp.fs.src === 'model' && a.inputFs?.years?.length > 0;
+  if (tichHop) { mods.wcDays = false; mods.fa = false; }
   const P = {
     gm: inp.gmb.gm ?? his.gm, sga: inp.gmb.sga ?? his.sga,
     dso: inp.wcd.dso ?? his.dso, dio: inp.wcd.dio ?? his.dio, dpo: inp.wcd.dpo ?? his.dpo, wcOther: his.wcOther ?? 0,
     ppe0: B.ppe ?? null, life0: inp.fa.life0 ?? his.ppeLife ?? 10, life: inp.fa.life, capexAmt: inp.fa.amt,
   };
   // Biên gộp cần cả khi chỉ bật vốn lưu động theo ngày (giá vốn = doanh thu − lợi nhuận gộp).
+  // Biên gộp lịch sử: lấy từ 03.Input_FS khi số đo của tab chưa có.
+  if (P.gm === null && a.inputFs?.years?.length) {
+    const gms = a.inputFs.years.slice(-3).map((y) => { const x = actualRow(a.inputFs.cells[y]); return x.rev ? x.gp / x.rev : null; }).filter((x) => x !== null);
+    if (gms.length) P.gm = gms.reduce((s2, x) => s2 + x, 0) / gms.length;
+  }
   if ((mods.gm || mods.wcDays) && P.gm === null) { out.issues.push('noGm'); mods.gm = false; mods.wcDays = false; }
   if (mods.gm && P.sga === null) P.sga = 0;
   if (mods.wcDays && P.dso === null && P.dio === null && P.dpo === null) { out.issues.push('noWcDays'); mods.wcDays = false; }
@@ -402,6 +411,20 @@ export function dcfValuation(a, inputs, adj = {}) {
   if (inp.revMode === 'projects' && !proj) out.issues.push('noProj');
   const flows = projectFcff({ rev0, years: inp.years, growth: d.growth, fade: inp.fade, g: inp.g, margin: d.margin, da: d.da, capex: d.capex, nwc: d.nwc, tax: d.tax,
     byYear: inp.byYear, revMode: inp.revMode, rev: inp.rev, adj, segs, mods, P, proj, nwc0: mods.wcDays && B.tradeWc !== null ? B.tradeWc : null });
+  if (tichHop) {
+    const m3 = model3(a, flows, { fs: inp.fs, kd: d.kd, capexPct: d.capex, shares: v.shares });
+    if (m3 && !m3.issue) {
+      // Capex, khấu hao, Δ vốn lưu động (ngầm) và FCFF lấy từ mô hình — cùng một bộ số với ba báo cáo.
+      flows.forEach((f, i) => {
+        const y = m3.years[i];
+        f.capex = -y.cf.capex; f.da = y.cf.da; f.fcff = y.cf.fcff;
+        f.ebitda = f.ebit + f.da; f.dNwc = f.nopat + f.da - f.capex - f.fcff;
+        f.capexPct = f.rev ? f.capex / f.rev : null; f.daPct = f.rev ? f.da / f.rev : null; f.src3 = true;
+      });
+      out.m3 = m3;
+      out.fcffSrc = 'model';
+    } else out.issues.push('no3s');
+  }
   if (inp.revMode === 'stores' && !inp.rev.stores0) out.issues.push('noStores');
   const exitM = inp.exit ?? a.inputs.evEbitda[1];
   const r = evAt(flows, W.wacc, inp.g, { method: inp.tvMethod, exit: exitM });

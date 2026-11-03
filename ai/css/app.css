@@ -1221,3 +1221,9 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-3t tr.dv-check td{color:var(--em-text);font-weight:700}
 .dv-3t .dv-yr{width:78px;background:var(--surface);border:1px dashed var(--line-2);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;text-align:right;color:var(--strong)}
 .dv-3t .dv-yr.on{border:1.5px solid var(--gold);background:var(--gold-soft)}
+.dv-src{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:8px 0;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.dv-radio{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;border:1px solid var(--line-2);cursor:pointer;font-size:13px}
+.dv-radio.on{border-color:var(--em);background:var(--em-soft);color:var(--em-text);font-weight:700}
+.dv-radio input{accent-color:var(--em)}
+.dv-src small{flex-basis:100%}
+.dv-drv td:first-child{white-space:nowrap}
