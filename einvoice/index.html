@@ -487,9 +487,9 @@
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
             </svg>
             <h3>Kéo thả file vào đây hoặc click để chọn</h3>
-            <p>Hỗ trợ file XML, PDF và Excel (.xlsx) hoá đơn điện tử — tối đa 20 file mỗi lần</p>
-            <p style="margin-top:6px;padding:6px 12px;background:var(--warning-light);border-left:3px solid var(--warning);border-radius:4px;font-size:12px;color:var(--text);display:inline-block">
-                <strong style="color:var(--warning)">Lưu ý:</strong> Nếu có nhiều hơn 20 file riêng lẻ, vui lòng sử dụng chức năng <strong>Gộp PDF</strong> để gộp lại trước rồi upload file đã gộp.
+            <p>Hỗ trợ file XML, PDF và Excel (.xlsx) hoá đơn điện tử — chọn thẳng nhiều file một lần (tối đa 1000), <strong>không cần gộp PDF</strong></p>
+            <p style="margin-top:6px;padding:6px 12px;background:var(--info-light);border-left:3px solid var(--info);border-radius:4px;font-size:12px;color:var(--text);display:inline-block">
+                <strong style="color:var(--info)">Mẹo:</strong> Có file <strong>XML</strong> thì nên dùng XML — đọc ngay, chính xác, không qua AI. Chọn cả XML lẫn PDF cùng tên thì tool tự lấy XML, bỏ PDF.
             </p>
             <input type="file" id="fileInput" multiple accept=".xml,.pdf,.xlsx,.xls">
         </div>
@@ -1636,19 +1636,26 @@
         return canvas.toDataURL('image/png').split(',')[1];
     }
 
+    // Base64 qua FileReader (mã gốc của trình duyệt) — nhanh & nhẹ RAM hơn nối chuỗi từng byte với file lớn
+    function bytesToBase64(bytes) {
+        return new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(String(r.result).slice(String(r.result).indexOf(',') + 1));
+            r.onerror = () => reject(new Error('Không đọc được file PDF'));
+            r.readAsDataURL(new Blob([bytes], { type: 'application/pdf' }));
+        });
+    }
+
     // Split PDF into chunks of maxPages using pdf-lib
     const CHUNK_PAGES = 20;
     async function splitPDFIntoChunks(fileArrayBuffer, maxPages = CHUNK_PAGES) {
         const { PDFDocument } = PDFLib;
-        const srcDoc = await PDFDocument.load(fileArrayBuffer);
+        const srcDoc = await PDFDocument.load(fileArrayBuffer, { ignoreEncryption: true });
         const totalPages = srcDoc.getPageCount();
 
         if (totalPages <= maxPages) {
             // No need to split — return single chunk as base64
-            const bytes = new Uint8Array(fileArrayBuffer);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-            return [{ base64: btoa(binary), pageStart: 1, pageEnd: totalPages, totalPages }];
+            return [{ base64: await bytesToBase64(fileArrayBuffer), pageStart: 1, pageEnd: totalPages, totalPages }];
         }
 
         const chunks = [];
@@ -1658,9 +1665,7 @@
             const pages = await newDoc.copyPages(srcDoc, Array.from({ length: end - start }, (_, i) => start + i));
             pages.forEach(p => newDoc.addPage(p));
             const pdfBytes = await newDoc.save();
-            let binary = '';
-            for (let i = 0; i < pdfBytes.length; i++) binary += String.fromCharCode(pdfBytes[i]);
-            chunks.push({ base64: btoa(binary), pageStart: start + 1, pageEnd: end, totalPages });
+            chunks.push({ base64: await bytesToBase64(pdfBytes), pageStart: start + 1, pageEnd: end, totalPages });
         }
         return chunks;
     }
@@ -2125,17 +2130,30 @@ Trả về đúng định dạng JSON mảng sau (không markdown, không backti
     }
 
     // ==================== FILE HANDLER ====================
+    // Nhận thẳng hàng trăm file — KHÔNG cần gộp PDF trước:
+    // - XML/Excel đọc ngay trên máy (không qua AI, không tốn lượt key).
+    // - PDF trùng tên với 1 file XML trong cùng lần chọn → bỏ qua, dùng XML (chính xác & nhanh hơn).
+    // - Các PDF còn lại gửi AI song song PDF_CONCURRENCY file một lúc (trước đây lần lượt từng file).
+    // - HĐ đọc từ PDF mà đã có (từ XML/lần trước) thì không thêm lần nữa.
+    const MAX_UPLOAD_FILES = 1000;
+    const PDF_CONCURRENCY = 4;
+
     async function processFiles(files) {
         const fileList = Array.from(files);
         if (fileList.length === 0) return;
 
-        if (fileList.some(f => /\.pdf$/i.test(f.name)) && !isGeminiConfigured()) {
-            showToast(aiMissingKeyError().message, 'warning');
+        if (fileList.length > MAX_UPLOAD_FILES) {
+            showToast(`Tối đa ${MAX_UPLOAD_FILES} file mỗi lần upload — vui lòng chia làm nhiều lần.`, 'warning', 8000);
             return;
         }
 
-        if (fileList.length > 20) {
-            showToast('Tối đa 20 file mỗi lần upload. Nếu có nhiều hơn 20 file riêng lẻ, vui lòng dùng chức năng "Gộp PDF" để gộp lại trước rồi upload file đã gộp.', 'warning', 8000);
+        const baseName = f => f.name.replace(/\.[^.]+$/, '').trim().toLowerCase();
+        const kindOf = f => /\.xml$/i.test(f.name) ? 'xml' : /\.xlsx?$/i.test(f.name) ? 'excel' : /\.pdf$/i.test(f.name) ? 'pdf' : 'other';
+        const xmlNames = new Set(fileList.filter(f => kindOf(f) === 'xml').map(baseName));
+        const pdfNeedsAI = fileList.some(f => kindOf(f) === 'pdf' && !xmlNames.has(baseName(f)));
+
+        if (pdfNeedsAI && !isGeminiConfigured()) {
+            showToast(aiMissingKeyError().message, 'warning');
             return;
         }
 
@@ -2151,11 +2169,10 @@ Trả về đúng định dạng JSON mảng sau (không markdown, không backti
         footerEl.style.display = 'none';
         summaryEl.style.display = 'none';
 
-        // Build file list UI
         listEl.innerHTML = fileList.map((f, i) => {
-            const ext = f.name.split('.').pop().toLowerCase();
-            const icon = ext === 'pdf' ? '<span class="badge badge-pdf">PDF</span>'
-                : (ext === 'xlsx' || ext === 'xls') ? '<span class="badge badge-excel">Excel</span>'
+            const k = kindOf(f);
+            const icon = k === 'pdf' ? '<span class="badge badge-pdf">PDF</span>'
+                : k === 'excel' ? '<span class="badge badge-excel">Excel</span>'
                 : '<span class="badge badge-xml">XML</span>';
             return `<div class="processing-item p-waiting" id="pitem-${i}">
                 <div class="p-icon">${icon}</div>
@@ -2167,107 +2184,113 @@ Trả về đúng định dạng JSON mảng sau (không markdown, không backti
         openModal('processingModal');
 
         showProgress(true);
-        let processed = 0, errors = 0;
+        let processed = 0, errors = 0, skipped = 0, done = 0;
         const startTime = Date.now();
+        const tick = () => {
+            done++;
+            updateProgress(done / fileList.length * 100);
+            titleEl.innerHTML = `<span class="spinner"></span> Đang xử lý ${done}/${fileList.length} file...`;
+        };
+        const el = i => ({ item: document.getElementById('pitem-' + i), status: document.getElementById('pstatus-' + i) });
+        const errText = err => '✗ ' + (err.message.length > 60 ? err.message.substring(0, 57) + '...' : err.message);
 
+        // 1) XML, Excel, file lạ — nhanh, làm lần lượt theo thứ tự
+        const pdfIdx = [];
         for (let i = 0; i < fileList.length; i++) {
             const file = fileList[i];
-            const itemEl = document.getElementById('pitem-' + i);
-            const statusEl = document.getElementById('pstatus-' + i);
-            updateProgress((i + 1) / fileList.length * 100);
-
-            // Mark as active
-            itemEl.className = 'processing-item p-active';
-            const isPdf = file.name.toLowerCase().endsWith('.pdf');
-            const isXml = file.name.toLowerCase().endsWith('.xml');
-            const isExcel = /\.xlsx?$/i.test(file.name);
-
-            if (isPdf && isGeminiConfigured()) {
-                statusEl.innerHTML = '<span class="spinner"></span> AI đang xử lý PDF...';
-            } else if (isPdf) {
-                statusEl.innerHTML = '<span class="spinner"></span> Đang đọc PDF...';
-            } else if (isXml) {
-                statusEl.innerHTML = '<span class="spinner"></span> Đang phân tích XML...';
-            } else if (isExcel) {
-                statusEl.innerHTML = '<span class="spinner"></span> Đang đọc Excel...';
-            } else {
-                statusEl.textContent = 'File không hỗ trợ';
-                itemEl.className = 'processing-item p-error';
-                errors++;
+            const k = kindOf(file);
+            const { item, status } = el(i);
+            if (k === 'pdf') {
+                if (xmlNames.has(baseName(file))) {
+                    status.textContent = '↷ Bỏ qua — đã có file XML cùng tên';
+                    item.className = 'processing-item p-done';
+                    skipped++;
+                    tick();
+                } else {
+                    pdfIdx.push(i);
+                }
                 continue;
             }
-
+            item.className = 'processing-item p-active';
+            if (k === 'other') {
+                status.textContent = 'File không hỗ trợ';
+                item.className = 'processing-item p-error';
+                errors++;
+                tick();
+                continue;
+            }
+            status.innerHTML = '<span class="spinner"></span> ' + (k === 'xml' ? 'Đang phân tích XML...' : 'Đang đọc Excel...');
             try {
-                if (isXml) {
-                    const text = await readFileAsText(file);
-                    const parsed = parseXML(text);
+                if (k === 'xml') {
+                    const parsed = parseXML(await readFileAsText(file));
                     parsed.forEach(inv => { inv.source = file.name; });
                     invoices.push(...parsed);
                     processed += parsed.length;
-                    statusEl.textContent = '\u2713 ' + parsed.length + ' hoá đơn';
-                    itemEl.className = 'processing-item p-done';
-                } else if (isExcel) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    status.textContent = '✓ ' + parsed.length + ' hoá đơn';
+                } else {
+                    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
                     const result = parseExcelWorkbook(workbook, file.name);
-
-                    // Filter duplicates
                     const dupeCount = result.invoices.filter(inv => isDuplicateInvoice(inv)).length;
                     const newInvs = result.invoices.filter(inv => !isDuplicateInvoice(inv));
                     invoices.push(...newInvs);
                     processed += newInvs.length;
-
-                    let statusText = '\u2713 ' + newInvs.length + ' hoá đơn (Excel)';
+                    let statusText = '✓ ' + newInvs.length + ' hoá đơn (Excel)';
                     if (dupeCount > 0) statusText += ` — ${dupeCount} trùng bỏ qua`;
                     if (result.errors.length > 0) statusText += ` — ${result.errors.length} lỗi`;
-                    statusEl.textContent = statusText;
-                    itemEl.className = 'processing-item p-done';
-                } else if (isPdf) {
-                    // statusCallback to update UI during multi-chunk processing
-                    const statusCb = (msg) => {
-                        statusEl.innerHTML = '<span class="spinner"></span> ' + msg;
-                    };
-                    const invList = await parsePDF(file, statusCb);
-                    invoices.push(...invList);
-                    processed += invList.length;
-                    const method = isGeminiConfigured() ? ' (AI)' : ' (regex)';
-                    const countLabel = invList.length > 1 ? (' ' + invList.length + ' hoá đơn') : '';
-                    statusEl.textContent = '\u2713 Thành công' + countLabel + method;
-                    itemEl.className = 'processing-item p-done';
+                    status.textContent = statusText;
                 }
+                item.className = 'processing-item p-done';
             } catch (err) {
                 errors++;
                 console.error(`Error processing ${file.name}:`, err);
-                itemEl.className = 'processing-item p-error';
-
-                // Detect Gemini rate limit
-                const isRateLimit = err.message && (err.message.includes('429') || err.message.includes('RATE_LIMIT') || err.message.includes('quota'));
-                if (isRateLimit) {
-                    statusEl.textContent = '\u26A0 Rate limit - thử lại sau 60s...';
-                    // Wait and retry once
-                    await sleep(60000);
-                    statusEl.innerHTML = '<span class="spinner"></span> Đang thử lại...';
-                    itemEl.className = 'processing-item p-active';
-                    try {
-                        if (isPdf) {
-                            const invList = await parsePDF(file);
-                            invoices.push(...invList);
-                            processed += invList.length;
-                            errors--; // undo error count
-                            statusEl.textContent = '\u2713 Thành công (retry) ' + invList.length + ' hoá đơn';
-                            itemEl.className = 'processing-item p-done';
-                        }
-                    } catch (retryErr) {
-                        statusEl.textContent = '\u2717 ' + retryErr.message;
-                        itemEl.className = 'processing-item p-error';
-                    }
-                } else {
-                    statusEl.textContent = '\u2717 ' + (err.message.length > 60 ? err.message.substring(0, 57) + '...' : err.message);
-                }
+                item.className = 'processing-item p-error';
+                status.textContent = errText(err);
             }
+            tick();
+        }
 
-            // Scroll to current item
-            itemEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // 2) PDF — gửi AI song song; kết quả giữ đúng thứ tự file
+        const pdfResults = new Array(fileList.length);
+        const isRateLimit = err => err.message && /429|RATE_LIMIT|quota/i.test(err.message);
+        async function runPdf(i) {
+            const file = fileList[i];
+            const { item, status } = el(i);
+            item.className = 'processing-item p-active';
+            status.innerHTML = '<span class="spinner"></span> AI đang xử lý PDF...';
+            const statusCb = msg => { status.innerHTML = '<span class="spinner"></span> ' + msg; };
+            try {
+                try {
+                    pdfResults[i] = await parsePDF(file, statusCb);
+                } catch (err) {
+                    if (!isRateLimit(err)) throw err;
+                    status.textContent = '⚠ Rate limit - thử lại sau 60s...';
+                    await sleep(60000);
+                    statusCb('Đang thử lại...');
+                    pdfResults[i] = await parsePDF(file, statusCb);
+                }
+                const n = pdfResults[i].length;
+                status.textContent = '✓ Thành công' + (n > 1 ? ' ' + n + ' hoá đơn' : '') + ' (AI)';
+                item.className = 'processing-item p-done';
+            } catch (err) {
+                errors++;
+                console.error(`Error processing ${file.name}:`, err);
+                item.className = 'processing-item p-error';
+                status.textContent = errText(err);
+            }
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            tick();
+        }
+        let next = 0;
+        const worker = async () => { while (next < pdfIdx.length) await runPdf(pdfIdx[next++]); };
+        await Promise.all(Array.from({ length: Math.min(PDF_CONCURRENCY, pdfIdx.length) }, worker));
+
+        let pdfDupes = 0;
+        for (const i of pdfIdx) {
+            for (const inv of pdfResults[i] || []) {
+                if (inv.number && inv.serial && isDuplicateInvoice(inv)) { pdfDupes++; continue; }
+                invoices.push(inv);
+                processed++;
+            }
         }
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -2276,14 +2299,14 @@ Trả về đúng định dạng JSON mảng sau (không markdown, không backti
         updateStats();
         updateButtons();
 
-        // Update modal to completed state
         titleEl.textContent = 'Hoàn thành xử lý!';
         closeBtnEl.style.display = '';
         footerEl.style.display = '';
         summaryEl.style.display = '';
         summaryEl.innerHTML =
-            `<span>\u2713 Thành công: <strong style="color:var(--success)">${processed}</strong></span>` +
-            (errors > 0 ? `<span>\u2717 Lỗi: <strong style="color:var(--error)">${errors}</strong></span>` : '') +
+            `<span>✓ Thành công: <strong style="color:var(--success)">${processed}</strong></span>` +
+            (skipped + pdfDupes > 0 ? `<span>↷ Bỏ qua trùng: <strong>${skipped + pdfDupes}</strong></span>` : '') +
+            (errors > 0 ? `<span>✗ Lỗi: <strong style="color:var(--error)">${errors}</strong></span>` : '') +
             `<span>Thời gian: <strong>${elapsed}s</strong></span>`;
 
         if (processed > 0) showToast(`Đã trích xuất ${processed} hoá đơn thành công!`, 'success');
