@@ -10,6 +10,7 @@ import { dcfBlock, targetBlock, piotroskiCard, mnaBlock, compsBlock, dvDashboard
 import { roadmap, stepWrap } from './dvguide.js';
 import { sotpBlock } from './dvparts.js';
 import { lboBlock } from './dvlbo.js';
+import { threeBlock } from './dv3s.js';
 
 const pc = (x) => (Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : '—');
 const lan = (x) => (Number.isFinite(x) ? t('ch.times', { v: x.toFixed(2) }) : '—');
@@ -35,7 +36,7 @@ export function renderDeal(store) {
     dvDashboard(a, inp, money, ul),
     stepWrap(1, ebitdaTable(a, money, ul), manualAdj(inp, save, unit, money), quality(a), flagBox(a, money)),
     stepWrap(2, wcTable(a, money), cashTable(a, money)),
-    stepWrap(3, dcfBlock(a, inp, save, money, ul)),
+    stepWrap(3, dcfBlock(a, inp, save, money, ul), threeBlock(a, inp, save, money, ul)),
     stepWrap(4, bridge(a, money)),
     stepWrap(5, valuation(a, inp, save, money, ul), compsBlock(a, inp, save, money, unit, ul), sotpBlock(a, inp, save, money, unit, ul)),
     stepWrap(6, targetBlock(a, inp, save, money)),

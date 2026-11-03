@@ -165,7 +165,7 @@ export function wiring(V, r) {
     nut('EBIT → NOPAT'),
     nut(M.fa ? t('dv.w.capexFa') : t('dv.w.capex'), M.fa),
     nut(M.wcDays ? t('dv.w.nwcDays') : t('dv.w.nwc'), M.wcDays),
-    nut('FCFF', true), nut(t('dv.w.ev')), nut(t('dv.w.out')),
+    nut('FCFF', true), nut(t('dv.w.3s'), true), nut(t('dv.w.ev')), nut(t('dv.w.out')),
   ];
   return h('div', { class: 'dv-wire', role: 'img', 'aria-label': t('dv.w.h') }, h('b', {}, t('dv.w.h')), ' ', xs.flatMap((x, i) => (i ? [mui(), x] : [x])));
 }

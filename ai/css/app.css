@@ -1213,3 +1213,11 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-su{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
 .dv-warn{color:var(--gold);font-weight:700}
 .dv-lbog td.dv-mid{font-weight:800;outline:2px solid var(--em);outline-offset:-2px}
+/* Mô hình ba báo cáo (ui/dv3s.js) */
+.dv-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 6px}
+.dv-tab{all:unset;cursor:pointer;padding:6px 14px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);font-size:13px;font-weight:600;color:var(--text)}
+.dv-tab.on{background:var(--em);border-color:var(--em);color:var(--em-ink)}
+.dv-tab:focus-visible{outline:2px solid var(--em);outline-offset:2px}
+.dv-3t tr.dv-check td{color:var(--em-text);font-weight:700}
+.dv-3t .dv-yr{width:78px;background:var(--surface);border:1px dashed var(--line-2);border-radius:6px;padding:3px 6px;font:inherit;font-size:12.5px;text-align:right;color:var(--strong)}
+.dv-3t .dv-yr.on{border:1.5px solid var(--gold);background:var(--gold-soft)}

@@ -10,6 +10,8 @@
 // Giả định mặc định giống model: trung bình 3 năm actual GẦN NHẤT (tự trượt khi thêm năm), người dùng
 // ghi đè ô nào thì ô đó dùng số của người dùng. MÁY tính, AI không tham gia.
 
+import { cleanFs, DEFAULT_FS } from './threestmt.js';
+
 const num = (v) => (Number.isFinite(v) ? v : null);
 const abs = (v) => (v === null ? null : Math.abs(v));
 const div = (a, b) => (a === null || b === null || !b ? null : a / b);
@@ -52,6 +54,7 @@ export const DEFAULT_VAL = {
   fa: { life0: null, life: 10, amt: [] },       // tuổi còn lại TSCĐ hiện có · thời gian khấu hao TSCĐ mới · capex từng năm (đồng)
   proj: { items: [], core: null, coreG: null },  // dự án: [{ name, total (đồng), pct: [% ghi nhận từng năm], gm }] + doanh thu nền
   lbo: { entry: null, exit: null, years: null, fees: 0.02, sX: 3, sRate: 0.09, sAmort: 0.1, mX: 1, mRate: 0.12, sweep: 0.75, irr: 0.2 },
+  fs: DEFAULT_FS,         // giả định tài chính của mô hình ba báo cáo (core/threestmt.js): lãi tiền gửi, cổ tức, nợ, phát hành
   others: [],             // phương pháp định giá khác đưa vào giá mục tiêu: [{ name, ps (đồng / cổ phiếu), w (trọng số) }] — RNAV, DDM, đồng thuận CTCK…
   byYear: {},             // ghi đè theo năm: { growth: [năm1, năm2, …], margin: […], … } — null = dùng số chung   // evRev: theo trung vị peer (bảng so sánh)
 };
@@ -142,6 +145,7 @@ export function cleanVal(x) {
     ps: Number.isFinite(+x?.ps) && +x.ps > 0 && +x.ps < 1e9 ? +x.ps : null,
     w: Number.isFinite(+x?.w) && +x.w >= 0 && +x.w <= 100 ? +x.w : 0,
   }));
+  out.fs = cleanFs(o.fs);
   const w = o.weights && typeof o.weights === 'object' ? o.weights : {};
   for (const k of Object.keys(DEFAULT_VAL.weights)) if (Number.isFinite(+w[k]) && +w[k] >= 0 && +w[k] <= 100) out.weights[k] = +w[k];
   return out;
