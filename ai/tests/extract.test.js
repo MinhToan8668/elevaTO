@@ -432,3 +432,31 @@ test('trang KQKD không có tiêu đề ở đầu (chữ pdf.js lệch thứ t�
   ]);
   assert.deepEqual(r.types, ['BS', 'BS', 'IS', 'CF']);
 });
+
+import { livesFrom } from '../js/core/extract.js';
+
+test('thời gian khấu hao theo nhóm (chính sách kế toán): khung năm, đổi tỷ lệ % ra năm, gộp dòng cùng nhóm, đất không thời hạn', () => {
+  const r = livesFrom({ nhom_tai_san: [
+    { ten: 'Nhà cửa, vật kiến trúc', nhom: 'buildings', tu_nam: '05', den_nam: '25 năm' },
+    { ten: 'Máy móc, thiết bị', nhom: 'machinery', tu_nam: '3', den_nam: '7' },
+    { ten: 'Phương tiện vận tải', nhom: '', ty_le_tu: '10%', ty_le_den: '16,67%' },
+    { ten: 'Thiết bị văn phòng', nhom: 'office', tu_nam: '3', den_nam: '3' },
+    { ten: 'Dụng cụ quản lý', nhom: 'office', tu_nam: '5', den_nam: '8' },
+    { ten: 'Quyền sử dụng đất không thời hạn', nhom: 'land', tu_nam: '0', den_nam: '0' },
+    { ten: 'Phần mềm máy tính', nhom: '', tu_nam: '3', den_nam: '5' },
+    { ten: 'Cộng', nhom: 'other', tu_nam: '1', den_nam: '50' },
+  ] });
+  assert.deepEqual([r.buildings.min, r.buildings.max], [5, 25]);
+  assert.deepEqual([r.machinery.min, r.machinery.max], [3, 7]);
+  assert.deepEqual([Math.round(r.transport.min), r.transport.max], [6, 10], 'tỷ lệ 16,67% → 6 năm, 10% → 10 năm; nhóm đoán theo tên');
+  assert.deepEqual([r.office.min, r.office.max], [3, 8], 'hai dòng cùng nhóm → khung bao');
+  assert.deepEqual([r.land.min, r.land.max], [0, 0]);
+  assert.deepEqual([r.software.min, r.software.max], [3, 5]);
+  assert.equal(r.other, undefined, 'bỏ dòng cộng');
+});
+
+test('nhận trang chính sách kế toán có thời gian khấu hao (PDF có chữ)', () => {
+  const pg = (s) => s.padEnd(60, ' x');
+  const r = classifyPages([pg('THUYẾT MINH BÁO CÁO TÀI CHÍNH HỢP NHẤT'), pg('Tài sản cố định hữu hình được khấu hao theo phương pháp đường thẳng dựa trên thời gian hữu dụng ước tính như sau')]);
+  assert.deepEqual(r.notes.lives, [2]);
+});

@@ -380,3 +380,13 @@ test('tự kiểm chứng: dòng tổng không khớp (AI đọc sai một dòng
   assert.equal(r.statements.IS.cur['IS:32'], 26649261729);
   assert.match(r.warnings.join('\n'), /đã đọc lại có trọng tâm/);
 });
+
+test('thuyết minh thời gian khấu hao (chính sách kế toán) → khung năm theo nhóm TSCĐ, lưu ở notes.lives', async () => {
+  const io = makeIO({ 'CHÍNH SÁCH KẾ TOÁN': () => ({ nhom_tai_san: [
+    { ten: 'Nhà cửa, vật kiến trúc', nhom: 'buildings', tu_nam: '6', den_nam: '25' },
+    { ten: 'Phương tiện vận tải', nhom: 'transport', tu_nam: '6', den_nam: '10' },
+  ] }) });
+  const r = await extractJob({ ...job, notes: { ...job.notes, lives: [6] } }, io, { noteGroups: ['lives'] });
+  assert.deepEqual(r.notes.lives, { buildings: { min: 6, max: 25, names: ['Nhà cửa, vật kiến trúc'] }, transport: { min: 6, max: 10, names: ['Phương tiện vận tải'] } });
+  assert.equal(io.calls.find((c) => c.prompt.includes('CHÍNH SÁCH')).pages, 'p6,7', 'kèm trang sau: chính sách kế toán hay dài sang trang');
+});

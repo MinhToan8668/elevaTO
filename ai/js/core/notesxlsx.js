@@ -130,6 +130,11 @@ function khoiTSCD(ds) {
   }
   const coGW = ds.periods.some((p) => (ds.notes && ds.notes[p.id]?.goodwill));
   if (coGW) nhom.push({ ten: t('xn.gw'), rows: GW_DONG.map((f) => ({ label: t(`tm.gw.${f}`), get: (no) => no.goodwill?.[f] })) });
+  // Khung thời gian khấu hao (chính sách kế toán): mỗi nhóm hai dòng từ / đến (năm).
+  const lop = [...new Set(ds.periods.flatMap((p) => Object.keys((ds.notes && ds.notes[p.id]?.lives) || {})))];
+  if (lop.length) {
+    nhom.push({ ten: t('xn.lives'), rows: lop.flatMap((cls) => ['min', 'max'].map((f) => ({ label: t(`tm.lives.${f}`, { cls: t(`tm.fa.${cls}`) }), kind: 'int', get: (no) => no.lives?.[cls]?.[f] }))) });
+  }
   return nhom;
 }
 

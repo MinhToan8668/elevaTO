@@ -234,6 +234,19 @@ export const NOTE_TASKS = {
     schema: obj({ meta: obj({ don_vi: S }), nguyen_gia: S, phan_bo_luy_ke: S, tang: S, phan_bo_trong_ky: S }, ['meta']),
     prompt: `Đọc thuyết minh LỢI THẾ THƯƠNG MẠI năm nay: nguyen_gia (nguyên giá cuối năm), phan_bo_luy_ke (phân bổ lũy kế cuối năm), tang (tăng trong năm), phan_bo_trong_ky (phân bổ trong năm). ${KY_NAY} ${DON_VI_BANG}`,
   },
+  lives: {
+    label: 'Thời gian khấu hao TSCĐ (chính sách kế toán)',
+    schema: obj({ nhom_tai_san: arr(obj({ ten: S, nhom: S, tu_nam: S, den_nam: S, ty_le_tu: S, ty_le_den: S }, ['ten'])) }, ['nhom_tai_san']),
+    prompt: [
+      'Đọc mục CHÍNH SÁCH KẾ TOÁN về tài sản cố định hữu hình, vô hình (và thuê tài chính): đoạn hoặc bảng "thời gian khấu hao / thời gian hữu dụng ước tính" theo từng nhóm tài sản.',
+      'Mỗi nhóm tài sản là một phần tử: ten = tên nhóm đúng như in;',
+      'nhom: nhà cửa/vật kiến trúc → buildings; máy móc thiết bị → machinery; phương tiện vận tải/truyền dẫn → transport; thiết bị dụng cụ quản lý/văn phòng → office; TSCĐ hữu hình khác, cây lâu năm → other; quyền sử dụng đất → land; phần mềm máy tính và TSCĐ vô hình khác → software.',
+      'tu_nam, den_nam = số năm nhỏ nhất, lớn nhất (in một số thì hai ô như nhau, ví dụ "05 - 25 năm" → 5 và 25).',
+      'Nếu báo cáo in TỶ LỆ khấu hao (%/năm) thay vì số năm thì chép vào ty_le_tu, ty_le_den và để trống số năm.',
+      'Quyền sử dụng đất không thời hạn (không trích khấu hao): tu_nam = den_nam = "0".',
+      'Bỏ bất động sản đầu tư, chi phí trả trước, lợi thế thương mại.',
+    ].join('\n'),
+  },
   params: {
     label: 'Số cổ phiếu lưu hành, thuế suất TNDN',
     schema: obj({ so_co_phieu_luu_hanh: S, thue_suat_tndn: S }),
@@ -246,7 +259,7 @@ export const NOTE_TASKS = {
 export const PAGE_MAP_SCHEMA = arr(obj({
   trang: I,
   loai: { type: 'STRING', enum: ['BS', 'IS', 'CF', 'NOTES', 'OTHER'] },
-  nhom: arr({ type: 'STRING', enum: ['fixedAssets', 'debt', 'equity', 'segments', 'goodwill', 'params'] }),
+  nhom: arr({ type: 'STRING', enum: ['fixedAssets', 'debt', 'equity', 'segments', 'goodwill', 'params', 'lives'] }),
   // Bản scan hay có trang in ngang (báo cáo bộ phận, bảng biến động vốn chủ) nhưng đóng cùng chiều
   // với các trang dọc → ảnh gửi AI bị nằm ngang. Hỏi luôn ở lượt nhận trang, khỏi tốn thêm lượt.
   xoay: { type: 'STRING', enum: ['0', '90', '180', '270'] },
@@ -263,7 +276,7 @@ export function pageMapTask(pages) {
       intro,
       'Với MỖI trang, cho biết loai: BS (tình hình tài chính / cân đối kế toán), IS (kết quả kinh doanh), CF (lưu chuyển tiền tệ), NOTES (thuyết minh), OTHER (bìa, mục lục, báo cáo kiểm toán, ban giám đốc…).',
       'Trang tiếp nối của một bảng (không có tiêu đề) vẫn cùng loại với bảng đó.',
-      'Với trang NOTES, nhom = các thuyết minh có trên trang: fixedAssets (TSCĐ hữu hình/vô hình), debt (vay và nợ thuê tài chính), equity (biến động vốn chủ sở hữu), segments (báo cáo bộ phận / doanh thu theo mảng), goodwill (lợi thế thương mại), params (số cổ phiếu lưu hành, thuế suất TNDN).',
+      'Với trang NOTES, nhom = các thuyết minh có trên trang: fixedAssets (TSCĐ hữu hình/vô hình), debt (vay và nợ thuê tài chính), equity (biến động vốn chủ sở hữu), segments (báo cáo bộ phận / doanh thu theo mảng), goodwill (lợi thế thương mại), params (số cổ phiếu lưu hành, thuế suất TNDN), lives (chính sách kế toán: thời gian khấu hao / hữu dụng ước tính của TSCĐ).',
       'xoay: ảnh trang này phải quay bao nhiêu độ THEO CHIỀU KIM ĐỒNG HỒ để chữ nằm ngang và đọc từ trái sang phải —',
       '"0" nếu chữ đã xuôi; "90" nếu chữ chạy từ dưới lên trên (phải nghiêng đầu sang trái mới đọc được);',
       '"180" nếu chữ ngược đầu; "270" nếu chữ chạy từ trên xuống dưới. Không chắc thì ghi "0".',

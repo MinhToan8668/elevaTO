@@ -73,6 +73,13 @@ function periodCard(p, n) {
   const u = unitLabel(M);
   if (n.debt) kv(t('tm.debt', { unit: u }), ['stProceeds', 'stRepay', 'ltProceeds', 'ltRepay'].map((k) => [t(`tm.debt.${k}`), n.debt[k]]));
   if (n.equity) kv(t('tm.equity', { unit: u }), Object.entries(n.equity));
+  if (n.lives && Object.keys(n.lives).length) {
+    parts.push(h('table', { class: 'k' },
+      h('thead', {}, h('tr', {}, h('th', {}, t('tm.lives')), h('th', {}, t('tm.lives.range')), h('th', {}, t('tm.lives.src')))),
+      h('tbody', {}, Object.entries(n.lives).map(([cls, x]) => h('tr', {}, h('td', {}, faName(cls)),
+        h('td', {}, x.max === 0 ? t('tm.lives.none') : x.min === x.max ? t('tm.lives.one', { n: x.min }) : t('tm.lives.two', { a: x.min, b: x.max })),
+        h('td', { class: 'priv' }, (x.names || []).join('; ')))))));
+  }
   if (n.goodwill) kv(t('tm.gw', { unit: u }), ['cost', 'accAmort', 'additions', 'amortization'].map((k) => [t(`tm.gw.${k}`), n.goodwill[k]]));
   kv(t('tm.params'), [[t('tm.shares'), n.shares !== undefined ? n.shares.toLocaleString('vi-VN') : undefined], [t('tm.taxRate'), n.taxRate !== undefined ? `${Math.round(n.taxRate * 1000) / 10}%` : undefined]]);
   return h('div', { class: 'cardx' }, parts);

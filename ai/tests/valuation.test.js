@@ -327,3 +327,21 @@ test('mô hình ba báo cáo: cân mọi năm, tiền LCTT = tiền CĐKT; FCFF 
   gan(m2.years[0].bs.cash, 1e16, 1e-12, 'revolver');
   assert.ok(m2.ok);
 });
+
+test('khung số năm khấu hao lấy từ thuyết minh (như cột AB / AC của 10.FA_SCHED): không cần nhập số năm, khấu hao vẫn khớp model DGW', () => {
+  const a = { inputFs: inputFsFrom(DGW3.byYear), valuation: { shares: null },
+    // Khung trong thuyết minh của DGW (đúng cột AB / AC model dùng).
+    faLives: { buildings: { min: 21, max: 25 }, machinery: { min: 2, max: 7 }, transport: { min: 3, max: 6 }, office: { min: 1, max: 5 },
+      other: { min: 3, max: 6 }, land: { min: 0, max: 0 }, software: { min: 3, max: 6 } } };
+  const flows = DGW3.is.map((x, i) => ({ t: i + 1, rev: x.rev * 1e6, cogs: -x.cogs * 1e6, gp: (x.rev + x.cogs) * 1e6, ebit: 1e12, tax: 0.2 }));
+  const capex = Object.fromEntries(Object.entries(DGW3.capex).map(([k, v]) => [k, v.map((x) => x * 1e6)]));
+  const m = model3(a, flows, { fs: cleanFs({ capex }), kd: 0.07, capexPct: 0, shares: null });
+  assert.deepEqual(FA_LIVES(m), [25, 7, 6, 5, 6, 0, 6], 'số năm áp dụng = ước tính chặn trong khung thuyết minh');
+  assert.ok(Object.values(m.lives).every((x) => x.src === 'tm'));
+  gan(m.years[0].cf.da, DGW3.da[0] * 1e6, 1e-6, 'D&A 2026F');
+  gan(m.years[1].bs.faNet, (DGW3.f2027.tang + DGW3.f2027.intang) * 1e6, 1e-6, 'TSCĐ thuần 2027F');
+  // Không có thuyết minh: khung chung, đánh dấu nguồn "md".
+  const m2 = model3({ ...a, faLives: null }, flows, { fs: cleanFs({ capex }), kd: 0.07, capexPct: 0, shares: null });
+  assert.equal(m2.lives.buildings.src, 'md');
+});
+const FA_LIVES = (m) => ['buildings', 'machinery', 'transport', 'office', 'other', 'land', 'software'].map((k) => +m.lives[k].applied.toFixed(4));
