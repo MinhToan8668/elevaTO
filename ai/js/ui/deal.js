@@ -9,6 +9,7 @@ import { t, unitLabel } from '../i18n.js';
 import { dcfBlock, targetBlock, piotroskiCard, mnaBlock, compsBlock, dvDashboard, dvSummary } from './dealval.js';
 import { roadmap, stepWrap } from './dvguide.js';
 import { sotpBlock } from './dvparts.js';
+import { lboBlock } from './dvlbo.js';
 
 const pc = (x) => (Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : '—');
 const lan = (x) => (Number.isFinite(x) ? t('ch.times', { v: x.toFixed(2) }) : '—');
@@ -40,6 +41,7 @@ export function renderDeal(store) {
     stepWrap(6, targetBlock(a, inp, save, money)),
     stepWrap(7, capacity(a, inp, save, money)),
     stepWrap(8, mnaBlock(a, inp, save, money, unit, ul)),
+    stepWrap(9, lboBlock(a, inp, save, money, ul)),
     h('p', { class: 'priv' }, t('dl.note')));
 }
 
@@ -58,6 +60,7 @@ function soBuoc(a, inp, money, ul) {
       : t('dv.step.5.v', { m: v.methods.length, p: (inp.peers || []).filter((x) => !x.off).length }),
     6: b ? `${ps(b.price) || tien(b.equity)}${b.rec ? ` · ${t(`tg.rec.${b.rec}`)}` : ''}` : '—',
     7: a.capacity ? tien(a.capacity.headroom) : '—',
+    9: S?.lbo && !S.lbo.issue ? `IRR ${pc(S.lbo.irr)} · MOIC ${S.lbo.moic.toFixed(1)}×` : '—',
     8: inp.mna?.price ? t('dv.step.8.v', { s: pc(inp.mna.stake) }) : t('dv.step.8.opt'),
   };
 }

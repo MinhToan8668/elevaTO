@@ -11,12 +11,13 @@ import { t } from '../i18n.js';
 export const STEPS = [
   { n: 1, from: [], to: [3, 5, 7] },        // Quality of Earnings → Normalised EBITDA
   { n: 2, from: [], to: [3] },              // Working capital & FCF lịch sử → tỷ lệ mặc định cho dự phóng
-  { n: 3, from: [1, 2], to: [4] },          // DCF: dự phóng + WACC → EV
+  { n: 3, from: [1, 2], to: [4, 9] },       // DCF: dự phóng + WACC → EV
   { n: 4, from: [3], to: [5, 6, 7] },       // EV → equity bridge
   { n: 5, from: [1, 4], to: [6] },          // định giá tương đối: bội số + peer
-  { n: 6, from: [3, 4, 5], to: [8] },       // target price & recommendation
+  { n: 6, from: [3, 4, 5, 9], to: [8] },    // target price & recommendation
   { n: 7, from: [1, 4], to: [] },           // debt capacity (góc nhìn ngân hàng)
   { n: 8, from: [6], to: [] },              // thương vụ M&A
+  { n: 9, from: [3], to: [6] },             // LBO: dòng tiền dự phóng → IRR; giá tối đa để đạt IRR mục tiêu → giá mục tiêu
 ];
 
 export const stepId = (n) => `dv-step-${n}`;

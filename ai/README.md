@@ -163,6 +163,16 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     3.3 WACC · 3.4 FCFF → EV · 3.5 Sensitivity) → ④ EV → equity bridge → ⑤ Relative valuation (multiples & peers)
     → ⑥ Target price & recommendation; thêm ⑦ Debt capacity và ⑧ M&A. Đầu tab là sơ đồ các bước (công thức + số
     kết quả chính, bấm để nhảy tới); mỗi bước có mục đích, công thức và thanh "Đầu vào ← / chuyển sang →".
+  - **Forecast modules bật / tắt** (`js/ui/dvparts.js`, `projectFcff` ở `js/core/valuation.js`): *Gross margin & SG&A*
+    (EBIT = gross profit − SG&A, biên gộp riêng từng mảng / dự án — mặc định theo báo cáo bộ phận), *Working capital by
+    days* (DSO theo revenue, DIO / DPO theo COGS + phần khác), *Fixed asset schedule* (TSCĐ hiện có khấu hao theo tuổi
+    còn lại, capex mới — nhập số tiền từng năm được — theo thời gian sử dụng, nửa năm đầu; EBIT = EBITDA − khấu hao
+    theo lịch). Thiếu số lịch sử thì máy báo và tạm tắt module. Sơ đồ *model wiring* cho thấy module nào đang chạy vào
+    dòng nào. Cách dự phóng doanh thu thứ 6 *theo dự án* (giá trị × % ghi nhận từng năm + doanh thu nền) cho bất
+    động sản / xây dựng. Mẫu ngành tự bật module hợp ngành (sản xuất, bán lẻ: cả ba; tiện ích: lịch TSCĐ…).
+  - **LBO** (`js/core/lbo.js`, bước 9): dùng EBITDA, capex, ΔNWC, thuế đã dự phóng; sources & uses, nợ senior (trả
+    góp + cash sweep) / mezzanine, lịch nợ và credit stats, IRR / MOIC, bảng IRR entry × exit, bội số vào tối đa để đạt
+    IRR mục tiêu → giá / cổ phiếu đưa sang football field và weight "LBO" của target price.
   - **Doanh thu theo mảng & SOTP** (`js/ui/dvparts.js`, `js/core/sotp.js`): cách dự phóng thứ 5 "theo từng mảng kinh
     doanh" (revenue build-up) — mỗi mảng doanh thu năm gốc (mặc định theo thuyết minh báo cáo bộ phận) và tăng trưởng
     riêng, ghi đè được từng năm; tổng các mảng khớp revenue hợp nhất (giữ tỷ lệ loại trừ nội bộ năm gốc).

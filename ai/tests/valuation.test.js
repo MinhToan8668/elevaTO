@@ -211,3 +211,67 @@ test('giá mục tiêu: SOTP và phương pháp khác (RNAV…) vào bình quân
   gan(b.equity, (1000e9 * 50 + 1200e9 * 25 + 2000e9 * 25) / 100, 1e-12, 'bình quân');
   assert.equal(b.rows.find((x) => x.key === 'o0').name, 'RNAV');
 });
+
+import { lboAnalysis, lboMaxEntry, lboGrid } from '../js/core/lbo.js';
+
+test('module biên gộp & SG&A: EBIT = lợi nhuận gộp − SG&A; theo mảng thì biên gộp từng mảng', () => {
+  const a = { ...A(), segments: [{ name: 'X', revenue: 600e9, gm: 0.3 }, { name: 'Y', revenue: 400e9, gm: 0.1 }] };
+  const r = dcfValuation(a, { years: 2, growth: 0.1, fade: false, mods: { gm: true }, gmb: { gm: 0.2, sga: 0.05 } });
+  gan(r.flows[0].gp, 1100e9 * 0.2, 1e-12, 'GP = rev × biên gộp');
+  gan(r.flows[0].ebit, 1100e9 * (0.2 - 0.05), 1e-12, 'EBIT = GP − SG&A');
+  const s = dcfValuation(a, { years: 1, growth: 0.1, fade: false, revMode: 'segments', mods: { gm: true }, gmb: { gm: 0.2, sga: 0.05 } });
+  gan(s.flows[0].gp, (660e9 * 0.3 + 440e9 * 0.1), 1e-12, 'GP theo biên từng mảng');
+  assert.ok(dcfValuation(A(), { mods: { gm: true } }).issues.includes('noGm'), 'không có biên gộp lịch sử → báo, tắt module');
+});
+
+test('module vốn lưu động theo ngày: AR theo doanh thu, tồn kho & phải trả theo giá vốn', () => {
+  const r = dcfValuation(A(), { years: 1, growth: 0, fade: false, mods: { wcDays: true }, gmb: { gm: 0.25 }, wcd: { dso: 36.5, dio: 73, dpo: 36.5 } });
+  const f = r.flows[0];
+  gan(f.wcd.ar, 100e9, 1e-12, 'AR = 1.000 × 36,5 / 365');
+  gan(f.wcd.inv, 150e9, 1e-12, 'tồn kho = giá vốn 750 × 73 / 365');
+  gan(f.wcd.ap, 75e9, 1e-12, 'phải trả = 750 × 36,5 / 365');
+  gan(f.wcd.other, 200e9, 1e-12, 'phần vốn lưu động khác theo % doanh thu lịch sử (fixture: chưa tách AR / tồn kho)');
+  gan(f.nwc, 175e9 + 200e9, 1e-12, 'NWC = AR + tồn kho − phải trả + khác');
+});
+
+test('lịch TSCĐ: TSCĐ cũ khấu hao theo tuổi còn lại, capex mới nửa năm đầu; EBIT = EBITDA − khấu hao theo lịch', () => {
+  const a = A(); a.base.m = { ...a.base.m, ppe: 500e9 };
+  const r = dcfValuation(a, { years: 2, growth: 0, fade: false, margin: 0.1, da: 0.02, capex: 0.03, mods: { fa: true }, fa: { life0: 10, life: 5, amt: [100e9] } });
+  const [f1, f2] = r.flows;
+  gan(f1.fa.daOld, 50e9, 1e-12, 'TSCĐ cũ 500 / 10 năm');
+  gan(f1.fa.daNew, 10e9, 1e-12, 'capex 100 / 5 năm × ½');
+  gan(f1.capex, 100e9, 1e-12, 'capex nhập số tiền');
+  gan(f1.ebitda, 1000e9 * 0.12, 1e-12, 'EBITDA = (EBIT margin + D&A%) × rev');
+  gan(f1.ebit, 120e9 - 60e9, 1e-12, 'EBIT = EBITDA − khấu hao lịch');
+  gan(f2.fa.daNew, 20e9 + 30e9 / 5 / 2, 1e-12, 'năm 2: lớp 1 cả năm + capex năm 2 nửa năm');
+  gan(f2.fa.open, f1.fa.close, 1e-12, 'đầu kỳ = cuối kỳ trước');
+});
+
+test('doanh thu theo dự án: Σ giá trị × % ghi nhận + doanh thu nền', () => {
+  const r = dcfValuation(A(), { years: 2, growth: 0, fade: false, revMode: 'projects', proj: { items: [{ name: 'P1', total: 2000e9, pct: [0.3, 0.7] }], core: 100e9, coreG: 0.1 } });
+  gan(r.flows[0].rev, 600e9 + 110e9, 1e-12, 'năm 1');
+  gan(r.flows[1].rev, 1400e9 + 121e9, 1e-12, 'năm 2');
+});
+
+test('LBO: nguồn = dùng vốn, trả nợ từ dòng tiền, IRR / MOIC; bội số vào tối đa đạt đúng IRR mục tiêu', () => {
+  const a = A(); a.valuation = { ...a.valuation, ebitdaAnnual: 150e9 };
+  const r = dcfValuation(a, { years: 5, growth: 0.05, fade: false, lbo: { entry: 8, exit: 8, sX: 3, mX: 1, fees: 0.02 } });
+  const k = lboAnalysis(a, r);
+  gan(k.uses, 150e9 * 8 * 1.02, 1e-12, 'uses');
+  gan(k.senior0 + k.mezz0 + k.equity0, k.uses, 1e-12, 'sources = uses');
+  assert.ok(k.rows[4].senior < k.senior0, 'nợ senior giảm dần');
+  gan(k.moic, k.equityOut / k.equity0, 1e-12, 'MOIC');
+  gan((1 + k.irr) ** 5, k.moic, 1e-9, 'IRR');
+  const mx = lboMaxEntry(a, r, k);
+  gan(lboAnalysis(a, r, { entry: mx.entry, exit: k.exit }).irr, r.inputs.lbo.irr, 1e-6, 'IRR tại bội số tối đa = mục tiêu');
+  const gr = lboGrid(a, r, k);
+  assert.ok(gr.irr[0][2] > gr.irr[4][2], 'vào rẻ hơn → IRR cao hơn');
+});
+
+test('LBO: không quét tiền trả nợ khi tiền mặt tích luỹ còn âm', () => {
+  const a = A(); a.valuation = { ...a.valuation, ebitdaAnnual: 150e9 };
+  const r = dcfValuation(a, { years: 5, growth: 0.05, fade: false, lbo: { entry: 10, sX: 6, mX: 2, sRate: 0.12, sAmort: 0.2 } });
+  const k = lboAnalysis(a, r);
+  for (const x of k.rows) if (x.cash < 0) assert.equal(x.sweep, 0, `năm ${x.t}: tiền âm mà vẫn quét`);
+  assert.ok(k.issues.includes('shortfall'));
+});

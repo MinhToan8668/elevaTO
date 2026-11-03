@@ -167,6 +167,11 @@ export function measure(v, notes = {}) {
     debt, cash, cashLike, netDebt, debtLike, nonOp, minority,
     tradeWc, opWc, cfo, capexGross, capexNet, fcff, fcfe, shares,
     ta: g('BS:280'), tl: abs(g('BS:300')),
+    // Cho các module dự phóng chi tiết: biên gộp / SG&A, số ngày vốn lưu động, tài sản cố định.
+    cogs: abs(g('IS:11')), gross: g('IS:20') ?? (rev !== null && g('IS:11') !== null ? rev - abs(g('IS:11')) : null),
+    sga: sumN(abs(g('IS:25')), abs(g('IS:26'))),
+    ar: abs(g('BS:131')), inv: g('BS:140') === null ? null : abs(g('BS:140')), ap: abs(g('BS:311')),
+    ppe: abs(g('BS:220')) ?? sumN(abs(g('BS:221')), abs(g('BS:224')), abs(g('BS:227'))),
   };
 }
 
@@ -341,7 +346,8 @@ export function dealAnalysis(ds, inputs) {
     for (let i = periods.length - 1; i >= 0; i--) {
       const p = periods[i], sg = notesOf(p.ltm ? p.from[1] : p.id).segments;
       if (Array.isArray(sg) && sg.some((x) => Number.isFinite(x.revenue))) {
-        return sg.filter((x) => Number.isFinite(x.revenue)).map((x) => ({ name: x.name, revenue: x.revenue, gross: Number.isFinite(x.gross) ? x.gross : null, label: p.label }));
+        return sg.filter((x) => Number.isFinite(x.revenue)).map((x) => ({ name: x.name, revenue: x.revenue, gross: Number.isFinite(x.gross) ? x.gross : null,
+          gm: Number.isFinite(x.gross) && x.revenue ? x.gross / x.revenue : null, label: p.label }));
       }
     }
     return [];

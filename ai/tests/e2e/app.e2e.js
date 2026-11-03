@@ -1239,8 +1239,8 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   assert.match(await page.locator('.dv-mna').innerText(), /EPS after/i);
 
   // Lộ trình định giá: 8 bước nối nhau, mỗi bước có công thức và thanh liên kết; bấm bước 4 nhảy tới EV → equity bridge
-  assert.equal(await page.locator('.dv-road .dv-node').count(), 8);
-  assert.equal(await page.locator('.dv-step').count(), 8);
+  assert.equal(await page.locator('.dv-road .dv-node').count(), 9);
+  assert.equal(await page.locator('.dv-step').count(), 9);
   assert.match(await page.locator('#dv-step-3').innerText(), /3\.1[\s\S]*3\.2[\s\S]*3\.3[\s\S]*3\.4[\s\S]*3\.5/);
   assert.ok(await page.locator('#dv-step-4 .dv-chip.in', { hasText: 'Bước 3' }).count() === 1, 'bước 4 lấy đầu vào từ bước 3');
   await page.locator('.dv-road .dv-node').nth(3).click();
@@ -1307,6 +1307,30 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.locator('#dv-step-6 input[aria-label="Per share RNAV"]').fill('40000');
   await page.locator('#dv-step-6 input[aria-label="Per share RNAV"]').dispatchEvent('change');
   await page.waitForFunction(() => [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'RNAV') && [...document.querySelectorAll('.dv-dash .ff2-name')].some((x) => x.textContent === 'SOTP'));
+  // Module dự phóng: bật Gross margin & SG&A, Working capital by days, Fixed asset schedule → bảng dự phóng có dòng tương ứng
+  for (const ten of ['Gross margin & SG&A', 'Working capital by days', 'Fixed asset schedule']) {
+    await page.locator('.dv-mod', { hasText: ten }).locator('input[type=checkbox]').check();
+    await page.waitForFunction((x) => [...document.querySelectorAll('.dv-mod.on')].some((el) => el.innerText.includes(x)), ten);
+  }
+  await page.waitForSelector('.dv-proj tr:has-text("Closing net PP&E")');
+  for (const s2 of ['Gross profit', '(−) SG&A', 'Net working capital', 'Receivables (DSO)', '(−) D&A capex mới']) assert.ok(await page.locator('.dv-proj tr', { hasText: s2 }).count() >= 1, `thiếu dòng "${s2}"`);
+  assert.ok(await page.locator('.dv-wire .dv-w.on', { hasText: 'FA schedule' }).count() >= 1, 'wiring tô module đang bật');
+  if (process.env.E2E_SHOTS) await page.locator('#dv-step-3').screenshot({ path: join(process.env.E2E_SHOTS, 'modules.png') });
+
+  // LBO: chạy trên dòng tiền dự phóng → IRR, MOIC, giá tối đa; football field có dòng LBO
+  await page.waitForSelector('#dv-step-9 .dv-lbo .hbox:has-text("IRR")');
+  assert.match(await page.locator('#dv-step-9').innerText(), /Sources & uses[\s\S]*Sponsor equity[\s\S]*MOIC/);
+  assert.ok(await page.locator('#dv-step-9 .dv-lbog tbody tr').count() === 5, 'bảng IRR 5 × 5');
+  if (process.env.E2E_SHOTS) await page.locator('#dv-step-9').screenshot({ path: join(process.env.E2E_SHOTS, 'lbo.png') });
+  // Doanh thu theo dự án
+  await sel('Forecast revenue by').selectOption('projects');
+  await page.locator('.dv-segs button', { hasText: '+ Thêm dự án' }).click();
+  const tong = page.locator('.dv-segt input[aria-label="Dự án 1 Total value"]');
+  await tong.fill('5000'); await tong.dispatchEvent('change');
+  const p1 = page.locator('.dv-segt input[aria-label="Dự án 1 2026F"]');
+  await p1.fill('40'); await p1.dispatchEvent('change');
+  await page.waitForFunction(() => /2\.000/.test(document.querySelector('.dv-segt tr.dl-sub')?.innerText || ''));
+
   if (process.env.E2E_SHOTS) await page.locator('#dv-step-5 .dv-sotpsec').screenshot({ path: join(process.env.E2E_SHOTS, 'sotp.png') });
   if (process.env.E2E_SHOTS) await page.locator('#dv-step-6').screenshot({ path: join(process.env.E2E_SHOTS, 'buoc-6.png') });
   if (process.env.E2E_SHOTS) await page.locator('.deal').screenshot({ path: join(process.env.E2E_SHOTS, 'dinh-gia.png') });
