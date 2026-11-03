@@ -39,14 +39,13 @@ export const BS_DRIVERS = [
   { k: 'otherCa', row: 48, side: 'A', basis: 'rev', cf: 'rec' },
   { k: 'ltRec', row: 52, side: 'A', basis: 'rev', cf: 'rec' },
   { k: 'cip', row: 59, side: 'A', basis: 'level', cf: 'invOther' },
-  { k: 'assoc', row: 60, side: 'A', basis: 'flat', cf: 'invOther' },
   { k: 'otherLtInv', row: 61, side: 'A', basis: 'level', cf: 'invOther' },
   { k: 'ltPrepaid', row: 62, side: 'A', basis: 'rev', cf: 'prepaid' },
   { k: 'dta', row: 63, side: 'A', basis: 'rev', cf: 'other' },
   { k: 'otherLt', row: 64, side: 'A', basis: 'rev', cf: 'invOther' },
   { k: 'ap', row: 71, side: 'L', basis: 'dcogs', cf: 'pay' },
   { k: 'advCust', row: 72, side: 'L', basis: 'rev', cf: 'pay' },
-  { k: 'taxPay', row: 73, side: 'L', basis: 'rev', cf: 'pay' },
+  { k: 'taxPay', row: 73, side: 'L', basis: 'rev', cf: 'tax' },          // vào dòng "thuế đã nộp" (lịch thuế, 13.Tax)
   { k: 'empPay', row: 74, side: 'L', basis: 'rev', cf: 'pay' },
   { k: 'accrued', row: 75, side: 'L', basis: 'rev', cf: 'pay' },
   { k: 'unearned', row: 76, side: 'L', basis: 'rev', cf: 'pay' },
@@ -57,6 +56,7 @@ export const BS_DRIVERS = [
 // Driver tài chính (cũng bình quân 3 năm, ghi đè được): vay NH / giá vốn, tỷ lệ cổ tức, NCI / LNST, phát hành cổ phiếu.
 export const FIN_DRIVERS = [
   { k: 'stDebt', basis: 'cogs' }, { k: 'payout', basis: 'pct' }, { k: 'nci', basis: 'pct' }, { k: 'issue', basis: 'level' },
+  { k: 'assocProfit', basis: 'level' },               // phần lãi / lỗ công ty liên doanh, liên kết (13.Tax_JV_Sched mục D)
 ];
 // Nhóm TSCĐ (như targets/model.js FA_CLASSES): dòng đầu khối +0 nguyên giá, +1 hao mòn LK, +2 tăng, +3 khấu hao.
 export const FA_CLS = [
@@ -68,7 +68,8 @@ export const FA_CLS = [
   { cls: 'software', row: 180, min: 3, max: 8 },
 ];
 
-export const DEFAULT_FS = { src: 'model', cashRate: 0.03, minCash: null, stRate: null, ltRate: null, ltNew: [], ltRepay: [], drv: {}, capex: {}, life: {}, gwYears: null };
+export const DEFAULT_FS = { src: 'model', cashRate: 0.03, minCash: null, stRate: null, ltRate: null, ltNew: [], ltRepay: [], drv: {}, capex: {}, life: {}, gwYears: null,
+  assocNew: [], assocDiv: 0 };
 
 const tl = (v, lo, hi, d) => (v !== null && v !== undefined && v !== '' && Number.isFinite(+v) && +v >= lo && +v <= hi ? +v : d);
 const mang = (arr, lo, hi) => (Array.isArray(arr) ? arr : []).slice(0, 10).map((v) => tl(v, lo, hi, null));
@@ -95,6 +96,7 @@ export function cleanFs(x) {
     cashRate: tl(o.cashRate, 0, 0.3, DEFAULT_FS.cashRate), minCash: tl(o.minCash, 0, 1e18, null),
     stRate: tl(o.stRate, 0, 0.5, null), ltRate: tl(o.ltRate, 0, 0.5, null),
     ltNew: mang(o.ltNew, 0, 1e18), ltRepay: mang(o.ltRepay, 0, 1e18), drv, capex, life, gwYears: tl(o.gwYears, 1, 50, null),
+    assocNew: mang(o.assocNew, -1e18, 1e18), assocDiv: tl(o.assocDiv, 0, 1, 0),
   };
 }
 
@@ -128,6 +130,7 @@ function tyLe(d, c, cPrev) {
   if (d.k === 'payout') { const p = cPrev ? actualRow(cPrev).npatP : null; return p > 0 && g(122) !== null ? -g(122) / p : null; }
   if (d.k === 'nci') return A.npat ? (g(27) ?? 0) / A.npat : null;
   if (d.k === 'issue') return g(118) ?? 0;
+  if (d.k === 'assocProfit') return g(16) ?? 0;
   const v = g(d.row);
   if (v === null) return d.basis === 'flat' || d.basis === 'level' ? 0 : null;
   switch (d.basis) {
@@ -197,7 +200,7 @@ export function model3(a, flows, ctx) {
   const issues = [];
 
   // Số dư năm gốc theo đúng các dòng của 07.BS. Chênh lệch (nếu Input_FS chưa cân) dồn vào "khác" để năm gốc cân.
-  const base = { cash: A0.cash, stDebt: g0(78), ltDebt: g0(80), revolver: 0, shareCap: g0(85) + g0(86) + g0(87) + g0(88), retained: g0(89), nci: g0(90) };
+  const base = { cash: A0.cash, stDebt: g0(78), ltDebt: g0(80), revolver: 0, shareCap: g0(85) + g0(86) + g0(87) + g0(88), retained: g0(89), nci: g0(90), assoc: g0(60) };
   for (const d of BS_DRIVERS) base[d.k] = g0(d.row);
   const fa0 = FA_CLS.map((c) => ({ cls: c.cls, cost: g0(c.row), acc: g0(c.row + 1) }));
   // Phần TSCĐ trên CĐKT không nằm trong nhóm nào (Input_FS thiếu thuyết minh) → nhóm "khác".
@@ -206,7 +209,7 @@ export function model3(a, flows, ctx) {
   const gw0 = { cost: num(c0[185]) ?? g0(65), acc: num(c0[185]) !== null ? g0(186) : 0 };
   // Lợi thế thương mại theo thuyết minh lệch số dư CĐKT → lấy số dư CĐKT (giữ nguyên giá, chỉnh phân bổ luỹ kế).
   if (Math.abs(gw0.cost + gw0.acc - g0(65)) > 1) gw0.acc = g0(65) - gw0.cost;
-  const tsB = base.cash + BS_DRIVERS.filter((d) => d.side === 'A').reduce((s, d) => s + base[d.k], 0) + fa0.reduce((s, x) => s + x.cost + x.acc, 0) + gw0.cost + gw0.acc;
+  const tsB = base.cash + base.assoc + BS_DRIVERS.filter((d) => d.side === 'A').reduce((s, d) => s + base[d.k], 0) + fa0.reduce((s, x) => s + x.cost + x.acc, 0) + gw0.cost + gw0.acc;
   const nvB = BS_DRIVERS.filter((d) => d.side === 'L').reduce((s, d) => s + base[d.k], 0) + base.stDebt + base.ltDebt;
   const vcB = base.shareCap + base.retained + base.nci;
   base.plug = tsB - nvB - vcB;                          // nợ / vốn chủ chưa phân loại (Input_FS cân thì ≈ 0)
@@ -254,8 +257,13 @@ export function model3(a, flows, ctx) {
     n.ltDebt = p.ltDebt + ltNew - ltRepay;
     const laiVay = p.stDebt * stRate + p.ltDebt * ltRate + p.revolver * stRate;
     const laiGui = (p.cash + p.stInv) * fs.cashRate;
-    // 4. KQKD.
-    const pbt = f.ebit + laiGui - laiVay;
+    // Đầu tư công ty liên kết (13.Tax_JV_Sched mục D): đầu kỳ + đầu tư mới + phần lãi / lỗ − cổ tức nhận về.
+    const lk = dv('assocProfit') ?? 0;
+    const lkMoi = fs.assocNew[i] ?? 0;
+    const lkCoTuc = Math.max(0, lk) * fs.assocDiv;
+    n.assoc = p.assoc + lkMoi + lk - lkCoTuc;
+    // 4. KQKD (thuế = thuế suất hiệu dụng × LNTT, như 06.IS).
+    const pbt = f.ebit + laiGui - laiVay + lk;
     const thue = Math.max(0, pbt) * f.tax;
     const npat = pbt - thue;
     const nciP = npat * (dv('nci') ?? 0);
@@ -273,11 +281,13 @@ export function model3(a, flows, ctx) {
     const cf = {
       pbt, da: khau + gwAm, prov: nhom('prov'), interest: laiVay,
       rec: nhom('rec'), inv: nhom('inv'), pay: nhom('pay'), prepaid: nhom('prepaid'),
-      intPaid: -laiVay, taxPaid: -thue, other: nhom('other'),
+      // Thuế đã nộp theo lịch thuế phải nộp (13.Tax mục B): đầu kỳ + thuế phải nộp trong năm − cuối kỳ.
+      intPaid: -laiVay, taxPaid: -thue + nhom('tax'), other: nhom('other'), assoc: -lk,
     };
-    cf.cfo = cf.pbt + cf.da + cf.prov + cf.interest + cf.rec + cf.inv + cf.pay + cf.prepaid + cf.intPaid + cf.taxPaid + cf.other;
+    cf.cfo = cf.pbt + cf.da + cf.prov + cf.assoc + cf.interest + cf.rec + cf.inv + cf.pay + cf.prepaid + cf.intPaid + cf.taxPaid + cf.other;
     cf.capex = -capex; cf.stInv = nhom('stInv'); cf.invOther = nhom('invOther');
-    cf.cfi = cf.capex + cf.stInv + cf.invOther;
+    cf.assocInv = -lkMoi; cf.assocDiv = lkCoTuc;
+    cf.cfi = cf.capex + cf.stInv + cf.invOther + cf.assocInv + cf.assocDiv;
     cf.issue = phatHanh; cf.stDebt = n.stDebt - p.stDebt; cf.ltNew = ltNew; cf.ltRepay = -ltRepay; cf.div = -coTuc;
     let tien = p.cash + cf.cfo + cf.cfi + cf.issue + cf.stDebt + cf.ltNew + cf.ltRepay + cf.div;
     // Revolver: tiền dưới mức tối thiểu thì vay; dư thì trả revolver trước.
@@ -296,10 +306,10 @@ export function model3(a, flows, ctx) {
     cf.fcfe = cf.fcff - laiVay * (1 - f.tax) + cf.stDebt + cf.ltNew + cf.ltRepay + cf.revolver;
     // 7. Tổng & kiểm tra.
     const faNet = n.fa.reduce((s, x) => s + x.cost + x.acc, 0), gwNet = n.gw.cost + n.gw.acc;
-    const assets = n.cash + BS_DRIVERS.filter((d) => d.side === 'A').reduce((s, d) => s + n[d.k], 0) + faNet + gwNet;
+    const assets = n.cash + n.assoc + BS_DRIVERS.filter((d) => d.side === 'A').reduce((s, d) => s + n[d.k], 0) + faNet + gwNet;
     const liab = BS_DRIVERS.filter((d) => d.side === 'L').reduce((s, d) => s + n[d.k], 0) + n.stDebt + n.ltDebt + n.revolver + n.plug;
     const equity = n.shareCap + n.retained + n.nci;
-    const is = { rev, cogs: -cogs, gp: rev - cogs, ebit: f.ebit, intIncome: laiGui, interest: -laiVay, pbt, tax: -thue, npat, nci: -nciP, npatP,
+    const is = { rev, cogs: -cogs, gp: rev - cogs, ebit: f.ebit, intIncome: laiGui, interest: -laiVay, assoc: lk, pbt, tax: -thue, npat, nci: -nciP, npatP,
       eps: ctx.shares ? npatP / ctx.shares : null, da: khau + gwAm, ebitda: f.ebit + khau + gwAm };
     const bs = { ...n, faNet, gwNet, assets, liab, equity, tle: liab + equity };
     const ratios = {
@@ -309,8 +319,10 @@ export function model3(a, flows, ctx) {
       roe: (p.shareCap + p.retained) > 0 ? npatP / (((p.shareCap + p.retained) + (n.shareCap + n.retained)) / 2) : null,
       cover: laiVay > 0 ? f.ebit / laiVay : null, dps: ctx.shares ? coTuc / ctx.shares : null, bvps: ctx.shares ? (n.shareCap + n.retained) / ctx.shares : null,
     };
+    const tax = { pbt, charge: thue, rate: pbt > 0 ? thue / pbt : null, open: p.taxPay, paid: -cf.taxPaid, close: n.taxPay, dta: n.dta, dtl: n.dtl };
+    const jv = { open: p.assoc, add: lkMoi, share: lk, div: -lkCoTuc, close: n.assoc };
     p = n;
-    return { t, is, bs, cf, check: assets - (liab + equity), ratios, fa: n.fa, gwAm };
+    return { t, is, bs, cf, check: assets - (liab + equity), ratios, fa: n.fa, gwAm, tax, jv };
   });
   const baseFaNet = fa0.reduce((s, x) => s + x.cost + x.acc, 0);
   return {
