@@ -92,7 +92,7 @@ details li{word-break:break-all}
 <script>
 const $ = id => document.getElementById(id);
 let items = [];          // {name, file, size, hash}
-let seen = new Set();    // hash nội dung để bỏ file trùng
+let seen = new Map();    // dung lượng → các file cùng cỡ (để bỏ file trùng)
 let dupes = 0;
 let outputs = [];        // {name, blob, url}
 
@@ -120,12 +120,22 @@ async function hashOf(buf) {
   return Array.from(new Uint8Array(h.slice(0, 12)), b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Bỏ file trùng mà không phải đọc hết từng file: chỉ file nào cùng dung lượng
+// với file đã có mới đọc ra để so nội dung (file khác cỡ thì chắc chắn khác nhau).
 async function addOne(name, blob) {
-  const buf = await blob.arrayBuffer();
-  const hash = await hashOf(buf);
-  if (seen.has(hash)) { dupes++; return; }
-  seen.add(hash);
-  items.push({ name, file: blob, size: blob.size, hash });
+  const item = { name, file: blob, size: blob.size, hash: null };
+  const same = seen.get(blob.size);
+  if (same) {
+    item.hash = await hashOf(await blob.arrayBuffer());
+    for (const o of same) {
+      if (!o.hash) o.hash = await hashOf(await o.file.arrayBuffer());
+      if (o.hash === item.hash) { dupes++; return; }
+    }
+    same.push(item);
+  } else {
+    seen.set(blob.size, [item]);
+  }
+  items.push(item);
 }
 
 async function addFiles(list) {
@@ -145,7 +155,7 @@ async function addFiles(list) {
         await addOne(f.webkitRelativePath || f.name, f);
       }
     } catch (e) { console.error(f.name, e); }
-    if (i % 20 === 0) { setBar(i / files.length * 100); await tick(); }
+    if (i % 200 === 0) { setBar(i / files.length * 100); await tick(); }
   }
   setBar(null); msg('');
   refresh();
@@ -175,48 +185,112 @@ function clearOutputs() {
   $('outCard').classList.add('hide');
 }
 
+// Gộp 1 nhóm file. Hàm này chạy trong Web Worker (nhiều nhóm gộp song song trên nhiều nhân CPU);
+// worker không tạo được thì chạy luôn trên trang. ParseSpeeds.Fastest + objectsPerTick lớn: pdf-lib
+// không tự ngắt nghỉ từng chút như mặc định → nhanh hơn hẳn với file nhiều đối tượng.
+async function mergeGroup(PDFLib, files, onFileDone) {
+  const out = await PDFLib.PDFDocument.create({ updateMetadata: false });
+  let pages = 0, ok = 0;
+  const bad = [];
+  for (let k = 0; k < files.length; k++) {
+    try {
+      const src = await PDFLib.PDFDocument.load(await files[k].arrayBuffer(), {
+        ignoreEncryption: true, updateMetadata: false, parseSpeed: PDFLib.ParseSpeeds.Fastest,
+      });
+      const copied = await out.copyPages(src, src.getPageIndices());
+      copied.forEach(p => out.addPage(p));
+      pages += copied.length; ok++;
+    } catch (e) {
+      bad.push({ k, err: String(e && e.message || e) });
+    }
+    onFileDone();
+  }
+  const bytes = ok ? await out.save({ objectsPerTick: Infinity }) : null;
+  return { bytes, pages, ok, bad };
+}
+
+const PDFLIB_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+let workerUrl = null;
+function makeWorker() {
+  if (!workerUrl) {
+    const src = `importScripts(${JSON.stringify(PDFLIB_URL)});\n${mergeGroup.toString()}\n` +
+      `onmessage = async e => { try { const r = await mergeGroup(PDFLib, e.data.files, () => postMessage({ tick: 1 }));` +
+      ` postMessage({ done: r }, r.bytes ? [r.bytes.buffer] : []); } catch (err) { postMessage({ fail: String(err && err.message || err) }); } };`;
+    workerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  }
+  return new Worker(workerUrl);
+}
+let useWorkers = typeof Worker !== 'undefined';
+
+function runGroup(group, onFileDone) {
+  const files = group.map(it => it.file);
+  if (!useWorkers) return mergeGroup(PDFLib, files, onFileDone);
+  return new Promise((resolve, reject) => {
+    let w;
+    try { w = makeWorker(); } catch (e) { useWorkers = false; return mergeGroup(PDFLib, files, onFileDone).then(resolve, reject); }
+    let started = false;
+    const fallback = () => { w.terminate(); useWorkers = false; mergeGroup(PDFLib, files, onFileDone).then(resolve, reject); };
+    w.onerror = e => { e.preventDefault && e.preventDefault(); if (!started) fallback(); else { w.terminate(); reject(new Error(e.message || 'Worker lỗi')); } };
+    w.onmessage = e => {
+      started = true;
+      if (e.data.tick) onFileDone();
+      else if (e.data.done) { w.terminate(); resolve(e.data.done); }
+      else if (e.data.fail) { w.terminate(); reject(new Error(e.data.fail)); }
+    };
+    w.postMessage({ files });
+  });
+}
+
 async function merge() {
   const groups = plan();
   clearOutputs();
   $('btnGo').disabled = true;
   const prefix = ($('prefix').value.trim() || 'HoaDon_gop').replace(/[\\/:*?"<>|]+/g, '_');
-  const pad = String(groups.length).length < 2 ? 2 : String(groups.length).length;
-  const bad = [];
+  const pad = Math.max(2, String(groups.length).length);
   const total = items.length;
-  let done = 0, startNo = 1;
   const t0 = Date.now();
-  setBar(0);
-  for (let g = 0; g < groups.length; g++) {
-    const out = await PDFLib.PDFDocument.create();
-    let pages = 0, okCount = 0;
-    for (const it of groups[g]) {
+  let done = 0;
+  const onFileDone = () => { done++; setBar(done / total * 100); msg(`Đang gộp ${done}/${total} file…`); };
+  setBar(0); msg(`Đang gộp 0/${total} file…`);
+
+  // Khung kết quả giữ đúng thứ tự, bản nào xong trước thì hiện trước
+  let startNo = 1;
+  const slots = groups.map((g, i) => {
+    const name = `${prefix}_${String(i + 1).padStart(pad, '0')}_(file ${startNo}-${startNo + g.length - 1}).pdf`;
+    startNo += g.length;
+    const div = document.createElement('div');
+    div.className = 'part';
+    div.innerHTML = `<div class="n"><b>${esc(name)}</b><span>Đang gộp…</span></div>`;
+    $('parts').appendChild(div);
+    return { name, div, out: null };
+  });
+  $('outCard').classList.remove('hide');
+  $('outTitle').textContent = `Đang gộp ${groups.length} bản…`;
+
+  const bad = [];
+  const cores = navigator.hardwareConcurrency || 4;
+  const parallel = Math.max(1, Math.min(groups.length, cores > 2 ? cores - 1 : 1, 6));
+  let next = 0;
+  async function lane() {
+    while (next < groups.length) {
+      const i = next++;
+      const s = slots[i];
       try {
-        const src = await PDFLib.PDFDocument.load(await it.file.arrayBuffer(), { ignoreEncryption: true });
-        const copied = await out.copyPages(src, src.getPageIndices());
-        copied.forEach(p => out.addPage(p));
-        pages += copied.length; okCount++;
+        const r = await runGroup(groups[i], onFileDone);
+        r.bad.forEach(b => bad.push(groups[i][b.k].name + ' — ' + b.err));
+        if (!r.bytes) { s.div.querySelector('span').textContent = 'Không có file đọc được'; continue; }
+        const blob = new Blob([r.bytes], { type: 'application/pdf' });
+        s.out = { name: s.name, blob, url: URL.createObjectURL(blob) };
+        s.div.innerHTML = `<div class="n"><b>${esc(s.name)}</b><span>${r.ok} file · ${r.pages} trang · ${fmtMB(blob.size)}</span></div>` +
+          `<a class="btn sm" href="${s.out.url}" download="${esc(s.name)}">Tải</a>`;
       } catch (e) {
-        bad.push(it.name + ' — ' + (e.message || e));
+        s.div.querySelector('span').textContent = 'Lỗi: ' + (e.message || e);
       }
-      done++;
-      if (done % 5 === 0) { setBar(done / total * 100); msg(`Đang gộp bản ${g + 1}/${groups.length} — ${done}/${total} file…`); await tick(); }
     }
-    const endNo = startNo + groups[g].length - 1;
-    if (okCount) {
-      const bytes = await out.save();
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      const name = `${prefix}_${String(g + 1).padStart(pad, '0')}_(file ${startNo}-${endNo}).pdf`;
-      const o = { name, blob, url: URL.createObjectURL(blob) };
-      outputs.push(o);
-      const div = document.createElement('div');
-      div.className = 'part';
-      div.innerHTML = `<div class="n"><b>${esc(name)}</b><span>${okCount} file · ${pages} trang · ${fmtMB(blob.size)}</span></div>` +
-        `<a class="btn sm" href="${o.url}" download="${esc(name)}">Tải</a>`;
-      $('parts').appendChild(div);
-      $('outCard').classList.remove('hide');
-    }
-    startNo = endNo + 1;
   }
+  await Promise.all(Array.from({ length: parallel }, lane));
+  outputs = slots.filter(s => s.out).map(s => s.out);
+
   setBar(null);
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
   $('outTitle').textContent = `${outputs.length} bản gộp từ ${total - bad.length} file — ${secs}s`;
@@ -268,7 +342,7 @@ drop.ondrop = async e => {
   if (entries.length) { const files = []; for (const en of entries) await walkEntry(en, files); addFiles(files); }
   else addFiles(e.dataTransfer.files);
 };
-$('btnClear').onclick = () => { items = []; seen = new Set(); dupes = 0; clearOutputs(); msg(''); refresh(); };
+$('btnClear').onclick = () => { items = []; seen = new Map(); dupes = 0; clearOutputs(); msg(''); refresh(); };
 $('btnGo').onclick = merge;
 $('btnZip').onclick = zipAll;
 ['maxFiles', 'maxMB', 'order'].forEach(id => $(id).addEventListener('input', refresh));
