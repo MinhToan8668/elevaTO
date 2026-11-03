@@ -1317,6 +1317,20 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   assert.ok(await page.locator('.dv-wire .dv-w.on', { hasText: 'FA schedule' }).count() >= 1, 'wiring tô module đang bật');
   if (process.env.E2E_SHOTS) await page.locator('#dv-step-3').screenshot({ path: join(process.env.E2E_SHOTS, 'modules.png') });
 
+  // Ba báo cáo liên kết: cân mọi năm (cả khi bật module), đổi tab, nhập vay mới vẫn cân
+  await page.waitForSelector('.dv-3s .msg.ok');
+  if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-is.png') });
+  await page.locator('.dv-3s .dv-tab', { hasText: 'Balance sheet' }).click();
+  const kt = await page.locator('.dv-3s tr.dv-check td').allInnerTexts();
+  assert.ok(kt.slice(1).filter((x) => x).every((x) => x.startsWith('✓')), `balance check: ${kt.join(' | ')}`);
+  if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-bs.png') });
+  await page.locator('.dv-3s .dv-tab', { hasText: 'Cash flow' }).click();
+  const vay = page.locator('.dv-3s input[aria-label^="(+) Vay mới"]').first();
+  await vay.fill('500'); await vay.dispatchEvent('change');
+  await page.waitForSelector('.dv-3s input.dv-yr.on');
+  assert.equal(await page.locator('.dv-3s .msg.ok').count(), 1, 'vay mới vẫn cân');
+  if (process.env.E2E_SHOTS) await page.locator('.dv-3s').screenshot({ path: join(process.env.E2E_SHOTS, '3s-cf.png') });
+
   // LBO: chạy trên dòng tiền dự phóng → IRR, MOIC, giá tối đa; football field có dòng LBO
   await page.waitForSelector('#dv-step-9 .dv-lbo .hbox:has-text("IRR")');
   assert.match(await page.locator('#dv-step-9').innerText(), /Sources & uses[\s\S]*Sponsor equity[\s\S]*MOIC/);

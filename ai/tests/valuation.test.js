@@ -275,3 +275,42 @@ test('LBO: không quét tiền trả nợ khi tiền mặt tích luỹ còn âm'
   for (const x of k.rows) if (x.cash < 0) assert.equal(x.sweep, 0, `năm ${x.t}: tiền âm mà vẫn quét`);
   assert.ok(k.issues.includes('shortfall'));
 });
+
+import { threeStatement } from '../js/core/threestmt.js';
+
+// Năm gốc có đủ CĐKT (đồng) để chạy mô hình ba báo cáo.
+const A3 = () => {
+  const a = A();
+  a.base.v = { 'BS:280': 2000e9, 'BS:110': 100e9, 'BS:131': 150e9, 'BS:140': 200e9, 'BS:311': 150e9, 'BS:400': 900e9, 'IS:60': 80e9, 'IS:61': 72e9, 'CF:36': -36e9 };
+  a.base.m = { ...a.base.m, ppe: 600e9, debt: 400e9, minority: 50e9, cashLike: 0, tradeWc: 200e9 };
+  return a;
+};
+
+test('ba báo cáo: CĐKT cân mọi năm, tiền cuối kỳ = tiền đầu kỳ + LCTT, vốn chủ = đầu kỳ + LNST − cổ tức', () => {
+  const a = A3();
+  for (const mods of [{}, { fa: true }, { gm: true, wcDays: true }]) {
+    const r = dcfValuation(a, { years: 5, growth: 0.08, margin: 0.1, gmb: { gm: 0.25, sga: 0.1 }, wcd: { dso: 40, dio: 60, dpo: 45 }, mods, fs: { amort: 0.1, newDebt: [50e9], issue: [0, 20e9] } });
+    const m = threeStatement(a, r);
+    assert.ok(m.ok, `cân đối (${JSON.stringify(mods)}): ${m.years.map((y) => y.check).join(', ')}`);
+    let truoc = m.base;
+    for (const y of m.years) {
+      gan(y.bs.cash, truoc.cash + y.cf.net, 1e-9, 'tiền');
+      gan(y.bs.equityParent, truoc.equityParent + y.is.npatP + y.cf.div + y.cf.issue, 1e-9, 'vốn chủ');
+      gan(y.bs.ppe, truoc.ppe - y.cf.capex - y.cf.da, 1e-9, 'TSCĐ');
+      truoc = y.bs;
+    }
+  }
+});
+
+test('ba báo cáo: lãi vay trên dư nợ đầu năm; cổ tức theo tỷ lệ chi trả năm gốc; revolver khi thiếu tiền', () => {
+  const a = A3();
+  const r = dcfValuation(a, { years: 2, growth: 0, margin: 0.1, kd: 0.1 });
+  const m = threeStatement(a, r);
+  gan(-m.years[0].is.interest, 400e9 * 0.1, 1e-12, 'lãi vay năm 1');
+  gan(m.fs.payout, 36 / 72, 1e-12, 'payout = cổ tức / LNST cty mẹ');
+  gan(m.fs.nciPct, 8 / 80, 1e-12, 'tỷ lệ NCI');
+  const r2 = dcfValuation(a, { years: 2, growth: 0, margin: 0.1, kd: 0.1, fs: { minCash: 5000e9 } });
+  const m2 = threeStatement(a, r2);
+  gan(m2.years[0].bs.cash, 5000e9, 1e-12, 'revolver kéo tiền lên mức tối thiểu');
+  assert.ok(m2.years[0].bs.revolver > 0 && m2.ok);
+});
