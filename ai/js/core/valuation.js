@@ -37,19 +37,28 @@ export const DEFAULT_VAL = {
   capex: null,            // capex thuần / doanh thu
   nwc: null,              // vốn lưu động thương mại / doanh thu
   exit: null,             // bội số EV/EBITDA lúc thoát để đối chiếu — mặc định = mức giữa tab bội số
-  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0, sotp: 0 },
+  weights: { dcf: 50, pe: 25, evEbitda: 15, pb: 10, evRev: 0, sotp: 0, lbo: 0 },
   revMode: 'growth',      // cách dự phóng doanh thu: growth · volprice (sản lượng × giá) · stores (cửa hàng × DT/cửa hàng) · manual
   rev: { vol: 0.03, price: 0.02, stores0: null, storesAdd: 0, perStore: 0.03, manual: [] },
   tvMethod: 'gordon',     // giá trị cuối kỳ: gordon · exit (bội số EV/EBITDA lúc thoát) · blend (bình quân hai cách)
   scen: { on: false, baseP: 50, bull: { growth: 0.03, margin: 0.01, wacc: -0.01, p: 25 }, bear: { growth: -0.03, margin: -0.01, wacc: 0.01, p: 25 } },
   preset: '',             // mẫu ngành đang dùng (core/presets.js)
   segs: [],               // dự phóng doanh thu theo mảng: [{ name, rev0 (đồng, null = theo thuyết minh), g (tăng trưởng chung, null = như cả công ty), gy: [từng năm] }]
+  // Module dự phóng chi tiết (bật / tắt): gm = biên gộp & SG&A (thay EBIT margin) · wcDays = vốn lưu động theo số ngày
+  // (thay NWC % doanh thu) · fa = lịch tài sản cố định (khấu hao theo thời gian sử dụng, capex nhập số tiền được).
+  mods: { gm: false, wcDays: false, fa: false },
+  gmb: { gm: null, sga: null },                 // biên gộp, SG&A / doanh thu — null = bình quân lịch sử
+  wcd: { dso: null, dio: null, dpo: null },     // số ngày phải thu (theo doanh thu), tồn kho & phải trả (theo giá vốn)
+  fa: { life0: null, life: 10, amt: [] },       // tuổi còn lại TSCĐ hiện có · thời gian khấu hao TSCĐ mới · capex từng năm (đồng)
+  proj: { items: [], core: null, coreG: null },  // dự án: [{ name, total (đồng), pct: [% ghi nhận từng năm], gm }] + doanh thu nền
+  lbo: { entry: null, exit: null, years: null, fees: 0.02, sX: 3, sRate: 0.09, sAmort: 0.1, mX: 1, mRate: 0.12, sweep: 0.75, irr: 0.2 },
   others: [],             // phương pháp định giá khác đưa vào giá mục tiêu: [{ name, ps (đồng / cổ phiếu), w (trọng số) }] — RNAV, DDM, đồng thuận CTCK…
   byYear: {},             // ghi đè theo năm: { growth: [năm1, năm2, …], margin: […], … } — null = dùng số chung   // evRev: theo trung vị peer (bảng so sánh)
 };
 /** Tham số sửa được theo từng năm dự phóng. */
-export const BY_YEAR = ['growth', 'margin', 'da', 'capex', 'nwc', 'tax', 'vol', 'price', 'storesAdd', 'perStore'];
-export const REV_MODES = ['growth', 'volprice', 'stores', 'manual', 'segments'];
+export const BY_YEAR = ['growth', 'margin', 'da', 'capex', 'nwc', 'tax', 'vol', 'price', 'storesAdd', 'perStore', 'gm', 'sga', 'dso', 'dio', 'dpo'];
+const LA_SO = ['storesAdd', 'dso', 'dio', 'dpo'];      // ghi đè từng năm là SỐ (cửa hàng, ngày), không phải tỷ lệ
+export const REV_MODES = ['growth', 'volprice', 'stores', 'manual', 'segments', 'projects'];
 export const TV_METHODS = ['gordon', 'exit', 'blend'];
 const KHOA_TY_LE = ['rf', 'erp', 'extra', 'kd', 'tax', 'g', 'growth', 'margin', 'da', 'capex', 'nwc'];
 
@@ -75,7 +84,7 @@ export function cleanVal(x) {
   for (const k of BY_YEAR) {
     if (!Array.isArray(by[k])) continue;
     // storesAdd là SỐ cửa hàng mở thêm (số nguyên, có thể âm khi đóng), còn lại là tỷ lệ trong (−1; 1).
-    const ok = (x) => (k === 'storesAdd' ? Math.abs(x) < 1e6 : x > -1 && x < 1);
+    const ok = (x) => (LA_SO.includes(k) ? Math.abs(x) < 1e6 : x > -1 && x < 1);
     const a = by[k].slice(0, 10).map((x) => (x !== null && x !== '' && Number.isFinite(+x) && ok(+x) ? +x : null));
     if (a.some((x) => x !== null)) out.byYear[k] = a;
   }
@@ -96,12 +105,38 @@ export function cleanVal(x) {
   out.scen = { on: sc.on === true, baseP: Number.isFinite(+sc.baseP) && +sc.baseP >= 0 && +sc.baseP <= 100 ? +sc.baseP : 50,
     bull: kb(sc.bull, DEFAULT_VAL.scen.bull), bear: kb(sc.bear, DEFAULT_VAL.scen.bear) };
   const tlN = (x) => (x !== null && x !== '' && Number.isFinite(+x) && +x > -1 && +x < 5 ? +x : null);
+  const tl1 = (x) => (x !== null && x !== undefined && x !== '' && Number.isFinite(+x) && +x > -1 && +x < 1 ? +x : null);
+  const tien = (x) => (x !== null && x !== undefined && x !== '' && Number.isFinite(+x) && +x >= 0 && +x < 1e18 ? +x : null);
+  const ngay = (x) => (x !== null && x !== undefined && x !== '' && Number.isFinite(+x) && +x >= 0 && +x < 2000 ? +x : null);
   out.segs = (Array.isArray(o.segs) ? o.segs : []).slice(0, 12).map((x) => ({
     name: String(x?.name || '').slice(0, 60),
-    rev0: x?.rev0 !== null && x?.rev0 !== '' && Number.isFinite(+x?.rev0) && +x.rev0 >= 0 && +x.rev0 < 1e18 ? +x.rev0 : null,
+    rev0: tien(x?.rev0),
     g: tlN(x?.g),
     gy: (Array.isArray(x?.gy) ? x.gy : []).slice(0, 10).map(tlN),
+    gm: tl1(x?.gm),
   }));
+  const md = o.mods && typeof o.mods === 'object' ? o.mods : {};
+  out.mods = { gm: md.gm === true, wcDays: md.wcDays === true, fa: md.fa === true };
+  out.gmb = { gm: tl1(o.gmb?.gm), sga: tl1(o.gmb?.sga) };
+  out.wcd = { dso: ngay(o.wcd?.dso), dio: ngay(o.wcd?.dio), dpo: ngay(o.wcd?.dpo) };
+  const nam = (x, d) => (Number.isFinite(+x) && +x >= 1 && +x <= 60 ? +x : d);
+  out.fa = { life0: o.fa?.life0 === null || o.fa?.life0 === undefined || o.fa?.life0 === '' ? null : nam(o.fa.life0, null), life: nam(o.fa?.life, 10),
+    amt: (Array.isArray(o.fa?.amt) ? o.fa.amt : []).slice(0, 10).map(tien) };
+  const pj = o.proj && typeof o.proj === 'object' ? o.proj : {};
+  out.proj = {
+    items: (Array.isArray(pj.items) ? pj.items : []).slice(0, 20).map((x) => ({
+      name: String(x?.name || '').slice(0, 60), total: tien(x?.total) ?? 0,
+      pct: (Array.isArray(x?.pct) ? x.pct : []).slice(0, 10).map((v) => (Number.isFinite(+v) && +v >= 0 && +v <= 1 && v !== null && v !== '' ? +v : null)),
+      gm: tl1(x?.gm) })),
+    core: tien(pj.core), coreG: tlN(pj.coreG),
+  };
+  const lb = o.lbo && typeof o.lbo === 'object' ? o.lbo : {};
+  const dl = DEFAULT_VAL.lbo, khoang = (x, lo, hi, d) => (x !== null && x !== undefined && x !== '' && Number.isFinite(+x) && +x >= lo && +x <= hi ? +x : d);
+  out.lbo = {
+    entry: khoang(lb.entry, 0.5, 60, null), exit: khoang(lb.exit, 0.5, 60, null), years: khoang(lb.years, 1, 10, null),
+    fees: khoang(lb.fees, 0, 0.2, dl.fees), sX: khoang(lb.sX, 0, 15, dl.sX), sRate: khoang(lb.sRate, 0, 0.5, dl.sRate), sAmort: khoang(lb.sAmort, 0, 1, dl.sAmort),
+    mX: khoang(lb.mX, 0, 15, dl.mX), mRate: khoang(lb.mRate, 0, 0.5, dl.mRate), sweep: khoang(lb.sweep, 0, 1, dl.sweep), irr: khoang(lb.irr, 0, 1, dl.irr),
+  };
   out.others = (Array.isArray(o.others) ? o.others : []).slice(0, 8).map((x) => ({
     name: String(x?.name || '').slice(0, 60),
     ps: Number.isFinite(+x?.ps) && +x.ps > 0 && +x.ps < 1e9 ? +x.ps : null,
@@ -147,6 +182,14 @@ export function historyDrivers(years) {
     nwc: tyle((x) => x.tradeWc),
     tax: avg(ba.map((c) => thueSuat(c.v))),
     kd: kep(kd, 0.02, 0.2),
+    // Module chi tiết: biên gộp, SG&A / doanh thu; số ngày phải thu / tồn kho / phải trả (tồn kho, phải trả theo giá vốn);
+    // phần vốn lưu động thương mại còn lại (trả trước, phải trả khác…) theo % doanh thu; tuổi còn lại của TSCĐ hiện có.
+    gm: tyle((x) => x.gross), sga: tyle((x) => x.sga),
+    dso: avg(m.map((x) => (x.rev && x.ar !== null ? (x.ar / x.rev) * 365 : null))),
+    dio: avg(m.map((x) => (x.cogs && x.inv !== null ? (x.inv / x.cogs) * 365 : null))),
+    dpo: avg(m.map((x) => (x.cogs && x.ap !== null ? (x.ap / x.cogs) * 365 : null))),
+    wcOther: tyle((x) => (x.tradeWc === null ? null : x.tradeWc - ((x.ar || 0) + (x.inv || 0) - (x.ap || 0)))),
+    ppeLife: (() => { const l = m[m.length - 1]; return l && l.ppe > 0 && l.kh > 0 ? kep(l.ppe / l.kh, 2, 40) : null; })(),
     n: ba.length,
   };
 }
@@ -158,7 +201,12 @@ function lichSu(years) {
     const truoc = i ? a[i - 1].m.rev : null;
     const ebit = m.adjEbitda === null ? null : m.adjEbitda - (m.kh || 0);
     return { label: c.label, rev, growth: truoc > 0 && rev > 0 ? rev / truoc - 1 : null, ebit, margin: rev ? div(ebit, rev) : null,
-      da: rev ? div(m.kh, rev) : null, capex: rev ? div(m.capexNet, rev) : null, nwc: rev ? div(m.tradeWc, rev) : null, tax: thueSuat(c.v), fcff: m.fcff };
+      da: rev ? div(m.kh, rev) : null, capex: rev ? div(m.capexNet, rev) : null, nwc: rev ? div(m.tradeWc, rev) : null, tax: thueSuat(c.v), fcff: m.fcff,
+      gm: rev ? div(m.gross, rev) : null, sga: rev ? div(m.sga, rev) : null, gp: m.gross ?? null,
+      dso: rev && m.ar !== null && m.ar !== undefined ? (m.ar / rev) * 365 : null,
+      dio: m.cogs && m.inv !== null && m.inv !== undefined ? (m.inv / m.cogs) * 365 : null,
+      dpo: m.cogs && m.ap !== null && m.ap !== undefined ? (m.ap / m.cogs) * 365 : null,
+      ppe: m.ppe ?? null, capexAbs: m.capexNet ?? null, daAbs: m.kh ?? null };
   });
 }
 
@@ -176,7 +224,8 @@ export function wacc({ rf, erp, beta, blume, extra, kd, tax, debt, equityMkt, eq
  * Dự phóng FCFF N năm từ doanh thu năm gốc.
  * @returns [{ t, rev, growth, ebit, nopat, da, capex, nwc, dNwc, ebitda, fcff }]
  */
-export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, nwc, tax, byYear = {}, nwc0 = null, revMode = 'growth', rev: R = {}, adj = {}, segs = null }) {
+export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, nwc, tax, byYear = {}, nwc0 = null, revMode = 'growth', rev: R = {}, adj = {}, segs = null,
+  mods = {}, P = {}, proj = null }) {
   const out = [];
   // Ghi đè từng năm (như cột OVERRIDE của sheet 04.Drivers): byYear[k][t − 1] là số của năm t, null = dùng số chung.
   const lay = (k, t, chung) => (Number.isFinite(byYear[k]?.[t - 1]) ? byYear[k][t - 1] : chung);
@@ -187,6 +236,12 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
   // Theo mảng: mỗi mảng tăng trưởng riêng; tổng doanh thu = Σ mảng × hệ số khớp với doanh thu hợp nhất năm gốc
   // (doanh thu bộ phận thường chưa loại trừ giao dịch nội bộ — giữ nguyên tỷ lệ loại trừ của năm gốc).
   const dtMang = segs?.list?.length ? segs.list.map((x) => x.rev0) : null;
+  // Theo dự án: doanh thu = Σ giá trị dự án × % ghi nhận năm đó + doanh thu nền (mảng không theo dự án).
+  let nen = proj ? proj.core || 0 : 0;
+  // Lịch TSCĐ: TSCĐ hiện có khấu hao đều theo tuổi còn lại; capex mới khấu hao đều theo thời gian sử dụng (nửa năm đầu).
+  let tsCu = P.ppe0 || 0;
+  const khCu = P.ppe0 && P.life0 ? P.ppe0 / P.life0 : 0;
+  const lop = [];                                              // các lớp capex mới: { con: giá trị còn lại, kh: khấu hao / năm }
   for (let t = 1; t <= years; t++) {
     const gChung = fade && years > 1 ? growth + (g - growth) * (t - 1) / (years - 1) : growth;
     const m = lay('margin', t, margin) + dM, d = lay('da', t, da), c = lay('capex', t, capex), n = lay('nwc', t, nwc), tx = lay('tax', t, tax);
@@ -206,15 +261,59 @@ export function projectFcff({ rev0, years, growth, fade, g, margin, da, capex, n
       segs.list.forEach((x, i) => { dtMang[i] *= 1 + (Number.isFinite(x.gy[t - 1]) ? x.gy[t - 1] : Number.isFinite(x.g) ? x.g : gChung) + dG; });
       rev = dtMang.reduce((a, b) => a + b, 0) * segs.k;
       extra = { segs: dtMang.slice() };
+    } else if (revMode === 'projects' && proj) {
+      nen *= 1 + (Number.isFinite(proj.coreG) ? proj.coreG : gChung) + dG;
+      const ds = proj.items.map((x) => x.total * (x.pct[t - 1] || 0) * (1 + dG));
+      rev = ds.reduce((a, b) => a + b, 0) + nen;
+      extra = { proj: ds, core: nen };
     } else if (revMode === 'manual' && Number.isFinite(R.manual?.[t - 1])) {
       rev = R.manual[t - 1] * (1 + dG);
     } else rev *= 1 + lay('growth', t, gChung) + dG;
     const gt = truoc ? rev / truoc - 1 : 0;
-    const ebit = rev * m, khau = rev * d, cx = rev * c, wc = rev * n;
+
+    // Lợi nhuận gộp: theo từng mảng / dự án khi có biên riêng, phần còn lại theo biên gộp chung.
+    const gmT = lay('gm', t, P.gm ?? 0) + dM;
+    let gp = rev * gmT;
+    if (extra.segs) gp = extra.segs.reduce((s2, v, i) => s2 + v * (Number.isFinite(segs.list[i].gm) ? segs.list[i].gm + dM : gmT), 0) * segs.k;
+    if (extra.proj) gp = extra.proj.reduce((s2, v, i) => s2 + v * (Number.isFinite(proj.items[i].gm) ? proj.items[i].gm + dM : gmT), 0) + extra.core * gmT;
+    const sgaT = lay('sga', t, P.sga ?? 0);
+    // EBIT trước lịch khấu hao: gm bật → lợi nhuận gộp − SG&A; không thì doanh thu × EBIT margin.
+    const ebit0 = mods.gm ? gp - rev * sgaT : rev * m;
+
+    // Capex & khấu hao.
+    const cx = mods.fa && Number.isFinite(P.capexAmt?.[t - 1]) ? P.capexAmt[t - 1] : rev * c;
+    let khau = rev * d, ebit = ebit0, ebitda = ebit0 + khau, fa = null;
+    if (mods.fa) {
+      const moDau = tsCu + lop.reduce((s2, x) => s2 + x.con, 0);
+      const k1 = Math.min(tsCu, khCu); tsCu -= k1;
+      let k2 = 0;
+      for (const x of lop) { const k = Math.min(x.con, x.kh); x.con -= k; k2 += k; }
+      const life = P.life || 10;
+      const kMoi = Math.min(cx, cx / life / 2);                 // capex năm nay: khấu hao nửa năm
+      lop.push({ con: cx - kMoi, kh: cx / life });
+      k2 += kMoi;
+      khau = k1 + k2;
+      // Biên lịch sử đã gồm khấu hao (≈ D&A % doanh thu): EBITDA = EBIT trước lịch + phần khấu hao đó; EBIT = EBITDA − khấu hao theo lịch.
+      ebitda = ebit0 + rev * d;
+      ebit = ebitda - khau;
+      fa = { open: moDau, capex: cx, daOld: k1, daNew: k2, close: moDau + cx - khau };
+    }
+
+    // Vốn lưu động: theo số ngày (phải thu theo doanh thu, tồn kho & phải trả theo giá vốn) hoặc % doanh thu.
+    let wc = rev * n, wcd = null;
+    if (mods.wcDays) {
+      const cogs = rev - gp;
+      const dso = lay('dso', t, P.dso ?? 0), dio = lay('dio', t, P.dio ?? 0), dpo = lay('dpo', t, P.dpo ?? 0);
+      const ar = (rev * dso) / 365, inv = (cogs * dio) / 365, ap = (cogs * dpo) / 365, khac = rev * (P.wcOther ?? 0);
+      wc = ar + inv - ap + khac;
+      wcd = { dso, dio, dpo, ar, inv, ap, other: khac };
+    }
     const nopat = ebit * (1 - tx);
     const dNwc = wc - nwcTruoc;
     nwcTruoc = wc;
-    out.push({ t, rev, growth: gt, ...extra, margin: m, daPct: d, capexPct: c, nwcPct: n, tax: tx, ebit, nopat, da: khau, capex: cx, nwc: wc, dNwc, ebitda: ebit + khau, fcff: nopat + khau - cx - dNwc,
+    out.push({ t, rev, growth: gt, ...extra, margin: rev ? ebit / rev : m, daPct: d, capexPct: rev ? cx / rev : c, nwcPct: rev ? wc / rev : n, tax: tx, ebit, nopat, da: khau, capex: cx, nwc: wc, dNwc, ebitda,
+      gp, gm: rev ? gp / rev : null, sga: rev * sgaT, sgaPct: sgaT, cogs: rev - gp, fa, wcd,
+      fcff: nopat + khau - cx - dNwc,
       ghiDe: Object.fromEntries(BY_YEAR.map((k) => [k, Number.isFinite(byYear[k]?.[t - 1])])) });
   }
   return out;
@@ -275,13 +374,30 @@ export function dcfValuation(a, inputs, adj = {}) {
 
   // Mảng kinh doanh: người dùng nhập, không có thì lấy theo thuyết minh báo cáo bộ phận.
   const nguonMang = inp.segs.length ? inp.segs : (a.segments || []).map((x) => ({ name: x.name, rev0: null, g: null, gy: [] }));
-  const list = nguonMang.map((x) => ({ ...x, rev0: x.rev0 ?? (a.segments || []).find((y) => y.name === x.name)?.revenue ?? 0 }));
+  const theoTm = (x) => (a.segments || []).find((y) => y.name === x.name);
+  const list = nguonMang.map((x) => ({ ...x, rev0: x.rev0 ?? theoTm(x)?.revenue ?? 0, gm: x.gm ?? theoTm(x)?.gm ?? null }));
   const tongMang = list.reduce((s, x) => s + x.rev0, 0);
   const segs = inp.revMode === 'segments' && tongMang > 0 ? { list, k: rev0 / tongMang, sum: tongMang } : null;
   out.segs = segs;
   if (inp.revMode === 'segments' && !segs) out.issues.push('noSegs');
+  // Module chi tiết: thiếu số lịch sử để làm thì tắt module đó và báo.
+  const mods = { ...inp.mods };
+  const P = {
+    gm: inp.gmb.gm ?? his.gm, sga: inp.gmb.sga ?? his.sga,
+    dso: inp.wcd.dso ?? his.dso, dio: inp.wcd.dio ?? his.dio, dpo: inp.wcd.dpo ?? his.dpo, wcOther: his.wcOther ?? 0,
+    ppe0: B.ppe ?? null, life0: inp.fa.life0 ?? his.ppeLife ?? 10, life: inp.fa.life, capexAmt: inp.fa.amt,
+  };
+  // Biên gộp cần cả khi chỉ bật vốn lưu động theo ngày (giá vốn = doanh thu − lợi nhuận gộp).
+  if ((mods.gm || mods.wcDays) && P.gm === null) { out.issues.push('noGm'); mods.gm = false; mods.wcDays = false; }
+  if (mods.gm && P.sga === null) P.sga = 0;
+  if (mods.wcDays && P.dso === null && P.dio === null && P.dpo === null) { out.issues.push('noWcDays'); mods.wcDays = false; }
+  if (mods.fa && !(P.ppe0 > 0)) { out.issues.push('noPpe'); mods.fa = false; }
+  Object.assign(d, { gm: P.gm, sga: P.sga, dso: P.dso, dio: P.dio, dpo: P.dpo, life0: P.life0, ppe0: P.ppe0 });
+  out.mods = mods;
+  const proj = inp.revMode === 'projects' && (inp.proj.items.length || inp.proj.core) ? inp.proj : null;
+  if (inp.revMode === 'projects' && !proj) out.issues.push('noProj');
   const flows = projectFcff({ rev0, years: inp.years, growth: d.growth, fade: inp.fade, g: inp.g, margin: d.margin, da: d.da, capex: d.capex, nwc: d.nwc, tax: d.tax,
-    byYear: inp.byYear, revMode: inp.revMode, rev: inp.rev, adj, segs });
+    byYear: inp.byYear, revMode: inp.revMode, rev: inp.rev, adj, segs, mods, P, proj, nwc0: mods.wcDays && B.tradeWc !== null ? B.tradeWc : null });
   if (inp.revMode === 'stores' && !inp.rev.stores0) out.issues.push('noStores');
   const exitM = inp.exit ?? a.inputs.evEbitda[1];
   const r = evAt(flows, W.wacc, inp.g, { method: inp.tvMethod, exit: exitM });
@@ -370,6 +486,7 @@ export function blendedTarget(a, dcf, extra = {}) {
     { key: 'pb', equity: giua('pb') },
     { key: 'evRev', equity: extra.evRev ?? null },
     { key: 'sotp', equity: extra.sotp ?? null },
+    { key: 'lbo', equity: extra.lbo ?? null },
   ].map((r) => ({ ...r, weight: w[r.key] || 0, price: r.equity !== null && v.shares ? r.equity / v.shares : null }))
     // Phương pháp khác người dùng thêm (RNAV, DDM, đồng thuận CTCK…): nhập giá / cổ phiếu và trọng số.
     .concat((dcf.inputs.others || []).map((o, i) => ({ key: `o${i}`, name: o.name, other: i, weight: o.w,

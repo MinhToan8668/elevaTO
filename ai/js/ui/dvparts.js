@@ -39,8 +39,13 @@ export function segBuild(a, r, V, dat, money, ul) {
   if (!ds.length) return h('div', { class: 'dv-segs' }, h('p', { class: 'msg warn' }, t('dv.seg.none')), dau);
 
   const S = r.segs;
+  const coGm = r.mods?.gm;
+  const gmTm = (x) => (a.segments || []).find((y) => y.name === x.name)?.gm ?? null;
   const tong = S ? S.sum : ds.reduce((s, x) => s + (x.rev0 ?? theoTm(x) ?? 0), 0);
-  const cot = 4 + F.length;
+  const cot = 4 + F.length + (coGm ? 1 : 0);
+  const gmCell = (x, i) => (coGm ? h('td', { class: 'num' }, oIn(x.gm === null || x.gm === undefined ? null : +(x.gm * 100).toFixed(2), (v) => ghi(i, { gm: v === null ? null : v / 100 }),
+    { step: '1', aria: `${x.name} GM`, placeholder: gmTm(x) !== null ? (gmTm(x) * 100).toFixed(1) : Number.isFinite(r.d?.gm) ? (r.d.gm * 100).toFixed(1) : '' })) : null);
+  const trong = () => (coGm ? h('td', {}) : null);
   const gyAt = (i, j, v) => { const gy = Array.from({ length: Math.max(ds[i].gy.length, F.length) }, (_, k) => ds[i].gy[k] ?? null); gy[j] = v; ghi(i, { gy }); };
   const hang = ds.map((x, i) => {
     const goc = x.rev0 ?? theoTm(x) ?? 0;
@@ -52,11 +57,14 @@ export function segBuild(a, r, V, dat, money, ul) {
         h('td', { class: 'num' }, tong ? pc(goc / tong) : '—'),
         h('td', { class: 'num' }, oIn(x.g === null ? null : +(x.g * 100).toFixed(3), (v) => ghi(i, { g: v === null ? null : v / 100 }),
           { step: '0.5', aria: `${x.name} ${t('dv.seg.g')}`, placeholder: Number.isFinite(F[0]?.growth) && x.g === null ? t('dv.seg.gAuto') : '' })),
+        gmCell(x, i),
         F.map((f, j) => h('td', { class: 'num' }, oIn(Number.isFinite(x.gy[j]) ? +(x.gy[j] * 100).toFixed(3) : null, (v) => gyAt(i, j, v === null ? null : v / 100),
           { step: '0.5', cls: `dv-yr${Number.isFinite(x.gy[j]) ? ' on' : ''}`, aria: `${x.name} ${nhanF(f)}`,
             placeholder: S && Number.isFinite(f.segs?.[i]) ? pc((f.segs[i] / (j ? F[j - 1].segs[i] : S.list[i].rev0)) - 1).replace('%', '') : '' })))),
-      h('tr', { class: 'dl-sub' }, h('td', {}, `↳ ${t('dv.seg.rev')}`), h('td', { class: 'num' }, money(goc)), h('td', {}), h('td', {}),
+      h('tr', { class: 'dl-sub' }, h('td', {}, `↳ ${t('dv.seg.rev')}`), h('td', { class: 'num' }, money(goc)), h('td', {}), h('td', {}), trong(),
         F.map((f) => h('td', { class: 'num' }, Number.isFinite(f.segs?.[i]) ? money(f.segs[i]) : '—'))),
+      coGm && S ? h('tr', { class: 'dl-sub' }, h('td', {}, `↳ ${t('dv.seg.gp')}`), h('td', {}), h('td', {}), h('td', {}), trong(),
+        F.map((f) => h('td', { class: 'num' }, Number.isFinite(f.segs?.[i]) ? money(f.segs[i] * (Number.isFinite(S.list[i].gm) ? S.list[i].gm : r.d.gm)) : '—'))) : null,
     ];
   });
   const lech = S ? r.rev0 - S.sum : null;
@@ -64,15 +72,17 @@ export function segBuild(a, r, V, dat, money, ul) {
     h('p', { class: 'priv' }, t('dv.seg.lead')),
     h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-segt' },
       h('thead', {}, h('tr', {}, h('th', {}, t('dv.seg.name')), h('th', { class: 'num' }, `${t('dv.seg.base')} (${ul})`), h('th', { class: 'num' }, t('dv.seg.mix')),
-        h('th', { class: 'num' }, t('dv.seg.g')), F.map((f) => h('th', { class: 'num' }, `${nhanF(f)} %`)))),
+        h('th', { class: 'num' }, t('dv.seg.g')), coGm ? h('th', { class: 'num' }, 'GM %') : null, F.map((f) => h('th', { class: 'num' }, `${nhanF(f)} %`)))),
       h('tbody', {}, hang,
         S ? [
-          h('tr', { class: 'dl-sub' }, h('td', {}, t('dv.seg.sum')), h('td', { class: 'num' }, money(S.sum)), h('td', {}), h('td', {}),
+          h('tr', { class: 'dl-sub' }, h('td', {}, t('dv.seg.sum')), h('td', { class: 'num' }, money(S.sum)), h('td', {}), h('td', {}), trong(),
             F.map((f) => h('td', { class: 'num' }, money(f.segs.reduce((x, y) => x + y, 0))))),
-          Math.abs(lech) > Math.abs(r.rev0) * 1e-6 ? h('tr', { class: 'dl-sub' }, h('td', {}, t('dv.seg.elim', { k: pc(S.k - 1) })), h('td', { class: 'num' }, money(lech)), h('td', {}), h('td', {}),
+          Math.abs(lech) > Math.abs(r.rev0) * 1e-6 ? h('tr', { class: 'dl-sub' }, h('td', {}, t('dv.seg.elim', { k: pc(S.k - 1) })), h('td', { class: 'num' }, money(lech)), h('td', {}), h('td', {}), trong(),
             F.map((f) => h('td', { class: 'num' }, money(f.rev - f.segs.reduce((x, y) => x + y, 0))))) : null,
-          h('tr', { class: 'dl-tot' }, h('td', {}, t('dv.seg.total')), h('td', { class: 'num' }, money(r.rev0)), h('td', {}), h('td', {}), F.map((f) => h('td', { class: 'num' }, money(f.rev)))),
-          h('tr', {}, h('td', {}, t('dv.r.growthRow')), h('td', {}), h('td', {}), h('td', {}), F.map((f) => h('td', { class: 'num' }, pc(f.growth)))),
+          h('tr', { class: 'dl-tot' }, h('td', {}, t('dv.seg.total')), h('td', { class: 'num' }, money(r.rev0)), h('td', {}), h('td', {}), trong(), F.map((f) => h('td', { class: 'num' }, money(f.rev)))),
+          h('tr', {}, h('td', {}, t('dv.r.growthRow')), h('td', {}), h('td', {}), h('td', {}), trong(), F.map((f) => h('td', { class: 'num' }, pc(f.growth)))),
+          coGm ? h('tr', { class: 'dl-tot' }, h('td', {}, t('dv.r.gp')), h('td', {}), h('td', {}), h('td', {}), trong(), F.map((f) => h('td', { class: 'num' }, money(f.gp)))) : null,
+          coGm ? h('tr', {}, h('td', {}, t('dv.r.gmRow')), h('td', {}), h('td', {}), h('td', {}), trong(), F.map((f) => h('td', { class: 'num' }, pc(f.gm)))) : null,
         ] : h('tr', {}, h('td', { colspan: String(cot) }, t('dv.seg.noBase')))))),
     dau);
 }
@@ -120,4 +130,82 @@ export function sotpBlock(a, inp, save, money, unit, ul) {
     h('ul', { class: 'priv dv-tipsl' }, ['so.tip.ev', 'so.tip.eq', 'so.tip.disc'].map((k) => h('li', {}, t(k)))),
     bang, nut,
     res.equity !== null && !(inp.val.weights.sotp > 0) ? h('p', { class: 'msg' }, t('so.weightHint')) : null);
+}
+
+// ─── Module dự phóng (bật / tắt) & sơ đồ nối các dòng ──────────────
+
+export const MODS = ['gm', 'wcDays', 'fa'];
+const MOD_ISSUE = { gm: 'noGm', wcDays: 'noWcDays', fa: 'noPpe' };
+
+/** Thẻ bật / tắt từng module dự phóng chi tiết; mỗi thẻ ghi rõ module thay dòng nào và đưa số sang đâu. */
+export function modPanel(V, r, dat) {
+  return h('div', { class: 'dv-mods' },
+    h('h4', {}, t('dv.mod.h')),
+    h('p', { class: 'priv' }, t('dv.mod.lead')),
+    h('div', { class: 'dv-modgrid' }, MODS.map((k) => {
+      const on = V.mods[k], loi = on && r.issues?.includes(MOD_ISSUE[k]);
+      return h('label', { class: `dv-mod${on ? ' on' : ''}${loi ? ' err' : ''}` },
+        h('span', { class: 'dv-modh' }, h('input', { type: 'checkbox', checked: on, onchange: (e) => dat({ mods: { ...V.mods, [k]: e.target.checked } }) }), h('b', {}, t(`dv.mod.${k}`))),
+        h('small', {}, t(`dv.mod.${k}.d`)),
+        h('span', { class: 'dv-modlk' }, t(`dv.mod.${k}.lk`)),
+        loi ? h('span', { class: 'dv-moderr' }, t(`dv.issue.${MOD_ISSUE[k]}`)) : null);
+    })));
+}
+
+/** Sơ đồ "model wiring": doanh thu → lợi nhuận → FCFF → EV → các mô hình dùng nó; module đang bật được tô đậm. */
+export function wiring(V, r) {
+  const M = r.mods || V.mods;
+  const nut = (txt, on = false) => h('span', { class: `dv-w${on ? ' on' : ''}` }, txt);
+  const mui = () => h('span', { class: 'dv-wa' }, '→');
+  const xs = [
+    nut(`${t('dv.w.rev')} · ${t(`dv.rm.${V.revMode}`)}`, V.revMode !== 'growth'),
+    ...(M.gm ? [nut(t('dv.w.gp'), true), nut(t('dv.w.sga'), true)] : [nut(t('dv.w.margin'))]),
+    nut('EBITDA'),
+    nut(M.fa ? t('dv.w.daFa') : t('dv.w.da'), M.fa),
+    nut('EBIT → NOPAT'),
+    nut(M.fa ? t('dv.w.capexFa') : t('dv.w.capex'), M.fa),
+    nut(M.wcDays ? t('dv.w.nwcDays') : t('dv.w.nwc'), M.wcDays),
+    nut('FCFF', true), nut(t('dv.w.ev')), nut(t('dv.w.out')),
+  ];
+  return h('div', { class: 'dv-wire', role: 'img', 'aria-label': t('dv.w.h') }, h('b', {}, t('dv.w.h')), ' ', xs.flatMap((x, i) => (i ? [mui(), x] : [x])));
+}
+
+// ─── Doanh thu theo dự án (bất động sản, xây dựng…) ─────────────────
+
+export function projBuild(a, r, V, dat, money, ul) {
+  const u = a.unitDong, P = V.proj;
+  const ghi = (patch) => dat({ proj: { ...P, ...patch } });
+  const ghiI = (i, patch) => ghi({ items: P.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+  const F = r.flows || [];
+  const N = F.length || V.years;
+  const namGoc = a.base.months === 12 && !a.base.ltm ? a.base.year : null;
+  const nhan = (k) => (namGoc ? `${namGoc + k}F` : t('dv.yearN', { n: k }));
+  const coGm = r.mods?.gm;
+  const pctAt = (i, j, v) => { const pct = Array.from({ length: Math.max(P.items[i].pct.length, N) }, (_, k) => P.items[i].pct[k] ?? null); pct[j] = v; ghiI(i, { pct }); };
+  const yrs = Array.from({ length: N }, (_, j) => j);
+  const hang = P.items.map((x, i) => {
+    const tong = x.pct.reduce((s, v) => s + (v || 0), 0);
+    return [
+      h('tr', { class: 'dv-seg' },
+        h('td', {}, h('div', { class: 'dv-segn' }, oText(x.name, (v) => ghiI(i, { name: v }), t('dv.pj.name')), xoa(() => ghi({ items: P.items.filter((_, j) => j !== i) }), t('dv.pj.del', { n: x.name })))),
+        h('td', { class: 'num' }, oIn(x.total ? +(x.total / u).toFixed(2) : null, (v) => ghiI(i, { total: (v || 0) * u }), { aria: `${x.name} ${t('dv.pj.total')}` })),
+        coGm ? h('td', { class: 'num' }, oIn(x.gm === null ? null : +(x.gm * 100).toFixed(2), (v) => ghiI(i, { gm: v === null ? null : v / 100 }), { step: '1', aria: `${x.name} GM`, placeholder: Number.isFinite(r.d?.gm) ? (r.d.gm * 100).toFixed(1) : '' })) : null,
+        yrs.map((j) => h('td', { class: 'num' }, oIn(Number.isFinite(x.pct[j]) ? +(x.pct[j] * 100).toFixed(2) : null, (v) => pctAt(i, j, v === null ? null : Math.max(0, Math.min(100, v)) / 100), { step: '5', aria: `${x.name} ${nhan(j + 1)}` }))),
+        h('td', { class: `num${Math.abs(tong - 1) > 1e-6 && tong > 0 ? ' dv-warn' : ''}` }, pc(tong, 0))),
+      h('tr', { class: 'dl-sub' }, h('td', {}, `↳ ${t('dv.seg.rev')}`), h('td', {}), coGm ? h('td', {}) : null,
+        yrs.map((j) => h('td', { class: 'num' }, Number.isFinite(F[j]?.proj?.[i]) ? money(F[j].proj[i]) : '—')), h('td', {})),
+    ];
+  });
+  return h('div', { class: 'dv-segs' },
+    h('p', { class: 'priv' }, t('dv.pj.lead')),
+    h('div', { class: 'dv-grid' },
+      h('label', { class: 'dv-f' }, h('span', {}, t('dv.pj.core')), oIn(P.core === null ? null : +(P.core / u).toFixed(2), (v) => ghi({ core: v === null ? null : v * u }), { cls: '', aria: t('dv.pj.core') }), h('i', {}, ul)),
+      h('label', { class: 'dv-f' }, h('span', {}, t('dv.pj.coreG')), oIn(P.coreG === null ? null : +(P.coreG * 100).toFixed(2), (v) => ghi({ coreG: v === null ? null : v / 100 }), { cls: '', step: '0.5', aria: t('dv.pj.coreG') }), h('i', {}, '%'))),
+    P.items.length ? h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t dv-segt' },
+      h('thead', {}, h('tr', {}, h('th', {}, t('dv.pj.name')), h('th', { class: 'num' }, `${t('dv.pj.total')} (${ul})`), coGm ? h('th', { class: 'num' }, 'GM %') : null,
+        yrs.map((j) => h('th', { class: 'num' }, `${nhan(j + 1)} %`)), h('th', { class: 'num' }, 'Σ %'))),
+      h('tbody', {}, hang,
+        F.length ? h('tr', { class: 'dl-sub' }, h('td', {}, t('dv.pj.coreRow')), h('td', {}), coGm ? h('td', {}) : null, F.map((f) => h('td', { class: 'num' }, money(f.core))), h('td', {})) : null,
+        F.length ? h('tr', { class: 'dl-tot' }, h('td', {}, t('dv.seg.total')), h('td', {}), coGm ? h('td', {}) : null, F.map((f) => h('td', { class: 'num' }, money(f.rev))), h('td', {})) : null))) : null,
+    h('div', { class: 'row cp-bar' }, h('button', { type: 'button', class: 'btn ghost sm', onclick: () => ghi({ items: [...P.items, { name: t('dv.pj.new', { n: P.items.length + 1 }), total: 0, pct: [], gm: null }] }) }, t('dv.pj.add'))));
 }
