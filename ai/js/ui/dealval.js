@@ -55,7 +55,9 @@ export function dcfBlock(a, inp, save, money, ul) {
   const waccGrid = h('div', {},
     nhom(t('dv.fs.mkt'), t('dv.fs.mkt.h'),
       oNum(t('dv.price'), V.price, (v) => dat({ price: v }), { suffix: t('dv.cur') }),
-      oNum(t('dv.shares'), V.shares, (v) => dat({ shares: v }), { step: '1', placeholder: a.cols.map((c) => c.m.shares).filter(Boolean).pop()?.toString() || '' })),
+      oNum(t('dv.shares'), V.shares, (v) => dat({ shares: v }), { step: '1', placeholder: a.cols.map((c) => c.m.shares).filter(Boolean).pop()?.toString() || '' }),
+      h('label', { class: 'dv-f dv-sel' }, h('span', {}, t('dv.bridge')),
+        h('select', { onchange: (e) => dat({ bridge: e.target.value }) }, ['model', 'full'].map((k) => h('option', { value: k, selected: V.bridge === k }, t(`dv.bridge.${k}`)))))),
     h('div', { class: 'dv-fsrow' },
     nhom(t('dv.fs.ke'), 'Ke = Rf + β × ERP + premium',
     oPct(t('dv.rf'), V.rf, null, (v) => dat({ rf: v ?? 0.0437 })),
@@ -85,7 +87,9 @@ export function dcfBlock(a, inp, save, money, ul) {
       oNum(t('dv.years'), V.years, (v) => dat({ years: v ?? 5 }), { step: '1' }),
       laTheoMang ? null : oPct(t('dv.growth'), V.growth, r.d.growth, (v) => dat({ growth: v })),
       laTheoMang ? null : h('label', { class: 'dv-f dv-chk' }, h('input', { type: 'checkbox', checked: V.fade, onchange: (e) => dat({ fade: e.target.checked }) }), h('span', {}, t('dv.fade')))),
-    nhom(t('dv.fs.ops'), t('dv.fs.ops.h'),
+    // Mô hình tích hợp: chi phí hoạt động, khấu hao, vốn lưu động do driver ở 3.6 đảm nhận — chỉ còn capex % làm mặc định.
+    r.fcffSrc === 'model' ? nhom(t('dv.fs.ops'), t('dv.fs.ops.3s'),
+      oPct(t('dv.capex'), V.capex, r.d.capex, (v) => dat({ capex: v }))) : nhom(t('dv.fs.ops'), t('dv.fs.ops.h'),
       M.gm ? null : oPct(t('dv.margin'), V.margin, r.d.margin, (v) => dat({ margin: v })),
       oPct(t(M.fa ? 'dv.daEmb' : 'dv.da'), V.da, r.d.da, (v) => dat({ da: v })),
       oPct(t('dv.capex'), V.capex, r.d.capex, (v) => dat({ capex: v })),
@@ -543,6 +547,11 @@ function setupBlock(a, r, V, dat, money, ul) {
       h('p', { class: 'dv-trap' }, h('b', {}, t('dv.tip.trap')), ' ', t(`preset.${preset.id}.trap`))) : null,
     cheDo[V.revMode]?.(),
     modPanel(V, r, dat),
+    // Công tắc kịch bản (như 02.Control / Dashboard): định giá chính chạy theo kịch bản đang chọn.
+    h('div', { class: 'dv-src' }, h('b', {}, t('dv.sc.pick')),
+      ['base', 'bull', 'bear'].map((k) => h('label', { class: `dv-radio${S.pick === k ? ' on' : ''}` },
+        h('input', { type: 'radio', name: 'dv-pick', checked: S.pick === k, onchange: () => dat({ scen: { ...S, pick: k } }) }), ' ', t(`dv.sc.${k}`))),
+      h('small', { class: 'priv' }, t('dv.sc.pick.h'))),
     h('details', { class: 'dv-scen', open: S.on },
       h('summary', {}, h('label', { onclick: (e) => e.stopPropagation() }, h('input', { type: 'checkbox', checked: S.on, onchange: (e) => datS('on', e.target.checked) }), ' ', h('b', {}, t('dv.sc.h'))),
         kb?.expected.price ? h('span', { class: 'tag em' }, t('dv.sc.exp', { p: dong(kb.expected.price) })) : null),
@@ -601,10 +610,14 @@ export function dvDashboard(a, inp, money, ul) {
   if (kb) rows.push({ label: t('dv.ff.scen'), lo: ps(kb.rows[0].equity), mid: ps(kb.expected.equity), hi: ps(kb.rows[2].equity), hl: true });
   const ff = footballChart(rows, { price: gia, target: sh ? b?.price : b?.equity, labels: { price: t('dv.ff.price'), target: t('dv.ff.target'), title: t('dv.ff.h') } });
 
+  const Bm = a.base.m;
+  const cauNoi = V.bridge === 'model'
+    ? [{ label: t('dv.wf.cash'), v: (Bm.cash || 0) / a.unitDong }, { label: t('dv.wf.debt'), v: -(Bm.debt || 0) / a.unitDong }, { label: t('dv.wf.nci'), v: -(v.minority || 0) / a.unitDong }]
+    : [{ label: t('dv.wf.nd'), v: -(v.netDebt || 0) / a.unitDong }, { label: t('dv.wf.dl'), v: -v.debtLikeSum / a.unitDong },
+      { label: t('dv.wf.nci'), v: -(v.minority || 0) / a.unitDong }, { label: t('dv.wf.no'), v: v.nonOpSum / a.unitDong }];
   const wf = r.flows ? waterfallChart([
     { label: t('dv.wf.pv'), v: r.pv / a.unitDong }, { label: t('dv.wf.tv'), v: r.pvTv / a.unitDong }, { label: 'EV', v: r.ev / a.unitDong, total: true },
-    { label: t('dv.wf.nd'), v: -(v.netDebt || 0) / a.unitDong }, { label: t('dv.wf.dl'), v: -v.debtLikeSum / a.unitDong },
-    { label: t('dv.wf.nci'), v: -(v.minority || 0) / a.unitDong }, { label: t('dv.wf.no'), v: v.nonOpSum / a.unitDong },
+    ...cauNoi,
     { label: t('dv.wf.eq'), v: r.equity / a.unitDong, total: true },
   ].filter((x) => x.total || Math.abs(x.v) > 1e-9), { title: t('dv.wf.h') }) : null;
 

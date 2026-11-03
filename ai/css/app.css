@@ -1227,3 +1227,5 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-radio input{accent-color:var(--em)}
 .dv-src small{flex-basis:100%}
 .dv-drv td:first-child{white-space:nowrap}
+.dv-segd td{background:color-mix(in srgb,var(--surface-2) 60%,transparent);font-size:12.5px}
+.dv-note{width:100%}

@@ -186,6 +186,14 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     tiền. **FCFF = CFO + lãi vay × (1 − t) + capex + Δ đầu tư NH → DCF** (mặc định; chọn được "driver đơn giản").
     Kiểm bằng chính số của model DGW (`tests/fixtures/dgw-3s.json`): DSO / DIO / DPO, phải thu, tồn kho, phải trả, vay
     NH, khấu hao gồm lợi thế thương mại, TSCĐ thuần 2026F–2027F khớp file Excel.
+  - **Khớp model elevaTO tới từng dòng** (kiểm bằng `tests/fixtures/dgw-3s.json`, file gốc ở `ai/models/`): KQKD như
+    06.IS (lợi nhuận gộp theo mảng − chi phí bán hàng, QLDN, chi phí tài chính khác theo % doanh thu + thu nhập tài chính
+    = lợi suất × tiền đầu kỳ − lãi vay + LDLK + thu nhập / chi phí khác; thuế suất hiệu dụng; EBIT = LNTT + lãi vay), vay
+    NH gộp (tiền vay = MAX(giá vốn × tỷ lệ vay mới, Δ dư nợ)), lãi suất ghi đè từng năm, số cổ phiếu tăng theo ESOP (mệnh
+    giá 10.000 đ); WACC với Kd năm dự phóng đầu và thuế năm actual cuối; cầu nối EV + tiền − nợ vay − NCI (chọn được
+    "đầy đủ"); trọng số giá mục tiêu như 17.Valuation; kịch bản Base / Bull / Bear theo từng mảng, từng năm (tăng trưởng &
+    biên gộp, ghi chú căn cứ) với công tắc kịch bản áp dụng. Dựng lại DGW 2026F–2030F khớp KQKD, LCTT, FCFF, tiền, vay,
+    tổng tài sản, vốn chủ, EV và giá mục tiêu 44.620 đ.
   - **LBO** (`js/core/lbo.js`, bước 9): dùng EBITDA, capex, ΔNWC, thuế đã dự phóng; sources & uses, nợ senior (trả
     góp + cash sweep) / mezzanine, lịch nợ và credit stats, IRR / MOIC, bảng IRR entry × exit, bội số vào tối đa để đạt
     IRR mục tiêu → giá / cổ phiếu đưa sang football field và weight "LBO" của target price.

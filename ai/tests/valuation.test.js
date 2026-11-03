@@ -276,7 +276,7 @@ test('LBO: không quét tiền trả nợ khi tiền mặt tích luỹ còn âm'
   assert.ok(k.issues.includes('shortfall'));
 });
 
-import { model3, inputFsFrom, cleanFs } from '../js/core/model3.js';
+import { model3, inputFsFrom, cleanFs, waccFrom3 } from '../js/core/model3.js';
 import { readFileSync } from 'node:fs';
 
 // Số của chính model DGW (03.Input_FS 2019–2025A, 06.IS 2026F–2027F, capex theo nhóm ở 10.FA_SCHED mục A), triệu đồng.
@@ -318,7 +318,7 @@ test('mô hình ba báo cáo: cân mọi năm, tiền LCTT = tiền CĐKT; FCFF 
   assert.ok(m.ok, m.years.map((y) => y.check).join(', '));
   for (const y of m.years) {
     gan(y.cf.close, y.bs.cash, 1e-12, 'tiền');
-    gan(y.cf.fcff, y.cf.cfo - y.is.interest * (1 - 0.2) + y.cf.capex + y.cf.stInv, 1e-12, 'FCFF');
+    gan(y.cf.fcff, y.cf.cfo - y.is.interest * (1 - y.is.taxRate) + y.cf.capex + y.cf.stInv, 1e-12, 'FCFF');
   }
   // Revolver kéo tiền lên mức tối thiểu, vẫn cân.
   const a = { inputFs: inputFsFrom(DGW3.byYear), valuation: { shares: null } };
@@ -360,4 +360,74 @@ test('đầu tư công ty liên kết như 13.Tax_JV_Sched: đầu kỳ + phần
   gan(m2.years[0].jv.close, 13000e6 + 50e9 + 10e9 - 5e9, 1e-9, 'đầu kỳ + mới + lãi − cổ tức');
   gan(m2.years[0].cf.assocInv + m2.years[0].cf.assocDiv, -50e9 + 5e9, 1e-9, 'CFI');
   assert.ok(m2.ok, m2.years.map((y) => y.check).join(', '));
+});
+
+
+// Toàn bộ model DGW 2026F–2030F: cùng doanh thu & lợi nhuận gộp (05.Revenue), cùng các ô ghi đè của model (bán hàng 5,7%,
+// QLDN 1,05%, CP tài chính khác 0,35%, lãi vay NH 7% / 7% / 6%), capex theo nhóm và khung khấu hao thuyết minh.
+const SH0 = DGW3.byYear[2025][214].v * 1e6;          // số cổ phiếu cuối 2025A (03.Input_FS dòng 214)
+const dgwDu = () => {
+  const a = { inputFs: inputFsFrom(DGW3.byYear), valuation: { shares: SH0 },
+    faLives: { buildings: { min: 21, max: 25 }, machinery: { min: 2, max: 7 }, transport: { min: 3, max: 6 }, office: { min: 1, max: 5 },
+      other: { min: 3, max: 6 }, land: { min: 0, max: 0 }, software: { min: 3, max: 6 } } };
+  const flows = DGW3.rev5.map((rev, i) => ({ t: i + 1, rev: rev * 1e6, gp: DGW3.gp5[i] * 1e6, cogs: (rev - DGW3.gp5[i]) * 1e6, ebit: 0, tax: 0.2 }));
+  const capex = Object.fromEntries(Object.entries(DGW3.capex5).map(([k, v]) => [k, v.map((x) => x * 1e6)]));
+  const fs = cleanFs({ capex, stRateY: DGW3.stRateY, drv: { selling: { all: 0.057 }, ga: { all: 0.0105 }, otherFin: { all: 0.0035 } } });
+  return { a, m: model3(a, flows, { fs, kd: 0.05, capexPct: 0, shares: SH0 }), fs };
+};
+
+test('dựng lại TOÀN BỘ model DGW 2026F–2030F: KQKD từng dòng như 06.IS', () => {
+  const { m } = dgwDu();
+  const is = DGW3.is5;
+  for (const [k, ta] of [['intIncome', 'finInc'], ['interest', 'interest'], ['otherFin', 'otherFin'], ['assoc', 'assoc'], ['selling', 'selling'], ['ga', 'ga'],
+    ['otherInc', 'otherInc'], ['otherExp', 'otherExp'], ['pbt', 'pbt'], ['tax', 'tax'], ['npat', 'npat'], ['npatP', 'npatP'], ['da', 'da'], ['ebit', 'ebit'], ['ebitda', 'ebitda']]) {
+    m.years.forEach((y, i) => gan(y.is[k], is[ta][i] * 1e6, 1e-6, `${k} ${2026 + i}F`));
+  }
+  m.years.forEach((y, i) => gan(y.is.shares, DGW3.shares5[i] * 1e6, 1e-9, `số CP ${2026 + i}F (ESOP theo mệnh giá)`));
+});
+
+test('dựng lại TOÀN BỘ model DGW 2026F–2030F: LCTT, FCFF, tiền, vay NH (vay / trả gộp), tổng tài sản, vốn chủ như 07.BS / 08.CF', () => {
+  const { m } = dgwDu();
+  assert.ok(m.ok);
+  m.years.forEach((y, i) => {
+    const n = `${2026 + i}F`;
+    gan(y.cf.cfo, DGW3.cf5.cfo[i] * 1e6, 1e-6, `CFO ${n}`);
+    gan(y.cf.fcff, DGW3.cf5.fcff[i] * 1e6, 1e-6, `FCFF ${n}`);
+    gan(y.cf.fcfe, DGW3.cf5.fcfe[i] * 1e6, 1e-6, `FCFE ${n}`);
+    gan(y.cf.stVay, DGW3.cf5.stProc[i] * 1e6, 1e-6, `tiền vay NH ${n}`);
+    gan(y.cf.div, DGW3.cf5.div[i] * 1e6, 1e-6, `cổ tức ${n}`);
+    gan(y.bs.cash, DGW3.bs5.cash[i] * 1e6, 1e-6, `tiền ${n}`);
+    gan(y.bs.stDebt, DGW3.bs5.stDebt[i] * 1e6, 1e-6, `vay NH ${n}`);
+    gan(y.bs.assets, DGW3.bs5.ta[i] * 1e6, 1e-6, `tổng tài sản ${n}`);
+    gan(y.bs.equity, DGW3.bs5.eq[i] * 1e6, 1e-6, `vốn chủ ${n}`);
+  });
+});
+
+test('dựng lại model DGW: WACC (Kd năm đầu 7%, thuế năm actual cuối), EV, giá trị vốn chủ, giá mục tiêu 44.620 đ như 15.DCF', () => {
+  const { a, m, fs } = dgwDu();
+  const w = waccFrom3(a.inputFs, fs, 0.05);
+  gan(w.kd, DGW3.dcf.kd, 1e-9, 'Kd');
+  gan(w.tax, DGW3.dcf.taxW, 1e-9, 'thuế WACC');
+  const W = wacc({ rf: 0.0437, erp: 0.0813, beta: 1.3364, blume: true, extra: 0, kd: w.kd, tax: w.tax, debt: 2899171.03e6, equityMkt: 44400 * 221.3202e6, equityBook: 1 });
+  gan(W.wacc, DGW3.dcf.wacc, 1e-4, 'WACC');
+  const r = evAt(m.years.map((y) => ({ t: y.t, fcff: y.cf.fcff })), DGW3.dcf.wacc, 0.03);
+  gan(r.ev, DGW3.dcf.ev * 1e6, 1e-6, 'EV');
+  const eq = r.ev + DGW3.dcf.cash * 1e6 + DGW3.dcf.debt * 1e6 + DGW3.dcf.nci * 1e6;
+  gan(eq / SH0, DGW3.dcf.price, 1e-9, 'giá mục tiêu');
+});
+
+test('kịch bản theo mảng như 04.Drivers A–B: Bull / Bear nhập riêng tăng trưởng & biên gộp từng năm; công tắc kịch bản đổi định giá chính', () => {
+  const a = { ...A(), segments: [{ name: 'X', revenue: 600e9, gm: 0.1 }, { name: 'Y', revenue: 400e9, gm: 0.2 }] };
+  const segs = [{ name: 'X', g: 0.1, gmy: [0.12], sc: { bull: { gy: [0.3], gmy: [0.15] } } }, { name: 'Y', g: 0.05 }];
+  const base = { revMode: 'segments', years: 1, segs, mods: { gm: true }, gmb: { sga: 0.05 }, scen: { on: true, bull: { growth: 0.02, margin: 0.01, wacc: 0, p: 25 }, bear: { growth: -0.02, margin: 0, wacc: 0, p: 25 } } };
+  const rB = dcfValuation(a, base);
+  gan(rB.flows[0].segs[0], 600e9 * 1.1, 1e-12, 'Base: X +10%');
+  gan(rB.flows[0].gp, (660e9 * 0.12 + 420e9 * 0.2) * 1, 1e-12, 'Base: biên X năm 1 = 12% (từng năm)');
+  const rU = dcfValuation(a, { ...base, scen: { ...base.scen, pick: 'bull' } });
+  assert.equal(rU.scenKey, 'bull');
+  gan(rU.flows[0].segs[0], 600e9 * 1.3, 1e-12, 'Bull: X nhập riêng +30%, không cộng chênh chung');
+  gan(rU.flows[0].segs[1], 400e9 * (1 + 0.05 + 0.02), 1e-12, 'Bull: Y không nhập riêng → Base + chênh chung');
+  gan(rU.flows[0].gp, 780e9 * 0.15 + 428e9 * (0.2 + 0.01), 1e-12, 'Bull: biên X 15%, Y = 20% + 1 điểm');
+  const kb = scenarioValuation(a, { ...base, scen: { ...base.scen, pick: 'bull' } });
+  gan(kb.rows[1].equity, rB.equity, 1e-12, 'dòng Base của bảng kịch bản vẫn là Base dù công tắc đang ở Bull');
 });
