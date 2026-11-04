@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script>try{const t=localStorage.getItem("elevato-theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
+<title>Media Hub</title>
+<style>
+/* Liquid glass theo style elevaTO (assets/glass.css): nền xanh ngọc có quầng màu trôi, thẻ kính mờ,
+   Plus Jakarta Sans (tiêu đề) + Be Vietnam Pro (chữ), nhúng sẵn — app chạy offline. */
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600 800;font-display:swap;src:url('assets/fonts/pjs-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:600 800;font-display:swap;src:url('assets/fonts/pjs-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:400;font-display:swap;src:url('assets/fonts/bvp-400-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:400;font-display:swap;src:url('assets/fonts/bvp-400-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:500;font-display:swap;src:url('assets/fonts/bvp-500-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:500;font-display:swap;src:url('assets/fonts/bvp-500-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:600;font-display:swap;src:url('assets/fonts/bvp-600-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:600;font-display:swap;src:url('assets/fonts/bvp-600-latin.woff2') format('woff2')}
+@font-face{font-family:'Be Vietnam Pro';font-weight:700;font-display:swap;src:url('assets/fonts/bvp-700-vietnamese.woff2') format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Be Vietnam Pro';font-weight:700;font-display:swap;src:url('assets/fonts/bvp-700-latin.woff2') format('woff2')}
+
+:root{
+  color-scheme:light;
+  --bg:#e7f4ee;--fg:#0b1d17;--text:#22352e;--mut:#4f645c;--mut2:#6f837b;
+  --acc:#0b9b74;--acc-lt:#18cb96;--acc-soft:rgba(24,203,150,.14);
+  --ok:#0b9b74;--ok-soft:rgba(24,203,150,.14);--warn:#a8730a;--warn-soft:rgba(214,158,24,.16);--bad:#d33f3f;--bad-soft:rgba(211,63,63,.12);
+  --card:rgb(255 255 255 / .52);--card2:rgb(255 255 255 / .64);--card3:rgb(255 255 255 / .82);
+  --line:rgb(15 60 45 / .10);--line2:rgb(15 60 45 / .16);--hover:rgb(255 255 255 / .55);
+  --g-blur:22px;--g-hi:inset 0 1px 0 rgb(255 255 255 / .9),inset 0 -1px 0 rgb(255 255 255 / .35);
+  --g-shadow:0 1px 2px rgb(10 40 30 / .06),0 14px 34px -14px rgb(10 50 38 / .22);--g-rim:rgb(255 255 255 / .75);
+  --btn-ink:#04241a;--r:22px;--r-sm:14px;
+  --b1:rgba(24,203,150,.42);--b2:rgba(34,211,238,.30);--b3:rgba(99,102,241,.22);--b4:rgba(250,204,21,.20);
+  --ff-body:'Be Vietnam Pro',-apple-system,system-ui,sans-serif;--ff-head:'Plus Jakarta Sans','Be Vietnam Pro',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#04211b;--fg:#ffffff;--text:#dce8e3;--mut:#a9bbb4;--mut2:#83968f;
+  --acc:#3ee0b4;--acc-lt:#6aeccb;--acc-soft:rgba(62,224,180,.12);
+  --ok:#3ee0b4;--ok-soft:rgba(62,224,180,.12);--warn:#f0c86a;--warn-soft:rgba(240,200,106,.13);--bad:#f07a7a;--bad-soft:rgba(240,122,122,.13);
+  --card:rgb(30 44 42 / .48);--card2:rgb(36 52 50 / .58);--card3:rgb(44 62 60 / .74);
+  --line:rgb(255 255 255 / .08);--line2:rgb(255 255 255 / .13);--hover:rgb(255 255 255 / .06);
+  --g-hi:inset 0 1px 0 rgb(255 255 255 / .12),inset 0 -1px 0 rgb(255 255 255 / .03);
+  --g-shadow:0 1px 2px rgb(0 0 0 / .3),0 16px 40px -10px rgb(0 0 0 / .55);--g-rim:rgb(255 255 255 / .16);
+  --b1:rgba(24,203,150,.40);--b2:rgba(34,211,238,.26);--b3:rgba(99,102,241,.26);--b4:rgba(250,204,21,.12)}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#04211b;--fg:#ffffff;--text:#dce8e3;--mut:#a9bbb4;--mut2:#83968f;
+  --acc:#3ee0b4;--acc-lt:#6aeccb;--acc-soft:rgba(62,224,180,.12);
+  --ok:#3ee0b4;--ok-soft:rgba(62,224,180,.12);--warn:#f0c86a;--warn-soft:rgba(240,200,106,.13);--bad:#f07a7a;--bad-soft:rgba(240,122,122,.13);
+  --card:rgb(30 44 42 / .48);--card2:rgb(36 52 50 / .58);--card3:rgb(44 62 60 / .74);
+  --line:rgb(255 255 255 / .08);--line2:rgb(255 255 255 / .13);--hover:rgb(255 255 255 / .06);
+  --g-hi:inset 0 1px 0 rgb(255 255 255 / .12),inset 0 -1px 0 rgb(255 255 255 / .03);
+  --g-shadow:0 1px 2px rgb(0 0 0 / .3),0 16px 40px -10px rgb(0 0 0 / .55);--g-rim:rgb(255 255 255 / .16);
+  --b1:rgba(24,203,150,.40);--b2:rgba(34,211,238,.26);--b3:rgba(99,102,241,.26);--b4:rgba(250,204,21,.12)}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 var(--ff-body);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+h1,h3,.kpi .v,.brand,.btn,nav a{font-family:var(--ff-head)}
+::selection{background:var(--acc-soft)}
+
+/* nền: các quầng màu trôi chậm */
+.bgx{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+  background:radial-gradient(130% 40% at 50% -8%,var(--b1) 0,transparent 72%),radial-gradient(130% 36% at 50% 108%,var(--b3) 0,transparent 72%),var(--bg)}
+.bgx i{position:absolute;border-radius:50%;opacity:.8;animation:gdrift 30s ease-in-out infinite alternate}
+.bgx .b1{width:70vmax;height:70vmax;left:-24vmax;top:-28vmax;background:radial-gradient(circle,var(--b1) 0 34%,transparent 72%)}
+.bgx .b2{width:58vmax;height:58vmax;right:-20vmax;top:18vmax;background:radial-gradient(circle,var(--b2) 0 34%,transparent 72%);animation-duration:36s}
+.bgx .b3{width:64vmax;height:64vmax;left:0;bottom:-32vmax;background:radial-gradient(circle,var(--b3) 0 34%,transparent 72%);animation-duration:40s}
+.bgx .b4{width:34vmax;height:34vmax;right:12vmax;bottom:2vmax;background:radial-gradient(circle,var(--b4) 0 36%,transparent 74%);animation-duration:28s}
+@keyframes gdrift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vmax,3vmax,0) scale(1.08)}100%{transform:translate3d(-3vmax,5vmax,0) scale(.96)}}
+@media (prefers-reduced-motion:reduce){.bgx i{animation:none}}
+
+/* chất liệu kính */
+.glass,.card,aside,.drawer,.toast,.tabs-wrap{
+  background:linear-gradient(160deg,var(--card2),var(--card));
+  -webkit-backdrop-filter:blur(var(--g-blur));backdrop-filter:blur(var(--g-blur));
+  border:1px solid var(--g-rim);box-shadow:var(--g-hi),var(--g-shadow)}
+
+.app{position:relative;z-index:1;display:grid;grid-template-columns:236px 1fr;gap:14px;height:100vh;padding:14px}
+aside{border-radius:var(--r);padding:18px 12px;display:flex;flex-direction:column;gap:3px;overflow:auto}
+.brand{display:flex;flex-direction:column;gap:4px;padding:2px 10px 18px}
+.brand b{font:800 21px/1.1 var(--ff-head);letter-spacing:-.03em;color:var(--fg)}
+.brand small{font:500 12px/1.3 var(--ff-body);color:var(--mut2)}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:13px;color:var(--text);text-decoration:none;cursor:pointer;user-select:none;font-weight:600;font-size:13.5px;transition:background .2s}
+nav a:hover{background:var(--hover)}
+nav a.on{background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .5),0 8px 20px -8px rgba(16,180,130,.6)}
+nav a .ic{width:18px;text-align:center}
+nav a .pill{margin-left:auto;font-size:11px;background:var(--acc);color:#fff;border-radius:9px;padding:0 7px}
+nav a.on .pill{background:var(--btn-ink);color:#2ee0ad}
+.who{margin-top:auto;padding:12px 10px 2px;border-top:1px solid var(--line);font-size:12px;color:var(--mut)}
+.who b{color:var(--fg);display:block;font:700 13px/1.3 var(--ff-head)}
+
+main{overflow:auto;position:relative;border-radius:var(--r)}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:12px 18px;margin-bottom:4px;border-radius:var(--r);
+  background:linear-gradient(160deg,var(--card2),var(--card));-webkit-backdrop-filter:blur(var(--g-blur));backdrop-filter:blur(var(--g-blur));
+  border:1px solid var(--g-rim);box-shadow:var(--g-hi),var(--g-shadow)}
+header h1{font-size:20px;margin:0;font-weight:800;letter-spacing:-.025em;color:var(--fg)}
+header .sp{flex:1}
+.status{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);padding:5px 12px;border-radius:99px;background:var(--hover);border:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut2)}.dot.on{background:var(--acc-lt);box-shadow:0 0 0 3px var(--acc-soft)}.dot.run{background:var(--acc-lt);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.bell{position:relative;border:1px solid var(--g-rim);background:var(--card);font-size:15px;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;box-shadow:var(--g-hi)}
+.bell:hover{background:var(--card3)}
+.bell b{position:absolute;top:-4px;right:-5px;background:var(--bad);color:#fff;font-size:10px;min-width:17px;height:17px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
+.page{padding:14px 2px 40px;max-width:1200px}
+.view{display:none}.view.on{display:block;animation:fade .3s cubic-bezier(.22,1,.36,1)}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.card{border-radius:var(--r);padding:18px}
+.card h3{margin:0 0 12px;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--fg);letter-spacing:-.01em}
+.card h3 .sp{flex:1}
+.kpi .l{color:var(--mut);font-size:12px;font-weight:500}.kpi .v{font-size:28px;font-weight:800;margin:2px 0;letter-spacing:-.03em;color:var(--fg);font-variant-numeric:tabular-nums}.kpi .s{color:var(--mut);font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--g-rim);background:var(--card);color:var(--fg);padding:8px 16px;border-radius:13px;cursor:pointer;white-space:nowrap;font-weight:700;font-size:13px;box-shadow:var(--g-hi);transition:all .2s}
+.btn:hover{border-color:var(--acc);color:var(--acc);background:var(--card2)}.btn:disabled{opacity:.45;cursor:default;pointer-events:none}
+.btn.pri{background:linear-gradient(180deg,#2ee0ad,#14c08f);border-color:transparent;color:var(--btn-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .5),0 8px 22px -8px rgba(16,180,130,.55)}
+.btn.pri:hover{background:linear-gradient(180deg,#45e8ba,#18cb96);color:var(--btn-ink);box-shadow:inset 0 1px 0 rgb(255 255 255 / .6),0 12px 30px -8px rgba(16,180,130,.6)}
+.btn.dan{color:var(--bad)}.btn.dan:hover{border-color:var(--bad);color:var(--bad)}.btn.sm{padding:5px 12px;font-size:12.5px;border-radius:11px}
+input[type=text],input[type=number],input[type=password],select,textarea{border:1px solid var(--line2);background:var(--card2);color:var(--fg);border-radius:12px;padding:8px 12px;min-width:0;transition:all .2s}
+input:focus,select:focus{outline:none;background:var(--card3);border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+input[type=checkbox]{accent-color:#14c08f;width:15px;height:15px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut);font-weight:500}
+label.f input,label.f select{color:var(--fg);font-size:14px}
+.chk{display:flex;align-items:center;gap:9px;cursor:pointer}
+.switch{position:relative;width:42px;height:25px;flex:none}.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:var(--line2);border-radius:13px;transition:.25s;cursor:pointer;box-shadow:inset 0 1px 2px rgb(0 0 0 / .12)}
+.switch span:before{content:"";position:absolute;width:21px;height:21px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.25s cubic-bezier(.22,1,.36,1);box-shadow:0 2px 5px rgba(0,0,0,.25)}
+.switch input:checked+span{background:linear-gradient(180deg,#2ee0ad,#14c08f)}.switch input:checked+span:before{transform:translateX(17px)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-weight:600;color:var(--mut);font-size:12px;position:sticky;top:0;background:var(--card3);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td,table tr:hover td{background:var(--hover)}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tbl{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card)}
+.path{word-break:break-all;font-size:12.5px}.mut{color:var(--mut)}.small{font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--hover);color:var(--mut);border:1px solid var(--line);white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}.tag.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.tag.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}.tag.acc{background:var(--acc-soft);color:var(--acc);border-color:transparent}
+.bar{height:7px;border-radius:4px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#14c08f,#2ee0ad);border-radius:4px;transition:width .4s}
+.xfer{padding:11px 0;border-bottom:1px solid var(--line)}.xfer:last-child{border:0}
+.xfer .top{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px;color:var(--fg);font-weight:500}.xfer .top span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{color:var(--mut);text-align:center;padding:28px 10px}
+.two{grid-template-columns:1fr 1fr}@media(max-width:900px){.two{grid-template-columns:1fr}}
+.chips{display:flex;flex-direction:column;gap:7px}
+.chipf{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);padding:8px 12px;border-radius:12px}
+.chipf span{flex:1;word-break:break-all;font-size:12.5px;color:var(--fg)}
+.chipf button{border:0;background:transparent;cursor:pointer;color:var(--mut);font-size:14px;border-radius:7px;width:24px;height:24px}
+.chipf button:hover{background:var(--bad-soft);color:var(--bad)}
+.tabs{display:inline-flex;gap:3px;padding:4px;margin-bottom:14px;border-radius:14px;background:var(--hover);border:1px solid var(--line);flex-wrap:wrap}
+.tabs a{padding:6px 13px;cursor:pointer;border-radius:10px;color:var(--mut);font:600 13px/1.4 var(--ff-head);transition:all .2s}
+.tabs a:hover{color:var(--fg)}
+.tabs a.on{color:var(--fg);background:var(--card3);box-shadow:var(--g-hi),0 2px 8px -2px rgb(0 0 0 / .15)}
+.log{font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:560px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.log div{padding:1px 0}.log .error{color:var(--bad)}.log .warn{color:var(--warn)}.log .success{color:var(--ok)}
+.log time{color:var(--mut2);margin-right:8px}
+.drawer{position:fixed;top:14px;right:14px;bottom:14px;width:370px;max-width:calc(100% - 28px);border-radius:var(--r);transform:translateX(calc(100% + 30px));transition:.35s cubic-bezier(.22,1,.36,1);z-index:20;display:flex;flex-direction:column;background:linear-gradient(160deg,var(--card3),var(--card2))}
+.drawer.on{transform:none}
+.drawer header{position:static;background:transparent;border:0;box-shadow:none;padding:16px 16px 10px;-webkit-backdrop-filter:none;backdrop-filter:none}
+.drawer .list{overflow:auto;flex:1;padding:0 12px 12px}
+.noti{padding:11px 13px;border-radius:14px;margin-bottom:7px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--mut2)}
+.noti.success{border-left-color:var(--acc-lt)}.noti.error{border-left-color:var(--bad)}.noti.warn{border-left-color:var(--warn)}.noti.info{border-left-color:#22d3ee}
+.noti b{display:block;font:700 13px/1.35 var(--ff-head);color:var(--fg)}.noti p{margin:3px 0 0;font-size:12.5px;color:var(--mut);word-break:break-word}.noti time{font-size:11px;color:var(--mut2)}
+.toasts{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:8px;z-index:30}
+.toast{border-left:4px solid #22d3ee;padding:11px 15px;border-radius:16px;max-width:340px;animation:in .35s cubic-bezier(.22,1,.36,1);background:linear-gradient(160deg,var(--card3),var(--card2))}
+.toast.success{border-left-color:var(--acc-lt)}.toast.error{border-left-color:var(--bad)}.toast.warn{border-left-color:var(--warn)}
+.toast b{display:block;font:700 13.5px/1.35 var(--ff-head);color:var(--fg)}.toast p{margin:2px 0 0;color:var(--mut);font-size:12.5px;word-break:break-word}
+@keyframes in{from{transform:translateY(12px) scale(.97);opacity:0}}
+.busy{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--acc-soft);color:var(--acc);border:1px solid var(--line);border-radius:var(--r-sm);margin-bottom:14px;font-weight:600}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.alert{padding:12px 16px;border-radius:var(--r-sm);background:var(--warn-soft);color:var(--warn);margin-bottom:14px;border:1px solid var(--line);font-weight:500}
+.alert a{color:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+.steps{counter-reset:s;margin:0;padding:0;list-style:none}.steps li{counter-increment:s;padding:4px 0 4px 30px;position:relative}
+.steps li:before{content:counter(s);position:absolute;left:0;top:4px;width:21px;height:21px;border-radius:50%;background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);font:700 11px/21px var(--ff-head);text-align:center}
+code{font-size:12px;background:var(--hover);padding:1px 6px;border-radius:6px}
+.theme-tg{border:1px solid var(--g-rim);background:var(--card);width:36px;height:36px;border-radius:12px;cursor:pointer;display:grid;place-items:center;box-shadow:var(--g-hi);font-size:15px}
+.theme-tg:hover{background:var(--card3)}
+.hide{display:none!important}
+.pick-hero{display:flex;flex-direction:column;align-items:center;gap:8px;padding:44px 20px;text-align:center}
+.pick-hero b{font:700 16px/1.3 var(--ff-head);color:var(--fg)}
+.player{position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:16/9;max-height:52vh;width:100%;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgb(255 255 255 / .06)}
+.player video{width:100%;height:100%;object-fit:contain;display:block}
+.pv-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;text-align:center;color:#fff;background:rgb(4 33 27 / .85)}
+.pv-msg .mut{color:#a9bbb4}
+.ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 10px}
+.ctrl .play-btn{width:44px;font-size:14px}
+.ctrl .tc{font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mut);margin:0 6px;font-variant-numeric:tabular-nums}
+.ctrl .tc b{color:var(--fg);font-weight:600}
+.ctrl select{padding:5px 8px;border-radius:10px;font-size:12.5px}
+kbd{font:600 10.5px/1 ui-monospace,Menlo,monospace;padding:2px 5px;border-radius:5px;border:1px solid var(--line2);background:var(--card2);color:var(--mut);margin-left:2px}
+.btn.pri kbd{background:rgb(255 255 255 / .35);border-color:transparent;color:var(--btn-ink)}
+.tl{position:relative;height:64px;border-radius:12px;overflow:hidden;cursor:crosshair;user-select:none;background:var(--line);touch-action:none}
+.tl-thumbs{position:absolute;inset:0;background-size:100% 100%;background-repeat:no-repeat;opacity:.75;filter:saturate(.9)}
+.tl-marks{position:absolute;inset:0;pointer-events:none}
+.tl-marks i{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed #fff;opacity:.8}
+.tl-segs{position:absolute;inset:0}
+.tl-segs .s{position:absolute;top:0;bottom:0;background:rgba(46,224,173,.32);border-left:2px solid #2ee0ad;border-right:2px solid #2ee0ad;cursor:pointer}
+.tl-segs .s span{position:absolute;top:4px;left:4px;font:700 10.5px/1 var(--ff-head);color:#04241a;background:#2ee0ad;padding:2px 5px;border-radius:5px}
+.tl-sel{position:absolute;top:0;bottom:0;background:rgba(250,204,21,.25);border:2px solid #facc15;border-radius:4px;box-shadow:0 0 0 9999px rgb(0 0 0 / .25)}
+.tl-sel .h{position:absolute;top:-2px;bottom:-2px;width:12px;background:#facc15;cursor:ew-resize}
+.tl-sel .h.l{left:-7px;border-radius:5px 0 0 5px}.tl-sel .h.r{right:-7px;border-radius:0 5px 5px 0}
+.tl-sel .h::after{content:"";position:absolute;left:5px;top:35%;bottom:35%;width:2px;background:rgb(0 0 0 / .45);border-radius:1px}
+.tl-sel span{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font:700 10.5px/1 ui-monospace,Menlo,monospace;background:#facc15;color:#2a2000;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.tl-head{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 6px rgb(0 0 0 / .6);pointer-events:none;transform:translateX(-1px)}
+.tl-head i{position:absolute;top:-1px;left:-5px;border:6px solid transparent;border-top-color:#fff}
+.tl-hover{position:absolute;top:2px;transform:translateX(-50%);font:600 10.5px/1 ui-monospace,Menlo,monospace;background:rgb(0 0 0 / .7);color:#fff;padding:3px 5px;border-radius:5px;pointer-events:none}
+.tl-ruler{position:relative;height:18px;margin-top:3px;font:500 10.5px/18px ui-monospace,Menlo,monospace;color:var(--mut2)}
+.tl-ruler span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.seglist{display:flex;flex-direction:column;gap:7px}
+.segrow{display:grid;grid-template-columns:24px 1fr auto 1fr auto auto auto;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);padding:6px 8px;border-radius:12px}
+.segrow.on{border-color:#facc15}
+.segrow .no{width:22px;height:22px;border-radius:50%;background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);font:700 11px/22px var(--ff-head);text-align:center}
+.segrow input{width:100%;padding:5px 8px;font:500 12.5px/1.2 ui-monospace,Menlo,monospace;border-radius:9px}
+.segrow .d{font:500 12px ui-monospace,Menlo,monospace;color:var(--mut);white-space:nowrap}
+.segrow button{border:0;background:transparent;cursor:pointer;color:var(--mut);border-radius:7px;width:26px;height:26px}
+.segrow button:hover{background:var(--hover);color:var(--fg)}
+textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;width:100%}
+.seg{display:flex;flex-direction:column;gap:8px}
+.seg label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);cursor:pointer}
+.seg label:has(input:checked){border-color:var(--acc);background:var(--acc-soft)}
+.seg input[type=radio]{accent-color:#14c08f}
+.vinfo{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ord{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);padding:8px 10px;border-radius:12px}
+.ord .no{width:24px;height:24px;border-radius:50%;background:linear-gradient(180deg,#2ee0ad,#14c08f);color:var(--btn-ink);font:700 11px/24px var(--ff-head);text-align:center;flex:none}
+.ord .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg)}
+.ord button{border:0;background:transparent;cursor:pointer;color:var(--mut);border-radius:7px;width:26px;height:26px}
+.ord button:hover{background:var(--hover);color:var(--fg)}
+@media (max-width:760px){.app{grid-template-columns:1fr;padding:10px}aside{display:none}}
+</style>
+</head>
+<body>
+<div class="bgx" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+<div class="app">
+  <aside>
+    <div class="brand"><b>Media Hub</b><small>Telegram · Video · Ổ cứng</small></div>
+    <nav id="nav">
+      <a data-v="home" class="on"><span class="ic">🏠</span>Tổng quan</a>
+      <a data-v="upload"><span class="ic">☁️</span>Upload<span class="pill hide" id="pillUp">0</span></a>
+      <a data-v="sort"><span class="ic">🎬</span>Sắp xếp video</a>
+      <a data-v="media"><span class="ic">✂️</span>Cắt &amp; gộp</a>
+      <a data-v="disk"><span class="ic">💽</span>Ổ cứng</a>
+      <a data-v="find"><span class="ic">🔎</span>Tìm &amp; tải</a>
+      <a data-v="log"><span class="ic">📜</span>Nhật ký</a>
+      <a data-v="settings"><span class="ic">⚙️</span>Cài đặt</a>
+    </nav>
+    <div class="who" id="who">Chưa đăng nhập Telegram</div>
+  </aside>
+
+  <main>
+    <header>
+      <h1 id="title">Tổng quan</h1>
+      <div class="sp"></div>
+      <div class="status"><span class="dot" id="stDot"></span><span id="stText">Đang chờ</span></div>
+      <button class="theme-tg" id="themeTg" title="Đổi sáng / tối">🌙</button>
+      <button class="bell" id="bell" title="Thông báo">🔔<b id="bellN" class="hide">0</b></button>
+    </header>
+
+    <div class="page">
+      <div id="loginAlert" class="alert hide"></div>
+
+      <!-- ===== TỔNG QUAN ===== -->
+      <section class="view on" id="v-home">
+        <div class="grid kpis">
+          <div class="card kpi"><div class="l">File chờ upload</div><div class="v" id="kCount">–</div><div class="s" id="kSize">&nbsp;</div></div>
+          <div class="card kpi"><div class="l">File cần split (&gt;2GB)</div><div class="v" id="kBig">–</div><div class="s">tự cắt khi upload</div></div>
+          <div class="card kpi"><div class="l">Đã upload</div><div class="v" id="kDone">–</div><div class="s" id="kDoneSize">&nbsp;</div></div>
+          <div class="card kpi"><div class="l">Lượt gần nhất</div><div class="v" id="kLast">–</div><div class="s" id="kLastSub">&nbsp;</div></div>
+        </div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="card">
+            <h3>☁️ Upload lên Telegram</h3>
+            <div class="row" style="justify-content:space-between;margin-bottom:12px">
+              <label class="chk"><span class="switch"><input type="checkbox" id="watchSw"><span></span></span>
+                <span><b>Tự động upload</b><br><span class="mut small">Quét folder định kỳ, có file mới là tự up</span></span></label>
+            </div>
+            <div class="row">
+              <button class="btn pri" id="btnUp">▶ Upload ngay</button>
+              <button class="btn dan hide" id="btnStop">■ Dừng</button>
+              <button class="btn" data-go="upload">Xem chi tiết</button>
+            </div>
+            <div id="xferHome" style="margin-top:12px"></div>
+          </div>
+          <div class="card">
+            <h3>🔔 Thông báo gần đây<span class="sp"></span><button class="btn sm" id="seeAll">Xem tất cả</button></h3>
+            <div id="notiHome"></div>
+          </div>
+        </div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="card"><h3>📁 Theo folder</h3><div id="homeFolders"></div></div>
+          <div class="card"><h3>🗂 Theo loại</h3><div id="homeCats"></div></div>
+        </div>
+      </section>
+
+      <!-- ===== UPLOAD ===== -->
+      <section class="view" id="v-upload">
+        <div class="card" style="margin-bottom:14px">
+          <h3>Đang chạy<span class="sp"></span>
+            <button class="btn sm pri" id="btnUp2">▶ Upload ngay</button>
+            <button class="btn sm dan hide" id="btnStop2">■ Dừng</button></h3>
+          <div id="xferUp"></div>
+          <div id="lastErr"></div>
+        </div>
+        <div class="tabs" data-tabs="up"><a data-t="queue" class="on">Hàng chờ</a><a data-t="hist">Lịch sử đã up</a></div>
+        <div data-pane="up-queue" class="card">
+          <h3>File sẽ được upload<span class="sp"></span><button class="btn sm" id="rescan">↻ Quét lại</button></h3>
+          <div id="queueTbl"></div>
+        </div>
+        <div data-pane="up-hist" class="card hide"><div id="histTbl"></div></div>
+      </section>
+
+      <!-- ===== SẮP XẾP VIDEO ===== -->
+      <section class="view" id="v-sort">
+        <div id="sortBusy"></div>
+        <div class="grid two">
+          <div class="card">
+            <h3>1. Nguồn</h3>
+            <div class="chips" id="sortSrc"></div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn sm" id="sortAdd">＋ Thêm folder</button>
+              <label class="chk small"><input type="checkbox" id="sortCards"> Lấy từ thẻ nhớ đang cắm</label>
+            </div>
+          </div>
+          <div class="card">
+            <h3>2. Tuỳ chọn</h3>
+            <div class="grid" style="gap:10px">
+              <label class="f">Tên dự án<input type="text" id="sortProj" placeholder="VD: Vlog Đà Lạt"></label>
+              <div class="row">
+                <label class="chk small"><input type="checkbox" id="sortCopy"> Copy (giữ file gốc)</label>
+                <label class="f" style="flex-direction:row;align-items:center;gap:6px">File trùng:
+                  <select id="sortDups"><option value="move">Gom vào _Trung_lap</option><option value="skip">Để nguyên</option></select></label>
+              </div>
+              <div class="mut small">Thư viện: <span id="sortLib">~/Movies/Library</span> (đổi trong Cài đặt)</div>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin:14px 0">
+          <button class="btn pri" id="sortPrev">👁 Xem trước</button>
+          <button class="btn" id="sortApply" disabled>✔ Thực hiện sắp xếp</button>
+          <span class="sp" style="flex:1"></span>
+          <button class="btn" id="sortUndo">↶ Hoàn tác lần gần nhất</button>
+        </div>
+        <div class="card"><h3 id="sortHead">Kế hoạch</h3><div id="sortTbl"><div class="empty">Chọn nguồn rồi bấm <b>Xem trước</b> — chưa có file nào bị đụng tới cho tới khi bạn bấm Thực hiện.</div></div></div>
+      </section>
+
+      <!-- ===== CẮT & GỘP ===== -->
+      <section class="view" id="v-media">
+        <div id="mediaBusy"></div>
+        <div class="card hide" id="mediaXferCard" style="margin-bottom:14px"><h3>Đang xử lý</h3><div id="xferMedia"></div></div>
+        <div class="tabs" data-tabs="md"><a data-t="cut" class="on">✂️ Cắt video</a><a data-t="merge">🔗 Gộp video</a><a data-t="file">🧩 Chia / ghép file</a></div>
+
+        <div data-pane="md-cut">
+          <div class="card pick-hero" id="cutEmpty">
+            <div style="font-size:38px">🎞</div>
+            <b>Chọn video để xem và chọn đoạn cắt</b>
+            <span class="mut small">mp4, mov, m4v phát được ngay · mkv, avi, mts sẽ tạo bản xem trước</span>
+            <button class="btn pri" id="cutPick">Chọn video…</button>
+          </div>
+
+          <div class="card hide" id="cutEditor">
+            <div class="row" style="margin-bottom:10px">
+              <b id="cutName" style="color:var(--fg);font-family:var(--ff-head)"></b><span id="cutTags" class="vinfo" style="margin:0"></span>
+              <span style="flex:1"></span><button class="btn sm" id="cutPick2">Đổi video…</button>
+            </div>
+            <div class="player">
+              <video id="vp" preload="auto" playsinline></video>
+              <div class="pv-msg hide" id="pvMsg"><b>Trình phát không đọc được định dạng này</b>
+                <span class="mut small">Tạo một bản xem trước nhẹ để chọn đoạn — khi cắt vẫn dùng file gốc, giữ nguyên chất lượng.</span>
+                <button class="btn pri" id="pvMake">Tạo bản xem trước</button></div>
+            </div>
+            <div class="ctrl">
+              <button class="btn sm" id="vpBack" title="Lùi 5s (Shift+←)">⏪</button>
+              <button class="btn sm pri play-btn" id="vpPlay" title="Phát / dừng (Space)">▶</button>
+              <button class="btn sm" id="vpFwd" title="Tiến 5s (Shift+→)">⏩</button>
+              <span class="tc"><b id="vpCur">0:00.0</b> / <span id="vpDur">0:00.0</span></span>
+              <select id="vpRate" title="Tốc độ phát"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="4">4×</option></select>
+              <span style="flex:1"></span>
+              <button class="btn sm" id="setIn" title="Phím I">⟦ Đặt đầu <kbd>I</kbd></button>
+              <button class="btn sm" id="setOut" title="Phím O">Đặt cuối ⟧ <kbd>O</kbd></button>
+              <button class="btn sm pri" id="addSeg" title="Phím Enter">＋ Thêm đoạn <kbd>↵</kbd></button>
+            </div>
+            <div class="tl" id="tl">
+              <div class="tl-thumbs" id="tlThumbs"></div>
+              <div class="tl-marks" id="tlMarks"></div>
+              <div class="tl-segs" id="tlSegs"></div>
+              <div class="tl-sel hide" id="tlSel"><i class="h l" data-h="in"></i><i class="h r" data-h="out"></i><span id="tlSelLbl"></span></div>
+              <div class="tl-head" id="tlHead"><i></i></div>
+              <div class="tl-hover hide" id="tlHover"></div>
+            </div>
+            <div class="tl-ruler" id="tlRuler"></div>
+            <div class="mut small" style="margin-top:8px">Kéo trên thanh thời gian để chọn đoạn · kéo 2 mép để chỉnh · bấm để tua.
+              Phím tắt: <kbd>Space</kbd> phát/dừng · <kbd>I</kbd>/<kbd>O</kbd> đầu/cuối · <kbd>↵</kbd> thêm đoạn · <kbd>←</kbd><kbd>→</kbd> 1s (Shift 5s) · <kbd>,</kbd><kbd>.</kbd> từng khung hình</div>
+          </div>
+
+          <div class="grid two" style="margin-top:14px">
+            <div class="card">
+              <h3>Các đoạn sẽ cắt<span class="sp"></span><span class="mut small" id="segTotal"></span></h3>
+              <div id="segList"></div>
+            </div>
+            <div class="card">
+              <h3>Cách cắt</h3>
+              <div class="seg">
+                <label><input type="radio" name="cutMode" value="ranges" checked> Theo các đoạn đã chọn trên video</label>
+                <label><input type="radio" name="cutMode" value="duration"> Chia đều mỗi đoạn <input type="number" id="cutMin" value="10" min="0.1" step="0.5" style="width:80px"> phút</label>
+                <label><input type="radio" name="cutMode" value="size"> Chia mỗi đoạn khoảng <input type="number" id="cutMb" value="1900" min="1" style="width:90px"> MB</label>
+              </div>
+              <div class="grid" style="gap:10px;margin-top:12px">
+                <label class="chk"><span class="switch"><input type="checkbox" id="cutJoin"><span></span></span>
+                  <span>Gộp các đoạn thành 1 file<br><span class="mut small">VD: bỏ các đoạn quay hỏng, giữ phần còn lại liền mạch</span></span></label>
+                <label class="chk"><span class="switch"><input type="checkbox" id="cutPrecise"><span></span></span>
+                  <span>Cắt chính xác từng khung hình<br><span class="mut small">Chậm hơn, có nén lại. Tắt = cắt nhanh, lệch ~1–2s</span></span></label>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px"><button class="btn pri" id="cutGo" disabled>✂️ Cắt video</button>
+            <span class="mut small" id="cutHint">Lưu vào folder <code>tên-video_cat</code> cạnh video gốc.</span></div>
+        </div>
+
+        <div data-pane="md-merge" class="hide">
+          <div class="card">
+            <h3>Các video sẽ gộp theo thứ tự<span class="sp"></span><button class="btn sm" id="mgAdd">＋ Thêm video…</button></h3>
+            <div class="chips" id="mgList"></div>
+            <div class="row" style="margin-top:12px;justify-content:space-between">
+              <label class="chk"><span class="switch"><input type="checkbox" id="mgRe"><span></span></span>
+                <span>Chuyển đổi cho khớp<br><span class="mut small">Bật khi các video khác máy quay / độ phân giải. Chậm hơn, có nén lại.</span></span></label>
+              <span class="mut small" id="mgTotal"></span>
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px"><button class="btn pri" id="mgGo" disabled>🔗 Gộp video</button>
+            <span class="mut small">File gộp lưu cạnh video đầu tiên, tên <code>…_gop</code>.</span></div>
+        </div>
+
+        <div data-pane="md-file" class="hide">
+          <div class="grid two">
+            <div class="card">
+              <h3>🧩 Chia file thành nhiều phần</h3>
+              <div class="mut small" style="margin-bottom:10px">Dùng cho file bất kỳ (zip, video, dmg…). Ra các phần <code>.part001</code>, <code>.part002</code>… ghép lại được bằng app hoặc lệnh <code>cat</code>.</div>
+              <div class="row"><button class="btn" id="sfPick">📄 Chọn file…</button><span class="small path" id="sfName"></span></div>
+              <div class="row" style="margin-top:12px"><label class="f" style="flex-direction:row;align-items:center;gap:6px">Mỗi phần<input type="number" id="sfMb" value="1950" min="1" style="width:100px">MB</label>
+                <button class="btn pri" id="sfGo" disabled>Chia file</button></div>
+            </div>
+            <div class="card">
+              <h3>🧷 Ghép các phần lại</h3>
+              <div class="mut small" style="margin-bottom:10px">Chọn 1 phần bất kỳ (<code>.part001</code>…) — app tự tìm đủ các phần cùng folder.</div>
+              <button class="btn" id="jfPick">📄 Chọn 1 phần…</button>
+              <div id="jfList" style="margin-top:10px"></div>
+              <button class="btn pri" id="jfGo" disabled style="margin-top:10px">Ghép file</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card hide" id="mediaOut" style="margin-top:14px"><h3>✅ Kết quả gần nhất</h3><div id="mediaOutList"></div></div>
+      </section>
+
+      <!-- ===== Ổ CỨNG ===== -->
+      <section class="view" id="v-disk">
+        <div id="diskBusy"></div>
+        <div class="card" style="margin-bottom:14px">
+          <h3>Quét ổ cứng</h3>
+          <div class="chips" id="diskRoots"></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn sm" id="diskAdd">＋ Thêm folder</button>
+            <label class="f" style="flex-direction:row;align-items:center;gap:6px">File lớn ≥<input type="number" id="diskBig" value="300" style="width:80px">MB</label>
+            <label class="f" style="flex-direction:row;align-items:center;gap:6px">không sửa ≥<input type="number" id="diskOld" value="90" style="width:70px">ngày</label>
+            <span style="flex:1"></span>
+            <button class="btn pri" id="diskScan">🔍 Quét</button>
+          </div>
+        </div>
+        <div id="diskOut"><div class="card empty">Chưa quét. Bấm <b>Quét</b> để xem ổ đang đầy vì cái gì.</div></div>
+      </section>
+
+      <!-- ===== TÌM & TẢI ===== -->
+      <section class="view" id="v-find">
+        <div class="card" style="margin-bottom:14px">
+          <div class="row">
+            <input type="text" id="q" placeholder="Tên file, tên folder, #hashtag…" style="flex:1;font-size:15px;padding:9px 12px">
+            <button class="btn pri" id="findBtn">Tìm trên Telegram</button>
+          </div>
+          <div class="mut small" style="margin-top:6px">File đã bị split sẽ được tải đủ các phần và tự ghép lại. Lưu vào <span id="dlDir">~/Downloads/TeleUploader</span>.</div>
+        </div>
+        <div class="card hide" id="dlCard" style="margin-bottom:14px"><h3>Đang tải</h3><div id="xferDl"></div></div>
+        <div class="card"><div id="findOut"><div class="empty">Nhập từ khoá để tìm.</div></div></div>
+      </section>
+
+      <!-- ===== NHẬT KÝ ===== -->
+      <section class="view" id="v-log">
+        <div class="card"><h3>Nhật ký hoạt động<span class="sp"></span><label class="chk small"><input type="checkbox" id="logFollow" checked> Tự cuộn</label></h3>
+          <div class="log" id="log"></div></div>
+      </section>
+
+      <!-- ===== CÀI ĐẶT ===== -->
+      <section class="view" id="v-settings">
+        <div class="grid two">
+          <div class="card">
+            <h3>✈️ Tài khoản Telegram</h3>
+            <div id="acct"></div>
+          </div>
+          <div class="card">
+            <h3>🔑 Telegram API</h3>
+            <ol class="steps small mut" style="margin-bottom:10px">
+              <li>Mở <b>my.telegram.org</b> → đăng nhập</li>
+              <li>Chọn <b>API development tools</b> → tạo app (tên bất kỳ)</li>
+              <li>Copy <b>api_id</b> và <b>api_hash</b> vào đây</li>
+            </ol>
+            <div class="grid" style="gap:10px">
+              <label class="f">API ID<input type="text" id="cApiId"></label>
+              <label class="f">API Hash<input type="text" id="cApiHash"></label>
+            </div>
+          </div>
+        </div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="card">
+            <h3>📁 Folder cần upload</h3>
+            <div class="chips" id="cFolders"></div>
+            <button class="btn sm" id="cAddFolder" style="margin-top:8px">＋ Thêm folder</button>
+            <div class="grid" style="gap:10px;margin-top:14px">
+              <label class="f">Gửi tới<input type="text" id="cTarget" placeholder="me = Saved Messages, hoặc @tenkenh"></label>
+            </div>
+          </div>
+          <div class="card">
+            <h3>⚙️ Tuỳ chọn upload</h3>
+            <div class="grid" style="gap:12px">
+              <label class="chk"><span class="switch"><input type="checkbox" id="cTrash"><span></span></span>Up xong chuyển file gốc vào Thùng rác</label>
+              <label class="chk"><span class="switch"><input type="checkbox" id="cPremium"><span></span></span>Tài khoản Premium (4GB/file)</label>
+              <label class="chk"><span class="switch"><input type="checkbox" id="cDoc"><span></span></span>Gửi dạng file (giữ nguyên chất lượng)</label>
+              <div class="row">
+                <label class="f">Quét lại mỗi (phút)<input type="number" id="cInterval" min="1" style="width:110px"></label>
+                <label class="f">Up song song<input type="number" id="cConc" min="1" max="4" style="width:90px"></label>
+                <label class="f">Bỏ qua file mới sửa (giây)<input type="number" id="cAge" min="0" style="width:120px"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3>🎬 Sắp xếp video</h3>
+          <div class="row">
+            <label class="f" style="flex:1">Thư viện đích<input type="text" id="cLib"></label>
+            <button class="btn sm" id="cPickLib" style="align-self:flex-end">Chọn…</button>
+            <label class="f" style="flex:1">Mẫu tên file<input type="text" id="cTpl"></label>
+          </div>
+          <div class="mut small" style="margin-top:6px">Biến dùng được: {date} {day} {project} {seq:03d} {orig} {cam}</div>
+        </div>
+        <div class="row" style="margin-top:16px"><button class="btn pri" id="cSave">💾 Lưu cài đặt</button><span class="mut small" id="cSaved"></span></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="drawer" id="drawer">
+  <header><h1 style="font-size:17px">Thông báo</h1><div class="sp"></div>
+    <button class="btn sm" id="notiClear">Xoá hết</button><button class="bell" id="drawerX">✕</button></header>
+  <div class="list" id="notiList"></div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get("t");
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const human = n => { n = +n || 0; for (const u of ["B","KB","MB","GB","TB"]) { if (n < 1024 || u === "TB") return (u === "B" ? n : n.toFixed(1)) + " " + u; n /= 1024; } };
+const ago = t => { const s = Date.now()/1000 - t; if (s < 60) return "vừa xong"; if (s < 3600) return Math.floor(s/60) + " phút trước"; if (s < 86400) return Math.floor(s/3600) + " giờ trước"; return new Date(t*1000).toLocaleDateString("vi-VN"); };
+const dur = s => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s/60)}m${String(Math.round(s%60)).padStart(2,"0")}` : `${Math.floor(s/3600)}h${String(Math.floor(s%3600/60)).padStart(2,"0")}`;
+
+async function api(path, data) {
+  const r = await fetch("/api/" + path, data === undefined ? {headers:{"X-Token":TOKEN}} :
+    {method:"POST", headers:{"X-Token":TOKEN,"Content-Type":"application/json"}, body:JSON.stringify(data)});
+  const j = await r.json().catch(() => ({ok:false, error:"Lỗi kết nối app"}));
+  if (j && j.ok === false) { toast("Lỗi", j.error, "error"); throw new Error(j.error); }
+  return j;
+}
+// gọi API không hiện thông báo lỗi (dùng cho hộp thoại chọn file: lỗi thì chuyển sang ô nhập đường dẫn)
+const quiet = (path, data) => fetch("/api/" + path, {method:"POST", headers:{"X-Token":TOKEN,"Content-Type":"application/json"},
+  body:JSON.stringify(data)}).then(r => r.json()).then(j => j.ok ? j : null).catch(() => null);
+function toast(title, text, level="info") {
+  const d = document.createElement("div"); d.className = "toast " + level;
+  d.innerHTML = `<b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ""}`;
+  $("#toasts").append(d); setTimeout(() => d.remove(), 5000);
+}
+async function pickFolder() {
+  if (window.pywebview?.api?.pick_folder) return await window.pywebview.api.pick_folder();
+  const r = await quiet("pick_folder", {}); if (r?.path) return r.path; if (r?.ok) return null;
+  return prompt("Nhập đường dẫn folder (VD: ~/Movies):");
+}
+
+/* ---------- điều hướng ---------- */
+const TITLES = {home:"Tổng quan", upload:"Upload", sort:"Sắp xếp video", media:"Cắt & gộp", disk:"Ổ cứng", find:"Tìm & tải", log:"Nhật ký", settings:"Cài đặt"};
+function go(v) {
+  $$("#nav a").forEach(a => a.classList.toggle("on", a.dataset.v === v));
+  $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
+  $("#title").textContent = TITLES[v];
+  store("view", v);
+  if (v === "upload" || v === "home") loadScan();
+  if (v === "upload") loadHistory();
+  if (v === "settings") loadSettings();
+  if (v === "disk") loadDisk();
+}
+$$("#nav a").forEach(a => a.onclick = () => go(a.dataset.v));
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
+$$("[data-tabs]").forEach(t => t.querySelectorAll("a").forEach(a => a.onclick = () => {
+  t.querySelectorAll("a").forEach(x => x.classList.toggle("on", x === a));
+  $$(`[data-pane^="${t.dataset.tabs}-"]`).forEach(p => p.classList.toggle("hide", p.dataset.pane !== `${t.dataset.tabs}-${a.dataset.t}`));
+}));
+
+/* ---------- trạng thái chung (poll mỗi giây) ---------- */
+let lastLog = 0, seenNoti = 0, firstPoll = true, ST = {};
+async function poll() {
+  try {
+    const s = await (await fetch(`/api/state?since=${lastLog}`, {headers:{"X-Token":TOKEN}})).json();
+    ST = s; render(s);
+  } catch {}
+  setTimeout(poll, 1000);
+}
+function render(s) {
+  // trạng thái header
+  const dot = $("#stDot");
+  dot.className = "dot" + (s.uploading ? " run" : s.watch ? " on" : "");
+  const busy = Object.values(s.busy || {});
+  $("#stText").textContent = s.uploading ? "Đang upload…" : busy[0] || (s.watch ? "Tự động upload: bật" : "Đang chờ");
+  $("#watchSw").checked = s.watch;
+  for (const id of ["#btnUp","#btnUp2"]) $(id).classList.toggle("hide", s.uploading);
+  for (const id of ["#btnStop","#btnStop2"]) $(id).classList.toggle("hide", !s.uploading);
+  // người dùng
+  $("#who").innerHTML = s.me ? `<b>${esc(s.me.name)}</b>${s.me.username ? "@" + esc(s.me.username) : ""}${s.me.premium ? " · ⭐ Premium" : ""}`
+                             : "Chưa đăng nhập Telegram";
+  const la = $("#loginAlert");
+  if (s.login_step === "ok") la.classList.add("hide");
+  else { la.classList.remove("hide"); la.innerHTML = s.login_step === "need_api"
+      ? `Chưa có API Telegram. <a data-go="settings">Vào Cài đặt</a> để nhập API ID / Hash.`
+      : `Chưa đăng nhập Telegram. <a data-go="settings">Đăng nhập ngay</a>.`; }
+  // tiến độ
+  const ups = s.transfers.filter(t => t.kind === "upload"), dls = s.transfers.filter(t => t.kind === "download");
+  const xhtml = list => list.length ? list.map(t => {
+    const pct = t.total ? Math.min(100, t.done / t.total * 100) : 0;
+    const eta = t.speed > 0 ? dur((t.total - t.done) / t.speed) : "";
+    return `<div class="xfer"><div class="top"><span title="${esc(t.desc)}">${esc(t.desc)}</span><span class="mut small">${pct.toFixed(0)}%</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="row mut small" style="justify-content:space-between;margin-top:4px"><span>${t.media && /video/i.test(t.desc) ? fmtT(t.done) + " / " + fmtT(t.total) : human(t.done) + " / " + human(t.total)}</span>
+      <span>${t.speed && !(t.media && /video/i.test(t.desc)) ? human(t.speed) + "/s" : ""}${eta ? " · còn " + eta : ""}</span></div></div>`; }).join("") : "";
+  const idle = s.last_round ? `<div class="mut small">Lượt gần nhất ${ago(s.last_round.at)}: ✅ ${s.last_round.done} file (${human(s.last_round.bytes)})${s.last_round.failed ? ` · ❌ ${s.last_round.failed} lỗi` : ""}</div>`
+                            : `<div class="mut small">Chưa có lượt upload nào trong phiên này.</div>`;
+  $("#xferHome").innerHTML = xhtml(ups) || (s.uploading ? `<div class="mut small">Đang chuẩn bị…</div>` : idle);
+  $("#xferUp").innerHTML = xhtml(ups) || (s.uploading ? `<div class="mut small">Đang chuẩn bị…</div>` : idle);
+  $("#dlCard").classList.toggle("hide", !dls.length); $("#xferDl").innerHTML = xhtml(dls);
+  const mds = s.transfers.filter(t => t.kind === "media");
+  $("#mediaXferCard").classList.toggle("hide", !mds.length); $("#xferMedia").innerHTML = xhtml(mds.map(t => ({...t, media: true})));
+  $("#mediaBusy").innerHTML = s.busy.media && !mds.length ? `<div class="busy"><span class="spin"></span>${esc(s.busy.media)}</div>` : "";
+  $("#pillUp").classList.toggle("hide", !ups.length); $("#pillUp").textContent = ups.length;
+  const errs = s.last_round?.errors || [];
+  $("#lastErr").innerHTML = errs.length && !s.uploading ? `<div style="margin-top:10px" class="small"><b style="color:var(--bad)">File lỗi lượt trước</b> (sẽ thử lại lượt sau)<br>` +
+    errs.map(e => `• ${esc(e.file)} — <span class="mut">${esc(e.error)}</span>`).join("<br>") + "</div>" : "";
+  if (s.last_round) { $("#kLast").textContent = s.last_round.done + " file"; $("#kLastSub").textContent = `${ago(s.last_round.at)} · ${dur(s.last_round.seconds)}`; }
+  // việc nặng
+  $("#sortBusy").innerHTML = s.busy.sort ? `<div class="busy"><span class="spin"></span>${esc(s.busy.sort)}</div>` : "";
+  $("#diskBusy").innerHTML = s.busy.disk ? `<div class="busy"><span class="spin"></span>${esc(s.busy.disk)}</div>` : "";
+  $("#sortPrev").disabled = !!s.busy.sort; $("#diskScan").disabled = !!s.busy.disk;
+  const st = s.stamps || {};
+  if (st.sort !== stamps.sort) loadSort();
+  if (st.disk !== stamps.disk) loadDisk();
+  if (st.media !== stamps.media) loadMedia();
+  if (st.preview && st.preview !== stamps.preview) onPreviewReady();
+  stamps = st;
+  if (wasUploading && !s.uploading) { loadScan(); loadHistory(); }
+  wasBusy = {...s.busy}; wasUploading = s.uploading;
+  // nhật ký
+  if (s.log.length) {
+    const box = $("#log");
+    box.insertAdjacentHTML("beforeend", s.log.map(l => `<div class="${l.level}"><time>${new Date(l.t*1000).toLocaleTimeString("vi-VN")}</time>${esc(l.text)}</div>`).join(""));
+    while (box.children.length > 600) box.firstChild.remove();
+    lastLog = s.log[s.log.length - 1].t;
+    if ($("#logFollow").checked) box.scrollTop = box.scrollHeight;
+  }
+  // thông báo
+  const maxId = s.notifications[0]?.id || 0;
+  if (!firstPoll) s.notifications.filter(n => n.id > seenNoti).reverse().forEach(n => toast(n.title, n.text, n.level));
+  seenNoti = Math.max(seenNoti, maxId); firstPoll = false;
+  $("#bellN").classList.toggle("hide", !s.unread); $("#bellN").textContent = s.unread;
+  const nhtml = list => list.length ? list.map(n => `<div class="noti ${n.level}"><b>${esc(n.title)}</b><p>${esc(n.text)}</p><time>${ago(n.t)}</time></div>`).join("")
+                                    : `<div class="empty">Chưa có thông báo.</div>`;
+  $("#notiList").innerHTML = nhtml(s.notifications);
+  $("#notiHome").innerHTML = nhtml(s.notifications.slice(0, 5));
+}
+let wasBusy = {}, wasUploading = false, stamps = {};
+const openDrawer = () => { $("#drawer").classList.add("on"); api("notifications/read", {}); };
+$("#bell").onclick = openDrawer; $("#seeAll").onclick = openDrawer;
+$("#drawerX").onclick = () => $("#drawer").classList.remove("on");
+$("#notiClear").onclick = () => api("notifications/clear", {});
+
+/* ---------- upload ---------- */
+const startUp = () => api("upload/start", {}).then(() => toast("Bắt đầu upload", "", "info")).catch(() => {});
+const stopUp = () => api("upload/stop", {});
+$("#btnUp").onclick = $("#btnUp2").onclick = startUp;
+$("#btnStop").onclick = $("#btnStop2").onclick = stopUp;
+$("#watchSw").onchange = e => api("watch", {on: e.target.checked}).catch(() => e.target.checked = !e.target.checked);
+$("#rescan").onclick = () => loadScan();
+
+const CAT = {video:"🎞 Video", anh:"🖼 Ảnh", nhac:"🎵 Nhạc", tailieu:"📄 Tài liệu", nen:"🗜 File nén", code:"💻 Code", khac:"📦 Khác"};
+async function loadScan() {
+  let d; try { d = await api("scan", {}); } catch { return; }
+  $("#kCount").textContent = d.count.toLocaleString("vi-VN"); $("#kSize").textContent = human(d.total) + (d.fresh ? ` · ${d.fresh} file đang copy dở` : "");
+  $("#kBig").textContent = d.big;
+  const bars = (rows, label) => {
+    if (!rows.length) return `<div class="empty">${d.missing?.length ? "Folder không tồn tại: " + esc(d.missing.join(", ")) : "Không có file nào đang chờ. Thêm folder ở <a data-go='settings' style='color:var(--acc);cursor:pointer'>Cài đặt</a>."}</div>`;
+    const max = Math.max(...rows.map(r => r.size));
+    return `<table>${rows.map(r => `<tr><td style="width:45%">${label(r)}</td><td><div class="bar"><i style="width:${Math.max(2, r.size/max*100)}%"></i></div></td>
+      <td class="n mut">${r.count} file</td><td class="n">${human(r.size)}</td></tr>`).join("")}</table>`;
+  };
+  $("#homeFolders").innerHTML = bars(d.folders, r => `📁 ${esc(r.name)}${r.big ? ` <span class="tag warn">${r.big} cần split</span>` : ""}`);
+  $("#homeCats").innerHTML = bars(d.cats, r => CAT[r.name] || r.name);
+  $("#queueTbl").innerHTML = d.files?.length ? `<div class="tbl"><table><tr><th>File</th><th>Folder</th><th>Loại</th><th class="n">Dung lượng</th></tr>` +
+    d.files.map(f => `<tr><td class="path">${esc(f.rel)} ${f.split ? `<span class="tag warn">sẽ split</span>` : ""}</td><td class="mut small">${esc(f.root)}</td>
+      <td class="small">${CAT[f.cat] || f.cat}</td><td class="n">${human(f.size)}</td></tr>`).join("") + `</table></div>` +
+    (d.count > d.files.length ? `<div class="mut small" style="margin-top:6px">Hiện ${d.files.length}/${d.count} file.</div>` : "")
+    : `<div class="empty">Hàng chờ trống 🎉</div>`;
+}
+async function loadHistory() {
+  const rows = await api("history");
+  const total = rows.reduce((a, r) => a + r.size, 0);
+  $("#kDone").textContent = rows.length.toLocaleString("vi-VN"); $("#kDoneSize").textContent = human(total) + (rows.length >= 300 ? " (300 gần nhất)" : "");
+  $("#histTbl").innerHTML = rows.length ? `<div class="tbl"><table><tr><th>Thời gian</th><th>File</th><th class="n">Dung lượng</th><th>Phần</th><th>Thùng rác</th></tr>` +
+    rows.map(r => `<tr><td class="small mut">${esc(r.at.replace("T"," "))}</td><td class="path">${esc(r.root)}/${esc(r.rel)}</td><td class="n">${human(r.size)}</td>
+      <td>${r.parts > 1 ? `<span class="tag acc">${r.parts} phần</span>` : ""}</td><td>${r.trashed ? "🗑" : ""}</td></tr>`).join("") + `</table></div>`
+    : `<div class="empty">Chưa upload file nào.</div>`;
+}
+
+/* ---------- danh sách folder dạng chip ---------- */
+function chipList(el, list, onChange) {
+  el.innerHTML = list.length ? list.map((p, i) => `<div class="chipf">📁<span>${esc(p)}</span><button data-i="${i}" title="Bỏ">✕</button></div>`).join("")
+                             : `<div class="mut small">Chưa có folder nào.</div>`;
+  el.querySelectorAll("button").forEach(b => b.onclick = () => { list.splice(+b.dataset.i, 1); chipList(el, list, onChange); onChange?.(); });
+}
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+
+/* ---------- sắp xếp video ---------- */
+const sortSrc = load("sortSrc", []);
+chipList($("#sortSrc"), sortSrc);
+$("#sortProj").value = load("sortProj", "");
+$("#sortAdd").onclick = async () => { const p = await pickFolder(); if (p) { sortSrc.push(p); store("sortSrc", sortSrc); chipList($("#sortSrc"), sortSrc, () => store("sortSrc", sortSrc)); } };
+$("#sortPrev").onclick = () => {
+  store("sortProj", $("#sortProj").value);
+  api("sort/preview", {sources: sortSrc, cards: $("#sortCards").checked, project: $("#sortProj").value,
+                       copy: $("#sortCopy").checked, dups: $("#sortDups").value}).catch(() => {});
+};
+$("#sortApply").onclick = () => { if (confirm("Thực hiện sắp xếp theo kế hoạch?\n(Có thể Hoàn tác sau)")) api("sort/apply", {}).catch(() => {}); };
+$("#sortUndo").onclick = () => { if (confirm("Hoàn tác lần sắp xếp gần nhất?")) api("sort/undo", {}); };
+async function loadSort() {
+  const r = await api("sort/result");
+  if (!r.rows || !r.rows.length) { $("#sortTbl").innerHTML = `<div class="empty">${r.rows ? "Không có video/ảnh nào trong nguồn đã chọn." : "Chọn nguồn rồi bấm <b>Xem trước</b>."}</div>`; $("#sortApply").disabled = true; return; }
+  $("#sortLib").textContent = r.library;
+  const dups = r.rows.filter(x => x.status === "trùng").length, fin = r.rows.filter(x => x.status === "Final").length;
+  const guess = r.rows.filter(x => !["metadata","exif"].includes(x.source)).length;
+  $("#sortHead").innerHTML = `Kế hoạch: ${r.rows.length} file <span class="tag">${r.rows.length - dups - fin} Raw</span> <span class="tag acc">${fin} Final</span> <span class="tag bad">${dups} trùng</span>` +
+    (r.applied ? ` <span class="tag ok">✔ đã thực hiện</span>` : "");
+  $("#sortApply").disabled = r.applied || !r.rows.length;
+  $("#sortTbl").innerHTML = (r.ffprobe ? "" : `<div class="alert">Chưa cài ffmpeg nên ngày quay video có thể không chính xác. Mở Terminal chạy <b>brew install ffmpeg</b> một lần.</div>`) +
+    (guess ? `<div class="mut small" style="margin-bottom:8px">⚠️ ${guess} file không có ngày quay trong metadata → lấy theo ngày tạo file (đánh dấu vàng).</div>` : "") +
+    `<div class="tbl"><table><tr><th>File gốc</th><th>Ngày quay</th><th>→ Vị trí mới trong thư viện</th><th class="n">Dung lượng</th></tr>` +
+    r.rows.map(x => `<tr><td class="path">${esc(x.name)}</td>
+      <td class="small" style="white-space:nowrap">${esc(x.date)} ${["metadata","exif"].includes(x.source) ? "" : `<span class="tag warn">${esc(x.source)}</span>`}</td>
+      <td class="path">${x.status === "trùng" ? `<span class="tag bad">trùng</span> <span class="mut">với ${esc(x.dup_of)}</span>` :
+        `${x.status === "Final" ? `<span class="tag acc">Final</span> ` : ""}${esc(x.dst)}`}</td>
+      <td class="n">${human(x.size)}</td></tr>`).join("") + `</table></div>`;
+}
+
+/* ---------- ổ cứng ---------- */
+const diskRoots = load("diskRoots", ["~/Movies", "~/Downloads", "~/Desktop"]);
+chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots));
+$("#diskAdd").onclick = async () => { const p = await pickFolder(); if (p) { diskRoots.push(p); store("diskRoots", diskRoots); chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots)); } };
+$("#diskScan").onclick = () => api("disk/scan", {roots: diskRoots, min_big: +$("#diskBig").value, old_days: +$("#diskOld").value}).catch(() => {});
+let diskTab = "suggest";
+async function loadDisk() {
+  const {result: d} = await api("disk/result");
+  if (!d) return;
+  const daysAgo = m => Math.floor((Date.now()/1000 - m) / 86400);
+  const sel = (rows, key) => `<div class="row" style="margin-bottom:8px"><label class="chk small"><input type="checkbox" data-all="${key}"> Chọn tất cả</label><span style="flex:1"></span>
+      <span class="mut small" id="sel-${key}">0 file</span>
+      <button class="btn sm pri" data-act="queue" data-k="${key}">☁️ Đưa lên Telegram & dọn</button>
+      <button class="btn sm dan" data-act="trash" data-k="${key}">🗑 Chuyển vào Thùng rác</button></div>
+    <div class="tbl"><table><tr><th></th><th>File</th><th class="n">Dung lượng</th><th class="n">Sửa lần cuối</th><th></th></tr>` +
+    rows.map(f => `<tr><td><input type="checkbox" data-k="${key}" value="${esc(f.path)}" data-size="${f.size}"></td><td class="path">${esc(f.path)} ${f.uploaded ? `<span class="tag ok">đã up</span>` : ""}</td>
+      <td class="n">${human(f.size)}</td><td class="n mut">${daysAgo(f.mtime)} ngày</td><td><button class="btn sm" data-reveal="${esc(f.path)}">Finder</button></td></tr>`).join("") + `</table></div>`;
+  const maxDir = Math.max(1, ...d.top_dirs.map(x => x.size));
+  const panes = {
+    suggest: d.suggest.length ? `<div class="mut small" style="margin-bottom:8px">File lớn, lâu rồi không đụng tới. <b>Đưa lên Telegram</b> = chuyển vào folder upload, app sẽ up rồi tự đưa vào Thùng rác.</div>` + sel(d.suggest, "suggest")
+             : `<div class="empty">Không có file nào thoả điều kiện 👍</div>`,
+    dups: d.dups.length ? `<div class="mut small" style="margin-bottom:8px">Mỗi nhóm là các file giống hệt nhau. Bấm 🗑 ở bản thừa (giữ lại 1 bản).</div><div class="tbl"><table>` +
+      d.dups.map(g => `<tr><td>${g.paths.map(p => `<div class="row" style="gap:6px;padding:2px 0"><span class="path" style="flex:1">${esc(p)}</span>
+        <button class="btn sm" data-reveal="${esc(p)}">Finder</button><button class="btn sm dan" data-trash1="${esc(p)}">🗑</button></div>`).join("")}</td>
+        <td class="n" style="vertical-align:top">${human(g.size)}<br><span class="mut small">thừa ${human(g.waste)}</span></td></tr>`).join("") + `</table></div>`
+      : `<div class="empty">Không có file trùng (≥10MB) 👍</div>`,
+    dirs: `<table>` + d.top_dirs.map(x => `<tr><td class="path" style="width:55%">${esc(x.path)}</td><td><div class="bar"><i style="width:${Math.max(2, x.size/maxDir*100)}%"></i></div></td><td class="n">${human(x.size)}</td></tr>`).join("") + `</table>`,
+    big: sel(d.biggest, "big"),
+    types: `<table>` + d.types.map(x => `<tr><td>${esc(x.ext)}</td><td class="n">${human(x.size)}</td></tr>`).join("") + `</table>`,
+  };
+  const used = d.disk_total - d.free;
+  $("#diskOut").innerHTML = `<div class="grid kpis" style="margin-bottom:14px">
+      <div class="card kpi"><div class="l">Ổ đĩa còn trống</div><div class="v">${human(d.free)}</div><div class="bar" style="margin-top:6px"><i style="width:${used/d.disk_total*100}%;background:${d.free/d.disk_total < .1 ? "var(--bad)" : "var(--acc)"}"></i></div><div class="s">đã dùng ${human(used)} / ${human(d.disk_total)}</div></div>
+      <div class="card kpi"><div class="l">Đã quét</div><div class="v">${human(d.scanned)}</div><div class="s">${d.count.toLocaleString("vi-VN")} file · ${ago(d.at)}</div></div>
+      <div class="card kpi"><div class="l">File trùng lãng phí</div><div class="v" style="color:var(--bad)">${human(d.dup_waste)}</div><div class="s">${d.dups.length} nhóm</div></div>
+      <div class="card kpi"><div class="l">Có thể dọn (gợi ý)</div><div class="v" style="color:var(--ok)">${human(d.suggest.reduce((a, f) => a + f.size, 0))}</div><div class="s">${d.suggest.length} file</div></div></div>
+    <div class="card"><div class="tabs" id="diskTabs">${[["suggest","💡 Nên dọn"],["dups","♊ File trùng"],["dirs","📁 Folder nặng"],["big","🐘 File lớn nhất"],["types","🗂 Theo loại"]]
+      .map(([k, l]) => `<a data-t="${k}" class="${k === diskTab ? "on" : ""}">${l}</a>`).join("")}</div>
+      ${Object.entries(panes).map(([k, h]) => `<div data-dp="${k}" class="${k === diskTab ? "" : "hide"}">${h}</div>`).join("")}</div>`;
+  $$("#diskTabs a").forEach(a => a.onclick = () => { diskTab = a.dataset.t; $$("#diskTabs a").forEach(x => x.classList.toggle("on", x === a)); $$("[data-dp]").forEach(p => p.classList.toggle("hide", p.dataset.dp !== diskTab)); });
+  const upd = k => { const c = $$(`input[data-k="${k}"]:checked`); $(`#sel-${k}`).textContent = `${c.length} file · ${human(c.reduce((a, x) => a + +x.dataset.size, 0))}`; };
+  $$("[data-all]").forEach(a => a.onchange = () => { $$(`input[data-k="${a.dataset.all}"]`).forEach(x => x.checked = a.checked); upd(a.dataset.all); });
+  $$("input[data-k]").forEach(x => x.onchange = () => upd(x.dataset.k));
+  $$("[data-act]").forEach(b => b.onclick = async () => {
+    const paths = $$(`input[data-k="${b.dataset.k}"]:checked`).map(x => x.value);
+    if (!paths.length) return toast("Chưa chọn file nào", "", "warn");
+    if (b.dataset.act === "queue") { if (!confirm(`Chuyển ${paths.length} file vào folder upload?\nApp sẽ up lên Telegram rồi tự đưa vào Thùng rác.`)) return; await api("disk/queue", {paths}); }
+    else { if (!confirm(`Chuyển ${paths.length} file vào Thùng rác?`)) return; await api("trash", {paths}); }
+    paths.forEach(p => $$(`input[value="${CSS.escape(p)}"]`).forEach(x => x.closest("tr").remove()));
+  });
+  $$("[data-trash1]").forEach(b => b.onclick = async () => { if (confirm("Chuyển file này vào Thùng rác?\n" + b.dataset.trash1)) { await api("trash", {paths: [b.dataset.trash1]}); b.closest(".row").remove(); } });
+}
+document.addEventListener("click", e => { const r = e.target.closest("[data-reveal]"); if (r) api("reveal", {path: r.dataset.reveal}); });
+
+/* ---------- cắt & gộp ---------- */
+const fmtT = s => { s = Math.max(0, Math.round(+s || 0)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(x).padStart(2,"0"); };
+async function pickFiles(multiple) {
+  if (window.pywebview?.api?.pick_files) return await window.pywebview.api.pick_files(multiple);
+  const r = await quiet("pick_files", {multiple}); if (r?.paths?.length) return r.paths; if (r?.ok) return [];
+  const p = prompt("Nhập đường dẫn file" + (multiple ? " (mỗi file cách nhau bằng dấu ;)" : "") + ":");
+  return p ? p.split(";").map(x => x.trim()).filter(Boolean) : [];
+}
+const vtag = i => `<div class="vinfo"><span class="tag acc">⏱ ${fmtT(i.duration)}</span>${i.width ? `<span class="tag">${i.width}×${i.height}</span>` : ""}
+  ${i.fps ? `<span class="tag">${i.fps} fps</span>` : ""}${i.vcodec ? `<span class="tag">${esc(i.vcodec)}${i.acodec ? " / " + esc(i.acodec) : " · không tiếng"}</span>` : ""}<span class="tag">${human(i.size)}</span></div>`;
+/* ---- cắt video có xem trước ---- */
+const fmtP = x => { x = Math.max(0, +x || 0); const h = Math.floor(x/3600), m = Math.floor(x%3600/60), sec = (x%60).toFixed(1).padStart(4, "0");
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + sec; };
+const parseT = str => { const p = String(str).trim().replace(",", ".").split(":").map(Number); if (p.some(isNaN) || !p.length) return NaN; return p.reduce((a, v) => a*60 + v, 0); };
+const vp = $("#vp");
+let cutVid = null, segs = [], selIn = null, selOut = null, playUntil = null, activeSeg = -1;
+const DUR = () => cutVid?.duration || vp.duration || 0;
+const pct = t => (DUR() ? t / DUR() * 100 : 0) + "%";
+
+async function openCut() {
+  const [p] = await pickFiles(false); if (!p) return;
+  let r; try { r = await api("media/open", {path: p}); } catch { return; }
+  cutVid = r; segs = []; selIn = selOut = null; activeSeg = -1;
+  $("#cutEmpty").classList.add("hide"); $("#cutEditor").classList.remove("hide");
+  $("#cutName").textContent = r.name;
+  $("#cutTags").innerHTML = vtag(r).replace(/^<div class="vinfo">|<\/div>$/g, "");
+  $("#pvMsg").classList.toggle("hide", r.playable);
+  vp.src = r.playable ? `/media/stream/${r.id}?t=${TOKEN}&v=${Date.now()}` : "";
+  $("#vpDur").textContent = fmtP(r.duration);
+  loadThumbs(); drawRuler(); drawTL(); renderSegs();
+}
+$("#cutPick").onclick = $("#cutPick2").onclick = openCut;
+$("#pvMake").onclick = () => api("media/make_preview", {id: cutVid.id}).catch(() => {});
+function onPreviewReady() { if (cutVid) { $("#pvMsg").classList.add("hide"); vp.src = `/media/stream/${cutVid.id}?t=${TOKEN}&v=${Date.now()}`; } }
+vp.addEventListener("error", () => { if (cutVid && vp.getAttribute("src")) $("#pvMsg").classList.remove("hide"); });
+
+function loadThumbs() {
+  const n = Math.max(6, Math.min(30, Math.round($("#tl").clientWidth / 110)));
+  $("#tlThumbs").style.backgroundImage = `url("/media/thumbs/${cutVid.id}?t=${TOKEN}&n=${n}")`;
+}
+function drawRuler() {
+  const d = DUR(); if (!d) return;
+  const steps = [1,2,5,10,15,30,60,120,300,600,900,1800,3600];
+  const want = d / Math.max(4, Math.floor($("#tl").clientWidth / 90));
+  const st = steps.find(x => x >= want) || 3600;
+  let h = ""; for (let t = 0; t <= d + .01; t += st) h += `<span style="left:${pct(t)}">${fmtT(t)}</span>`;
+  $("#tlRuler").innerHTML = h;
+}
+function drawTL() {
+  $("#tlSegs").innerHTML = segs.map((g, i) => `<div class="s" data-i="${i}" style="left:${pct(g.a)};width:calc(${pct(g.b - g.a)})" title="Đoạn ${i+1}: ${fmtP(g.a)} → ${fmtP(g.b)}"><span>${i+1}</span></div>`).join("");
+  $$("#tlSegs .s").forEach(el => el.onpointerdown = e => { e.stopPropagation(); const g = segs[+el.dataset.i]; activeSeg = +el.dataset.i; selIn = g.a; selOut = g.b; vp.currentTime = g.a; drawSel(); renderSegs(); });
+  const mode = document.querySelector("input[name=cutMode]:checked").value;
+  let marks = "";
+  if (mode === "duration" && DUR()) { const st = (+$("#cutMin").value || 0) * 60; if (st > 0) for (let t = st; t < DUR() - .5 && t / st < 400; t += st) marks += `<i style="left:${pct(t)}"></i>`; }
+  if (mode === "size" && DUR() && cutVid?.size) { const st = DUR() * (+$("#cutMb").value * 1048576) / cutVid.size * .97; if (st > 1) for (let t = st; t < DUR() - .5 && t / st < 400; t += st) marks += `<i style="left:${pct(t)}"></i>`; }
+  $("#tlMarks").innerHTML = marks;
+  drawSel();
+}
+function drawSel() {
+  const el = $("#tlSel");
+  if (selIn == null && selOut == null) { el.classList.add("hide"); return; }
+  const a = selIn ?? vp.currentTime, b = selOut ?? DUR();
+  el.classList.remove("hide"); el.style.left = pct(Math.min(a, b)); el.style.width = `calc(${pct(Math.abs(b - a))})`;
+  $("#tlSelLbl").textContent = `${fmtP(Math.min(a, b))} → ${fmtP(Math.max(a, b))} · ${fmtP(Math.abs(b - a))}`;
+}
+const tick = () => {
+  $("#tlHead").style.left = pct(vp.currentTime); $("#vpCur").textContent = fmtP(vp.currentTime);
+  if (playUntil != null && vp.currentTime >= playUntil) { vp.pause(); playUntil = null; }
+  $("#vpPlay").textContent = vp.paused ? "▶" : "❚❚";
+  requestAnimationFrame(tick);
+};
+requestAnimationFrame(tick);
+vp.addEventListener("loadedmetadata", () => { if (!cutVid.duration) cutVid.duration = vp.duration; $("#vpDur").textContent = fmtP(DUR()); drawRuler(); drawTL(); });
+window.addEventListener("resize", () => { if (cutVid) { drawRuler(); } });
+
+// tương tác trên thanh thời gian: bấm = tua, kéo = chọn đoạn, kéo mép = chỉnh
+const tl = $("#tl");
+const tAt = e => { const r = tl.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * DUR(); };
+let drag = null;
+tl.addEventListener("pointerdown", e => {
+  if (!cutVid) return; tl.setPointerCapture(e.pointerId);
+  const h = e.target.dataset?.h;
+  drag = h ? {mode: h} : {mode: "new", start: tAt(e), x: e.clientX};
+  if (!h) vp.currentTime = drag.start;
+});
+tl.addEventListener("pointermove", e => {
+  if (!cutVid) return;
+  const t = tAt(e), hv = $("#tlHover"); hv.classList.remove("hide"); hv.style.left = (e.clientX - tl.getBoundingClientRect().left) + "px"; hv.textContent = fmtP(t);
+  if (!drag) return;
+  if (drag.mode === "in") { selIn = t; vp.currentTime = t; }
+  else if (drag.mode === "out") { selOut = t; vp.currentTime = t; }
+  else if (Math.abs(e.clientX - drag.x) > 4) { selIn = Math.min(drag.start, t); selOut = Math.max(drag.start, t); activeSeg = -1; drag.moved = true; vp.currentTime = t; }
+  else return;
+  if (selIn != null && selOut != null && selIn > selOut) { [selIn, selOut] = [selOut, selIn]; drag.mode = drag.mode === "in" ? "out" : drag.mode === "out" ? "in" : drag.mode; }
+  if (activeSeg >= 0 && drag.mode !== "new") { segs[activeSeg] = {a: selIn, b: selOut}; drawTL(); renderSegs(); } else drawSel();
+});
+tl.addEventListener("pointerleave", () => $("#tlHover").classList.add("hide"));
+tl.addEventListener("pointerup", () => { drag = null; });
+
+// điều khiển
+const seek = d => vp.currentTime = Math.max(0, Math.min(DUR(), vp.currentTime + d));
+$("#vpPlay").onclick = () => { playUntil = null; vp.paused ? vp.play() : vp.pause(); };
+$("#vpBack").onclick = () => seek(-5); $("#vpFwd").onclick = () => seek(5);
+$("#vpRate").onchange = e => vp.playbackRate = +e.target.value;
+const setIn = () => { selIn = vp.currentTime; if (selOut != null && selOut <= selIn) selOut = null; activeSeg = -1; drawSel(); };
+const setOut = () => { selOut = vp.currentTime; if (selIn == null || selIn >= selOut) selIn = selIn != null && selIn < selOut ? selIn : 0; activeSeg = -1; drawSel(); };
+function addSeg() {
+  if (!cutVid) return;
+  const a = selIn ?? 0, b = selOut ?? DUR();
+  if (b - a < 0.3) return toast("Đoạn quá ngắn", "Đặt điểm đầu (I) và cuối (O) trước", "warn");
+  if (activeSeg >= 0) segs[activeSeg] = {a, b}; else segs.push({a, b});
+  segs.sort((x, y) => x.a - y.a); selIn = selOut = null; activeSeg = -1;
+  document.querySelector("input[name=cutMode][value=ranges]").checked = true;
+  drawTL(); renderSegs();
+}
+$("#setIn").onclick = setIn; $("#setOut").onclick = setOut; $("#addSeg").onclick = addSeg;
+
+function renderSegs() {
+  const tot = segs.reduce((a, g) => a + g.b - g.a, 0);
+  $("#segTotal").textContent = segs.length ? `${segs.length} đoạn · ${fmtP(tot)}` : "";
+  $("#segList").innerHTML = segs.length ? `<div class="seglist">` + segs.map((g, i) => `<div class="segrow ${i === activeSeg ? "on" : ""}">
+      <span class="no">${i+1}</span><input value="${fmtP(g.a)}" data-a="${i}" title="Bắt đầu"><span class="mut">→</span><input value="${fmtP(g.b)}" data-b="${i}" title="Kết thúc">
+      <span class="d">${fmtP(g.b - g.a)}</span><button data-pv="${i}" title="Xem đoạn này">▶</button><button data-del="${i}" title="Bỏ">✕</button></div>`).join("") + `</div>`
+    : `<div class="empty small">Chưa có đoạn nào.<br>Kéo chọn trên thanh thời gian (hoặc bấm <kbd>I</kbd> / <kbd>O</kbd>) rồi bấm <b>＋ Thêm đoạn</b>.</div>`;
+  $$("[data-pv]").forEach(b => b.onclick = () => { const g = segs[+b.dataset.pv]; vp.currentTime = g.a; playUntil = g.b; vp.play(); });
+  $$("[data-del]").forEach(b => b.onclick = () => { segs.splice(+b.dataset.del, 1); activeSeg = -1; drawTL(); renderSegs(); });
+  $$("[data-a],[data-b]").forEach(inp => inp.onchange = () => {
+    const i = +(inp.dataset.a ?? inp.dataset.b), t = parseT(inp.value);
+    if (isNaN(t)) return renderSegs();
+    const g = segs[i]; if (inp.dataset.a != null) g.a = Math.max(0, t); else g.b = Math.min(DUR(), t);
+    if (g.b - g.a < 0.3) { toast("Thời gian không hợp lệ", "Cuối phải sau đầu", "warn"); }
+    segs.sort((x, y) => x.a - y.a); drawTL(); renderSegs();
+  });
+  const mode = document.querySelector("input[name=cutMode]:checked").value;
+  $("#cutGo").disabled = !cutVid || (mode === "ranges" && !segs.length);
+  $("#cutJoin").closest("label").style.opacity = mode === "ranges" ? 1 : .45;
+}
+$$("input[name=cutMode]").forEach(r => r.onchange = () => { drawTL(); renderSegs(); });
+["#cutMin","#cutMb"].forEach((id, i) => { $(id).addEventListener("focus", () => { document.querySelectorAll("input[name=cutMode]")[i + 1].checked = true; drawTL(); renderSegs(); });
+  $(id).addEventListener("input", drawTL); });
+
+$("#cutGo").onclick = () => {
+  const mode = document.querySelector("input[name=cutMode]:checked").value;
+  const value = mode === "duration" ? $("#cutMin").value : mode === "size" ? $("#cutMb").value
+              : segs.map(g => `${g.a.toFixed(3)} - ${g.b.toFixed(3)}`).join("\n");
+  vp.pause();
+  api("media/split_video", {path: cutVid.path, mode, value, precise: $("#cutPrecise").checked,
+                            join: mode === "ranges" && $("#cutJoin").checked}).catch(() => {});
+};
+
+// phím tắt (chỉ khi đang ở tab Cắt video và không gõ trong ô nhập)
+document.addEventListener("keydown", e => {
+  if (!cutVid || !$("#v-media").classList.contains("on") || $("[data-pane=md-cut]").classList.contains("hide")) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
+  const k = e.key, big = e.shiftKey ? 5 : 1, fr = 1 / (cutVid.fps || 30);
+  const map = {" ": () => $("#vpPlay").click(), i: setIn, I: setIn, o: setOut, O: setOut, Enter: addSeg,
+    ArrowLeft: () => seek(-big), ArrowRight: () => seek(big), ",": () => { vp.pause(); seek(-fr); }, ".": () => { vp.pause(); seek(fr); },
+    Escape: () => { selIn = selOut = null; activeSeg = -1; drawSel(); renderSegs(); },
+    Delete: () => { if (activeSeg >= 0) { segs.splice(activeSeg, 1); activeSeg = -1; selIn = selOut = null; drawTL(); renderSegs(); } },
+    Backspace: () => map.Delete()};
+  if (map[k]) { e.preventDefault(); map[k](); }
+});
+renderSegs();
+
+let mg = [];
+function renderMerge() {
+  $("#mgList").innerHTML = mg.length ? mg.map((v, i) => `<div class="ord"><span class="no">${i + 1}</span><span class="nm" title="${esc(v.path)}">${esc(v.name)}</span>
+      <span class="mut small">${fmtT(v.duration)} · ${v.width ? v.width + "×" + v.height : ""}</span>
+      <button data-up="${i}" title="Lên">↑</button><button data-dn="${i}" title="Xuống">↓</button><button data-rm="${i}" title="Bỏ">✕</button></div>`).join("")
+    : `<div class="empty">Chưa có video. Bấm <b>＋ Thêm video</b> (chọn được nhiều file cùng lúc).</div>`;
+  const keys = new Set(mg.map(v => [v.vcodec, v.acodec, v.width, v.height].join("|")));
+  $("#mgTotal").innerHTML = mg.length ? `Tổng ${fmtT(mg.reduce((a, v) => a + v.duration, 0))} · ${human(mg.reduce((a, v) => a + v.size, 0))}` +
+    (keys.size > 1 ? ` · <span style="color:var(--warn)">khác định dạng → nên bật Chuyển đổi</span>` : "") : "";
+  if (keys.size > 1) $("#mgRe").checked = true;
+  $("#mgGo").disabled = mg.length < 2;
+  const mv = (i, j) => { if (j < 0 || j >= mg.length) return; [mg[i], mg[j]] = [mg[j], mg[i]]; renderMerge(); };
+  $$("[data-up]").forEach(b => b.onclick = () => mv(+b.dataset.up, +b.dataset.up - 1));
+  $$("[data-dn]").forEach(b => b.onclick = () => mv(+b.dataset.dn, +b.dataset.dn + 1));
+  $$("[data-rm]").forEach(b => b.onclick = () => { mg.splice(+b.dataset.rm, 1); renderMerge(); });
+}
+$("#mgAdd").onclick = async () => { const ps = await pickFiles(true); if (!ps.length) return; const r = await api("media/probe", {paths: ps});
+  mg.push(...r.items.sort((a, b) => a.name.localeCompare(b.name, "vi", {numeric: true}))); renderMerge(); };
+$("#mgGo").onclick = () => api("media/merge", {paths: mg.map(v => v.path), reencode: $("#mgRe").checked}).catch(() => {});
+renderMerge();
+
+let sfPath = null, jfParts = [];
+$("#sfPick").onclick = async () => { const [p] = await pickFiles(false); if (!p) return; sfPath = p; $("#sfName").textContent = p.split("/").pop(); $("#sfGo").disabled = false; };
+$("#sfGo").onclick = () => api("media/split_file", {path: sfPath, mb: +$("#sfMb").value}).catch(() => {});
+$("#jfPick").onclick = async () => {
+  const [p] = await pickFiles(false); if (!p) return;
+  try { const r = await api("media/parts", {path: p}); jfParts = r.items; } catch { jfParts = []; }
+  $("#jfList").innerHTML = jfParts.length ? `<div class="mut small" style="margin-bottom:6px">Tìm thấy ${jfParts.length} phần · ${human(jfParts.reduce((a, x) => a + x.size, 0))}</div>` +
+    jfParts.map(x => `<div class="small path">🧩 ${esc(x.name)} <span class="mut">${human(x.size)}</span></div>`).join("") : "";
+  $("#jfGo").disabled = !jfParts.length;
+};
+$("#jfGo").onclick = () => api("media/join", {paths: jfParts.map(x => x.path)}).catch(() => {});
+
+async function loadMedia() {
+  const m = await api("media/result");
+  if (!m.result) return;
+  $("#mediaOut").classList.remove("hide");
+  $("#mediaOutList").innerHTML = `<div class="tbl"><table>` + m.result.outputs.map(o => `<tr><td class="path">${esc(o.name)}</td><td class="n">${human(o.size)}</td>
+    <td style="width:1%"><button class="btn sm" data-reveal="${esc(o.path)}">Finder</button></td></tr>`).join("") + `</table></div>`;
+}
+
+/* ---------- tìm & tải ---------- */
+$("#findBtn").onclick = doFind; $("#q").onkeydown = e => e.key === "Enter" && doFind();
+async function doFind() {
+  const q = $("#q").value.trim(); if (!q) return;
+  $("#findOut").innerHTML = `<div class="empty"><span class="spin" style="display:inline-block"></span> Đang tìm…</div>`;
+  let r; try { r = await api("find", {q}); } catch (e) { $("#findOut").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#findOut").innerHTML = r.items.length ? `<div class="tbl"><table><tr><th>File</th><th>Folder</th><th class="n">Dung lượng</th><th>Phần</th><th>Ngày up</th><th></th></tr>` +
+    r.items.map(x => `<tr><td class="path"><b>${esc(x.name)}</b></td><td class="small mut">${esc(x.folder)}</td><td class="n">${human(x.size)}</td>
+      <td>${x.total > 1 ? `<span class="tag ${x.parts < x.total ? "bad" : "acc"}">${x.parts}/${x.total}</span>` : ""}</td><td class="small">${esc(x.date)}</td>
+      <td style="white-space:nowrap"><button class="btn sm pri" data-dl="${x.id}" ${x.parts < x.total ? "disabled title='Thiếu phần'" : ""}>⬇ Tải về</button>
+      ${x.link ? `<button class="btn sm" data-link="${esc(x.link)}">Mở Telegram</button>` : ""}</td></tr>`).join("") + `</table></div>`
+    : `<div class="empty">Không tìm thấy “${esc(q)}”.</div>`;
+  $$("[data-dl]").forEach(b => b.onclick = () => api("get", {id: b.dataset.dl}).then(() => toast("Bắt đầu tải", "", "info")).catch(() => {}));
+  $$("[data-link]").forEach(b => b.onclick = () => api("open_url", {url: b.dataset.link}));
+}
+
+/* ---------- cài đặt ---------- */
+let CFG = {}, cFolders = [];
+async function loadSettings() {
+  CFG = await api("config");
+  $("#cApiId").value = CFG.api_id && CFG.api_id != 123456 ? CFG.api_id : "";
+  $("#cApiHash").value = CFG.api_hash && !/^0123456789/.test(CFG.api_hash) ? CFG.api_hash : "";
+  $("#cTarget").value = CFG.target ?? "me";
+  cFolders = [...(CFG.folders || [])]; chipList($("#cFolders"), cFolders);
+  $("#cTrash").checked = CFG.move_to_trash ?? true; $("#cPremium").checked = !!CFG.premium; $("#cDoc").checked = CFG.send_as_document ?? true;
+  $("#cInterval").value = Math.round((CFG.watch_interval_seconds ?? 300) / 60); $("#cConc").value = CFG.concurrency ?? 2; $("#cAge").value = CFG.min_file_age_seconds ?? 120;
+  const v = CFG.video_sorter || {}; $("#cLib").value = v.library ?? "~/Movies/Library"; $("#cTpl").value = v.name_template ?? "{date}_{project}_{seq:03d}";
+  renderAcct();
+}
+$("#cAddFolder").onclick = async () => { const p = await pickFolder(); if (p) { cFolders.push(p); chipList($("#cFolders"), cFolders); } };
+$("#cPickLib").onclick = async () => { const p = await pickFolder(); if (p) $("#cLib").value = p; };
+$("#cSave").onclick = async () => {
+  await api("config", {
+    api_id: $("#cApiId").value.trim(), api_hash: $("#cApiHash").value.trim(), target: $("#cTarget").value.trim() || "me",
+    folders: cFolders, move_to_trash: $("#cTrash").checked, premium: $("#cPremium").checked, send_as_document: $("#cDoc").checked,
+    watch_interval_seconds: Math.max(1, +$("#cInterval").value) * 60, concurrency: Math.min(4, Math.max(1, +$("#cConc").value)),
+    min_file_age_seconds: Math.max(0, +$("#cAge").value),
+    video_sorter: {...(CFG.video_sorter || {}), library: $("#cLib").value.trim(), name_template: $("#cTpl").value.trim()},
+  });
+  $("#cSaved").textContent = "✔ Đã lưu"; setTimeout(() => $("#cSaved").textContent = "", 2500);
+  toast("Đã lưu cài đặt", "", "success");
+  api("login/check", {}).then(renderAcct).catch(() => {});
+  loadScan();
+};
+function renderAcct() {
+  const s = ST.login_step, el = $("#acct");
+  if (ST.me) {
+    el.innerHTML = `<div class="row"><div style="flex:1"><b style="font-size:15px">${esc(ST.me.name)}</b><div class="mut small">${ST.me.username ? "@" + esc(ST.me.username) : ""}${ST.me.premium ? " · ⭐ Premium" : ""}</div></div>
+      <span class="tag ok">Đã kết nối</span></div><div class="row" style="margin-top:12px"><button class="btn sm dan" id="logout">Đăng xuất</button></div>`;
+    $("#logout").onclick = async () => { if (confirm("Đăng xuất Telegram khỏi app?")) { await api("logout", {}); setTimeout(renderAcct, 300); } };
+  } else if (s === "need_api") {
+    el.innerHTML = `<div class="mut">Nhập API ID và API Hash bên cạnh, bấm <b>Lưu cài đặt</b>, rồi đăng nhập ở đây.</div>`;
+  } else if (s === "need_code") {
+    el.innerHTML = `<div class="mut small" style="margin-bottom:8px">Telegram vừa gửi mã đăng nhập vào app Telegram của bạn.</div>
+      <div class="row"><input type="text" id="lgCode" placeholder="Mã 5 số" style="width:140px"><button class="btn pri" id="lgGo">Xác nhận</button></div>`;
+    $("#lgGo").onclick = () => api("login/code", {code: $("#lgCode").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
+  } else if (s === "need_password") {
+    el.innerHTML = `<div class="mut small" style="margin-bottom:8px">Tài khoản có bật xác minh 2 bước — nhập mật khẩu.</div>
+      <div class="row"><input type="password" id="lgPw" placeholder="Mật khẩu 2 bước"><button class="btn pri" id="lgGo">Đăng nhập</button></div>`;
+    $("#lgGo").onclick = () => api("login/password", {password: $("#lgPw").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
+  } else {
+    el.innerHTML = `<div class="mut small" style="margin-bottom:8px">Đăng nhập bằng tài khoản Telegram của bạn (bot chỉ up được 50MB).</div>
+      <div class="row"><input type="text" id="lgPhone" placeholder="+84 912 345 678" style="width:200px"><button class="btn pri" id="lgGo">Gửi mã</button></div>`;
+    $("#lgGo").onclick = () => api("login/phone", {phone: $("#lgPhone").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
+  }
+}
+
+/* ---------- sáng / tối (dùng chung khoá 'elevato-theme' với web elevaTO) ---------- */
+const isDark = () => (document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+const syncTheme = () => $("#themeTg").textContent = isDark() ? "☀️" : "🌙";
+$("#themeTg").onclick = () => { const t = isDark() ? "light" : "dark"; document.documentElement.dataset.theme = t; try { localStorage.setItem("elevato-theme", t); } catch {} syncTheme(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncTheme);
+syncTheme();
+
+/* ---------- khởi động ---------- */
+poll();
+setTimeout(() => { go(load("view", "home") in TITLES ? load("view", "home") : "home"); loadHistory(); loadSort(); }, 300);
+</script>
+</body>
+</html>
