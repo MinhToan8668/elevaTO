@@ -554,7 +554,7 @@
       <div>
         <div class="flex items-center gap-2">
           <span class="text-[19px] font-bold tracking-tight">AI FinLens</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background:rgba(255,255,255,.18);color:#fff">v4.1</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background:rgba(255,255,255,.18);color:#fff">v4.2</span>
         </div>
         <p class="text-[11px] -mt-0.5" style="color:#aec6e0">Trích xuất &amp; phân tích Báo cáo Tài chính với AI</p>
       </div>
@@ -646,7 +646,6 @@
   <div id="main-tools" class="flex items-center gap-1 mb-5 p-1.5 rounded-2xl" style="background:var(--vib-card);border:1px solid var(--vib-line);box-shadow:var(--vib-shadow-sm)">
     <button type="button" data-tool="convert" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">🔁 1 · Chuyển form cũ → 2026</button>
     <button type="button" data-tool="extract" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">🔍 2 · AI trích xuất BCTC</button>
-    <button type="button" data-tool="analyze" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">✍️ 3 · Phân tích & tờ trình</button>
   </div>
 
   <div id="tool-extract">
@@ -1068,47 +1067,105 @@
 #tool-convert .ai{background:linear-gradient(135deg,#8a5a16,var(--vib-copper));border:none;color:#fff}
 #tool-convert .drop{border-radius:14px;background:#F4F8FC;border-color:#B9D4EC}
 #tool-convert select,#tool-convert input[type=text],#tool-convert input[type=number]{border-radius:8px}
+/* [v4.2] Danh sách hồ sơ + khung làm việc */
+#tool-convert [hidden]{display:none!important}
+#tool-convert button.pri{background:linear-gradient(135deg,var(--vib-navy),var(--vib-blue));border:none;color:#fff}
+#tool-convert button.ai{background:linear-gradient(135deg,#8a5a16,var(--vib-copper));border:none;color:#fff}
+#tool-convert .cv-top{padding:14px 18px}
+#tool-convert .cv-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#tool-convert .cv-unit{display:flex;align-items:center;gap:6px;white-space:nowrap}
+#tool-convert .cv-unit select{width:auto;padding:5px 8px}
+#tool-convert .cv-set{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+#tool-convert .cv-ws{display:grid;grid-template-columns:290px minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+#tool-convert .cv-ws.empty{grid-template-columns:minmax(0,1fr)}
+#tool-convert .cv-ws.empty .cv-side{display:none}
+#tool-convert .cv-side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;background:var(--vib-card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--vib-shadow-sm)}
+@media(max-width:900px){#tool-convert .cv-ws{grid-template-columns:minmax(0,1fr)}#tool-convert .cv-side{position:static;max-height:none}}
+#tool-convert .cv-sh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;color:var(--vib-navy)}
+#tool-convert .cv-add{padding:9px;font-size:13px;font-weight:600;color:var(--vib-blue)}
+#tool-convert .cv-big{padding:56px 24px}
+#tool-convert .cv-grp{margin-top:12px}
+#tool-convert .cv-gh{display:flex;justify-content:space-between;gap:6px;align-items:center;font-size:12.5px;font-weight:700;color:var(--vib-navy);text-transform:uppercase;letter-spacing:.2px}
+#tool-convert .cv-gh .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tool-convert .cv-gh .cnt{flex:none;font-weight:600;text-transform:none;color:var(--mut);font-size:11.5px}
+#tool-convert .cv-item{position:relative;border:1px solid var(--line);border-left:4px solid transparent;border-radius:10px;padding:8px 26px 8px 10px;margin-top:6px;background:#fff;cursor:pointer;outline:none}
+#tool-convert .cv-item:hover{border-color:#B9D4EC}
+#tool-convert .cv-item:focus-visible{box-shadow:0 0 0 2px #B9D4EC}
+#tool-convert .cv-item.on{border-left-color:var(--vib-blue);background:#EEF5FC;border-color:#B9D4EC}
+#tool-convert .cv-item .fn{font-size:12.5px;font-weight:600;color:var(--vib-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tool-convert .cv-item .st{margin-top:4px}
+#tool-convert .cv-item .x{position:absolute;top:5px;right:5px;border:none;background:none;color:var(--mut);padding:0 5px;font-size:15px;line-height:1.2;border-radius:6px}
+#tool-convert .cv-item .x:hover{background:var(--badbg);color:var(--bad)}
+#tool-convert .chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:#EEF2F7;color:var(--vib-ink-2);margin:4px 4px 0 0}
+#tool-convert .chip.off{opacity:.45;text-decoration:line-through}
+#tool-convert .cv-gact{margin-top:6px}
+#tool-convert .cv-gact button{flex:1;padding:5px 8px;font-size:12px}
+#tool-convert #mergeAll{width:100%;margin-top:14px}
+#tool-convert .cv-hint{margin-top:8px;text-align:center}
+#tool-convert .cv-log summary{cursor:pointer;font-weight:600;color:var(--vib-navy)}
+#tool-convert .cv-log #log{margin-top:8px}
+#tool-convert .fhead .acts{align-self:flex-end}
+#tool-convert .fmeta{flex-basis:100%;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#tool-convert .fmeta .sh{display:flex;gap:6px;align-items:center}
+#tool-convert .fmeta select{width:auto;min-width:120px;padding:4px 8px}
+#tool-convert .cv-nav{margin-left:auto;display:flex;gap:6px;align-items:center}
+#tool-convert .cv-nav button{padding:3px 10px}
+#tool-convert .file{margin-bottom:0}
+#tool-convert .tblwrap{max-height:70vh}
     </style>
-  <div class="card">
-    <h2>1. Cài đặt</h2>
-    <div class="grid">
+  <div class="card cv-top">
+    <div class="cv-bar">
       <div>
-        <label class="f">AI rà soát &amp; map</label>
-        <div class="small">Dùng chung API key và model của AI FinLens — bấm <b>Alt+F9</b> để nạp key / đổi model.</div>
-        <div class="row" style="margin-top:6px"><label class="small"><input type="checkbox" id="sendVals" checked> Gửi kèm số liệu cho AI (để soát bất thường)</label></div>
+        <h2 style="margin:0">Chuyển form cũ → Form nội bộ 2026</h2>
+        <div class="small">Nạp nhiều file cùng lúc — mỗi file là 1 hồ sơ ở cột trái (tự xếp nhóm theo công ty). Bấm hồ sơ để rà soát, xuất form hoặc đẩy sang tool Trích xuất.</div>
       </div>
-      <div>
-        <label class="f">Template Form 2026</label>
-        <select id="tplMode"><option value="emb">Template chuẩn (đã nhúng sẵn)</option><option value="up">Dùng file của tôi (template hoặc form đã có dữ liệu)</option></select>
-        <input type="file" id="tplFile" accept=".xlsx" style="display:none;margin-top:6px">
-        <div class="small" id="tplInfo" style="margin-top:4px"></div>
-      </div>
-      <div>
-        <label class="f">Đơn vị hiển thị trên tool</label>
-        <select id="unit"><option value="1">đồng</option><option value="1000000" selected>triệu đồng</option><option value="1000000000">tỷ đồng</option></select>
+      <div class="row">
+        <label class="small cv-unit">Đơn vị trên tool <select id="unit"><option value="1">đồng</option><option value="1000000" selected>triệu đồng</option><option value="1000000000">tỷ đồng</option></select></label>
+        <button type="button" id="btnSettings" aria-expanded="false">⚙ Cài đặt xuất form</button>
       </div>
     </div>
-    <div style="margin-top:14px">
-      <label class="f">Đơn vị hiển thị trong form xuất ra (F1 · bảng “Hiển thị đơn vị”) — vẫn đổi được trong Excel bằng ô xổ xuống ở F1</label>
-      <div class="row" id="xunits"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>2. Nạp file phân tích BCTC theo form cũ</h2>
-    <div class="drop" id="drop">Kéo thả 1 hoặc nhiều file .xlsx / .xls / .xlsm vào đây, hoặc bấm để chọn<input type="file" id="files" multiple accept=".xlsx,.xls,.xlsm" style="display:none"></div>
-    <div class="row" style="margin-top:10px;justify-content:space-between">
-      <span class="small">Mỗi file xuất ra 1 form riêng. Muốn gộp nhiều file (vd. các năm khác nhau của cùng 1 công ty) vào 1 form thì bấm “Gộp tất cả”.</span>
-      <button id="mergeAll" disabled>Gộp tất cả vào 1 form</button>
+    <div id="cvSettings" class="cv-set" hidden>
+      <div class="grid">
+        <div>
+          <label class="f">AI rà soát &amp; map</label>
+          <div class="small">Dùng chung API key và model của AI FinLens — bấm <b>Alt+F9</b> để nạp key / đổi model.</div>
+          <div class="row" style="margin-top:6px"><label class="small"><input type="checkbox" id="sendVals" checked> Gửi kèm số liệu cho AI (để soát bất thường)</label></div>
+        </div>
+        <div>
+          <label class="f">Template Form 2026</label>
+          <select id="tplMode"><option value="emb">Template chuẩn (đã nhúng sẵn)</option><option value="up">Dùng file của tôi (template hoặc form đã có dữ liệu)</option></select>
+          <input type="file" id="tplFile" accept=".xlsx" style="display:none;margin-top:6px">
+          <div class="small" id="tplInfo" style="margin-top:4px"></div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="f">Đơn vị hiển thị trong form xuất ra (F1 · bảng “Hiển thị đơn vị”) — vẫn đổi được trong Excel bằng ô xổ xuống ở F1</label>
+        <div class="row" id="xunits"></div>
+      </div>
     </div>
   </div>
 
-  <div id="filesWrap"></div>
-  <div class="card"><h2>Nhật ký</h2><div id="log"></div></div>
+  <input type="file" id="files" multiple accept=".xlsx,.xls,.xlsm" style="display:none">
+  <div class="cv-ws empty" id="cvWs">
+    <aside class="cv-side" id="cvSide">
+      <div class="cv-sh"><b>Hồ sơ đã nạp</b><span class="small" id="cvCount"></span></div>
+      <div class="drop cv-add" id="drop" title="Bấm để chọn hoặc kéo thả file vào đây">＋ Thêm file BCTC</div>
+      <div id="cvList"></div>
+      <button type="button" id="mergeAll" disabled title="Gộp mọi hồ sơ đang nạp vào 1 form 2026">Gộp tất cả vào 1 form</button>
+      <div class="small cv-hint">Mẹo: <b>Alt + ↑ / ↓</b> chuyển hồ sơ</div>
+    </aside>
+    <section class="cv-main">
+      <div class="drop cv-big" id="dropBig">
+        <div style="font-size:34px;line-height:1">📂</div>
+        <div style="font-weight:600;color:var(--vib-navy);margin-top:6px">Kéo thả 1 hoặc nhiều file phân tích BCTC theo form cũ vào đây, hoặc bấm để chọn</div>
+        <div class="small" style="margin-top:4px">.xlsx / .xls / .xlsm · mỗi file là 1 hồ sơ · các file cùng công ty (năm khác nhau) tự xếp chung nhóm để gộp 1 form</div>
+      </div>
+      <div id="filesWrap"></div>
+    </section>
+  </div>
+  <details class="card cv-log"><summary>Nhật ký</summary><div id="log"></div></details>
   </div>
 
-  <!-- [v4.0] TOOL 3: Phân tích & viết tờ trình -->
-  <div id="tool-analyze" class="hidden"><div id="az-root" class="vib-card p-6"></div></div>
 
 <!-- PDF Loading Overlay -->
 <div id="pdf-loading-overlay" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
@@ -1131,7 +1188,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.9.155/b
 // ============================================================
 // VERSION MANAGEMENT
 // ============================================================
-const APP_VERSION = '4.1';
+const APP_VERSION = '4.2';
 const ANNOUNCEMENT_URL = 'https://gist.githubusercontent.com/iamnga/0b19d4cba3765c79b0b3cd3e4728a367/raw/finlens-announcement.json';
 const DOWNLOAD_URL = 'https://vibonline.sharepoint.com/:f:/r/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20FinLens?csf=1&web=1&e=FimKrB';
 
@@ -3107,11 +3164,11 @@ async function accessGate() {
 accessGate();
 
 // ============================================================
-// [v4.0] 3 TOOL TRONG 1 — [v4.1] thứ tự theo quy trình: Chuyển form → Trích xuất → Phân tích
+// [v4.2] 2 TOOL TRONG 1 theo quy trình: Chuyển form → Trích xuất
 // ============================================================
 const MAIN_TOOL_LS = 'finlens_tool';
 function switchMainTool(k) {
-  ['extract', 'convert', 'analyze'].forEach(t => {
+  ['convert', 'extract'].forEach(t => {
     const el = document.getElementById('tool-' + t);
     if (el) el.classList.toggle('hidden', t !== k);
     const btn = document.querySelector(`#main-tools [data-tool="${t}"]`);
@@ -3121,7 +3178,6 @@ function switchMainTool(k) {
         : 'background:transparent;color:var(--vib-ink-2)';
     }
   });
-  if (k === 'analyze') azInit();
   try { localStorage.setItem(MAIN_TOOL_LS, k); } catch (e) { /* bỏ qua */ }
 }
 document.querySelectorAll('#main-tools [data-tool]').forEach(b => b.addEventListener('click', () => switchMainTool(b.dataset.tool)));
@@ -3187,344 +3243,8 @@ function syncFromConverter({ company, periods }) {
   switchMainTool('extract');
   goToStep(3); loadLane('TT99'); renderResults(); updateUndoRedoButtons(); applyLaneChrome(); renderMainviewTabs(); switchMainview('overview');
   currentSessionId = null; autoSaveSession();
-  if (AZ.inited) azRefreshSources();
   showToast(`Đã đồng bộ ${periods.length} kỳ từ form cũ sang tool Trích xuất.`);
   return true;
-}
-
-// ============================================================
-// [v4.0/4.1] TOOL PHÂN TÍCH & VIẾT TỜ TRÌNH — chỉ phân tích CÁC KỲ ĐÃ CHỌN, theo khung bài bản
-// ============================================================
-const AZ = { inited: false, formBk: null, formInfo: '', company: '', extra: [], styles: [], busy: false, result: null, lines: null, researchNote: '', pick: {} };
-
-function azInit() {
-  if (AZ.inited) { azRefreshSources(); return; }
-  AZ.inited = true;
-  const root = document.getElementById('az-root');
-  root.innerHTML = `
-    <h2 class="text-lg font-bold mb-1" style="color:var(--vib-navy)">Phân tích & viết tờ trình (AI)</h2>
-    <p class="text-[13px] mb-4" style="color:var(--vib-ink-3)">AI viết theo văn phong RM nhiều năm kinh nghiệm, bám khung phân tích tín dụng và CHỈ dùng các kỳ bạn tick bên dưới. Mọi con số lấy từ bảng số gửi đi — thiếu hoặc mâu thuẫn AI phải nói rõ, không bịa.</p>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="rounded-xl p-4" style="border:1px solid var(--vib-line);background:var(--vib-card-2)">
-        <p class="text-[13px] font-bold mb-1">1. Nguồn số liệu & kỳ phân tích</p>
-        <div id="az-lanes" class="text-[12.5px] mb-1" style="color:var(--vib-ink-2)"></div>
-        <div id="az-periods" class="mb-2"></div>
-        <label class="text-[12px] font-semibold" style="color:var(--vib-ink-3)">Form nội bộ 2026 (.xlsx, tuỳ chọn — đọc sheet Lưu trữ; mặc định tick đúng các kỳ đang gán ở F1)</label>
-        <input type="file" id="az-form" accept=".xlsx" class="block w-full text-sm mt-1">
-        <div id="az-form-info" class="text-[12px] mt-1" style="color:var(--vib-ink-3)"></div>
-        <label class="text-[12px] font-semibold mt-3 block" style="color:var(--vib-ink-3)">Tên công ty</label>
-        <input type="text" id="az-company" class="block w-full text-sm mt-1 px-2.5 py-1.5 rounded-lg" style="border:1px solid var(--vib-line)" placeholder="Tự lấy từ dữ liệu — sửa được">
-      </div>
-      <div class="rounded-xl p-4" style="border:1px solid var(--vib-line);background:var(--vib-card-2)">
-        <p class="text-[13px] font-bold mb-1">2. File theo dõi bổ sung <span class="font-normal" style="color:var(--vib-ink-3)">(tuỳ chọn: phải thu, phải trả, tồn kho, breakdown doanh thu…)</span></p>
-        <input type="file" id="az-extra" accept=".xlsx,.xls,.csv" multiple class="block w-full text-sm">
-        <div id="az-extra-list" class="text-[12px] mt-1" style="color:var(--vib-ink-3)"></div>
-        <p class="text-[13px] font-bold mb-1 mt-3">3. Tờ trình mẫu để học văn phong <span class="font-normal" style="color:var(--vib-ink-3)">(tuỳ chọn, tối đa 2 file .docx / .pdf / .txt)</span></p>
-        <input type="file" id="az-style" accept=".docx,.pdf,.txt" multiple class="block w-full text-sm">
-        <div id="az-style-list" class="text-[12px] mt-1" style="color:var(--vib-ink-3)"></div>
-      </div>
-    </div>
-    <div class="rounded-xl p-4 mt-4" style="border:1px solid var(--vib-line);background:var(--vib-card-2)">
-      <p class="text-[13px] font-bold mb-1">4. Insight / thông tin bổ sung cho AI <span class="font-normal" style="color:var(--vib-ink-3)">(ngành, khách hàng lớn, sự kiện trong kỳ, giải thích của doanh nghiệp, điểm cần tập trung…)</span></p>
-      <textarea id="az-insight" rows="4" maxlength="6000" class="block w-full text-sm px-2.5 py-1.5 rounded-lg" style="border:1px solid var(--vib-line)" placeholder="Ví dụ: KH phân phối xe tải qua 40 đại lý, mùa cao điểm quý 4; Q3 nới hạn thanh toán cho đại lý từ 30 lên 75 ngày; mục đích: gia hạn hạn mức vốn lưu động 500 tỷ…"></textarea>
-      <div class="flex items-center flex-wrap gap-4 mt-3 text-[13px]">
-        <label class="flex items-center gap-1.5"><input type="checkbox" id="az-research" checked> Tìm thêm thông tin công ty & ngành trên mạng (Google Search, +1 lượt AI)</label>
-        <label class="flex items-center gap-1.5"><input type="checkbox" id="az-include"> Đính kèm bài phân tích vào file Excel khi xuất (sheet “Phân tích AI”)</label>
-      </div>
-      <div class="flex items-center gap-3 mt-3">
-        <button id="az-go" class="vib-btn-copper px-5 py-2.5 rounded-[10px] font-semibold text-sm">Viết tờ trình phân tích</button>
-        <span class="text-[12px]" style="color:var(--vib-ink-3)">tốn 1–2 lượt AI · key & model theo Alt+F9</span>
-      </div>
-      <div id="az-status" class="text-[13px] mt-2" style="color:var(--vib-ink-2)"></div>
-    </div>
-    <div id="az-out" class="mt-4"></div>`;
-  const $$ = id => root.querySelector('#' + id);
-  $$('az-form').addEventListener('change', async e => {
-    const f = e.target.files[0]; if (!f) return;
-    const box = $$('az-form-info'); box.textContent = 'Đang đọc…';
-    try {
-      const bk = await window.TTForm.open(f);
-      if (!bk.kho) throw new Error('File không có sheet "Lưu trữ" — không phải form nội bộ 2026.');
-      AZ.formBk = bk;
-      const r5 = window.TTForm.getRow(bk.sheet.F1.data, 5);
-      const cty = r5 ? window.TTForm.readStrCell(window.TTForm.getCell(r5, 'C5'), bk.sst) : '';
-      if (cty && !$$('az-company').value) $$('az-company').value = cty;
-      // mặc định tick đúng các kỳ đang gán hiển thị ở F1 (cột Năm 1..4); F1 trống thì tick hết
-      const cur = new Set(Object.values(bk.kho.cur || {}).filter(Boolean));
-      bk.kho.periods.forEach(p => { AZ.pick['f|' + p.id] = cur.size ? cur.has(p.id) : true; });
-      AZ.formInfo = `${f.name}: ${bk.kho.periods.length} kỳ trong Lưu trữ`;
-      box.textContent = '✓ ' + AZ.formInfo + (cur.size ? ` · F1 đang chọn: ${[...cur].join(', ')}` : '');
-      azRenderPeriods();
-    } catch (err) { AZ.formBk = null; box.textContent = '✗ ' + err.message; azRenderPeriods(); }
-  });
-  $$('az-extra').addEventListener('change', async e => {
-    AZ.extra = [];
-    for (const f of Array.from(e.target.files).slice(0, 4)) {
-      try { AZ.extra.push({ name: f.name, text: await azReadTable(f) }); }
-      catch (err) { AZ.extra.push({ name: f.name, text: '', err: err.message }); }
-    }
-    $$('az-extra-list').innerHTML = AZ.extra.map(x => x.err ? `✗ ${escapeHtml(x.name)}: ${escapeHtml(x.err)}` : `✓ ${escapeHtml(x.name)} (${Math.round(x.text.length / 1000)}k ký tự)`).join('<br>');
-  });
-  $$('az-style').addEventListener('change', async e => {
-    AZ.styles = [];
-    for (const f of Array.from(e.target.files).slice(0, 2)) {
-      try { AZ.styles.push({ name: f.name, text: await azReadDoc(f) }); }
-      catch (err) { AZ.styles.push({ name: f.name, text: '', err: err.message }); }
-    }
-    $$('az-style-list').innerHTML = AZ.styles.map(x => x.err ? `✗ ${escapeHtml(x.name)}: ${escapeHtml(x.err)}` : `✓ ${escapeHtml(x.name)} (${Math.round(x.text.length / 1000)}k ký tự)`).join('<br>');
-  });
-  $$('az-include').addEventListener('change', e => { if (window._toTrinh) window._toTrinh.include = e.target.checked; });
-  $$('az-go').addEventListener('click', azWrite);
-  azRefreshSources();
-}
-
-function azRefreshSources() {
-  const box = document.getElementById('az-lanes'); if (!box) return;
-  const avail = lanesAvailable();
-  box.innerHTML = avail.length
-    ? 'Phiên trích xuất: ' + avail.map(tt => `<b>${tt === 'TT99' ? 'BCTC 2026+' : 'BCTC ≤2025'}</b>`).join(' · ')
-    : 'Chưa có phiên trích xuất — dùng tab "AI trích xuất BCTC", hoặc tải form nội bộ 2026 bên dưới.';
-  // kỳ mới xuất hiện: mặc định tick (người dùng bỏ bớt)
-  avail.forEach(tt => periodsAsc(lanes[tt].extractedData).forEach(p => { const k = 'l|' + tt + '|' + p.id; if (!(k in AZ.pick)) AZ.pick[k] = true; }));
-  const cty = document.getElementById('az-company');
-  if (cty && !cty.value) {
-    for (const tt of ['TT99', 'TT200']) { const ed = lanes[tt] && lanes[tt].extractedData; if (ed && ed.company) { cty.value = ed.company; break; } }
-  }
-  azRenderPeriods();
-}
-
-/** Danh sách kỳ dạng checkbox — AI CHỈ phân tích kỳ được tick. */
-function azRenderPeriods() {
-  const box = document.getElementById('az-periods'); if (!box) return;
-  const chip = (key, label, src) => `<label class="inline-flex items-center gap-1 mr-3 mb-1 text-[12.5px]" style="color:var(--vib-ink)"><input type="checkbox" data-pick="${escapeHtml(key)}" ${AZ.pick[key] !== false ? 'checked' : ''}> ${escapeHtml(label)}<span style="color:var(--vib-ink-3)">·${src}</span></label>`;
-  let html = '';
-  lanesAvailable().forEach(tt => { periodsAsc(lanes[tt].extractedData).forEach(p => { html += chip('l|' + tt + '|' + p.id, p.label, 'trích xuất'); }); });
-  if (AZ.formBk) AZ.formBk.kho.periods.forEach(p => { html += chip('f|' + p.id, p.label, 'form'); });
-  box.innerHTML = html ? `<div class="text-[12px] font-semibold mb-0.5" style="color:var(--vib-ink-3)">Kỳ phân tích (chỉ kỳ được tick mới đưa vào bài viết):</div>${html}` : '';
-  box.querySelectorAll('[data-pick]').forEach(cb => cb.addEventListener('change', () => { AZ.pick[cb.dataset.pick] = cb.checked; }));
-}
-
-// File xlsx/csv → text CSV gọn (mỗi sheet tối đa ~120 dòng, cả file ~9000 ký tự)
-async function azReadTable(f) {
-  if (/\.csv$/i.test(f.name)) return (await f.text()).slice(0, 9000);
-  const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
-  let out = '';
-  for (const name of wb.SheetNames.slice(0, 3)) {
-    const csv = XLSX.utils.sheet_to_csv(wb.Sheets[name], { blankrows: false }).split('\n').slice(0, 120).join('\n');
-    if (csv.trim()) out += `--- Sheet: ${name} ---\n${csv}\n`;
-    if (out.length > 9000) break;
-  }
-  return out.slice(0, 9000);
-}
-
-// Tờ trình mẫu: .docx (JSZip → document.xml), .pdf (pdf.js), .txt — lấy tối đa 15k ký tự
-async function azReadDoc(f) {
-  if (/\.txt$/i.test(f.name)) return (await f.text()).slice(0, 15000);
-  if (/\.docx$/i.test(f.name)) {
-    const zip = await JSZip.loadAsync(await f.arrayBuffer());
-    const xml = await zip.file('word/document.xml').async('string');
-    return xml.replace(/<w:p[ >]/g, '\n<w:p ').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\n{3,}/g, '\n\n').trim().slice(0, 15000);
-  }
-  if (/\.pdf$/i.test(f.name)) {
-    const doc = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
-    let out = '';
-    for (let p = 1; p <= Math.min(doc.numPages, 25) && out.length < 15000; p++) {
-      const tc = await (await doc.getPage(p)).getTextContent();
-      out += tc.items.map(i => i.str).join(' ') + '\n';
-    }
-    return out.slice(0, 15000);
-  }
-  throw new Error('Chỉ nhận .docx, .pdf, .txt');
-}
-
-const AZ_TY = v => (v === null || v === undefined || !isFinite(v)) ? '' : (Math.round(v / 1e6) / 1e3).toFixed(3);
-
-/** Các kỳ đã tick, chia theo nguồn. */
-function azSelected() {
-  const sel = { lanes: {}, form: [], labels: [] };
-  lanesAvailable().forEach(tt => {
-    const ps = periodsAsc(lanes[tt].extractedData).filter(p => AZ.pick['l|' + tt + '|' + p.id] !== false);
-    if (ps.length) { sel.lanes[tt] = ps; ps.forEach(p => sel.labels.push(p.label)); }
-  });
-  if (AZ.formBk) {
-    sel.form = AZ.formBk.kho.periods.filter(p => AZ.pick['f|' + p.id] !== false);
-    sel.form.forEach(p => { if (!sel.labels.includes(p.label)) sel.labels.push(p.label); });
-  }
-  return sel;
-}
-
-// Bảng số liệu từ phiên trích xuất — CHỈ các kỳ đã tick, đơn vị tỷ đồng
-function azLanesTable(sel) {
-  let out = '';
-  for (const [tt, ps] of Object.entries(sel.lanes)) {
-    const ed = lanes[tt].extractedData;
-    out += `\n== Số liệu trích xuất (hệ ${tt === 'TT99' ? 'mẫu 2026+' : 'mẫu ≤2025, mã theo TT200'}; đơn vị TỶ ĐỒNG; kỳ cũ → mới) ==\n`;
-    out += 'Báo cáo|Mã|Chỉ tiêu|' + ps.map(p => p.label).join('|') + '\n';
-    for (const k of ['CDKT', 'KQKD', 'LCTT']) {
-      const items = (ed.reports && ed.reports[k] && ed.reports[k].items) || [];
-      for (const it of items) {
-        const vals = ps.map(p => AZ_TY(getValByPeriod(items, it.ma_so, p.id)));
-        if (vals.some(v => v !== '')) out += `${k}|${it.ma_so}|${String(it.ten || '').slice(0, 55)}|${vals.join('|')}\n`;
-      }
-    }
-    const fr = ed._ratios;
-    if (fr) {
-      const ids = new Set(ps.map(p => p.id));
-      out += '-- Chỉ số tài chính (máy tính sẵn, chỉ các kỳ đã chọn) --\n';
-      for (const g of ['summary', 'profitability', 'leverage', 'efficiency']) {
-        for (const r of (fr[g] || [])) {
-          if (!Array.isArray(r.values)) continue;
-          const vals = r.values.filter(v => ids.has(v.period_id));
-          if (!vals.length) continue;
-          out += `${r.name}|${vals.map(v => v.value === null || v.value === undefined ? '' : (typeof v.value === 'number' ? (Math.abs(v.value) > 1e6 ? AZ_TY(v.value) + ' tỷ' : String(Math.round(v.value * 100) / 100)) : v.value)).join('|')}\n`;
-        }
-      }
-    }
-  }
-  return out;
-}
-
-// Bảng số liệu từ form nội bộ tải lên — CHỈ các kỳ đã tick
-function azFormTable(sel) {
-  if (!AZ.formBk || !sel.form.length) return '';
-  const bk = AZ.formBk, T = window.TTForm;
-  let out = `\n== Số liệu trong form nội bộ 2026 tải lên (đơn vị TỶ ĐỒNG; kỳ đã chọn: ${sel.form.map(p => p.label).join(', ')}) ==\n`;
-  out += 'Nhóm|MS|Chỉ tiêu|' + sel.form.map(p => p.label).join('|') + '\n';
-  const gets = sel.form.map(p => T.khoGet(bk, p.id));
-  const sd = bk.sheet.KHO.data;
-  for (const [key, rn] of Object.entries(bk.kho.key)) {
-    const [nm, ma] = key.split('|');
-    const row = T.getRow(sd, rn);
-    const label = row ? T.readStrCell(T.getCell(row, 'C' + rn), bk.sst) : '';
-    const vals = gets.map(g => AZ_TY(g && g.val(nm, ma)));
-    if (vals.some(v => v !== '')) out += `${nm === 'F2' ? 'CĐKT' : nm === 'F3' ? 'KQKD' : 'LCTT'}|${ma}|${String(label).slice(0, 55)}|${vals.join('|')}\n`;
-  }
-  return out;
-}
-
-const AZ_SCHEMA = { type: 'OBJECT', properties: {
-  tieu_de: { type: 'STRING' },
-  tong_quan: { type: 'STRING', description: 'Tối đa 120 từ: khách hàng, quy mô, xu hướng chính của CÁC KỲ ĐÃ CHỌN, kết luận sơ bộ' },
-  nganh_thi_truong: { type: 'STRING' },
-  hoat_dong_kinh_doanh: { type: 'STRING' },
-  tai_chinh: { type: 'STRING' },
-  von_luu_dong: { type: 'STRING' },
-  dong_tien: { type: 'STRING' },
-  rui_ro: { type: 'ARRAY', items: { type: 'OBJECT', properties: { muc: { type: 'STRING', enum: ['cao', 'trung bình', 'thấp'] }, noi_dung: { type: 'STRING' }, co_so: { type: 'STRING' } }, required: ['muc', 'noi_dung', 'co_so'] } },
-  de_xuat: { type: 'ARRAY', items: { type: 'STRING' } },
-  cau_hoi: { type: 'ARRAY', items: { type: 'STRING' } },
-}, required: ['tieu_de', 'tong_quan', 'nganh_thi_truong', 'hoat_dong_kinh_doanh', 'tai_chinh', 'von_luu_dong', 'dong_tien', 'rui_ro', 'de_xuat', 'cau_hoi'] };
-
-async function azWrite() {
-  if (AZ.busy) return;
-  const root = document.getElementById('az-root');
-  const q = id => root.querySelector('#' + id);
-  const company = (q('az-company').value || '').trim();
-  const sel = azSelected();
-  const dataPack = azLanesTable(sel) + azFormTable(sel);
-  if (!sel.labels.length || !dataPack.trim()) { q('az-status').innerHTML = '<span style="color:var(--vib-error)">Chưa tick kỳ nào có số liệu — chọn kỳ ở mục 1 (hoặc trích xuất / tải form trước).</span>'; return; }
-  if (!company) { q('az-status').innerHTML = '<span style="color:var(--vib-error)">Nhập tên công ty.</span>'; return; }
-  AZ.busy = true; q('az-go').disabled = true;
-  const status = t => { q('az-status').textContent = t; };
-  try {
-    AZ.researchNote = '';
-    if (q('az-research').checked) {
-      status('Đang tìm thông tin công ty & ngành trên mạng…');
-      try {
-        AZ.researchNote = await aiCall({ plain: true, maxOutputTokens: 4096, thinkingLevel: 'low', temperature: 0.2,
-          tools: [{ google_search: {} }],
-          prompt: `Tìm và tóm tắt (tối đa 400 từ, gạch đầu dòng, tiếng Việt) thông tin CÔNG KHAI về "${company}" và ngành của công ty này tại Việt Nam: lĩnh vực hoạt động, quy mô/vị thế, tin tức đáng chú ý 12 tháng qua, triển vọng và rủi ro chung của ngành. Cuối mỗi ý ghi nguồn trong ngoặc. Không bịa; không chắc thì ghi "không tìm thấy thông tin".` });
-      } catch (e) { AZ.researchNote = ''; status('Không tìm được thông tin mạng (' + e.message + ') — viết dựa trên số liệu và insight.'); }
-    }
-    status('AI đang viết tờ trình phân tích…');
-    const styleTxt = AZ.styles.filter(x => x.text).map((x, i) => `--- MẪU ${i + 1} (${x.name}) ---\n${x.text}`).join('\n');
-    const extraTxt = AZ.extra.filter(x => x.text).map(x => `--- FILE: ${x.name} ---\n${x.text}`).join('\n');
-    const insight = (q('az-insight').value || '').trim();
-    const kyChon = sel.labels.join(', ');
-    const prompt = [
-      `Bạn là RM (quản lý khách hàng doanh nghiệp) ngân hàng Việt Nam với 15 năm kinh nghiệm, viết phần PHÂN TÍCH KHÁCH HÀNG trong tờ trình tín dụng cho khách hàng "${company}".`,
-      `KỲ PHÂN TÍCH ĐÃ CHỌN: ${kyChon}. CHỈ phân tích đúng các kỳ này — tuyệt đối không nhắc tới kỳ khác kể cả khi bảng dữ liệu có chứa.`,
-      'KHUNG BẮT BUỘC cho từng mục chữ (phân tích bài bản, không lan man):',
-      '  (1) SỐ LIỆU: nêu giá trị từng kỳ đã chọn và biến động tuyệt đối + % theo dạng "X → Y tỷ đồng (+Z%)";',
-      '  (2) NGUYÊN NHÂN / DIỄN GIẢI: chỉ từ insight của RM, file theo dõi, thông tin cung cấp — không suy đoán vô căn cứ, thiếu thì ghi "cần làm rõ với khách hàng";',
-      '  (3) NHẬN ĐỊNH RM: 1–2 câu, thận trọng theo chuẩn mực ngân hàng.',
-      'GIỚI HẠN: tong_quan ≤ 120 từ; mỗi mục khác 80–180 từ; không lặp lại cùng con số ở nhiều mục trừ khi để đối chiếu; mục thiếu dữ liệu ghi đúng một câu "Chưa có số liệu để phân tích mục này".',
-      'VĂN PHONG: câu ngắn, rõ, mạch lạc giữa các số liệu; không khen sáo rỗng; đơn vị tỷ đồng (ghi "tỷ đồng" lần đầu).' + (styleTxt ? ' HỌC VĂN PHONG, bố cục câu và cách dùng từ theo các MẪU TỜ TRÌNH bên dưới (nội dung phải theo số liệu của khách hàng này).' : ''),
-      'QUY TẮC SỐ LIỆU: chỉ dùng số trong các bảng DỮ LIỆU bên dưới (đã quy về tỷ đồng); nếu insight/giải thích mâu thuẫn với số liệu thì nêu rõ ở rui_ro hoặc cau_hoi. Thông tin tìm trên mạng chỉ dùng cho mục ngành/thị trường và dẫn kèm "(thông tin công khai)".',
-      'rui_ro: mỗi ý gồm muc (cao/trung bình/thấp), noi_dung và co_so (dẫn đúng con số làm căn cứ). de_xuat: đo lường được (hạn mức, TSBĐ, điều kiện giải ngân, tần suất theo dõi). cau_hoi: 5–8 câu, mỗi câu dẫn con số cụ thể.',
-      insight ? `\n== INSIGHT / THÔNG TIN RM CUNG CẤP ==\n${insight}` : '',
-      AZ.researchNote ? `\n== THÔNG TIN TÌM TRÊN MẠNG (chỉ dùng cho mục ngành/thị trường) ==\n${AZ.researchNote}` : '',
-      `\n== DỮ LIỆU TÀI CHÍNH (chỉ phân tích các kỳ: ${kyChon}) ==${dataPack}`,
-      extraTxt ? `\n== FILE THEO DÕI BỔ SUNG ==\n${extraTxt}` : '',
-      styleTxt ? `\n== MẪU TỜ TRÌNH ĐỂ HỌC VĂN PHONG (không chép nội dung) ==\n${styleTxt}` : '',
-    ].filter(Boolean).join('\n');
-    const raw = await aiCall({ prompt, schema: AZ_SCHEMA, maxOutputTokens: 24576, thinkingLevel: 'medium', temperature: 0.25 });
-    AZ.result = azSanitize(raw);
-    AZ.lines = azToLines(AZ.result, company, kyChon);
-    window._toTrinh = { include: q('az-include').checked, lines: AZ.lines, text: AZ.lines.join('\n'), company, at: new Date().toISOString() };
-    azRender();
-    status('');
-  } catch (e) {
-    q('az-status').innerHTML = `<span style="color:var(--vib-error)">Lỗi: ${escapeHtml(e.message)}</span>`;
-  } finally { AZ.busy = false; q('az-go').disabled = false; }
-}
-
-function azSanitize(o) {
-  o = (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
-  const str = v => typeof v === 'string' ? v.trim() : '';
-  const arr = (v, n) => Array.isArray(v) ? v.slice(0, n) : [];
-  return {
-    tieu_de: str(o.tieu_de) || 'PHÂN TÍCH KHÁCH HÀNG', tong_quan: str(o.tong_quan), nganh_thi_truong: str(o.nganh_thi_truong),
-    hoat_dong_kinh_doanh: str(o.hoat_dong_kinh_doanh), tai_chinh: str(o.tai_chinh), von_luu_dong: str(o.von_luu_dong), dong_tien: str(o.dong_tien),
-    rui_ro: arr(o.rui_ro, 12).map(r => (r && typeof r === 'object') ? { muc: ['cao', 'trung bình', 'thấp'].includes(r.muc) ? r.muc : 'trung bình', noi_dung: str(r.noi_dung), co_so: str(r.co_so) } : { muc: 'trung bình', noi_dung: str(r), co_so: '' }).filter(r => r.noi_dung),
-    de_xuat: arr(o.de_xuat, 10).map(x => str(x)).filter(Boolean),
-    cau_hoi: arr(o.cau_hoi, 10).map(x => str(x)).filter(Boolean),
-  };
-}
-
-const AZ_SECTIONS = [['tong_quan', 'I. TỔNG QUAN'], ['nganh_thi_truong', 'II. NGÀNH & THỊ TRƯỜNG'], ['hoat_dong_kinh_doanh', 'III. HOẠT ĐỘNG KINH DOANH'], ['tai_chinh', 'IV. TÌNH HÌNH TÀI CHÍNH'], ['von_luu_dong', 'V. VỐN LƯU ĐỘNG (PHẢI THU · TỒN KHO · PHẢI TRẢ)'], ['dong_tien', 'VI. DÒNG TIỀN']];
-
-function azWrap(s, width) {
-  const out = [];
-  for (const para of String(s).split(/\n/)) {
-    let t = para.trim();
-    if (!t) { out.push(''); continue; }
-    while (t.length > width) { let i = t.lastIndexOf(' ', width); if (i < width * 0.6) i = width; out.push(t.slice(0, i)); t = t.slice(i).trim(); }
-    out.push(t);
-  }
-  return out;
-}
-
-function azToLines(r, company, kyChon) {
-  const L = [];
-  L.push(r.tieu_de || `PHÂN TÍCH KHÁCH HÀNG — ${company}`);
-  L.push(`Kỳ phân tích: ${kyChon} · AI viết từ số liệu đã trích xuất · ${new Date().toLocaleString('vi-VN')} · RM rà soát lại trước khi dùng`); L.push('');
-  for (const [k, h] of AZ_SECTIONS) { if (!r[k]) continue; L.push(h); azWrap(r[k], 115).forEach(x => L.push(x)); L.push(''); }
-  if (r.rui_ro.length) { L.push('VII. RỦI RO & GIẢM THIỂU'); r.rui_ro.forEach(x => azWrap(`- [${x.muc.toUpperCase()}] ${x.noi_dung}${x.co_so ? ' | Cơ sở: ' + x.co_so : ''}`, 115).forEach(y => L.push(y))); L.push(''); }
-  if (r.de_xuat.length) { L.push('VIII. ĐỀ XUẤT CỦA RM'); r.de_xuat.forEach((x, i) => azWrap(`${i + 1}. ${x}`, 115).forEach(y => L.push(y))); L.push(''); }
-  if (r.cau_hoi.length) { L.push('IX. NỘI DUNG CẦN LÀM RÕ VỚI KHÁCH HÀNG'); r.cau_hoi.forEach((x, i) => azWrap(`${i + 1}. ${x}`, 115).forEach(y => L.push(y))); }
-  return L;
-}
-
-function azRender() {
-  const out = document.getElementById('az-out'), r = AZ.result;
-  const sec = (h, body) => body ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">${h}</h3><p class="text-[13.5px] whitespace-pre-wrap" style="color:var(--vib-ink)">${escapeHtml(body)}</p>` : '';
-  out.innerHTML = `<div class="rounded-xl p-5" style="border:1px solid var(--vib-line);background:#fff">
-    <div class="flex items-center justify-between flex-wrap gap-2">
-      <h2 class="text-[15px] font-bold" style="color:var(--vib-navy)">${escapeHtml(r.tieu_de)}</h2>
-      <div class="flex gap-2">
-        <button id="az-copy" class="px-3 py-1.5 rounded-lg text-sm font-medium" style="border:1px solid var(--vib-line)">Sao chép</button>
-        <button id="az-redo" class="px-3 py-1.5 rounded-lg text-sm font-medium" style="border:1px solid var(--vib-line)">Viết lại</button>
-      </div>
-    </div>
-    ${AZ_SECTIONS.map(([k, h]) => sec(h, r[k])).join('')}
-    ${r.rui_ro.length ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">VII. RỦI RO & GIẢM THIỂU</h3><ul class="text-[13.5px] space-y-1">${r.rui_ro.map(x => `<li><span style="font-weight:700;color:${x.muc === 'cao' ? 'var(--vib-error)' : x.muc === 'thấp' ? 'var(--vib-ink-3)' : 'var(--vib-warning)'}">[${x.muc.toUpperCase()}]</span> ${escapeHtml(x.noi_dung)}${x.co_so ? ` <span style="color:var(--vib-ink-3)">— Cơ sở: ${escapeHtml(x.co_so)}</span>` : ''}</li>`).join('')}</ul>` : ''}
-    ${r.de_xuat.length ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">VIII. ĐỀ XUẤT CỦA RM</h3><ol class="text-[13.5px] list-decimal pl-5 space-y-1">${r.de_xuat.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>` : ''}
-    ${r.cau_hoi.length ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">IX. NỘI DUNG CẦN LÀM RÕ VỚI KHÁCH HÀNG</h3><ol class="text-[13.5px] list-decimal pl-5 space-y-1">${r.cau_hoi.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>` : ''}
-    <p class="text-[12px] mt-4" style="color:var(--vib-ink-3)">AI viết để RM tham khảo khi soạn tờ trình — rà lại từng con số trước khi dùng chính thức. ${AZ.researchNote ? 'Mục ngành/thị trường có dùng thông tin tìm trên mạng.' : ''} Bật “Đính kèm vào file Excel” ở trên để sheet “Phân tích AI” đi kèm khi xuất form nội bộ / báo cáo đầy đủ.</p>
-  </div>`;
-  out.querySelector('#az-copy').onclick = () => navigator.clipboard.writeText(AZ.lines.join('\n')).then(() => showToast('Đã sao chép bài phân tích')).catch(() => showToast('Không sao chép được — bôi đen và copy tay', 'error'));
-  out.querySelector('#az-redo').onclick = azWrite;
 }
 
 try { const t0 = localStorage.getItem(MAIN_TOOL_LS); if (t0 && t0 !== 'convert' && document.getElementById('tool-' + t0)) switchMainTool(t0); } catch (e) { /* bỏ qua */ }
@@ -7702,16 +7422,6 @@ async function exportExcel() {
       ws5.getColumn(1).width = 5; ws5.getColumn(2).width = 80; ws5.getColumn(3).width = 60;
     }
 
-    // [v4.0] Đính kèm bài phân tích AI (tab Phân tích & tờ trình) nếu người dùng bật tuỳ chọn
-    if (window._toTrinh && window._toTrinh.include && Array.isArray(window._toTrinh.lines) && window._toTrinh.lines.length) {
-      const wsA = wb.addWorksheet('Phân tích AI');
-      wsA.getColumn(1).width = 2; wsA.getColumn(2).width = 115;
-      window._toTrinh.lines.forEach((ln, i) => {
-        const c = wsA.getCell(i + 1, 2); c.value = ln;
-        c.font = { name: XL_FONT, size: 10, bold: /^[IVX]+\. |^PHÂN TÍCH/.test(ln) };
-        c.alignment = { horizontal: 'left', vertical: 'top' };
-      });
-    }
     const safeName = company.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, '_').substring(0, 30);
     const safeDate = (date || '').replace(/\//g, '-');
     const filename = (`${reportTypePrefix()} - ${(company || 'Khach hang')} - ${date || ''}`).replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().replace(/ -$/, '') + '.xlsx';   // [v4.0] BCTC RIÊNG/HỢP NHẤT - tên cty - thời điểm
@@ -11261,27 +10971,6 @@ try {
     const f = doc.createElementNS(NSM, 'formula1'); f.textContent = formula; d.appendChild(f); dvs.appendChild(d);
     dvs.setAttribute('count', String(dvs.getElementsByTagNameNS(NSM, 'dataValidation').length));
   }
-  // [v4.0] Thêm sheet "Phân tích AI" (văn bản thuần, canh trái) vào workbook form nội bộ.
-  async function addAnalysisSheet(bk, lines) {
-    const escX = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const rows = lines.map((ln, i) => ln === '' ? `<row r="${i + 1}"/>` : `<row r="${i + 1}"><c r="B${i + 1}" t="inlineStr"><is><t xml:space="preserve">${escX(ln)}</t></is></c></row>`).join('');
-    bk.zip.file('xl/worksheets/sheetAI.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="${NSM}"><cols><col min="1" max="1" width="3" customWidth="1"/><col min="2" max="2" width="118" customWidth="1"/></cols><sheetData>${rows}</sheetData></worksheet>`);
-    let ct = await bk.zip.file('[Content_Types].xml').async('string');
-    if (!ct.includes('/xl/worksheets/sheetAI.xml')) ct = ct.replace('</Types>', '<Override PartName="/xl/worksheets/sheetAI.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
-    bk.zip.file('[Content_Types].xml', ct);
-    let rl = await bk.zip.file('xl/_rels/workbook.xml.rels').async('string');
-    if (!rl.includes('rIdAIPT')) rl = rl.replace('</Relationships>', '<Relationship Id="rIdAIPT" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheetAI.xml"/></Relationships>');
-    bk.zip.file('xl/_rels/workbook.xml.rels', rl);
-    const sheets = bk.wbDoc.getElementsByTagName('sheets')[0];
-    if (!Array.from(sheets.getElementsByTagName('sheet')).some(s => s.getAttribute('name') === 'Phân tích AI')) {
-      const el = bk.wbDoc.createElementNS(NSM, 'sheet');
-      el.setAttribute('name', 'Phân tích AI');
-      el.setAttribute('sheetId', String(Math.max(...Array.from(sheets.getElementsByTagName('sheet')).map(s => +s.getAttribute('sheetId') || 0)) + 1));
-      el.setAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'r:id', 'rIdAIPT');
-      sheets.appendChild(el);
-    }
-  }
-
   async function ttBuild(bk, type) {
     let calc = bk.wbDoc.getElementsByTagName('calcPr')[0];
     if (!calc) {
@@ -11662,11 +11351,6 @@ try {
         let fname = ($$('tt-fname').value || '').trim();
         if (!fname) fname = suggestName(_bk, nameKH);
         fname = fname.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim() || 'BCTC';
-        // [v4.0] Đính kèm bài phân tích AI nếu bật ở tab "Phân tích & tờ trình"
-        if (window._toTrinh && window._toTrinh.include && Array.isArray(window._toTrinh.lines) && window._toTrinh.lines.length) {
-          await addAnalysisSheet(_bk, window._toTrinh.lines);
-          log.push('kèm sheet "Phân tích AI"');
-        }
         await ttSave(_bk, fname + '.xlsx');
         const kho = _bk.kho ? ` · Lưu trữ: ${_bk.kho.periods.length} kỳ` : '';
         $$('tt-msg').innerHTML = `<span style="color:#15803d">✓ Đã tạo file. ${log.join(' · ')}${kho}<br>
@@ -11694,6 +11378,7 @@ const ROOT = document.getElementById('tool-convert');
 const $ = s=>ROOT.querySelector(s);
 const FILES = [];
 let customTpl = null;
+let NEXT_ID = 0, ACTIVE = null;   // [v4.2] id ổn định khi gỡ file; hồ sơ đang mở
 
 function log(m){const el=$('#log'); el.textContent=(new Date().toLocaleTimeString())+'  '+m+'\n'+el.textContent;}
 function store(k,v){try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v);}catch(e){}}
@@ -11746,7 +11431,7 @@ function findName(wb,fname){
 async function addFile(file){
   const buf=await file.arrayBuffer();
   const wb=XLSX.read(buf,{type:'array'});
-  const F={id:FILES.length,fileName:file.name,wb,name:findName(wb,file.name),sheets:{},info:{},periods:[],map:{},data:{},user:{},applied:new Set(),sugs:[],aiSugs:[],tab:'CĐKT'};
+  const F={id:NEXT_ID++,fileName:file.name,wb,name:findName(wb,file.name),sheets:{},info:{},periods:[],map:{},data:{},user:{},applied:new Set(),sugs:[],aiSugs:[],tab:'CĐKT'};
   const infos={}; wb.SheetNames.forEach(sn=>{infos[sn]=analyze(wb.Sheets[sn]);});
   F.infos=infos;
   wb.SheetNames.forEach(sn=>{const role=detectRole(infos[sn]); if(role&&!F.sheets[role]) F.sheets[role]=sn;});
@@ -11760,7 +11445,7 @@ async function addFile(file){
   if(noCache) log(`⚠ ${file.name}: ô tiêu đề không có giá trị cache — hãy mở file bằng Excel, lưu lại rồi nạp lại.`);
   GROUPS.forEach(g=>{F.map[g]={};F.data[g]={};F.user[g]={};});
   GROUPS.forEach(g=>ruleMap(F,g));
-  FILES.push(F); refreshSugs(F); renderFile(F); $('#mergeAll').disabled=FILES.length<2;
+  FILES.push(F); refreshSugs(F); ACTIVE=F.id; renderFile(F); syncView();
   const cnt=GROUPS.map(g=>`${g}: ${Object.keys(F.map[g]).length}`).join(', ');
   log(`Đã đọc ${file.name} → ${F.periods.length} kỳ, map theo quy tắc ${cnt} dòng.`);
 }
@@ -11912,19 +11597,114 @@ function buildSyncPayload(F){
   });
   return {company:(F.name||'').trim(), periods};
 }
+/* ---------- [v4.2] danh sách hồ sơ: nhóm theo công ty, chuyển qua lại ---------- */
+function gkey(n){
+  let s=' '+String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[đĐ]/g,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ')+' ', t;
+  const re=/ (cong ty|cty|tnhh|co phan|cp|mtv|mot thanh vien|jsc|ltd|co) /;   // bỏ loại hình DN để "CÔNG TY CP ABC" = "ABC JSC"
+  while((t=s.replace(re,' '))!==s) s=t;
+  return s.replace(/\s+/g,'');
+}
+function groupsOf(){const m=new Map(); FILES.forEach(F=>{const k=gkey(F.name)||('#'+F.id); if(!m.has(k)) m.set(k,[]); m.get(k).push(F);}); return [...m.values()];}
+function order(){return groupsOf().flat();}
+function fileStat(F){
+  const mapped=GROUPS.reduce((s,g)=>s+Object.keys(F.map[g]||{}).length,0);
+  const pend=[...F.sugs,...F.aiSugs].filter(s=>s.fix.type!=='none'&&!F.applied.has(s.key)&&F.periods[s.pi]&&F.periods[s.pi].on).length;
+  return {mapped, ch:mapped?checks(F).length:0, pend};
+}
+let LIST_PTR=false, LIST_PEND=false;   // đang nhấn chuột trên danh sách → hoãn dựng lại (blur→change) để cú click không bị nuốt
+function renderList(){
+  const box=$('#cvList'); if(!box) return;
+  if(!box.__ptr){box.__ptr=1; box.addEventListener('pointerdown',()=>{LIST_PTR=true;},true);
+    document.addEventListener('pointerup',()=>{LIST_PTR=false; if(LIST_PEND){LIST_PEND=false; setTimeout(renderList,0);}},true);
+    document.addEventListener('pointercancel',()=>{LIST_PTR=false; if(LIST_PEND){LIST_PEND=false; setTimeout(renderList,0);}},true);}
+  if(LIST_PTR){LIST_PEND=true; return;}
+  const gs=groupsOf(), o=gs.flat();
+  $('#cvCount').textContent=FILES.length?`${FILES.length} file · ${gs.length} công ty`:'';
+  box.innerHTML=gs.map((g,gi)=>`<div class="cv-grp">
+    <div class="cv-gh"><span class="nm" title="${esc(g[0].name)}">${esc(g[0].name||'(chưa có tên)')}</span>${g.length>1?`<span class="cnt">${g.length} file</span>`:''}</div>
+    ${g.map(F=>{const s=fileStat(F); return `<div class="cv-item ${F.id===ACTIVE?'on':''}" data-id="${F.id}" tabindex="0" role="button" aria-current="${F.id===ACTIVE}" title="${esc(F.fileName)}">
+      <button type="button" class="x" data-x="${F.id}" title="Gỡ hồ sơ này khỏi danh sách">×</button>
+      <div class="fn">${esc(F.fileName)}</div>
+      <div>${F.periods.length?F.periods.map(p=>`<span class="chip ${p.on?'':'off'}">${esc(p.label)}</span>`).join(''):'<span class="small">chưa nhận diện được kỳ</span>'}</div>
+      <div class="st">${!s.mapped?'<span class="pill p-mut">chưa map</span>':s.ch?`<span class="pill p-bad">${s.ch} chỗ lệch</span>`:'<span class="pill p-ok">khớp form cũ</span>'} ${s.pend?`<span class="pill p-warn">${s.pend} đề xuất</span>`:''}</div>
+    </div>`;}).join('')}
+    ${g.length>1?`<div class="row cv-gact"><button type="button" data-gx="${gi}" title="Gộp ${g.length} hồ sơ của công ty này vào 1 form 2026">Gộp ${g.length} file → 1 form</button><button type="button" data-gs="${gi}" title="Đẩy mọi kỳ đã tick của công ty này sang tool Trích xuất">⇪ Trích xuất</button></div>`:''}
+  </div>`).join('');
+  box.querySelectorAll('.cv-item').forEach(it=>{
+    it.onclick=e=>{ if(e.target.closest('[data-x]')) return; setActive(+it.dataset.id); };
+    it.onkeydown=e=>{ if(e.target!==it) return; if(e.key==='Enter'||e.key===' '){e.preventDefault(); setActive(+it.dataset.id);} };
+  });
+  box.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{e.stopPropagation(); removeFile(+b.dataset.x);});
+  box.querySelectorAll('[data-gx]').forEach(b=>b.onclick=()=>exportForm(gs[+b.dataset.gx]));
+  box.querySelectorAll('[data-gs]').forEach(b=>b.onclick=()=>syncFiles(gs[+b.dataset.gs]));
+  // số thứ tự "2/5" trên đầu từng hồ sơ
+  FILES.forEach(F=>{const nav=ROOT.querySelector('#file'+F.id+' .cv-nav'); if(!nav) return; nav.hidden=FILES.length<2; const p=nav.querySelector('.cv-pos'); if(p) p.textContent=`${o.indexOf(F)+1}/${FILES.length}`;});
+}
+function setActive(id){
+  if(!FILES.some(F=>F.id===id)) return;
+  const ae=document.activeElement, inList=!!(ae&&ae.closest&&ae.closest('#cvList')), navK=ae&&ae.closest&&ae.closest('.cv-nav')?ae.dataset.k:null;
+  ACTIVE=id;
+  FILES.forEach(F=>{const el=ROOT.querySelector('#file'+F.id); if(el) el.hidden=F.id!==id;});
+  renderList();
+  const el=ROOT.querySelector('#file'+id); if(el&&el.getBoundingClientRect().top<0) el.scrollIntoView({block:'start'});
+  const cur=ROOT.querySelector(`.cv-item[data-id="${id}"]`); if(cur&&cur.scrollIntoView) cur.scrollIntoView({block:'nearest'});
+  if(inList&&cur) cur.focus({preventScroll:true});
+  else if(navK&&el){const b=el.querySelector(`.cv-nav [data-k="${navK}"]`); if(b) b.focus({preventScroll:true});}
+}
+function stepActive(d){const o=order(); if(!o.length) return; const i=o.findIndex(F=>F.id===ACTIVE); setActive(o[((i<0?0:i)+d+o.length)%o.length].id);}
+function removeFile(id){
+  const F=FILES.find(x=>x.id===id); if(!F) return;
+  if(!confirm(`Gỡ hồ sơ "${F.fileName}" khỏi danh sách? (chỉnh sửa trên hồ sơ này sẽ mất)`)) return;
+  const o=order(), pos=o.indexOf(F);
+  FILES.splice(FILES.indexOf(F),1);
+  const el=ROOT.querySelector('#file'+id); if(el) el.remove();
+  if(ACTIVE===id){const rest=o.filter(x=>x!==F); ACTIVE=rest.length?rest[Math.min(pos,rest.length-1)].id:null;}
+  log(`Đã gỡ ${F.fileName}.`);
+  syncView();
+}
+function syncView(){
+  $('#mergeAll').disabled=FILES.length<2;
+  $('#cvWs').classList.toggle('empty',!FILES.length);
+  $('#dropBig').hidden=FILES.length>0;
+  if(ACTIVE!=null&&FILES.some(F=>F.id===ACTIVE)) setActive(ACTIVE); else renderList();
+}
+// Đẩy nhiều hồ sơ (cùng công ty) sang tool Trích xuất trong 1 lần; kỳ trùng nhau thì hồ sơ nạp sau thắng
+function syncFiles(list){
+  try{
+    const byId=new Map(); let company='';
+    list.forEach(F=>{const p=buildSyncPayload(F); if(!company) company=p.company; p.periods.forEach(x=>byId.set(x.id,x));});
+    const periods=[...byId.values()];
+    if(!company) return alert('Nhập tên khách hàng trước khi đồng bộ.');
+    if(!periods.length) return alert('Chưa tick kỳ nào (hoặc kỳ đã tick không có số liệu) để đồng bộ.');
+    if(!window.FINLENS||!window.FINLENS.syncFromConverter) return alert('Không gọi được tool Trích xuất.');
+    window.FINLENS.syncFromConverter({company,periods});
+  }catch(e){alert('Đồng bộ lỗi: '+e.message);}
+}
+document.addEventListener('keydown',e=>{
+  if(!e.altKey||e.ctrlKey||e.metaKey||(e.key!=='ArrowUp'&&e.key!=='ArrowDown')) return;
+  const t=e.target; if(ROOT.classList.contains('hidden')||FILES.length<2||(t&&(t.tagName==='SELECT'||t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))) return;
+  e.preventDefault(); stepActive(e.key==='ArrowDown'?1:-1);
+});
 function renderFile(F){
+  if(!FILES.includes(F)) return;   // hồ sơ đã gỡ (vd AI trả về muộn)
   let el=document.getElementById('file'+F.id);
   if(!el){el=document.createElement('div');el.className='file';el.id='file'+F.id;$('#filesWrap').appendChild(el);}
+  el.hidden=F.id!==ACTIVE;
   const sheetOpts=g=>`<option value="">—</option>`+F.wb.SheetNames.map(sn=>`<option ${F.sheets[g]===sn?'selected':''}>${esc(sn)}</option>`).join('');
   const ch=checks(F);
   el.innerHTML=`
   <div class="fhead">
-    <div class="nm"><label class="f">Tên khách hàng (ghi vào F1) · <span class="small">${esc(F.fileName)}</span></label><input type="text" data-k="name" value="${esc(F.name)}"></div>
-    ${GROUPS.map(g=>`<div style="width:130px"><label class="f">Sheet ${g}</label><select data-k="sheet" data-g="${g}">${sheetOpts(g)}</select></div>`).join('')}
-    <div class="row" style="align-self:flex-end">
-      <button class="ai" data-k="ai">AI rà soát &amp; map</button><span class="status" id="st${F.id}"></span>
+    <div class="nm"><label class="f">Tên khách hàng (ghi vào F1)</label><input type="text" data-k="name" value="${esc(F.name)}"></div>
+    <div class="row acts">
+      <button class="ai" data-k="ai">AI rà soát &amp; map</button>
       <button class="pri" data-k="export">Xuất form 2026</button>
       <button data-k="sync" title="Nạp các kỳ đã tick sang tool Trích xuất — cùng công ty thì gộp thêm kỳ vào dữ liệu đang có">⇪ Sang tool Trích xuất</button>
+      <span class="status" id="st${F.id}"></span>
+    </div>
+    <div class="fmeta">
+      <span class="small" title="${esc(F.fileName)}">📄 ${esc(F.fileName)}</span>
+      ${GROUPS.map(g=>`<label class="sh"><span class="small">Sheet ${g}</span><select data-k="sheet" data-g="${g}">${sheetOpts(g)}</select></label>`).join('')}
+      <span class="cv-nav" hidden><button type="button" data-k="prev" title="Hồ sơ trước (Alt+↑)">‹</button><span class="small cv-pos"></span><button type="button" data-k="next" title="Hồ sơ sau (Alt+↓)">›</button></span>
     </div>
   </div>
   <div class="fbody">
@@ -11945,7 +11725,7 @@ function renderFile(F){
     <div class="tblwrap" id="tbl${F.id}"></div>
     <div id="unm${F.id}"></div>
   </div>`;
-  renderSugs(F); renderTable(F); bind(F,el);
+  renderSugs(F); renderTable(F); bind(F,el); renderList();
 }
 function renderSugs(F){
   const all=[...F.sugs,...F.aiSugs].filter(s=>F.periods[s.pi]&&F.periods[s.pi].on);
@@ -11978,7 +11758,9 @@ function renderTable(F){
   document.getElementById('unm'+F.id).innerHTML=un.length?`<div class="box" style="margin-top:10px;border-color:#f5c98b;background:var(--warnbg)"><h3>Dòng form cũ có số nhưng chưa map (${un.length})</h3>${un.map(r=>`<div class="small">Dòng ${r.row}: ${esc(r.label)} — ${r.vals.map((v,i)=>on[i]?fmt(v):null).filter(x=>x!==null).join(' | ')}</div>`).join('')}<div class="small" style="margin-top:6px">Gõ số dòng vào cột “Dòng form cũ” của chỉ tiêu tương ứng, hoặc bấm “AI rà soát &amp; map”.</div></div>`:'';
 }
 function bind(F,el){
-  el.querySelector('[data-k=name]').onchange=e=>F.name=e.target.value;
+  el.querySelector('[data-k=name]').onchange=e=>{F.name=e.target.value; renderList();};
+  el.querySelector('[data-k=prev]').onclick=()=>stepActive(-1);
+  el.querySelector('[data-k=next]').onclick=()=>stepActive(1);
   el.querySelectorAll('[data-k=sheet]').forEach(s=>s.onchange=()=>{const g=s.dataset.g; F.sheets[g]=s.value||undefined; if(s.value&&!F.infos[s.value]) F.infos[s.value]=analyze(F.wb.Sheets[s.value]); F.map[g]={}; ruleMap(F,g); refreshSugs(F); renderFile(F);});
   el.querySelectorAll('[data-k=pon]').forEach(c=>c.onchange=()=>{F.periods[+c.dataset.i].on=c.checked; refreshSugs(F); renderFile(F);});
   el.querySelectorAll('[data-k=plab]').forEach(c=>c.onchange=()=>{const t=c.value.trim(); F.periods[+c.dataset.i].label=/^\d{4}$/.test(t)?+t:t; renderFile(F);});
@@ -11987,15 +11769,7 @@ function bind(F,el){
   el.querySelector('[data-k=ai]').onclick=()=>runAI(F);
   el.querySelector('[data-k=applyAll]').onclick=()=>{let n=0; while(n<200){refreshSugs(F); const s=[...F.sugs,...F.aiSugs].find(s=>s.fix.type!=='none'&&!F.applied.has(s.key)&&F.periods[s.pi]&&F.periods[s.pi].on); if(!s) break; applyFix(F,s); n++;} refreshSugs(F); renderFile(F); log(`${F.name}: áp dụng ${n} đề xuất.`);};
   el.querySelector('[data-k=export]').onclick=()=>exportForm([F]);
-  el.querySelector('[data-k=sync]').onclick=()=>{
-    try{
-      const pay=buildSyncPayload(F);
-      if(!pay.company) return alert('Nhập tên khách hàng trước khi đồng bộ.');
-      if(!pay.periods.length) return alert('Chưa tick kỳ nào (hoặc kỳ đã tick không có số liệu) để đồng bộ.');
-      if(!window.FINLENS||!window.FINLENS.syncFromConverter) return alert('Không gọi được tool Trích xuất.');
-      window.FINLENS.syncFromConverter(pay);
-    }catch(e){alert('Đồng bộ lỗi: '+e.message);}
-  };
+  el.querySelector('[data-k=sync]').onclick=()=>syncFiles([F]);
   el.querySelector('#tbl'+F.id).addEventListener('change',e=>{
     const t=e.target, g=F.tab, ms=t.dataset.ms;
     if(t.dataset.k==='map'){const r=parseInt(t.value,10); if(!t.value.trim()) delete F.map[g][ms]; else if(rowByNum(F,g,r)) F.map[g][ms]={row:r,src:'user'}; else {alert('Không thấy dòng '+t.value+' (dòng phải có nhãn) trong sheet '+F.sheets[g]); return;}
@@ -12035,6 +11809,7 @@ async function runAI(F){
   const st=document.getElementById('st'+F.id); st.innerHTML='<span class="spin"></span> đang gửi AI…';
   try{
     const out=await window.FINLENS.aiJson({prompt:buildPrompt(F), maxOutputTokens:32768, thinkingLevel:'medium'});
+    if(!FILES.includes(F)) return;
     let changed=0; const touched={};
     (out.map||[]).forEach(m=>{const g=m.group, ms=String(m.ms); if(!IDX[g]||!IDX[g][ms]) return; const row=parseInt(m.row,10); if(!rowByNum(F,g,row)) return;
       const cur=F.map[g][ms]; if(cur&&cur.src==='user') return;
@@ -12048,7 +11823,7 @@ async function runAI(F){
     refreshSugs(F); renderFile(F);
     document.getElementById('st'+F.id).innerHTML=`<span class="pill p-ai">AI xong: ${changed} dòng map thay đổi, ${F.aiSugs.length} cảnh báo</span>`;
     log(`${F.name}: AI (${window.FINLENS.model()}) sửa ${changed} dòng map, ${F.aiSugs.length} cảnh báo.`);
-  }catch(e){ st.innerHTML=`<span class="pill p-bad">Lỗi AI</span>`; log('Lỗi Gemini: '+e.message); alert('Lỗi Gemini: '+e.message);}
+  }catch(e){ if(!FILES.includes(F)) return; st.innerHTML=`<span class="pill p-bad">Lỗi AI</span>`; log('Lỗi Gemini: '+e.message); alert('Lỗi Gemini: '+e.message);}
 }
 
 /* ---------- xuất file (sửa trực tiếp XML của template → giữ nguyên công thức, định dạng) ---------- */
@@ -12110,6 +11885,8 @@ async function exportForm(list){
       GROUPS.forEach(g=>META.order[g].forEach(it=>{ if(it.f&&!it.stored) return; const v=it.f?(val(F,g,it.ms,pi)==null?null:eff(F,g,it.ms,pi)):val(F,g,it.ms,pi); if(v==null) return; const k=g+'|'+it.ms; if(!rowOf[k]){miss.add(k);return;} vals[k]=v;}));
       P.push({label:p.label,months:p.months,vals,name:F.name});}));
     if(!P.length) throw new Error('Không có kỳ nào được chọn.');
+    const _pk=p=>{const m=String(periodId(p.label)).match(/^(?:Q([1-4])|FY)-(\d{4})$/); return m?(+m[2])*10+(m[1]?+m[1]:5):1e9;};
+    P.sort((a,b)=>_pk(a)-_pk(b));
     const lx=new SheetXml(await zip.file(paths['Lưu trữ']).async('string'));
     const assigned=[];
     for(const p of P){ let c=Object.keys(colLab).map(Number).find(c=>String(colLab[c])===String(p.label));
@@ -12163,12 +11940,15 @@ $('#tplFile').onchange=async e=>{const f=e.target.files[0]; if(!f) return; custo
   const lws=w.Sheets['Lưu trữ']; if(!lws){alert('File này không có sheet "Lưu trữ" — không phải form 2026.'); customTpl=null; return;}
   const labs=[]; for(let c=3;c<=28;c++){const v=cellV(lws,8,c), id=cellV(lws,7,c); if(v!==undefined&&v!=='') labs.push(v); else if(id) labs.push(id);}
   $('#tplInfo').textContent=labs.length?`Form đã có ${labs.length} kỳ: ${labs.join(', ')} — kỳ trùng nhãn sẽ bị ghi đè, kỳ mới thêm vào cột trống.`:'Template trống.';};
-const drop=$('#drop'), fin=$('#files');
-drop.onclick=()=>fin.click();
-fin.onchange=async()=>{for(const f of fin.files) await addFile(f).catch(e=>log('Lỗi đọc '+f.name+': '+e.message)); fin.value='';};
-['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on');}));
-['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('on');}));
-drop.addEventListener('drop',async e=>{for(const f of e.dataTransfer.files) await addFile(f).catch(er=>log('Lỗi đọc '+f.name+': '+er.message));});
+const fin=$('#files');
+fin.onchange=async()=>{for(const f of [...fin.files]) await addFile(f).catch(e=>log('Lỗi đọc '+f.name+': '+e.message)); fin.value='';};
+[$('#drop'),$('#dropBig')].forEach(drop=>{
+  drop.onclick=()=>fin.click();
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('on');}));
+  drop.addEventListener('drop',async e=>{for(const f of [...e.dataTransfer.files]) await addFile(f).catch(er=>log('Lỗi đọc '+f.name+': '+er.message));});
+});
+$('#btnSettings').onclick=()=>{const p=$('#cvSettings'); p.hidden=!p.hidden; $('#btnSettings').setAttribute('aria-expanded',String(!p.hidden));};
 $('#mergeAll').onclick=()=>exportForm(FILES);
 log('Sẵn sàng. Template chuẩn 2026 đã nhúng (có dòng MS 03 dự phòng, số ngày quý = tháng × 30).');
 
