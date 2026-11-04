@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI FinLens - Trích xuất và phân tích dữ liệu BCTC</title>
+  <style id="gate-css">body{visibility:hidden}</style>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     @font-face {
@@ -553,7 +554,7 @@
       <div>
         <div class="flex items-center gap-2">
           <span class="text-[19px] font-bold tracking-tight">AI FinLens</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background:rgba(255,255,255,.18);color:#fff">v4.0</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background:rgba(255,255,255,.18);color:#fff">v4.1</span>
         </div>
         <p class="text-[11px] -mt-0.5" style="color:#aec6e0">Trích xuất &amp; phân tích Báo cáo Tài chính với AI</p>
       </div>
@@ -643,9 +644,9 @@
 
   <!-- [v4.0] 3 TOOL TRONG 1 -->
   <div id="main-tools" class="flex items-center gap-1 mb-5 p-1.5 rounded-2xl" style="background:var(--vib-card);border:1px solid var(--vib-line);box-shadow:var(--vib-shadow-sm)">
-    <button type="button" data-tool="extract" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">🔍 AI trích xuất BCTC</button>
-    <button type="button" data-tool="convert" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">🔁 Chuyển form cũ → 2026</button>
-    <button type="button" data-tool="analyze" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">✍️ Phân tích & tờ trình</button>
+    <button type="button" data-tool="convert" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">🔁 1 · Chuyển form cũ → 2026</button>
+    <button type="button" data-tool="extract" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">🔍 2 · AI trích xuất BCTC</button>
+    <button type="button" data-tool="analyze" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">✍️ 3 · Phân tích & tờ trình</button>
   </div>
 
   <div id="tool-extract">
@@ -1057,7 +1058,16 @@
 #tool-convert #log{font-size:12px;color:var(--mut);white-space:pre-wrap;max-height:120px;overflow:auto}
 #tool-convert .status{font-size:12px;margin-left:6px}
 #tool-convert .spin{display:inline-block;width:12px;height:12px;border:2px solid #c9b8f5;border-top-color:var(--ai);border-radius:50%;animation:s 0.8s linear infinite;vertical-align:-2px}
-#tool-convert @keyframes s{to{transform:rotate(360deg)}}
+@keyframes s{to{transform:rotate(360deg)}}
+/* [v4.1] Đồng bộ giao diện theo VIB */
+#tool-convert{--bg:transparent;--card:var(--vib-card);--ink:var(--vib-ink);--mut:var(--vib-ink-3);--line:var(--vib-line);--acc:var(--vib-blue);--acc2:#E8F1FA;font-family:inherit;font-size:14px;line-height:1.5;color:var(--vib-ink)}
+#tool-convert .card,#tool-convert .file{border-radius:14px;box-shadow:var(--vib-shadow-sm);border-color:var(--vib-line)}
+#tool-convert h2{color:var(--vib-navy)}
+#tool-convert button{border-radius:10px}
+#tool-convert .pri{background:linear-gradient(135deg,var(--vib-navy),var(--vib-blue));border:none;color:#fff}
+#tool-convert .ai{background:linear-gradient(135deg,#8a5a16,var(--vib-copper));border:none;color:#fff}
+#tool-convert .drop{border-radius:14px;background:#F4F8FC;border-color:#B9D4EC}
+#tool-convert select,#tool-convert input[type=text],#tool-convert input[type=number]{border-radius:8px}
     </style>
   <div class="card">
     <h2>1. Cài đặt</h2>
@@ -1121,7 +1131,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.9.155/b
 // ============================================================
 // VERSION MANAGEMENT
 // ============================================================
-const APP_VERSION = '4.0';
+const APP_VERSION = '4.1';
 const ANNOUNCEMENT_URL = 'https://gist.githubusercontent.com/iamnga/0b19d4cba3765c79b0b3cd3e4728a367/raw/finlens-announcement.json';
 const DOWNLOAD_URL = 'https://vibonline.sharepoint.com/:f:/r/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20FinLens?csf=1&web=1&e=FimKrB';
 
@@ -1130,7 +1140,7 @@ const DOWNLOAD_URL = 'https://vibonline.sharepoint.com/:f:/r/sites/WB-DS/Shared%
 // ============================================================
 const VERTEX_CONFIG = {
   model: "gemini-3.6-flash",
-  api_key: ""   // KHÔNG ghi key vào file (repo công khai) — nạp key bằng Alt+F9, lưu trong trình duyệt,
+  api_key: "",  // KHÔNG ghi key vào file (repo công khai) — nạp key bằng Alt+F9, lưu trong trình duyệt
   project_id: "713303278652",
   location: "global"
 };
@@ -3055,7 +3065,49 @@ function aiOpenSettings() {
 document.addEventListener('keydown', e => { if (e.altKey && e.key === 'F9') { e.preventDefault(); aiOpenSettings(); } });
 
 // ============================================================
-// [v4.0] 3 TOOL TRONG 1: Trích xuất · Chuyển form 2026 · Phân tích & viết tờ trình
+// [v4.1] MÃ TRUY CẬP — hạn chế share file tràn lan. Mã đúng mới hiện trang; "tin máy này" thì khỏi nhập lại.
+// Đổi mã: mở Console (F12) gõ  await FINLENS.sha256('mã mới')  rồi thay chuỗi ACCESS_SHA bên dưới; xoá localStorage 'finlens_gate' trên máy cũ nếu muốn bắt nhập lại.
+// LƯU Ý: đây là khoá phía trình duyệt — chặn người dùng thường, KHÔNG chặn người biết đọc mã nguồn.
+// ============================================================
+const ACCESS_ON = true;
+const ACCESS_SHA = 'da7ec048170e3f6ed2128706fddc5ca31fb2713ffc89509f11047033aa86057f';
+async function sha256hex(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function accessGate() {
+  const css = document.getElementById('gate-css');
+  const done = () => { if (css) css.remove(); };
+  if (!ACCESS_ON) return done();
+  try { if (localStorage.getItem('finlens_gate') === ACCESS_SHA) return done(); } catch (e) { /* bỏ qua */ }
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#0b1f3a;display:flex;align-items:center;justify-content:center;visibility:visible';
+    ov.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px 30px;width:360px;max-width:92vw;font-family:system-ui,Segoe UI,sans-serif;box-shadow:0 24px 70px rgba(0,0,0,.45)">
+      <div style="font-size:18px;font-weight:700;color:#0b1f3a">AI FinLens · Nội bộ</div>
+      <p style="font-size:13px;color:#64748b;margin:6px 0 14px">Nhập mã truy cập để mở công cụ.</p>
+      <input id="gate-in" type="password" autocomplete="off" style="width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:9px 11px;font-size:14px" placeholder="Mã truy cập">
+      <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;color:#475569;margin-top:10px"><input id="gate-trust" type="checkbox" checked> Tin máy này (không hỏi lại)</label>
+      <div id="gate-err" style="font-size:12.5px;color:#b91c1c;min-height:18px;margin-top:6px"></div>
+      <button id="gate-go" style="width:100%;margin-top:6px;background:linear-gradient(135deg,#0b1f3a,#0b4f9e);color:#fff;border:none;border-radius:10px;padding:10px;font-weight:700;font-size:14px;cursor:pointer">Mở công cụ</button>
+    </div>`;
+    document.body.appendChild(ov);
+    const inp = ov.querySelector('#gate-in');
+    const thu = async () => {
+      if (await sha256hex(inp.value.trim()) === ACCESS_SHA) {
+        if (ov.querySelector('#gate-trust').checked) { try { localStorage.setItem('finlens_gate', ACCESS_SHA); } catch (e) {} }
+        ov.remove(); done(); resolve();
+      } else { ov.querySelector('#gate-err').textContent = 'Mã chưa đúng.'; inp.select(); }
+    };
+    ov.querySelector('#gate-go').onclick = thu;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') thu(); });
+    setTimeout(() => inp.focus(), 50);
+  });
+}
+accessGate();
+
+// ============================================================
+// [v4.0] 3 TOOL TRONG 1 — [v4.1] thứ tự theo quy trình: Chuyển form → Trích xuất → Phân tích
 // ============================================================
 const MAIN_TOOL_LS = 'finlens_tool';
 function switchMainTool(k) {
@@ -3073,7 +3125,7 @@ function switchMainTool(k) {
   try { localStorage.setItem(MAIN_TOOL_LS, k); } catch (e) { /* bỏ qua */ }
 }
 document.querySelectorAll('#main-tools [data-tool]').forEach(b => b.addEventListener('click', () => switchMainTool(b.dataset.tool)));
-switchMainTool('extract');
+switchMainTool('convert');
 
 // ─── Gọi AI dùng chung (key + model từ Alt+F9, 2 cổng, xoay key) ───
 // plain=true: trả text thô (dùng cho research có google_search). Mặc định: parse JSON.
@@ -3092,14 +3144,58 @@ async function aiCall({ prompt, parts = null, schema = null, maxOutputTokens = 3
   const text = (cand.content.parts || []).map(p => p.text || '').join('');
   return plain ? text : parseLooseJson(text);
 }
-window.FINLENS = { aiJson: aiCall, model: () => VERTEX_CONFIG.model, openSettings: () => aiOpenSettings() };
+window.FINLENS = { aiJson: aiCall, model: () => VERTEX_CONFIG.model, openSettings: () => aiOpenSettings(), syncFromConverter, sha256: sha256hex };
+
+// ─── [v4.1] Nhận dữ liệu từ tool Chuyển form → nạp vào tool Trích xuất (làn TT99 — form 2026 dùng mã TT99) ───
+// Cùng công ty: gộp thêm kỳ vào dữ liệu đang có; khác công ty: hỏi trước khi thay thế.
+function syncFromConverter({ company, periods }) {
+  const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const isoOf = p => {
+    let m = /^Q([1-4])-(\d{4})$/.exec(p.id || '');
+    if (m) return { iso: `${m[2]}-${['03-31', '06-30', '09-30', '12-31'][+m[1] - 1]}`, type: 'QUY' };
+    m = /^FY-(\d{4})$/.exec(p.id || '');
+    if (m) {
+      if (p.months && p.months < 12) { const mm = Math.min(12, Math.max(1, p.months)); const dd = [4, 6, 9, 11].includes(mm) ? 30 : (mm === 2 ? 28 : 31); return { iso: `${m[1]}-${String(mm).padStart(2, '0')}-${dd}`, type: 'QUY' }; }
+      return { iso: `${m[1]}-12-31`, type: 'NAM' };
+    }
+    throw new Error(`không hiểu kỳ "${p.label}" — đặt nhãn dạng 2025 hoặc Q2/2026 rồi đồng bộ lại.`);
+  };
+  const raws = periods.map(p => { const z = isoOf(p); return { fileName: 'Form cũ · ' + p.label, raw: {
+    company, thong_tu: 'TT99', report_date: String(p.label), report_date_iso: z.iso, period_type: z.type,
+    currency: 'VND', unit_scale: 1, _unit_applied: true, _unit_scale_raw: 1, report_type: null, audit_status: null, lctt_method: p.reports.LCTT.some(x => x.ma_so === '08') ? 'GIAN_TIEP' : 'TRUC_TIEP',
+    reports: { CDKT: { found: p.reports.CDKT.length > 0, items: p.reports.CDKT }, KQKD: { found: p.reports.KQKD.length > 0, items: p.reports.KQKD }, LCTT: { found: p.reports.LCTT.length > 0, items: p.reports.LCTT } },
+  } }; });
+  setActiveTT('TT99');
+  let frs = raws;
+  const cur = lanes.TT99 && lanes.TT99.extractedData;
+  if (cur) {
+    const a = norm(cur.company), b = norm(company);
+    const same = !a || !b || a === b || a.includes(b) || b.includes(a);
+    if (same) frs = [{ raw: cur, fileName: 'phiên trích xuất hiện tại' }].concat(raws);
+    else if (confirm(`Tool Trích xuất đang có dữ liệu của "${cur.company}" — KHÁC công ty "${company}".\nOK = THAY THẾ bằng dữ liệu từ form; Cancel = giữ nguyên, không đồng bộ.`) === false) return false;
+  }
+  stashLane();
+  const ed = mergeExtractions(frs);
+  ed._tt = 'TT99';
+  if (!ed.report_type && cur) ed.report_type = cur.report_type;
+  ed._warnings = ed._warnings || [];
+  ed._warnings.push({ type: 'TT_AUTO', msg: `Đồng bộ từ tool Chuyển form: ${periods.map(x => x.label).join(', ')} (mã theo form 2026 / TT99).` });
+  try { ed._ratios = calcAllRatios(ed); ed._redFlags = detectRedFlags(ed); ed._health = evaluateHealth(ed); } catch (e) { console.error(e); }
+  const goi = { extractedData: ed, originalExtractedData: JSON.parse(JSON.stringify(ed)), editUndoStack: [], editRedoStack: [], analysisData: null, analysisRunning: false, fileNames: (lanes.TT99 ? lanes.TT99.fileNames || [] : []).concat(periods.map(p => 'Form cũ · ' + p.label)) };
+  lanes.TT99 = Object.assign(lanes.TT99 || {}, goi);
+  activeLaneTT = null;
+  switchMainTool('extract');
+  goToStep(3); loadLane('TT99'); renderResults(); updateUndoRedoButtons(); applyLaneChrome(); renderMainviewTabs(); switchMainview('overview');
+  currentSessionId = null; autoSaveSession();
+  if (AZ.inited) azRefreshSources();
+  showToast(`Đã đồng bộ ${periods.length} kỳ từ form cũ sang tool Trích xuất.`);
+  return true;
+}
 
 // ============================================================
-// [v4.0] TOOL 3 — PHÂN TÍCH & VIẾT TỜ TRÌNH (AI viết theo văn phong RM)
-// Nguồn số: phiên trích xuất hiện tại + form nội bộ 2026 tải lên + file theo dõi bổ sung.
-// AI chỉ dùng số trong bảng gửi đi; thông tin mạng (nếu bật) tách riêng mục research và ghi rõ nguồn.
+// [v4.0/4.1] TOOL PHÂN TÍCH & VIẾT TỜ TRÌNH — chỉ phân tích CÁC KỲ ĐÃ CHỌN, theo khung bài bản
 // ============================================================
-const AZ = { inited: false, formBk: null, formInfo: '', formTable: '', company: '', extra: [], styles: [], busy: false, result: null, lines: null, researchNote: '' };
+const AZ = { inited: false, formBk: null, formInfo: '', company: '', extra: [], styles: [], busy: false, result: null, lines: null, researchNote: '', pick: {} };
 
 function azInit() {
   if (AZ.inited) { azRefreshSources(); return; }
@@ -3107,12 +3203,13 @@ function azInit() {
   const root = document.getElementById('az-root');
   root.innerHTML = `
     <h2 class="text-lg font-bold mb-1" style="color:var(--vib-navy)">Phân tích & viết tờ trình (AI)</h2>
-    <p class="text-[13px] mb-4" style="color:var(--vib-ink-3)">AI viết phân tích theo văn phong RM nhiều năm kinh nghiệm, dựa trên: số liệu đã trích xuất / form nội bộ 2026 tải lên, file theo dõi bổ sung, insight bạn nhập và (tuỳ chọn) thông tin tìm trên mạng. Mọi con số trong bài viết lấy từ bảng số gửi đi — chỗ nào thiếu hoặc mâu thuẫn AI phải nói rõ, không bịa.</p>
+    <p class="text-[13px] mb-4" style="color:var(--vib-ink-3)">AI viết theo văn phong RM nhiều năm kinh nghiệm, bám khung phân tích tín dụng và CHỈ dùng các kỳ bạn tick bên dưới. Mọi con số lấy từ bảng số gửi đi — thiếu hoặc mâu thuẫn AI phải nói rõ, không bịa.</p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="rounded-xl p-4" style="border:1px solid var(--vib-line);background:var(--vib-card-2)">
-        <p class="text-[13px] font-bold mb-1">1. Nguồn số liệu</p>
-        <div id="az-lanes" class="text-[12.5px] mb-2" style="color:var(--vib-ink-2)"></div>
-        <label class="text-[12px] font-semibold" style="color:var(--vib-ink-3)">Form nội bộ 2026 (.xlsx, tuỳ chọn — đọc sheet Lưu trữ)</label>
+        <p class="text-[13px] font-bold mb-1">1. Nguồn số liệu & kỳ phân tích</p>
+        <div id="az-lanes" class="text-[12.5px] mb-1" style="color:var(--vib-ink-2)"></div>
+        <div id="az-periods" class="mb-2"></div>
+        <label class="text-[12px] font-semibold" style="color:var(--vib-ink-3)">Form nội bộ 2026 (.xlsx, tuỳ chọn — đọc sheet Lưu trữ; mặc định tick đúng các kỳ đang gán ở F1)</label>
         <input type="file" id="az-form" accept=".xlsx" class="block w-full text-sm mt-1">
         <div id="az-form-info" class="text-[12px] mt-1" style="color:var(--vib-ink-3)"></div>
         <label class="text-[12px] font-semibold mt-3 block" style="color:var(--vib-ink-3)">Tên công ty</label>
@@ -3152,10 +3249,13 @@ function azInit() {
       const r5 = window.TTForm.getRow(bk.sheet.F1.data, 5);
       const cty = r5 ? window.TTForm.readStrCell(window.TTForm.getCell(r5, 'C5'), bk.sst) : '';
       if (cty && !$$('az-company').value) $$('az-company').value = cty;
-      AZ.formTable = azFormTable(bk);
-      AZ.formInfo = `${f.name}: ${bk.kho.periods.length} kỳ (${bk.kho.periods.map(p => p.label).join(', ')})`;
-      box.textContent = '✓ ' + AZ.formInfo;
-    } catch (err) { AZ.formBk = null; AZ.formTable = ''; box.textContent = '✗ ' + err.message; }
+      // mặc định tick đúng các kỳ đang gán hiển thị ở F1 (cột Năm 1..4); F1 trống thì tick hết
+      const cur = new Set(Object.values(bk.kho.cur || {}).filter(Boolean));
+      bk.kho.periods.forEach(p => { AZ.pick['f|' + p.id] = cur.size ? cur.has(p.id) : true; });
+      AZ.formInfo = `${f.name}: ${bk.kho.periods.length} kỳ trong Lưu trữ`;
+      box.textContent = '✓ ' + AZ.formInfo + (cur.size ? ` · F1 đang chọn: ${[...cur].join(', ')}` : '');
+      azRenderPeriods();
+    } catch (err) { AZ.formBk = null; box.textContent = '✗ ' + err.message; azRenderPeriods(); }
   });
   $$('az-extra').addEventListener('change', async e => {
     AZ.extra = [];
@@ -3182,12 +3282,26 @@ function azRefreshSources() {
   const box = document.getElementById('az-lanes'); if (!box) return;
   const avail = lanesAvailable();
   box.innerHTML = avail.length
-    ? 'Phiên trích xuất hiện tại: ' + avail.map(tt => { const ps = periodsAsc(lanes[tt].extractedData); return `<b>${tt === 'TT99' ? 'BCTC 2026+' : 'BCTC ≤2025'}</b> · ${ps.map(p => p.label).join(', ')}`; }).join(' &nbsp;|&nbsp; ')
-    : 'Chưa có phiên trích xuất — dùng tab "AI trích xuất BCTC" trước, hoặc tải form nội bộ 2026 bên dưới.';
+    ? 'Phiên trích xuất: ' + avail.map(tt => `<b>${tt === 'TT99' ? 'BCTC 2026+' : 'BCTC ≤2025'}</b>`).join(' · ')
+    : 'Chưa có phiên trích xuất — dùng tab "AI trích xuất BCTC", hoặc tải form nội bộ 2026 bên dưới.';
+  // kỳ mới xuất hiện: mặc định tick (người dùng bỏ bớt)
+  avail.forEach(tt => periodsAsc(lanes[tt].extractedData).forEach(p => { const k = 'l|' + tt + '|' + p.id; if (!(k in AZ.pick)) AZ.pick[k] = true; }));
   const cty = document.getElementById('az-company');
   if (cty && !cty.value) {
     for (const tt of ['TT99', 'TT200']) { const ed = lanes[tt] && lanes[tt].extractedData; if (ed && ed.company) { cty.value = ed.company; break; } }
   }
+  azRenderPeriods();
+}
+
+/** Danh sách kỳ dạng checkbox — AI CHỈ phân tích kỳ được tick. */
+function azRenderPeriods() {
+  const box = document.getElementById('az-periods'); if (!box) return;
+  const chip = (key, label, src) => `<label class="inline-flex items-center gap-1 mr-3 mb-1 text-[12.5px]" style="color:var(--vib-ink)"><input type="checkbox" data-pick="${escapeHtml(key)}" ${AZ.pick[key] !== false ? 'checked' : ''}> ${escapeHtml(label)}<span style="color:var(--vib-ink-3)">·${src}</span></label>`;
+  let html = '';
+  lanesAvailable().forEach(tt => { periodsAsc(lanes[tt].extractedData).forEach(p => { html += chip('l|' + tt + '|' + p.id, p.label, 'trích xuất'); }); });
+  if (AZ.formBk) AZ.formBk.kho.periods.forEach(p => { html += chip('f|' + p.id, p.label, 'form'); });
+  box.innerHTML = html ? `<div class="text-[12px] font-semibold mb-0.5" style="color:var(--vib-ink-3)">Kỳ phân tích (chỉ kỳ được tick mới đưa vào bài viết):</div>${html}` : '';
+  box.querySelectorAll('[data-pick]').forEach(cb => cb.addEventListener('change', () => { AZ.pick[cb.dataset.pick] = cb.checked; }));
 }
 
 // File xlsx/csv → text CSV gọn (mỗi sheet tối đa ~120 dòng, cả file ~9000 ký tự)
@@ -3225,13 +3339,25 @@ async function azReadDoc(f) {
 
 const AZ_TY = v => (v === null || v === undefined || !isFinite(v)) ? '' : (Math.round(v / 1e6) / 1e3).toFixed(3);
 
-// Bảng số liệu từ phiên trích xuất: mọi dòng có số của từng làn, đơn vị tỷ đồng
-function azLanesTable() {
-  const avail = lanesAvailable();
-  if (!avail.length) return '';
+/** Các kỳ đã tick, chia theo nguồn. */
+function azSelected() {
+  const sel = { lanes: {}, form: [], labels: [] };
+  lanesAvailable().forEach(tt => {
+    const ps = periodsAsc(lanes[tt].extractedData).filter(p => AZ.pick['l|' + tt + '|' + p.id] !== false);
+    if (ps.length) { sel.lanes[tt] = ps; ps.forEach(p => sel.labels.push(p.label)); }
+  });
+  if (AZ.formBk) {
+    sel.form = AZ.formBk.kho.periods.filter(p => AZ.pick['f|' + p.id] !== false);
+    sel.form.forEach(p => { if (!sel.labels.includes(p.label)) sel.labels.push(p.label); });
+  }
+  return sel;
+}
+
+// Bảng số liệu từ phiên trích xuất — CHỈ các kỳ đã tick, đơn vị tỷ đồng
+function azLanesTable(sel) {
   let out = '';
-  for (const tt of avail) {
-    const ed = lanes[tt].extractedData, ps = periodsAsc(ed);
+  for (const [tt, ps] of Object.entries(sel.lanes)) {
+    const ed = lanes[tt].extractedData;
     out += `\n== Số liệu trích xuất (hệ ${tt === 'TT99' ? 'mẫu 2026+' : 'mẫu ≤2025, mã theo TT200'}; đơn vị TỶ ĐỒNG; kỳ cũ → mới) ==\n`;
     out += 'Báo cáo|Mã|Chỉ tiêu|' + ps.map(p => p.label).join('|') + '\n';
     for (const k of ['CDKT', 'KQKD', 'LCTT']) {
@@ -3243,11 +3369,14 @@ function azLanesTable() {
     }
     const fr = ed._ratios;
     if (fr) {
-      out += '-- Chỉ số tài chính (máy tính sẵn) --\n';
+      const ids = new Set(ps.map(p => p.id));
+      out += '-- Chỉ số tài chính (máy tính sẵn, chỉ các kỳ đã chọn) --\n';
       for (const g of ['summary', 'profitability', 'leverage', 'efficiency']) {
         for (const r of (fr[g] || [])) {
           if (!Array.isArray(r.values)) continue;
-          out += `${r.name}|${r.values.map(v => v.value === null || v.value === undefined ? '' : (typeof v.value === 'number' ? (Math.abs(v.value) > 1e6 ? AZ_TY(v.value) + ' tỷ' : String(Math.round(v.value * 100) / 100)) : v.value)).join('|')}\n`;
+          const vals = r.values.filter(v => ids.has(v.period_id));
+          if (!vals.length) continue;
+          out += `${r.name}|${vals.map(v => v.value === null || v.value === undefined ? '' : (typeof v.value === 'number' ? (Math.abs(v.value) > 1e6 ? AZ_TY(v.value) + ' tỷ' : String(Math.round(v.value * 100) / 100)) : v.value)).join('|')}\n`;
         }
       }
     }
@@ -3255,14 +3384,15 @@ function azLanesTable() {
   return out;
 }
 
-// Bảng số liệu từ form nội bộ tải lên (sheet Lưu trữ): mọi dòng có số, tỷ đồng
-function azFormTable(bk) {
-  const T = window.TTForm, kho = bk.kho;
-  let out = `\n== Số liệu trong form nội bộ 2026 tải lên (đơn vị TỶ ĐỒNG; kỳ: ${kho.periods.map(p => p.label).join(', ')}) ==\n`;
-  out += 'Nhóm|MS|Chỉ tiêu|' + kho.periods.map(p => p.label).join('|') + '\n';
-  const gets = kho.periods.map(p => T.khoGet(bk, p.id));
+// Bảng số liệu từ form nội bộ tải lên — CHỈ các kỳ đã tick
+function azFormTable(sel) {
+  if (!AZ.formBk || !sel.form.length) return '';
+  const bk = AZ.formBk, T = window.TTForm;
+  let out = `\n== Số liệu trong form nội bộ 2026 tải lên (đơn vị TỶ ĐỒNG; kỳ đã chọn: ${sel.form.map(p => p.label).join(', ')}) ==\n`;
+  out += 'Nhóm|MS|Chỉ tiêu|' + sel.form.map(p => p.label).join('|') + '\n';
+  const gets = sel.form.map(p => T.khoGet(bk, p.id));
   const sd = bk.sheet.KHO.data;
-  for (const [key, rn] of Object.entries(kho.key)) {
+  for (const [key, rn] of Object.entries(bk.kho.key)) {
     const [nm, ma] = key.split('|');
     const row = T.getRow(sd, rn);
     const label = row ? T.readStrCell(T.getCell(row, 'C' + rn), bk.sst) : '';
@@ -3274,29 +3404,31 @@ function azFormTable(bk) {
 
 const AZ_SCHEMA = { type: 'OBJECT', properties: {
   tieu_de: { type: 'STRING' },
-  tong_quan: { type: 'STRING', description: 'Tóm tắt 1 đoạn: khách hàng, quy mô, xu hướng chính, kết luận sơ bộ' },
-  nganh_thi_truong: { type: 'STRING', description: 'Ngành, vị thế, thị trường — dùng insight + thông tin công khai (ghi rõ nguồn gốc)' },
+  tong_quan: { type: 'STRING', description: 'Tối đa 120 từ: khách hàng, quy mô, xu hướng chính của CÁC KỲ ĐÃ CHỌN, kết luận sơ bộ' },
+  nganh_thi_truong: { type: 'STRING' },
   hoat_dong_kinh_doanh: { type: 'STRING' },
-  tai_chinh: { type: 'STRING', description: 'Cơ cấu tài sản - nguồn vốn, nợ vay, thanh khoản, sinh lời' },
-  von_luu_dong: { type: 'STRING', description: 'Phải thu, tồn kho, phải trả, vòng quay — dùng cả file theo dõi bổ sung nếu có' },
+  tai_chinh: { type: 'STRING' },
+  von_luu_dong: { type: 'STRING' },
   dong_tien: { type: 'STRING' },
-  rui_ro: { type: 'ARRAY', items: { type: 'OBJECT', properties: { muc: { type: 'STRING', enum: ['cao', 'trung bình', 'thấp'] }, noi_dung: { type: 'STRING' } }, required: ['muc', 'noi_dung'] } },
+  rui_ro: { type: 'ARRAY', items: { type: 'OBJECT', properties: { muc: { type: 'STRING', enum: ['cao', 'trung bình', 'thấp'] }, noi_dung: { type: 'STRING' }, co_so: { type: 'STRING' } }, required: ['muc', 'noi_dung', 'co_so'] } },
   de_xuat: { type: 'ARRAY', items: { type: 'STRING' } },
   cau_hoi: { type: 'ARRAY', items: { type: 'STRING' } },
 }, required: ['tieu_de', 'tong_quan', 'nganh_thi_truong', 'hoat_dong_kinh_doanh', 'tai_chinh', 'von_luu_dong', 'dong_tien', 'rui_ro', 'de_xuat', 'cau_hoi'] };
 
 async function azWrite() {
   if (AZ.busy) return;
-  const root = document.getElementById('az-root'), $$ = id => root.querySelector('#' + id);
-  const company = ($$('az-company').value || '').trim();
-  const dataPack = azLanesTable() + (AZ.formTable || '');
-  if (!dataPack.trim()) { $$('az-status').innerHTML = '<span style="color:var(--vib-error)">Chưa có số liệu nào — trích xuất BCTC ở tab 1 hoặc tải form nội bộ 2026 lên.</span>'; return; }
-  if (!company) { $$('az-status').innerHTML = '<span style="color:var(--vib-error)">Nhập tên công ty.</span>'; return; }
-  AZ.busy = true; $$('az-go').disabled = true;
-  const status = t => { $$('az-status').textContent = t; };
+  const root = document.getElementById('az-root');
+  const q = id => root.querySelector('#' + id);
+  const company = (q('az-company').value || '').trim();
+  const sel = azSelected();
+  const dataPack = azLanesTable(sel) + azFormTable(sel);
+  if (!sel.labels.length || !dataPack.trim()) { q('az-status').innerHTML = '<span style="color:var(--vib-error)">Chưa tick kỳ nào có số liệu — chọn kỳ ở mục 1 (hoặc trích xuất / tải form trước).</span>'; return; }
+  if (!company) { q('az-status').innerHTML = '<span style="color:var(--vib-error)">Nhập tên công ty.</span>'; return; }
+  AZ.busy = true; q('az-go').disabled = true;
+  const status = t => { q('az-status').textContent = t; };
   try {
     AZ.researchNote = '';
-    if ($$('az-research').checked) {
+    if (q('az-research').checked) {
       status('Đang tìm thông tin công ty & ngành trên mạng…');
       try {
         AZ.researchNote = await aiCall({ plain: true, maxOutputTokens: 4096, thinkingLevel: 'low', temperature: 0.2,
@@ -3307,27 +3439,34 @@ async function azWrite() {
     status('AI đang viết tờ trình phân tích…');
     const styleTxt = AZ.styles.filter(x => x.text).map((x, i) => `--- MẪU ${i + 1} (${x.name}) ---\n${x.text}`).join('\n');
     const extraTxt = AZ.extra.filter(x => x.text).map(x => `--- FILE: ${x.name} ---\n${x.text}`).join('\n');
-    const insight = ($$('az-insight').value || '').trim();
+    const insight = (q('az-insight').value || '').trim();
+    const kyChon = sel.labels.join(', ');
     const prompt = [
       `Bạn là RM (quản lý khách hàng doanh nghiệp) ngân hàng Việt Nam với 15 năm kinh nghiệm, viết phần PHÂN TÍCH KHÁCH HÀNG trong tờ trình tín dụng cho khách hàng "${company}".`,
-      'YÊU CẦU VĂN PHONG: rõ ràng, mạch lạc, câu ngắn, mỗi nhận định gắn với con số và kỳ cụ thể (đơn vị tỷ đồng, ghi "tỷ đồng" lần đầu); so sánh giữa các kỳ theo dạng "X → Y"; thận trọng đúng chuẩn mực ngân hàng; không khen sáo rỗng; không bịa số hay thông tin.' + (styleTxt ? ' HỌC VĂN PHONG, bố cục câu và cách dùng từ theo các MẪU TỜ TRÌNH bên dưới (nhưng nội dung phải theo số liệu của khách hàng này).' : ''),
-      'QUY TẮC SỐ LIỆU: chỉ dùng số trong các bảng DỮ LIỆU bên dưới; số đã quy về tỷ đồng; thiếu dữ liệu ở mục nào thì ghi "chưa có số liệu" ở mục đó; nếu lời giải thích/insight mâu thuẫn với số liệu thì phải nêu rõ mâu thuẫn trong mục rủi ro hoặc câu hỏi. Thông tin tìm trên mạng chỉ dùng cho mục ngành/thị trường và phải dẫn kèm chữ "(thông tin công khai)".',
-      'Trả về JSON đúng khuôn: tieu_de; tong_quan; nganh_thi_truong; hoat_dong_kinh_doanh (doanh thu, biên lợi nhuận, cơ cấu doanh thu nếu có breakdown); tai_chinh (tài sản - nguồn vốn, nợ vay/TCTD, đòn bẩy, thanh khoản); von_luu_dong (phải thu, tồn kho, phải trả, vòng quay, chất lượng từ file theo dõi nếu có); dong_tien; rui_ro (mảng {muc, noi_dung} xếp mức giảm dần); de_xuat (việc RM đề xuất / điều kiện kèm theo); cau_hoi (5-8 câu cần làm rõ với khách hàng, dẫn số cụ thể). Mỗi mục chữ viết 1-3 đoạn, xuống dòng bằng \\n.',
-      insight ? `\n== INSIGHT / THÔNG TIN RM CUNG CẤP (ưu tiên dùng để diễn giải) ==\n${insight}` : '',
-      AZ.researchNote ? `\n== THÔNG TIN TÌM TRÊN MẠNG (chỉ dùng cho mục ngành/thị trường, dẫn "(thông tin công khai)") ==\n${AZ.researchNote}` : '',
-      `\n== DỮ LIỆU TÀI CHÍNH ==${dataPack}`,
-      extraTxt ? `\n== FILE THEO DÕI BỔ SUNG (phải thu / phải trả / tồn kho / breakdown…) ==\n${extraTxt}` : '',
+      `KỲ PHÂN TÍCH ĐÃ CHỌN: ${kyChon}. CHỈ phân tích đúng các kỳ này — tuyệt đối không nhắc tới kỳ khác kể cả khi bảng dữ liệu có chứa.`,
+      'KHUNG BẮT BUỘC cho từng mục chữ (phân tích bài bản, không lan man):',
+      '  (1) SỐ LIỆU: nêu giá trị từng kỳ đã chọn và biến động tuyệt đối + % theo dạng "X → Y tỷ đồng (+Z%)";',
+      '  (2) NGUYÊN NHÂN / DIỄN GIẢI: chỉ từ insight của RM, file theo dõi, thông tin cung cấp — không suy đoán vô căn cứ, thiếu thì ghi "cần làm rõ với khách hàng";',
+      '  (3) NHẬN ĐỊNH RM: 1–2 câu, thận trọng theo chuẩn mực ngân hàng.',
+      'GIỚI HẠN: tong_quan ≤ 120 từ; mỗi mục khác 80–180 từ; không lặp lại cùng con số ở nhiều mục trừ khi để đối chiếu; mục thiếu dữ liệu ghi đúng một câu "Chưa có số liệu để phân tích mục này".',
+      'VĂN PHONG: câu ngắn, rõ, mạch lạc giữa các số liệu; không khen sáo rỗng; đơn vị tỷ đồng (ghi "tỷ đồng" lần đầu).' + (styleTxt ? ' HỌC VĂN PHONG, bố cục câu và cách dùng từ theo các MẪU TỜ TRÌNH bên dưới (nội dung phải theo số liệu của khách hàng này).' : ''),
+      'QUY TẮC SỐ LIỆU: chỉ dùng số trong các bảng DỮ LIỆU bên dưới (đã quy về tỷ đồng); nếu insight/giải thích mâu thuẫn với số liệu thì nêu rõ ở rui_ro hoặc cau_hoi. Thông tin tìm trên mạng chỉ dùng cho mục ngành/thị trường và dẫn kèm "(thông tin công khai)".',
+      'rui_ro: mỗi ý gồm muc (cao/trung bình/thấp), noi_dung và co_so (dẫn đúng con số làm căn cứ). de_xuat: đo lường được (hạn mức, TSBĐ, điều kiện giải ngân, tần suất theo dõi). cau_hoi: 5–8 câu, mỗi câu dẫn con số cụ thể.',
+      insight ? `\n== INSIGHT / THÔNG TIN RM CUNG CẤP ==\n${insight}` : '',
+      AZ.researchNote ? `\n== THÔNG TIN TÌM TRÊN MẠNG (chỉ dùng cho mục ngành/thị trường) ==\n${AZ.researchNote}` : '',
+      `\n== DỮ LIỆU TÀI CHÍNH (chỉ phân tích các kỳ: ${kyChon}) ==${dataPack}`,
+      extraTxt ? `\n== FILE THEO DÕI BỔ SUNG ==\n${extraTxt}` : '',
       styleTxt ? `\n== MẪU TỜ TRÌNH ĐỂ HỌC VĂN PHONG (không chép nội dung) ==\n${styleTxt}` : '',
     ].filter(Boolean).join('\n');
     const raw = await aiCall({ prompt, schema: AZ_SCHEMA, maxOutputTokens: 24576, thinkingLevel: 'medium', temperature: 0.25 });
     AZ.result = azSanitize(raw);
-    AZ.lines = azToLines(AZ.result, company);
-    window._toTrinh = { include: $$('az-include').checked, lines: AZ.lines, text: AZ.lines.join('\n'), company, at: new Date().toISOString() };
+    AZ.lines = azToLines(AZ.result, company, kyChon);
+    window._toTrinh = { include: q('az-include').checked, lines: AZ.lines, text: AZ.lines.join('\n'), company, at: new Date().toISOString() };
     azRender();
     status('');
   } catch (e) {
-    $$('az-status').innerHTML = `<span style="color:var(--vib-error)">Lỗi: ${escapeHtml(e.message)}</span>`;
-  } finally { AZ.busy = false; $$('az-go').disabled = false; }
+    q('az-status').innerHTML = `<span style="color:var(--vib-error)">Lỗi: ${escapeHtml(e.message)}</span>`;
+  } finally { AZ.busy = false; q('az-go').disabled = false; }
 }
 
 function azSanitize(o) {
@@ -3337,7 +3476,7 @@ function azSanitize(o) {
   return {
     tieu_de: str(o.tieu_de) || 'PHÂN TÍCH KHÁCH HÀNG', tong_quan: str(o.tong_quan), nganh_thi_truong: str(o.nganh_thi_truong),
     hoat_dong_kinh_doanh: str(o.hoat_dong_kinh_doanh), tai_chinh: str(o.tai_chinh), von_luu_dong: str(o.von_luu_dong), dong_tien: str(o.dong_tien),
-    rui_ro: arr(o.rui_ro, 12).map(r => (r && typeof r === 'object') ? { muc: ['cao', 'trung bình', 'thấp'].includes(r.muc) ? r.muc : 'trung bình', noi_dung: str(r.noi_dung) } : { muc: 'trung bình', noi_dung: str(r) }).filter(r => r.noi_dung),
+    rui_ro: arr(o.rui_ro, 12).map(r => (r && typeof r === 'object') ? { muc: ['cao', 'trung bình', 'thấp'].includes(r.muc) ? r.muc : 'trung bình', noi_dung: str(r.noi_dung), co_so: str(r.co_so) } : { muc: 'trung bình', noi_dung: str(r), co_so: '' }).filter(r => r.noi_dung),
     de_xuat: arr(o.de_xuat, 10).map(x => str(x)).filter(Boolean),
     cau_hoi: arr(o.cau_hoi, 10).map(x => str(x)).filter(Boolean),
   };
@@ -3356,11 +3495,12 @@ function azWrap(s, width) {
   return out;
 }
 
-function azToLines(r, company) {
+function azToLines(r, company, kyChon) {
   const L = [];
-  L.push(r.tieu_de || `PHÂN TÍCH KHÁCH HÀNG — ${company}`); L.push('AI viết từ số liệu đã trích xuất · ' + new Date().toLocaleString('vi-VN') + ' · RM rà soát lại trước khi dùng'); L.push('');
+  L.push(r.tieu_de || `PHÂN TÍCH KHÁCH HÀNG — ${company}`);
+  L.push(`Kỳ phân tích: ${kyChon} · AI viết từ số liệu đã trích xuất · ${new Date().toLocaleString('vi-VN')} · RM rà soát lại trước khi dùng`); L.push('');
   for (const [k, h] of AZ_SECTIONS) { if (!r[k]) continue; L.push(h); azWrap(r[k], 115).forEach(x => L.push(x)); L.push(''); }
-  if (r.rui_ro.length) { L.push('VII. RỦI RO & GIẢM THIỂU'); r.rui_ro.forEach(x => azWrap(`- [${x.muc.toUpperCase()}] ${x.noi_dung}`, 115).forEach(y => L.push(y))); L.push(''); }
+  if (r.rui_ro.length) { L.push('VII. RỦI RO & GIẢM THIỂU'); r.rui_ro.forEach(x => azWrap(`- [${x.muc.toUpperCase()}] ${x.noi_dung}${x.co_so ? ' | Cơ sở: ' + x.co_so : ''}`, 115).forEach(y => L.push(y))); L.push(''); }
   if (r.de_xuat.length) { L.push('VIII. ĐỀ XUẤT CỦA RM'); r.de_xuat.forEach((x, i) => azWrap(`${i + 1}. ${x}`, 115).forEach(y => L.push(y))); L.push(''); }
   if (r.cau_hoi.length) { L.push('IX. NỘI DUNG CẦN LÀM RÕ VỚI KHÁCH HÀNG'); r.cau_hoi.forEach((x, i) => azWrap(`${i + 1}. ${x}`, 115).forEach(y => L.push(y))); }
   return L;
@@ -3378,7 +3518,7 @@ function azRender() {
       </div>
     </div>
     ${AZ_SECTIONS.map(([k, h]) => sec(h, r[k])).join('')}
-    ${r.rui_ro.length ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">VII. RỦI RO & GIẢM THIỂU</h3><ul class="text-[13.5px] space-y-1">${r.rui_ro.map(x => `<li><span class="tag" style="font-weight:700;color:${x.muc === 'cao' ? 'var(--vib-error)' : x.muc === 'thấp' ? 'var(--vib-ink-3)' : 'var(--vib-warning)'}">[${x.muc.toUpperCase()}]</span> ${escapeHtml(x.noi_dung)}</li>`).join('')}</ul>` : ''}
+    ${r.rui_ro.length ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">VII. RỦI RO & GIẢM THIỂU</h3><ul class="text-[13.5px] space-y-1">${r.rui_ro.map(x => `<li><span style="font-weight:700;color:${x.muc === 'cao' ? 'var(--vib-error)' : x.muc === 'thấp' ? 'var(--vib-ink-3)' : 'var(--vib-warning)'}">[${x.muc.toUpperCase()}]</span> ${escapeHtml(x.noi_dung)}${x.co_so ? ` <span style="color:var(--vib-ink-3)">— Cơ sở: ${escapeHtml(x.co_so)}</span>` : ''}</li>`).join('')}</ul>` : ''}
     ${r.de_xuat.length ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">VIII. ĐỀ XUẤT CỦA RM</h3><ol class="text-[13.5px] list-decimal pl-5 space-y-1">${r.de_xuat.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>` : ''}
     ${r.cau_hoi.length ? `<h3 class="text-[13px] font-bold mt-4 mb-1" style="color:var(--vib-navy)">IX. NỘI DUNG CẦN LÀM RÕ VỚI KHÁCH HÀNG</h3><ol class="text-[13.5px] list-decimal pl-5 space-y-1">${r.cau_hoi.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>` : ''}
     <p class="text-[12px] mt-4" style="color:var(--vib-ink-3)">AI viết để RM tham khảo khi soạn tờ trình — rà lại từng con số trước khi dùng chính thức. ${AZ.researchNote ? 'Mục ngành/thị trường có dùng thông tin tìm trên mạng.' : ''} Bật “Đính kèm vào file Excel” ở trên để sheet “Phân tích AI” đi kèm khi xuất form nội bộ / báo cáo đầy đủ.</p>
@@ -3387,7 +3527,7 @@ function azRender() {
   out.querySelector('#az-redo').onclick = azWrite;
 }
 
-try { const t0 = localStorage.getItem(MAIN_TOOL_LS); if (t0 && t0 !== 'extract' && document.getElementById('tool-' + t0)) switchMainTool(t0); } catch (e) { /* bỏ qua */ }
+try { const t0 = localStorage.getItem(MAIN_TOOL_LS); if (t0 && t0 !== 'convert' && document.getElementById('tool-' + t0)) switchMainTool(t0); } catch (e) { /* bỏ qua */ }
 
 async function fetchWithRetry(url, options, maxRetries = 2, timeoutMs = 120000) {
   if (url && url.__ai) return fetchAI(url, options, maxRetries, timeoutMs);
@@ -11729,6 +11869,49 @@ function fmt(v){if(v==null||v==='')return '';const u=unit();const x=v/u;return x
 function fmtRaw(v){return (+v).toLocaleString('en-US');}
 function parseNum(s){s=String(s).trim(); if(!s) return null; let neg=/^\(.*\)$/.test(s); s=s.replace(/[(),\s]/g,''); const x=parseFloat(s); if(isNaN(x)) return undefined; return (neg?-1:1)*x*unit();}
 
+// [v4.1] Đồng bộ sang tool Trích xuất: gom số liệu các kỳ đã tick thành payload cho FINLENS.syncFromConverter
+function anyVal(F,g,ms,pi,d=0){const it=IDX[g][ms]; if(!it||d>30) return false;
+  if(it.f) return it.f.some(([sg,c])=>anyVal(F,g,c,pi,d+1));
+  return val(F,g,ms,pi)!=null;}
+function buildSyncPayload(F){
+  const periods=[];
+  F.periods.forEach((p,pi)=>{
+    if(!p.on) return;
+    const reports={CDKT:[],KQKD:[],LCTT:[]};
+    [['CĐKT','CDKT'],['KQKD','KQKD']].forEach(([g,out])=>{
+      const extra={};               // 135x→135, 215x→215 (FinLens không có dòng x)
+      META.order[g].forEach(it=>{
+        const ms=it.ms;
+        if(/^KP/.test(ms)) return;  // chỉ tiêu ngoài bảng
+        if(g==='CĐKT'){
+          if(ms==='135x'||ms==='215x'){const v=val(F,g,ms,pi); if(v!=null) extra[ms.slice(0,3)]=(extra[ms.slice(0,3)]||0)+v; return;}
+          if(!/^\d{3}$/.test(ms)) return;   // bỏ dòng memo 111a, 141a-g, 420a…
+        }
+        let v;
+        if(it.f){ if(!anyVal(F,g,ms,pi)) return; v=eff(F,g,ms,pi); }
+        else { v=val(F,g,ms,pi); if(v==null) return; }
+        reports[out].push({ma_so:ms,ten:it.label,gia_tri:v});
+      });
+      Object.keys(extra).forEach(ma=>{
+        const row=reports[out].find(r=>r.ma_so===ma);
+        if(row) row.gia_tri=(row.gia_tri||0)+extra[ma];
+        else {const it=IDX[g][ma]; reports[out].push({ma_so:ma,ten:it?it.label:ma,gia_tri:extra[ma]});}
+      });
+    });
+    // LCTT: ưu tiên bộ mã gián tiếp (01..); form nhập trực tiếp (mã T..) thì bỏ chữ T (mã 2 bộ trùng ý nghĩa)
+    META.order['LCTT'].forEach(it=>{ if(/^T/.test(it.ms)) return;
+      let v; if(it.f){ if(!anyVal(F,'LCTT',it.ms,pi)) return; v=eff(F,'LCTT',it.ms,pi);} else {v=val(F,'LCTT',it.ms,pi); if(v==null) return;}
+      reports.LCTT.push({ma_so:it.ms,ten:it.label,gia_tri:v}); });
+    if(!reports.LCTT.length){
+      META.order['LCTT'].forEach(it=>{ if(!/^T/.test(it.ms)) return;
+        let v; if(it.f){ if(!anyVal(F,'LCTT',it.ms,pi)) return; v=eff(F,'LCTT',it.ms,pi);} else {v=val(F,'LCTT',it.ms,pi); if(v==null) return;}
+        reports.LCTT.push({ma_so:it.ms.slice(1),ten:it.label,gia_tri:v}); });
+    }
+    if(reports.CDKT.length||reports.KQKD.length||reports.LCTT.length)
+      periods.push({id:periodId(p.label), label:String(p.label||'').trim(), months:p.months, reports});
+  });
+  return {company:(F.name||'').trim(), periods};
+}
 function renderFile(F){
   let el=document.getElementById('file'+F.id);
   if(!el){el=document.createElement('div');el.className='file';el.id='file'+F.id;$('#filesWrap').appendChild(el);}
@@ -11741,6 +11924,7 @@ function renderFile(F){
     <div class="row" style="align-self:flex-end">
       <button class="ai" data-k="ai">AI rà soát &amp; map</button><span class="status" id="st${F.id}"></span>
       <button class="pri" data-k="export">Xuất form 2026</button>
+      <button data-k="sync" title="Nạp các kỳ đã tick sang tool Trích xuất — cùng công ty thì gộp thêm kỳ vào dữ liệu đang có">⇪ Sang tool Trích xuất</button>
     </div>
   </div>
   <div class="fbody">
@@ -11803,6 +11987,15 @@ function bind(F,el){
   el.querySelector('[data-k=ai]').onclick=()=>runAI(F);
   el.querySelector('[data-k=applyAll]').onclick=()=>{let n=0; while(n<200){refreshSugs(F); const s=[...F.sugs,...F.aiSugs].find(s=>s.fix.type!=='none'&&!F.applied.has(s.key)&&F.periods[s.pi]&&F.periods[s.pi].on); if(!s) break; applyFix(F,s); n++;} refreshSugs(F); renderFile(F); log(`${F.name}: áp dụng ${n} đề xuất.`);};
   el.querySelector('[data-k=export]').onclick=()=>exportForm([F]);
+  el.querySelector('[data-k=sync]').onclick=()=>{
+    try{
+      const pay=buildSyncPayload(F);
+      if(!pay.company) return alert('Nhập tên khách hàng trước khi đồng bộ.');
+      if(!pay.periods.length) return alert('Chưa tick kỳ nào (hoặc kỳ đã tick không có số liệu) để đồng bộ.');
+      if(!window.FINLENS||!window.FINLENS.syncFromConverter) return alert('Không gọi được tool Trích xuất.');
+      window.FINLENS.syncFromConverter(pay);
+    }catch(e){alert('Đồng bộ lỗi: '+e.message);}
+  };
   el.querySelector('#tbl'+F.id).addEventListener('change',e=>{
     const t=e.target, g=F.tab, ms=t.dataset.ms;
     if(t.dataset.k==='map'){const r=parseInt(t.value,10); if(!t.value.trim()) delete F.map[g][ms]; else if(rowByNum(F,g,r)) F.map[g][ms]={row:r,src:'user'}; else {alert('Không thấy dòng '+t.value+' (dòng phải có nhãn) trong sheet '+F.sheets[g]); return;}
