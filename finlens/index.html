@@ -999,7 +999,6 @@
     </div>
   </div>
     </div><!-- /mv-detail -->
-</div>
   </div><!-- /tool-extract -->
 
   <!-- [v4.0] TOOL 2: Chuyển form cũ → 2026 (nhúng từ tool Chuyen_form_cu_sang_2026, dùng chung key/model Alt+F9) -->
@@ -1073,6 +1072,7 @@
 #tool-convert button.ai{background:linear-gradient(135deg,#8a5a16,var(--vib-copper));border:none;color:#fff}
 #tool-convert .cv-top{padding:14px 18px}
 #tool-convert .cv-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#tool-convert .cv-bar>div:first-child{flex:1 1 360px;min-width:0}
 #tool-convert .cv-unit{display:flex;align-items:center;gap:6px;white-space:nowrap}
 #tool-convert .cv-unit select{width:auto;padding:5px 8px}
 #tool-convert .cv-set{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
@@ -1164,8 +1164,8 @@
     </section>
   </div>
   <details class="card cv-log"><summary>Nhật ký</summary><div id="log"></div></details>
-  </div>
-
+  </div><!-- /tool-convert -->
+</div><!-- /khung chính max-w-7xl -->
 
 <!-- PDF Loading Overlay -->
 <div id="pdf-loading-overlay" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
