@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v7.1 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v7.2 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -7400,7 +7400,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='7.1';
+const APP_VERSION='7.2';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8355,7 +8355,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='7.1';
+const TL_VER='7.2';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10096,6 +10096,23 @@ const _TF_DCOLS=[['STL',b=>b.nh],['MLT',b=>b.th+b.dh],['Khác',b=>b.kh],['Off Ba
 // Loại TSBĐ trên R20 (mã 01–27) → cột form nội bộ
 const _TF_CCOLS=['KPT','HTK','MMTB','GTCG','BĐS','QTS','PTVT','CP','Bảo lãnh'];
 const _TF_CMAP={'01':'BĐS','02':'PTVT','03':'GTCG','04':'GTCG','05':'CP','06':'GTCG','07':'GTCG','08':'GTCG','09':'GTCG','10':'GTCG','11':'GTCG','12':'MMTB','13':'MMTB','14':'MMTB','15':'HTK','16':'HTK','17':'HTK','18':'QTS','19':'QTS','20':'QTS','21':'KPT','22':'QTS','23':'QTS','24':'QTS','25':'QTS','26':'QTS','27':'QTS'};
+// Chốt kiểm tra trước khi ghi file: (1) mọi dòng TCTD có số đều có công thức Total cuối dòng; (2) giá trị tính sẵn của MỌI
+// công thức được tính lại từ chính các ô trong sheet (Excel mở ở Protected View hiển thị giá trị tính sẵn); (3) số không hợp lệ → trống.
+function _tfSeal(ws,rEnd,C0,nB,width,isD){
+  const E=(r,c)=>XLSX.utils.encode_cell({r,c});const num=a=>{const o=ws[a];return o&&typeof o.v==='number'&&isFinite(o.v)?o.v:0;};
+  Object.keys(ws).forEach(a=>{if(a[0]==='!')return;const o=ws[a];if(o&&typeof o.v==='number'&&!isFinite(o.v)){o.v=0;if(!o.f){o.t='s';o.v='';}}});
+  let added=0;
+  for(let r=8;r<rEnd;r++){const lab=ws[E(r,8)];const L=lab&&typeof lab.v==='string'?lab.v:'';if(!L||/^(Total|Grand total)/.test(L))continue;
+    for(let b=0;b<nB;b++){const c0=C0+b*width,tc=c0+width-1;const a=E(r,tc);
+      if(!ws[a]||!ws[a].f){let has=false;for(let c=c0;c<tc;c++)if(num(E(r,c)))has=true;
+        const st=(ws[E(r,c0)]&&ws[E(r,c0)].s)||(ws[a]&&ws[a].s);ws[a]={t:'n',v:0,f:'SUM('+XLSX.utils.encode_col(c0)+(r+1)+':'+XLSX.utils.encode_col(tc-1)+(r+1)+')'};if(st)ws[a].s=st;if(has)added++;}}}
+  // tính lại giá trị tính sẵn: công thức chỉ gồm SUM(cột a:b) và tổng các ô (A1+B2+…) → lặp tới khi ổn định
+  const ev=f=>{let m=f.match(/^SUM\(([A-Z]+)(\d+):([A-Z]+)(\d+)\)$/);if(m){const c1=XLSX.utils.decode_col(m[1]),c2=XLSX.utils.decode_col(m[3]),r1=+m[2]-1,r2=+m[4]-1;let v=0;for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++)v+=num(E(r,c));return v;}
+    if(/^[A-Z]+\d+(\+[A-Z]+\d+)*$/.test(f))return f.split('+').reduce((v,x)=>v+num(x),0);if(/^\d+(\.\d+)?$/.test(f))return +f;return null;};
+  for(let it=0;it<6;it++){let ch=false;Object.keys(ws).forEach(a=>{if(a[0]==='!')return;const o=ws[a];if(!o||!o.f)return;const v=ev(o.f);if(v==null)return;const nv=Math.round(v*1000)/1000;if(o.v!==nv){o.v=nv;o.t='n';ch=true;}});if(!ch)break;}
+  if(added)console.warn('[Form] Bổ sung công thức Total cho '+added+' dòng '+(isD?'dư nợ':'TSBĐ'));
+  ws['!tfSealAdded']=added;
+}
 function _tfBuild(){
   const g=_tfGroup();const mons=[...TF.debtMons].sort();if(!mons.length)throw new Error('Chọn ít nhất một kỳ dư nợ');
   const cm=TF.collMon||mons[mons.length-1];const all=mons.concat([cm]).sort();
@@ -10224,6 +10241,7 @@ function tfExport(){
     for(let c=C0;c<=lastC;c++)cw.push(isD?11.5:11);cw.push(46,2,9,6,13);
     ws['!cols']=cw.map(w=>({wch:w}));ws['!rows']=[];for(let i=0;i<=r;i++)ws['!rows'].push({hpt:18});
     ws['!freeze']={xSplit:9,ySplit:7};
+    _tfSeal(ws,r,C0,blocks.length,width,isD);
     return ws;
   }
   XLSX.utils.book_append_sheet(wb,sheet('D'),'Deb Inventory (F)');

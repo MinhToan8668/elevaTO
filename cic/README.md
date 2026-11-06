@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.1 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.2 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.1.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.2.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -232,6 +232,14 @@ còn một dòng icon + tiêu đề + số tóm tắt; "Hiện" để mở lại
 Ô không có bản tra trước đây ghi "quá 3T" (nhãn của cơ chế kéo bản cũ đã bỏ ở 7.0) → nay ghi **"chưa tra"**, chú thích: không có bản tra kỳ đó,
 để trống, không cộng vào tổng kỳ, kèm ngày tra và kỳ số liệu của bản gần nhất. Cột Tỷ trọng của công ty chưa tra kỳ cuối ghi "chưa tra kỳ …"
 thay vì 0,0%. Chú giải bảng / biểu đồ / file Excel bỏ "CIC 12 tháng" và "kéo bản cũ".
+
+## v7.2 — Form nội bộ: chốt kiểm tra công thức Total trước khi ghi file
+Có file form người dùng gửi: dòng TCTD có số (vd. GTCG) nhưng ô Total cuối dòng trống, dòng Total công ty không cộng phần đó.
+Chưa tái hiện được bằng dữ liệu hiện có (mọi lần xuất thử đều đủ công thức), nên thêm chốt kiểm tra ở cả sheet Dư nợ và TSBĐ:
+- dòng TCTD nào có số mà thiếu công thức Total cuối dòng → thêm `=SUM(...)`;
+- giá trị tính sẵn của mọi công thức được tính lại từ chính các ô trong sheet (Excel mở ở Protected View hiện giá trị này);
+- ô số không hợp lệ (NaN/∞) → trống thay vì để Excel xoá ô khi mở.
+Kiểm tra: 3 lần xuất (Nhóm ABC, Thaco không / có khung form cũ) — đủ Total ở mọi dòng có số, 8.050 công thức có giá trị tính sẵn khớp.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
