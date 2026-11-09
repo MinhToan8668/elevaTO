@@ -165,17 +165,19 @@ const MOD_ISSUE = { gm: 'noGm', wcDays: 'noWcDays', fa: 'noPpe' };
 
 /** Thẻ bật / tắt từng module dự phóng chi tiết; mỗi thẻ ghi rõ module thay dòng nào và đưa số sang đâu. */
 export function modPanel(V, r, dat) {
+  // Mô hình tích hợp: vốn lưu động và TSCĐ do 3.6 đảm nhận — chỉ còn module biên gộp có tác dụng.
+  const tichHop = r.fcffSrc === 'model';
   return h('div', { class: 'dv-mods' },
     h('h4', {}, t('dv.mod.h')),
-    h('p', { class: 'priv' }, t('dv.mod.lead')),
-    h('div', { class: 'dv-modgrid' }, MODS.map((k) => {
+    h('p', { class: 'priv' }, t(tichHop ? 'dv.mod.lead.3s' : 'dv.mod.lead')),
+    h('div', { class: 'dv-modgrid' }, MODS.filter((k) => !tichHop || k === 'gm').map((k) => {
       const on = V.mods[k], loi = on && r.issues?.includes(MOD_ISSUE[k]);
       return h('label', { class: `dv-mod${on ? ' on' : ''}${loi ? ' err' : ''}` },
         h('span', { class: 'dv-modh' }, h('input', { type: 'checkbox', checked: on, onchange: (e) => dat({ mods: { ...V.mods, [k]: e.target.checked } }) }), h('b', {}, t(`dv.mod.${k}`))),
         h('small', {}, t(`dv.mod.${k}.d`)),
         h('span', { class: 'dv-modlk' }, t(`dv.mod.${k}.lk`)),
         loi ? h('span', { class: 'dv-moderr' }, t(`dv.issue.${MOD_ISSUE[k]}`)) : null,
-        r.fcffSrc === 'model' && k !== 'gm' ? h('span', { class: 'dv-moderr' }, t(`dv.mod.by3s.${k}`)) : null);
+        null);
     })));
 }
 
@@ -184,7 +186,12 @@ export function wiring(V, r) {
   const M = r.mods || V.mods;
   const nut = (txt, on = false) => h('span', { class: `dv-w${on ? ' on' : ''}` }, txt);
   const mui = () => h('span', { class: 'dv-wa' }, '→');
-  const xs = [
+  // Mô hình tích hợp: chi phí theo driver C1 (06.IS), TSCĐ theo lịch 10.FA_SCHED, vốn lưu động theo driver 07.BS, FCFF như 08.CF.
+  const xs = r.fcffSrc === 'model' ? [
+    nut(`${t('dv.w.rev')} · ${t(`dv.rm.${V.revMode}`)}`, V.revMode !== 'growth'),
+    nut(t('dv.w.gp'), true), nut(t('dv.w.is3'), true), nut(t('dv.w.fa3'), true), nut(t('dv.w.bs3'), true),
+    nut(t('dv.w.cf3'), true), nut('FCFF', true), nut(t('dv.w.ev')), nut(t('dv.w.out')),
+  ] : [
     nut(`${t('dv.w.rev')} · ${t(`dv.rm.${V.revMode}`)}`, V.revMode !== 'growth'),
     ...(M.gm ? [nut(t('dv.w.gp'), true), nut(t('dv.w.sga'), true)] : [nut(t('dv.w.margin'))]),
     nut('EBITDA'),

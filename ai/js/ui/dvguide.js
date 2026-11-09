@@ -22,21 +22,28 @@ export const STEPS = [
 
 export const stepId = (n) => `dv-step-${n}`;
 
-/** Cuộn tới một bước; khối M&A là <details> thì mở ra. */
+// Bước nào đang mở — nhớ trong trang (không ghi vào thông số): mặc định mở DCF và target price, các bước khác
+// thu gọn chỉ còn tiêu đề + công thức để trang đỡ dài; bấm vào sơ đồ / thanh liên kết là bước đó tự mở.
+const uiStep = { 3: true, 6: true };
+
+/** Cuộn tới một bước (mở bước đó ra); khối M&A là <details> thì mở luôn. */
 function toi(n) {
   const el = typeof document !== 'undefined' ? document.getElementById(stepId(n)) : null;
   if (!el) return;
+  uiStep[n] = true;
+  if (el.tagName === 'DETAILS') el.open = true;
   el.querySelectorAll('details.dv-mna').forEach((d) => { d.open = true; });
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 const chip = (n, txt, cls) => h('button', { type: 'button', class: `dv-chip ${cls}`, onclick: () => toi(n) }, txt);
 
-/** Bọc các khối của một bước: tiêu đề "Bước n", mục đích, công thức; cuối bước là thanh liên kết. */
+/** Bọc các khối của một bước (thu gọn được): tiêu đề "Bước n", mục đích, công thức; cuối bước là thanh liên kết. */
 export function stepWrap(n, ...kids) {
   const st = STEPS.find((x) => x.n === n);
-  return h('div', { class: 'dv-step', id: stepId(n) },
-    h('div', { class: 'dv-step-h' },
+  // Mở / đóng chỉ là trạng thái trang (không đụng thông số) nên ghi theo sự kiện "toggle" là đủ.
+  return h('details', { class: 'dv-step', id: stepId(n), open: !!uiStep[n], ontoggle: (e) => { if (e.currentTarget.isConnected) uiStep[n] = e.currentTarget.open; } },
+    h('summary', { class: 'dv-step-h' },
       h('span', { class: 'dv-badge' }, t('dv.step', { n })),
       h('div', {},
         h('h2', {}, t(`dv.step.${n}.t`)),

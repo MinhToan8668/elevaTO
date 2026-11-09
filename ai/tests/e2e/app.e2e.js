@@ -227,6 +227,14 @@ function bctcPdf() {
   return pdfCho;
 }
 
+
+/** Tab định giá: các bước thu gọn mặc định — mở hết để bấm / điền được ô trong từng bước. */
+async function moBuoc(page) {
+  await page.waitForSelector('.deal details.dv-step');
+  await page.evaluate(() => document.querySelectorAll('details.dv-step').forEach((d) => { d.open = true; }));
+  await page.waitForFunction(() => [...document.querySelectorAll('details.dv-step')].every((d) => d.open));
+}
+
 test('luồng chính: đăng ký → tải PDF → nhận trang → trích xuất → sửa ô → xuất file → mở lại phiên', { timeout: 180_000 }, async () => {
   const pdfPath = await bctcPdf();
   const { page, errors } = await newPage();
@@ -1003,6 +1011,7 @@ test('tab M&A & định giá: mở phiên có số, ra EBITDA chuẩn hoá, cầ
   await page.locator('#restore button.btn.sm').first().click();
   await page.locator('.rail a[data-step="6"]').click();
   await page.locator('#tabb-DEAL').click();
+  await moBuoc(page);
   await page.waitForSelector('.deal .dl-sec');
   const txt = await page.locator('.deal').textContent();
   for (const s of ['Normalised EBITDA', 'Net debt', 'Beneish', "Altman Z''", 'EV / EBITDA', 'Debt capacity']) assert.ok(txt.includes(s), `thiếu "${s}"`);
@@ -1201,6 +1210,7 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await page.locator('#restore button.btn.sm').first().click();
   await page.locator('.rail a[data-step="6"]').click();
   await page.locator('#tabb-DEAL').click();
+  await moBuoc(page);
   await page.waitForSelector('.deal .dv-grid');
   const txt = await page.locator('.deal').innerText();
   for (const s of ['DCF valuation (FCFF)', 'WACC', 'Target price & recommendation', 'Piotroski']) assert.ok(txt.toLowerCase().includes(s.toLowerCase()), `thiếu "${s}"`);
@@ -1211,6 +1221,12 @@ test('định giá DCF, giá mục tiêu gia quyền và thương vụ M&A: nh�
   await o('Shares outstanding').dispatchEvent('change');
   await o('Market price').fill('30000');
   await o('Market price').dispatchEvent('change');
+  // Chưa có peer, chưa nhập multiple: multiple mặc định chỉ tham khảo; DCF của mẫu này âm → bị loại, có dòng báo lý do.
+  await page.waitForSelector('#dv-step-6 .msg.warn:has-text("không tính vào target price")');
+  assert.match(await page.locator('#dv-step-6').innerText(), /multiple mặc định — chỉ tham khảo/);
+  const pe = page.locator('#dv-step-5 .dl-sec').first().locator('tbody tr').nth(1).locator('input.dl-mult').nth(1);
+  await pe.fill('12');
+  await pe.dispatchEvent('change');
   await page.waitForFunction(() => /BUY|ACCUMULATE|HOLD|UNDERPERFORM|SELL/.test(document.querySelector('.deal').innerText) && /equity theo market price/.test(document.querySelector('.deal').innerText));
 
   // Bảng dự phóng: cột A (thực tế) cạnh cột F; sửa tăng trưởng riêng năm thứ 2 → ô được đánh dấu ghi đè, FCFF đổi
@@ -1406,6 +1422,7 @@ test('bảng peer (16.Comps): dán từ Excel ra bội số, trung vị, giá ng
   await page.locator('#restore button.btn.sm').first().click();
   await page.locator('.rail a[data-step="6"]').click();
   await page.locator('#tabb-DEAL').click();
+  await moBuoc(page);
   await page.waitForSelector('.cp-bar button:has-text("Dán từ Excel")');
   await page.locator('.cp-bar button', { hasText: 'Dán từ Excel' }).click();
   await page.locator('textarea[aria-label="Dán từ Excel"]').fill([
@@ -1443,6 +1460,7 @@ test('hồi quy beta từ file dữ liệu giá: ra β như model (1,3364), bấ
   await page.locator('#restore button.btn.sm').first().click();
   await page.locator('.rail a[data-step="6"]').click();
   await page.locator('#tabb-DEAL').click();
+  await moBuoc(page);
   await page.locator('.dv-beta summary').click();
   await page.setInputFiles('.dv-beta input[type=file]', fileURLToPath(new URL('../fixtures/dgw-beta.tsv', import.meta.url)));
   await page.waitForSelector('.dv-beta .hbox');
@@ -1475,6 +1493,7 @@ test('tải giá từ sàn để hồi quy beta: gọi máy chủ /gia, ra beta,
   await page.locator('#restore button.btn.sm').first().click();
   await page.locator('.rail a[data-step="6"]').click();
   await page.locator('#tabb-DEAL').click();
+  await moBuoc(page);
   await page.locator('.dv-beta summary').click();
   await page.locator('.dv-beta .bt-ma').fill('dgw');
   await page.locator('.dv-beta button', { hasText: 'Tải giá từ sàn' }).click();
@@ -1512,6 +1531,7 @@ test('mạng chặn máy chủ (Failed to fetch) → trang tự gọi thẳng VN
   await page.locator('#restore button.btn.sm').first().click();
   await page.locator('.rail a[data-step="6"]').click();
   await page.locator('#tabb-DEAL').click();
+  await moBuoc(page);
   await page.locator('.dv-beta summary').click();
   await page.locator('.dv-beta .bt-ma').fill('dgw');
   await page.locator('.dv-beta button', { hasText: 'Tải giá từ sàn' }).click();

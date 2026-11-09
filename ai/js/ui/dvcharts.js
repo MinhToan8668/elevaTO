@@ -87,7 +87,7 @@ export function waterfallChart(steps, { title = '' } = {}) {
       return s('g', {},
         s('rect', { x: x0, y: top, width: w, height: hh, rx: 3, class: cls }),
         i < bars.length - 1 ? s('line', { x1: x0 + w, x2: x0 + bw, y1: y(b.a1), y2: y(b.a1), class: 'wf-link' }) : null,
-        s('text', { x: x0 + w / 2, y: top - 5, class: 'lbl', 'text-anchor': 'middle' }, `${b.v < 0 && !b.total ? '−' : ''}${fmtN(Math.abs(b.v))}`),
+        s('text', { x: x0 + w / 2, y: top - 5, class: 'lbl', 'text-anchor': 'middle' }, `${b.v < 0 ? '−' : ''}${fmtN(Math.abs(b.v))}`),
         s('text', { x: x0 + w / 2, y: H - B + 16, class: 'lbl wf-name', 'text-anchor': 'middle' },
           haiDong(b.label).map((d, k) => s('tspan', { x: x0 + w / 2, dy: k ? 13 : 0 }, d))),
         s('title', {}, `${b.label}: ${fmtN(b.v)}`));
@@ -95,33 +95,43 @@ export function waterfallChart(steps, { title = '' } = {}) {
 }
 
 /**
- * Cột theo năm: doanh thu (nhạt) và FCFF (đậm); cột năm actual tô mờ khác năm dự phóng.
+ * Doanh thu (cột, trục trái) và FCFF (đường, trục phải): hai đại lượng chênh nhau cả chục lần nên mỗi thứ một
+ * trục; vạch 0 hai trục thẳng hàng để FCFF âm đọc được ngay. Năm actual tô mờ khác năm dự phóng.
  * @param cols [{ label, actual, rev, fcff }]
  */
 export function revFcffChart(cols, { names = ['', ''], title = '' } = {}) {
   const ok = cols.filter((c) => Number.isFinite(c.rev) || Number.isFinite(c.fcff));
   if (!ok.length) return null;
-  const vals = ok.flatMap((c) => [c.rev, c.fcff]).filter(Number.isFinite);
-  const sc = nice(Math.min(0, ...vals), Math.max(...vals));
-  const T = 26, B = 40, H = 280, L = 70;
-  const y = (v) => T + (1 - (v - sc.lo) / (sc.hi - sc.lo)) * (H - T - B);
-  const bw = (W - L - 10) / ok.length;
-  const lam = (v, x0, w, cls) => (Number.isFinite(v) ? s('rect', { x: x0, y: Math.min(y(0), y(v)), width: w, height: Math.max(1.5, Math.abs(y(v) - y(0))), rx: 2, class: cls }) : null);
+  const rv = ok.map((c) => c.rev).filter(Number.isFinite), fv = ok.map((c) => c.fcff).filter(Number.isFinite);
+  const a = nice(Math.min(0, ...rv), Math.max(0, ...rv)), b = nice(Math.min(0, ...fv), Math.max(0, ...fv));
+  // Đưa vạch 0 hai trục về cùng một độ cao: phần âm (tỷ lệ) lấy theo trục có phần âm lớn hơn.
+  const am = (x) => (x.hi > x.lo ? -x.lo / (x.hi - x.lo) : 0);
+  const p = Math.min(0.9, Math.max(am(a), am(b)));
+  const keo = (x) => (x.hi > 0 ? { ...x, lo: Math.min(x.lo, (-p * x.hi) / (1 - p)) } : x);
+  const sa = keo(a), sb = keo(b);
+  const T = 26, B = 40, H = 280, L = 70, R = 64;
+  const yA = (v) => T + (1 - (v - sa.lo) / (sa.hi - sa.lo)) * (H - T - B);
+  const yB = (v) => T + (1 - (v - sb.lo) / (sb.hi - sb.lo)) * (H - T - B);
+  const trong = (x) => x.ticks.filter((v) => v >= x.lo - 1e-9 && v <= x.hi + 1e-9);
+  const bw = (W - L - R) / ok.length;
   const ranh = ok.findIndex((c) => !c.actual);
+  const cx = (i) => L + i * bw + bw / 2;
+  const diem = ok.map((c, i) => (Number.isFinite(c.fcff) ? [cx(i), yB(c.fcff), c] : null)).filter(Boolean);
   return s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'cv dvc', role: 'img', 'aria-label': title },
-    sc.ticks.map((v) => s('g', {}, s('line', { x1: L, x2: W - 10, y1: y(v), y2: y(v), class: Math.abs(v) < 1e-9 ? 'ax0' : 'grid' }),
-      s('text', { x: L - 6, y: y(v) + 4, class: 'lbl', 'text-anchor': 'end' }, fmtN(v)))),
-    ranh > 0 ? s('rect', { x: L + ranh * bw, y: T - 10, width: W - 10 - (L + ranh * bw), height: H - T - B + 10, class: 'rf-fc' }) : null,
-    ok.map((c, i) => {
-      const x0 = L + i * bw;
-      return s('g', {},
-        lam(c.rev, x0 + bw * 0.12, bw * 0.38, `rf-rev${c.actual ? ' a' : ''}`),
-        lam(c.fcff, x0 + bw * 0.5, bw * 0.38, `rf-fcff${c.actual ? ' a' : ''}`),
-        s('text', { x: x0 + bw / 2, y: H - B + 18, class: 'lbl', 'text-anchor': 'middle' }, c.label),
-        s('title', {}, `${c.label}: ${names[0]} ${Number.isFinite(c.rev) ? fmtN(c.rev) : '—'} · ${names[1]} ${Number.isFinite(c.fcff) ? fmtN(c.fcff) : '—'}`));
-    }),
-    s('g', {}, s('rect', { x: L, y: 4, width: 12, height: 12, rx: 3, class: 'rf-rev' }), s('text', { x: L + 18, y: 14, class: 'lbl' }, names[0]),
-      s('rect', { x: L + 120, y: 4, width: 12, height: 12, rx: 3, class: 'rf-fcff' }), s('text', { x: L + 138, y: 14, class: 'lbl' }, names[1])));
+    trong(sa).map((v) => s('g', {}, s('line', { x1: L, x2: W - R, y1: yA(v), y2: yA(v), class: Math.abs(v) < 1e-9 ? 'ax0' : 'grid' }),
+      s('text', { x: L - 6, y: yA(v) + 4, class: 'lbl', 'text-anchor': 'end' }, fmtN(v)))),
+    fv.length ? trong(sb).map((v) => s('text', { x: W - R + 6, y: yB(v) + 4, class: 'lbl rf-ax2' }, fmtN(v))) : null,
+    ranh > 0 ? s('rect', { x: L + ranh * bw, y: T - 10, width: W - R - (L + ranh * bw), height: H - T - B + 10, class: 'rf-fc' }) : null,
+    ok.map((c, i) => s('g', {},
+      Number.isFinite(c.rev) ? s('rect', { x: L + i * bw + bw * 0.2, y: Math.min(yA(0), yA(c.rev)), width: bw * 0.6, height: Math.max(1.5, Math.abs(yA(c.rev) - yA(0))), rx: 2, class: `rf-rev${c.actual ? ' a' : ''}` }) : null,
+      s('text', { x: cx(i), y: H - B + 18, class: 'lbl', 'text-anchor': 'middle' }, c.label),
+      s('title', {}, `${c.label}: ${names[0]} ${Number.isFinite(c.rev) ? fmtN(c.rev) : '—'} · ${names[1]} ${Number.isFinite(c.fcff) ? fmtN(c.fcff) : '—'}`))),
+    diem.length > 1 ? s('polyline', { points: diem.map(([x, y]) => `${x},${y}`).join(' '), class: 'rf-line' }) : null,
+    diem.map(([x, y, c]) => s('circle', { cx: x, cy: y, r: 4, class: `rf-dot${c.actual ? ' a' : ''}${c.fcff < 0 ? ' neg' : ''}` },
+      s('title', {}, `${c.label}: ${names[1]} ${fmtN(c.fcff)}`))),
+    s('g', {}, s('rect', { x: L, y: 4, width: 12, height: 12, rx: 3, class: 'rf-rev' }), s('text', { x: L + 18, y: 14, class: 'lbl' }, `${names[0]} (${names[2] || '◂'})`),
+      s('line', { x1: L + 170, x2: L + 186, y1: 10, y2: 10, class: 'rf-line' }), s('circle', { cx: L + 178, cy: 10, r: 3.5, class: 'rf-dot' }),
+      s('text', { x: L + 192, y: 14, class: 'lbl' }, `${names[1]} (${names[3] || '▸'})`)));
 }
 
 /** Màu ô bảng độ nhạy theo % chênh với giá thị trường: xanh khi cao hơn, đỏ khi thấp hơn. */

@@ -146,8 +146,9 @@ function tyLe(d, c, cPrev) {
   if (d.k === 'otherInc') return pRev(20);
   if (d.k === 'otherExp') return pRev(21, -1);
   if (d.k === 'yield') { const c0 = cPrev ? actualRow(cPrev).cash : null; return c0 && g(12) !== null ? g(12) / c0 : null; }
-  if (d.k === 'intRate') { const n0 = cPrev ? (num(cPrev[78]) ?? 0) + (num(cPrev[80]) ?? 0) : null; return n0 && g(13) !== null ? -g(13) / n0 : null; }
-  if (d.k === 'taxRate') return A.pbt ? -A.tax / A.pbt : null;
+  // Lãi suất ngoài [0; 30%] (nợ đầu kỳ gần 0) và thuế suất năm lỗ / ngoài [0; 50%] không đưa vào bình quân.
+  if (d.k === 'intRate') { const n0 = cPrev ? (num(cPrev[78]) ?? 0) + (num(cPrev[80]) ?? 0) : null; const x = n0 > 0 && g(13) !== null ? -g(13) / n0 : null; return x !== null && x >= 0 && x <= 0.3 ? x : null; }
+  if (d.k === 'taxRate') { const x = A.pbt > 0 ? -A.tax / A.pbt : null; return x !== null && x >= 0 && x <= 0.5 ? x : null; }
   const v = g(d.row);
   if (v === null) return d.basis === 'flat' || d.basis === 'level' ? 0 : null;
   switch (d.basis) {
@@ -190,8 +191,10 @@ export function usefulLives(inputFs, fs, ranges = {}) {
     const k = ranges?.[c.cls];
     const tm = k && Number.isFinite(k.min) && Number.isFinite(k.max);
     const lo = tm ? k.min : c.min, hi = tm ? k.max : c.max;
-    const clamp = est === null ? (hi ? Math.round((lo + hi) / 2) : 0) : Math.min(hi, Math.max(lo, est));
-    out[c.cls] = { est, applied: fs.life[c.cls] ?? clamp, user: fs.life[c.cls] !== undefined, min: lo, max: hi, src: tm ? 'tm' : 'md' };
+    // Lịch sử có nguyên giá mà không có khấu hao (vd. TSCĐ vô hình chưa tách nhóm, quyền sử dụng đất): không khấu hao,
+    // trừ khi thuyết minh có khung số năm (như model: chặn về min) hoặc người dùng nhập.
+    const clamp = est === null ? (tm ? lo : 0) : Math.min(hi, Math.max(lo, est));
+    out[c.cls] = { est, applied: fs.life[c.cls] ?? clamp, user: fs.life[c.cls] !== undefined, min: lo, max: hi, src: tm ? 'tm' : est === null ? 'nohist' : 'md' };
   }
   return out;
 }

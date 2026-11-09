@@ -1133,6 +1133,11 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dvc .rf-rev{fill:var(--blue);opacity:.75}
 .dvc .rf-fcff{fill:var(--em)}
 .dvc .rf-rev.a,.dvc .rf-fcff.a{opacity:.45}
+.dvc .rf-line{fill:none;stroke:var(--em);stroke-width:2.5}
+.dvc .rf-dot{fill:var(--em);stroke:var(--bg,#fff);stroke-width:1.5}
+.dvc .rf-dot.a{fill:var(--bg,#fff);stroke:var(--em);stroke-width:2}
+.dvc .rf-dot.neg{fill:var(--red);stroke:var(--red)}
+.dvc .rf-ax2{fill:var(--em)}
 .dvc .rf-fc{fill:var(--em-soft);opacity:.6}
 .dvc .grid{stroke:var(--line)}
 .dvc .ax0{stroke:var(--line-3);stroke-width:1.5}
@@ -1164,7 +1169,19 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-node.side .dv-badge{background:var(--gold)}
 .dv-road-note{margin-top:10px}
 .dv-step{margin:26px 0 8px;padding:16px 16px 12px;border-radius:16px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 45%,transparent);scroll-margin-top:96px}
-.dv-step-h{display:flex;gap:12px;align-items:flex-start;margin-bottom:6px}
+.dv-step-h{display:flex;gap:12px;align-items:flex-start;margin-bottom:6px;cursor:pointer;list-style:none;position:relative;padding-right:30px}
+.dv-step-h::-webkit-details-marker{display:none}
+.dv-step-h::after{content:"";position:absolute;right:6px;top:8px;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.dv-step[open]>.dv-step-h::after{transform:rotate(-135deg);top:12px}
+.dv-step:not([open]){padding-bottom:8px}
+.dv-step:not([open])>.dv-step-h{margin-bottom:0}
+.dv-step-h:focus-visible{outline:2px solid var(--em);outline-offset:4px;border-radius:8px}
+.dv-ref{margin-top:10px;padding:8px 12px;border-radius:12px;border:1px dashed var(--line-2);background:var(--surface)}
+.dv-ref summary{cursor:pointer;color:var(--muted);font-size:13px}
+.dv-ref[open] summary{margin-bottom:6px}
+.dv-ro td:not(:first-child){color:var(--muted)}
+.dv-scen-tag{margin-left:6px}
+.ff-note{margin-top:6px;font-size:12px}
 .dv-step-h h2{margin:0;font-size:18px;color:var(--strong)}
 .dv-step-h .dv-badge{height:28px;font-size:13px;margin-top:2px}
 .dv-why{margin:4px 0 6px;color:var(--text);font-size:13.5px}
@@ -1179,7 +1196,20 @@ dialog.chart-zoom .chart.big .lbl{font-size:10px}
 .dv-sub{display:flex;align-items:center;gap:8px;margin:18px 0 4px;font-size:15px;color:var(--strong)}
 .dv-num{display:inline-flex;padding:1px 8px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line-2);font-size:12px;font-weight:800;color:var(--em-text)}
 .dv-sublead{margin:0 0 6px}
-@media (max-width:640px){.dv-road .dv-flow{grid-template-columns:1fr;gap:20px}.dv-road .dv-flow li:not(:last-child)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-19px;transform:translateX(-50%)}}
+@media (max-width:640px){
+  /* Sơ đồ lộ trình gọn: 2 cột, bỏ dòng công thức (đã có ở đầu từng bước), bỏ mũi tên giữa các thẻ. */
+  .dv-road .dv-flow{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .dv-road .dv-flow li:not(:last-child)::after{content:none}
+  .dv-node{padding:9px 10px;gap:3px}
+  .dv-node-f{display:none}
+  .dv-step{padding:12px 10px 10px;margin-top:16px}
+  .dv-step-h{flex-wrap:wrap;gap:6px 10px}
+  .dv-step-h h2{font-size:16px}
+  .dv-formula{font-size:11.5px}
+  /* Biểu đồ: giữ chiều rộng tối thiểu để chữ đọc được, cuộn ngang trong khung. */
+  .dv-charts .chart{overflow-x:auto}
+  .dv-charts .chart .cv{min-width:560px}
+}
 /* Revenue build-up theo mảng · SOTP · phương pháp khác (ui/dvparts.js) */
 .dv-name{width:100%;min-width:140px;box-sizing:border-box;background:var(--surface);border:1px dashed var(--line-2);border-radius:6px;padding:4px 7px;font:inherit;font-size:12.5px;color:var(--strong)}
 .dv-segn{display:flex;align-items:center;gap:4px}
