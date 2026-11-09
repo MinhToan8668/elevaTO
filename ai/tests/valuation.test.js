@@ -431,3 +431,31 @@ test('kịch bản theo mảng như 04.Drivers A–B: Bull / Bear nhập riêng 
   const kb = scenarioValuation(a, { ...base, scen: { ...base.scen, pick: 'bull' } });
   gan(kb.rows[1].equity, rB.equity, 1e-12, 'dòng Base của bảng kịch bản vẫn là Base dù công tắc đang ở Bull');
 });
+
+test('vững với dữ liệu xấu: exit / blend khi EBITDA năm cuối âm → Gordon + báo; thuế suất năm lỗ, lãi suất nợ ~0 không vào bình quân', () => {
+  const r = dcfValuation(A(), { years: 3, margin: -0.05, tvMethod: 'exit' });
+  assert.ok(r.issues.includes('noExitTv'), 'báo');
+  assert.equal(r.tvMethodUsed, 'gordon');
+  assert.ok(Number.isFinite(r.ev));
+  // Năm lỗ / nợ đầu kỳ gần 0: bỏ khỏi bình quân thay vì kéo thuế suất / lãi suất lệch hàng trăm %.
+  const by = JSON.parse(JSON.stringify(DGW3.byYear));
+  by[2024][50] = { v: 0 }; by[2024][22] = { v: 0 };
+  by[2023][23] = { v: -500000 };                         // thuế hiện hành 2023 gấp mấy lần LNTT
+  by[2023][78] = { v: 1 }; by[2023][80] = { v: 0 };      // nợ cuối 2023 ≈ 0 → lãi suất 2024 vô lý
+  const m = model3({ inputFs: inputFsFrom(by), valuation: { shares: null } }, DGW3.rev5.map((rev, i) => ({ t: i + 1, rev: rev * 1e6, gp: DGW3.gp5[i] * 1e6, cogs: (rev - DGW3.gp5[i]) * 1e6, ebit: 0, tax: 0.2 })),
+    { fs: cleanFs({}), kd: 0.07, capexPct: 0, shares: null });
+  assert.ok(m.drivers.taxRate.applied[0] >= 0 && m.drivers.taxRate.applied[0] <= 0.5, `thuế ${m.drivers.taxRate.applied[0]}`);
+  assert.ok(m.drivers.intRate.applied[0] >= 0 && m.drivers.intRate.applied[0] <= 0.3, `lãi ${m.drivers.intRate.applied[0]}`);
+});
+
+test('giá mục tiêu: bội số mặc định chưa có peer không vào bình quân; có peer thì lấy trung vị peer; báo phương pháp bị loại & lý do', () => {
+  const a = A(); a.valuation = { ...a.valuation, methods: [{ key: 'pe', equity: [0, 400e9, 0] }, { key: 'evEbitda', equity: [0, -50e9, 0] }, { key: 'pb', equity: [0, 900e9, 0] }] };
+  const dcf = { equity: 1000e9, inputs: cleanVal({ price: 10000 }) };           // trọng số mặc định 50 / 25 / 10 / 5 / 10
+  const b = blendedTarget(a, dcf, { defaultMult: { pe: true, pb: true } });
+  gan(b.equity, 1000e9, 1e-12, 'chỉ còn DCF');
+  assert.deepEqual(b.excluded.map((x) => `${x.key}:${x.reason}`).sort(), ['evEbitda:negative', 'evRev:missing', 'pb:default', 'pe:default']);
+  assert.equal(b.wUsed, 50);
+  const b2 = blendedTarget(a, dcf, { peer: { pe: 600e9 } });
+  gan(b2.rows.find((x) => x.key === 'pe').equity, 600e9, 1e-12, 'P/E theo trung vị peer');
+  assert.equal(b2.rows.find((x) => x.key === 'pe').src, 'peer');
+});

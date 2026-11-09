@@ -44,7 +44,7 @@ export function renderDeal(store) {
     stepWrap(1, ebitdaTable(a, money, ul), manualAdj(inp, save, unit, money), quality(a), flagBox(a, money)),
     stepWrap(2, wcTable(a, money), cashTable(a, money)),
     stepWrap(3, dcfBlock(a, inp, save, money, ul), threeBlock(a, inp, save, money, ul)),
-    stepWrap(4, bridge(a, money)),
+    stepWrap(4, bridge(a, inp, money)),
     stepWrap(5, valuation(a, inp, save, money, ul), compsBlock(a, inp, save, money, unit, ul), sotpBlock(a, inp, save, money, unit, ul)),
     stepWrap(6, targetBlock(a, inp, save, money)),
     stepWrap(7, capacity(a, inp, save, money)),
@@ -164,10 +164,19 @@ function quality(a) {
     piotroskiCard(a, ZONE_TONE)));
 }
 
-function bridge(a, money) {
+/** Cầu nối EV → vốn chủ theo đúng cách đang dùng để ra giá DCF (như 15.DCF hoặc đầy đủ); cách còn lại để tham khảo. */
+function bridge(a, inp, money) {
   const v = a.valuation, m = a.base.m;
   const dong = (label, val, cls = '') => h('tr', { class: cls }, h('td', {}, label), h('td', { class: 'num' }, money(val)));
-  return sec('bridge', h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' }, h('tbody', {},
+  const bang = (...rows) => h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' }, h('tbody', {}, ...rows)));
+  const truModel = (m.debt || 0) - (m.cash || 0) + (v.minority || 0);
+  const truFull = (v.netDebt || 0) + v.debtLikeSum + (v.minority || 0) - v.nonOpSum;
+  const model = bang(
+    dong(t('dl.debt'), m.debt),
+    dong(t('dl.cash'), m.cash === null ? null : -m.cash, 'dl-sub'),
+    dong(t('dl.minority'), v.minority || 0, 'dl-sub'),
+    dong(t('dl.evToEq'), truModel, 'dl-tot'));
+  const full = bang(
     dong(t('dl.debt'), m.debt),
     dong(t('dl.cash'), m.cash === null ? null : -m.cash, 'dl-sub'),
     dong(t('dl.cashLike'), m.cashLike === null ? null : -m.cashLike, 'dl-sub'),
@@ -175,7 +184,15 @@ function bridge(a, money) {
     v.debtLike.map((x) => dong(t(`dl.dl.${x.key}`), x.v, 'dl-sub')),
     v.minority ? dong(t('dl.minority'), v.minority, 'dl-sub') : null,
     v.nonOp.map((x) => dong(t(`dl.no.${x.key}`), -x.v, 'dl-sub')),
-    dong(t('dl.evToEq'), (v.netDebt || 0) + v.debtLikeSum + (v.minority || 0) - v.nonOpSum, 'dl-tot')))));
+    dong(t('dl.evToEq'), truFull, 'dl-tot'));
+  const dangDung = inp.val.bridge === 'full' ? 'full' : 'model';
+  const khac = dangDung === 'model' ? 'full' : 'model';
+  return h('section', { class: 'dl-sec' },
+    h('h3', {}, t('dl.bridge.h')),
+    h('p', { class: 'priv' }, h('span', { class: 'tag em' }, t('dl.bridge.using')), ' ', t(`dl.bridge.lead.${dangDung}`)),
+    dangDung === 'model' ? model : full,
+    h('details', { class: 'dv-ref' }, h('summary', {}, t(`dl.bridge.ref.${khac}`), ' ', h('span', { class: 'tag' }, t('dl.bridge.diff', { v: money(truModel - truFull) }))),
+      h('p', { class: 'priv' }, t(`dl.bridge.lead.${khac}`)), khac === 'model' ? model : full));
 }
 
 function valuation(a, inp, save, money, ul) {
@@ -200,26 +217,7 @@ function valuation(a, inp, save, money, ul) {
     h('p', { class: 'priv' }, t('dl.val.base', { ebitda: money(v.ebitdaAnnual), e: money(v.earnings), unit: ul }),
       v.shares ? ' ' + t('dl.val.shares', { n: Math.round(v.shares).toLocaleString('vi-VN') }) : ' ' + t('dl.val.noShares')),
     h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' }, h('thead', {}, head), h('tbody', {}, rows))),
-    football(v, money, ul));
-}
-
-/** "Football field": mỗi phương pháp một thanh từ mức thấp đến mức cao, vạch ở mức giữa. */
-function football(v, money, ul) {
-  const ms = v.methods;
-  if (!ms.length) return null;
-  const all = ms.flatMap((m) => m.equity);
-  const lo = Math.min(0, ...all), hi = Math.max(...all);
-  if (!(hi > lo)) return null;
-  const x = (n) => `${((n - lo) / (hi - lo)) * 100}%`;
-  return h('div', { class: 'ff', role: 'img', 'aria-label': t('dl.ff') },
-    h('h4', {}, t('dl.ff'), h('small', { class: 'priv' }, ` (${ul})`)),
-    ms.map((m) => h('div', { class: 'ff-row' },
-      h('span', { class: 'ff-lbl' }, t(`dl.m.${m.key}`)),
-      h('div', { class: 'ff-track' },
-        lo < 0 ? h('i', { class: 'ff-zero', style: { left: x(0) } }) : null,
-        h('i', { class: 'ff-bar', style: { left: x(m.equity[0]), width: `calc(${x(m.equity[2])} - ${x(m.equity[0])})` } }),
-        h('i', { class: 'ff-mid', style: { left: x(m.equity[1]) } })),
-      h('span', { class: 'ff-v' }, `${money(m.equity[0])} – ${money(m.equity[2])}`))));
+    h('p', { class: 'priv' }, t('dl.ff.moved')));
 }
 
 function capacity(a, inp, save, money) {

@@ -44,11 +44,13 @@ export function lboAnalysis(a, r, o = {}) {
     const quet = Math.min(s - batBuoc, duThat * L.sweep);
     s -= batBuoc + quet;
     cash += du - quet;
-    rows.push({ t, ebitda: f.ebitda, capex: f.capex, dNwc: f.dNwc, tax: thue, cfads, intS, intM, mandatory: batBuoc, sweep: quet, senior: s, mezz: m, cash,
-      lev: f.ebitda > 0 ? (s + m) / f.ebitda : null, cover: lai > 0 ? f.ebitda / lai : null });
+    // Đòn bẩy, khả năng trả lãi và bội số thoát theo EBITDA hoạt động — cùng định nghĩa với EBITDA lúc vào (chuẩn hoá).
+    const eOp = f.ebitdaOp ?? f.ebitda;
+    rows.push({ t, ebitda: f.ebitda, ebitdaOp: eOp, capex: f.capex, dNwc: f.dNwc, tax: thue, cfads, intS, intM, mandatory: batBuoc, sweep: quet, senior: s, mezz: m, cash,
+      lev: eOp > 0 ? (s + m) / eOp : null, cover: lai > 0 ? eOp / lai : null });
   }
   const last = rows[N - 1];
-  const evOut = last.ebitda * exit;
+  const evOut = (last.ebitdaOp ?? last.ebitda) * exit;
   const equityOut = evOut - last.senior - last.mezz + last.cash;
   const moic = equityOut / equity0;
   const irr = equityOut > 0 ? moic ** (1 / N) - 1 : -1;

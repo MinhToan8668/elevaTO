@@ -207,10 +207,19 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     Ô nhập gom theo nhóm có tiêu đề (Market data, Cost of equity, Deal terms, Funding structure…), nhãn nằm trên ô.
   - **Bảng điều khiển định giá** (`js/ui/dvcharts.js`, SVG vẽ tay): thẻ số chính (giá mục tiêu gia quyền, upside,
     khuyến nghị, giá DCF kèm tỷ trọng giá trị cuối kỳ, WACC / g, giá trị kỳ vọng theo kịch bản); **football field**
-    (DCF lấy dải từ bảng độ nhạy WACC ± 0,5 / g ± 0,5, DCF bội số thoát, bội số thấp / giữa / cao, trung vị peer, EPV,
-    Graham, kịch bản) với vạch giá thị trường và giá mục tiêu; **thác nước** PV FCFF + PV giá trị cuối kỳ = EV − nợ
-    ròng − tương đương nợ − cổ đông không kiểm soát + tài sản ngoài hoạt động = vốn chủ; **doanh thu & FCFF** các
-    năm actual cạnh năm dự phóng. Bảng độ nhạy tô màu theo % chênh với giá thị trường.
+    (DCF lấy dải hình chữ thập từ bảng độ nhạy: WACC ± 0,5 ở g gốc và g ± 0,5 ở WACC gốc; DCF bội số thoát, bội số thấp /
+    giữa / cao, trung vị peer, EPV, Graham, kịch bản; phương pháp ra giá trị âm không vẽ mà ghi chú bên dưới) với vạch
+    giá thị trường và giá mục tiêu — chỉ còn một football field (bỏ bản trùng ở bước 5); **thác nước** EV → vốn chủ theo
+    đúng cầu nối đang dùng; **doanh thu (cột, trục trái) & FCFF (đường, trục phải)** các năm actual cạnh năm dự phóng.
+    Bảng độ nhạy tô màu theo % chênh với giá thị trường. Thẻ số gắn nhãn khi đang chạy kịch bản Bull / Bear, kèm nhãn
+    cảnh báo (WACC thấp bất thường, terminal value > 75% EV, TV phải chuyển sang Gordon, có năm FCFF âm).
+  - **Trình bày theo lộ trình 9 bước** (`js/ui/dvguide.js`): mỗi bước thu gọn được (mặc định mở DCF và target price,
+    bấm thẻ trên sơ đồ là bước đó tự mở). Ở chế độ mô hình ba báo cáo tích hợp: sơ đồ nối mô hình đổi theo (driver
+    C1 → 10.FA_SCHED → 07.BS → 08.CF), bảng dự phóng 3.4 khoá các dòng biên EBIT / D&A / capex / thuế ("từ 3.6"), giữ
+    tăng trưởng và biên gộp sửa được, thêm dòng EBITDA hoạt động. Bước 4 hiện cầu nối đang dùng (như 15.DCF hoặc đầy
+    đủ), cách còn lại để tham khảo kèm chênh lệch. Bảng target price ghi nguồn bội số (trung vị peer / mặc định) và lý
+    do phương pháp bị loại (thiếu số, giá trị âm, bội số mặc định chưa có peer chỉ để tham khảo). Màn hình hẹp: sơ đồ
+    2 cột gọn, biểu đồ cuộn ngang.
   - **Thiết lập mô hình** (`js/core/presets.js`, từ sheet 19.Playbook): **10 mẫu ngành** (chung, phân phối, bán lẻ
     chuỗi, sản xuất, tiêu dùng, tiện ích, công nghệ, xây dựng, bất động sản, ngân hàng) — mỗi mẫu đặt cách dự phóng
     doanh thu, cách tính giá trị cuối kỳ, trọng số giá mục tiêu và hiện ghi chú "dự phóng thế nào · định giá ưu tiên

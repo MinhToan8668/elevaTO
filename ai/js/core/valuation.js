@@ -47,7 +47,8 @@ export const DEFAULT_VAL = {
   revMode: 'growth',      // cách dự phóng doanh thu: growth · volprice (sản lượng × giá) · stores (cửa hàng × DT/cửa hàng) · manual
   rev: { vol: 0.03, price: 0.02, stores0: null, storesAdd: 0, perStore: 0.03, manual: [] },
   tvMethod: 'gordon',     // giá trị cuối kỳ: gordon · exit (bội số EV/EBITDA lúc thoát) · blend (bình quân hai cách)
-  scen: { on: false, baseP: 50, bull: { growth: 0.03, margin: 0.01, wacc: -0.01, p: 25 }, bear: { growth: -0.03, margin: -0.01, wacc: 0.01, p: 25 } },
+  // ΔWACC mặc định 0: model gốc chỉ đổi tăng trưởng & biên theo kịch bản, WACC giữ nguyên (người dùng tự nhập nếu muốn).
+  scen: { on: false, baseP: 50, bull: { growth: 0.03, margin: 0.01, wacc: 0, p: 25 }, bear: { growth: -0.03, margin: -0.01, wacc: 0, p: 25 } },
   preset: '',             // mẫu ngành đang dùng (core/presets.js)
   segs: [],               // dự phóng doanh thu theo mảng: [{ name, rev0 (đồng, null = theo thuyết minh), g (tăng trưởng chung, null = như cả công ty), gy: [từng năm] }]
   // Module dự phóng chi tiết (bật / tắt): gm = biên gộp & SG&A (thay EBIT margin) · wcDays = vốn lưu động theo số ngày
@@ -353,7 +354,9 @@ export function evAt(flows, w, g, { method = 'gordon', exit = null } = {}) {
   const pv = flows.reduce((s, f) => s + f.fcff / (1 + w) ** f.t, 0);
   const last = flows[n - 1];
   const gordon = w > g ? last.fcff * (1 + g) / (w - g) : null;
-  const thoat = exit > 0 && last.ebitda > 0 ? last.ebitda * exit : null;
+  // Bội số thoát áp lên EBITDA HOẠT ĐỘNG (không gồm thu nhập tài chính / khác) — cùng định nghĩa với bội số EV/EBITDA.
+  const eb = last.ebitdaOp ?? last.ebitda;
+  const thoat = exit > 0 && eb > 0 ? eb * exit : null;
   // Steps của model: giá trị cuối kỳ theo Gordon HOẶC theo bội số EV/EBITDA lúc thoát; "blend" lấy bình quân.
   const tv = method === 'exit' ? thoat : method === 'blend' ? (gordon !== null && thoat !== null ? (gordon + thoat) / 2 : null) : gordon;
   if (tv === null) return null;
@@ -396,8 +399,11 @@ export function dcfValuation(a, inputs, adj0 = {}) {
   // Mô hình tích hợp: Kd = lãi suất bình quân năm dự phóng đầu (11.Debt), thuế = thuế suất hiệu dụng năm actual cuối (như 15.DCF).
   const tichHop = inp.fs.src === 'model' && a.inputFs?.years?.length > 0;
   const w3 = tichHop ? waccFrom3(a.inputFs, inp.fs, d.kd) : null;
-  const kdW = inp.kd ?? (w3 && Number.isFinite(w3.kd) && w3.kd > 0 ? w3.kd : d.kd);
-  const taxW = inp.tax ?? (w3 && Number.isFinite(w3.tax) && w3.tax >= 0 && w3.tax < 0.5 ? w3.tax : d.tax);
+  // Chặn số suy từ lịch sử: Kd trong [Rf + 1%; 20%], thuế trong [5%; 35%] — ngoài khoảng thì dùng số mặc định và báo.
+  const kdOk = (x) => Number.isFinite(x) && x >= inp.rf + 0.01 - 1e-9 && x <= 0.2;
+  const taxOk = (x) => Number.isFinite(x) && x >= 0.05 && x <= 0.35;
+  const kdW = inp.kd ?? (w3 && kdOk(w3.kd) ? w3.kd : d.kd);
+  const taxW = inp.tax ?? (w3 && taxOk(w3.tax) ? w3.tax : taxOk(d.tax) ? d.tax : 0.2);
   const W = wacc({ rf: inp.rf, erp: inp.erp, beta: inp.beta, blume: inp.blume, extra: inp.extra, kd: kdW, tax: taxW,
     debt: B.debt || 0, equityMkt, equityBook: B.equityParent });
   if (adj.wacc) W.wacc += adj.wacc;
@@ -452,6 +458,8 @@ export function dcfValuation(a, inputs, adj0 = {}) {
         f.ebit = y.is.ebit; f.tax = y.is.taxRate; f.nopat = f.ebit * (1 - f.tax); f.margin = f.rev ? f.ebit / f.rev : null;
         f.capex = -y.cf.capex; f.da = y.cf.da; f.fcff = y.cf.fcff;
         f.ebitda = f.ebit + f.da; f.dNwc = f.nopat + f.da - f.capex - f.fcff;
+        // EBITDA hoạt động = lợi nhuận gộp − bán hàng − QLDN + khấu hao: dùng cho bội số thoát, LBO, so với EBITDA chuẩn hoá.
+        f.ebitdaOp = y.is.gp + y.is.selling + y.is.ga + f.da;
         f.capexPct = f.rev ? f.capex / f.rev : null; f.daPct = f.rev ? f.da / f.rev : null; f.src3 = true;
       });
       out.m3 = m3;
@@ -460,19 +468,25 @@ export function dcfValuation(a, inputs, adj0 = {}) {
   }
   if (inp.revMode === 'stores' && !inp.rev.stores0) out.issues.push('noStores');
   const exitM = inp.exit ?? a.inputs.evEbitda[1];
-  const r = evAt(flows, W.wacc, inp.g, { method: inp.tvMethod, exit: exitM });
+  // Giá trị cuối kỳ theo bội số thoát cần EBITDA năm cuối > 0 và có bội số: không được thì dùng Gordon và báo.
+  let tvM = inp.tvMethod;
+  let r = evAt(flows, W.wacc, inp.g, { method: tvM, exit: exitM });
+  if (!r && tvM !== 'gordon') { out.issues.push('noExitTv'); tvM = 'gordon'; r = evAt(flows, W.wacc, inp.g, { method: tvM }); }
+  if (!r) { out.issues.push('noTv'); return out; }
+  out.tvMethodUsed = tvM;
   // Cầu nối như 15.DCF: EV + tiền − tổng nợ vay − NCI; hoặc đầy đủ (net debt gồm đầu tư NH, khoản tương đương nợ, tài sản ngoài HĐ).
   const toEq = (ev) => (ev === null ? null : inp.bridge === 'model' ? ev + (B.cash || 0) - (B.debt || 0) - (v.minority || 0)
     : ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum);
   const perShare = (eq) => (eq === null || !shares ? null : eq / shares);
   const last = flows[flows.length - 1];
   const exit = exitM;
-  const tvExit = last.ebitda > 0 ? last.ebitda * exit : null;
+  const ebOp = last.ebitdaOp ?? last.ebitda;
+  const tvExit = ebOp > 0 && exit > 0 ? ebOp * exit : null;
   const evExit = tvExit === null ? null : r.pv + tvExit / (1 + W.wacc) ** flows.length;
   Object.assign(out, {
     flows, ...r, equity: toEq(r.ev), price: perShare(toEq(r.ev)),
     tvShare: r.ev ? r.pvTv / r.ev : null,
-    impliedExit: last.ebitda > 0 ? r.tv / last.ebitda : null,
+    impliedExit: ebOp > 0 && r ? r.tv / ebOp : null,
     exit: { mult: exit, ev: evExit, equity: toEq(evExit), price: perShare(toEq(evExit)),
       impliedG: tvExit ? (tvExit * W.wacc - last.fcff) / (tvExit + last.fcff) : null },
   });
@@ -483,7 +497,7 @@ export function dcfValuation(a, inputs, adj0 = {}) {
   const buoc = [-0.015, -0.01, -0.005, 0, 0.005, 0.01, 0.015];
   out.sens = {
     w: buoc.map((s) => W.wacc + s), g: buoc.map((s) => inp.g + s),
-    grid: buoc.map((sg) => buoc.map((sw) => { const x = evAt(flows, W.wacc + sw, inp.g + sg, { method: inp.tvMethod, exit: exitM }); const eq = x && toEq(x.ev); return shares ? perShare(eq) : eq; })),
+    grid: buoc.map((sg) => buoc.map((sw) => { const x = evAt(flows, W.wacc + sw, inp.g + sg, { method: tvM, exit: exitM }); const eq = x && toEq(x.ev); return shares ? perShare(eq) : eq; })),
     perShare: !!shares,
   };
   return out;
@@ -540,12 +554,15 @@ export function quickAnchors(a, dcf) {
 export function blendedTarget(a, dcf, extra = {}) {
   if (!dcf) return null;
   const w = dcf.inputs.weights, v = a.valuation;
-  const giua = (key) => v.methods.find((m) => m.key === key)?.equity[1] ?? null;
+  // Bội số P/E, EV/EBITDA, P/B: người dùng đã sửa → theo số đã sửa; chưa sửa mà có peer → trung vị peer (như 16.Comps → 17.Valuation);
+  // chưa sửa, chưa có peer → bội số MẶC ĐỊNH chỉ để tham khảo, không đưa vào giá mục tiêu (extra.defaultMult[key] = true).
+  const giua = (key) => (extra.peer?.[key] !== undefined && extra.peer[key] !== null ? extra.peer[key] : v.methods.find((m) => m.key === key)?.equity[1] ?? null);
+  const nguon = (key) => (extra.peer?.[key] !== undefined && extra.peer[key] !== null ? 'peer' : extra.defaultMult?.[key] ? 'default' : 'input');
   const rows = [
     { key: 'dcf', equity: dcf.equity ?? null },
-    { key: 'pe', equity: giua('pe') },
-    { key: 'evEbitda', equity: giua('evEbitda') },
-    { key: 'pb', equity: giua('pb') },
+    { key: 'pe', equity: giua('pe'), src: nguon('pe') },
+    { key: 'evEbitda', equity: giua('evEbitda'), src: nguon('evEbitda') },
+    { key: 'pb', equity: giua('pb'), src: nguon('pb') },
     { key: 'evRev', equity: extra.evRev ?? null },
     { key: 'sotp', equity: extra.sotp ?? null },
     { key: 'lbo', equity: extra.lbo ?? null },
@@ -553,13 +570,18 @@ export function blendedTarget(a, dcf, extra = {}) {
     // Phương pháp khác người dùng thêm (RNAV, DDM, đồng thuận CTCK…): nhập giá / cổ phiếu và trọng số.
     .concat((dcf.inputs.others || []).map((o, i) => ({ key: `o${i}`, name: o.name, other: i, weight: o.w,
       equity: o.ps && v.shares ? o.ps * v.shares : null, price: o.ps })));
-  const co = rows.filter((r) => r.equity !== null && r.equity > 0 && r.weight > 0);
+  // Lý do một phương pháp có trọng số mà không vào giá mục tiêu: thiếu số · giá âm · bội số mặc định chưa có peer.
+  const lyDo = (r) => (r.weight <= 0 ? null : r.equity === null ? 'missing' : r.equity <= 0 ? 'negative' : r.src === 'default' ? 'default' : null);
+  const co = rows.filter((r) => r.weight > 0 && !lyDo(r));
   const tong = co.reduce((s, r) => s + r.weight, 0);
-  if (!tong) return { rows, equity: null, price: null, upside: null, rec: null };
+  const tongNhap = rows.reduce((s, r) => s + (r.weight || 0), 0);
+  const excluded = rows.filter((r) => lyDo(r)).map((r) => ({ key: r.key, name: r.name, weight: r.weight, reason: lyDo(r) }));
+  const out = (x) => ({ rows: rows.map((r) => ({ ...r, used: co.includes(r), share: co.includes(r) ? r.weight / tong : 0, reason: lyDo(r) })), excluded, wUsed: tong, wTotal: tongNhap, ...x });
+  if (!tong) return out({ equity: null, price: null, upside: null, rec: null });
   const equity = co.reduce((s, r) => s + r.equity * r.weight, 0) / tong;
   const price = v.shares ? equity / v.shares : null;
   const upside = price !== null && dcf.inputs.price ? price / dcf.inputs.price - 1 : null;
-  return { rows: rows.map((r) => ({ ...r, used: co.includes(r), share: co.includes(r) ? r.weight / tong : 0 })), equity, price, upside, rec: recommend(upside) };
+  return out({ equity, price, upside, rec: recommend(upside) });
 }
 
 /** Piotroski F-score (9 tiêu chí) giữa hai năm liền nhau; tiêu chí thiếu số thì bỏ, ghi vào `missing`. */
