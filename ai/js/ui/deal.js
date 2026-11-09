@@ -5,6 +5,8 @@
 
 import { h, fmt } from './dom.js';
 import { dealAnalysis, cleanInputs, DEFAULT_INPUTS } from '../core/deal.js';
+import { equityBridge } from '../core/bridge.js';
+import { dcfValuation } from '../core/valuation.js';
 import { buildModel } from '../targets/model.js';
 import { inputFsFrom } from '../core/model3.js';
 import { t, unitLabel } from '../i18n.js';
@@ -164,35 +166,33 @@ function quality(a) {
     piotroskiCard(a, ZONE_TONE)));
 }
 
-/** Cầu nối EV → vốn chủ theo đúng cách đang dùng để ra giá DCF (như 15.DCF hoặc đầy đủ); cách còn lại để tham khảo. */
+/**
+ * Cầu nối EV → vốn chủ (core/bridge.js) — cùng một hàm cho DCF, bội số EV, peer, SOTP, LBO: bảng theo cách đang dùng,
+ * từ EV của DCF tới equity value; cách còn lại để tham khảo kèm chênh lệch.
+ */
 function bridge(a, inp, money) {
-  const v = a.valuation, m = a.base.m;
+  const B = a.base.m;
+  const r = dcfValuation(a, inp.val);
+  const ev = r?.ev ?? null;
+  const NHAN = (k) => (k === 'debt' ? 'dl.br.debt' : k === 'cash' ? 'dl.br.cash' : k === 'cashLike' ? 'dl.br.cashLike' : k === 'nci' ? 'dl.br.nci'
+    : k.startsWith('dl.') ? `dl.br.dl.${k.slice(3)}` : `dl.br.no.${k.slice(3)}`);
   const dong = (label, val, cls = '') => h('tr', { class: cls }, h('td', {}, label), h('td', { class: 'num' }, money(val)));
-  const bang = (...rows) => h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' }, h('tbody', {}, ...rows)));
-  const truModel = (m.debt || 0) - (m.cash || 0) + (v.minority || 0);
-  const truFull = (v.netDebt || 0) + v.debtLikeSum + (v.minority || 0) - v.nonOpSum;
-  const model = bang(
-    dong(t('dl.debt'), m.debt),
-    dong(t('dl.cash'), m.cash === null ? null : -m.cash, 'dl-sub'),
-    dong(t('dl.minority'), v.minority || 0, 'dl-sub'),
-    dong(t('dl.evToEq'), truModel, 'dl-tot'));
-  const full = bang(
-    dong(t('dl.debt'), m.debt),
-    dong(t('dl.cash'), m.cash === null ? null : -m.cash, 'dl-sub'),
-    dong(t('dl.cashLike'), m.cashLike === null ? null : -m.cashLike, 'dl-sub'),
-    dong(t('dl.netDebt'), v.netDebt, 'dl-tot'),
-    v.debtLike.map((x) => dong(t(`dl.dl.${x.key}`), x.v, 'dl-sub')),
-    v.minority ? dong(t('dl.minority'), v.minority, 'dl-sub') : null,
-    v.nonOp.map((x) => dong(t(`dl.no.${x.key}`), -x.v, 'dl-sub')),
-    dong(t('dl.evToEq'), truFull, 'dl-tot'));
+  const bang = (eb) => h('div', { class: 'gridwrap' }, h('table', { class: 'k dl-t' }, h('tbody', {},
+    ev !== null ? dong(t('dl.br.ev'), ev, 'dl-tot') : null,
+    eb.items.map((x) => dong(t(NHAN(x.key)), x.v, 'dl-sub')),
+    dong(t('dl.br.total'), eb.total, 'dl-tot'),
+    ev !== null ? dong(t('dl.br.eq'), eb.toEq(ev), 'dl-tot') : null)),
+    eb.dup.length ? h('p', { class: 'priv' }, t('dl.br.dup', { v: eb.dup.map((k) => t(NHAN(k === 'cashLike' ? k : k === 'loansOut' ? `no.${k}` : `dl.${k}`))).join(', ') })) : null);
   const dangDung = inp.val.bridge === 'full' ? 'full' : 'model';
   const khac = dangDung === 'model' ? 'full' : 'model';
+  const eb = equityBridge(B, inp.val), eb2 = equityBridge(B, { ...inp.val, bridge: khac });
   return h('section', { class: 'dl-sec' },
     h('h3', {}, t('dl.bridge.h')),
     h('p', { class: 'priv' }, h('span', { class: 'tag em' }, t('dl.bridge.using')), ' ', t(`dl.bridge.lead.${dangDung}`)),
-    dangDung === 'model' ? model : full,
-    h('details', { class: 'dv-ref' }, h('summary', {}, t(`dl.bridge.ref.${khac}`), ' ', h('span', { class: 'tag' }, t('dl.bridge.diff', { v: money(truModel - truFull) }))),
-      h('p', { class: 'priv' }, t(`dl.bridge.lead.${khac}`)), khac === 'model' ? model : full));
+    h('p', { class: 'priv' }, t(eb.stAsCash ? 'dl.br.stCash' : 'dl.br.stWc')),
+    bang(eb),
+    h('details', { class: 'dv-ref' }, h('summary', {}, t(`dl.bridge.ref.${khac}`), ' ', h('span', { class: 'tag' }, t('dl.bridge.diff', { v: money(eb2.total - eb.total) }))),
+      h('p', { class: 'priv' }, t(`dl.bridge.lead.${khac}`)), bang(eb2)));
 }
 
 function valuation(a, inp, save, money, ul) {

@@ -64,7 +64,7 @@ test('không ghép được LTM thì kỳ định giá là năm gần nhất', (
 
 test('định giá bội số đi qua cầu nối và chia số cổ phiếu', () => {
   const ds = { periods: [KY('FY2025', 2025)], values: { FY2025: nam() }, notes: { FY2025: { shares: 10e6 } } };
-  const a = dealAnalysis(ds, { evEbitda: [5, 6, 7] });
+  const a = dealAnalysis(ds, { evEbitda: [5, 6, 7], val: { bridge: 'full', fs: { src: 'simple' } } });
   const ev = a.valuation.methods.find((x) => x.key === 'evEbitda');
   const ebitda = 230 * B;
   const tru = 100 * B + 10 * B + 50 * B - 50 * B;            // nợ ròng + cổ tức phải trả + CĐKKS − đầu tư LDLK

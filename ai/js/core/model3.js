@@ -75,7 +75,11 @@ export const FA_CLS = [
   { cls: 'software', row: 180, min: 3, max: 8 },
 ];
 
-export const DEFAULT_FS = { src: 'model', cashRate: null, minCash: null, stRate: null, ltRate: null, stRateY: [], ltRateY: [], ltNew: [], ltRepay: [], drv: {}, capex: {}, life: {},
+// fcffMode: 'std' (chuẩn) — lãi tiền gửi = lãi suất gửi × (tiền + ĐTNH) đầu kỳ, vào LNTT nhưng KHÔNG vào FCFF (giá trị của
+// tiền đã cộng ở cầu nối); ĐTNH giữ nguyên số dư, coi như tiền; phần thu nhập tài chính còn lại (chiết khấu thanh toán, tỷ
+// giá…) theo % doanh thu, giữ trong EBIT / FCFF. 'excel' — như model: thu nhập tài chính = lợi suất × tiền đầu kỳ, nằm
+// trong FCFF; ĐTNH theo % doanh thu, biến động vào FCFF (08.CF dòng 25).
+export const DEFAULT_FS = { src: 'model', fcffMode: 'std', depRate: null, finOp: null, cashRate: null, minCash: null, stRate: null, ltRate: null, stRateY: [], ltRateY: [], ltNew: [], ltRepay: [], drv: {}, capex: {}, life: {},
   gwYears: null, assocNew: [], assocDiv: 0 };
 
 const tl = (v, lo, hi, d) => (v !== null && v !== undefined && v !== '' && Number.isFinite(+v) && +v >= lo && +v <= hi ? +v : d);
@@ -100,6 +104,7 @@ export function cleanFs(x) {
   }
   return {
     src: o.src === 'simple' ? 'simple' : 'model',
+    fcffMode: o.fcffMode === 'excel' ? 'excel' : 'std', depRate: tl(o.depRate, 0, 0.3, null), finOp: tl(o.finOp, -0.5, 0.5, null),
     cashRate: tl(o.cashRate, 0, 1, null), minCash: tl(o.minCash, 0, 1e18, null),
     stRate: tl(o.stRate, 0, 0.5, null), ltRate: tl(o.ltRate, 0, 0.5, null), stRateY: mang(o.stRateY, 0, 0.5), ltRateY: mang(o.ltRateY, 0, 0.5),
     ltNew: mang(o.ltNew, 0, 1e18), ltRepay: mang(o.ltRepay, 0, 1e18), drv, capex, life, gwYears: tl(o.gwYears, 1, 50, null),
@@ -231,6 +236,18 @@ export function model3(a, flows, ctx) {
   if (!A0.assets) return { issue: 'noBs' };
   const N = flows.length;
   const D = driverTable(F, fs, N);
+  // Chế độ FCFF chuẩn: lãi suất tiền gửi (mặc định = Rf) và thu nhập tài chính hoạt động (% doanh thu, bình quân 3 năm
+  // actual của phần thu nhập tài chính VƯỢT lãi gửi ước tính trên tiền + ĐTNH đầu kỳ).
+  const chuan = fs.fcffMode !== 'excel';
+  const depRate = fs.depRate ?? ctx.rf ?? 0.04;
+  const finOpHist = F.years.slice(-3).map((y) => {
+    const k = F.years.indexOf(y), c = F.cells[y], cp = k > 0 ? F.cells[F.years[k - 1]] : null;
+    const rev = actualRow(c).rev, fi = num(c[12]);
+    if (!rev || fi === null) return null;
+    const goc = cp ? actualRow(cp).cash + (num(cp[34]) ?? 0) : 0;
+    return Math.max(0, fi - depRate * goc) / rev;
+  }).filter((x) => x !== null);
+  const finOpPct = fs.finOp ?? (finOpHist.length ? finOpHist.reduce((s2, x) => s2 + x, 0) / finOpHist.length : 0);
   const lives = usefulLives(F, fs, a.faLives);
   const g0 = (r) => num(c0[r]) ?? 0;
   const issues = [];
@@ -276,6 +293,7 @@ export function model3(a, flows, ctx) {
           : d.basis === 'dcogs' ? (x * cogs) / 365 : d.basis === 'inv' ? null : x;
     }
     n.invProv = (dv('invProv') ?? 0) * n.inv;
+    if (chuan) n.stInv = p.stInv;                       // ĐTNH coi như tiền: giữ số dư, không vào FCFF
     // 2. Lịch TSCĐ theo nhóm.
     let capex = 0, khau = 0;
     n.fa = p.fa.map((x, j) => {
@@ -298,8 +316,11 @@ export function model3(a, flows, ctx) {
     n.ltDebt = p.ltDebt + ltNew - ltRepay;
     const rST = stRateAt(i), rLT = ltRateAt(i);
     const laiVay = p.stDebt * rST + p.ltDebt * rLT + p.revolver * rST;
-    // Thu nhập tài chính = lợi suất × tiền ĐẦU KỲ (như 06.IS dòng 13).
-    const laiGui = p.cash * (fs.cashRate ?? dv('yield') ?? 0);
+    // Thu nhập tài chính — 'excel': lợi suất × tiền ĐẦU KỲ (như 06.IS dòng 13); 'std': lãi gửi trên tiền + ĐTNH đầu kỳ
+    // + phần hoạt động theo % doanh thu.
+    const laiGui = chuan ? depRate * (p.cash + p.stInv) : p.cash * (fs.cashRate ?? dv('yield') ?? 0);
+    const tcHd = chuan ? finOpPct * rev : 0;
+    const thuTc = laiGui + tcHd;
     // Đầu tư công ty liên kết (13.Tax_JV_Sched mục D): đầu kỳ + đầu tư mới + phần lãi / lỗ − cổ tức nhận về.
     const lk = dv('assocProfit') ?? 0;
     const lkMoi = fs.assocNew[i] ?? 0;
@@ -310,7 +331,7 @@ export function model3(a, flows, ctx) {
     const gp = rev - cogs;
     const ban = (dv('selling') ?? 0) * rev, ql = (dv('ga') ?? 0) * rev, tcKhac = (dv('otherFin') ?? 0) * rev;
     const tnKhac = (dv('otherInc') ?? 0) * rev, cpKhac = (dv('otherExp') ?? 0) * rev;
-    const opProfit = gp + laiGui - laiVay - tcKhac + lk - ban - ql;
+    const opProfit = gp + thuTc - laiVay - tcKhac + lk - ban - ql;
     const pbt = opProfit + tnKhac - cpKhac;
     const taxR = dv('taxRate') ?? f.tax;
     const thue = pbt * taxR;
@@ -353,7 +374,8 @@ export function model3(a, flows, ctx) {
     cf.open = p.cash; cf.close = tien;
     n.cash = tien;
     // FCFF như 08.CF dòng 47: CFO + lãi vay × (1 − t) + capex + Δ đầu tư tài chính NH.  FCFE = FCFF − lãi(1 − t) + vay ròng.
-    cf.fcff = cf.cfo + laiVay * (1 - taxR) + cf.capex + cf.stInv;
+    // Chế độ chuẩn: bỏ lãi tiền gửi sau thuế khỏi FCFF (tiền đã được cộng ở cầu nối EV → vốn chủ).
+    cf.fcff = cf.cfo + laiVay * (1 - taxR) - (chuan ? laiGui * (1 - taxR) : 0) + cf.capex + cf.stInv;
     cf.fcfe = cf.fcff - laiVay * (1 - taxR) + cf.stDebt + cf.ltNew + cf.ltRepay + cf.revolver;
     // 7. Tổng & kiểm tra.
     const faNet = n.fa.reduce((s, x) => s + x.cost + x.acc, 0), gwNet = n.gw.cost + n.gw.acc;
@@ -361,7 +383,7 @@ export function model3(a, flows, ctx) {
     const liab = BS_DRIVERS.filter((d) => d.side === 'L').reduce((s, d) => s + n[d.k], 0) + n.stDebt + n.ltDebt + n.revolver + n.plug;
     const equity = n.shareCap + n.retained + n.nci;
     const sh = n.shares;
-    const is = { rev, cogs: -cogs, gp, selling: -ban, ga: -ql, otherFin: -tcKhac, otherInc: tnKhac, otherExp: -cpKhac, opProfit, ebit, intIncome: laiGui, interest: -laiVay,
+    const is = { rev, cogs: -cogs, gp, selling: -ban, ga: -ql, otherFin: -tcKhac, otherInc: tnKhac, otherExp: -cpKhac, opProfit, ebit, intIncome: thuTc, cashInt: chuan ? laiGui : 0, finOp: tcHd, interest: -laiVay,
       assoc: lk, pbt, tax: -thue, taxRate: taxR, npat, nci: -nciP, npatP, eps: sh ? npatP / sh : null, shares: sh, da: khau + gwAm, ebitda: ebit + khau + gwAm,
       rST, rLT };
     const bs = { ...n, faNet, gwNet, assets, liab, equity, tle: liab + equity };
@@ -377,8 +399,11 @@ export function model3(a, flows, ctx) {
     p = n;
     return { t, is, bs, cf, check: assets - (liab + equity), ratios, fa: n.fa, gwAm, tax, jv };
   });
+  // 'excel': thu nhập tài chính (nằm trong FCFF) quá lớn so với EBIT, hoặc lợi suất trên tiền vượt xa lãi gửi → báo.
+  if (!chuan && years.some((y) => y.is.ebit > 0 && y.is.intIncome / y.is.ebit > 0.2)) issues.push('finHeavy');
   const baseFaNet = fa0.reduce((s, x) => s + x.cost + x.acc, 0);
   return {
+    fcffMode: chuan ? 'std' : 'excel', depRate, finOpPct,
     years, drivers: D, lives, issues, last, tyTrong, gwYears, stRate, ltRate, minCash,
     base: { ...base, fa: fa0, gw: gw0, faNet: baseFaNet, gwNet: gw0.cost + gw0.acc, assets: tsB, liab: nvB + base.plug, equity: vcB, tle: tsB },
     ok: years.every((y) => Math.abs(y.check) <= Math.max(1, Math.abs(y.bs.assets) * 1e-9) && Math.abs(y.cf.close - y.bs.cash) < 1),
