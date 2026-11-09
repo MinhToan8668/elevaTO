@@ -287,7 +287,7 @@ const dgwChay = () => {
   const capex = Object.fromEntries(Object.entries(DGW3.capex).map(([k, v]) => [k, v.map((x) => x * 1e6)]));
   // Số năm sử dụng như model (chặn theo khung thuyết minh của DGW): nhà 25, máy 7, xe 6, VP 5, khác 6, QSDĐ 0, phần mềm 6.
   const life = { buildings: 25, machinery: 7, transport: 6, office: 5, other: 6, land: 0, software: 6 };
-  return model3(a, flows, { fs: cleanFs({ capex, life }), kd: 0.07, capexPct: 0, shares: null });
+  return model3(a, flows, { fs: cleanFs({ capex, life, fcffMode: 'excel' }), kd: 0.07, capexPct: 0, shares: null });
 };
 
 test('mô hình ba báo cáo khớp model DGW: driver = bình quân 3 năm; phải thu, tồn kho, phải trả, vay NH 2026F–2027F', () => {
@@ -366,14 +366,14 @@ test('đầu tư công ty liên kết như 13.Tax_JV_Sched: đầu kỳ + phần
 // Toàn bộ model DGW 2026F–2030F: cùng doanh thu & lợi nhuận gộp (05.Revenue), cùng các ô ghi đè của model (bán hàng 5,7%,
 // QLDN 1,05%, CP tài chính khác 0,35%, lãi vay NH 7% / 7% / 6%), capex theo nhóm và khung khấu hao thuyết minh.
 const SH0 = DGW3.byYear[2025][214].v * 1e6;          // số cổ phiếu cuối 2025A (03.Input_FS dòng 214)
-const dgwDu = () => {
+const dgwDu = (mode = 'excel') => {
   const a = { inputFs: inputFsFrom(DGW3.byYear), valuation: { shares: SH0 },
     faLives: { buildings: { min: 21, max: 25 }, machinery: { min: 2, max: 7 }, transport: { min: 3, max: 6 }, office: { min: 1, max: 5 },
       other: { min: 3, max: 6 }, land: { min: 0, max: 0 }, software: { min: 3, max: 6 } } };
   const flows = DGW3.rev5.map((rev, i) => ({ t: i + 1, rev: rev * 1e6, gp: DGW3.gp5[i] * 1e6, cogs: (rev - DGW3.gp5[i]) * 1e6, ebit: 0, tax: 0.2 }));
   const capex = Object.fromEntries(Object.entries(DGW3.capex5).map(([k, v]) => [k, v.map((x) => x * 1e6)]));
-  const fs = cleanFs({ capex, stRateY: DGW3.stRateY, drv: { selling: { all: 0.057 }, ga: { all: 0.0105 }, otherFin: { all: 0.0035 } } });
-  return { a, m: model3(a, flows, { fs, kd: 0.05, capexPct: 0, shares: SH0 }), fs };
+  const fs = cleanFs({ fcffMode: mode, capex, stRateY: DGW3.stRateY, drv: { selling: { all: 0.057 }, ga: { all: 0.0105 }, otherFin: { all: 0.0035 } } });
+  return { a, m: model3(a, flows, { fs, kd: 0.05, capexPct: 0, shares: SH0, rf: 0.0437 }), fs };
 };
 
 test('dựng lại TOÀN BỘ model DGW 2026F–2030F: KQKD từng dòng như 06.IS', () => {
@@ -458,4 +458,47 @@ test('giá mục tiêu: bội số mặc định chưa có peer không vào bìn
   const b2 = blendedTarget(a, dcf, { peer: { pe: 600e9 } });
   gan(b2.rows.find((x) => x.key === 'pe').equity, 600e9, 1e-12, 'P/E theo trung vị peer');
   assert.equal(b2.rows.find((x) => x.key === 'pe').src, 'peer');
+});
+
+test('FCFF chuẩn (A1): lãi tiền gửi = Rf × (tiền + ĐTNH) đầu kỳ vào LNTT nhưng không vào FCFF; ĐTNH giữ số dư; vẫn cân; giá thấp hơn chế độ Excel', () => {
+  const ex = dgwDu('excel').m, { m } = dgwDu('std');
+  assert.equal(m.fcffMode, 'std');
+  assert.ok(m.ok, m.years.map((y) => y.check).join(', '));
+  let p = m.base;
+  for (const y of m.years) {
+    gan(y.is.cashInt, 0.0437 * (p.cash + p.stInv), 1e-9, 'lãi tiền gửi');
+    assert.equal(y.bs.stInv, m.base.stInv, 'ĐTNH giữ nguyên');
+    assert.equal(y.cf.stInv, 0);
+    gan(y.cf.fcff, y.cf.cfo - y.is.interest * (1 - y.is.taxRate) - y.is.cashInt * (1 - y.is.taxRate) + y.cf.capex, 1e-12, 'FCFF chuẩn');
+    gan(y.is.intIncome, y.is.cashInt + y.is.finOp, 1e-12, 'thu nhập tài chính = lãi gửi + phần hoạt động');
+    p = y.bs;
+  }
+  assert.ok(m.finOpPct >= 0 && m.finOpPct < 0.05, `finOp ${m.finOpPct}`);
+  // Thu nhập tài chính năm cuối không còn phình theo tiền tích luỹ như chế độ Excel.
+  assert.ok(m.years[4].is.intIncome < ex.years[4].is.intIncome);
+  const ev = (mm) => evAt(mm.years.map((y) => ({ t: y.t, fcff: y.cf.fcff })), DGW3.dcf.wacc, 0.03).ev;
+  assert.ok(ev(m) < ev(ex), 'bỏ lãi tiền khỏi FCFF thì EV thấp hơn');
+  // Chế độ Excel có thu nhập tài chính > 20% EBIT → báo finHeavy.
+  assert.ok(ex.issues.includes('finHeavy'));
+  assert.ok(!m.issues.includes('finHeavy'));
+});
+
+test('cầu nối dùng chung (A3): như 15.DCF / đầy đủ; ĐTNH theo chế độ FCFF; khoản FCFF tích hợp đã gồm thì không tính lần nữa', async () => {
+  const { equityBridge } = await import('../js/core/bridge.js');
+  const B = { debt: 100, cash: 30, cashLike: 20, minority: 5,
+    debtLike: [{ key: 'dividends', v: 4 }, { key: 'provisions', v: 3 }, { key: 'ltTax', v: 2 }],
+    nonOp: [{ key: 'associatesInv', v: 7 }, { key: 'loansOut', v: 6 }] };
+  const E = (val) => equityBridge(B, val).toEq(1000);
+  assert.equal(E({ bridge: 'model', fs: { src: 'model', fcffMode: 'excel' } }), 1000 + 30 - 100 - 5);           // như 15.DCF
+  assert.equal(E({ bridge: 'model', fs: { src: 'model', fcffMode: 'std' } }), 1000 + 30 + 20 - 100 - 5);       // ĐTNH = tiền
+  assert.equal(E({ bridge: 'full', fs: { src: 'simple' } }), 1000 + 30 + 20 - 100 - 4 - 3 - 2 + 7 + 6 - 5);    // đầy đủ
+  const tich = equityBridge(B, { bridge: 'full', fs: { src: 'model', fcffMode: 'excel' } });
+  assert.equal(tich.toEq(1000), 1000 + 30 - 100 - 2 + 7 - 5);
+  assert.deepEqual(tich.dup.sort(), ['cashLike', 'dividends', 'loansOut', 'provisions']);
+  assert.equal(equityBridge(B, { bridge: 'full', fs: { src: 'model', fcffMode: 'std' } }).toEq(1000), 1000 + 30 + 20 - 100 - 2 + 7 - 5);
+  // DCF dùng cùng hàm cầu nối với bội số EV / peer (deal.js đặt a.valuation.bridge bằng equityBridge(B, inp.val)).
+  const r = dcfValuation(A(), { years: 3, growth: 0.05, fade: false });
+  assert.equal(r.bridge.mode, 'model');
+  assert.equal(r.equity, r.bridge.toEq(r.ev));
+  assert.equal(r.equity, r.ev + 0 - 100e9);
 });

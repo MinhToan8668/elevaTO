@@ -445,7 +445,7 @@ export function compsBlock(a, inp, save, money, unit, ul) {
   const datP = (list) => save({ peers: list });
   const sua = (i, patch) => datP(peers.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   const nam = 12 / (a.base.months || 12);
-  const bridge = (ev) => ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum;
+  const bridge = v.bridge.toEq;
   const r = compsAnalysis(peers, { rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent, shares: v.shares, bridge });
   const dcf = dcfValuation(a, inp.val);
   // Dòng của chính công ty đang phân tích (như dòng DGW của model) — cần giá thị trường + số cổ phiếu.
@@ -587,7 +587,7 @@ export function dvSummary(a, inp) {
   if (!r) return null;
   const nam = 12 / (a.base.months || 12);
   const cp = compsAnalysis(inp.peers, { rev: B.rev === null ? null : B.rev * nam, ebitda: v.ebitdaAnnual, npat: v.earnings, equity: B.equityParent, shares: v.shares,
-    bridge: (ev) => ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum });
+    bridge: v.bridge.toEq });
   const so = sotpValuation(a, inp.sotp);
   const lbo = r.flows ? lboAnalysis(a, r) : null;
   const lboMax = lbo && !lbo.issue ? lboMaxEntry(a, r, lbo) : null;
@@ -636,11 +636,9 @@ export function dvDashboard(a, inp, money, ul) {
   const veDuoc = rows.filter((x) => !boRa.includes(x));
   const ff = footballChart(veDuoc, { price: gia, target: sh ? b?.price : b?.equity, labels: { price: t('dv.ff.price'), target: t('dv.ff.target'), title: t('dv.ff.h') } });
 
-  const Bm = a.base.m;
-  const cauNoi = V.bridge === 'model'
-    ? [{ label: t('dv.wf.cash'), v: (Bm.cash || 0) / a.unitDong }, { label: t('dv.wf.debt'), v: -(Bm.debt || 0) / a.unitDong }, { label: t('dv.wf.nci'), v: -(v.minority || 0) / a.unitDong }]
-    : [{ label: t('dv.wf.nd'), v: -(v.netDebt || 0) / a.unitDong }, { label: t('dv.wf.dl'), v: -v.debtLikeSum / a.unitDong },
-      { label: t('dv.wf.nci'), v: -(v.minority || 0) / a.unitDong }, { label: t('dv.wf.no'), v: v.nonOpSum / a.unitDong }];
+  // Thác nước theo đúng cầu nối đang dùng (core/bridge.js) — gộp theo nhóm: tiền, nợ vay, tương đương nợ, ngoài HĐ, NCI.
+  const WF = { cash: 'dv.wf.cash', debt: 'dv.wf.debt', debtLike: 'dv.wf.dl', nonOp: 'dv.wf.no', nci: 'dv.wf.nci' };
+  const cauNoi = Object.keys(WF).map((g) => ({ label: t(WF[g]), v: (r.bridge?.items || []).filter((x) => x.grp === g).reduce((s2, x) => s2 + x.v, 0) / a.unitDong }));
   const wf = r.flows ? waterfallChart([
     { label: t('dv.wf.pv'), v: r.pv / a.unitDong }, { label: t('dv.wf.tv'), v: r.pvTv / a.unitDong }, { label: 'EV', v: r.ev / a.unitDong, total: true },
     ...cauNoi,
@@ -656,7 +654,7 @@ export function dvDashboard(a, inp, money, ul) {
   const up = b?.upside ?? null;
   // Đang chạy kịch bản Bull / Bear: gắn nhãn ở tiêu đề và các thẻ giá — tránh đọc nhầm là kịch bản gốc.
   const kbTag = V.scen.pick && V.scen.pick !== 'base' ? h('span', { class: `tag dv-scen-tag ${V.scen.pick === 'bull' ? 'em' : 'red'}` }, t('dv.sc.running', { k: t(`dv.sc.${V.scen.pick}`) })) : null;
-  const canhBao = ['lowWacc', 'tvHeavy', 'noExitTv', 'negFcff'].filter((k) => r.issues.includes(k));
+  const canhBao = ['lowWacc', 'tvHeavy', 'noExitTv', 'negFcff', 'finHeavy'].filter((k) => r.issues.includes(k));
   return h('section', { class: 'dl-sec dv-dash' },
     h('h3', {}, t('dv.dash.h'), kbTag),
     canhBao.length ? h('p', { class: 'dv-warns' }, canhBao.map((k) => h('span', { class: 'tag gold', title: t(`dv.issue.${k}`) }, `⚠ ${t(`dv.warn.${k}`)}`))) : null,

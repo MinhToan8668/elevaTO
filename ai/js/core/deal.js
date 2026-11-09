@@ -16,6 +16,7 @@
 import { computeTotals } from './statements.js';
 import { periodLabel } from './table.js';
 import { cleanVal } from './valuation.js';
+import { equityBridge } from './bridge.js';
 import { cleanMna } from './mna.js';
 import { cleanSotp } from './sotp.js';
 import { cleanPeers } from './comps.js';
@@ -262,7 +263,9 @@ export function dealAnalysis(ds, inputs) {
 
   const debtLikeSum = B.debtLike.reduce((a, x) => a + x.v, 0);
   const nonOpSum = B.nonOp.reduce((a, x) => a + x.v, 0);
-  const bridge = (ev) => (ev === null ? null : ev - (B.netDebt || 0) - debtLikeSum - (B.minority || 0) + nonOpSum);
+  // Cầu nối EV → vốn chủ dùng chung với DCF, peer, SOTP, LBO (core/bridge.js) — cùng một định nghĩa nợ ròng.
+  const eb = equityBridge(B, inp.val);
+  const bridge = eb.toEq;
   const perShare = (eq) => (eq === null || !shares ? null : eq / shares);
   const ba = (f) => [0, 1, 2].map(f);
   const methods = [];
@@ -281,7 +284,7 @@ export function dealAnalysis(ds, inputs) {
   }
   const valuation = {
     ebitda: ebitdaVal, ebitdaAnnual: ebitdaNam, manual, earnings, shares,
-    netDebt: B.netDebt, debtLike: B.debtLike, debtLikeSum, nonOp: B.nonOp, nonOpSum, minority: B.minority,
+    netDebt: B.netDebt, debtLike: B.debtLike, debtLikeSum, nonOp: B.nonOp, nonOpSum, minority: B.minority, bridge: eb,
     methods,
     range: methods.length ? [Math.min(...methods.map((x) => x.equity[0])), Math.max(...methods.map((x) => x.equity[2]))] : null,
     annualized: nam !== 1,

@@ -21,7 +21,7 @@ export function lboAnalysis(a, r, o = {}) {
   const L = r.inputs.lbo, v = a.valuation;
   const e0 = v.ebitdaAnnual;
   if (!(e0 > 0)) return { issue: 'noEbitda' };
-  const thiTruong = r.inputs.price && v.shares ? (r.inputs.price * v.shares + (v.netDebt || 0) + v.debtLikeSum + (v.minority || 0) - v.nonOpSum) / e0 : null;
+  const thiTruong = r.inputs.price && v.shares ? (r.inputs.price * v.shares - (r.bridge ?? v.bridge).total) / e0 : null;
   const entry = o.entry ?? L.entry ?? (thiTruong > 0 ? thiTruong : a.inputs.evEbitda[1]);
   const exit = o.exit ?? L.exit ?? entry;
   const N = Math.min(L.years ?? r.flows.length, r.flows.length);
@@ -87,6 +87,6 @@ export function lboMaxEntry(a, r, base) {
   }
   const v = a.valuation, e0 = v.ebitdaAnnual;
   const ev = e0 * lo;
-  const equity = ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum;
+  const equity = (r.bridge ?? v.bridge).toEq(ev);
   return { entry: lo, ev, equity, price: v.shares ? equity / v.shares : null, irr: target };
 }

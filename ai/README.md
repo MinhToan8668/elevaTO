@@ -213,6 +213,13 @@ Trang: `https://minhtoan8668.github.io/elevaTO/ai/` · giao diện **tiếng Vi�
     đúng cầu nối đang dùng; **doanh thu (cột, trục trái) & FCFF (đường, trục phải)** các năm actual cạnh năm dự phóng.
     Bảng độ nhạy tô màu theo % chênh với giá thị trường. Thẻ số gắn nhãn khi đang chạy kịch bản Bull / Bear, kèm nhãn
     cảnh báo (WACC thấp bất thường, terminal value > 75% EV, TV phải chuyển sang Gordon, có năm FCFF âm).
+  - **FCFF chuẩn & cầu nối dùng chung** (`js/core/model3.js`, `js/core/bridge.js`): mô hình ba báo cáo có công tắc
+    "Chuẩn" (mặc định) / "Như model Excel". Chuẩn: lãi tiền gửi = lãi suất gửi (mặc định Rf) × (tiền + đầu tư NH) đầu
+    kỳ, vào LNTT nhưng không vào FCFF; phần thu nhập tài chính hoạt động theo % doanh thu giữ trong FCFF; đầu tư NH coi
+    như tiền (giữ số dư, cộng ở cầu nối). Như Excel giữ đúng 06.IS / 08.CF (test DGW 44.620 đ chạy ở chế độ này) và
+    báo khi thu nhập tài chính > 20% EBIT. Một hàm cầu nối EV → vốn chủ cho DCF, EV/EBITDA, peer, SOTP, LBO, thác nước
+    và bước 4; cầu nối đầy đủ không tính lại khoản FCFF tích hợp đã gồm (ĐTNH ở chế độ Excel, cổ tức phải trả, dự
+    phòng, cho vay). DGW: 44.621 đ (Excel) → 30.798 đ (chuẩn).
   - **Trình bày theo lộ trình 9 bước** (`js/ui/dvguide.js`): mỗi bước thu gọn được (mặc định mở DCF và target price,
     bấm thẻ trên sơ đồ là bước đó tự mở). Ở chế độ mô hình ba báo cáo tích hợp: sơ đồ nối mô hình đổi theo (driver
     C1 → 10.FA_SCHED → 07.BS → 08.CF), bảng dự phóng 3.4 khoá các dòng biên EBIT / D&A / capex / thuế ("từ 3.6"), giữ

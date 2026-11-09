@@ -47,7 +47,7 @@ export function sotpValuation(a, sotp) {
   const eqSum = co.filter((r) => r.basis === 'equity').reduce((s, r) => s + r.attr, 0);
   // Phần tính theo EV chưa trừ nợ → trừ một lần nợ ròng, khoản tương đương nợ và NCI của số hợp nhất.
   const coEv = co.some((r) => r.basis === 'ev');
-  const less = S.bridge && coEv ? (v.netDebt || 0) + v.debtLikeSum + (v.minority || 0) : 0;
+  const less = S.bridge && coEv ? (v.bridge ? v.bridge.claims : (v.netDebt || 0) + v.debtLikeSum + (v.minority || 0)) : 0;
   const total = evSum + eqSum - less;
   const discAmt = total > 0 ? total * S.disc : 0;
   const equity = total - discAmt;

@@ -33,7 +33,7 @@ export function threeBlock(a, inp, save, money, ul) {
   const khung = (...kids) => h('section', { class: 'dl-sec dv-3s' }, ...head, ...kids);
   if (!a.inputFs?.years?.length) return khung(h('p', { class: 'msg' }, t('fs.noInput')));
   if (!r?.flows) return khung(h('p', { class: 'msg' }, t('fs.need')));
-  const M = r.m3 ?? model3(a, r.flows, { fs: F, kd: r.d.kd, capexPct: r.d.capex, shares: a.valuation.shares });
+  const M = r.m3 ?? model3(a, r.flows, { fs: F, kd: r.d.kd, capexPct: r.d.capex, shares: a.valuation.shares, rf: V.rf });
   if (!M) return khung(h('p', { class: 'msg' }, t('fs.need')));
   if (M.issue) return khung(h('p', { class: 'msg warn' }, t(`fs.issue.${M.issue}`)));
 
@@ -49,11 +49,18 @@ export function threeBlock(a, inp, save, money, ul) {
     ['model', 'simple'].map((k) => h('label', { class: `dv-radio${F.src === k ? ' on' : ''}` },
       h('input', { type: 'radio', name: 'fs-src', checked: F.src === k, onchange: () => dat({ src: k }) }), ' ', t(`fs.src.${k}`))),
     h('small', { class: 'priv' }, t(F.src === 'model' ? 'fs.src.model.h' : 'fs.src.simple.h')));
+  // Cách xử lý thu nhập tài chính & ĐTNH trong FCFF: chuẩn (lãi gửi ngoài FCFF, ĐTNH = tiền) hay như model Excel.
+  const cheDo = h('div', { class: 'dv-src' },
+    h('b', {}, t('fs.mode')),
+    ['std', 'excel'].map((k) => h('label', { class: `dv-radio${M.fcffMode === k ? ' on' : ''}` },
+      h('input', { type: 'radio', name: 'fs-mode', checked: M.fcffMode === k, onchange: () => dat({ fcffMode: k }) }), ' ', t(`fs.mode.${k}`))),
+    h('small', { class: 'priv' }, t(`fs.mode.${M.fcffMode}.h`, { r: pc(M.depRate, 2), f: pc(M.finOpPct, 2) })));
   const giaDinh = h('div', { class: 'dv-fsrow' },
     nhom(t('fs.fs.fin'), t('fs.fs.fin.h'),
       oPct(t('fs.stRate'), F.stRate, M.stRate, (v) => dat({ stRate: v })),
       oPct(t('fs.ltRate'), F.ltRate, M.ltRate, (v) => dat({ ltRate: v })),
-      oPct(t('fs.cashRate'), F.cashRate, M.drivers.yield.applied[0], (v) => dat({ cashRate: v })),
+      M.fcffMode === 'std' ? oPct(t('fs.depRate'), F.depRate, M.depRate, (v) => dat({ depRate: v })) : oPct(t('fs.cashRate'), F.cashRate, M.drivers.yield.applied[0], (v) => dat({ cashRate: v })),
+      M.fcffMode === 'std' ? oPct(t('fs.finOp'), F.finOp, M.finOpPct, (v) => dat({ finOp: v }), '0.01') : null,
       oNum(t('fs.minCash'), F.minCash === null ? null : +(F.minCash / u).toFixed(2), (v) => dat({ minCash: v === null ? null : v * u }), { suffix: ul, placeholder: '0' }),
       oNum(t('fs.gwYears'), F.gwYears, (v) => dat({ gwYears: v }), { step: '1', suffix: t('dv.years.u'), placeholder: String(M.gwYears) })));
 
@@ -146,6 +153,7 @@ export function threeBlock(a, inp, save, money, ul) {
     [t('fs.is.gp'), tienA((y) => ac(y).gp), tienF((y) => y.is.gp), 'dl-tot'],
     [t('fs.is.gm'), (y) => pc(ac(y).gp / ac(y).rev), (y) => pc(y.is.gp / y.is.rev)],
     [t('fs.is.intIncome'), tienA((y) => cellsA(y)[12]), tienF((y) => y.is.intIncome)],
+    ...(M.fcffMode === 'std' ? [[`↳ ${t('fs.is.cashInt')}`, null, tienF((y) => y.is.cashInt), 'dl-sub'], [`↳ ${t('fs.is.finOp')}`, null, tienF((y) => y.is.finOp), 'dl-sub']] : []),
     [t('fs.is.interest'), tienA((y) => cellsA(y)[13]), tienF((y) => y.is.interest)],
     [t('fs.is.otherFin'), tienA((y) => cellsA(y)[14]), tienF((y) => y.is.otherFin)],
     [t('fs.is.assoc'), tienA((y) => cellsA(y)[16]), tienF((y) => y.is.assoc)],
@@ -230,6 +238,7 @@ export function threeBlock(a, inp, save, money, ul) {
     [t('fs.cf.close'), cfA(128), tienF((y) => y.cf.close), 'dl-tot'],
     [t('fs.cf.check'), () => '', (y) => (Math.abs(y.cf.close - y.bs.cash) < 1 ? '✓ 0' : money(y.cf.close - y.bs.cash)), 'dv-check'],
     [t('fs.memo'), 'grp'],
+    ...(M.fcffMode === 'std' ? [[t('fs.cf.cashInt'), () => '', tienF((y) => -y.is.cashInt * (1 - y.is.taxRate)), 'dl-sub']] : []),
     [t('fs.cf.fcff'), () => '', tienF((y) => y.cf.fcff), 'dl-tot'],
     [t('fs.cf.fcfe'), () => '', tienF((y) => y.cf.fcfe)],
   ]);
@@ -291,6 +300,7 @@ export function threeBlock(a, inp, save, money, ul) {
     } }, t(`fs.tab.${k}`))));
   return khung(
     nguon,
+    cheDo,
     h('p', { class: `msg ${M.ok ? 'ok' : 'err'}` }, M.ok ? t('fs.ok') : t('fs.bad')),
     M.issues.map((k) => h('p', { class: 'msg warn' }, t(`fs.issue.${k}`))),
     giaDinh,

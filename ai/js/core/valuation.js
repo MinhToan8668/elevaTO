@@ -11,6 +11,7 @@
 // ghi đè ô nào thì ô đó dùng số của người dùng. MÁY tính, AI không tham gia.
 
 import { cleanFs, DEFAULT_FS, model3, actualRow, waccFrom3 } from './model3.js';
+import { equityBridge } from './bridge.js';
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 const abs = (v) => (v === null ? null : Math.abs(v));
@@ -449,13 +450,14 @@ export function dcfValuation(a, inputs, adj0 = {}) {
   const flows = projectFcff({ rev0, years: inp.years, growth: d.growth, fade: inp.fade, g: inp.g, margin: d.margin, da: d.da, capex: d.capex, nwc: d.nwc, tax: d.tax,
     byYear: inp.byYear, revMode: inp.revMode, rev: inp.rev, adj, segs, mods, P, proj, nwc0: mods.wcDays && B.tradeWc !== null ? B.tradeWc : null });
   if (tichHop) {
-    const m3 = model3(a, flows, { fs: inp.fs, kd: d.kd, capexPct: d.capex, shares: v.shares });
+    const m3 = model3(a, flows, { fs: inp.fs, kd: d.kd, capexPct: d.capex, shares: v.shares, rf: inp.rf });
     if (m3 && !m3.issue) {
       // Capex, khấu hao, Δ vốn lưu động (ngầm) và FCFF lấy từ mô hình — cùng một bộ số với ba báo cáo.
       flows.forEach((f, i) => {
         const y = m3.years[i];
         // KQKD như 06.IS (EBIT = LNTT + lãi vay), thuế suất hiệu dụng; capex, khấu hao, FCFF như 08.CF.
-        f.ebit = y.is.ebit; f.tax = y.is.taxRate; f.nopat = f.ebit * (1 - f.tax); f.margin = f.rev ? f.ebit / f.rev : null;
+        // Chế độ chuẩn: lãi tiền gửi không thuộc EBIT hoạt động (đã loại khỏi FCFF; tiền cộng ở cầu nối).
+        f.ebit = y.is.ebit - (y.is.cashInt || 0); f.tax = y.is.taxRate; f.nopat = f.ebit * (1 - f.tax); f.margin = f.rev ? f.ebit / f.rev : null;
         f.capex = -y.cf.capex; f.da = y.cf.da; f.fcff = y.cf.fcff;
         f.ebitda = f.ebit + f.da; f.dNwc = f.nopat + f.da - f.capex - f.fcff;
         // EBITDA hoạt động = lợi nhuận gộp − bán hàng − QLDN + khấu hao: dùng cho bội số thoát, LBO, so với EBITDA chuẩn hoá.
@@ -463,6 +465,7 @@ export function dcfValuation(a, inputs, adj0 = {}) {
         f.capexPct = f.rev ? f.capex / f.rev : null; f.daPct = f.rev ? f.da / f.rev : null; f.src3 = true;
       });
       out.m3 = m3;
+      if (m3.issues.includes('finHeavy')) out.issues.push('finHeavy');
       out.fcffSrc = 'model';
     } else out.issues.push('no3s');
   }
@@ -474,9 +477,9 @@ export function dcfValuation(a, inputs, adj0 = {}) {
   if (!r && tvM !== 'gordon') { out.issues.push('noExitTv'); tvM = 'gordon'; r = evAt(flows, W.wacc, inp.g, { method: tvM }); }
   if (!r) { out.issues.push('noTv'); return out; }
   out.tvMethodUsed = tvM;
-  // Cầu nối như 15.DCF: EV + tiền − tổng nợ vay − NCI; hoặc đầy đủ (net debt gồm đầu tư NH, khoản tương đương nợ, tài sản ngoài HĐ).
-  const toEq = (ev) => (ev === null ? null : inp.bridge === 'model' ? ev + (B.cash || 0) - (B.debt || 0) - (v.minority || 0)
-    : ev - (v.netDebt || 0) - v.debtLikeSum - (v.minority || 0) + v.nonOpSum);
+  // Cầu nối dùng chung (core/bridge.js): như 15.DCF hoặc đầy đủ; khoản FCFF tích hợp đã gồm thì không tính lần nữa.
+  out.bridge = equityBridge(B, inp);
+  const toEq = out.bridge.toEq;
   const perShare = (eq) => (eq === null || !shares ? null : eq / shares);
   const last = flows[flows.length - 1];
   const exit = exitM;
