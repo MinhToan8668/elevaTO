@@ -121,6 +121,18 @@ test('webhook bị Apps Script cũ giành mất: lịch 5 phút soát Telegram, 
     await ctx2.xong();
     assert.equal(tg.filter((x) => x.method === 'setWebhook').length, 2);
     assert.equal(tg.filter((x) => x.method === 'sendMessage').length, 0);
+    // Bị gỡ trống (chỗ khác cầm token gọi deleteWebhook): báo cách đổi token, kèm số lần đã phải lấy lại.
+    dangTro = '';
+    await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%' OR khoa LIKE 'tg_cuop_el'").run();
+    tg.length = 0;
+    const ctx4 = moCtx();
+    await worker.scheduled({}, env, ctx4);
+    await ctx4.xong();
+    const bao2 = tg.filter((x) => x.method === 'sendMessage' && x.tok === 'bottoken-el').map((x) => x.text).join('\n');
+    assert.match(bao2, /vừa bị gỡ/);
+    assert.match(bao2, /Revoke/);
+    assert.match(bao2, /TG_EL_TOKEN/);
+    assert.match(bao2, /2 lần/, 'lần bị giành lúc im lặng vẫn được đếm');
     // Webhook đúng chỗ thì chỉ hỏi, không đặt lại.
     await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%'").run();
     tg.length = 0;
@@ -135,6 +147,21 @@ test('webhook bị Apps Script cũ giành mất: lịch 5 phút soát Telegram, 
     assert.equal(tg.filter((x) => x.method === 'getWebhookInfo').length, 2);
     assert.equal(tg.filter((x) => x.method === 'setWebhook').length, 0);
   } finally { globalThis.fetch = that; }
+});
+
+test('đổi token bot (Revoke) thì tự nối webhook cho token mới ngay, không báo động nhầm', async () => {
+  const f = moFetch();
+  try {
+    const env = env0();
+    await goi(env, { action: 'ungho' });
+    f.tg.length = 0;
+    env.TG_EL_TOKEN = 'token-el-moi';
+    await goi(env, { action: 'ungho' });
+    const dat = f.tg.filter((x) => x.method === 'setWebhook');
+    assert.equal(dat.length, 1, 'chỉ bot đổi token mới nối lại');
+    assert.equal(dat[0].url, `${API}tg/el`);
+    assert.doesNotMatch(f.nhan().join('\n'), /⚠️/);
+  } finally { f.thoi(); }
 });
 
 // ─── Lệnh quản trị ──────────────────────────────────────────
@@ -337,7 +364,8 @@ test('Brevo lỗi thì báo quản trị chứ không im lặng', async () => {
 // ─── Cài đặt còn thiếu ──────────────────────────────────────
 
 test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò', async () => {
-  const xem = async (env) => (await (await worker.fetch(new Request(API), env, moCtx())).json()).cai;
+  // Chờ cả việc chạy ngầm (nối webhook) xong, không thì nó chạy lố sang bài sau và bị đếm nhầm ở đó.
+  const xem = async (env) => { const ctx = moCtx(); const r = await worker.fetch(new Request(API), env, ctx); await ctx.xong(); return (await r.json()).cai; };
   assert.deepEqual(await xem(moEnv(SCHEMA)), { ai: false, bot_ai: false, bot_el: false, mail: false, tai_thang: false,
     thieu: ['GEMINI_KEYS', 'TG_SECRET', 'TG_ADMIN', 'TG_AI_TOKEN', 'TG_EL_TOKEN', 'BREVO_KEY', 'MAIL_TU', 'UPLOAD_TG_TOKEN', 'TAIVE_SECRET'] });
   assert.deepEqual(await xem(env0({ GEMINI_KEYS: 'k' })), { ai: true, bot_ai: true, bot_el: true, mail: true, tai_thang: true, thieu: [] });
@@ -354,7 +382,9 @@ test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca r�
   assert.equal((await xem(env0({ TG_ADMIN: '' }))).bot_ai, false, 'thiếu TG_ADMIN');
   assert.equal((await xem(env0({ BREVO_KEY: '' }))).mail, false);
   // Không được lộ giá trị nào ra ngoài.
-  const than = await (await worker.fetch(new Request(API), env0({ GEMINI_KEYS: 'key-that' }), moCtx())).text();
+  const ctxT = moCtx();
+  const than = await (await worker.fetch(new Request(API), env0({ GEMINI_KEYS: 'key-that' }), ctxT)).text();
+  await ctxT.xong();
   assert.doesNotMatch(than, /key-that|token-ai|token-el|token-upload|bimat|brevo/);
 });
 
