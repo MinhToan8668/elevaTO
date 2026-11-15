@@ -27,7 +27,11 @@ fail() {
 }
 [ -x "$DIR/.venv/bin/python" ] || fail "Chưa cài xong. Mở Terminal chạy lại: cd \\"$DIR\\" && ./install.sh"
 echo "=== \$(date) ===" >> "\$LOG"
-"$DIR/.venv/bin/python" "$DIR/gui.py" >> "\$LOG" 2>&1
+# Mac chip Apple: app dạng script hay bị mở qua Rosetta (Intel) → Python của hệ thống báo lỗi posix_spawn.
+# Ép chạy đúng kiến trúc arm64.
+RUN=""
+[ "\$(sysctl -n hw.optional.arm64 2>/dev/null)" = "1" ] && RUN="/usr/bin/arch -arm64"
+\$RUN "$DIR/.venv/bin/python" "$DIR/gui.py" >> "\$LOG" 2>&1
 CODE=\$?
 [ \$CODE -eq 0 ] || fail "App bị lỗi khi mở (mã \$CODE):
 
@@ -49,6 +53,7 @@ cat > "$APP/Contents/Info.plist" <<PL
   <key>CFBundleVersion</key><string>1.0</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>LSArchitecturePriority</key><array><string>arm64</string><string>x86_64</string></array>
 </dict></plist>
 PL
 ICON_SRC="$DIR/ui/assets/icon.png"
