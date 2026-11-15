@@ -983,6 +983,24 @@ class JsApi:
         return r[0] if r else None
 
 
+def ensure_ffmpeg():
+    """Tìm ffmpeg/ffprobe (Homebrew hoặc bản app tự tải). Chưa có thì tự tải 1 lần (~80MB), không cần cài tay."""
+    os.environ["PATH"] = os.pathsep.join(["/opt/homebrew/bin", "/usr/local/bin", os.environ.get("PATH", "")])
+    if vs.shutil.which("ffmpeg") and vs.shutil.which("ffprobe"):
+        return
+    S.busy["ffmpeg"] = "Đang tải bộ xử lý video (ffmpeg), chỉ lần đầu…"
+    try:
+        import static_ffmpeg
+        static_ffmpeg.add_paths()
+        if not (vs.shutil.which("ffmpeg") and vs.shutil.which("ffprobe")):
+            raise RuntimeError("tải xong nhưng không tìm thấy ffmpeg")
+        S.notify("Đã sẵn sàng xử lý video", "Đã tải xong ffmpeg — cắt, gộp, đọc ngày quay dùng được rồi.", "success", mac=False)
+    except Exception as e:  # noqa: BLE001
+        S.notify("Chưa tải được ffmpeg", f"Kiểm tra mạng rồi mở lại app, hoặc cài tay: brew install ffmpeg ({e})", "error", mac=False)
+    finally:
+        S.busy.pop("ffmpeg", None)
+
+
 def brand_mac_app():
     """Tiến trình là Python nên Dock mặc định hiện tên/icon 'Python' — đổi sang tên và icon của Media Hub."""
     try:
@@ -1014,6 +1032,7 @@ def main():
             if S.login_step == "offline":
                 S.notify("Không kết nối được Telegram", str(e), "error", mac=False)
     asyncio.run_coroutine_threadsafe(first_connect(), LOOP)
+    threading.Thread(target=ensure_ffmpeg, daemon=True).start()
     try:
         import webview
     except ImportError:

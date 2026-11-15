@@ -758,7 +758,7 @@ async function loadSort() {
   $("#sortHead").innerHTML = `Kế hoạch: ${r.rows.length} file <span class="tag">${r.rows.length - dups - fin} Raw</span> <span class="tag acc">${fin} Final</span> <span class="tag bad">${dups} trùng</span>` +
     (r.applied ? ` <span class="tag ok">✔ đã thực hiện</span>` : "");
   $("#sortApply").disabled = r.applied || !r.rows.length;
-  $("#sortTbl").innerHTML = (r.ffprobe ? "" : `<div class="alert">Chưa cài ffmpeg nên ngày quay video có thể không chính xác. Mở Terminal chạy <b>brew install ffmpeg</b> một lần.</div>`) +
+  $("#sortTbl").innerHTML = (r.ffprobe ? "" : `<div class="alert">Chưa có ffmpeg nên ngày quay video có thể không chính xác. App tự tải ffmpeg khi mở (cần mạng) — đợi thông báo tải xong rồi bấm <b>Xem trước</b> lại.</div>`) +
     (guess ? `<div class="mut small" style="margin-bottom:8px">⚠️ ${guess} file không có ngày quay trong metadata → lấy theo ngày tạo file (đánh dấu vàng).</div>` : "") +
     `<div class="tbl"><table><tr><th>File gốc</th><th>Ngày quay</th><th>→ Vị trí mới trong thư viện</th><th class="n">Dung lượng</th></tr>` +
     r.rows.map(x => `<tr><td class="path">${esc(x.name)}</td>

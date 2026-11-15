@@ -22,7 +22,7 @@ def _noop(done, total, label=""):
 
 def _need_ffmpeg():
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
-        raise RuntimeError("Chưa cài ffmpeg. Mở Terminal chạy: brew install ffmpeg")
+        raise RuntimeError("Chưa có ffmpeg — app đang tải hoặc tải chưa được. Đợi thông báo tải xong, hoặc mở lại app khi có mạng.")
 
 
 def _unique(p: Path) -> Path:

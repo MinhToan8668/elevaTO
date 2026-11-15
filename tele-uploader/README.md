@@ -1,6 +1,6 @@
 # Media Hub (macOS)
 
-Gồm 3 công cụ: **TeleUploader** (đẩy lên Telegram + tìm/tải lại), **Video Sorter** (`./sort.sh`), **Disk Report** (`./disk.sh`). Nên cài thêm `brew install ffmpeg` để đọc ngày quay video chính xác.
+Gồm 3 công cụ: **TeleUploader** (đẩy lên Telegram + tìm/tải lại), **Video Sorter** (`./sort.sh`), **Disk Report** (`./disk.sh`). ffmpeg (xử lý video) được tự tải lần đầu, không cần cài tay.
 
 Tự động quét folder trên Mac → thống kê → upload lên Telegram theo cây thư mục → file > 2GB tự split → up xong tự chuyển file gốc vào **Thùng rác** (có thể *Put Back*).
 
@@ -24,7 +24,7 @@ Trong app → **Cài đặt**:
 - **Tổng quan**: số file chờ, file cần split, tiến độ upload, công tắc *Tự động upload*, thông báo gần đây.
 - **Upload**: hàng chờ, tiến độ từng file (tốc độ, thời gian còn lại), lịch sử đã up, nút Dừng.
 - **Sắp xếp video**: chọn folder/thẻ nhớ → Xem trước → Thực hiện → (Hoàn tác nếu cần).
-- **Cắt & gộp** (cần `brew install ffmpeg`):
+- **Cắt & gộp**:
   - *Cắt video*: xem video ngay trong app, **kéo chọn đoạn trên thanh thời gian** (có ảnh thu nhỏ), kéo 2 mép để chỉnh, ▶ xem lại từng đoạn, sửa giờ bằng tay được. Phím tắt: `Space` phát/dừng, `I`/`O` đặt đầu/cuối, `Enter` thêm đoạn, `←/→` tua 1s (Shift 5s), `,`/`.` từng khung hình.
     Cắt theo các đoạn đã chọn (tuỳ chọn gộp thành 1 file), hoặc chia đều mỗi N phút / mỗi N MB (vạch chia hiện trên timeline).
     Mặc định cắt nhanh không nén lại (lệch 1–2s theo keyframe); bật *Cắt chính xác từng khung hình* nếu cần đúng tuyệt đối. mkv/avi/mts: bấm *Tạo bản xem trước* để xem, khi cắt vẫn dùng file gốc.

@@ -9,7 +9,10 @@ python3 -m venv .venv
 .venv/bin/pip install -q --upgrade pip
 .venv/bin/pip install -q -r requirements.txt
 [ -f config.yaml ] || cp config.example.yaml config.yaml
-command -v ffprobe >/dev/null || echo "💡 Nên cài thêm ffmpeg để đọc ngày quay video: brew install ffmpeg"
+if ! PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" command -v ffprobe >/dev/null; then
+  echo "⏳ Đang tải ffmpeg (xử lý video, ~80MB, chỉ lần đầu)…"
+  .venv/bin/python -c "import static_ffmpeg; static_ffmpeg.add_paths()" || echo "⚠️  Chưa tải được ffmpeg — app sẽ tự thử lại khi mở."
+fi
 
 rm -rf "$HOME/Applications/TeleUploader.app"   # tên cũ
 APP="$HOME/Applications/Media Hub.app"
