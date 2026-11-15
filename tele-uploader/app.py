@@ -285,10 +285,31 @@ def cleanup_empty_dirs(root: Path) -> None:
 
 
 # ---------------------------------------------------------------- telegram
+def proxy_kwargs(cfg: dict) -> dict:
+    """Proxy cho Telegram (khi bị nhà mạng chặn). Hỗ trợ:
+    socks5://[user:pass@]host:port · http://host:port · tg://proxy?server=…&port=…&secret=… (MTProxy)."""
+    from urllib.parse import parse_qs, urlparse
+    raw = str(cfg.get("proxy") or "").strip()
+    if not raw:
+        return {}
+    u = urlparse(raw)
+    if u.scheme in ("tg", "https") and "secret" in u.query:  # link MTProxy: tg://proxy?… hoặc https://t.me/proxy?…
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        from telethon import connection
+        return {"connection": connection.ConnectionTcpMTProxyRandomizedIntermediate,
+                "proxy": (q["server"], int(q["port"]), q["secret"])}
+    if u.scheme in ("socks5", "socks4", "http"):
+        p = {"proxy_type": u.scheme, "addr": u.hostname, "port": u.port, "rdns": True}
+        if u.username:
+            p.update(username=u.username, password=u.password or "")
+        return {"proxy": p}
+    raise ValueError("Proxy không hợp lệ — dùng socks5://host:port, http://host:port hoặc link MTProxy (tg://proxy?…)")
+
+
 async def get_client(cfg: dict):
     from telethon import TelegramClient
     client = TelegramClient(SESSION, int(cfg["api_id"]), cfg["api_hash"],
-                            device_model="TeleUploader Mac", connection_retries=10, retry_delay=5)
+                            device_model="Media Hub Mac", connection_retries=10, retry_delay=5, **proxy_kwargs(cfg))
     await client.start()
     return client
 
@@ -432,7 +453,7 @@ async def run_upload(cfg: dict, dry_run: bool = False) -> None:
         await send_summary(client, entity, results)
         console.print(f"[green]Xong:[/] {len(results['done'])} upload, {len(results['skipped'])} đã có, "
                       f"[red]{len(results['failed'])} lỗi[/]")
-        notify_mac("TeleUploader", f"Đã upload {len(results['done'])} file, lỗi {len(results['failed'])}")
+        notify_mac("Media Hub", f"Đã upload {len(results['done'])} file, lỗi {len(results['failed'])}")
     finally:
         await client.disconnect()
         conn.close()
@@ -588,7 +609,7 @@ def main() -> None:
     fd.add_argument("query")
     gt = sub.add_parser("get", help="tải file về (tự ghép nếu bị split)")
     gt.add_argument("key", help="ID tin nhắn hoặc tên file")
-    gt.add_argument("--to", type=Path, default=Path("~/Downloads/TeleUploader").expanduser())
+    gt.add_argument("--to", type=Path, default=Path("~/Downloads/MediaHub").expanduser())
     args = ap.parse_args()
 
     if args.cmd == "history":

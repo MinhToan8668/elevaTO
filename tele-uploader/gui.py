@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""TeleUploader app — giao diện cửa sổ cho TeleUploader, Video Sorter, Disk Report.
+"""Media Hub — app giao diện cho upload Telegram, sắp xếp video, cắt & gộp, ổ cứng.
 
-Mở: bấm đúp TeleUploader.app (do install.sh tạo) hoặc `python gui.py`.
+Mở: bấm đúp Media Hub.app (do install.sh tạo) hoặc `python gui.py`.
 Giao diện là trang web chạy nội bộ trên máy (127.0.0.1), hiển thị trong cửa sổ riêng.
 """
 from __future__ import annotations
@@ -176,15 +176,23 @@ async def ensure_client(require_login=True):
     if not cfg.get("api_id") or not cfg.get("api_hash") or str(cfg.get("api_id")) == "123456":
         S.login_step = "need_api"
         raise ValueError("Chưa nhập API ID / API Hash trong Cài đặt.")
-    key = (str(cfg["api_id"]), cfg["api_hash"])
+    key = (str(cfg["api_id"]), cfg["api_hash"], str(cfg.get("proxy") or ""))
     if TG.client is None or TG.key != key:
         if TG.client:
             await TG.client.disconnect()
         TG.client = TelegramClient(core.SESSION, int(cfg["api_id"]), cfg["api_hash"],
-                                   device_model="TeleUploader Mac", connection_retries=10, retry_delay=5)
+                                   device_model="Media Hub Mac", connection_retries=3, retry_delay=3,
+                                   timeout=15, **core.proxy_kwargs(cfg))
         TG.key = key
     if not TG.client.is_connected():
-        await TG.client.connect()
+        try:
+            await asyncio.wait_for(TG.client.connect(), 45)
+        except (asyncio.TimeoutError, OSError, ConnectionError) as e:
+            S.login_step = "offline"
+            raise ValueError("Không kết nối được Telegram — mạng có thể đang chặn Telegram. "
+                             "Bật VPN hoặc nhập Proxy trong Cài đặt rồi thử lại.") from e
+        if S.login_step == "offline":
+            S.login_step = "need_phone"
     if await TG.client.is_user_authorized():
         if not S.me:
             me = await TG.client.get_me()
@@ -285,13 +293,29 @@ def background(name: str, label: str, fn):
 
 
 def file_row(p, s, m):
-    return {"path": str(p), "name": Path(p).name, "size": s, "mtime": m}
+    return {"path": str(p), "name": Path(p).name, "size": s, "mtime": m, "system": dr.is_system_path(p)}
 
 
-def disk_job(roots: list[Path], min_big: int, old_days: int):
-    files, dir_size = dr.walk(roots)
+def dir_tree(dir_size: dict, roots: list[Path], files, min_size: int) -> dict:
+    """{folder: [mục con ≥ min_size, lớn → nhỏ]} để xem theo từng tầng. Mục con gồm cả folder lẫn file lớn."""
+    tree = defaultdict(list)
+    for d, sz in dir_size.items():
+        if sz >= min_size and d not in roots:
+            tree[str(d.parent)].append({"path": str(d), "name": d.name, "size": sz, "dir": True})
+    for p, sz, *_ in files:
+        if sz >= min_size:
+            tree[str(p.parent)].append({"path": str(p), "name": p.name, "size": sz, "dir": False})
+    for k in tree:
+        tree[k].sort(key=lambda x: -x["size"])
+        del tree[k][200:]
+    return tree
+
+
+def disk_job(roots: list[Path], min_big: int, old_days: int, full: bool = False):
+    files, dir_size = dr.walk(roots, full=full, on_progress=lambda n, t: S.busy.__setitem__(
+        "disk", f"Đang quét… {n:,} file · {core.human(t)}"))
     S.busy["disk"] = "Đang tìm file trùng…"
-    dups = dr.find_dups(files, 10 * MiB)
+    dups = dr.find_dups([f for f in files if not (full and dr.is_system_path(f[0]))], 10 * MiB)
     now = time.time()
 
     class A:  # dr.suggestions cần object có min_big/old_days
@@ -300,7 +324,8 @@ def disk_job(roots: list[Path], min_big: int, old_days: int):
     uploaded = dr.uploaded_paths()
     du = __import__("shutil").disk_usage(roots[0])
     q = dr.queue_folder()
-    sugg = [f for f in dr.suggestions(files, A) if not (q and str(f[0]).startswith(str(q) + os.sep))]
+    sugg = [f for f in dr.suggestions(files, A) if not (q and str(f[0]).startswith(str(q) + os.sep))
+            and not (full and dr.is_system_path(f[0]))]
     dup_rows = []
     for g in sorted(dups, key=lambda g: -g[0].stat().st_size)[:100]:
         size = g[0].stat().st_size
@@ -310,7 +335,9 @@ def disk_job(roots: list[Path], min_big: int, old_days: int):
         by_ext[p.suffix.lower() or "(không đuôi)"] += s
     S.results["disk"] = {
         "at": now, "roots": [str(r) for r in roots], "free": du.free, "disk_total": du.total,
-        "scanned": sum(f[1] for f in files), "count": len(files),
+        "scanned": dr.walk.total, "count": dr.walk.count, "full": full,
+        "root_sizes": [{"path": str(r), "name": str(r), "size": dir_size.get(r, 0), "dir": True} for r in roots],
+        "tree": dir_tree(dir_size, roots, files, 20 * MiB),
         "top_dirs": [{"path": str(d), "size": s} for d, s in
                      sorted(((d, s) for d, s in dir_size.items() if d not in roots), key=lambda x: -x[1])[:30]],
         "biggest": [file_row(p, s, m) | {"uploaded": str(p) in uploaded} for p, s, m, _ in
@@ -319,7 +346,7 @@ def disk_job(roots: list[Path], min_big: int, old_days: int):
         "dups": dup_rows, "dup_waste": sum(d["waste"] for d in dup_rows),
         "types": [{"ext": e, "size": s} for e, s in sorted(by_ext.items(), key=lambda x: -x[1])[:12]],
     }
-    S.notify("Quét ổ cứng xong", f"{len(files):,} file · gợi ý dọn {core.human(sum(f[1] for f in sugg))}",
+    S.notify("Quét ổ cứng xong", f"{dr.walk.count:,} file · gợi ý dọn {core.human(sum(f[1] for f in sugg))}",
              "success")
 
 
@@ -401,7 +428,7 @@ def api_get_config():
 def api_set_config():
     cfg = read_cfg()
     new = body()
-    for k in ("api_id", "api_hash", "target", "folders", "premium", "move_to_trash", "min_file_age_seconds",
+    for k in ("api_id", "api_hash", "proxy", "target", "folders", "premium", "move_to_trash", "min_file_age_seconds",
               "send_as_document", "concurrency", "watch_interval_seconds", "video_sorter"):
         if k in new:
             cfg[k] = new[k]
@@ -655,12 +682,16 @@ def api_sort_undo():
 @web.post("/api/disk/scan")
 def api_disk_scan():
     b = body()
-    roots = [Path(os.path.expanduser(s)).resolve() for s in b.get("roots") or [] if s] or [Path.home()]
+    full = bool(b.get("full"))
+    if full:  # toàn bộ máy: thư mục cá nhân (cả Library, folder ẩn) + ứng dụng
+        roots = [Path.home(), Path("/Applications")]
+    else:
+        roots = [Path(os.path.expanduser(s)).resolve() for s in b.get("roots") or [] if s] or [Path.home()]
     roots = [r for r in roots if r.exists()]
     if not roots:
         return err("Folder không tồn tại.")
     if not background("disk", "Đang quét ổ cứng…",
-                      lambda: disk_job(roots, int(b.get("min_big", 300)), int(b.get("old_days", 90)))):
+                      lambda: disk_job(roots, int(b.get("min_big", 300)), int(b.get("old_days", 90)), full)):
         return err("Đang quét rồi.")
     return ok()
 
@@ -686,6 +717,8 @@ def api_trash():
     paths = body().get("paths") or []
     n = 0
     for p in paths:
+        if dr.is_system_path(p):  # không xoá file hệ thống / ứng dụng từ app
+            continue
         if Path(p).exists():
             core.move_to_trash(Path(p))
             n += 1
@@ -866,7 +899,7 @@ def api_find():
 @web.post("/api/get")
 def api_get():
     key = str(body().get("id", ""))
-    out_dir = Path(os.path.expanduser(body().get("to") or "~/Downloads/TeleUploader"))
+    out_dir = Path(os.path.expanduser(body().get("to") or "~/Downloads/MediaHub"))
 
     async def go():
         try:
@@ -954,11 +987,16 @@ def main():
     url = f"http://127.0.0.1:{port}/?t={TOKEN}"
     threading.Thread(target=lambda: web.run("127.0.0.1", port, threaded=True, use_reloader=False),
                      daemon=True).start()
-    S.add_log(f"TeleUploader khởi động {datetime.now():%d/%m/%Y %H:%M}")
-    try:
-        run_tg(ensure_client(require_login=False), timeout=20)
-    except Exception as e:  # noqa: BLE001
-        S.add_log(str(e), "warn")
+    S.add_log(f"Media Hub khởi động {datetime.now():%d/%m/%Y %H:%M}")
+    # Kết nối Telegram chạy ngầm — cửa sổ mở ngay, không chờ (mạng chặn Telegram thì có thể rất lâu)
+    async def first_connect():
+        try:
+            await ensure_client(require_login=False)
+        except Exception as e:  # noqa: BLE001
+            S.add_log(str(e), "warn")
+            if S.login_step == "offline":
+                S.notify("Không kết nối được Telegram", str(e), "error", mac=False)
+    asyncio.run_coroutine_threadsafe(first_connect(), LOOP)
     try:
         import webview
     except ImportError:
@@ -971,7 +1009,7 @@ def main():
         except KeyboardInterrupt:
             return
     api = JsApi()
-    api.window = webview.create_window("elevaTO Media Hub", url, width=1180, height=780, min_size=(820, 560), js_api=api)
+    api.window = webview.create_window("Media Hub", url, width=1180, height=780, min_size=(820, 560), js_api=api)
     webview.start()
 
 

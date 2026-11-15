@@ -1,4 +1,4 @@
-# TeleUploader (macOS)
+# Media Hub (macOS)
 
 Gồm 3 công cụ: **TeleUploader** (đẩy lên Telegram + tìm/tải lại), **Video Sorter** (`./sort.sh`), **Disk Report** (`./disk.sh`). Nên cài thêm `brew install ffmpeg` để đọc ngày quay video chính xác.
 
@@ -10,7 +10,10 @@ Mở Terminal, chạy:
 cd tele-uploader
 ./install.sh
 ```
-Xong sẽ có **TeleUploader.app** trong `~/Applications` và app tự mở. Từ đó chỉ cần bấm đúp app (kéo vào Dock cho tiện).
+Xong sẽ có **Media Hub.app** trong `~/Applications` và app tự mở. Từ đó chỉ cần bấm đúp app (kéo vào Dock cho tiện).
+
+Sắp xếp video, Cắt & gộp, Ổ cứng dùng được ngay, không cần Telegram. Riêng Upload và Tìm & tải cần đăng nhập Telegram.
+Nếu mạng chặn Telegram: bật VPN, hoặc nhập Proxy trong Cài đặt (`socks5://host:port` hoặc link MTProxy `tg://proxy?...`).
 
 Trong app → **Cài đặt**:
 1. Vào https://my.telegram.org → *API development tools* → copy `api_id`, `api_hash` vào ô API → **Lưu cài đặt**.
@@ -27,11 +30,11 @@ Trong app → **Cài đặt**:
     Mặc định cắt nhanh không nén lại (lệch 1–2s theo keyframe); bật *Cắt chính xác từng khung hình* nếu cần đúng tuyệt đối. mkv/avi/mts: bấm *Tạo bản xem trước* để xem, khi cắt vẫn dùng file gốc.
   - *Gộp video*: chọn nhiều video, sắp thứ tự bằng ↑↓. Video khác máy quay/độ phân giải thì bật *Chuyển đổi cho khớp* (nén lại H.264, dùng chip đồ hoạ của Mac).
   - *Chia / ghép file*: chia file bất kỳ thành `.part001`… và ghép lại (chọn 1 phần, app tự tìm đủ các phần).
-- **Ổ cứng**: quét → xem file nên dọn, file trùng, folder nặng → tick chọn → *Đưa lên Telegram & dọn* hoặc *Thùng rác*.
+- **Ổ cứng**: *Quét các folder đã chọn* → file nên dọn, file trùng → tick chọn → *Đưa lên Telegram & dọn* hoặc *Thùng rác*. *Quét toàn bộ máy* → quét cả thư mục cá nhân (gồm Library, folder ẩn) và Ứng dụng, bấm vào từng folder để xem cái gì chiếm chỗ; file hệ thống/ứng dụng chỉ để xem, app không cho xoá. Muốn quét đủ mọi folder: cấp *Full Disk Access* cho Media Hub.
 - **Tìm & tải**: tìm file đã up, bấm Tải về (tự ghép file đã split).
 - **🔔 Thông báo**: mọi việc xong/lỗi đều báo trong app và thông báo của macOS.
 
-Muốn app tự mở khi bật máy: System Settings → General → Login Items → thêm TeleUploader.
+Muốn app tự mở khi bật máy: System Settings → General → Login Items → thêm Media Hub.
 
 > Không chạy song song app với `./run.sh watch` / `autostart.sh` (dùng chung phiên đăng nhập).
 

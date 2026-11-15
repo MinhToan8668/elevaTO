@@ -1,4 +1,5 @@
 telethon>=1.36
+python-socks[asyncio]>=2.4
 cryptg>=0.4
 rich>=13.7
 PyYAML>=6.0

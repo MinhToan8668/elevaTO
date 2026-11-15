@@ -38,14 +38,29 @@ def human(n: float) -> str:
     return f"{n:.1f} TB"
 
 
-def walk(roots: list[Path]):
+def is_system_path(p) -> bool:
+    """File của hệ thống / ứng dụng — chỉ để xem, không nên xoá bằng app."""
+    parts = Path(p).parts
+    return ("Library" in parts or "Applications" in parts or any(x.endswith((".app", ".photoslibrary")) for x in parts)
+            or any(x.startswith(".") for x in parts[1:]))
+
+
+def walk(roots: list[Path], full: bool = False, on_progress=None):
+    """full=True: quét cả Library, ứng dụng, folder ẩn; chỉ giữ file ≥ 1MB trong danh sách (đỡ tốn RAM)
+    nhưng dung lượng folder vẫn tính đủ. Tổng số file / dung lượng ở walk.count, walk.total."""
     files = []
     dir_size: dict[Path, int] = defaultdict(int)
+    count = total = 0
     with Progress(console=console, transient=True) as pr:
         t = pr.add_task("Đang quét…", total=None)
         for root in roots:
+            dev = os.stat(root).st_dev
             for dp, dns, fns in os.walk(root):
-                dns[:] = [d for d in dns if not d.startswith(".") and d not in SKIP_DIRS and not d.endswith((".app", ".photoslibrary"))]
+                if full:  # không đi sang ổ đĩa khác (ổ ngoài, ổ mạng)
+                    dns[:] = [d for d in dns if _same_dev(os.path.join(dp, d), dev)]
+                else:
+                    dns[:] = [d for d in dns if not d.startswith(".") and d not in SKIP_DIRS
+                              and not d.endswith((".app", ".photoslibrary"))]
                 d = Path(dp)
                 for n in fns:
                     p = d / n
@@ -55,16 +70,31 @@ def walk(roots: list[Path]):
                         continue
                     if not os.path.isfile(p) or os.path.islink(p):
                         continue
-                    files.append((p, st.st_size, st.st_mtime, st.st_atime))
+                    # dung lượng thật trên đĩa (file thưa / nén của macOS nhỏ hơn st_size)
+                    size = min(st.st_size, st.st_blocks * 512) if full and getattr(st, "st_blocks", 0) else st.st_size
+                    count += 1
+                    total += size
+                    if not full or size >= MiB:
+                        files.append((p, size, st.st_mtime, st.st_atime))
                     # cộng dồn cho mọi folder cha trong phạm vi root
                     cur = d
                     while True:
-                        dir_size[cur] += st.st_size
+                        dir_size[cur] += size
                         if cur == root or cur.parent == cur:
                             break
                         cur = cur.parent
-                pr.update(t, description=f"Đã quét {len(files):,} file")
+                pr.update(t, description=f"Đã quét {count:,} file")
+                if on_progress and count % 500 < len(fns) + 1:
+                    on_progress(count, total)
+    walk.count, walk.total = count, total
     return files, dir_size
+
+
+def _same_dev(path: str, dev: int) -> bool:
+    try:
+        return not os.path.islink(path) and os.lstat(path).st_dev == dev
+    except OSError:
+        return False
 
 
 def find_dups(files, min_size: int):

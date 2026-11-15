@@ -464,7 +464,8 @@ textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospa
             <label class="f" style="flex-direction:row;align-items:center;gap:6px">File lớn ≥<input type="number" id="diskBig" value="300" style="width:80px">MB</label>
             <label class="f" style="flex-direction:row;align-items:center;gap:6px">không sửa ≥<input type="number" id="diskOld" value="90" style="width:70px">ngày</label>
             <span style="flex:1"></span>
-            <button class="btn pri" id="diskScan">🔍 Quét</button>
+            <button class="btn" id="diskFull" title="Quét cả thư mục cá nhân (gồm Library, folder ẩn) và Ứng dụng">💻 Quét toàn bộ máy</button>
+            <button class="btn pri" id="diskScan">🔍 Quét các folder trên</button>
           </div>
         </div>
         <div id="diskOut"><div class="card empty">Chưa quét. Bấm <b>Quét</b> để xem ổ đang đầy vì cái gì.</div></div>
@@ -477,7 +478,7 @@ textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospa
             <input type="text" id="q" placeholder="Tên file, tên folder, #hashtag…" style="flex:1;font-size:15px;padding:9px 12px">
             <button class="btn pri" id="findBtn">Tìm trên Telegram</button>
           </div>
-          <div class="mut small" style="margin-top:6px">File đã bị split sẽ được tải đủ các phần và tự ghép lại. Lưu vào <span id="dlDir">~/Downloads/TeleUploader</span>.</div>
+          <div class="mut small" style="margin-top:6px">File đã bị split sẽ được tải đủ các phần và tự ghép lại. Lưu vào <span id="dlDir">~/Downloads/MediaHub</span>.</div>
         </div>
         <div class="card hide" id="dlCard" style="margin-bottom:14px"><h3>Đang tải</h3><div id="xferDl"></div></div>
         <div class="card"><div id="findOut"><div class="empty">Nhập từ khoá để tìm.</div></div></div>
@@ -506,6 +507,8 @@ textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospa
             <div class="grid" style="gap:10px">
               <label class="f">API ID<input type="text" id="cApiId"></label>
               <label class="f">API Hash<input type="text" id="cApiHash"></label>
+              <label class="f">Proxy (khi mạng chặn Telegram — để trống nếu đang dùng VPN)
+                <input type="text" id="cProxy" placeholder="socks5://127.0.0.1:1080 hoặc link MTProxy tg://proxy?server=…"></label>
             </div>
           </div>
         </div>
@@ -625,7 +628,9 @@ function render(s) {
                              : "Chưa đăng nhập Telegram";
   const la = $("#loginAlert");
   if (s.login_step === "ok") la.classList.add("hide");
-  else { la.classList.remove("hide"); la.innerHTML = s.login_step === "need_api"
+  else { la.classList.remove("hide"); la.innerHTML = s.login_step === "offline"
+      ? `Không kết nối được Telegram (mạng có thể đang chặn). Bật VPN hoặc nhập Proxy trong <a data-go="settings">Cài đặt</a> rồi bấm Lưu.`
+      : s.login_step === "need_api"
       ? `Chưa có API Telegram. <a data-go="settings">Vào Cài đặt</a> để nhập API ID / Hash.`
       : `Chưa đăng nhập Telegram. <a data-go="settings">Đăng nhập ngay</a>.`; }
   // tiến độ
@@ -768,17 +773,33 @@ const diskRoots = load("diskRoots", ["~/Movies", "~/Downloads", "~/Desktop"]);
 chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots));
 $("#diskAdd").onclick = async () => { const p = await pickFolder(); if (p) { diskRoots.push(p); store("diskRoots", diskRoots); chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots)); } };
 $("#diskScan").onclick = () => api("disk/scan", {roots: diskRoots, min_big: +$("#diskBig").value, old_days: +$("#diskOld").value}).catch(() => {});
-let diskTab = "suggest";
+$("#diskFull").onclick = () => { diskTab = "dirs"; diskCwd = null; api("disk/scan", {full: true, min_big: +$("#diskBig").value, old_days: +$("#diskOld").value}).catch(() => {}); };
+let diskTab = "suggest", diskCwd = null, diskData = null;
+function drawTree() {
+  const d = diskData, box = $("#diskTree"); if (!d || !box) return;
+  const rows = diskCwd ? (d.tree[diskCwd] || []) : d.root_sizes;
+  const max = Math.max(1, ...rows.map(x => x.size));
+  const parent = diskCwd && !d.root_sizes.some(r => r.path === diskCwd) ? diskCwd.slice(0, diskCwd.lastIndexOf("/")) : null;
+  box.innerHTML = `<div class="row" style="margin-bottom:8px"><button class="btn sm" id="treeUp" ${diskCwd ? "" : "disabled"}>⬆ Lên</button>
+      <span class="path" style="flex:1"><b>${esc(diskCwd || "Toàn bộ")}</b></span></div>` +
+    (rows.length ? `<table>` + rows.map(x => `<tr ${x.dir && d.tree[x.path] ? `data-cd="${esc(x.path)}" style="cursor:pointer"` : ""}><td class="path" style="width:50%">${x.dir ? "📁" : "📄"} ${esc(x.name)}${x.dir && d.tree[x.path] ? " ›" : ""}</td>
+      <td><div class="bar"><i style="width:${Math.max(2, x.size/max*100)}%"></i></div></td><td class="n">${human(x.size)}</td>
+      <td style="width:1%"><button class="btn sm" data-reveal="${esc(x.path)}">Finder</button></td></tr>`).join("") + `</table>`
+      : `<div class="empty">Không còn mục nào ≥ 20 MB trong folder này.</div>`);
+  $("#treeUp").onclick = () => { diskCwd = parent; drawTree(); };
+  box.querySelectorAll("[data-cd]").forEach(tr => tr.onclick = e => { if (e.target.closest("button")) return; diskCwd = tr.dataset.cd; drawTree(); });
+}
 async function loadDisk() {
   const {result: d} = await api("disk/result");
   if (!d) return;
+  diskData = d; if (diskCwd && !d.tree[diskCwd]) diskCwd = null;
   const daysAgo = m => Math.floor((Date.now()/1000 - m) / 86400);
   const sel = (rows, key) => `<div class="row" style="margin-bottom:8px"><label class="chk small"><input type="checkbox" data-all="${key}"> Chọn tất cả</label><span style="flex:1"></span>
       <span class="mut small" id="sel-${key}">0 file</span>
       <button class="btn sm pri" data-act="queue" data-k="${key}">☁️ Đưa lên Telegram & dọn</button>
       <button class="btn sm dan" data-act="trash" data-k="${key}">🗑 Chuyển vào Thùng rác</button></div>
     <div class="tbl"><table><tr><th></th><th>File</th><th class="n">Dung lượng</th><th class="n">Sửa lần cuối</th><th></th></tr>` +
-    rows.map(f => `<tr><td><input type="checkbox" data-k="${key}" value="${esc(f.path)}" data-size="${f.size}"></td><td class="path">${esc(f.path)} ${f.uploaded ? `<span class="tag ok">đã up</span>` : ""}</td>
+    rows.map(f => `<tr><td>${f.system ? "" : `<input type="checkbox" data-k="${key}" value="${esc(f.path)}" data-size="${f.size}">`}</td><td class="path">${esc(f.path)} ${f.uploaded ? `<span class="tag ok">đã up</span>` : ""}${f.system ? `<span class="tag warn">hệ thống / ứng dụng</span>` : ""}</td>
       <td class="n">${human(f.size)}</td><td class="n mut">${daysAgo(f.mtime)} ngày</td><td><button class="btn sm" data-reveal="${esc(f.path)}">Finder</button></td></tr>`).join("") + `</table></div>`;
   const maxDir = Math.max(1, ...d.top_dirs.map(x => x.size));
   const panes = {
@@ -789,7 +810,7 @@ async function loadDisk() {
         <button class="btn sm" data-reveal="${esc(p)}">Finder</button><button class="btn sm dan" data-trash1="${esc(p)}">🗑</button></div>`).join("")}</td>
         <td class="n" style="vertical-align:top">${human(g.size)}<br><span class="mut small">thừa ${human(g.waste)}</span></td></tr>`).join("") + `</table></div>`
       : `<div class="empty">Không có file trùng (≥10MB) 👍</div>`,
-    dirs: `<table>` + d.top_dirs.map(x => `<tr><td class="path" style="width:55%">${esc(x.path)}</td><td><div class="bar"><i style="width:${Math.max(2, x.size/maxDir*100)}%"></i></div></td><td class="n">${human(x.size)}</td></tr>`).join("") + `</table>`,
+    dirs: `<div class="mut small" style="margin-bottom:8px">Bấm vào folder để xem bên trong chiếm chỗ vì cái gì.${d.full ? " Mục trong Library / Ứng dụng là của hệ thống và app — chỉ để xem, muốn giải phóng thì gỡ app tương ứng." : ""}</div><div id="diskTree"></div>`,
     big: sel(d.biggest, "big"),
     types: `<table>` + d.types.map(x => `<tr><td>${esc(x.ext)}</td><td class="n">${human(x.size)}</td></tr>`).join("") + `</table>`,
   };
@@ -799,10 +820,11 @@ async function loadDisk() {
       <div class="card kpi"><div class="l">Đã quét</div><div class="v">${human(d.scanned)}</div><div class="s">${d.count.toLocaleString("vi-VN")} file · ${ago(d.at)}</div></div>
       <div class="card kpi"><div class="l">File trùng lãng phí</div><div class="v" style="color:var(--bad)">${human(d.dup_waste)}</div><div class="s">${d.dups.length} nhóm</div></div>
       <div class="card kpi"><div class="l">Có thể dọn (gợi ý)</div><div class="v" style="color:var(--ok)">${human(d.suggest.reduce((a, f) => a + f.size, 0))}</div><div class="s">${d.suggest.length} file</div></div></div>
-    <div class="card"><div class="tabs" id="diskTabs">${[["suggest","💡 Nên dọn"],["dups","♊ File trùng"],["dirs","📁 Folder nặng"],["big","🐘 File lớn nhất"],["types","🗂 Theo loại"]]
+    <div class="card"><div class="tabs" id="diskTabs">${[["suggest","💡 Nên dọn"],["dups","♊ File trùng"],["dirs","📁 Chiếm chỗ theo folder"],["big","🐘 File lớn nhất"],["types","🗂 Theo loại"]]
       .map(([k, l]) => `<a data-t="${k}" class="${k === diskTab ? "on" : ""}">${l}</a>`).join("")}</div>
       ${Object.entries(panes).map(([k, h]) => `<div data-dp="${k}" class="${k === diskTab ? "" : "hide"}">${h}</div>`).join("")}</div>`;
   $$("#diskTabs a").forEach(a => a.onclick = () => { diskTab = a.dataset.t; $$("#diskTabs a").forEach(x => x.classList.toggle("on", x === a)); $$("[data-dp]").forEach(p => p.classList.toggle("hide", p.dataset.dp !== diskTab)); });
+  drawTree();
   const upd = k => { const c = $$(`input[data-k="${k}"]:checked`); $(`#sel-${k}`).textContent = `${c.length} file · ${human(c.reduce((a, x) => a + +x.dataset.size, 0))}`; };
   $$("[data-all]").forEach(a => a.onchange = () => { $$(`input[data-k="${a.dataset.all}"]`).forEach(x => x.checked = a.checked); upd(a.dataset.all); });
   $$("input[data-k]").forEach(x => x.onchange = () => upd(x.dataset.k));
@@ -1045,7 +1067,7 @@ async function loadSettings() {
   CFG = await api("config");
   $("#cApiId").value = CFG.api_id && CFG.api_id != 123456 ? CFG.api_id : "";
   $("#cApiHash").value = CFG.api_hash && !/^0123456789/.test(CFG.api_hash) ? CFG.api_hash : "";
-  $("#cTarget").value = CFG.target ?? "me";
+  $("#cTarget").value = CFG.target ?? "me"; $("#cProxy").value = CFG.proxy ?? "";
   cFolders = [...(CFG.folders || [])]; chipList($("#cFolders"), cFolders);
   $("#cTrash").checked = CFG.move_to_trash ?? true; $("#cPremium").checked = !!CFG.premium; $("#cDoc").checked = CFG.send_as_document ?? true;
   $("#cInterval").value = Math.round((CFG.watch_interval_seconds ?? 300) / 60); $("#cConc").value = CFG.concurrency ?? 2; $("#cAge").value = CFG.min_file_age_seconds ?? 120;
@@ -1056,7 +1078,7 @@ $("#cAddFolder").onclick = async () => { const p = await pickFolder(); if (p) { 
 $("#cPickLib").onclick = async () => { const p = await pickFolder(); if (p) $("#cLib").value = p; };
 $("#cSave").onclick = async () => {
   await api("config", {
-    api_id: $("#cApiId").value.trim(), api_hash: $("#cApiHash").value.trim(), target: $("#cTarget").value.trim() || "me",
+    api_id: $("#cApiId").value.trim(), api_hash: $("#cApiHash").value.trim(), proxy: $("#cProxy").value.trim(), target: $("#cTarget").value.trim() || "me",
     folders: cFolders, move_to_trash: $("#cTrash").checked, premium: $("#cPremium").checked, send_as_document: $("#cDoc").checked,
     watch_interval_seconds: Math.max(1, +$("#cInterval").value) * 60, concurrency: Math.min(4, Math.max(1, +$("#cConc").value)),
     min_file_age_seconds: Math.max(0, +$("#cAge").value),
@@ -1084,7 +1106,8 @@ function renderAcct() {
       <div class="row"><input type="password" id="lgPw" placeholder="Mật khẩu 2 bước"><button class="btn pri" id="lgGo">Đăng nhập</button></div>`;
     $("#lgGo").onclick = () => api("login/password", {password: $("#lgPw").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
   } else {
-    el.innerHTML = `<div class="mut small" style="margin-bottom:8px">Đăng nhập bằng tài khoản Telegram của bạn (bot chỉ up được 50MB).</div>
+    el.innerHTML = (s === "offline" ? `<div class="alert">Chưa kết nối được máy chủ Telegram — bật VPN hoặc nhập Proxy bên cạnh, bấm Lưu cài đặt rồi thử lại.</div>` : "") +
+      `<div class="mut small" style="margin-bottom:8px">Đăng nhập bằng tài khoản Telegram của bạn (bot chỉ up được 50MB).</div>
       <div class="row"><input type="text" id="lgPhone" placeholder="+84 912 345 678" style="width:200px"><button class="btn pri" id="lgGo">Gửi mã</button></div>`;
     $("#lgGo").onclick = () => api("login/phone", {phone: $("#lgPhone").value}).then(() => setTimeout(renderAcct, 300)).catch(() => {});
   }
