@@ -982,6 +982,22 @@ class JsApi:
         return r[0] if r else None
 
 
+def brand_mac_app():
+    """Tiến trình là Python nên Dock mặc định hiện tên/icon 'Python' — đổi sang tên và icon của Media Hub."""
+    try:
+        from AppKit import NSApplication, NSImage
+        from Foundation import NSBundle
+        info = NSBundle.mainBundle().localizedInfoDictionary() or NSBundle.mainBundle().infoDictionary()
+        if info is not None:
+            info["CFBundleName"] = "Media Hub"
+            info["CFBundleDisplayName"] = "Media Hub"
+        icon = NSImage.alloc().initWithContentsOfFile_(str(HERE / "ui" / "assets" / "icon.png"))
+        if icon:
+            NSApplication.sharedApplication().setApplicationIconImage_(icon)
+    except Exception:  # noqa: BLE001 — không phải macOS hoặc thiếu pyobjc: bỏ qua
+        pass
+
+
 def main():
     port = free_port()
     url = f"http://127.0.0.1:{port}/?t={TOKEN}"
@@ -1008,6 +1024,7 @@ def main():
                 time.sleep(3600)
         except KeyboardInterrupt:
             return
+    brand_mac_app()
     api = JsApi()
     api.window = webview.create_window("Media Hub", url, width=1180, height=780, min_size=(820, 560), js_api=api)
     webview.start()

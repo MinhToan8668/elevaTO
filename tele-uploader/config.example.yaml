@@ -6,9 +6,7 @@ api_hash: "0123456789abcdef0123456789abcdef"
 target: "me"
 
 # Các folder cần quét & upload
-folders:
-  - "~/Documents/CanUpload"
-  - "~/Downloads/Telegram-Queue"
+folders: []          # thêm trong app (Cài đặt) hoặc ghi dạng:  - "~/Movies/Library"
 
 # Tài khoản Telegram Premium được up 4GB/file, thường là 2GB/file
 premium: false
