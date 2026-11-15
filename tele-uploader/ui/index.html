@@ -773,7 +773,7 @@ const diskRoots = load("diskRoots", ["~/Movies", "~/Downloads", "~/Desktop"]);
 chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots));
 $("#diskAdd").onclick = async () => { const p = await pickFolder(); if (p) { diskRoots.push(p); store("diskRoots", diskRoots); chipList($("#diskRoots"), diskRoots, () => store("diskRoots", diskRoots)); } };
 $("#diskScan").onclick = () => api("disk/scan", {roots: diskRoots, min_big: +$("#diskBig").value, old_days: +$("#diskOld").value}).catch(() => {});
-$("#diskFull").onclick = () => { diskTab = "dirs"; diskCwd = null; api("disk/scan", {full: true, min_big: +$("#diskBig").value, old_days: +$("#diskOld").value}).catch(() => {}); };
+$("#diskFull").onclick = () => { diskTab = "summary"; diskCwd = null; api("disk/scan", {full: true, min_big: +$("#diskBig").value, old_days: +$("#diskOld").value}).catch(() => {}); };
 let diskTab = "suggest", diskCwd = null, diskData = null;
 function drawTree() {
   const d = diskData, box = $("#diskTree"); if (!d || !box) return;
@@ -802,7 +802,16 @@ async function loadDisk() {
     rows.map(f => `<tr><td>${f.system ? "" : `<input type="checkbox" data-k="${key}" value="${esc(f.path)}" data-size="${f.size}">`}</td><td class="path">${esc(f.path)} ${f.uploaded ? `<span class="tag ok">đã up</span>` : ""}${f.system ? `<span class="tag warn">hệ thống / ứng dụng</span>` : ""}</td>
       <td class="n">${human(f.size)}</td><td class="n mut">${daysAgo(f.mtime)} ngày</td><td><button class="btn sm" data-reveal="${esc(f.path)}">Finder</button></td></tr>`).join("") + `</table></div>`;
   const maxDir = Math.max(1, ...d.top_dirs.map(x => x.size));
+  const SAFE = {safe: `<span class="tag ok">xoá thoải mái</span>`, care: `<span class="tag warn">xem trước khi xoá</span>`};
+  if (!d.summary && diskTab === "summary") diskTab = "suggest";
   const panes = {
+    summary: d.summary ? `<div class="mut small" style="margin-bottom:8px">Những gì đang chiếm chỗ nhiều nhất trên máy, lớn → nhỏ. Bấm một dòng để xem bên trong.</div>
+      <div class="tbl" style="max-height:none"><table><tr><th>#</th><th>Thư mục / nhóm</th><th class="n">Dung lượng</th><th>Gồm những gì</th><th></th></tr>` +
+      d.summary.map((x, i) => `<tr data-sum="${esc(x.paths[0])}" style="cursor:pointer"><td class="mut">${i + 1}</td>
+        <td style="min-width:170px">${x.kind === "folder" ? `<code>${esc(x.label)}</code>` : `<b style="color:var(--fg)">${esc(x.label)}</b>`}<div style="margin-top:3px">${SAFE[x.safe] || ""}</div></td>
+        <td class="n"><b style="color:var(--fg)">${human(x.size)}</b></td>
+        <td class="small">${esc(x.contents)}${x.note ? `<div class="mut">${esc(x.note)}</div>` : ""}</td>
+        <td style="width:1%"><button class="btn sm" data-reveal="${esc(x.paths[0])}">Finder</button></td></tr>`).join("") + `</table></div>` : "",
     suggest: d.suggest.length ? `<div class="mut small" style="margin-bottom:8px">File lớn, lâu rồi không đụng tới. <b>Đưa lên Telegram</b> = chuyển vào folder upload, app sẽ up rồi tự đưa vào Thùng rác.</div>` + sel(d.suggest, "suggest")
              : `<div class="empty">Không có file nào thoả điều kiện 👍</div>`,
     dups: d.dups.length ? `<div class="mut small" style="margin-bottom:8px">Mỗi nhóm là các file giống hệt nhau. Bấm 🗑 ở bản thừa (giữ lại 1 bản).</div><div class="tbl"><table>` +
@@ -820,11 +829,14 @@ async function loadDisk() {
       <div class="card kpi"><div class="l">Đã quét</div><div class="v">${human(d.scanned)}</div><div class="s">${d.count.toLocaleString("vi-VN")} file · ${ago(d.at)}</div></div>
       <div class="card kpi"><div class="l">File trùng lãng phí</div><div class="v" style="color:var(--bad)">${human(d.dup_waste)}</div><div class="s">${d.dups.length} nhóm</div></div>
       <div class="card kpi"><div class="l">Có thể dọn (gợi ý)</div><div class="v" style="color:var(--ok)">${human(d.suggest.reduce((a, f) => a + f.size, 0))}</div><div class="s">${d.suggest.length} file</div></div></div>
-    <div class="card"><div class="tabs" id="diskTabs">${[["suggest","💡 Nên dọn"],["dups","♊ File trùng"],["dirs","📁 Chiếm chỗ theo folder"],["big","🐘 File lớn nhất"],["types","🗂 Theo loại"]]
-      .map(([k, l]) => `<a data-t="${k}" class="${k === diskTab ? "on" : ""}">${l}</a>`).join("")}</div>
+    <div class="card"><div class="tabs" id="diskTabs">${[["summary","📊 Tổng hợp"],["suggest","💡 Nên dọn"],["dups","♊ File trùng"],["dirs","📁 Chiếm chỗ theo folder"],["big","🐘 File lớn nhất"],["types","🗂 Theo loại"]]
+      .filter(([k]) => k !== "summary" || d.summary).map(([k, l]) => `<a data-t="${k}" class="${k === diskTab ? "on" : ""}">${l}</a>`).join("")}</div>
       ${Object.entries(panes).map(([k, h]) => `<div data-dp="${k}" class="${k === diskTab ? "" : "hide"}">${h}</div>`).join("")}</div>`;
   $$("#diskTabs a").forEach(a => a.onclick = () => { diskTab = a.dataset.t; $$("#diskTabs a").forEach(x => x.classList.toggle("on", x === a)); $$("[data-dp]").forEach(p => p.classList.toggle("hide", p.dataset.dp !== diskTab)); });
   drawTree();
+  $$("[data-sum]").forEach(tr => tr.onclick = e => { if (e.target.closest("button")) return;
+    diskCwd = d.tree[tr.dataset.sum] ? tr.dataset.sum : null; diskTab = "dirs";
+    $$("#diskTabs a").forEach(x => x.classList.toggle("on", x.dataset.t === "dirs")); $$("[data-dp]").forEach(p => p.classList.toggle("hide", p.dataset.dp !== "dirs")); drawTree(); });
   const upd = k => { const c = $$(`input[data-k="${k}"]:checked`); $(`#sel-${k}`).textContent = `${c.length} file · ${human(c.reduce((a, x) => a + +x.dataset.size, 0))}`; };
   $$("[data-all]").forEach(a => a.onchange = () => { $$(`input[data-k="${a.dataset.all}"]`).forEach(x => x.checked = a.checked); upd(a.dataset.all); });
   $$("input[data-k]").forEach(x => x.onchange = () => upd(x.dataset.k));

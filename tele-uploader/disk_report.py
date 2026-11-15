@@ -90,6 +90,159 @@ def walk(roots: list[Path], full: bool = False, on_progress=None):
     return files, dir_size
 
 
+# Nhóm quen thuộc khi quét toàn bộ máy: (tên, ghi chú, mức an toàn khi xoá, các mẫu đường dẫn tính từ thư mục cá nhân)
+# an toàn: "safe" = xoá thoải mái · "care" = xoá được nhưng nên xem trước · "" = dữ liệu của bạn / hệ thống
+KNOWN_GROUPS = [
+    ("Thùng rác", "Chưa dọn — Finder → Empty Trash để lấy lại chỗ", "safe", [".Trash"]),
+    ("Cache trình duyệt", "Xoá thoải mái, trình duyệt tự tạo lại",
+     "safe", ["Library/Caches/BraveSoftware", "Library/Caches/Google", "Library/Caches/com.coccoc*", "Library/Caches/CocCoc",
+              "Library/Caches/Firefox", "Library/Caches/Mozilla", "Library/Caches/com.apple.Safari",
+              "Library/Caches/com.microsoft.edgemac", "Library/Caches/Microsoft Edge", "Library/Caches/com.operasoftware*",
+              "Library/Caches/company.thebrowser.Browser", "Library/Application Support/*/*/Default/Service Worker/CacheStorage",
+              "Library/Application Support/*/*/Default/Cache", "Library/Application Support/*/Default/Service Worker/CacheStorage"]),
+    ("Telegram (cache media)", "Dọn trong Telegram → Settings → Data and Storage → Storage Usage",
+     "care", ["Library/Group Containers/*.keepcoder.Telegram", "Library/Group Containers/*.ru.keepcoder.Telegram",
+              "Library/Containers/ru.keepcoder.Telegram", "Library/Application Support/Telegram Desktop",
+              "Library/Containers/org.telegram.desktop"]),
+    ("CapCut (cache & bản nháp)", "Cache xoá được trong CapCut → Settings; bản nháp nên xem trước khi xoá",
+     "care", ["Movies/CapCut", "Movies/CacheClip", "Movies/JianyingPro", "Library/Containers/com.lemon.lvoverseas",
+              "Library/Application Support/CapCut", "Library/Caches/com.lemon.lvoverseas"]),
+    ("Zalo", "Ảnh/file đã nhận — dọn trong Zalo → Cài đặt → Quản lý dữ liệu",
+     "care", ["Library/Application Support/ZaloData", "Library/Application Support/ZaloPC", "Library/Containers/com.vng.zalo"]),
+    ("Model AI & cache công cụ lập trình", "Xoá được, cần thì công cụ tự tải lại (tốn thời gian tải)",
+     "safe", [".cache", ".npm", ".yarn", ".pnpm-store", ".cargo/registry", ".gradle/caches", ".m2/repository", ".ollama",
+              ".lmstudio", "Library/Caches/pip", "Library/Caches/Homebrew", "Library/Caches/Yarn", "Library/Caches/pnpm",
+              "Library/Caches/ms-playwright", "Library/Caches/CocoaPods", "Library/Caches/huggingface"]),
+    ("Xcode & giả lập iPhone", "DerivedData và simulator cũ xoá được",
+     "care", ["Library/Developer"]),
+    ("Docker / máy ảo", "Xoá image & container thừa trong Docker Desktop",
+     "care", ["Library/Containers/com.docker.docker", "Library/Group Containers/group.com.docker", ".docker", ".colima",
+              "Library/Containers/com.utmapp.UTM", "Parallels", "Virtual Machines.localized"]),
+    ("Microsoft Teams", "Cache xoá được", "safe", ["Library/Application Support/Microsoft/Teams",
+                                                    "Library/Containers/com.microsoft.teams2", "Library/Group Containers/*.com.microsoft.teams"]),
+    ("Thư viện Photos", "Ảnh/video của bạn trong app Photos", "", ["Pictures/*.photoslibrary"]),
+    ("iCloud Drive (bản tải về máy)", "Chuột phải → Remove Download để chỉ giữ trên iCloud", "care", ["Library/Mobile Documents"]),
+    ("Tin nhắn & Mail", "Tệp đính kèm iMessage / Mail", "", ["Library/Messages", "Library/Mail"]),
+    ("Sao lưu iPhone", "Xoá bản cũ trong Finder → iPhone → Manage Backups", "care", ["Library/Application Support/MobileSync"]),
+    ("Cache ứng dụng khác", "Xoá thoải mái, app tự tạo lại", "safe", ["Library/Caches"]),
+]
+CONTAINERS = {"Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures", "Public"}
+GiB = 1024 * MiB
+
+
+def summarize(dir_size: dict, files, home: Path, apps: Path | None = None, min_size: int = 100 * MiB) -> list[dict]:
+    """Bảng tổng hợp "cái gì đang chiếm chỗ": nhóm quen thuộc (cache, Telegram, CapCut…) + các thư mục dự án của bạn,
+    xếp theo dung lượng, kèm bên trong gồm những gì."""
+    kids: dict[Path, list] = defaultdict(list)
+    for d, sz in dir_size.items():
+        kids[d.parent].append((sz, d.name, d))
+    for f, sz, *_ in files:
+        if sz >= 50 * MiB:
+            kids[f.parent].append((sz, f.name, f))
+
+    claimed: set[Path] = set()
+
+    def inside_claimed(d: Path) -> bool:
+        return any(c == d or c in d.parents for c in claimed)
+
+    def claimed_under(d: Path) -> int:
+        # chỉ tính mục đã nhận ở tầng cao nhất, tránh trừ 2 lần (vd Library/Caches và Library/Caches/Brave)
+        return sum(dir_size.get(c, 0) for c in claimed
+                   if d in c.parents and not any(o in c.parents and d in o.parents for o in claimed))
+
+    def short(n: int) -> str:
+        return f"{n / GiB:.1f}G" if n >= GiB else f"{n / MiB:.0f}M"
+
+    def contents(paths: list[Path], top: int = 5) -> str:
+        if len(paths) > 1:
+            rows = sorted(((dir_size.get(x, 0) - claimed_under(x), _nice(x, home)) for x in paths), reverse=True)
+        else:
+            d0 = paths[0]
+            for _ in range(5):  # folder chỉ có 1 folder con đáng kể → nhìn sâu vào trong
+                sub = [c for sz, _, c in kids.get(d0, []) if sz >= 20 * MiB]
+                if len(sub) == 1 and sub[0] in dir_size:
+                    d0 = sub[0]
+                else:
+                    break
+            rows = sorted(((sz - (claimed_under(c) if c in dir_size else 0), nm) for sz, nm, c in kids.get(d0, [])
+                           if not (c in dir_size and inside_claimed(c))), reverse=True)
+        rows = [(sz, nm) for sz, nm in rows if sz >= 20 * MiB][:top]
+        return ", ".join(f"{nm} {short(sz)}" for sz, nm in rows)
+
+    out = []
+    for label, note, safe, patterns in KNOWN_GROUPS:
+        found = []
+        for pat in patterns:
+            for d in home.glob(pat):
+                if d in dir_size and not inside_claimed(d) and d not in found:
+                    found.append(d)
+        found = [d for d in found if not any(o in d.parents for o in found)]
+        size = sum(dir_size[d] - claimed_under(d) for d in found)
+        if found and size >= min_size:
+            out.append({"label": label, "note": note, "safe": safe, "size": size, "contents": contents(found),
+                        "paths": [str(d) for d in sorted(found, key=lambda d: -dir_size[d])], "kind": "group"})
+        claimed.update(found)
+
+    def add_folder(d: Path, size: int, note: str = "", label: str | None = None):
+        if size >= min_size:
+            out.append({"label": label or _nice(d, home), "note": note, "safe": "", "size": size,
+                        "contents": contents([d]), "paths": [str(d)], "kind": "folder"})
+
+    def project(d: Path) -> Path:
+        """Folder chỉ chứa gần như 1 folder con → đi sâu vào (vd Video Project → Video Project/video editor)."""
+        for _ in range(4):
+            sub = [(sz, c) for sz, _, c in kids.get(d, []) if c in dir_size]
+            total = dir_size.get(d, 0)
+            big = max(sub, default=(0, None))
+            if big[1] is not None and total and big[0] >= 0.85 * total and not inside_claimed(big[1]):
+                d = big[1]
+            else:
+                break
+        return d
+
+    for sz, name, d in sorted(kids.get(home, []), reverse=True):
+        if d not in dir_size or inside_claimed(d) or name == "Library":
+            continue
+        if name in CONTAINERS:
+            rest = sz - claimed_under(d)
+            for csz, cname, c in sorted(kids.get(d, []), reverse=True):
+                if c in dir_size and not inside_claimed(c) and csz - claimed_under(c) >= 500 * MiB:
+                    pd = project(c)
+                    add_folder(pd, dir_size[pd] - claimed_under(pd))
+                    rest -= dir_size[pd] - claimed_under(pd)
+                    claimed.add(pd)
+            add_folder(d, rest, label=f"{name} (phần còn lại)")
+        elif name.startswith("."):
+            add_folder(d, sz - claimed_under(d), "Folder ẩn của một công cụ/ứng dụng — tìm hiểu trước khi xoá")
+        else:
+            pd = project(d)
+            add_folder(pd, dir_size[pd] - claimed_under(pd))
+            if pd != d:
+                add_folder(d, sz - claimed_under(d) - (dir_size[pd] - claimed_under(pd)), label=f"{name} (phần còn lại)")
+                claimed.add(pd)
+
+    lib = home / "Library"
+    if lib in dir_size:
+        rest = dir_size[lib] - claimed_under(lib)
+        if rest >= min_size:
+            sup = lib / "Application Support"
+            out.append({"label": "Dữ liệu ứng dụng khác (Library)", "note": "Dữ liệu các app đang dùng — gỡ app không dùng để giải phóng",
+                        "safe": "", "size": rest, "contents": contents([sup if sup in dir_size else lib]),
+                        "paths": [str(lib)], "kind": "group"})
+    if apps and apps in dir_size and dir_size[apps] >= min_size:
+        out.append({"label": "Ứng dụng đã cài", "note": "Gỡ app không dùng (kéo vào Thùng rác)", "safe": "",
+                    "size": dir_size[apps], "contents": contents([apps]), "paths": [str(apps)], "kind": "group"})
+    out.sort(key=lambda x: -x["size"])
+    return out[:40]
+
+
+def _nice(d: Path, home: Path) -> str:
+    try:
+        return str(d.relative_to(home))
+    except ValueError:
+        return str(d)
+
+
 def _same_dev(path: str, dev: int) -> bool:
     try:
         return not os.path.islink(path) and os.lstat(path).st_dev == dev

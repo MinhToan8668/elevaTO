@@ -338,6 +338,7 @@ def disk_job(roots: list[Path], min_big: int, old_days: int, full: bool = False)
         "scanned": dr.walk.total, "count": dr.walk.count, "full": full,
         "root_sizes": [{"path": str(r), "name": str(r), "size": dir_size.get(r, 0), "dir": True} for r in roots],
         "tree": dir_tree(dir_size, roots, files, 20 * MiB),
+        "summary": dr.summarize(dir_size, files, Path.home(), Path("/Applications")) if full else None,
         "top_dirs": [{"path": str(d), "size": s} for d, s in
                      sorted(((d, s) for d, s in dir_size.items() if d not in roots), key=lambda x: -x[1])[:30]],
         "biggest": [file_row(p, s, m) | {"uploaded": str(p) in uploaded} for p, s, m, _ in
