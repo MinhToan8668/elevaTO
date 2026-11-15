@@ -15,8 +15,24 @@ APP="$HOME/Applications/TeleUploader.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cat > "$APP/Contents/MacOS/TeleUploader" <<SH
 #!/bin/bash
-cd "$DIR"
-exec "$DIR/.venv/bin/python" "$DIR/gui.py" >> "$DIR/app.log" 2>&1
+# Mở từ Finder thì PATH rất ngắn → thêm chỗ Homebrew cài ffmpeg
+export PATH="/opt/homebrew/bin:/usr/local/bin:\$PATH"
+cd "$DIR" || exit 1
+LOG="$DIR/app.log"
+fail() {
+  MSG=\$(printf '%s' "\$1" | tr '"\\\\' "'/")
+  osascript -e "display dialog \\"\$MSG\\" buttons {\\"OK\\"} default button 1 with icon stop with title \\"Media Hub\\""
+  exit 1
+}
+[ -x "$DIR/.venv/bin/python" ] || fail "Chưa cài xong. Mở Terminal chạy lại: cd \\"$DIR\\" && ./install.sh"
+echo "=== \$(date) ===" >> "\$LOG"
+"$DIR/.venv/bin/python" "$DIR/gui.py" >> "\$LOG" 2>&1
+CODE=\$?
+[ \$CODE -eq 0 ] || fail "App bị lỗi khi mở (mã \$CODE):
+
+\$(tail -n 8 "\$LOG")
+
+Log đầy đủ: \$LOG"
 SH
 chmod +x "$APP/Contents/MacOS/TeleUploader"
 cat > "$APP/Contents/Info.plist" <<PL
