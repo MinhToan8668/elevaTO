@@ -31,7 +31,7 @@ import { tgAdmins } from './tg.js';
 import { quenMK, datLaiMKBangMa } from './quenmk.js';
 import { thongTinUngHo } from './ungho.js';
 import { linksChoWeb, linksKiemKey, linksLuu } from './links.js';
-import { taiThang } from './taive.js';
+import { taiPhan, taiThang } from './taive.js';
 import { giaCoPhieu } from './gia.js';
 
 const CORS = {
@@ -59,6 +59,11 @@ export default {
     // thân là form chứ không phải JSON, trả về luồng nhị phân chứ không phải {ok,data},
     // và không đụng tới D1 nên Worker chưa nối cơ sở dữ liệu vẫn chạy được.
     if (url.pathname === '/taive' && req.method === 'POST') return taiThang(req, env);
+    // Tải từng phần (trang tự ghép thành một file trên máy): xem taiPhan trong src/taive.js.
+    if (url.pathname === '/taive/phan') {
+      if (req.method === 'POST') return taiPhan(req, env);
+      return json(loi('bad', 'Tải từng phần chỉ nhận POST kèm vé đã ký'), 405, { allow: 'POST, OPTIONS' });
+    }
     // Mở /taive bằng trình duyệt (hay bị dán vào thanh địa chỉ để thử) thì nói thẳng là sai cách
     // gọi, chứ không rơi xuống nhánh GET bên dưới mà trả về tình trạng máy chủ — nhìn như đã chạy
     // xong mà thật ra chẳng tải gì.

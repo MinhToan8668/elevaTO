@@ -144,13 +144,15 @@ export async function taiThang(req, env) {
 }
 
 /** Vé hợp lệ về mặt hình thức chưa — kiểm trước khi mở luồng, lúc còn báo lỗi tử tế được. */
-function veSai(ve) {
+function veSai(ve, { motPhan = false } = {}) {
   if (!ve || typeof ve !== 'object') return 'Vé tải hỏng';
   if (typeof ve.n !== 'string' || !ve.n) return 'Vé tải thiếu tên file';
   if (!Number.isFinite(ve.s) || ve.s <= 0) return 'Vé tải thiếu dung lượng';
   if (!Number.isFinite(ve.e) || ve.e < Date.now()) return 'Vé tải đã hết hạn — bấm Tải thẳng lại';
   if (!Array.isArray(ve.f) || !ve.f.length) return 'Vé tải không có phần nào';
-  if (ve.f.length > MAX_PHAN) return `Vé tải có ${ve.f.length} phần, quá mức ${MAX_PHAN}`;
+  // Tải từng phần: mỗi lần gọi chỉ một phần, có đủ 50 lượt riêng — trần số phần và ngân sách
+  // dưới đây chỉ dành cho luồng một lần.
+  if (!motPhan && ve.f.length > MAX_PHAN) return `Vé tải có ${ve.f.length} phần, quá mức ${MAX_PHAN}`;
   for (const p of ve.f) {
     // Đường dẫn được phép TRỐNG: Apps Script hỏi Telegram mãi không được (Telegram nghẽn) thì để
     // trống, Worker tự xin bù bằng file_id. file_id thì bắt buộc.
@@ -161,7 +163,7 @@ function veSai(ve) {
   // Mỗi phần thiếu đường dẫn tốn thêm 1 subrequest. Không đủ lượt thì báo NGAY, trước khi mở
   // luồng — lúc này còn trả được trang lỗi tử tế, mở luồng rồi mới hụt thì chỉ còn cách cắt ngang.
   const thieu = ve.f.filter((p) => !p[1]).length;
-  if (ve.f.length + thieu > CF_SUBREQ) {
+  if (!motPhan && ve.f.length + thieu > CF_SUBREQ) {
     return `Telegram đang nghẽn, còn ${thieu} phần chưa lấy được đường dẫn — bấm lại sau ít phút, hoặc dùng Lấy về Drive`;
   }
   return '';
@@ -176,40 +178,10 @@ function veSai(ve) {
 async function bomCacPhan(phan, token, writable) {
   // Mỗi phần tốn đúng 1 subrequest; phần còn lại của 50 lượt để dành cho thử lại. File ít
   // phần thì dư nhiều lượt — đừng tự bó vào DU_PHONG khi còn chỗ.
-  let conDuPhong = CF_SUBREQ - phan.length;
-  const tai = async (duong) => {
-    try { return await fetch(TG_FILE + token + '/' + duong); }
-    catch (err) { return { ok: false, status: 0, loi: err }; }   // đứt mạng: coi như một mã lỗi
-  };
+  const quy = { con: CF_SUBREQ - phan.length };
   try {
     for (let i = 0; i < phan.length; i++) {
-      const [fid, duong] = phan[i];
-      // Vé để trống đường dẫn (Apps Script hỏi Telegram không được): xin bù bằng file_id.
-      let hienTai = duong;
-      for (let lan = 0; !hienTai && lan < 2 && conDuPhong >= 1; lan++) {
-        if (lan) await new Promise((r) => setTimeout(r, 1500));
-        conDuPhong -= 1;
-        hienTai = await duongMoi(token, fid);
-      }
-      if (!hienTai) throw new Error(`phần ${i + 1}/${phan.length}: Telegram không cho đường dẫn`);
-      let res = await tai(hienTai);
-      // Chỉ thử lại được khi CHƯA ghi byte nào của phần này: luồng trả về không lùi lại được.
-      for (let lan = 0; !res.ok && lan < 3; lan++) {
-        if ((res.status === 404 || res.status === 410) && conDuPhong >= 2) {
-          // Đường dẫn hết hạn giữa chừng. Xin lại rồi tải tiếp, đừng bỏ cả bản tải.
-          conDuPhong -= 2;
-          const moi = await duongMoi(token, fid);
-          if (!moi) break;
-          hienTai = moi;   // lần thử sau (nếu có) dùng đường dẫn MỚI, không quay về cái đã hết hạn
-          res = await tai(hienTai);
-        } else if ((res.status === 0 || res.status === 429 || res.status >= 500) && conDuPhong >= 1) {
-          // Telegram trục trặc thoáng qua (đứt mạng, bận, lỗi máy chủ): chờ chút rồi thử lại.
-          conDuPhong -= 1;
-          await new Promise((r) => setTimeout(r, 800 * (lan + 1)));
-          res = await tai(hienTai);
-        } else break;
-      }
-      if (!res.ok || !res.body) throw new Error(`phần ${i + 1}/${phan.length}: Telegram trả ${res.status}`);
+      const res = await layMotPhan(phan[i], token, quy, `${i + 1}/${phan.length}`);
       await res.body.pipeTo(writable, { preventClose: true });
     }
     await writable.close();
@@ -221,7 +193,128 @@ async function bomCacPhan(phan, token, writable) {
   }
 }
 
-async function duongMoi(token, fileId) {
+/**
+ * Lấy MỘT phần từ Telegram, chịu được trục trặc: đường dẫn trống thì xin bù bằng file_id,
+ * 404/410 (hết hạn) thì xin đường dẫn mới, đứt mạng / 429 / 5xx thì chờ rồi thử lại.
+ * `quy.con` là số subrequest còn được tiêu ngoài lượt tải chính của phần này (bị trừ dần).
+ * Chỉ thử lại được khi CHƯA đưa byte nào ra ngoài — nên hàm trả Response chưa đọc thân.
+ * @returns Response ok có thân; không lấy được thì ném lỗi.
+ */
+async function layMotPhan([fid, duong], token, quy, ten) {
+  const tai = async (d) => {
+    try { return await fetch(TG_FILE + token + '/' + d); }
+    catch (err) { return { ok: false, status: 0, loi: err }; }   // đứt mạng: coi như một mã lỗi
+  };
+  const vinhVien = (msg) => { const e = new Error(msg); e.vinhVien = true; return e; };
+  const getFile = { ma: 0 };
+  // Vé để trống đường dẫn (Apps Script hỏi Telegram không được): xin bù bằng file_id.
+  let hienTai = duong;
+  for (let lan = 0; !hienTai && lan < 2 && quy.con >= 1; lan++) {
+    if (lan) await new Promise((r) => setTimeout(r, 1500));
+    quy.con -= 1;
+    hienTai = await duongMoi(token, fid, getFile);
+    if (LOI_VINH_VIEN.has(getFile.ma)) throw vinhVien(`phần ${ten}: Telegram không cho đường dẫn (${getFile.ma})`);
+  }
+  if (!hienTai) throw new Error(`phần ${ten}: Telegram không cho đường dẫn`);
+  let res = await tai(hienTai);
+  for (let lan = 0; !res.ok && lan < 3; lan++) {
+    if ((res.status === 404 || res.status === 410) && quy.con >= 2) {
+      // Đường dẫn hết hạn giữa chừng. Xin lại rồi tải tiếp, đừng bỏ cả bản tải.
+      quy.con -= 2;
+      const moi = await duongMoi(token, fid, getFile);
+      if (!moi && LOI_VINH_VIEN.has(getFile.ma)) throw vinhVien(`phần ${ten}: Telegram không còn file này (${getFile.ma})`);
+      if (!moi) break;
+      hienTai = moi;   // lần thử sau (nếu có) dùng đường dẫn MỚI, không quay về cái đã hết hạn
+      res = await tai(hienTai);
+    } else if ((res.status === 0 || res.status === 429 || res.status >= 500) && quy.con >= 1) {
+      // Telegram trục trặc thoáng qua (đứt mạng, bận, lỗi máy chủ): chờ chút rồi thử lại.
+      quy.con -= 1;
+      await new Promise((r) => setTimeout(r, 800 * (lan + 1)));
+      res = await tai(hienTai);
+    } else break;
+  }
+  if (!res.ok || !res.body) {
+    // 401/403 = token của Worker không phải bot đã gửi file (đổi bot, dán nhầm token).
+    const e = new Error(`phần ${ten}: Telegram trả ${res.status}`);
+    if (res.status === 401 || res.status === 403) e.vinhVien = true;
+    throw e;
+  }
+  return res;
+}
+
+// ─── Tải từng phần ─────────────────────────────────────────────────────────────
+
+/** CORS cho đường tải từng phần: trang upload đọc thân bằng fetch() từ github.io. */
+const CORS_PHAN = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'content-type',
+  'access-control-allow-methods': 'POST, OPTIONS',
+};
+const loiPhan = (ma, loi, status) => new Response(JSON.stringify({ ok: false, ma, loi }), {
+  status,
+  headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...CORS_PHAN },
+});
+
+/**
+ * TẢI TỪNG PHẦN — POST /taive/phan, thân JSON { d, s, i } (gửi dạng text/plain cho khỏi
+ * preflight). Trả đúng phần thứ i của vé (≤19MB).
+ *
+ * Vì sao có đường này: một luồng 550MB thì Mac ngủ, đổi Wi-Fi, Telegram chập một phần… là
+ * hỏng cả bản tải, phải làm lại từ đầu. Trang tự tải từng phần một, phần nào hỏng thì tải lại
+ * RIÊNG phần đó rồi ghi thẳng xuống đĩa thành một file (File System Access trên Chrome) — nên
+ * không bao giờ phải làm lại từ đầu. Mỗi lần gọi là một yêu cầu ngắn có đủ 50 subrequest riêng,
+ * nên cũng hết trần 44 phần.
+ *
+ * Vé hết hạn → ma 'het_han' (410): trang xin vé mới rồi tải tiếp từ phần đang dở.
+ */
+export async function taiPhan(req, env) {
+  if (!env.UPLOAD_TG_TOKEN || !env.TAIVE_SECRET) return loiPhan('cai_dat', 'Worker chưa cài UPLOAD_TG_TOKEN / TAIVE_SECRET', 503);
+  let b;
+  try { b = JSON.parse(await req.text()); } catch { return loiPhan('hong', 'Không đọc được yêu cầu', 400); }
+  const d = String((b && b.d) || ''), s = String((b && b.s) || ''), i = Number(b && b.i);
+  if (!d || !s) return loiPhan('hong', 'Thiếu vé tải', 400);
+  if (!(await kiemChuKy(env.TAIVE_SECRET, d, s))) return loiPhan('sai_ky', 'Vé tải không hợp lệ', 403);
+  let ve;
+  try { ve = JSON.parse(new TextDecoder().decode(b64urlBytes(d))); } catch { return loiPhan('hong', 'Vé tải hỏng', 400); }
+  if (ve && Number.isFinite(ve.e) && ve.e < Date.now()) return loiPhan('het_han', 'Vé tải đã hết hạn', 410);
+  const sai = veSai(ve, { motPhan: true });
+  if (sai) return loiPhan('hong', sai, 400);
+  if (!Number.isInteger(i) || i < 0 || i >= ve.f.length) return loiPhan('hong', 'Số phần không hợp lệ', 400);
+
+  let res;
+  try {
+    res = await layMotPhan(ve.f[i], env.UPLOAD_TG_TOKEN, { con: CF_SUBREQ - 1 }, `${i + 1}/${ve.f.length}`);
+  } catch (err) {
+    console.error(`taiPhan: ${err && err.message ? err.message : err}`);
+    // telegram_hong: thử lại cũng vô ích — trang bỏ đường này, chuyển Lấy về Drive (Apps Script
+    // dùng token riêng của nó nên vẫn lấy được). telegram: trục trặc tạm, trang thử lại sau.
+    return loiPhan(err && err.vinhVien ? 'telegram_hong' : 'telegram', String(err && err.message ? err.message : err), 502);
+  }
+  // Chuyền thẳng thân của Telegram qua FixedLengthStream: byte đi ngoài JavaScript (không ăn
+  // CPU) và Cloudflare gửi đúng content-length để trang biết phần về đủ hay thiếu.
+  const len = Number(res.headers.get('content-length'));
+  let than = res.body;
+  if (Number.isFinite(len) && len > 0 && typeof FixedLengthStream === 'function') {
+    const { readable, writable } = new FixedLengthStream(len);
+    res.body.pipeTo(writable).catch(() => { /* đứt giữa chừng: trang thấy thiếu byte và tải lại phần này */ });
+    than = readable;
+  }
+  return new Response(than, {
+    headers: {
+      'content-type': 'application/octet-stream',
+      ...(Number.isFinite(len) && len > 0 ? { 'content-length': String(len) } : {}),
+      'cache-control': 'no-store',
+      ...CORS_PHAN,
+    },
+  });
+}
+
+/**
+ * Xin đường dẫn mới cho một phần. Trả '' nếu không được; `ghi.ma` (nếu truyền) nhận mã lỗi
+ * Telegram trả về để bên gọi biết lỗi là VĨNH VIỄN (400/401/403/404: file_id sai, token sai /
+ * đã đổi bot) hay tạm thời (mất kết nối, 429, 5xx).
+ */
+async function duongMoi(token, fileId, ghi) {
   try {
     const r = await fetch(TG_API + token + '/getFile', {
       method: 'POST',
@@ -229,11 +322,16 @@ async function duongMoi(token, fileId) {
       body: JSON.stringify({ file_id: fileId }),
     });
     const j = await r.json();
-    return j && j.ok && j.result ? j.result.file_path || '' : '';
+    if (j && j.ok && j.result && j.result.file_path) return j.result.file_path;
+    if (ghi) ghi.ma = (j && j.error_code) || r.status;
+    return '';
   } catch {
     return '';
   }
 }
+
+/** Telegram nói chắc là không có / không cho: thử lại bao nhiêu cũng vậy. */
+const LOI_VINH_VIEN = new Set([400, 401, 403, 404]);
 
 async function kiemChuKy(biMat, d, s) {
   try {

@@ -94,3 +94,47 @@ test('cả đợt mất kết nối (fetchAll ném lỗi) → hỏi lại cả �
   const duong = ctx.xinDuongDan('tok', IDS);
   assert.ok(duong.every(Boolean));
 });
+
+// ─── Trần 44 phần chỉ dành cho luồng MỘT LẦN ─────────────────────────────────────
+// Tải từng phần (Chrome/Edge ghép trên máy) mỗi phần một lần gọi Worker riêng, không vướng trần
+// 50 subrequest — Apps Script không được chặn file lớn ở đường này.
+
+function napKho(props, n) {
+  // Đúng khoá Code.gs dùng: TGLIB_<id> cho kho, file_id gói 40 mã một ô TGFID_<id>_<ô>.
+  const all = { ...props, TGLIB_a1: JSON.stringify({ id: 'a1', name: 'Buoi 9.mp4', size: n * 19 * 1048576, parts: n, date: 1 }) };
+  for (let o = 0; o * 40 < n; o++) all[`TGFID_a1_${o}`] = JSON.stringify(Array.from({ length: Math.min(40, n - o * 40) }, (_, k) => `f${o * 40 + k}`));
+  const ctx = {
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: (k) => all[k] ?? null, getProperties: () => all, setProperty() {}, deleteProperty() {},
+    }) },
+    Utilities: {
+      sleep() {}, base64EncodeWebSafe: (b) => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_'),
+      newBlob: (s) => ({ getBytes: () => [...Buffer.from(s)] }), computeHmacSha256Signature: () => [1, 2, 3],
+    },
+    Logger: { log() {} }, console: { error() {} },
+    UrlFetchApp: { fetchAll: (ds) => ds.map((y) => ({ getResponseCode: () => 200,
+      getContentText: () => JSON.stringify({ ok: true, result: { file_path: `documents/${JSON.parse(y.payload).file_id}.mp4` } }) })) },
+  };
+  vm.createContext(ctx);
+  vm.runInContext(readFileSync(PATH, 'utf8'), ctx, { filename: PATH });
+  ctx.kiemKey = () => {};
+  return ctx;
+}
+const CAI = { UPLOAD_KEY: 'k', TG_BOT_TOKEN: 'tok', TAIVE_WORKER_URL: 'https://w.example/taive', TAIVE_SECRET: 'x'.repeat(24) };
+
+test('file 60 phần: danh sách vẫn cho Tải thẳng (từng phần), chỉ tắt cờ một luồng', () => {
+  const ctx = napKho(CAI, 60);
+  const [it] = ctx.khoDanhSach('k');
+  assert.equal(it.thang, true, 'Chrome/Edge tải từng phần được — phải hiện nút');
+  assert.equal(it.thang1, false, 'một luồng vướng trần 44 phần');
+  const [nho] = napKho(CAI, 29).khoDanhSach('k');
+  assert.equal(nho.thang1, true);
+});
+
+test('xin vé từng phần cho file 60 phần được; xin vé một luồng thì vẫn bị chặn', () => {
+  const ctx = napKho(CAI, 60);
+  const ve = ctx.khoVeTaiThang('k', 'a1', true);
+  const ruot = JSON.parse(Buffer.from(ve.d.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  assert.equal(ruot.f.length, 60);
+  assert.throws(() => ctx.khoVeTaiThang('k', 'a1', false), /tối đa 44/);
+});

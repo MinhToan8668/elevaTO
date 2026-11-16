@@ -22,7 +22,13 @@ Sau đó, tuỳ ô **"Gửi file vào chat Telegram rồi xoá khỏi Drive"** t
 
 - **Tải thẳng** — file đi từ Telegram về máy luôn, **không đặt bản nào trên Drive**, bấm là
   tải ngay. Cần cài Cloudflare Worker (mục **Tải thẳng** dưới đây); chưa cài thì nút không hiện.
-  Tối đa **44 phần ≈ 836MB** mỗi file.
+  - **Chrome / Edge: tải từng phần, không đứt đoạn, không giới hạn dung lượng.** Bấm Tải thẳng →
+    chọn chỗ lưu → trang tự tải từng phần 19MB (3 phần cùng lúc), phần nào hỏng chỉ tải lại phần
+    đó, rồi ghép thành **một file** ngay trên máy. Mất mạng, máy ngủ, Telegram chập… chỉ làm chậm:
+    trang tạm dừng, giữ phần đã tải, có mạng lại là tự tải tiếp (hoặc bấm **Tải tiếp**). File chỉ
+    thành hình khi đủ từng phần; huỷ / hỏng hẳn thì xoá file dở, không để lại bản cụt.
+  - **Safari / Firefox:** một luồng như cũ, tối đa **44 phần ≈ 836MB**; đứt giữa chừng phải tải lại
+    (trình duyệt báo lỗi, không còn báo "xong" giả).
 - **Lấy về Drive** — đường cũ, chậm hơn nhưng **không giới hạn dung lượng**: trong 1–2 phút
   bot kéo các phần từ Telegram, ghép thành file gốc đặt tạm trên Drive → nút **Tải từ Drive**
   hiện ra. Bản tạm tự vào Thùng rác sau 24 giờ (`GIU_BAN_TAM_GIO`).
@@ -74,7 +80,10 @@ nó báo lỗi** chứ không lưu bản cụt coi như xong. (Trước đây fi
 `FixedLengthStream`.) Telegram trục trặc thoáng qua ở một phần thì Worker tự thử lại.
 Muốn tắt: chạy hàm `tatTaiThang` (để trống hai dòng đầu file không tắt — nó giữ bản đã cất).
 
-| Vì sao tối đa 44 phần | |
+Trần dưới đây chỉ dành cho **một luồng** (Safari / Firefox). Tải từng phần (Chrome / Edge) gọi
+Worker mỗi phần một lần — mỗi lần có đủ 50 subrequest riêng — nên không vướng trần này.
+
+| Vì sao một luồng tối đa 44 phần | |
 |---|---|
 | Cloudflare gói Free cho **50 subrequest** mỗi lần gọi, mỗi phần 19MB tốn 1 lượt tải | trần cứng 50 phần |
 | Chừa 6 lượt để Worker xin lại được đường dẫn Telegram hết hạn giữa chừng (mỗi lần tốn 2) | còn **44 phần ≈ 836MB** |
@@ -83,8 +92,13 @@ Lên gói Paid ($5/tháng) là 10.000 subrequest: sửa `CF_SUBREQ` trong `ai/wo
 và `TAI_THANG_PHAN` trong `backend/Code.gs` cho khớp nhau là tải thẳng được file 2GB.
 
 Đường dẫn file của Telegram chỉ bảo đảm sống **1 giờ**, nên vé tải hết hạn sau 50 phút
-(`VE_SONG_PHUT`). Tải quá lâu mà đứt thì bấm **Tải thẳng** lại — vé mới, đường dẫn mới.
-Rớt mạng giữa chừng phải tải lại từ đầu (Worker chưa làm `Range`).
+(`VE_SONG_PHUT`). Tải từng phần thì vé hết hạn giữa chừng trang tự xin vé mới rồi tải tiếp;
+một luồng mà đứt thì bấm **Tải thẳng** lại — vé mới, đường dẫn mới.
+
+Tải từng phần chuyển sang **Lấy về Drive** tự động khi: chưa phần nào về được mà mất kết nối 3
+lần liền (mạng chặn máy chủ tải — chuyển trong vài giây), hoặc Telegram từ chối hẳn file với
+Worker (token Worker không phải bot đã gửi file). Đang tạm dừng thì có nút **Lấy về Drive** để
+tự chuyển. Đường Worker: `POST /taive/phan` `{d, s, i}` trả phần thứ `i` (`ai/worker/src/taive.js`).
 
 Vì sao phần 19MB: bot gửi được file tới 50MB nhưng chỉ **tải về** được file tới 20MB.
 File gửi bằng bản cũ (phần 45MB) và file gửi trước khi có kho **không lấy về được** —

@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_PHAN, taiThang } from '../worker/src/taive.js';
+import { MAX_PHAN, taiPhan, taiThang } from '../worker/src/taive.js';
 
 const BI_MAT = 'bi-mat-dung-chung-dai-hon-24-ky-tu';
 const TOKEN = '123456:FAKE-TOKEN';
@@ -354,5 +354,110 @@ test('đường dẫn hết hạn (404) đã xin lại, lần thử sau dùng đ
     assert.equal(await res.text(), 'abcdefg');
     assert.equal(goi.filter((u) => u.endsWith('documents/p2.bin')).length, 1, 'không quay lại đường dẫn đã hết hạn');
     assert.equal(goi.filter((u) => u.endsWith('documents/moi.bin')).length, 2, '502 lần đầu rồi thử lại đúng đường dẫn mới');
+  } finally { globalThis.fetch = that; }
+});
+
+// ─── Tải từng phần: POST /taive/phan { d, s, i } ───────────────────────────────
+// Trang tự tải từng phần, hỏng phần nào tải lại đúng phần đó, rồi ghép thành một file trên máy.
+
+const xinPhan = (d, s, i) => new Request('https://w.example/taive/phan', {
+  method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ d, s, i }),
+});
+
+test('trả đúng phần thứ i, có CORS để trang đọc được, có dung lượng', async () => {
+  const ga = gaTelegram({ 'documents/p1.bin': 'abc', 'documents/p2.bin': 'defg' });
+  try {
+    const { d, s } = await veTest();
+    const r1 = await taiPhan(xinPhan(d, s, 1), ENV);
+    assert.equal(r1.status, 200);
+    assert.equal(r1.headers.get('access-control-allow-origin'), '*');
+    assert.equal(await r1.text(), 'defg');
+    assert.equal(await (await taiPhan(xinPhan(d, s, 0), ENV)).text(), 'abc');
+    assert.equal(ga.goi.length, 2, 'mỗi lần gọi chỉ tải đúng một phần');
+  } finally { ga.thoi(); }
+});
+
+test('lỗi trả JSON có mã để trang biết phải làm gì (kèm CORS — không thì trang không đọc được)', async () => {
+  const { d, s } = await veTest();
+  const sai = await taiPhan(xinPhan(d, 'sai', 0), ENV);
+  assert.equal(sai.status, 403);
+  assert.equal(sai.headers.get('access-control-allow-origin'), '*');
+  assert.equal((await sai.json()).ma, 'sai_ky');
+  const cu = await veTest({ e: Date.now() - 1000 });
+  const het = await taiPhan(xinPhan(cu.d, cu.s, 0), ENV);
+  assert.equal(het.status, 410);
+  assert.equal((await het.json()).ma, 'het_han', 'trang xin vé mới rồi tải tiếp từ phần đang dở');
+  for (const i of [-1, 2, 1.5, 'x']) {
+    assert.equal((await (await taiPhan(xinPhan(d, s, i), ENV)).json()).ma, 'hong', `i=${i}`);
+  }
+  assert.equal((await (await taiPhan(xinPhan(d, s, 0), { TAIVE_SECRET: BI_MAT })).json()).ma, 'cai_dat');
+});
+
+test('không còn trần 44 phần — mỗi lần gọi một phần, có đủ 50 lượt riêng', async () => {
+  const f = Array.from({ length: 60 }, (_, i) => [`fid-${i}`, `documents/p${i}.bin`]);
+  const ga = gaTelegram({ 'documents/p59.bin': 'z' });
+  try {
+    const { d, s } = await veTest({ f, s: 60 });
+    const r = await taiPhan(xinPhan(d, s, 59), ENV);
+    assert.equal(r.status, 200);
+    assert.equal(await r.text(), 'z');
+  } finally { ga.thoi(); }
+});
+
+test('phần trống đường dẫn / đường dẫn hết hạn / Telegram chập — vẫn lấy được phần đó', async () => {
+  const goi = [];
+  const that = globalThis.fetch;
+  let lan = 0;
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    goi.push(u);
+    if (u.endsWith('/getFile')) return new Response(JSON.stringify({ ok: true, result: { file_path: `documents/${JSON.parse(init.body).file_id}.bin` } }));
+    if (u.endsWith('documents/cu.bin')) return new Response('', { status: 404 });
+    if (u.endsWith('documents/fid-b.bin')) return ++lan === 1 ? new Response('', { status: 502 }) : new Response('BB');
+    if (u.endsWith('documents/fid-a.bin')) return new Response('AA');
+    return new Response('', { status: 404 });
+  };
+  try {
+    const { d, s } = await veTest({ f: [['fid-a', ''], ['fid-b', 'documents/cu.bin']], s: 4 });
+    assert.equal(await (await taiPhan(xinPhan(d, s, 0), ENV)).text(), 'AA', 'trống đường dẫn → xin bù');
+    assert.equal(await (await taiPhan(xinPhan(d, s, 1), ENV)).text(), 'BB', 'hết hạn → xin mới; 502 → thử lại');
+  } finally { globalThis.fetch = that; }
+});
+
+test('Telegram hỏng hẳn phần đó → 502 mã telegram, trang thử lại sau', async () => {
+  const ga = gaTelegramChapChon({ 'documents/p1.bin': 'abc' }, { 'documents/p1.bin': [500, 500, 500, 500] });
+  try {
+    const { d, s } = await veTest();
+    const r = await taiPhan(xinPhan(d, s, 0), ENV);
+    assert.equal(r.status, 502);
+    assert.equal((await r.json()).ma, 'telegram');
+  } finally { ga.thoi(); }
+});
+
+test('Telegram nói chắc không có / không cho (token sai, file_id sai) → mã telegram_hong, khỏi thử lại', async () => {
+  const goi = [];
+  const that = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    goi.push(u);
+    if (u.endsWith('/getFile')) return new Response(JSON.stringify({ ok: false, error_code: 400, description: 'Bad Request: wrong file_id' }), { status: 400 });
+    if (u.endsWith('documents/p1.bin')) return new Response('', { status: 404 });     // hết hạn → xin lại → 400 vĩnh viễn
+    if (u.endsWith('documents/p2.bin')) return new Response('', { status: 401 });     // token Worker không phải bot đã gửi file
+    return new Response('', { status: 404 });
+  };
+  try {
+    const { d, s } = await veTest();
+    const r0 = await taiPhan(xinPhan(d, s, 0), ENV);
+    assert.equal(r0.status, 502);
+    assert.equal((await r0.json()).ma, 'telegram_hong');
+    const r1 = await taiPhan(xinPhan(d, s, 1), ENV);
+    assert.equal((await r1.json()).ma, 'telegram_hong');
+    assert.equal(goi.filter((u) => u.endsWith('p2.bin')).length, 1, '401 không thử lại');
+    // Thông báo lỗi không được lộ token bot (đường dẫn Telegram chứa token).
+    const { d: d2, s: s2 } = await veTest({ f: [['fid-x', '']], s: 1 });
+    const r2 = await taiPhan(xinPhan(d2, s2, 0), ENV);
+    const j2 = await r2.json();
+    assert.equal(j2.ma, 'telegram_hong', 'getFile trả 400 cho phần trống đường dẫn → vĩnh viễn');
+    assert.doesNotMatch(JSON.stringify(j2), new RegExp(TOKEN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   } finally { globalThis.fetch = that; }
 });

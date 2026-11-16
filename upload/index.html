@@ -82,6 +82,7 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
 .btn-sm:hover{border-color:var(--emerald)}
 .btn-sm:disabled{opacity:.45;cursor:not-allowed}
 .item .msg{margin-top:8px;font-size:13px;padding:8px 11px}
+.item progress.tien{display:block;width:100%;height:6px;margin-top:10px;accent-color:var(--emerald)}
 .item-links .main{background:var(--emerald);border-color:var(--emerald);color:#04110c}
 .empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 8px;border:1px dashed var(--border2);border-radius:var(--r-sm)}
 [hidden]{display:none!important}
@@ -486,21 +487,41 @@ function khoRender() {
     act.className = 'item-links';
     // Tải thẳng chạy được cả khi đã có bản tạm trên Drive — người dùng chọn đường nào tuỳ ý.
     var u = khoUi[it.id] || {};
-    if (it.thang) {
+    if (u.tt) {
+      // Đang tải từng phần: thanh tiến trình + Tải tiếp (khi tạm dừng) + Huỷ.
+      var bar = document.createElement('progress');
+      bar.className = 'tien'; bar.max = u.tien.tong || 1; bar.value = u.tien.daGhi || 0;
+      li.appendChild(bar);
+      if (u.tt.dung) {
+        var tiep = document.createElement('button');
+        tiep.type = 'button'; tiep.className = 'main'; tiep.textContent = 'Tải tiếp';
+        tiep.onclick = function () { u.tt.tiep(); };
+        act.appendChild(tiep);
+        var sang = document.createElement('button');
+        sang.type = 'button'; sang.textContent = 'Lấy về Drive';
+        sang.onclick = function () { u.tt.sangDrive(); };
+        act.appendChild(sang);
+      }
+      var huy = document.createElement('button');
+      huy.type = 'button'; huy.textContent = 'Huỷ';
+      huy.onclick = function () { if (confirm('Huỷ tải "' + it.name + '"? Phần đã tải sẽ bỏ.')) u.tt.huyTai(); };
+      act.appendChild(huy);
+    } else if (it.thang) {
       var t = document.createElement('button');
       t.type = 'button'; t.className = 'main';
       var coVe = u.ve && u.veHet > Date.now();
       t.textContent = u.ban ? 'Đang xin…' : coVe ? 'Tải về ngay' : 'Tải thẳng';
-      t.disabled = !!u.ban;
+      t.disabled = !!u.ban || !!u.chon;
       t.onclick = function () {
-        if (!coVe) { khoTaiThang(it); return; }
+        if (!coVe) { khoBamTaiThang(it); return; }
         var ve = u.ve;
         khoGhi(it.id, { ve: null });
         guiVe(it, ve);
       };
       act.appendChild(t);
     }
-    if (it.st === 'san') {
+    if (u.tt) { /* đang tải: ẩn nút Drive cho khỏi bấm nhầm */ }
+    else if (it.st === 'san') {
       var a = document.createElement('a');
       a.className = it.thang ? '' : 'main';
       a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Tải từ Drive';
@@ -558,25 +579,38 @@ function loiTaiThang(msg) {
  * Hai ca hỏng đều tự chuyển sang Lấy về Drive: người dùng cần một file hoàn chỉnh, đường
  * nào ra file cũng được — Drive đi qua Google nên không bị chặn như workers.dev.
  */
-async function khoTaiThang(it) {
-  khoGhi(it.id, { ban: true, ve: null, loai: '', chu: '' });
-  var r;
-  // Telegram nghẽn lúc Apps Script hỏi đường dẫn các phần ("Gateway Timeout"…) là lỗi thoáng
-  // qua — tự xin lại vé, đừng bắt người dùng đoán là phải bấm lại.
+/**
+ * Xin vé tải (Apps Script hỏi Telegram đường dẫn từng phần rồi ký). Telegram nghẽn ("Gateway
+ * Timeout"…) là lỗi thoáng qua — tự xin lại 2 lần. Hết lượt vẫn nghẽn thì ném lỗi có e.tam = true
+ * để bên gọi chuyển sang Lấy về Drive; lỗi khác thì ném nguyên.
+ */
+async function xinVe(it, tungPhan) {
   for (var lan = 0; ; lan++) {
-    try { r = await call('lib_direct', { key: $('key').value.trim(), id: it.id }); break; }
+    try { return await call('lib_direct', tungPhan ? { key: $('key').value.trim(), id: it.id, phan: 1 } : { key: $('key').value.trim(), id: it.id }); }
     catch (e) {
       var tam = /Gateway Timeout|Bad Gateway|Service Unavailable|Too Many Requests|Internal Server Error|\((?:429|5\d\d)\)|lỗi 5\d\d/i.test(e && e.message || '');
-      if (!tam) { khoGhi(it.id, { ban: false, loai: 'err', chu: errText(e) }); return; }
-      if (lan >= 2) {
-        // Nghẽn mãi: Lấy về Drive tự thử lại từng phần mỗi phút, chậm nhưng chắc ra file.
-        khoGhi(it.id, { ban: false, loai: 'warn', chu: errText(e) + ' — Telegram đang nghẽn. Đang chuyển sang Lấy về Drive (tự thử lại mỗi phút), xong sẽ có nút Tải từ Drive cho file hoàn chỉnh.' });
-        khoLayFile(it);
-        return;
-      }
+      if (!tam) throw e;
+      if (lan >= 2) { e.tam = true; throw e; }
       khoGhi(it.id, { loai: 'warn', chu: 'Telegram đang nghẽn — tự xin lại vé (lần ' + (lan + 1) + '/2)…' });
       await new Promise(function (xong) { setTimeout(xong, 3000 * (lan + 1)); });
     }
+  }
+}
+
+/** Telegram nghẽn mãi: Lấy về Drive tự thử lại từng phần mỗi phút, chậm nhưng chắc ra file. */
+function chuyenDrive(it, truoc) {
+  khoGhi(it.id, { ban: false, loai: 'warn', chu: truoc + ' Đang chuyển sang Lấy về Drive (tự thử lại mỗi phút), xong sẽ có nút Tải từ Drive cho file hoàn chỉnh.' });
+  khoLayFile(it);
+}
+
+async function khoTaiThang(it) {
+  khoGhi(it.id, { ban: true, ve: null, loai: '', chu: '' });
+  var r;
+  try { r = await xinVe(it); }
+  catch (e) {
+    if (e.tam) chuyenDrive(it, errText(e) + ' — Telegram đang nghẽn.');
+    else khoGhi(it.id, { ban: false, loai: 'err', chu: errText(e) });
+    return;
   }
 
   // Xin vé mất vài giây (Apps Script hỏi Telegram đường dẫn từng phần). Tới lúc ấy cú bấm đã
@@ -590,6 +624,293 @@ async function khoTaiThang(it) {
   }
   khoGhi(it.id, { ban: false });
   guiVe(it, r);
+}
+
+// ─── Tải từng phần, ghép thành một file ngay trên máy ─────────────────────────────
+
+/**
+ * Chrome / Edge có File System Access: trang tự tải từng phần 19MB (POST /taive/phan), phần nào
+ * hỏng thì tải lại RIÊNG phần đó, rồi ghi đúng chỗ của nó trong một file trên đĩa. Mất mạng,
+ * máy ngủ, Telegram chập… chỉ làm chậm chứ không làm hỏng: tạm dừng, có mạng lại thì tự tải tiếp
+ * từ phần đang dở. File chỉ thành hình khi đủ từng phần (Chrome ghi vào file tạm .crswap, đóng
+ * xong mới đổi tên) — không bao giờ có bản cụt mang tên file thật.
+ * Trình duyệt khác (Safari, Firefox) không có API này → luồng một lần như cũ.
+ */
+var CO_FSA = typeof window.showSaveFilePicker === 'function' && window.isSecureContext;
+var PHAN_SONG_SONG = 3;      // tải cùng lúc 3 phần: nhanh hơn hẳn một luồng, tốn tối đa ~57MB bộ nhớ
+var PHAN_THU_TOI_DA = 8;     // thử một phần ngần ấy lần (chờ tăng dần tới 30s) rồi mới tạm dừng
+var CHO_IM_LANG = 45000;     // một phần không nhận thêm byte nào ngần ấy (kết nối "treo") thì tải lại phần đó
+var dangTaiPhan = 0;         // số file đang tải từng phần — để cảnh báo khi đóng trang
+
+function khoBamTaiThang(it) {
+  if (CO_FSA) { taiTungPhan(it); return; }
+  if (motLuongDuoc(it)) { khoTaiThang(it); return; }
+  khoGhi(it.id, { loai: 'warn', chu: 'File này ' + it.parts + ' phần — trình duyệt này chỉ tải thẳng được file nhỏ hơn. Mở bằng Chrome hoặc Edge để tải thẳng, hoặc dùng Lấy về Drive.' });
+}
+/** File tải được bằng MỘT luồng không (trần số phần của luồng). Apps Script cũ chưa báo thang1 thì theo thang. */
+function motLuongDuoc(it) { return it.thang1 === undefined ? !!it.thang : !!it.thang1; }
+
+/** Đọc ruột vé (base64url, có hoặc không có dấu = đệm) — trang chỉ cần biết số phần. */
+function docVe(d) {
+  var b = String(d).replace(/-/g, '+').replace(/_/g, '/');
+  while (b.length % 4) b += '=';
+  var bin = atob(b), u8 = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return JSON.parse(new TextDecoder().decode(u8));
+}
+
+async function taiTungPhan(it) {
+  var u0 = khoUi[it.id] || {};
+  if (u0.tt || u0.chon) return;   // bấm đúp / đang tải rồi: không mở lần tải thứ hai
+  khoUi[it.id] = Object.assign(u0, { chon: true });
+  var tay;
+  // PHẢI là việc đầu tiên của cú bấm, chưa await gì trước nó: hộp chọn chỗ lưu cần cú bấm còn "nóng".
+  try { tay = await window.showSaveFilePicker({ suggestedName: it.name }); }
+  catch (e) {
+    khoUi[it.id].chon = false;
+    // Huỷ ở hộp lưu, hoặc hộp lưu đang mở sẵn: thôi. Trình duyệt không cho dùng API này: đường cũ.
+    if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) return;
+    if (motLuongDuoc(it)) khoTaiThang(it);
+    else khoGhi(it.id, { loai: 'err', chu: 'Trình duyệt không cho chọn chỗ lưu (' + errText(e) + ') — dùng Lấy về Drive.' });
+    return;
+  }
+  khoUi[it.id].chon = false;
+  // Hộp lưu đã TẠO (và nếu chọn đè thì đã xoá rỗng) file thật. Bỏ dở thì xoá nó đi, đừng để lại
+  // một file 0 byte mang tên bản ghi mà mở không được.
+  function xoaFile() { try { if (tay.remove) return tay.remove().catch(function () {}); } catch (e) { /* bỏ qua */ } }
+  var ghi;
+  try { ghi = await tay.createWritable(); }
+  catch (e) { xoaFile(); khoGhi(it.id, { loai: 'err', chu: 'Không ghi được vào file đã chọn: ' + errText(e) }); return; }
+
+  var n = Math.max(1, Math.ceil(it.size / TG_PART));
+  var xong = [], soXong = 0, daGhi = 0, batDau = Date.now(), daGhiLucDau = 0;
+  // tt: trạng thái lần tải. huy: đã bấm Huỷ. dung: đang tạm dừng. chay: đang có luồng tải.
+  // ket: đã sang bước kết thúc (đóng / bỏ file) — Huỷ lúc này không được chen vào.
+  // loi: lỗi khiến lần chạy dừng. cho: những chỗ đang chờ để đánh thức. ac: huỷ các lần tải dở.
+  var tt = { huy: false, dung: false, chay: false, ket: false, loi: null, cho: [], ac: null };
+  var ve = null, veDangXin = null, daBo = false;
+  var hangGhi = Promise.resolve();   // ghi tuần tự: mấy luồng tải xong cùng lúc thì xếp hàng
+  dangTaiPhan++;
+
+  function thuc() { tt.cho.splice(0).forEach(function (f) { f(); }); }
+  /** Chờ ms (hoặc tới khi có mạng nếu đang mất mạng); Huỷ / Tải tiếp / lỗi chung đánh thức ngay. */
+  function nghi(ms) {
+    return new Promise(function (ok) {
+      var xongRoi = false;
+      function het() { if (!xongRoi) { xongRoi = true; window.removeEventListener('online', het); ok(); } }
+      tt.cho.push(het);
+      if (navigator.onLine) setTimeout(het, ms); else window.addEventListener('online', het);
+    });
+  }
+  function tienDo(chu, loai) {
+    var giay = (Date.now() - batDau) / 1000, toc = giay > 1 ? (daGhi - daGhiLucDau) / giay : 0;
+    return {
+      ban: true, tt: tt, tien: { daGhi: daGhi, tong: it.size }, loai: loai || '',
+      chu: chu || ('Đang tải ' + mb(daGhi) + ' / ' + mb(it.size) + ' · ' + soXong + '/' + n + ' phần' + (toc > 0 ? ' · ' + mb(toc) + '/s' : '')),
+    };
+  }
+  function bao(chu, loai) { if (!tt.ket) { Object.assign(khoUi[it.id], tienDo(chu, loai)); khoRender(); } }
+  function boTai() {   // thôi theo dõi lần tải này — đúng MỘT lần dù có bao nhiêu đường kết thúc
+    if (daBo) return;
+    daBo = true;
+    dangTaiPhan--;
+    khoUi[it.id] = Object.assign({}, khoUi[it.id] || {}, { ban: false, tien: null, tt: null });
+  }
+  function ketThuc(them) { boTai(); Object.assign(khoUi[it.id], them); khoRender(); }
+  /** Bước kết thúc: khoá Huỷ, ẩn nút ngay (đóng file 550MB mất vài giây). */
+  function vaoKet(chu) {
+    tt.ket = true;
+    Object.assign(khoUi[it.id], { ban: true, tt: null, tien: null, loai: '', chu: chu });   // ban: chưa cho bấm Tải thẳng lại
+    khoRender();
+  }
+  function boFile(them) {   // bỏ bản đang ghi + xoá file rỗng, rồi báo
+    return Promise.resolve(ghi.abort()).catch(function () {}).then(xoaFile).then(function () { if (them) ketThuc(them); });
+  }
+
+  /** Vé mới (lần đầu, hoặc khi vé cũ hết hạn giữa chừng). Mấy luồng cùng cần thì dùng chung một lần xin. */
+  function veMoi() {
+    if (!veDangXin) {
+      veDangXin = xinVe(it, true).then(function (r) {
+        var v = docVe(r.d);
+        if (!v || !Array.isArray(v.f) || v.f.length !== n || v.s !== it.size) {
+          var k = new Error('Vé tải không khớp file (' + (v && v.f ? v.f.length : '?') + ' phần, cần ' + n + ') — dùng Lấy về Drive');
+          k.that = true;
+          throw k;
+        }
+        ve = r;
+        return r;
+      }, function (e) { e.veLoi = true; throw e; }).finally(function () { veDangXin = null; });
+    }
+    return veDangXin;
+  }
+  function loiThat(msg, sangDrive) { var e = new Error(msg); e.that = true; e.sangDrive = !!sangDrive; return e; }
+
+  /**
+   * Đọc thân một phần vào bộ đệm đúng cỡ. Có canh: im lặng quá CHO_IM_LANG (kết nối "treo" — đổi
+   * Wi-Fi mà không đứt hẳn) thì huỷ lần này để thử lại, không đứng chờ mãi.
+   */
+  async function docThan(r, can, ac) {
+    if (!r.body || !r.body.getReader) {   // không đọc theo mẩu được: đọc cả cục
+      var c = await r.arrayBuffer();
+      return c.byteLength === can ? c : c.byteLength;
+    }
+    var reader = r.body.getReader(), buf = new Uint8Array(can), co = 0, hen = null;
+    function canh() { clearTimeout(hen); hen = setTimeout(function () { ac.abort(); }, CHO_IM_LANG); }
+    canh();
+    try {
+      for (;;) {
+        var x = await reader.read();
+        if (x.done) break;
+        if (co + x.value.byteLength > can) { ac.abort(); return co + x.value.byteLength; }   // thừa byte: sai phần
+        buf.set(x.value, co);
+        co += x.value.byteLength;
+        canh();
+      }
+    } finally { clearTimeout(hen); }
+    return co === can ? buf.buffer : co;
+  }
+
+  /** Một phần: tải tới khi về đủ byte; lỗi tạm thì chờ tăng dần rồi thử lại, mất mạng thì chờ có mạng. */
+  async function motPhan(i) {
+    var can = Math.min(TG_PART, it.size - i * TG_PART);
+    for (var lan = 1; ; lan++) {
+      if (tt.huy || tt.dung || tt.loi) return null;
+      var vi = '', mang = false;
+      var ac = new AbortController();
+      var boHuy = function () { ac.abort(); };
+      tt.ac.signal.addEventListener('abort', boHuy);
+      try {
+        var r = await fetch(ve.url.replace(/\/taive\/?$/, '') + '/taive/phan', {
+          method: 'POST', cache: 'no-store', signal: ac.signal,
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // kiểu "đơn giản": khỏi preflight
+          body: JSON.stringify({ d: ve.d, s: ve.s, i: i }),
+        });
+        if (r.ok) {
+          var kq = await docThan(r, can, ac);
+          if (typeof kq !== 'number') return kq;
+          vi = 'phần ' + (i + 1) + ' về sai dung lượng (' + mb(kq) + '/' + mb(can) + ')';
+        } else {
+          var j = null;
+          try { j = await r.json(); } catch (e) { j = null; }
+          if (j && j.ma === 'het_han') { await veMoi(); lan--; continue; }   // vé mới, không tính là một lần hỏng
+          if (j && (j.ma === 'sai_ky' || j.ma === 'cai_dat' || j.ma === 'hong')) throw loiThat(loiTaiThang(j.loi || ''));
+          if (j && j.ma === 'telegram_hong') throw loiThat('Máy chủ tải thẳng không lấy được file này từ Telegram (' + (j.loi || '') + ').', true);
+          vi = (j && j.loi) || ('máy chủ trả ' + r.status);
+        }
+      } catch (e) {
+        if (e && (e.that || e.veLoi)) throw e;
+        if (tt.huy) return null;
+        mang = true;
+        vi = 'mất kết nối tới máy chủ tải';
+      } finally { tt.ac.signal.removeEventListener('abort', boHuy); }
+      // Chưa phần nào về mà đã mất kết nối 3 lần liền: gần như chắc mạng đang chặn máy chủ tải —
+      // dừng sớm để chuyển Drive, đừng bắt chờ hết 8 lần (~1,5 phút).
+      if (mang && soXong === 0 && lan >= 3) throw new Error(vi);
+      if (lan >= PHAN_THU_TOI_DA) throw new Error(vi);
+      var s = Math.min(30, Math.pow(2, lan - 1));
+      bao(navigator.onLine ? 'Phần ' + (i + 1) + ': ' + vi + ' — thử lại sau ' + s + ' giây (lần ' + (lan + 1) + '/' + PHAN_THU_TOI_DA + ')…'
+                           : 'Mất mạng — có mạng lại là tự tải tiếp (đã có ' + mb(daGhi) + ' / ' + mb(it.size) + ').', 'warn');
+      await nghi(s * 1000);
+    }
+  }
+
+  /** Chạy (hoặc chạy tiếp) mấy luồng tải trên những phần còn thiếu. */
+  async function chay() {
+    if (tt.chay || tt.ket) return;
+    tt.chay = true; tt.dung = false; tt.loi = null; tt.ac = new AbortController();
+    var conLai = [];
+    for (var i = 0; i < n; i++) if (!xong[i]) conLai.push(i);
+    async function luong() {
+      while (!tt.huy && !tt.dung && !tt.loi && conLai.length) {
+        var i = conLai.shift(), buf;
+        try { buf = await motPhan(i); }
+        catch (e) { tt.loi = tt.loi || e; conLai.unshift(i); thuc(); return; }   // các luồng khác thôi chờ
+        if (!buf) { conLai.unshift(i); return; }
+        hangGhi = hangGhi.then(function () { return ghi.write({ type: 'write', position: i * TG_PART, data: buf }); });
+        try { await hangGhi; }
+        catch (e) { tt.loi = tt.loi || loiThat('Không ghi được xuống đĩa: ' + errText(e)); thuc(); return; }
+        xong[i] = true; soXong++; daGhi += buf.byteLength;
+        bao();
+      }
+    }
+    try {
+      if (!ve) await veMoi();
+      batDau = Date.now(); daGhiLucDau = daGhi;
+      bao();
+      var so = [];
+      for (var k = 0; k < Math.min(PHAN_SONG_SONG, conLai.length); k++) so.push(luong());
+      await Promise.all(so);
+    } catch (e) { tt.loi = tt.loi || e; }
+    var loi = tt.loi;
+
+    // Từ đây trở xuống là kết thúc (trừ tạm dừng). Khoá Huỷ NGAY, trước mọi await.
+    if (tt.huy) {
+      vaoKet('Đang huỷ…');
+      await boFile({ loai: 'warn', chu: 'Đã huỷ tải "' + it.name + '".' });
+      return;
+    }
+    if (soXong === n) {
+      vaoKet('Đang lưu file…');
+      try { await hangGhi; await ghi.close(); }
+      catch (e) { await boFile({ loai: 'err', chu: 'Tải đủ nhưng không lưu được file: ' + errText(e) }); return; }
+      ketThuc({ loai: 'ok', chu: '✓ Đã lưu đủ ' + mb(it.size) + ' thành một file "' + tay.name + '".' });
+      return;
+    }
+    if (loi && loi.that) {
+      vaoKet('Đang dừng…');
+      await boFile();
+      boTai();
+      // Telegram không đưa file cho Worker (đổi bot…): Drive dùng token của Apps Script nên vẫn lấy được.
+      if (loi.sangDrive) chuyenDrive(it, errText(loi));
+      else { Object.assign(khoUi[it.id], { loai: 'err', chu: errText(loi) }); khoRender(); }
+      return;
+    }
+    if (!ve) {
+      // Không xin nổi vé. Telegram nghẽn mãi → Drive; lỗi khác (sai key, chưa cài…) → báo thẳng.
+      vaoKet('Đang dừng…');
+      await boFile();
+      boTai();
+      if (loi && loi.tam) chuyenDrive(it, errText(loi) + ' — Telegram đang nghẽn.');
+      else { Object.assign(khoUi[it.id], { loai: 'err', chu: errText(loi) }); khoRender(); }
+      return;
+    }
+    if (soXong === 0 && /mất kết nối/.test(loi && loi.message || '')) {
+      // Chưa phần nào về mà lần nào cũng mất kết nối — gần như chắc mạng đang chặn máy chủ tải
+      // (hay gặp ở mạng công ty). Drive đi qua Google nên vẫn tải được.
+      vaoKet('Đang chuyển…');
+      await boFile();
+      boTai();
+      chuyenDrive(it, 'Không kết nối được máy chủ tải thẳng — thường là mạng đang chặn nó (hay gặp ở mạng công ty).');
+      return;
+    }
+    // Hỏng giữa chừng mà đã thử đủ lần: GIỮ NGUYÊN file đang ghi dở, tạm dừng. Có mạng lại thì tự
+    // chạy tiếp; hoặc bấm Tải tiếp; hoặc chuyển Lấy về Drive (khi mạng này chặn máy chủ tải).
+    tt.chay = false;
+    tt.dung = true;
+    bao('Tạm dừng ở ' + mb(daGhi) + ' / ' + mb(it.size) + ' (' + soXong + '/' + n + ' phần): ' + errText(loi) +
+        '. Phần đã tải vẫn giữ — bấm Tải tiếp (tự chạy lại khi có mạng), hoặc Lấy về Drive nếu mạng này chặn máy chủ tải.', 'warn');
+    window.addEventListener('online', function () { if (tt.dung && !tt.huy && !tt.ket) chay(); }, { once: true });
+  }
+
+  tt.tiep = function () { if (tt.dung && !tt.huy && !tt.ket) chay(); };
+  tt.huyTai = function () {
+    if (tt.ket || tt.huy) return;   // đang đóng / bỏ file, hoặc đã bấm Huỷ rồi
+    tt.huy = true;
+    if (tt.ac) tt.ac.abort();       // dừng ngay các phần đang tải dở
+    thuc();
+    if (!tt.chay) {                 // đang tạm dừng: không luồng nào chạy để tự kết thúc
+      vaoKet('Đang huỷ…');
+      boFile({ loai: 'warn', chu: 'Đã huỷ tải "' + it.name + '".' });
+    } else bao('Đang huỷ…', 'warn');
+  };
+  tt.sangDrive = function () {      // khi tạm dừng: bỏ bản dở, lấy cả file qua Drive
+    if (!tt.dung || tt.ket) return;
+    vaoKet('Đang chuyển…');
+    boFile().then(function () { boTai(); chuyenDrive(it, 'Đã chuyển sang Lấy về Drive.'); });
+  };
+  khoUi[it.id] = Object.assign({}, khoUi[it.id] || {}, tienDo('Đang xin vé tải…'));
+  khoRender();
+  chay();
 }
 
 /** Gửi vé sang Worker. Phải chạy ĐỒNG BỘ ngay trong cú bấm (không await trước f.submit()). */
@@ -678,7 +999,7 @@ $('key').oninput = refresh;
 $('go').onclick = uploadAll;
 $('khoLoad').onclick = khoTai;
 $('key').addEventListener('change', khoTai);
-window.addEventListener('beforeunload', function (e) { if (busy) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', function (e) { if (busy || dangTaiPhan > 0) { e.preventDefault(); e.returnValue = ''; } });
 
 // API + key: lấy từ link (#api=…&key=… — hàm caiDat nhắn vào Telegram) hoặc lần trước.
 // Key đã nhớ chỉ đi với đúng API của nó: link lạ trỏ API khác thì không mang key cũ theo.
