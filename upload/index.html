@@ -589,9 +589,23 @@ async function xinVe(it, tungPhan) {
     try { return await call('lib_direct', tungPhan ? { key: $('key').value.trim(), id: it.id, phan: 1 } : { key: $('key').value.trim(), id: it.id }); }
     catch (e) {
       var tam = /Gateway Timeout|Bad Gateway|Service Unavailable|Too Many Requests|Internal Server Error|\((?:429|5\d\d)\)|lỗi 5\d\d/i.test(e && e.message || '');
-      if (!tam) throw e;
-      if (lan >= 2) { e.tam = true; throw e; }
-      khoGhi(it.id, { loai: 'warn', chu: 'Telegram đang nghẽn — tự xin lại vé (lần ' + (lan + 1) + '/2)…' });
+      // Trình duyệt không nhận được câu trả lời nào ("Failed to fetch" / "Load failed" /
+      // "NetworkError"): Google trục trặc thoáng qua, mạng chập, hoặc bộ lọc mạng chặn câu trả lời.
+      var mang = e instanceof TypeError || /Failed to fetch|Load failed|NetworkError/i.test(e && e.message || '');
+      if (!tam && !mang) throw e;
+      if (lan >= 2) {
+        if (mang) {
+          var k = new Error('Không nhận được trả lời từ Apps Script (máy chủ Google của trang này) khi xin vé tải — ' +
+            'thường do mạng chập hoặc mạng đang chặn (hay gặp ở mạng công ty). Bấm Tải thẳng lại sau ít phút, ' +
+            'hoặc thử bằng 4G / mạng nhà.');
+          k.mang = true;
+          throw k;
+        }
+        e.tam = true;
+        throw e;
+      }
+      khoGhi(it.id, { loai: 'warn', chu: (mang ? 'Chưa nhận được trả lời từ Apps Script' : 'Telegram đang nghẽn') +
+        ' — tự xin lại vé (lần ' + (lan + 1) + '/2)…' });
       await new Promise(function (xong) { setTimeout(xong, 3000 * (lan + 1)); });
     }
   }
