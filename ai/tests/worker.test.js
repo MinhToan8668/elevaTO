@@ -128,6 +128,10 @@ test('mở /taive bằng trình duyệt: nói thẳng là sai cách gọi, khôn
   assert.equal(d.code, 'bad');
   assert.match(d.error, /POST/);
   assert.equal(d.service, undefined, 'không được lẫn sang câu trả lời của GET chung');
+  // Đường tải từng phần cũng vậy.
+  const p = await worker.fetch(new Request(`${API}taive/phan`), env0(), moCtx());
+  assert.equal(p.status, 405);
+  assert.equal((await p.json()).service, undefined);
 });
 
 test('chưa nối cơ sở dữ liệu thì báo setup; thân quá dài thì từ chối trước khi đọc', async () => {
