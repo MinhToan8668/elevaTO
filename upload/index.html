@@ -627,7 +627,7 @@ function guiVe(it, r) {
   daGui = true;
   f.submit();
   f.remove();
-  khoGhi(it.id, { loai: 'ok', chu: 'Đang tải "' + it.name + '" (' + mb(it.size) + ') về máy thành một file — xem thanh tải của trình duyệt.' });
+  khoGhi(it.id, { loai: 'ok', chu: 'Đang tải "' + it.name + '" (' + mb(it.size) + ') về máy thành một file — xem thanh tải của trình duyệt: phải đủ ' + mb(it.size) + ' mới là xong. Thanh tải báo lỗi (Failed) thì bấm lại, hoặc dùng Lấy về Drive.' });
 }
 
 async function khoLayFile(it, btn) {

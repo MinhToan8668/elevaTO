@@ -118,14 +118,22 @@ export async function taiThang(req, env) {
 
   // Luồng đi ngay, phần được bơm vào dần ở nền. KHÔNG await bomCacPhan: Cloudflare giữ
   // Worker sống chừng nào trình duyệt còn đang nhận, nên cứ trả Response ra trước.
-  const { readable, writable } = new TransformStream();
+  //
+  // PHẢI là FixedLengthStream, không phải TransformStream. Đã thử trong workerd: với
+  // TransformStream, Cloudflare VỨT header content-length tự đặt và gửi kiểu chunked — trình
+  // duyệt không biết file nặng bao nhiêu, luồng đứt giữa chừng thì nó báo "Done" với một bản
+  // cụt (file 540MB về được 81MB mà tưởng xong). FixedLengthStream thì Cloudflare tự gửi đúng
+  // content-length, và ghi thiếu / thừa byte là luồng lỗi → trình duyệt báo tải hỏng.
+  // Nó cũng là luồng gốc của runtime: pipeTo chép byte ngoài JavaScript, không ăn CPU.
+  const { readable, writable } = typeof FixedLengthStream === 'function'
+    ? new FixedLengthStream(ve.s)
+    : new TransformStream();   // chỉ khi chạy bài kiểm tra trên Node — Node không có FixedLengthStream
   bomCacPhan(ve.f, env.UPLOAD_TG_TOKEN, writable);
 
   return new Response(readable, {
     headers: {
       'content-type': 'application/octet-stream',
-      // Biết trước dung lượng nên trình duyệt hiện được thanh tiến trình, và đứt giữa
-      // chừng là nó biết file thiếu byte chứ không lưu nhầm bản cụt coi như xong.
+      // Trên Cloudflare dòng này thừa (FixedLengthStream tự đặt), giữ cho Node và bài kiểm tra.
       'content-length': String(ve.s),
       'content-disposition': `attachment; filename="${tenAscii(ve.n)}"; filename*=UTF-8''${encodeURIComponent(ve.n)}`,
       'cache-control': 'no-store',
@@ -158,16 +166,31 @@ function veSai(ve) {
  * quan trọng vì gói Free chỉ cho 10ms CPU, mà chép tay 800MB thì bao nhiêu cũng không đủ.
  */
 async function bomCacPhan(phan, token, writable) {
-  let conDuPhong = DU_PHONG;
+  // Mỗi phần tốn đúng 1 subrequest; phần còn lại của 50 lượt để dành cho thử lại. File ít
+  // phần thì dư nhiều lượt — đừng tự bó vào DU_PHONG khi còn chỗ.
+  let conDuPhong = CF_SUBREQ - phan.length;
+  const tai = async (duong) => {
+    try { return await fetch(TG_FILE + token + '/' + duong); }
+    catch (err) { return { ok: false, status: 0, loi: err }; }   // đứt mạng: coi như một mã lỗi
+  };
   try {
     for (let i = 0; i < phan.length; i++) {
       const [fid, duong] = phan[i];
-      let res = await fetch(TG_FILE + token + '/' + duong);
-      // 404/410 = đường dẫn hết hạn giữa chừng. Xin lại rồi tải tiếp, đừng bỏ cả bản tải.
-      if (!res.ok && (res.status === 404 || res.status === 410) && conDuPhong >= 2) {
-        conDuPhong -= 2;
-        const moi = await duongMoi(token, fid);
-        if (moi) res = await fetch(TG_FILE + token + '/' + moi);
+      let res = await tai(duong);
+      // Chỉ thử lại được khi CHƯA ghi byte nào của phần này: luồng trả về không lùi lại được.
+      for (let lan = 0; !res.ok && lan < 3; lan++) {
+        if ((res.status === 404 || res.status === 410) && conDuPhong >= 2) {
+          // Đường dẫn hết hạn giữa chừng. Xin lại rồi tải tiếp, đừng bỏ cả bản tải.
+          conDuPhong -= 2;
+          const moi = await duongMoi(token, fid);
+          if (!moi) break;
+          res = await tai(moi);
+        } else if ((res.status === 0 || res.status === 429 || res.status >= 500) && conDuPhong >= 1) {
+          // Telegram trục trặc thoáng qua (đứt mạng, bận, lỗi máy chủ): chờ chút rồi thử lại.
+          conDuPhong -= 1;
+          await new Promise((r) => setTimeout(r, 800 * (lan + 1)));
+          res = await tai(duong);
+        } else break;
       }
       if (!res.ok || !res.body) throw new Error(`phần ${i + 1}/${phan.length}: Telegram trả ${res.status}`);
       await res.body.pipeTo(writable, { preventClose: true });

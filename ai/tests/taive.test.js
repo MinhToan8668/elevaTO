@@ -224,3 +224,67 @@ test('vé ký đúng y kiểu Apps Script (base64 web-safe CÓ dấu = ở cuố
     assert.equal(await res.text(), 'abcdefg');
   } finally { ga.thoi(); }
 });
+
+// ─── Không bao giờ để trình duyệt lưu một bản cụt mà tưởng là xong ─────────────
+// Thực tế: file 540MB, trình duyệt báo "Done" ở 81MB. Trên Cloudflare, Response bọc
+// TransformStream bị VỨT content-length (gửi chunked) — đã thử trong workerd. Phải dùng
+// FixedLengthStream: Cloudflare gửi đúng content-length và luồng thiếu byte thì lỗi.
+
+test('trên Cloudflare dùng FixedLengthStream với đúng dung lượng trong vé', async () => {
+  const ga = gaTelegram({ 'documents/p1.bin': 'abc', 'documents/p2.bin': 'defg' });
+  const cu = globalThis.FixedLengthStream;
+  const dung = [];
+  globalThis.FixedLengthStream = class extends TransformStream { constructor(n) { super(); dung.push(n); } };
+  try {
+    const { d, s } = await veTest();
+    const res = await taiThang(yeuCau(d, s), ENV);
+    assert.equal(await res.text(), 'abcdefg');
+    assert.deepEqual(dung, [7], 'phải mở FixedLengthStream đúng bằng dung lượng file');
+  } finally {
+    if (cu === undefined) delete globalThis.FixedLengthStream; else globalThis.FixedLengthStream = cu;
+    ga.thoi();
+  }
+});
+
+/** Telegram giả mà một phần trả lỗi (hoặc đứt mạng) vài lần đầu rồi mới được. */
+function gaTelegramChapChon(phan, hongLan) {
+  const that = globalThis.fetch;
+  const goi = [];
+  const dem = {};
+  globalThis.fetch = async (url) => {
+    goi.push(String(url));
+    const duong = String(url).split(`/bot${TOKEN}/`)[1] || '';
+    dem[duong] = (dem[duong] || 0) + 1;
+    const kieu = (hongLan[duong] || [])[dem[duong] - 1];
+    if (kieu === 'mang') throw new TypeError('network connection lost');
+    if (kieu) return new Response('', { status: kieu });
+    return new Response(phan[duong]);
+  };
+  return { goi, thoi: () => { globalThis.fetch = that; } };
+}
+
+test('Telegram trục trặc thoáng qua ở một phần (502, đứt mạng, 429) thì thử lại, file vẫn đủ', async () => {
+  const ga = gaTelegramChapChon(
+    { 'documents/p1.bin': 'abc', 'documents/p2.bin': 'defg' },
+    { 'documents/p2.bin': [502, 'mang', 429] },
+  );
+  try {
+    const { d, s } = await veTest();
+    const res = await taiThang(yeuCau(d, s), ENV);
+    assert.equal(await res.text(), 'abcdefg');
+    assert.equal(ga.goi.filter((u) => u.endsWith('p2.bin')).length, 4, '3 lần hỏng + 1 lần được');
+  } finally { ga.thoi(); }
+});
+
+test('hỏng mãi thì thôi, luồng đứt (không treo, không lặp vô hạn)', async () => {
+  const ga = gaTelegramChapChon(
+    { 'documents/p1.bin': 'abc', 'documents/p2.bin': 'defg' },
+    { 'documents/p2.bin': [502, 502, 502, 502, 502, 502] },
+  );
+  try {
+    const { d, s } = await veTest();
+    const res = await taiThang(yeuCau(d, s), ENV);
+    await assert.rejects(res.text(), 'thiếu byte thì phải báo hỏng, không được coi như xong');
+    assert.equal(ga.goi.filter((u) => u.endsWith('p2.bin')).length, 4, 'thử tối đa 3 lần');
+  } finally { ga.thoi(); }
+});
