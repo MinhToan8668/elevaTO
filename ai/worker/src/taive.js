@@ -50,6 +50,35 @@ const loiText = (msg, status) =>
     headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
   });
 
+const escHtml = (x) => String(x).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/**
+ * Lỗi cho yêu cầu đến từ trang upload (form gửi vào một iframe ẩn).
+ *
+ * Trả chữ trơn như loiText thì nó nằm im trong khung ẩn — người dùng chỉ thấy bấm xong không
+ * có gì xảy ra. Nên trả một trang nhỏ tự báo NGƯỢC lên trang cha bằng postMessage, kèm `ma`
+ * của đúng lần bấm để trang biết lỗi thuộc file nào.
+ *
+ * targetOrigin '*': thư chỉ chứa câu báo lỗi (không có vé, không có token), còn trang cha tự
+ * kiểm nguồn gửi và `ma` trước khi tin. `<` trong JSON đổi thành \u003c để chuỗi không thể
+ * tự đóng thẻ <script>.
+ */
+function loiTrang(msg, status, ma) {
+  const thu = JSON.stringify({ taive: 'loi', ma, msg }).replace(/</g, '\\u003c');
+  return new Response(
+    `<!doctype html><meta charset="utf-8"><title>Tải thẳng</title><p>${escHtml(msg)}</p>` +
+      `<script>parent.postMessage(${thu}, '*')</script>`,
+    {
+      status,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+        'x-content-type-options': 'nosniff',
+      },
+    },
+  );
+}
+
 /**
  * POST /taive với hai trường form: d (vé base64url) và s (chữ ký base64url).
  *
@@ -58,29 +87,34 @@ const loiText = (msg, status) =>
  * cửa sổ bật lên và không để lại tab trắng.
  */
 export async function taiThang(req, env) {
-  if (!env.UPLOAD_TG_TOKEN) return loiText('Worker chưa cài UPLOAD_TG_TOKEN', 503);
-  if (!env.TAIVE_SECRET) return loiText('Worker chưa cài TAIVE_SECRET', 503);
-
   let d = '';
   let s = '';
+  // ui=1: trang upload gửi qua iframe ẩn → lỗi phải báo ngược lên trang (xem loiTrang).
+  // `ma` chỉ giữ chữ, số, _ và - : nó đi thẳng vào thư postMessage.
+  let ma = null;
   try {
     const form = await req.formData();
     d = String(form.get('d') || '');
     s = String(form.get('s') || '');
+    if (form.get('ui') === '1') ma = String(form.get('ma') || '').replace(/[^\w-]/g, '').slice(0, 40);
   } catch {
     return loiText('Không đọc được yêu cầu', 400);
   }
-  if (!d || !s) return loiText('Thiếu vé tải', 400);
-  if (!(await kiemChuKy(env.TAIVE_SECRET, d, s))) return loiText('Vé tải không hợp lệ', 403);
+  const loi = (msg, status) => (ma === null ? loiText(msg, status) : loiTrang(msg, status, ma));
+
+  if (!env.UPLOAD_TG_TOKEN) return loi('Worker chưa cài UPLOAD_TG_TOKEN', 503);
+  if (!env.TAIVE_SECRET) return loi('Worker chưa cài TAIVE_SECRET', 503);
+  if (!d || !s) return loi('Thiếu vé tải', 400);
+  if (!(await kiemChuKy(env.TAIVE_SECRET, d, s))) return loi('Vé tải không hợp lệ', 403);
 
   let ve;
   try {
     ve = JSON.parse(new TextDecoder().decode(b64urlBytes(d)));
   } catch {
-    return loiText('Vé tải hỏng', 400);
+    return loi('Vé tải hỏng', 400);
   }
-  const loi = veSai(ve);
-  if (loi) return loiText(loi, 400);
+  const sai = veSai(ve);
+  if (sai) return loi(sai, 400);
 
   // Luồng đi ngay, phần được bơm vào dần ở nền. KHÔNG await bomCacPhan: Cloudflare giữ
   // Worker sống chừng nào trình duyệt còn đang nhận, nên cứ trả Response ra trước.
