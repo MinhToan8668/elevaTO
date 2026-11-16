@@ -138,3 +138,16 @@ test('xin vé từng phần cho file 60 phần được; xin vé một luồng t
   assert.equal(ruot.f.length, 60);
   assert.throws(() => ctx.khoVeTaiThang('k', 'a1', false), /tối đa 44/);
 });
+
+// ─── Lỗi Google Drive phải nói được LÝ DO ─────────────────────────────────────────
+// Người dùng thấy "Lỗi: Drive 403" trơn. 403 hay nhất là Drive đầy — mà file trong Thùng rác vẫn
+// tính dung lượng — nên câu báo phải nói thẳng để biết đường dọn.
+
+test('loiDrive: Drive đầy / giới hạn tốc độ / lỗi khác đều có lý do', () => {
+  const { ctx } = nap(OK);
+  const res = (ma, body) => ({ getResponseCode: () => ma, getContentText: () => (typeof body === 'string' ? body : JSON.stringify(body)) });
+  assert.match(ctx.loiDrive(res(403, { error: { code: 403, errors: [{ reason: 'storageQuotaExceeded' }], message: 'The user has exceeded their Drive storage quota' } })), /Drive đã đầy.*Thùng rác/);
+  assert.match(ctx.loiDrive(res(403, { error: { errors: [{ reason: 'userRateLimitExceeded' }] } })), /giới hạn tốc độ/);
+  assert.equal(ctx.loiDrive(res(403, { error: { errors: [{ reason: 'insufficientPermissions' }] } })), 'Drive 403 (insufficientPermissions)');
+  assert.equal(ctx.loiDrive(res(500, '<html>lỗi</html>')), 'Drive 500', 'thân không phải JSON vẫn không vỡ');
+});

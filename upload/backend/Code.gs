@@ -173,7 +173,8 @@ function uploadBatDau(key, info) {
   var session = res.getResponseCode() === 200 ? layHeader(res, 'location') : '';
   if (!session) {
     ghiLoi('uploadBatDau', res.getResponseCode() + ' ' + res.getContentText().slice(0, 500));
-    throw new Error('Google Drive không mở được phiên tải lên, thử lại sau ít phút');
+    var ly = loiDrive(res);
+    throw new Error(/đầy|giới hạn/.test(ly) ? ly : 'Google Drive không mở được phiên tải lên, thử lại sau ít phút (' + ly + ')');
   }
   return session;
 }
@@ -632,7 +633,7 @@ function layMotPhan(job) {
       muteHttpExceptions: true
     });
     job.session = s.getResponseCode() === 200 ? layHeader(s, 'location') : '';
-    if (!job.session) return 'Drive ' + s.getResponseCode();
+    if (!job.session) return loiDrive(s);
   }
 
   var fid = docFid(job.id, job.part);
@@ -657,7 +658,7 @@ function layMotPhan(job) {
   if (code === 308) return true;
   if (code === 200 || code === 201) { job.driveId = JSON.parse(put.getContentText()).id; return true; }
   if (code === 404 || code === 410) return 'phien';
-  return 'Drive ' + code;
+  return loiDrive(put);
 }
 
 /** Bản tạm quá hạn → bỏ vào thùng rác. */
@@ -706,6 +707,24 @@ function thuMucUpload() {
   }
   props().setProperty(PROP_FOLDER, moi.body.id);
   return moi.body.id;
+}
+
+/**
+ * Câu báo cho một lỗi Google Drive, kèm LÝ DO Drive trả về. "Drive 403" trơn không nói được gì:
+ * 403 hay nhất là Drive ĐẦY (storageQuotaExceeded) — mà file đã vào Thùng rác vẫn tính dung
+ * lượng tới khi bị xoá hẳn, nên tải lên nhiều video là đầy lúc nào không hay.
+ */
+function loiDrive(res) {
+  var ma = res.getResponseCode(), ly = '';
+  try {
+    var e = (JSON.parse(res.getContentText() || '{}') || {}).error || {};
+    ly = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
+  } catch (x) { ly = ''; }
+  if (/storageQuotaExceeded|quotaExceeded/i.test(ly)) {
+    return 'Google Drive đã đầy — dọn Thùng rác (file trong thùng rác vẫn tính dung lượng) rồi thử lại';
+  }
+  if (/rateLimitExceeded/i.test(ly)) return 'Google Drive đang giới hạn tốc độ — đợi ít phút rồi thử lại';
+  return 'Drive ' + ma + (ly ? ' (' + ly + ')' : '');
 }
 
 function driveApi(method, url, body) {
