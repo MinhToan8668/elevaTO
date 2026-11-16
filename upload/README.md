@@ -59,6 +59,12 @@ Drive**, để lúc nào cũng ra được một file hoàn chỉnh. Hai lý do 
 (Trước đây form tải gửi vào một khung ẩn nên mọi lỗi của Worker nằm im trong đó: bấm xong nút
 hiện "Đang xin…" rồi thôi, không có gì xảy ra.)
 
+Telegram nghẽn lúc xin vé (*"Telegram không cho đường dẫn phần … (Gateway Timeout)"*) không còn làm
+hỏng lần tải: Apps Script hỏi đường dẫn từng đợt 8 phần và tự hỏi lại phần lỗi tạm (5xx, 429, mất
+kết nối) tối đa 4 vòng; còn thiếu thì để trống cho Worker tự xin bù; trang tự xin lại vé 2 lần, vẫn
+nghẽn thì chuyển sang Lấy về Drive. Phần Apps Script cần **dán lại `Code.gs`** rồi tạo phiên bản
+triển khai mới (xem *Sửa code sau này* bên dưới).
+
 Xin vé mất vài giây; nếu lâu quá cú bấm "nguội" (Safari và trình duyệt chặn tải tự động sẽ bỏ
 lần tải mà không báo), nút đổi thành **Tải về ngay** — bấm thêm một lần là file về.
 

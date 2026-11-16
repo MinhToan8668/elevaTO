@@ -152,9 +152,17 @@ function veSai(ve) {
   if (!Array.isArray(ve.f) || !ve.f.length) return 'Vé tải không có phần nào';
   if (ve.f.length > MAX_PHAN) return `Vé tải có ${ve.f.length} phần, quá mức ${MAX_PHAN}`;
   for (const p of ve.f) {
-    if (!Array.isArray(p) || typeof p[0] !== 'string' || typeof p[1] !== 'string' || !p[0] || !p[1]) {
+    // Đường dẫn được phép TRỐNG: Apps Script hỏi Telegram mãi không được (Telegram nghẽn) thì để
+    // trống, Worker tự xin bù bằng file_id. file_id thì bắt buộc.
+    if (!Array.isArray(p) || typeof p[0] !== 'string' || typeof p[1] !== 'string' || !p[0]) {
       return 'Vé tải có phần không hợp lệ';
     }
+  }
+  // Mỗi phần thiếu đường dẫn tốn thêm 1 subrequest. Không đủ lượt thì báo NGAY, trước khi mở
+  // luồng — lúc này còn trả được trang lỗi tử tế, mở luồng rồi mới hụt thì chỉ còn cách cắt ngang.
+  const thieu = ve.f.filter((p) => !p[1]).length;
+  if (ve.f.length + thieu > CF_SUBREQ) {
+    return `Telegram đang nghẽn, còn ${thieu} phần chưa lấy được đường dẫn — bấm lại sau ít phút, hoặc dùng Lấy về Drive`;
   }
   return '';
 }
@@ -176,7 +184,15 @@ async function bomCacPhan(phan, token, writable) {
   try {
     for (let i = 0; i < phan.length; i++) {
       const [fid, duong] = phan[i];
-      let res = await tai(duong);
+      // Vé để trống đường dẫn (Apps Script hỏi Telegram không được): xin bù bằng file_id.
+      let hienTai = duong;
+      for (let lan = 0; !hienTai && lan < 2 && conDuPhong >= 1; lan++) {
+        if (lan) await new Promise((r) => setTimeout(r, 1500));
+        conDuPhong -= 1;
+        hienTai = await duongMoi(token, fid);
+      }
+      if (!hienTai) throw new Error(`phần ${i + 1}/${phan.length}: Telegram không cho đường dẫn`);
+      let res = await tai(hienTai);
       // Chỉ thử lại được khi CHƯA ghi byte nào của phần này: luồng trả về không lùi lại được.
       for (let lan = 0; !res.ok && lan < 3; lan++) {
         if ((res.status === 404 || res.status === 410) && conDuPhong >= 2) {
@@ -184,12 +200,13 @@ async function bomCacPhan(phan, token, writable) {
           conDuPhong -= 2;
           const moi = await duongMoi(token, fid);
           if (!moi) break;
-          res = await tai(moi);
+          hienTai = moi;   // lần thử sau (nếu có) dùng đường dẫn MỚI, không quay về cái đã hết hạn
+          res = await tai(hienTai);
         } else if ((res.status === 0 || res.status === 429 || res.status >= 500) && conDuPhong >= 1) {
           // Telegram trục trặc thoáng qua (đứt mạng, bận, lỗi máy chủ): chờ chút rồi thử lại.
           conDuPhong -= 1;
           await new Promise((r) => setTimeout(r, 800 * (lan + 1)));
-          res = await tai(duong);
+          res = await tai(hienTai);
         } else break;
       }
       if (!res.ok || !res.body) throw new Error(`phần ${i + 1}/${phan.length}: Telegram trả ${res.status}`);

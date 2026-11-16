@@ -561,8 +561,23 @@ function loiTaiThang(msg) {
 async function khoTaiThang(it) {
   khoGhi(it.id, { ban: true, ve: null, loai: '', chu: '' });
   var r;
-  try { r = await call('lib_direct', { key: $('key').value.trim(), id: it.id }); }
-  catch (e) { khoGhi(it.id, { ban: false, loai: 'err', chu: errText(e) }); return; }
+  // Telegram nghẽn lúc Apps Script hỏi đường dẫn các phần ("Gateway Timeout"…) là lỗi thoáng
+  // qua — tự xin lại vé, đừng bắt người dùng đoán là phải bấm lại.
+  for (var lan = 0; ; lan++) {
+    try { r = await call('lib_direct', { key: $('key').value.trim(), id: it.id }); break; }
+    catch (e) {
+      var tam = /Gateway Timeout|Bad Gateway|Service Unavailable|Too Many Requests|Internal Server Error|\((?:429|5\d\d)\)|lỗi 5\d\d/i.test(e && e.message || '');
+      if (!tam) { khoGhi(it.id, { ban: false, loai: 'err', chu: errText(e) }); return; }
+      if (lan >= 2) {
+        // Nghẽn mãi: Lấy về Drive tự thử lại từng phần mỗi phút, chậm nhưng chắc ra file.
+        khoGhi(it.id, { ban: false, loai: 'warn', chu: errText(e) + ' — Telegram đang nghẽn. Đang chuyển sang Lấy về Drive (tự thử lại mỗi phút), xong sẽ có nút Tải từ Drive cho file hoàn chỉnh.' });
+        khoLayFile(it);
+        return;
+      }
+      khoGhi(it.id, { loai: 'warn', chu: 'Telegram đang nghẽn — tự xin lại vé (lần ' + (lan + 1) + '/2)…' });
+      await new Promise(function (xong) { setTimeout(xong, 3000 * (lan + 1)); });
+    }
+  }
 
   // Xin vé mất vài giây (Apps Script hỏi Telegram đường dẫn từng phần). Tới lúc ấy cú bấm đã
   // "nguội": Safari và các trình duyệt chặn tải tự động có thể bỏ lần tải này mà không báo gì.

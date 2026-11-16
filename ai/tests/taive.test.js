@@ -288,3 +288,71 @@ test('hỏng mãi thì thôi, luồng đứt (không treo, không lặp vô hạ
     assert.equal(ga.goi.filter((u) => u.endsWith('p2.bin')).length, 4, 'thử tối đa 3 lần');
   } finally { ga.thoi(); }
 });
+
+// ─── Vé có phần chưa có đường dẫn (Apps Script hỏi Telegram mãi bị "Gateway Timeout") ──────
+
+test('phần để trống đường dẫn trong vé thì Worker tự xin bù bằng file_id rồi tải đủ', async () => {
+  const goi = [];
+  const that = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    goi.push(String(url));
+    const u = String(url);
+    if (u.endsWith('/getFile')) {
+      const { file_id } = JSON.parse(init.body);
+      return new Response(JSON.stringify({ ok: true, result: { file_path: `documents/${file_id}.bin` } }));
+    }
+    if (u.endsWith('documents/p1.bin')) return new Response('abc');
+    if (u.endsWith('documents/fid-2.bin')) return new Response('defg');
+    return new Response('', { status: 404 });
+  };
+  try {
+    const { d, s } = await veTest({ f: [['fid-1', 'documents/p1.bin'], ['fid-2', '']] });
+    const res = await taiThang(yeuCau(d, s), ENV);
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), 'abcdefg');
+    assert.equal(goi.filter((u) => u.endsWith('/getFile')).length, 1, 'chỉ xin bù đúng phần thiếu');
+  } finally { globalThis.fetch = that; }
+});
+
+test('thiếu đường dẫn nhiều tới mức hết lượt subrequest thì báo ngay, chưa mở luồng', async () => {
+  const f = Array.from({ length: 30 }, (_, i) => [`fid-${i}`, i < 25 ? `documents/p${i}.bin` : '']);
+  // 30 phần + 5 lượt xin bù = 35 ≤ 50 → nhận; nhưng 44 phần + 10 thiếu = 54 > 50 → từ chối.
+  // Tải HẾT bản nhận được (mỗi phần 1 byte) để luồng nền không chạy dở chen sang bài sau.
+  const that = globalThis.fetch;
+  globalThis.fetch = async (url) => (String(url).endsWith('/getFile')
+    ? new Response(JSON.stringify({ ok: true, result: { file_path: 'documents/bu.bin' } }))
+    : new Response('x'));
+  try {
+    const ok = await veTest({ f, s: 30 });
+    const r = await taiThang(yeuCau(ok.d, ok.s, { ui: '1', ma: 'a' }), ENV);
+    assert.equal(r.status, 200);
+    assert.equal((await r.text()).length, 30);
+  } finally { globalThis.fetch = that; }
+  const nhieu = Array.from({ length: 44 }, (_, i) => [`fid-${i}`, i < 34 ? `documents/p${i}.bin` : '']);
+  const v = await veTest({ f: nhieu, s: 44 });
+  const res = await taiThang(yeuCau(v.d, v.s, { ui: '1', ma: 'b' }), ENV);
+  assert.equal(res.status, 400);
+  assert.match(thuTrongTrang(await res.text()).msg, /Telegram đang nghẽn, còn 10 phần/);
+});
+
+test('đường dẫn hết hạn (404) đã xin lại, lần thử sau dùng đường dẫn MỚI chứ không quay về cái cũ', async () => {
+  const goi = [];
+  const that = globalThis.fetch;
+  let lanMoi = 0;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    goi.push(u);
+    if (u.endsWith('/getFile')) return new Response(JSON.stringify({ ok: true, result: { file_path: 'documents/moi.bin' } }));
+    if (u.endsWith('documents/p1.bin')) return new Response('abc');
+    if (u.endsWith('documents/p2.bin')) return new Response('', { status: 404 });         // hết hạn
+    if (u.endsWith('documents/moi.bin')) return ++lanMoi === 1 ? new Response('', { status: 502 }) : new Response('defg');
+    return new Response('', { status: 404 });
+  };
+  try {
+    const { d, s } = await veTest();
+    const res = await taiThang(yeuCau(d, s), ENV);
+    assert.equal(await res.text(), 'abcdefg');
+    assert.equal(goi.filter((u) => u.endsWith('documents/p2.bin')).length, 1, 'không quay lại đường dẫn đã hết hạn');
+    assert.equal(goi.filter((u) => u.endsWith('documents/moi.bin')).length, 2, '502 lần đầu rồi thử lại đúng đường dẫn mới');
+  } finally { globalThis.fetch = that; }
+});
