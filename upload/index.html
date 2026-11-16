@@ -81,6 +81,7 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
   border:1px solid var(--border3);background:none;color:var(--white);cursor:pointer}
 .btn-sm:hover{border-color:var(--emerald)}
 .btn-sm:disabled{opacity:.45;cursor:not-allowed}
+.item .msg{margin-top:8px;font-size:13px;padding:8px 11px}
 .item-links .main{background:var(--emerald);border-color:var(--emerald);color:#04110c}
 .empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 8px;border:1px dashed var(--border2);border-radius:var(--r-sm)}
 [hidden]{display:none!important}
@@ -134,14 +135,11 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
       <b>Tải thẳng</b>: file đi từ Telegram về máy luôn, không đặt bản nào trên Drive, bấm là tải ngay.<br>
       <b>Lấy về Drive</b>: bot ghép file đặt tạm trên Drive (chờ 1–2 phút, bản tạm tự xoá sau 24 giờ).
       Chậm hơn nhưng không giới hạn dung lượng — file lớn thì dùng đường này.</p>
-    <ul class="list" id="khoList"></ul>
     <div class="msg" id="khoMsg"></div>
+    <ul class="list" id="khoList"></ul>
   </section>
 </main>
 
-<!-- Đích của form "Tải thẳng". Worker trả Content-Disposition: attachment nên trình duyệt
-     ghi thẳng ra ổ đĩa, iframe này không bao giờ hiện gì. Xem khoTaiThang(). -->
-<iframe name="taiThangFrame" title="Tải thẳng" hidden style="display:none;width:0;height:0;border:0"></iframe>
 
 <script>
 // URL /exec của dự án Apps Script upload (riêng, không phải backend landing page).
@@ -487,10 +485,19 @@ function khoRender() {
     var act = document.createElement('div');
     act.className = 'item-links';
     // Tải thẳng chạy được cả khi đã có bản tạm trên Drive — người dùng chọn đường nào tuỳ ý.
+    var u = khoUi[it.id] || {};
     if (it.thang) {
       var t = document.createElement('button');
-      t.type = 'button'; t.className = 'main'; t.textContent = 'Tải thẳng';
-      t.onclick = function () { khoTaiThang(it, t); };
+      t.type = 'button'; t.className = 'main';
+      var coVe = u.ve && u.veHet > Date.now();
+      t.textContent = u.ban ? 'Đang xin…' : coVe ? 'Tải về ngay' : 'Tải thẳng';
+      t.disabled = !!u.ban;
+      t.onclick = function () {
+        if (!coVe) { khoTaiThang(it); return; }
+        var ve = u.ve;
+        khoGhi(it.id, { ve: null });
+        guiVe(it, ve);
+      };
       act.appendChild(t);
     }
     if (it.st === 'san') {
@@ -506,50 +513,129 @@ function khoRender() {
       act.appendChild(b);
     }
     if (act.childNodes.length) li.appendChild(act);
+    // Báo ngay dưới đúng file vừa bấm — trước đây chữ hiện ở cuối cả danh sách, ngoài màn hình,
+    // nên bấm xong tưởng như không có gì xảy ra.
+    if (u.chu) {
+      var m = document.createElement('div');
+      m.className = 'msg ' + (u.loai || 'ok');
+      m.setAttribute('role', u.loai === 'err' ? 'alert' : 'status');
+      m.textContent = u.chu;
+      li.appendChild(m);
+    }
     ul.appendChild(li);
   });
 }
 
+/** Trạng thái riêng từng file trong kho (đang xin vé, dòng báo) — giữ qua các lần vẽ lại. */
+var khoUi = {};
+function khoGhi(id, them) {
+  khoUi[id] = Object.assign(khoUi[id] || {}, them);
+  khoRender();
+}
+
+/** Câu báo cho lỗi Worker trả về, kèm cách sửa với những lỗi do cài đặt. */
+function loiTaiThang(msg) {
+  var goi = '';
+  if (/không hợp lệ/i.test(msg)) goi = ' WORKER_SECRET trong Apps Script đang khác TAIVE_SECRET trong Worker — đặt hai chỗ giống hệt nhau rồi chạy lại caiDat.';
+  else if (/chưa cài/i.test(msg)) goi = ' Worker thiếu secret — xem mục Tải thẳng trong README.';
+  return 'Tải thẳng bị từ chối: ' + msg + '.' + goi;
+}
+
 /**
  * Tải thẳng: xin Apps Script một vé đã ký rồi POST sang Worker, Worker nối các phần từ
- * Telegram thành một luồng về máy. Không qua Drive.
+ * Telegram thành MỘT file về máy. Không qua Drive.
  *
- * Gửi bằng form trong iframe ẩn chứ không phải fetch(): fetch thì cả file phải nằm trong
- * bộ nhớ trình duyệt trước khi lưu — 800MB là treo máy. Form thì trình duyệt tự nhận ra
+ * Gửi bằng form vào iframe ẩn chứ không phải fetch(): fetch thì cả file phải nằm trong bộ
+ * nhớ trình duyệt trước khi lưu — 800MB là treo máy. Form thì trình duyệt tự nhận ra
  * Content-Disposition: attachment và ghi thẳng xuống ổ đĩa, có luôn thanh tiến trình.
+ * (Iframe chứ không phải tab mới: vé xin xong thì cú bấm chuột đã trôi qua, mở tab bị chặn.)
  *
- * Iframe chứ không phải target="_blank": vé xin xong mới gửi được, lúc ấy cú bấm chuột đã
- * trôi qua nên cửa sổ bật lên bị chặn. Iframe không bị chặn và cũng không để lại tab trắng.
+ * Khung ẩn thì nuốt mọi lỗi, nên phải tự nghe ngóng — đã thử trên Chromium:
+ *   · tải được file → khung KHÔNG nạp trang nào, không có sự kiện load;
+ *   · Worker từ chối → trang lỗi của nó postMessage câu báo lên đây (tới trước load);
+ *   · có load mà không có thư → thứ trả về không phải file cũng không phải Worker, thường là
+ *     trang chặn của mạng công ty ("File Transfer Blocked").
+ * Hai ca hỏng đều tự chuyển sang Lấy về Drive: người dùng cần một file hoàn chỉnh, đường
+ * nào ra file cũng được — Drive đi qua Google nên không bị chặn như workers.dev.
  */
-async function khoTaiThang(it, btn) {
-  btn.disabled = true;
-  var cu = btn.textContent;
-  btn.textContent = 'Đang xin…';
-  try {
-    var r = await call('lib_direct', { key: $('key').value.trim(), id: it.id });
-    var f = document.createElement('form');
-    f.method = 'POST'; f.action = r.url; f.target = 'taiThangFrame';
-    [['d', r.d], ['s', r.s]].forEach(function (kv) {
-      var i = document.createElement('input');
-      i.type = 'hidden'; i.name = kv[0]; i.value = kv[1];
-      f.appendChild(i);
-    });
-    document.body.appendChild(f);
-    f.submit();
-    f.remove();
-    khoShow('ok', 'Đang tải "' + it.name + '" thẳng từ Telegram về máy. Trình duyệt sẽ hiện thanh tải sau vài giây.');
-  } catch (e) { khoShow('err', errText(e)); }
-  btn.textContent = cu;
-  btn.disabled = false;
+async function khoTaiThang(it) {
+  khoGhi(it.id, { ban: true, ve: null, loai: '', chu: '' });
+  var r;
+  try { r = await call('lib_direct', { key: $('key').value.trim(), id: it.id }); }
+  catch (e) { khoGhi(it.id, { ban: false, loai: 'err', chu: errText(e) }); return; }
+
+  // Xin vé mất vài giây (Apps Script hỏi Telegram đường dẫn từng phần). Tới lúc ấy cú bấm đã
+  // "nguội": Safari và các trình duyệt chặn tải tự động có thể bỏ lần tải này mà không báo gì.
+  // Còn nóng thì gửi luôn; nguội rồi thì xin bấm thêm một lần — cú bấm mới gửi được ngay.
+  var nong = !!(navigator.userActivation && navigator.userActivation.isActive);
+  if (!nong) {
+    khoGhi(it.id, { ban: false, ve: r, veHet: Date.now() + 45 * 60000, loai: 'ok',
+      chu: 'Vé tải đã sẵn sàng — bấm "Tải về ngay" để trình duyệt nhận file.' });
+    return;
+  }
+  khoGhi(it.id, { ban: false });
+  guiVe(it, r);
+}
+
+/** Gửi vé sang Worker. Phải chạy ĐỒNG BỘ ngay trong cú bấm (không await trước f.submit()). */
+function guiVe(it, r) {
+  var ma = 'tt' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  var goc = '', may = 'máy chủ tải thẳng';
+  try { var url = new URL(r.url); goc = url.origin; may = url.host; } catch (e) { /* để trống: không thư nào khớp */ }
+  var khung = document.createElement('iframe');
+  khung.name = ma; khung.title = 'Tải thẳng'; khung.hidden = true;
+  khung.style.cssText = 'display:none;width:0;height:0;border:0';
+  var xong = false;
+
+  function hong(chu) {
+    if (xong) return;
+    xong = true;
+    window.removeEventListener('message', nghe);
+    setTimeout(function () { khung.remove(); }, 0);
+    khoGhi(it.id, { ban: false, loai: 'warn', chu: chu + ' Đang chuyển sang Lấy về Drive — 1–2 phút nữa sẽ có nút Tải từ Drive cho file hoàn chỉnh.' });
+    khoLayFile(it);
+  }
+  function nghe(e) {
+    if (e.origin !== goc || e.source !== khung.contentWindow) return;
+    var d = e.data || {};
+    if (d.taive === 'loi' && d.ma === ma) hong(loiTaiThang(String(d.msg || '')));
+  }
+  window.addEventListener('message', nghe);
+  var daGui = false;
+  khung.addEventListener('load', function () {
+    // Khung vừa gắn vào trang tự nạp about:blank một lần — đó không phải câu trả lời. Chỉ tính
+    // khi đã gửi form VÀ khung đã sang trang của máy khác (đọc địa chỉ bị chặn = khác nguồn).
+    if (!daGui) return;
+    try { if (khung.contentWindow.location.href === 'about:blank') return; } catch (e) { /* khác nguồn: đúng là đã nạp trang lạ */ }
+    // Thư của Worker luôn tới trước load; chờ thêm một nhịp cho chắc rồi mới kết luận.
+    setTimeout(function () {
+      hong('Tải thẳng không nhận được file: ' + may + ' trả về một trang khác thay vì file — thường là mạng đang chặn tên miền này (hay gặp ở mạng công ty).');
+    }, 400);
+  });
+  // Tải được thì khung im lặng mãi; thôi nghe sau một phút cho khỏi đọng.
+  setTimeout(function () { if (!xong) { xong = true; window.removeEventListener('message', nghe); } }, 60000);
+  document.body.appendChild(khung);
+
+  var f = document.createElement('form');
+  f.method = 'POST'; f.action = r.url; f.target = ma;
+  [['d', r.d], ['s', r.s], ['ui', '1'], ['ma', ma]].forEach(function (kv) {
+    var i = document.createElement('input');
+    i.type = 'hidden'; i.name = kv[0]; i.value = kv[1];
+    f.appendChild(i);
+  });
+  document.body.appendChild(f);
+  daGui = true;
+  f.submit();
+  f.remove();
+  khoGhi(it.id, { loai: 'ok', chu: 'Đang tải "' + it.name + '" (' + mb(it.size) + ') về máy thành một file — xem thanh tải của trình duyệt.' });
 }
 
 async function khoLayFile(it, btn) {
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   try {
     var r = await call('lib_restore', { key: $('key').value.trim(), id: it.id });
     it.st = r.st; it.done = r.done || 0; it.err = '';
-    khoShow();
-  } catch (e) { khoShow('err', errText(e)); }
+  } catch (e) { khoGhi(it.id, { loai: 'err', chu: errText(e) }); }
   khoRender();
   clearTimeout(khoTimer);
   khoTimer = setTimeout(khoTai, KHO_HOI_LAI);
@@ -557,8 +643,8 @@ async function khoLayFile(it, btn) {
 
 async function khoBoFile(it) {
   if (!confirm('Bỏ "' + it.name + '" khỏi kho?\n\nTin nhắn trong Telegram vẫn còn, nhưng trang này sẽ không lấy file về được nữa.')) return;
-  try { await call('lib_forget', { key: $('key').value.trim(), id: it.id }); khoShow(); }
-  catch (e) { khoShow('err', errText(e)); }
+  try { await call('lib_forget', { key: $('key').value.trim(), id: it.id }); }
+  catch (e) { khoGhi(it.id, { loai: 'err', chu: errText(e) }); }
   khoTai();
 }
 

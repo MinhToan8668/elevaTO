@@ -36,11 +36,19 @@ async function veTest(sua = {}) {
   return { d, s: await ky(d) };
 }
 
-function yeuCau(d, s) {
+function yeuCau(d, s, them = {}) {
   const form = new FormData();
   form.set('d', d);
   form.set('s', s);
+  for (const [k, v] of Object.entries(them)) form.set(k, v);
   return new Request('https://w.example/taive', { method: 'POST', body: form });
+}
+
+/** Rút thư postMessage ra khỏi trang lỗi Worker trả cho trang upload. */
+function thuTrongTrang(html) {
+  const m = /parent\.postMessage\((\{.*?\}), '\*'\)/s.exec(html);
+  assert.ok(m, `trang lỗi không có postMessage:\n${html}`);
+  return JSON.parse(m[1]);
 }
 
 /** Thay fetch toàn cục: mỗi đường dẫn trả về đúng mấy byte đã hẹn. Trả về nhật ký đã gọi gì. */
@@ -139,4 +147,80 @@ test('Worker chưa cài secret thì nói thẳng, không im lặng trả file r�
   const { d, s } = await veTest();
   assert.equal((await taiThang(yeuCau(d, s), { TAIVE_SECRET: BI_MAT })).status, 503);
   assert.equal((await taiThang(yeuCau(d, s), { UPLOAD_TG_TOKEN: TOKEN })).status, 503);
+});
+
+// ─── Trang upload gửi qua iframe ẩn (ui=1) ─────────────────────────────────
+// Lỗi trả chữ trơn thì nằm im trong khung ẩn: người dùng bấm Tải thẳng, nút hiện "Đang
+// xin…" rồi thôi, không có gì xảy ra. Nên với ui=1 Worker trả trang tự báo ngược lên.
+
+test('ui=1: lỗi trả thành trang báo ngược lên trang upload, kèm đúng mã lần bấm', async () => {
+  const ga = gaTelegram({});
+  try {
+    const { d } = await veTest();
+    const res = await taiThang(yeuCau(d, await ky(d, 'bi-mat-khac-hoan-toan-dai-24'), { ui: '1', ma: 'tt-abc_123' }), ENV);
+    assert.equal(res.status, 403, 'vẫn giữ mã lỗi thật');
+    assert.match(res.headers.get('content-type'), /^text\/html; charset=utf-8/);
+    const thu = thuTrongTrang(await res.text());
+    assert.deepEqual(thu, { taive: 'loi', ma: 'tt-abc_123', msg: 'Vé tải không hợp lệ' });
+    assert.equal(ga.goi.length, 0);
+  } finally { ga.thoi(); }
+});
+
+test('ui=1: mọi nhánh lỗi đều báo ngược được — thiếu secret, vé hết hạn, thiếu vé', async () => {
+  const { d, s } = await veTest();
+  const thieu = await taiThang(yeuCau(d, s, { ui: '1', ma: 'a' }), { TAIVE_SECRET: BI_MAT });
+  assert.equal(thieu.status, 503);
+  assert.match(thuTrongTrang(await thieu.text()).msg, /UPLOAD_TG_TOKEN/);
+  const cu = await veTest({ e: Date.now() - 1000 });
+  const het = await taiThang(yeuCau(cu.d, cu.s, { ui: '1', ma: 'b' }), ENV);
+  assert.match(thuTrongTrang(await het.text()).msg, /hết hạn/);
+  const rong = await taiThang(yeuCau('', '', { ui: '1', ma: 'c' }), ENV);
+  assert.equal(thuTrongTrang(await rong.text()).msg, 'Thiếu vé tải');
+});
+
+test('ui=1: mã lần bấm bị lọc, không chèn được mã độc vào trang lỗi', async () => {
+  const { d } = await veTest();
+  const ac = '"</script><script>alert(1)</script>';
+  const res = await taiThang(yeuCau(d, 'sai', { ui: '1', ma: ac }), ENV);
+  const html = await res.text();
+  assert.equal((html.match(/<script>/g) || []).length, 1, 'chỉ đúng một thẻ script của Worker');
+  assert.doesNotMatch(html, /alert\(1\)<\/script>/);
+  assert.equal(thuTrongTrang(html).ma, 'scriptscriptalert1script', 'chỉ còn chữ, số, _ và -');
+});
+
+test('không có ui=1 thì lỗi vẫn là chữ trơn như cũ (gọi bằng curl, bài kiểm tra cũ)', async () => {
+  const { d } = await veTest();
+  const res = await taiThang(yeuCau(d, 'sai'), ENV);
+  assert.equal(res.status, 403);
+  assert.match(res.headers.get('content-type'), /^text\/plain/);
+  assert.equal(await res.text(), 'Vé tải không hợp lệ\n');
+});
+
+test('ui=1 mà vé đúng thì vẫn trả file như thường — cờ chỉ đổi cách báo lỗi', async () => {
+  const ga = gaTelegram({ 'documents/p1.bin': 'abc', 'documents/p2.bin': 'defg' });
+  try {
+    const { d, s } = await veTest();
+    const res = await taiThang(yeuCau(d, s, { ui: '1', ma: 'x' }), ENV);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-disposition'), /^attachment/);
+    assert.equal(await res.text(), 'abcdefg');
+  } finally { ga.thoi(); }
+});
+
+test('vé ký đúng y kiểu Apps Script (base64 web-safe CÓ dấu = ở cuối) vẫn qua được', async () => {
+  // Utilities.base64EncodeWebSafe giữ dấu '=' đệm, còn bài kiểm tra khác ký bằng base64url bỏ '='.
+  // Hai bên lệch kiểu mà Worker không nhận thì MỌI vé thật đều "không hợp lệ".
+  const ga = gaTelegram({ 'documents/p1.bin': 'abc', 'documents/p2.bin': 'defg' });
+  try {
+    const ve = { n: 'Modeling Buổi 2.mp4', s: 7, e: Date.now() + 600000,
+      f: [['fid-1', 'documents/p1.bin'], ['fid-2', 'documents/p2.bin']] };
+    const coDem = (b) => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
+    const d = coDem(Buffer.from(JSON.stringify(ve), 'utf8'));
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(BI_MAT), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const s = coDem(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(d))));
+    assert.ok(s.endsWith('='), 'chữ ký HMAC-SHA256 dạng base64 luôn có một dấu = đệm');
+    const res = await taiThang(yeuCau(d, s), ENV);
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), 'abcdefg');
+  } finally { ga.thoi(); }
 });

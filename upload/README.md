@@ -47,6 +47,17 @@ Cài 3 bước (Worker `elevato` đã dựng sẵn — xem `ai/worker/README.md`
    `TAIVE_SECRET` vào **Thuộc tính tập lệnh** rồi chạy `caiDat`). Cũng chỉ điền một lần.
 
 Kiểm tra: mở địa chỉ Worker, trong `cai` phải thấy `tai_thang: true`.
+
+Tải thẳng hỏng thì trang **nói rõ lý do ngay dưới file vừa bấm** và **tự chuyển sang Lấy về
+Drive**, để lúc nào cũng ra được một file hoàn chỉnh. Hai lý do hay gặp:
+
+- *"Vé tải không hợp lệ"* — `WORKER_SECRET` trong Apps Script khác `TAIVE_SECRET` trong Worker.
+  Đặt hai chỗ giống hệt nhau rồi chạy lại `caiDat`.
+- *"…trả về một trang khác thay vì file"* — mạng đang chặn `workers.dev` (hay gặp ở mạng công
+  ty, trang chặn kiểu "File Transfer Blocked"). Dùng 4G / mạng nhà, hoặc cứ để nó lấy về Drive.
+
+(Trước đây form tải gửi vào một khung ẩn nên mọi lỗi của Worker nằm im trong đó: bấm xong nút
+hiện "Đang xin…" rồi thôi, không có gì xảy ra.)
 Muốn tắt: chạy hàm `tatTaiThang` (để trống hai dòng đầu file không tắt — nó giữ bản đã cất).
 
 | Vì sao tối đa 44 phần | |
