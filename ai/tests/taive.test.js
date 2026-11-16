@@ -433,3 +433,31 @@ test('Telegram hỏng hẳn phần đó → 502 mã telegram, trang thử lại 
     assert.equal((await r.json()).ma, 'telegram');
   } finally { ga.thoi(); }
 });
+
+test('Telegram nói chắc không có / không cho (token sai, file_id sai) → mã telegram_hong, khỏi thử lại', async () => {
+  const goi = [];
+  const that = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    goi.push(u);
+    if (u.endsWith('/getFile')) return new Response(JSON.stringify({ ok: false, error_code: 400, description: 'Bad Request: wrong file_id' }), { status: 400 });
+    if (u.endsWith('documents/p1.bin')) return new Response('', { status: 404 });     // hết hạn → xin lại → 400 vĩnh viễn
+    if (u.endsWith('documents/p2.bin')) return new Response('', { status: 401 });     // token Worker không phải bot đã gửi file
+    return new Response('', { status: 404 });
+  };
+  try {
+    const { d, s } = await veTest();
+    const r0 = await taiPhan(xinPhan(d, s, 0), ENV);
+    assert.equal(r0.status, 502);
+    assert.equal((await r0.json()).ma, 'telegram_hong');
+    const r1 = await taiPhan(xinPhan(d, s, 1), ENV);
+    assert.equal((await r1.json()).ma, 'telegram_hong');
+    assert.equal(goi.filter((u) => u.endsWith('p2.bin')).length, 1, '401 không thử lại');
+    // Thông báo lỗi không được lộ token bot (đường dẫn Telegram chứa token).
+    const { d: d2, s: s2 } = await veTest({ f: [['fid-x', '']], s: 1 });
+    const r2 = await taiPhan(xinPhan(d2, s2, 0), ENV);
+    const j2 = await r2.json();
+    assert.equal(j2.ma, 'telegram_hong', 'getFile trả 400 cho phần trống đường dẫn → vĩnh viễn');
+    assert.doesNotMatch(JSON.stringify(j2), new RegExp(TOKEN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  } finally { globalThis.fetch = that; }
+});

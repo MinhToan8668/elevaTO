@@ -131,7 +131,7 @@ function doPost(e) {
     else if (b.action === 'upload_status') data = uploadTrangThai(b.key, b.session, b.total, b.share, b.tele);
     else if (b.action === 'lib_list') data = khoDanhSach(b.key);
     else if (b.action === 'lib_restore') data = khoLayVe(b.key, b.id);
-    else if (b.action === 'lib_direct') data = khoVeTaiThang(b.key, b.id);
+    else if (b.action === 'lib_direct') data = khoVeTaiThang(b.key, b.id, b.phan === 1);
     else if (b.action === 'lib_forget') data = khoBo(b.key, b.id);
     else return json({ ok: false, error: 'unknown action', code: 'session' });
     return json({ ok: true, data: data });
@@ -436,8 +436,10 @@ function khoDanhSach(key) {
     if (k.indexOf(LIB_PREFIX) !== 0) return;
     var m;
     try { m = JSON.parse(all[k]); } catch (e) { return; }
+    // thang: tải thẳng được (từng phần — trang Chrome/Edge ghép trên máy, không giới hạn số phần).
+    // thang1: tải được bằng MỘT luồng (Safari/Firefox) — luồng đó vướng trần TAI_THANG_PHAN.
     var it = { id: m.id, name: m.name, size: m.size, parts: m.parts, date: m.date, st: 'none',
-               thang: thang && m.parts <= TAI_THANG_PHAN };
+               thang: thang, thang1: thang && m.parts <= TAI_THANG_PHAN };
     var tam = docJson(all[TAM_PREFIX + m.id]), res = docJson(all[RES_PREFIX + m.id]);
     if (tam && tam.until > now) {
       it.st = 'san'; it.until = tam.until;
@@ -478,14 +480,15 @@ function khoLayVe(key, id) {
  * Mọi thứ có thể hỏng đều hỏng Ở ĐÂY, nơi còn trả về được lỗi tử tế cho trang hiển thị.
  * Sang tới Worker thì luồng đã mở, hỏng là bản tải đứt giữa chừng.
  */
-function khoVeTaiThang(key, id) {
+function khoVeTaiThang(key, id, tungPhan) {
   kiemKey(key);
   var m = docKho(id);
   var url = props().getProperty(PROP_WORKER), biMat = props().getProperty(PROP_SECRET);
   if (!url || !biMat) {
     throw new Error('PHIEN: Chưa cài tải thẳng — điền WORKER_URL, WORKER_SECRET rồi chạy lại caiDat (xem upload/README.md)');
   }
-  if (m.parts > TAI_THANG_PHAN) {
+  // Tải từng phần (tungPhan): mỗi phần một lần gọi Worker riêng, không vướng trần subrequest.
+  if (!tungPhan && m.parts > TAI_THANG_PHAN) {
     throw new Error('PHIEN: File này ' + m.parts + ' phần, tải thẳng tối đa ' + TAI_THANG_PHAN +
                     ' phần (~' + mbText(TAI_THANG_PHAN * TG_PART) + '). Dùng "Lấy về Drive".');
   }

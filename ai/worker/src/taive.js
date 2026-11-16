@@ -205,12 +205,15 @@ async function layMotPhan([fid, duong], token, quy, ten) {
     try { return await fetch(TG_FILE + token + '/' + d); }
     catch (err) { return { ok: false, status: 0, loi: err }; }   // đứt mạng: coi như một mã lỗi
   };
+  const vinhVien = (msg) => { const e = new Error(msg); e.vinhVien = true; return e; };
+  const getFile = { ma: 0 };
   // Vé để trống đường dẫn (Apps Script hỏi Telegram không được): xin bù bằng file_id.
   let hienTai = duong;
   for (let lan = 0; !hienTai && lan < 2 && quy.con >= 1; lan++) {
     if (lan) await new Promise((r) => setTimeout(r, 1500));
     quy.con -= 1;
-    hienTai = await duongMoi(token, fid);
+    hienTai = await duongMoi(token, fid, getFile);
+    if (LOI_VINH_VIEN.has(getFile.ma)) throw vinhVien(`phần ${ten}: Telegram không cho đường dẫn (${getFile.ma})`);
   }
   if (!hienTai) throw new Error(`phần ${ten}: Telegram không cho đường dẫn`);
   let res = await tai(hienTai);
@@ -218,7 +221,8 @@ async function layMotPhan([fid, duong], token, quy, ten) {
     if ((res.status === 404 || res.status === 410) && quy.con >= 2) {
       // Đường dẫn hết hạn giữa chừng. Xin lại rồi tải tiếp, đừng bỏ cả bản tải.
       quy.con -= 2;
-      const moi = await duongMoi(token, fid);
+      const moi = await duongMoi(token, fid, getFile);
+      if (!moi && LOI_VINH_VIEN.has(getFile.ma)) throw vinhVien(`phần ${ten}: Telegram không còn file này (${getFile.ma})`);
       if (!moi) break;
       hienTai = moi;   // lần thử sau (nếu có) dùng đường dẫn MỚI, không quay về cái đã hết hạn
       res = await tai(hienTai);
@@ -229,7 +233,12 @@ async function layMotPhan([fid, duong], token, quy, ten) {
       res = await tai(hienTai);
     } else break;
   }
-  if (!res.ok || !res.body) throw new Error(`phần ${ten}: Telegram trả ${res.status}`);
+  if (!res.ok || !res.body) {
+    // 401/403 = token của Worker không phải bot đã gửi file (đổi bot, dán nhầm token).
+    const e = new Error(`phần ${ten}: Telegram trả ${res.status}`);
+    if (res.status === 401 || res.status === 403) e.vinhVien = true;
+    throw e;
+  }
   return res;
 }
 
@@ -277,7 +286,9 @@ export async function taiPhan(req, env) {
     res = await layMotPhan(ve.f[i], env.UPLOAD_TG_TOKEN, { con: CF_SUBREQ - 1 }, `${i + 1}/${ve.f.length}`);
   } catch (err) {
     console.error(`taiPhan: ${err && err.message ? err.message : err}`);
-    return loiPhan('telegram', String(err && err.message ? err.message : err), 502);
+    // telegram_hong: thử lại cũng vô ích — trang bỏ đường này, chuyển Lấy về Drive (Apps Script
+    // dùng token riêng của nó nên vẫn lấy được). telegram: trục trặc tạm, trang thử lại sau.
+    return loiPhan(err && err.vinhVien ? 'telegram_hong' : 'telegram', String(err && err.message ? err.message : err), 502);
   }
   // Chuyền thẳng thân của Telegram qua FixedLengthStream: byte đi ngoài JavaScript (không ăn
   // CPU) và Cloudflare gửi đúng content-length để trang biết phần về đủ hay thiếu.
@@ -298,7 +309,12 @@ export async function taiPhan(req, env) {
   });
 }
 
-async function duongMoi(token, fileId) {
+/**
+ * Xin đường dẫn mới cho một phần. Trả '' nếu không được; `ghi.ma` (nếu truyền) nhận mã lỗi
+ * Telegram trả về để bên gọi biết lỗi là VĨNH VIỄN (400/401/403/404: file_id sai, token sai /
+ * đã đổi bot) hay tạm thời (mất kết nối, 429, 5xx).
+ */
+async function duongMoi(token, fileId, ghi) {
   try {
     const r = await fetch(TG_API + token + '/getFile', {
       method: 'POST',
@@ -306,11 +322,16 @@ async function duongMoi(token, fileId) {
       body: JSON.stringify({ file_id: fileId }),
     });
     const j = await r.json();
-    return j && j.ok && j.result ? j.result.file_path || '' : '';
+    if (j && j.ok && j.result && j.result.file_path) return j.result.file_path;
+    if (ghi) ghi.ma = (j && j.error_code) || r.status;
+    return '';
   } catch {
     return '';
   }
 }
+
+/** Telegram nói chắc là không có / không cho: thử lại bao nhiêu cũng vậy. */
+const LOI_VINH_VIEN = new Set([400, 401, 403, 404]);
 
 async function kiemChuKy(biMat, d, s) {
   try {
