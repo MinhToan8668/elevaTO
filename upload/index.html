@@ -188,7 +188,15 @@ function call(action, data) {
 }
 function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 function mb(n) { return n < 1048576 ? Math.max(1, Math.round(n / 1024)) + 'KB' : (n / 1048576).toFixed(1) + 'MB'; }
-function errText(e) { return String((e && e.message) || e || 'Lỗi không rõ'); }
+function errText(e) {
+  var m = String((e && e.message) || e || 'Lỗi không rõ');
+  // Trình duyệt không nhận được câu trả lời nào (chữ khác nhau tuỳ trình duyệt): nói rõ bằng tiếng Việt.
+  if (/^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/i.test(m)) {
+    return 'Không nhận được trả lời từ Apps Script (máy chủ Google của trang này) — mạng chập hoặc đang bị chặn ' +
+           '(hay gặp ở mạng công ty). Thử lại sau ít phút, hoặc bằng 4G / mạng nhà.';
+  }
+  return m;
+}
 function isFatal(e) { return !!e && (e.code === 'key' || e.code === 'session' || e.code === 'expired'); }
 
 function readB64(blob) {
