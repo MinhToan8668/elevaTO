@@ -58,6 +58,14 @@ Drive**, để lúc nào cũng ra được một file hoàn chỉnh. Hai lý do 
 
 (Trước đây form tải gửi vào một khung ẩn nên mọi lỗi của Worker nằm im trong đó: bấm xong nút
 hiện "Đang xin…" rồi thôi, không có gì xảy ra.)
+
+Xin vé mất vài giây; nếu lâu quá cú bấm "nguội" (Safari và trình duyệt chặn tải tự động sẽ bỏ
+lần tải mà không báo), nút đổi thành **Tải về ngay** — bấm thêm một lần là file về.
+
+Trình duyệt biết trước dung lượng thật nên thanh tiến trình đúng, và **luồng đứt giữa chừng thì
+nó báo lỗi** chứ không lưu bản cụt coi như xong. (Trước đây file 540MB về được 81MB mà vẫn báo
+"Done": Cloudflare vứt header dung lượng khi trả bằng `TransformStream`; nay dùng
+`FixedLengthStream`.) Telegram trục trặc thoáng qua ở một phần thì Worker tự thử lại.
 Muốn tắt: chạy hàm `tatTaiThang` (để trống hai dòng đầu file không tắt — nó giữ bản đã cất).
 
 | Vì sao tối đa 44 phần | |
