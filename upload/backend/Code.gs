@@ -492,25 +492,14 @@ function khoVeTaiThang(key, id) {
   var token = props().getProperty(PROP_TOKEN);
   if (!token) throw new Error('PHIEN: Chưa chạy caiDat');
 
-  var ids = [], yc = [];
+  var ids = [];
   for (var i = 0; i < m.parts; i++) {
     var fid = docFid(id, i);
     if (!fid) throw new Error('PHIEN: Thiếu mã phần ' + (i + 1) + ' — file này gửi bằng bản cũ, dùng "Lấy về Drive"');
     ids.push(fid);
-    yc.push({ url: 'https://api.telegram.org/bot' + token + '/getFile', method: 'post',
-              contentType: 'application/json', payload: JSON.stringify({ file_id: fid }),
-              muteHttpExceptions: true });
   }
-  var res = UrlFetchApp.fetchAll(yc), phan = [];
-  for (var j = 0; j < res.length; j++) {
-    var o = null;
-    try { o = JSON.parse(res[j].getContentText()); } catch (e) { o = null; }
-    if (!o || !o.ok || !o.result || !o.result.file_path) {
-      throw new Error('PHIEN: Telegram không cho đường dẫn phần ' + (j + 1) + ' (' +
-                      (o && o.description ? o.description : res[j].getResponseCode()) + ')');
-    }
-    phan.push([ids[j], o.result.file_path]);
-  }
+  var duong = xinDuongDan(token, ids), phan = [];
+  for (var j = 0; j < ids.length; j++) phan.push([ids[j], duong[j]]);
 
   // Ký chính chuỗi base64url chứ không phải JSON gốc: hai bên khỏi phải sắp xếp khoá
   // giống nhau mới ra cùng chữ ký.
@@ -518,6 +507,56 @@ function khoVeTaiThang(key, id) {
   var d = Utilities.base64EncodeWebSafe(Utilities.newBlob(JSON.stringify(ve)).getBytes());
   var s = Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(d, biMat));
   return { url: url, d: d, s: s, name: m.name, size: m.size };
+}
+
+/**
+ * Đường dẫn tải của từng phần (getFile), chịu được Telegram nghẹn.
+ *
+ * Trước đây gọi getFile cho CẢ file một lượt (27 phần cùng lúc) và một phần trả "Gateway
+ * Timeout" là bỏ luôn cả lần tải. Giờ: hỏi từng đợt GETFILE_DOT phần, phần nào lỗi TẠM (5xx,
+ * 429, mất kết nối, trả về không phải JSON) thì hỏi lại ở vòng sau, chờ tăng dần (429 thì chờ
+ * đúng retry_after). Lỗi THẬT (file_id sai, file đã bị xoá…) thì báo ngay, khỏi chờ.
+ *
+ * Hết GETFILE_VONG vòng mà vẫn còn phần chưa có đường dẫn thì để trống: Worker tự xin bù
+ * bằng file_id lúc tải (mỗi phần tốn thêm một lượt subrequest), vé vẫn phát được.
+ */
+var GETFILE_DOT = 8;
+var GETFILE_VONG = 4;
+function xinDuongDan(token, ids) {
+  var duong = ids.map(function () { return ''; });
+  var canXin = ids.map(function (_, i) { return i; });
+  for (var vong = 0; vong < GETFILE_VONG && canXin.length; vong++) {
+    var cho = 1500 * (vong + 1), conLai = [];   // chờ trước vòng sau: 1,5s · 3s · 4,5s
+    for (var b = 0; b < canXin.length; b += GETFILE_DOT) {
+      var dot = canXin.slice(b, b + GETFILE_DOT), res;
+      try {
+        res = UrlFetchApp.fetchAll(dot.map(function (i) {
+          return { url: 'https://api.telegram.org/bot' + token + '/getFile', method: 'post',
+                   contentType: 'application/json', payload: JSON.stringify({ file_id: ids[i] }),
+                   muteHttpExceptions: true };
+        }));
+      } catch (e) {
+        conLai = conLai.concat(dot);   // cả đợt mất kết nối: hỏi lại cả đợt ở vòng sau
+        continue;
+      }
+      for (var k = 0; k < dot.length; k++) {
+        var i = dot[k], ma = res[k].getResponseCode(), o = null;
+        try { o = JSON.parse(res[k].getContentText()); } catch (e) { o = null; }
+        if (o && o.ok && o.result && o.result.file_path) { duong[i] = o.result.file_path; continue; }
+        var maLoi = (o && o.error_code) || ma;
+        if (!o || maLoi === 429 || maLoi >= 500) {
+          conLai.push(i);
+          var sau = o && o.parameters && o.parameters.retry_after;
+          if (sau) cho = Math.max(cho, Math.min(Number(sau), 10) * 1000);
+          continue;
+        }
+        throw new Error('PHIEN: Telegram không cho đường dẫn phần ' + (i + 1) + ' (' + (o.description || ma) + ')');
+      }
+    }
+    canXin = conLai;
+    if (canXin.length && vong + 1 < GETFILE_VONG) Utilities.sleep(cho);
+  }
+  return duong;   // phần nào còn '' thì Worker tự xin bù
 }
 
 /** Bỏ file khỏi kho (tin nhắn trong Telegram vẫn còn). Có bản tạm thì bỏ luôn. */
