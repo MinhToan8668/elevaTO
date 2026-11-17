@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v7.3 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v7.4 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -7403,7 +7403,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='7.3';
+const APP_VERSION='7.4';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8358,7 +8358,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='7.3';
+const TL_VER='7.4';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -11394,6 +11394,14 @@ function _odBadge(msts){const now=_tlMaxMon()||'';const from=now?_tlMonAdd(now,-
 function cicOverdueSheet(wb,M,div){const R=cicOverdueModel(M);const rows=[['LƯU VẾT QUÁ HẠN / NỢ NHÓM ≥2 — '+M.scope.name],['Gom từ mọi bản tra trong kho: nhóm nợ trên báo cáo, mục 2.9 (nợ cần chú ý 12 tháng), 2.7 (nợ xấu 5 năm), chậm trả thẻ.'],[''],['Tháng','Công ty','MST','Loại','TCTD','Nhóm','Số tiền','Nguồn']];
   const det=[];R.forEach(({r,od})=>od.forEach((L,m)=>L.forEach(x=>det.push([_tlMonLbl(m),r.name,r.mst,x.kind,tctdLabel(x.bank||''),x.grp,x.amt!=null?Math.round(x.amt/div*100)/100:'chưa rõ',x.src]))));det.sort((a,b)=>b[0].split('/').reverse().join('').localeCompare(a[0].split('/').reverse().join('')));
   if(!det.length)det.push(['—','Không ghi nhận','','','','','','']);const ws=XLSX.utils.aoa_to_sheet(rows.concat(det));try{xStyl(ws,0,0,0,7,xS.sectionH);xStyl(ws,3,0,3,7,xS.tHead);}catch(e){}ws['!cols']=[{wch:10},{wch:44},{wch:13},{wch:14},{wch:24},{wch:7},{wch:14},{wch:34}];XLSX.utils.book_append_sheet(wb,ws,'Lich su qua han');}
+// ── 6) Kỳ của bản tra KHÔNG có dư nợ (không có ngày số liệu TCTD) = kỳ số liệu của các bản tra CÙNG ĐỢT (±3 ngày tra) ──
+// Trước đây lấy theo ngày tra → một đợt tra cả nhóm bị tách đôi: công ty có dư nợ vào kỳ số liệu (vd 10), công ty không dư nợ vào tháng tra (11).
+(function(){const _di=_tlDataInfo;_tlDataInfo=function(s){const d=_di(s);if(!d||d.src!=='query'||!s||!s.S10A)return d;
+  const cnt=new Map(),mx=new Map();_TL_CACHE.forEach(x=>{if(x===s||!x.S10A||Math.abs(x.ts-s.ts)>3*864e5)return;const p=_di(x);if(!p||p.src==='query'||p.src==='batch')return;cnt.set(p.mon,(cnt.get(p.mon)||0)+1);mx.set(p.mon,Math.max(mx.get(p.mon)||0,p.ts));});
+  if(!cnt.size)return d;const mon=[...cnt.entries()].sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?1:-1))[0][0];const ts=Math.min(mx.get(mon),s.ts);
+  const nd=Object.assign({},d,{mon,ts,day:_tlDayOf(ts),src:'batch',lag:Math.max(0,Math.round((s.ts-ts)/864e5))});s._d=nd;return nd;};
+  const _ac=_tlAfterChange;_tlAfterChange=function(){try{_TL_CACHE.forEach(s=>{if(s._d&&(s._d.src==='batch'||s._d.src==='query'))delete s._d;});}catch(e){}return _ac.apply(this,arguments);};
+})();
 
 </script>
 </body>

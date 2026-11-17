@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.3 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.4 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.3.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.4.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -254,6 +254,12 @@ Kiểm tra: 3 lần xuất (Nhóm ABC, Thaco không / có khung form cũ) — đ
 "Lich su qua han"): gom từ MỌI bản tra trong kho — nhóm nợ ≥2 trên báo cáo (kèm số tiền theo nhóm), ngoại bảng / trái phiếu nhóm ≥2,
 chậm trả thẻ, mục 2.9 (nợ cần chú ý 12 tháng) và 2.7 (nợ xấu 5 năm). Tháng nào có thì giữ vết tháng đó, kể cả khi bản tra sau về nhóm 1.
 Cùng tháng · TCTD · nhóm từ nhiều nguồn chỉ ghi một dòng (ưu tiên bản tra trực tiếp).
+
+## v7.4 — Một đợt tra không bị tách sang 2 kỳ
+**Lỗi**: tra cả nhóm cùng ngày (vd. 16/11): công ty có dư nợ có ngày số liệu TCTD tháng 10 → kỳ 10; công ty KHÔNG có quan hệ tín dụng
+không có ngày số liệu nào → tool lấy ngày tra → kỳ 11. Một đợt tra bị tách đôi; kỳ 11 hiện "5/8 cty, tổng 0", đường biểu đồ rơi về 0,
+trông như không cập nhật. Nay bản tra không có dư nợ theo kỳ số liệu của các bản tra cùng đợt (±3 ngày tra); cả đợt không ai có dư nợ thì
+mới dùng tháng tra. Muốn kỳ = tháng tra thì chọn "Xếp kỳ theo: Ngày tra" ở Diễn biến.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
