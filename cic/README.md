@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.4 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.5 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.4.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.5.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -260,6 +260,24 @@ Cùng tháng · TCTD · nhóm từ nhiều nguồn chỉ ghi một dòng (ưu ti
 không có ngày số liệu nào → tool lấy ngày tra → kỳ 11. Một đợt tra bị tách đôi; kỳ 11 hiện "5/8 cty, tổng 0", đường biểu đồ rơi về 0,
 trông như không cập nhật. Nay bản tra không có dư nợ theo kỳ số liệu của các bản tra cùng đợt (±3 ngày tra); cả đợt không ai có dư nợ thì
 mới dùng tháng tra. Muốn kỳ = tháng tra thì chọn "Xếp kỳ theo: Ngày tra" ở Diễn biến.
+
+## v7.5 — Xếp kỳ theo ngày tra mặc định, rà lại thiết kế
+**Mặc định "Xếp kỳ theo: Ngày tra"** (máy đang lưu "ngày số liệu" được chuyển một lần). Vẫn chọn lại "Ngày số liệu CIC" được.
+
+**Biểu đồ** (theo quy trình trực quan hoá dữ liệu, bảng màu kiểm tra bằng script — không chọn bằng mắt):
+- Bảng 12 màu cũ KHÔNG đạt: xanh lá ↔ cam cạnh nhau chỉ cách ΔE 5,6 với người mù màu đỏ-lục (ngưỡng 8), xanh VIB đậm và vàng
+  ngoài dải sáng, đỏ trùng màu cảnh báo, màu thứ 9+ xoay vòng. Thay bằng bảng 8 màu đạt mọi kiểm tra (độ sáng, độ bão hoà,
+  CVD ≥ 9,1, mắt thường ≥ 19,6), mở đầu xanh dương / cam gần màu VIB; tối đa 8 series, còn lại gộp "Khác" màu xám.
+- Màu đi theo TCTD / công ty, không theo thứ hạng — đổi khoảng xem không tô lại series còn lại.
+- Top N chọn theo dư nợ lớn nhất trong khoảng xem (trước theo kỳ cuối — kỳ cuối thiếu bản tra làm công ty lớn rơi vào "Khác").
+- Khe 2px giữa các khúc cột chồng, chỉ bo góc 4px ở đỉnh cột; đường tổng 2px màu mực, điểm 8px (rỗng khi kỳ chưa đủ bản tra);
+  lưới dọc ẩn, chữ trục / chú giải màu mực phụ, font theo tool. Tiêu đề ghi đúng "theo tháng tra" / "theo kỳ số liệu".
+- Dải độ phủ: kỳ thiếu bản tra dùng màu trạng thái "lưu ý" (không dùng màu cam của series).
+
+**Khung thông báo thống nhất**: đèn đánh giá, đối soát số liệu, còn thiếu bản tra, lưu vết quá hạn, bản tra cần xác nhận, nhãn mức bảo đảm
+cụm TSBĐ — cùng một kiểu: nền trắng, viền xám, vạch trái màu trạng thái (tốt / lưu ý / nguy cấp), chữ màu mực, luôn kèm icon + nhãn.
+Bỏ các kiểu nền tối riêng lẻ (tool chỉ có giao diện sáng — máy để chế độ tối thì các khung đó lệch màu).
+Tổng quan xếp lại: hàng KPI → các khung thông báo (ẩn được) → biểu đồ.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
