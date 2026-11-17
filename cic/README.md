@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.7 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.8 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.7.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.8.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -295,6 +295,17 @@ Tổng quan xếp lại: hàng KPI → các khung thông báo (ẩn được) �
 - Biểu đồ: đường tổng vẽ nét đứt khi đi vào kỳ chưa đủ bản tra.
 - Mỗi tab có dòng ngữ cảnh: mục đích, kỳ theo gì, khoảng xem, độ phủ kỳ cuối, quy tắc ô trống / so sánh.
 - Đổi tên tab theo nghiệp vụ: Dư nợ theo TCTD · Dư nợ theo công ty · Nợ quá hạn / nhóm ≥2 · Tài sản bảo đảm · Độ phủ bản tra · Nguồn dữ liệu.
+
+## v7.8 — Đồng bộ thư mục chung nhanh, không "đơ"
+**Lỗi**: mỗi lần đồng bộ (bấm tay, tự động 5 phút/lần, mỗi lần quay lại cửa sổ) tool mở TỪNG tệp trong thư mục chung, lần lượt, để xem
+có mới không. Trên ổ mạng / OneDrive mỗi thao tác hàng chục–trăm ms → thư mục vài trăm–nghìn tệp mất hàng phút, không có tiến độ → trông
+như đơ (máy ít dữ liệu / mạng nhanh thì không thấy). Đo với trễ 40 ms/thao tác, 569 tệp: đồng bộ không có gì mới 23 s, gửi toàn kho 91 s.
+- Mỗi máy ghi 1 tệp mục lục (`index/<người>_<máy>.json`, mã hoá nếu thư mục mã hoá) liệt kê bản tra đã gửi; máy khác chỉ đọc mục lục,
+  tải đúng tệp mới. Quét toàn thư mục (nhận tệp từ máy chạy bản cũ chưa có mục lục) chỉ khi bấm "Đồng bộ ngay" hoặc lần đầu mỗi phiên.
+- Đọc / ghi song song 8 tệp; tiến độ "Nhận / Gửi bản tra x/y tệp" trên nút và trong khung; nút khoá khi đang chạy.
+- Đo lại: đồng bộ không có gì mới 0,13 s; gửi toàn kho 8,8 s; máy thứ hai nhận đủ 568/568 bản tra trong 3,2 s; tệp từ máy bản cũ nhận đủ khi
+  bấm tay. Mọi máy nên dùng cùng bản mới (máy bản cũ vẫn đồng bộ kiểu cũ — chậm).
+- Thư mục OneDrive / SharePoint: nên bật "Always keep on this device" cho thư mục chung, nếu không mỗi tệp chưa tải về sẽ bị tải lúc đọc.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).

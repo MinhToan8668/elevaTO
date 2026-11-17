@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v7.7 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v7.8 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1175,6 +1175,8 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 .tl-ctx{display:flex;flex-wrap:wrap;gap:.2rem .8rem;align-items:baseline;margin:0 0 .7rem;padding:.4rem .65rem;border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:8px;background:var(--sf);font-size:.7rem;color:var(--tx2)}
 .tl-ctx>b{color:var(--tx);flex-basis:100%;font-weight:600}
 @media print{.tl-ctx{display:none}}
+.tls-prog{position:relative;margin-top:.45rem;height:18px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);overflow:hidden;font-size:.64rem;color:var(--tx2)}
+.tls-prog span{position:relative;z-index:1;padding:0 .45rem;line-height:16px}.tls-prog i{position:absolute;left:0;top:0;bottom:0;background:#cde2fb}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -7447,7 +7449,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='7.7';
+const APP_VERSION='7.8';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8402,7 +8404,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='7.7';
+const TL_VER='7.8';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -11505,6 +11507,70 @@ const _TL_TAB_PURPOSE={rk:'Đèn xanh / vàng / đỏ theo ngưỡng cấu hình
 function _tlCtxStrip(M,id){if(id==='ov'||TL._print||!M||M.empty)return '';const l=M.lastIdx>=0?M.lastIdx:M.cols.length-1;const a=M.agg[l];const n=M.rows.length;
   return '<div class="tl-ctx"><b>'+_dmEsc(_TL_TAB_PURPOSE[id]||'')+'</b><span>Kỳ theo <b>'+(TL.basis==='data'?'ngày số liệu CIC':'tháng tra')+'</b> · '+(M.cols.length?M.cols[0].label+' → '+M.cols[M.cols.length-1].label:'')+(M.scope.kind!=='co'?' · '+n+' công ty':'')
     +(a&&M.scope.kind!=='co'?' · kỳ cuối có bản tra <b class="'+(a.cov.real<n?'tl-up':'')+'">'+a.cov.real+'/'+n+'</b>':'')+'</span><span class="tl-mini">Ô trống / "chưa tra" = không có bản tra kỳ đó, không cộng vào tổng · Δ giữa 2 kỳ chỉ so các công ty có bản tra ở cả 2 kỳ</span></div>';}
+
+
+/* ═══════════ v7.8 — ĐỒNG BỘ THƯ MỤC CHUNG NHANH, KHÔNG "ĐƠ" ═══════════
+   Lỗi: mỗi lần đồng bộ (bấm tay, tự động 5 phút/lần, mỗi lần quay lại cửa sổ) tool mở TỪNG tệp trong thư mục chung để xem có mới
+   không, lần lượt từng tệp. Trên ổ mạng / OneDrive mỗi thao tác 30–200 ms → vài trăm tệp mất hàng phút, không có tiến độ → trông như đơ.
+   Sửa: (1) mỗi máy ghi 1 tệp MỤC LỤC (index/<người>_<máy>.json) liệt kê bản tra đã gửi + phiên bản; máy khác chỉ đọc mục lục và tải
+   đúng tệp mới; (2) quét toàn thư mục (để nhận bản tra từ máy chạy bản cũ chưa có mục lục) chỉ khi bấm "Đồng bộ ngay" hoặc 1 lần/phiên;
+   (3) đọc / ghi song song 8 tệp; (4) hiện tiến độ, khoá nút khi đang chạy. */
+function _tlsMachine(){let m='';try{m=localStorage.getItem('cic_tls_machine')||'';if(!m){m=Math.random().toString(36).slice(2,8);localStorage.setItem('cic_tls_machine',m);}}catch(e){m='may';}return m;}
+async function _tlsPool(items,n,fn,onStep){let i=0,done=0;const run=async()=>{while(i<items.length){const k=i++;try{await fn(items[k],k);}catch(e){}done++;if(onStep)onStep(done,items.length);}};await Promise.all(Array.from({length:Math.min(n,items.length)},run));}
+TLS.prog=null;
+function _tlsProg(ph,d,t){TLS.prog=ph?{ph,d,t}:null;try{tlsBadge();const el=document.getElementById('tlsProg');if(el)el.innerHTML=TLS.prog?_tlsProgHtml():'';}catch(e){}}
+function _tlsProgHtml(){const p=TLS.prog;if(!p)return '';const pc=p.t?Math.round(p.d/p.t*100):0;return '<div class="tls-prog"><span>'+p.ph+(p.t?' · '+p.d+'/'+p.t+' tệp':'')+'</span><i style="width:'+pc+'%"></i></div>';}
+// ── nhận về ──
+_tlsPull=async function(loud){
+  const seen=(await _tlKv.get('sync.seen2'))||{};const list=[];let bad=0;const byUser={};const me=_tlsSlug(_tlsUser());
+  const snapDir=await _tlsSub('snap');const idxDir=await _tlsSub('index');
+  // 1) mục lục của các máy
+  _tlsProg('Đọc mục lục',0,0);const want=[];const idxUsers=new Set();const myIdx=_tlsSlug(_tlsUser())+'_'+_tlsMachine()+'.json';
+  for await(const [fn,fh] of idxDir.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;try{const o=await _tlsDec(await (await fh.getFile()).text());if(!o||!o.files)continue;idxUsers.add(o.user||'');
+    if(fn===myIdx)continue;Object.entries(o.files).forEach(([p,st])=>{byUser[o.user||'?']=(byUser[o.user||'?']||0)+1;if(seen[p]!==st)want.push({p,st,by:o.user});});}catch(e){bad++;}}
+  // 2) quét toàn thư mục: chỉ khi bấm tay hoặc lần đầu trong phiên — nhận tệp của máy chạy bản cũ (chưa có mục lục)
+  if(loud||!TLS._scanned){TLS._scanned=true;_tlsProg('Quét thư mục (máy chạy bản cũ)',0,0);const legacy=[];
+    for await(const [mst,h] of snapDir.entries()){if(h.kind!=='directory')continue;for await(const [fn,fh] of h.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;
+      const u=fn.replace(/\.json$/,'').split('_').slice(2).join('_')||'?';if(idxUsers.has(u))continue;legacy.push({p:mst+'/'+fn,fh,u});}}
+    await _tlsPool(legacy,8,async x=>{const f=await x.fh.getFile();const st='m'+f.lastModified;byUser[x.u]=(byUser[x.u]||0)+1;if(seen[x.p]!==st)want.push({p:x.p,st,f,by:x.u});},(d,t)=>_tlsProg('Quét thư mục (máy chạy bản cũ)',d,t));}
+  // 3) tải đúng các tệp mới
+  await _tlsPool(want,8,async x=>{let f=x.f;if(!f){const [mst,fn]=x.p.split('/');const d=await snapDir.getDirectoryHandle(mst);f=await (await d.getFileHandle(fn)).getFile();}
+    try{const o=await _tlsDec(await f.text());if(o&&(o.S10A||o.R20))list.push({s10a:o.S10A,r20:o.R20,hint:o.ts?new Date(o.ts):null,src:'sync:'+(o.by||x.by||'?')});seen[x.p]=x.st;}catch(e){bad++;}},(d,t)=>_tlsProg('Nhận bản tra mới',d,t));
+  _tlsProg('Ghi vào kho',list.length,list.length);
+  const r=list.length?_tlIngest(list,'sync'):{new:[],upd:[]};
+  // 4) nhóm theo dõi (ít tệp)
+  const gd=await _tlsSub('groups');let ng=0;const gm=(await _tlKv.get('sync.gpushed'))||{};
+  for await(const [fn,fh] of gd.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;
+    try{const o=await _tlsDec(await (await fh.getFile()).text());const all=_tlGroups();
+      if(o.deleted){const cu=all.find(x=>x.id===o.id);if(cu&&(cu.t||0)<=o.at){TLS._applying=true;_tlGroupsSave(all.filter(x=>x.id!==o.id));TLS._applying=false;gm[o.id]='del';ng++;}continue;}
+      const g=o.group;if(!g||!g.id)continue;const cu=all.find(x=>x.id===g.id);
+      if(!cu||(g.t||0)>(cu.t||0)){if(cu)Object.assign(cu,g);else all.push(g);TLS._applying=true;_tlGroupsSave(all);TLS._applying=false;gm[g.id]=g.t;ng++;}}catch(e){bad++;}}
+  await _tlKv.set('sync.gpushed',gm);await _tlKv.set('sync.seen2',seen);
+  TLS.stat={byUser,files:Object.values(byUser).reduce((s,v)=>s+v,0)};
+  return {n:r.new.length,u:r.upd.length,g:ng,bad};
+};
+// ── gửi lên: song song + cập nhật mục lục của máy này ──
+_tlsPushSnaps=async function(all){
+  const pushed=(await _tlKv.get('sync.pushed'))||{};const user=_tlsSlug(_tlsUser());const snapDir=await _tlsSub('snap');let n=0,skip=0;
+  const list=(all?_TL_CACHE.slice():[..._tlsQ].map(k=>_TL_IDX.get(k)).filter(Boolean)).filter(s=>{if(!_tlsEligible(s)){skip++;return false;}if(String(s.src||'').startsWith('sync:')&&!all)return false;return pushed[s.key]!==s.t;});
+  const fname=s=>s.mst+'_'+s.day.replace(/-/g,'')+'_'+user+'.json';
+  await _tlsPool(list,8,async s=>{const d=await snapDir.getDirectoryHandle(s.mst,{create:true});await _tlsWrite(d,fname(s),await _tlsEnc({v:1,by:_tlsUser(),at:Date.now(),mst:s.mst,name:s.name,ts:s.ts,S10A:s.S10A,R20:s.R20}));pushed[s.key]=s.t;n++;},(d,t)=>_tlsProg('Gửi bản tra',d,t));
+  _tlsQ.clear();await _tlKv.set('sync.pushed',pushed);
+  // mục lục: mọi bản tra máy này đã gửi (đường dẫn → phiên bản)
+  const files={};Object.keys(pushed).forEach(k=>{const s=_TL_IDX.get(k);if(s)files[s.mst+'/'+fname(s)]=String(pushed[k]);});
+  const idxDir=await _tlsSub('index');const nm=user+'_'+_tlsMachine()+'.json';const prev=await _tlsRead(idxDir,nm);let same=false;try{const o=prev&&await _tlsDec(prev);same=o&&JSON.stringify(o.files)===JSON.stringify(files);}catch(e){}
+  if(!same)await _tlsWrite(idxDir,nm,await _tlsEnc({v:1,user,machine:_tlsMachine(),at:Date.now(),files}));
+  return {n,skip};
+};
+(function(){const _s=tlsSync;tlsSync=async function(loud,pushAll){if(TLS.busy){if(loud)toast('Đang đồng bộ — chờ lượt hiện tại xong');return;}
+  if(loud)TLS._scanned=false;   // bấm tay → quét cả thư mục (nhận tệp của máy chạy bản cũ)
+  const t0=Date.now();_tlsProg('Bắt đầu',0,0);try{await _s(loud,pushAll);}finally{_tlsProg(null);try{tlsRenderPane();}catch(e){}}
+  if(loud)console.info('[CIC] Đồng bộ xong sau '+Math.round((Date.now()-t0)/100)/10+' giây');};
+  // nút trong khung thư mục chung: khoá khi đang chạy, hiện tiến độ
+  const _rp=tlsRenderPane;tlsRenderPane=function(){_rp();try{const el=document.getElementById('tlgPaneS');if(!el)return;let p=document.getElementById('tlsProg');if(!p){p=document.createElement('div');p.id='tlsProg';const anchor=el.querySelector('.grp-hi');if(anchor)anchor.appendChild(p);}
+    p.innerHTML=_tlsProgHtml();el.querySelectorAll('button').forEach(b=>{if(/tlsSync/.test(b.getAttribute('onclick')||''))b.disabled=!!TLS.busy;});}catch(e){}};
+  const _b=tlsBadge;tlsBadge=function(){_b();try{const b=document.getElementById('tlsBtn');if(b&&TLS.busy&&TLS.prog&&TLS.prog.t)b.lastChild.textContent='Đang đồng bộ '+TLS.prog.d+'/'+TLS.prog.t;}catch(e){}};
+})();
 
 </script>
 </body>
