@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v7.2 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v7.3 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1128,6 +1128,9 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 .cic-col-h.ok,.cic-col-h.lv-g{border-color:#BBE5C8;background:#F0FAF3;color:#166534}.cic-col-h.lv-y{border-color:#F5D9A8;background:#FFF8EB;color:#92400E}
 @media print{.cic-col-x,.cic-col-b{display:none!important}}
 @media (prefers-color-scheme:dark){.cic-col-h.warn,.cic-col-h.lv-y{background:#2A1F0A;color:#FCD34D;border-color:#5B4317}.cic-col-h.bad,.cic-col-h.lv-r{background:#2A0F0F;color:#FCA5A5;border-color:#5B1F1F}.cic-col-h.ok,.cic-col-h.lv-g{background:#0F2A1A;color:#86EFAC;border-color:#1F5132}}
+.cic-od-sum{margin:0 0 .7rem;padding:.45rem .7rem;border-radius:8px;font-size:.7rem;line-height:1.55;border:1px solid #F5D9A8;background:#FFF8EB;color:#92400E}
+.lnk-audit.warn{background:#FFF8EB;color:#92400E}
+@media (prefers-color-scheme:dark){.cic-od-sum{background:#2A1F0A;color:#FCD34D;border-color:#5B4317}}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -7400,7 +7403,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='7.2';
+const APP_VERSION='7.3';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8355,7 +8358,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='7.2';
+const TL_VER='7.3';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -9168,6 +9171,7 @@ function tlExportXlsx(){
     const rows=[];M.rows.forEach(r=>r.snaps.forEach(s=>{const t=_tlTotalsOf(s);rows.push([r.name,r.mst,_tlDayLbl(s.day),s.R20?'Có':'Không',xv(t.total),xv(t.dn),xv(t.coll)]);}));
     table(ws,3,['Công ty','MST','Ngày tra','Có R20','Tổng dư nợ','Nợ vay','TSBĐ'],rows,4);ws['!cols']=[{wch:44},{wch:13},{wch:12},{wch:8},{wch:14},{wch:14},{wch:14}];
     XLSX.utils.book_append_sheet(wb,ws,'Nguon du lieu');}
+  try{if(typeof cicOverdueSheet==='function')cicOverdueSheet(wb,M,U);}catch(e){console.warn('Sheet quá hạn:',e&&e.message);}
   try{if(M.scope.kind!=='co'&&typeof cicPoolSheet==='function')cicPoolSheet(wb,cicCollPool(_poolUnitsModel(M,M.lastIdx)),'TSBĐ DÙNG CHUNG — kỳ '+M.cols[M.lastIdx].label+' · '+M.scope.name,U,un);}catch(e){console.warn('Sheet TSBĐ dùng chung:',e&&e.message);}
   if(!wb.SheetNames.length){toast('Chọn ít nhất một nội dung');return;}
   const nm='CIC_DienBien_'+M.scope.name.replace(/[^\p{L}\d]+/gu,'_').slice(0,40)+'_'+from.replace('-','')+'-'+to.replace('-','')+'.xlsx';
@@ -9543,14 +9547,14 @@ function tlRenderBody(keepTab){
       +'<div style="margin-top:.8rem;display:flex;gap:.4rem;justify-content:center"><button class="btn btn-p" onclick="tlOpenGroups()">Nhóm &amp; kho</button><button class="btn btn-o" onclick="tlOpenGroups(\'s\')">Thư mục chung</button></div></div>'+_tlRulesHtml(true);
     return;
   }
-  const tabs=[['ov','Tổng quan'],['tctd','TCTD × kỳ'],['co','Công ty × kỳ'],['tsbd','Tài sản bảo đảm'],['cal','Lịch tra'],['src','Nguồn dữ liệu']];
+  const tabs=[['ov','Tổng quan'],['tctd','TCTD × kỳ'],['co','Công ty × kỳ'],['od','Lịch sử quá hạn'],['tsbd','Tài sản bảo đảm'],['cal','Lịch tra'],['src','Nguồn dữ liệu']];
   if(M.scope.kind==='co'&&TL.tab==='co')TL.tab='ov';
   const keep={};if(keepTab)document.querySelectorAll('#tlBody .tl-mtx').forEach((m,i)=>{keep[i]=m.scrollLeft;});
   let h='<div class="tl-tabs">'+tabs.filter(t=>!(t[0]==='co'&&M.scope.kind==='co')).map(t=>'<button class="tl-tab'+(TL.tab===t[0]?' on':'')+'" data-t="'+t[0]+'" onclick="tlTab(\''+t[0]+'\',this)">'+t[1]+'</button>').join('')+'</div>';
   const pn=(id,html)=>'<div class="tl-pn'+(TL.tab===id?' on':'')+'" id="tlpn-'+id+'">'+(TL._print?'<h2 class="tl-ph">'+(tabs.find(t=>t[0]===id)||[])[1]+'</h2>':'')+html+'</div>';
   h+=pn('ov',tlHtmlOverview(M))+pn('tctd',tlHtmlBankMatrix(M));
   if(M.scope.kind!=='co')h+=pn('co',tlHtmlCoMatrix(M));
-  h+=pn('tsbd',tlHtmlColl(M))+pn('cal',tlHtmlCal(M));
+  h+=pn('od',typeof tlHtmlOverdue==='function'?tlHtmlOverdue(M):'')+pn('tsbd',tlHtmlColl(M))+pn('cal',tlHtmlCal(M));
   if(!TL._print)h+=pn('src',tlHtmlSources(M));
   const sy=window.scrollY;el.innerHTML=h;if(keepTab)window.scrollTo(0,sy);
   document.querySelectorAll('#tlBody .tl-mtx').forEach((m,i)=>{if(m.classList.contains('tl-wrap'))return;m.scrollLeft=(keepTab&&keep[i]!=null)?keep[i]:m.scrollWidth;});
@@ -11288,6 +11292,108 @@ function cicCollapsify(root){if(!root)return;
 (function(){const ui=document.getElementById('timelineUI');if(!ui||typeof MutationObserver==='undefined')return;let t=null;
   new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{try{cicCollapsify(ui);}catch(e){}},30);}).observe(ui,{childList:true,subtree:true});})();
 function cicColShowAll(){try{Object.keys(localStorage).filter(k=>k.indexOf(_COL_KEY)===0).forEach(k=>localStorage.removeItem(k));}catch(e){}document.querySelectorAll('.cic-col.is-col').forEach(w=>w.classList.remove('is-col'));}
+
+
+/* ═══════════ v7.3 — BẢN TRA MỚI CẬP NHẬT KHẮP NƠI · KHÔNG TRÙNG · LƯU VẾT QUÁ HẠN ═══════════
+   1) Diễn biến theo kịp tháng mới: khoảng xem đang dừng ở tháng mới nhất cũ → tự mở tới kỳ mới khi có bản tra mới.
+   2) Nhóm KH không có 2 dòng cùng MST: dán lại → thay bằng bản tra mới hơn (bản cũ hơn vẫn vào kho làm lịch sử).
+   3) Công ty mới tra trong Nhóm KH tự vào nhóm theo dõi khớp với danh sách đang mở (hoàn tác được).
+   4) Tra 1 KH / Theo kỳ một công ty đang mở ở Nhóm KH → Nhóm KH cập nhật bản mới (trừ khi đang xem một kỳ dựng từ kho).
+   5) Lưu vết quá hạn / nợ nhóm ≥2 theo tháng, gom từ mọi bản tra trong kho: nhóm nợ ≥2 (kèm số tiền), ngoại bảng / trái phiếu
+      nhóm ≥2, chậm trả thẻ, mục 2.9 (nợ cần chú ý 12 tháng) và 2.7 (nợ xấu 5 năm) của từng báo cáo. Bản sau về nhóm 1 vẫn giữ vết. */
+function _tlMaxMon(){let m='';_TL_CACHE.forEach(s=>{if(s.S10A){const b=_tlB(s);if(b>m)m=b;}});return m;}
+function _qTs(s10a){try{return _cicDateTs(s10a)||0;}catch(e){return 0;}}
+// ── 1) + thông báo kỳ của bản tra vừa vào kho ──
+(function(){const _i=_tlIngest;_tlIngest=function(list,src){
+  const before=_tlMaxMon();const r=_i(list,src);
+  try{const after=_tlMaxMon();if(TL.to&&before&&TL.to>=before&&after>TL.to){TL.to='';_tlSaveSt();}
+    const L=(r.new||[]).concat(r.upd||[]).filter(s=>s&&s.S10A);
+    if(L.length&&/^(single|group|period)$/.test(String(src||''))){const by=new Map();L.forEach(s=>{const k=_tlB(s);by.set(k,(by.get(k)||[]).concat([s]));});
+      toast('✓ Kho diễn biến: '+L.length+' bản tra → '+[...by.entries()].map(([k,a])=>'kỳ '+_tlMonLbl(k)+(a.length===1?' ('+shortName(a[0].name).substring(0,22)+', số liệu '+_tlDayLbl(_tlDD(a[0]))+')':' ('+a.length+' cty)')).join(' · '));}
+    if(String(src||'')!=='group')_grpRefreshFrom(L);}catch(e){console.warn('Kho:',e&&e.message);}
+  return r;};})();
+// ── 2) Nhóm KH: một MST một dòng ──
+const _coMst=c=>_normMstCic((c&&c.s10a&&c.s10a.customer&&c.s10a.customer.taxCode)||(c&&c.taxCode)||'');
+(function(){const _p=_pushCompany;_pushCompany=function(s,r){
+  const m=_normMstCic(s&&s.customer&&s.customer.taxCode);const i=m?companies.findIndex(c=>_coMst(c)===m):-1;
+  if(i<0)return _p.apply(this,arguments);
+  const cu=companies[i];const tNew=_qTs(s),tOld=_qTs(cu.s10a);
+  try{_tlIngest([{s10a:s,r20:r,src:'group'}],'group');}catch(e){}
+  if(tNew>=tOld){cu.s10a=s;cu.r20=r||(tNew===tOld?cu.r20:null);cu.name=s.customer.name||cu.name;cu.cicCode=s.customer.cicCode||cu.cicCode;cu.taxCode=s.customer.taxCode||cu.taxCode;cu.merged=mergeForCompany(cu.s10a,cu.r20);
+    toast('Nhóm KH: '+shortName(cu.name).substring(0,30)+' đã có trong danh sách → '+(tNew>tOld?'thay bằng bản tra mới '+_qDate(s):'cập nhật cùng bản tra')+' (không thêm dòng trùng)');}
+  else toast('Nhóm KH: '+shortName(cu.name).substring(0,30)+' đang mở bản tra mới hơn ('+_qDate(cu.s10a)+') — giữ nguyên, bản '+_qDate(s)+' đã lưu vào kho');
+};})();
+function _grpDedupe(list){const seen=new Map();(list||[]).forEach(c=>{const m=_coMst(c);if(!m){seen.set(Symbol(),c);return;}const o=seen.get(m);if(!o||_qTs(c.s10a)>=_qTs(o.s10a))seen.set(m,c);});return [...seen.values()];}
+(function(){const _a=_applyState;_applyState=function(st){try{if(st&&st.mode==='group'&&st.companies){const n=st.companies.length;st.companies=_grpDedupe(st.companies);if(st.companies.length<n)console.info('[CIC] Bỏ '+(n-st.companies.length)+' dòng trùng MST ở Nhóm KH');}}catch(e){}return _a(st);};})();
+_tlReady.then(()=>{try{const n=companies.length;const d=_grpDedupe(companies);if(d.length<n){companies=d;renderChips();updateGrpHero();if(document.getElementById('grpResult')&&document.getElementById('grpResult').innerHTML)analyzeGroup();saveState();toast('Nhóm KH: bỏ '+(n-d.length)+' dòng trùng mã số thuế');}}catch(e){}});
+// ── 3) công ty mới tra trong Nhóm KH → vào nhóm theo dõi khớp ──
+function _grpAutoAdd(){
+  const open=[...new Set(companies.map(_coMst).filter(Boolean))];if(open.length<2)return;
+  let best=null,bn=0;_tlGroups().forEach(g=>{const n=open.filter(m=>g.msts.indexOf(m)>=0).length;if(n>bn){bn=n;best=g;}});
+  if(!best||bn<2||bn/open.length<0.6)return;const add=open.filter(m=>best.msts.indexOf(m)<0);if(!add.length)return;
+  const names={};companies.forEach(c=>{const m=_coMst(c);if(add.indexOf(m)>=0)names[m]=_nameNoOld(c.name||'');});
+  _tlGroupUpsert({id:best.id,name:best.name,msts:best.msts.concat(add),names:Object.assign({},best.names||{},names)},'merge');
+  window._grpAutoAdded={gid:best.id,msts:add,t:Date.now()};
+  toast('✓ Nhóm theo dõi "'+best.name+'": thêm '+add.length+' công ty mới tra ('+add.map(m=>shortName(names[m]||m).substring(0,22)).join(', ')+') — bỏ ra ở thanh liên kết nếu không đúng');
+  try{_tlAfterChange();}catch(e){}
+}
+function cicUndoAutoAdd(){const a=window._grpAutoAdded;if(!a)return;const g=_tlGroupOf(a.gid);if(!g)return;
+  const all=_tlGroups();const x=all.find(y=>y.id===a.gid);x.msts=x.msts.filter(m=>a.msts.indexOf(m)<0);x.t=Date.now();_tlGroupsSave(all);window._grpAutoAdded=null;toast('Đã bỏ '+a.msts.length+' công ty khỏi nhóm "'+g.name+'"');_tlAfterChange();}
+(function(){const _pa=processAddCo;processAddCo=function(){const r=_pa.apply(this,arguments);try{_grpAutoAdd();}catch(e){}return r;};})();
+(function(){const _g=_lnkGroup;_lnkGroup=function(){let h=_g();try{const a=window._grpAutoAdded;if(a&&Date.now()-a.t<30*60e3){const g=_tlGroupOf(a.gid);if(g)h+='<div class="lnk-miss" style="background:var(--bg2);color:var(--tx2);border-color:var(--bd)">Đã tự thêm '+a.msts.length+' công ty mới tra vào nhóm theo dõi <b>'+_dmEsc(g.name)+'</b>: '+a.msts.map(m=>_dmEsc(shortName(_tlNameOfMst(m)).substring(0,26))).join(', ')+' '+_lnkBtn('Bỏ ra','cicUndoAutoAdd()')+'</div>';}}catch(e){}return h;};})();
+// ── 4) bản tra mới ở 1 KH / Theo kỳ → cập nhật dòng tương ứng đang mở ở Nhóm KH ──
+function _grpRefreshFrom(L){
+  if(!companies||!companies.length||!L||!L.length)return;const fk=window._grpFromKho;if(fk&&fk.mon&&fk.sig===_grpSig())return;   // đang xem một kỳ cố định
+  let n=0;L.forEach(s=>{const i=companies.findIndex(c=>_coMst(c)===s.mst);if(i<0)return;const cu=companies[i];if(s.ts>_qTs(cu.s10a)){const v=_tlWithOwnR20(s);cu.s10a=v.S10A;cu.r20=v.R20;cu.merged=mergeForCompany(cu.s10a,cu.r20);n++;}});
+  if(n){try{renderChips();updateGrpHero();if(document.getElementById('grpResult')&&document.getElementById('grpResult').innerHTML)analyzeGroup();saveState&&_tlSaveAllSlots();}catch(e){}toast('Nhóm KH: cập nhật '+n+' công ty theo bản tra mới');}
+}
+// ── 5) Lưu vết quá hạn / nợ nhóm ≥2 ──
+function cicOverdueOf(mst){
+  const out=new Map();const U=x=>(x&&x.vnd||0)+toVND(x&&x.usd||0,'USD');
+  const put=(mon,o)=>{if(!mon)return;const k=mon+'|'+o.kind+'|'+bankKey(o.bank||'')+'|'+o.grp;const L=out.get(mon)||[];const i=L.findIndex(x=>x._k===k);o._k=k;
+    if(i<0)L.push(o);else if(L[i].rank<o.rank||(L[i].rank===o.rank&&(o.amt||0)>(L[i].amt||0)))L[i]=o;out.set(mon,L);};
+  const ym=d=>{const m=String(d||'').match(/(\d{2})\/(\d{4})/);return m?m[2]+'-'+m[1]:'';};
+  _TL_CACHE.filter(s=>s.mst===mst&&s.S10A).forEach(s=>{const S=s.S10A,mon=_tlB(s),src='bản tra '+_tlDayLbl(s.day);
+    (S.debts||[]).forEach(d=>{const g=parseInt(d.debtGroup)||1;if(g<2)return;let amt=null;if(d.grpAmt){amt=0;Object.keys(d.grpAmt).forEach(k=>{if(+k>=2)amt+=d.grpAmt[k]||0;});}
+      put(ym(d.reportDate)||mon,{kind:'Nợ vay',bank:d.name,grp:g,amt,src,rank:3,unconf:!d.grpAmt});});
+    (S.offBalance||[]).forEach(o=>{const g=parseInt(o.debtGroup)||1;if(g>=2)put(ym(o.reportDate)||mon,{kind:'Ngoại bảng',bank:o.name,grp:g,amt:toVND(o.value,o.currency),src,rank:3});});
+    (S.bonds||[]).forEach(o=>{const g=parseInt(o.debtGroup)||1;if(g>=2)put(ym(o.reportDate)||mon,{kind:'Trái phiếu',bank:o.bankName,grp:g,amt:o.value||0,src,rank:3});});
+    if(S.cardInfo&&S.cardInfo.has&&S.cardInfo.late>0)put(mon,{kind:'Chậm trả thẻ',bank:'',grp:2,amt:S.cardInfo.late,src,rank:3});
+    (S.noteDebtHistory||[]).forEach(x=>{const m=String(x.month||'');if(!/^\d{6}$/.test(m)||!(x.amount>0))return;put(m.slice(0,4)+'-'+m.slice(4),{kind:'Nợ vay',bank:x.bankName,grp:2,amt:x.amount,src:'mục 2.9 của '+src,rank:2});});
+    (S.badDebtHistory||[]).forEach(x=>{const g=parseInt(x.debtGroup)||3;put(ym(x.lastDate)||mon,{kind:'Nợ xấu (5 năm)',bank:x.bankName,grp:g,amt:(x.vnd||0)+toVND(x.usd||0,'USD'),src:'mục 2.7 của '+src,rank:1});});
+  });
+  return out;}
+function cicOverdueModel(M){const rows=M.rows.map(r=>({r,od:cicOverdueOf(r.mst)})).filter(x=>x.od.size);return rows;}
+const _odCell=L=>{const g=Math.max(...L.map(x=>x.grp));const a=L.reduce((s,x)=>s+(x.amt||0),0);return {g,a,known:L.some(x=>x.amt!=null)};};
+function tlHtmlOverdue(M){
+  const R=cicOverdueModel(M);const keys=M.cols.map(c=>c.key);const inR=m=>m>=keys[0]&&m<=keys[keys.length-1];
+  if(!R.length)return '<div class="cic-audit ok">✓ Không ghi nhận nợ quá hạn / nhóm ≥2 trong mọi bản tra của '+(M.scope.kind==='co'?'công ty này':'nhóm')+' (gồm cả mục 2.9 nợ cần chú ý 12 tháng và 2.7 nợ xấu 5 năm trên từng báo cáo).</div>';
+  const inRange=R.filter(x=>[...x.od.keys()].some(inR));
+  let h='<div class="cic-od-sum"><b>Lưu vết quá hạn / nợ nhóm ≥2</b> — '+R.length+'/'+M.rows.length+' công ty có vết trong kho'+(inRange.length!==R.length?' ('+inRange.length+' trong khoảng đang xem)':'')+'. Gom từ mọi bản tra: nhóm nợ trên báo cáo, mục 2.9 (nợ cần chú ý 12 tháng), 2.7 (nợ xấu 5 năm), chậm trả thẻ. Bản tra sau về nhóm 1 vẫn giữ vết tháng cũ.</div>';
+  // ma trận công ty × kỳ
+  h+='<div class="tw"><div class="th"><span class="tt">Nợ nhóm ≥2 theo công ty × kỳ <span class="tl-mini">('+unitLabel()+') · bấm ô để xem chi tiết</span></span></div><div class="tl-mtx"><table class="d"><thead><tr><th>Công ty</th>'+M.cols.map(c=>'<th class="c">'+c.label+'</th>').join('')+'<th class="c">Trước khoảng xem</th></tr></thead><tbody>';
+  R.forEach(({r,od})=>{const before=[...od.keys()].filter(m=>m<keys[0]).sort();
+    h+='<tr><td><a style="cursor:pointer;color:var(--ac);font-weight:600" onclick="tlFocusCo(\''+r.mst+'\')">'+_dmEsc(shortName(r.name).substring(0,36))+'</a></td>'+keys.map(k=>{const L=od.get(k);if(!L)return '<td class="c"><span class="tl-mini">·</span></td>';const c=_odCell(L);
+      return '<td class="c" title="'+_dmEsc(L.map(x=>x.kind+' · '+tctdLabel(x.bank||'')+' · nhóm '+x.grp+(x.amt!=null?' · '+fm(x.amt):'')+' · '+x.src).join('\n'))+'"><span class="tg tg-0'+Math.min(c.g,5)+'">N'+c.g+'</span><div class="tl-mini">'+(c.known?fm(c.a):'?')+'</div></td>';}).join('')
+      +'<td class="c">'+(before.length?'<span class="tl-mini" title="'+_dmEsc(before.map(m=>_tlMonLbl(m)).join(', '))+'">'+before.length+' tháng, gần nhất '+_tlMonLbl(before[before.length-1])+'</span>':'—')+'</td></tr>';});
+  h+='</tbody></table></div></div>';
+  // chi tiết
+  const det=[];R.forEach(({r,od})=>od.forEach((L,m)=>L.forEach(x=>det.push({r,m,x}))));det.sort((a,b)=>b.m.localeCompare(a.m)||b.x.grp-a.x.grp);
+  h+='<div class="tw"><div class="th"><span class="tt">Chi tiết từng vết</span><span class="tc">'+det.length+' dòng</span></div><div class="tl-mtx tl-wrap"><table class="d"><thead><tr><th>Tháng</th><th>Công ty</th><th>Loại</th><th>TCTD</th><th class="c">Nhóm</th><th class="c" style="text-align:right!important">Số tiền</th><th>Nguồn</th></tr></thead><tbody>'
+    +det.slice(0,300).map(({r,m,x})=>'<tr><td>'+_tlMonLbl(m)+'</td><td>'+_dmEsc(shortName(r.name).substring(0,34))+'</td><td>'+x.kind+'</td><td>'+_dmEsc(tctdLabel(x.bank||'')||'—')+'</td><td class="c"><span class="tg tg-0'+Math.min(x.grp,5)+'">N'+x.grp+'</span></td><td class="am">'+(x.amt!=null?fm(x.amt):'<span class="tl-up" title="Bản tra lưu khi tool chưa ghi số tiền theo nhóm">chưa rõ</span>')+'</td><td class="tl-mini">'+_dmEsc(x.src)+'</td></tr>').join('')+'</tbody></table></div></div>';
+  return h;}
+// đánh giá rủi ro: nêu vết quá hạn
+(function(){const _a=tlAssess;tlAssess=function(M){const R=_a(M);try{if(!R)return R;const keys=M.cols.map(c=>c.key);const L=cicOverdueModel(M).map(({r,od})=>{const ms=[...od.keys()].filter(m=>m>=keys[0]&&m<=keys[keys.length-1]).sort();if(!ms.length)return null;const g=Math.max(...ms.map(m=>_odCell(od.get(m)).g));return {r,ms,g};}).filter(Boolean);
+  if(L.length&&R.grp)R.grp.push({lv:L.some(x=>x.g>=3)?'r':'y',t:'Lưu vết quá hạn / nhóm ≥2 trong khoảng xem: '+L.slice(0,5).map(x=>shortName(x.r.name).substring(0,26)+' (N'+x.g+' · '+x.ms.map(m=>_tlMonLbl(m)).join(', ')+')').join('; ')+(L.length>5?'…':'')+' — xem tab "Lịch sử quá hạn"'});}catch(e){}return R;};})();
+// Nhóm KH & 1 KH: huy hiệu vết quá hạn 12 tháng
+function _odBadge(msts){const now=_tlMaxMon()||'';const from=now?_tlMonAdd(now,-11):'';const hit=[];msts.forEach(m=>{const od=cicOverdueOf(m);const ms=[...od.keys()].filter(k=>k>=from).sort();if(ms.length)hit.push({m,ms,g:Math.max(...ms.map(k=>_odCell(od.get(k)).g))});});
+  if(!hit.length)return '';return '<span class="lnk-audit '+(hit.some(x=>x.g>=3)?'bad':'warn')+'" title="'+_dmEsc(hit.map(x=>shortName(_tlNameOfMst(x.m)).substring(0,30)+': N'+x.g+' · '+x.ms.map(k=>_tlMonLbl(k)).join(', ')).join('\n'))+'">⚠ '+hit.length+' cty có vết quá hạn / nhóm ≥2 trong 12 tháng</span>';}
+(function(){const _g=_lnkGroup;_lnkGroup=function(){let h=_g();try{if(companies&&companies.length){const b=_odBadge([...new Set(companies.map(_coMst).filter(Boolean))]);if(b)h+=b;}}catch(e){}return h;};
+  const _s=_lnkSingle;_lnkSingle=function(){let h=_s();try{const m=S10A&&_normMstCic(S10A.customer.taxCode);if(m){const b=_odBadge([m]);if(b)h+=b;}}catch(e){}return h;};})();
+// Excel Diễn biến: sheet lưu vết quá hạn
+function cicOverdueSheet(wb,M,div){const R=cicOverdueModel(M);const rows=[['LƯU VẾT QUÁ HẠN / NỢ NHÓM ≥2 — '+M.scope.name],['Gom từ mọi bản tra trong kho: nhóm nợ trên báo cáo, mục 2.9 (nợ cần chú ý 12 tháng), 2.7 (nợ xấu 5 năm), chậm trả thẻ.'],[''],['Tháng','Công ty','MST','Loại','TCTD','Nhóm','Số tiền','Nguồn']];
+  const det=[];R.forEach(({r,od})=>od.forEach((L,m)=>L.forEach(x=>det.push([_tlMonLbl(m),r.name,r.mst,x.kind,tctdLabel(x.bank||''),x.grp,x.amt!=null?Math.round(x.amt/div*100)/100:'chưa rõ',x.src]))));det.sort((a,b)=>b[0].split('/').reverse().join('').localeCompare(a[0].split('/').reverse().join('')));
+  if(!det.length)det.push(['—','Không ghi nhận','','','','','','']);const ws=XLSX.utils.aoa_to_sheet(rows.concat(det));try{xStyl(ws,0,0,0,7,xS.sectionH);xStyl(ws,3,0,3,7,xS.tHead);}catch(e){}ws['!cols']=[{wch:10},{wch:44},{wch:13},{wch:14},{wch:24},{wch:7},{wch:14},{wch:34}];XLSX.utils.book_append_sheet(wb,ws,'Lich su qua han');}
 
 </script>
 </body>

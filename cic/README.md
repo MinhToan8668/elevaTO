@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.2 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.3 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.2.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.3.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -240,6 +240,20 @@ Chưa tái hiện được bằng dữ liệu hiện có (mọi lần xuất th�
 - giá trị tính sẵn của mọi công thức được tính lại từ chính các ô trong sheet (Excel mở ở Protected View hiện giá trị này);
 - ô số không hợp lệ (NaN/∞) → trống thay vì để Excel xoá ô khi mở.
 Kiểm tra: 3 lần xuất (Nhóm ABC, Thaco không / có khung form cũ) — đủ Total ở mọi dòng có số, 8.050 công thức có giá trị tính sẵn khớp.
+
+## v7.3 — Bản tra mới cập nhật khắp nơi, không trùng, lưu vết quá hạn
+**Lỗi tái hiện được** (dán bản tra tháng 11 cho nhóm đang theo dõi):
+- Diễn biến không hiện kỳ mới vì khoảng xem đã lưu "đến 10/2026". Nay khoảng xem đang ở tháng mới nhất thì tự mở tới kỳ mới khi có bản tra mới.
+  Mỗi lần dán, thông báo ghi bản tra vào kỳ nào (kỳ theo ngày số liệu CIC — tra 12/11 mà số liệu 31/10 thì thuộc kỳ 10).
+- Nhóm KH nhận 2 dòng cùng MST khi dán lại một công ty → cộng đôi. Nay một MST một dòng: dán lại thì thay bằng bản tra mới hơn, bản cũ hơn
+  vẫn vào kho làm lịch sử; phiên cũ có dòng trùng được dọn khi mở tool.
+- Công ty mới tra trong Nhóm KH không vào nhóm theo dõi. Nay tự thêm khi danh sách đang mở khớp ≥60% một nhóm theo dõi (bỏ ra được).
+- Tra 1 KH / Theo kỳ một công ty đang mở ở Nhóm KH → Nhóm KH cập nhật bản mới (trừ khi đang xem một kỳ dựng từ kho).
+
+**Lưu vết quá hạn / nợ nhóm ≥2** (tab mới "Lịch sử quá hạn" ở Diễn biến, đánh giá rủi ro, huy hiệu ở Nhóm KH / 1 KH, sheet Excel
+"Lich su qua han"): gom từ MỌI bản tra trong kho — nhóm nợ ≥2 trên báo cáo (kèm số tiền theo nhóm), ngoại bảng / trái phiếu nhóm ≥2,
+chậm trả thẻ, mục 2.9 (nợ cần chú ý 12 tháng) và 2.7 (nợ xấu 5 năm). Tháng nào có thì giữ vết tháng đó, kể cả khi bản tra sau về nhóm 1.
+Cùng tháng · TCTD · nhóm từ nhiều nguồn chỉ ghi một dòng (ưu tiên bản tra trực tiếp).
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
