@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v7.5 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v7.6 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -3288,7 +3288,7 @@ function processAddCo(keepOpen){
       if(!prev){keptByMst[p.mst]=p;return;}
       const loser=_sdNewer(p,prev)?prev:p;   // bản cũ hơn bị loại
       if(loser===prev)keptByMst[p.mst]=p;
-      dupDropped++;
+      dupDropped++;try{if(typeof _tlIngest==='function')_tlIngest([{s10a:loser.s,r20:null,src:'group'}],'dup');}catch(e){}   // bản cũ hơn vẫn lưu vào kho (lịch sử tháng đó)
       dropNames.push(shortName(loser.s.customer.name||('S10A #'+(loser.idx+1))).substring(0,30)+' · '+(loser.dateStr||'(thiếu ngày)'));
     });
     // Đẩy vào nhóm theo đúng thứ tự dán ban đầu
@@ -3341,7 +3341,7 @@ function processAddCo(keepOpen){
     const msg=parts2.join(' · ');
     if(rUnmatched||sFail||rFail||sWarnNames.length||dupDropped){
       let detail='';
-      if(dupDropped)detail+='\n\nĐÃ GỘP TRÙNG THEO MST — mỗi KH chỉ giữ báo cáo có "Thời gian gửi báo cáo" gần nhất. Các bản cũ đã bỏ:\n- '+dropNames.slice(0,10).join('\n- ')+(dropNames.length>10?'\n- ...':'');
+      if(dupDropped)detail+='\n\nCÙNG MỘT CÔNG TY DÁN 2 LẦN — Nhóm KH chỉ phân tích báo cáo mới nhất của mỗi công ty. Bản cũ hơn KHÔNG bị mất: đã lưu vào kho Diễn biến (lịch sử tháng đó). Kiểm tra lại xem có dán nhầm thay cho công ty khác không:\n- '+dropNames.slice(0,10).join('\n- ')+(dropNames.length>10?'\n- ...':'');
       if(sWarnNames.length)detail+='\n\nCẢNH BÁO ĐỐI CHIẾU — tổng dư nợ parse KHÔNG khớp dòng "Tổng cộng các TCTD" trong báo cáo (có thể bỏ sót TCTD định dạng lạ):\n- '+sWarnNames.join('\n- ');
       if(unmatchedNames.length)detail+='\n\nR20 không khớp công ty nào:\n- '+unmatchedNames.slice(0,8).join('\n- ')+(unmatchedNames.length>8?'\n- ...':'');
       if(sFailNames.length||rFailNames.length)detail+='\n\nĐoạn lỗi: '+[...sFailNames,...rFailNames].slice(0,5).join(', ');
@@ -7442,7 +7442,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='7.5';
+const APP_VERSION='7.6';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8397,7 +8397,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='7.5';
+const TL_VER='7.6';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -11458,6 +11458,15 @@ try{if(localStorage.getItem('cic_basis_v75')!=='1'){TL.basis='query';localStorag
 if(!TL.basis)TL.basis='query';TL.topN=Math.min(8,+TL.topN||8);
 // biểu đồ dùng font và màu chữ của tool (chữ = mực phụ, không tô bằng màu series)
 try{if(window.Chart){Chart.defaults.font.family=getComputedStyle(document.body).fontFamily||Chart.defaults.font.family;Chart.defaults.color='#4A5568';}}catch(e){}
+// ── 8) Dán hàng loạt: R20 gắn SAU khi S10A vào kho → ghi lại cả cặp; báo công ty của nhóm theo dõi chưa có trong danh sách đang mở ──
+(function(){const _pa=processAddCo;processAddCo=function(){const r=_pa.apply(this,arguments);try{const L=(companies||[]).filter(c=>c.s10a&&c.r20).map(c=>({s10a:c.s10a,r20:c.r20,src:'group'}));if(L.length)_tlIngest(L,'group-r20');}catch(e){}
+  try{const open=new Set(companies.map(_coMst).filter(Boolean));let best=null,bn=0;_tlGroups().forEach(g=>{const n=g.msts.filter(m=>open.has(m)).length;if(n>bn){bn=n;best=g;}});
+    if(best&&bn>=2&&bn/open.size>=0.6){const miss=best.msts.filter(m=>!open.has(m));window._grpOpenMiss=miss.length?{gid:best.id,msts:miss}:null;
+      try{_cicLinkAll();}catch(e){}
+      if(miss.length)toast('Nhóm "'+best.name+'": danh sách đang mở có '+bn+'/'+best.msts.length+' công ty — thiếu '+miss.map(m=>shortName(_tlNameOfMst(m)).substring(0,26)).join(', '));}}catch(e){}
+  return r;};})();
+(function(){const _g=_lnkGroup;_lnkGroup=function(){let h=_g();try{const x=window._grpOpenMiss;const g=x&&_tlGroupOf(x.gid);if(g){const open=new Set(companies.map(_coMst));const miss=x.msts.filter(m=>!open.has(m)&&g.msts.indexOf(m)>=0);
+  if(miss.length)h+='<div class="lnk-miss"><b>Danh sách đang mở thiếu '+miss.length+'/'+g.msts.length+' công ty của nhóm '+_dmEsc(g.name)+'</b>: '+miss.map(m=>{const l=_tlLatestOf(m);return _dmEsc(shortName(_tlNameOfMst(m)).substring(0,32))+' <span class="tl-mini">('+(l?'bản gần nhất tra '+_tlDayLbl(l.day):'chưa tra lần nào')+')</span>';}).join(' · ')+'</div>';}}catch(e){}return h;};})();
 
 </script>
 </body>

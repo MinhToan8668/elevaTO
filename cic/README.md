@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.5 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.6 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.5.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.6.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -278,6 +278,12 @@ mới dùng tháng tra. Muốn kỳ = tháng tra thì chọn "Xếp kỳ theo: N
 cụm TSBĐ — cùng một kiểu: nền trắng, viền xám, vạch trái màu trạng thái (tốt / lưu ý / nguy cấp), chữ màu mực, luôn kèm icon + nhãn.
 Bỏ các kiểu nền tối riêng lẻ (tool chỉ có giao diện sáng — máy để chế độ tối thì các khung đó lệch màu).
 Tổng quan xếp lại: hàng KPI → các khung thông báo (ẩn được) → biểu đồ.
+
+## v7.6 — Dán hàng loạt: không mất bản tra trùng, báo công ty còn thiếu
+- Dán hàng loạt có 2 báo cáo cùng MST: Nhóm KH phân tích bản mới nhất; bản cũ hơn trước đây bị bỏ hẳn (mất dữ liệu tháng đó) → nay vẫn
+  lưu vào kho Diễn biến làm lịch sử. Thông báo ghi rõ "cùng một công ty dán 2 lần — kiểm tra có dán nhầm thay cho công ty khác không".
+- R20 dán hàng loạt được gắn vào công ty SAU khi S10A vào kho → kho có thể thiếu TSBĐ tới lúc bấm Phân tích. Nay ghi lại cả cặp ngay.
+- Danh sách đang mở khớp một nhóm theo dõi → thanh liên kết + thông báo nêu đích danh công ty của nhóm còn thiếu (kèm ngày tra gần nhất).
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
