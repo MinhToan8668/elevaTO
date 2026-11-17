@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.6 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.7 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.6.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.7.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -284,6 +284,17 @@ Tổng quan xếp lại: hàng KPI → các khung thông báo (ẩn được) �
   lưu vào kho Diễn biến làm lịch sử. Thông báo ghi rõ "cùng một công ty dán 2 lần — kiểm tra có dán nhầm thay cho công ty khác không".
 - R20 dán hàng loạt được gắn vào công ty SAU khi S10A vào kho → kho có thể thiếu TSBĐ tới lúc bấm Phân tích. Nay ghi lại cả cặp ngay.
 - Danh sách đang mở khớp một nhóm theo dõi → thanh liên kết + thông báo nêu đích danh công ty của nhóm còn thiếu (kèm ngày tra gần nhất).
+
+## v7.7 — Tab hiện đúng, các so sánh không gây hiểu nhầm
+- **Lỗi bấm tab không thấy gì** (do 7.5): Tổng quan luôn hiện nên tab được chọn bị đẩy xuống dưới cùng. Đã sửa.
+- **So sánh giữa 2 kỳ chỉ trên công ty có bản tra ở cả 2 kỳ** (trước so tổng 2 kỳ có độ phủ khác nhau → "giảm 65%" chỉ vì thiếu bản tra):
+  cột Δ đầu→cuối và dòng phụ Δ từng ô ở Dư nợ theo TCTD / theo công ty, bảng TSBĐ theo loại / theo TCTD (TSBĐ không trùng),
+  khung chi tiết kỳ, file Excel (sheet TCTD x Ky, Cong ty x Ky). Ghi "· n/N cty" khi chỉ so được một phần.
+- Excel Cong ty x Ky: công ty chưa tra kỳ cuối trước tính ô trống = 0 → "giảm 100%"; nay để trống Δ, ghi "chưa tra".
+  Cột nhóm nợ = nhóm của bản tra thật mới nhất (ghi kỳ).
+- Biểu đồ: đường tổng vẽ nét đứt khi đi vào kỳ chưa đủ bản tra.
+- Mỗi tab có dòng ngữ cảnh: mục đích, kỳ theo gì, khoảng xem, độ phủ kỳ cuối, quy tắc ô trống / so sánh.
+- Đổi tên tab theo nghiệp vụ: Dư nợ theo TCTD · Dư nợ theo công ty · Nợ quá hạn / nhóm ≥2 · Tài sản bảo đảm · Độ phủ bản tra · Nguồn dữ liệu.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
