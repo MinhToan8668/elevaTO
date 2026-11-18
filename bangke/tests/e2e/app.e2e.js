@@ -70,7 +70,7 @@ test('tải bảng kê → kiểm tra giải ngân nhầm → hồ sơ gốc →
   // ── bảng kê 1
   await page.click('#bImport');
   await page.setInputFiles('#iFile', f1);
-  await page.locator('.note.ok', { hasText: 'Không thấy hóa đơn nào' }).waitFor();
+  await page.locator('.verdict.ok', { hasText: 'ĐẠT — 2/2 hóa đơn hợp lệ' }).waitFor();
   assert.equal(await page.inputValue('#iNew'), 'CÔNG TY TNHH MTV SẢN XUẤT THỬ NGHIỆM', 'gợi ý tên KH từ dòng đầu file');
   assert.equal(await page.inputValue('[data-ki="so_kunn"]'), '8800123(37).26');
   assert.equal(await page.inputValue('[data-ki="ngay_gn"]'), '2026-03-24');
@@ -81,14 +81,26 @@ test('tải bảng kê → kiểm tra giải ngân nhầm → hồ sơ gốc →
   // ── bảng kê 2: phải bắt được hóa đơn đã giải ngân đủ
   await page.click('#bImp2');
   await page.setInputFiles('#iFile', f2);
-  await page.locator('.note.err', { hasText: '1 dòng có dấu hiệu giải ngân nhầm' }).waitFor();
+  await page.locator('.verdict.err', { hasText: 'KHÔNG ĐẠT — 1/2 hóa đơn không được giải ngân' }).waitFor();
+  assert.match(await page.locator('.vcard', { hasText: 'Đã giải ngân đủ trước đó' }).innerText(), /^1/);
   const rows = page.locator('.modal tbody tr');
   assert.match(await rows.nth(0).innerText(), /GN tiếp phần còn lại[\s\S]*8800123\(37\)\.26[\s\S]*400\.000\.000[\s\S]*\b0\b/);
-  assert.match(await rows.nth(1).innerText(), /ĐÃ GIẢI NGÂN ĐỦ trước đó/);
+  assert.match(await rows.nth(1).innerText(), /ĐÃ GIẢI NGÂN ĐỦ trước đó[\s\S]*không được GN lại/);
+  await page.locator('.vcard', { hasText: 'Đã giải ngân đủ trước đó' }).click();     // lọc chỉ dòng lỗi
+  assert.equal(await page.locator('.modal tbody tr').count(), 1);
+  await page.locator('.vcard', { hasText: 'Đã giải ngân đủ trước đó' }).click();
   await shot(page, '2-check');
   await page.click('#iSave');                // hộp xác nhận "vẫn lưu" được bấm OK
   await page.locator('.kunn', { hasText: 'KUNN 8800123(38).26' }).waitFor();
   assert.match(await page.locator('.tab', { hasText: 'Cảnh báo' }).innerText(), /Cảnh báo\s*1/);
+
+  // tra nhanh: hóa đơn 676 đã giải ngân đủ qua 2 KUNN; hóa đơn 999 chưa từng giải ngân
+  await page.fill('#qInvT', '676');
+  await page.press('#qInvT', 'Enter');
+  assert.match(await page.locator('#lkR').innerText(), /676[\s\S]*ĐÃ GIẢI NGÂN ĐỦ[\s\S]*8800123\(37\)\.26[\s\S]*8800123\(38\)\.26/);
+  await page.fill('#lkQ', '999');
+  await page.locator('.verdict.ok', { hasText: 'Chưa thấy hóa đơn 999' }).waitFor();
+  await page.locator('.modal [data-close]').first().click();
 
   // ── theo dõi hóa đơn: HĐ 676 GN qua 2 KUNN = đủ
   await page.click('[data-tab="inv"]');
