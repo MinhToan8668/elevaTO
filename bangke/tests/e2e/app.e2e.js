@@ -267,6 +267,25 @@ test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN 
   assert.equal(await page.locator(".todo li").count(), 1);
   assert.match(await page.locator('.legend').first().innerText(), /Quá hạn\s+1\s+50%/);
   await shot(page, '5-dashboard');
+  // bấm ô "KUNN quá hạn" → danh sách KUNN → bấm dòng → mở đúng KUNN ở bảng chi tiết từng hóa đơn
+  await page.locator('.tile', { hasText: 'KUNN quá hạn hồ sơ gốc' }).click();
+  await page.locator('#dSum', { hasText: '1 KUNN' }).waitFor();
+  assert.match(await page.locator('#dB').innerText(), /Công ty Kappa\s+5500777\(9\)\.26/);
+  await page.locator('#dB tr').first().click();
+  await page.locator('#custName', { hasText: 'Công ty Kappa' }).waitFor();
+  await page.locator('.kunn', { hasText: '5500777(9).26' }).locator('table').waitFor();
+  assert.match(await page.locator('.kunn', { hasText: '5500777(9).26' }).locator('tbody').innerText(), /Công ty Sigma[\s\S]*701[\s\S]*702/);
+  // bấm cột tháng trên biểu đồ → KUNN của tháng đó
+  await page.click('#navAll');
+  await page.locator('svg.viz rect.go').first().click();
+  await page.locator('#dSum', { hasText: 'KUNN' }).waitFor();
+  assert.notEqual(await page.inputValue('#dM'), '');
+  await page.locator('.modal [data-close]').first().click();
+  // ô "Còn lại chưa giải ngân" → danh sách hóa đơn GN 1 phần
+  await page.locator('.tile', { hasText: 'Còn lại chưa giải ngân' }).click();
+  assert.match(await page.locator('#hB').innerText(), /Công ty Sigma\s+701[\s\S]*1\.000[\s\S]*600[\s\S]*400/);
+  await page.locator('.modal [data-close]').first().click();
+  // việc cần làm → mở khách hàng
   await page.locator('.todo li').first().click();
   await page.locator('#custName', { hasText: 'Công ty Kappa' }).waitFor();
   await ctx.close();

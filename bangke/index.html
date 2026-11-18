@@ -134,6 +134,24 @@ svg.viz{width:100%;height:auto;display:block}svg .ax{font-size:11px;fill:#8C7E71
 table.click tbody tr{cursor:pointer}
 .vtip{position:fixed;z-index:300;pointer-events:none;background:#14233a;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:var(--shm);display:none;max-width:320px}
 .spark{display:block}
+.grid-a{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px;margin-bottom:12px;align-items:stretch}
+@media(max-width:1100px){.grid-a{grid-template-columns:1fr}}
+.grid-a .panel{margin-bottom:0;display:flex;flex-direction:column}.grid-a .pbody{flex:1;min-height:0}
+.grid-b{height:470px}.grid-b .panel{min-height:0;overflow:hidden}.grid-b .pbody{overflow:auto}
+.grid-b .tw{max-height:none;overflow:visible}.grid-b .todo{max-height:none}
+@media(max-width:1100px){.grid-b{height:auto}.grid-b .pbody{max-height:420px}}
+.lnk{color:var(--blue);font-weight:600;font-size:12.5px;white-space:nowrap;padding:2px 0}.lnk:hover{text-decoration:underline}
+.go{cursor:pointer}
+.tile.go{transition:box-shadow .15s,transform .15s}.tile.go:hover{box-shadow:var(--shm);transform:translateY(-1px)}
+.tgo{font-size:11.5px;color:var(--blue);font-weight:600;opacity:0;transition:opacity .15s;margin-top:2px}.tile.go:hover .tgo{opacity:1}
+svg .hit.go{cursor:pointer}svg .hit.go:hover{fill:rgba(0,91,170,.06)}
+.seg i[data-act]{cursor:pointer}.seg i[data-act]:hover{filter:brightness(.92)}
+.legend span.go:hover{color:var(--blue)}
+.hbr.go:hover .hbl{color:var(--blue);text-decoration:underline}
+.ib{height:8px;border-radius:0 4px 4px 0;background:transparent;margin-top:4px}.ib i{display:block;height:100%;background:#005baa;border-radius:0 4px 4px 0}
+.kunn.flash{box-shadow:0 0 0 3px #0072ce}
+.kbody .t td:nth-child(3){min-width:230px}.kbody .t td:nth-child(4){min-width:160px}
+
 
 </style>
 </head>
@@ -520,9 +538,18 @@ const BK = (() => {
       let nccTxt = cellText(get(row, 'ncc')).replace(/\s+/g, ' ').trim();
       const hdmbTxt = cellText(get(row, 'so_hdmb')).replace(/\s+/g, ' ').trim();
       if (!so_hd && tien_hd == null && tien_gn == null) continue;          // dòng chữ mô tả, chữ ký…
+      if (so_hd && !/\d/.test(so_hd) && tien_hd == null && tien_gn == null) continue;   // hàng tiêu đề phụ
       if (nccTxt) { if (nccTxt !== lastNcc) lastHdmb = ''; lastNcc = nccTxt; } else nccTxt = lastNcc;
       let hdmb = hdmbTxt;
       if (hdmb) lastHdmb = hdmb; else hdmb = lastHdmb;
+      const prev = cur.lines[cur.lines.length - 1];
+      if (!so_hd && prev && prev.so_hd && (!hdmbTxt || hdmbTxt === prev.so_hdmb) && (!cellText(get(row, 'ncc')).trim() || nccTxt === prev.ncc)) {
+        so_hd = prev.so_hd;
+        if (!ngay_hd) ngay_hd = prev.ngay_hd;
+        const nd = cellText(get(row, 'ngay_hd')).trim() || cellText(get(row, 'ky_hieu')).trim();
+        kyHieuLech = nd && !toISO(nd) ? nd : `phần ${cur.lines.filter((l) => l.so_hd === so_hd).length + 1}`;
+        assumed.push('so_hd_tiep');
+      }
       if (tien_gn == null && tien_hd != null) { tien_gn = tien_hd; assumed.push('tien_gn'); }   // không ghi số vay → coi như vay đủ tiền hóa đơn
       const hs = classifyDocNote(get(row, 'ho_so'));
       const line = {
@@ -546,6 +573,17 @@ const BK = (() => {
     }
     const out = groups.filter((g) => g.lines.length);
     for (const g of out) {
+      const ls = g.lines;
+      for (let i = 0; i < ls.length; i++) {
+        const a = ls[i];
+        if (a.tien_gn == null || (a.assumed || []).includes('tien_gn') || a.tien_hd == null) continue;
+        let j = i + 1, tot = a.tien_hd;
+        while (j < ls.length && (ls[j].assumed || []).includes('so_hd_tiep') && ls[j].so_hd === a.so_hd && (ls[j].assumed || []).includes('tien_gn')) { tot += ls[j].tien_hd || 0; j++; }
+        if (j > i + 1 && Math.abs(tot - a.tien_gn) <= 1 && Math.abs(a.tien_gn - a.tien_hd) > 1) {
+          a.ghi_chu = [a.ghi_chu, `số vay ghi gộp ${fmtMoney(a.tien_gn)} cho ${j - i} dòng`].filter(Boolean).join(' · ');
+          a.tien_gn = a.tien_hd;
+        }
+      }
       g.tong_gn = sum(g.lines.map((l) => l.tien_gn));
       if (g.so_tien != null && Math.abs(g.so_tien - g.tong_gn) > 1) warnings.push(`KUNN ${g.so_kunn || '(chưa có số)'}: tổng các dòng ${fmtMoney(g.tong_gn)} ≠ số tiền KUNN ${fmtMoney(g.so_tien)}`);
     }
@@ -1293,8 +1331,8 @@ function shortMoney(n) {
 }
 const axisMoney = (n) => (n >= 1e12 ? +(n / 1e12).toFixed(1) + 'N tỷ' : n >= 1e9 ? +(n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + ' tỷ' : n >= 1e6 ? +(n / 1e6).toFixed(0) + ' tr' : String(Math.round(n)));
 function niceMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p; return 10 * p; }
-/** Cột theo thời gian (1 chuỗi): nhãn giá trị chỉ ở cột cao nhất & cột cuối; rê chuột xem từng tháng. */
-function colChart(pts, { h = 190, fmt = shortMoney } = {}) {
+/** Cột theo thời gian (1 chuỗi): nhãn giá trị chỉ ở cột cao nhất & cột cuối; rê chuột xem, bấm để xem chi tiết tháng. */
+function colChart(pts, { h = 190, fmt = shortMoney, act = null } = {}) {
   const W = 640, L = 52, R = 8, T = 18, B = 26, ih = h - T - B, iw = W - L - R;
   const max = niceMax(Math.max(0, ...pts.map((p) => p.value)));
   const slot = iw / Math.max(1, pts.length), bw = Math.min(24, slot * 0.62);
@@ -1304,25 +1342,25 @@ function colChart(pts, { h = 190, fmt = shortMoney } = {}) {
   for (let i = 0; i <= 4; i++) { const v = (max / 4) * i, yy = y(v); s += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${VC.grid}" stroke-width="1"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" class="ax">${axisMoney(v)}</text>`; }
   pts.forEach((p, i) => {
     const cx = L + slot * i + slot / 2, x = cx - bw / 2, top = y(p.value), bh = T + ih - top;
-    if (p.value > 0) { const r = Math.min(4, bh); s += `<path d="M${x},${T + ih}V${top + r}Q${x},${top} ${x + r},${top}H${x + bw - r}Q${x + bw},${top} ${x + bw},${top + r}V${T + ih}Z" fill="${VC.series}"/>`; }
+    if (p.value > 0) { const r = Math.min(4, bh); s += `<path class="bar" d="M${x},${T + ih}V${top + r}Q${x},${top} ${x + r},${top}H${x + bw - r}Q${x + bw},${top} ${x + bw},${top + r}V${T + ih}Z" fill="${VC.series}"/>`; }
     if (p.value > 0 && (i === imax || i === pts.length - 1)) s += `<text x="${cx}" y="${top - 5}" text-anchor="middle" class="vl">${fmt(p.value)}</text>`;
     s += `<text x="${cx}" y="${h - 8}" text-anchor="middle" class="ax">${esc(p.label)}</text>`;
-    s += `<rect x="${L + slot * i}" y="${T}" width="${slot}" height="${ih}" fill="transparent" data-tip="${esc(p.tip || `${p.label}: ${money(p.value)}`)}"/>`;
+    s += `<rect x="${L + slot * i}" y="${T}" width="${slot}" height="${ih}" fill="transparent" class="hit${act && p.value > 0 ? ' go' : ''}" data-tip="${esc((p.tip || `${p.label}: ${money(p.value)}`) + (act && p.value > 0 ? ' — bấm để xem các KUNN' : ''))}" ${act && p.value > 0 ? act(p) : ''}/>`;
   });
   return s + `<line x1="${L}" x2="${W - R}" y1="${T + ih}" y2="${T + ih}" stroke="${VC.axis}" stroke-width="1"/></svg>`;
 }
-/** Một tổng chia phần (thanh ngang có khe 2px) + chú giải có số & %. */
+/** Một tổng chia phần (thanh ngang có khe 2px) + chú giải có số & %; mỗi phần bấm được. */
 function segBar(segs, unit = '') {
   const tot = BK.sum(segs.map((s) => s.value));
   if (!tot) return '<div class="muted" style="font-size:12.5px">Chưa có dữ liệu</div>';
-  return `<div class="seg">${segs.filter((s) => s.value > 0).map((s) => `<i style="flex:${s.value};background:${s.color}" data-tip="${esc(`${s.label}: ${s.value}${unit} (${Math.round((s.value / tot) * 100)}%)`)}"></i>`).join('')}</div>
-  <div class="legend">${segs.map((s) => `<span><i style="background:${s.color}"></i>${s.label} <b>${s.value}${unit}</b> <em>${Math.round((s.value / tot) * 100)}%</em></span>`).join('')}</div>`;
+  return `<div class="seg">${segs.filter((s) => s.value > 0).map((s) => `<i style="flex:${s.value};background:${s.color}" ${s.act || ''} data-tip="${esc(`${s.label}: ${s.value}${unit} (${Math.round((s.value / tot) * 100)}%) — bấm để xem`)}"></i>`).join('')}</div>
+  <div class="legend">${segs.map((s) => `<span ${s.value ? s.act || '' : ''} class="${s.value && s.act ? 'go' : ''}"><i style="background:${s.color}"></i>${s.label} <b>${s.value}${unit}</b> <em>${Math.round((s.value / tot) * 100)}%</em></span>`).join('')}</div>`;
 }
-/** Thanh ngang xếp hạng: nhãn trái, giá trị ở đầu thanh. */
-function hBars(items, { color = VC.series, fmt = shortMoney, open = '' } = {}) {
+/** Thanh ngang: nhãn trái, giá trị ở đầu thanh. */
+function hBars(items, { color = VC.series, fmt = shortMoney } = {}) {
   const max = Math.max(0, ...items.map((x) => x.value)) || 1;
   if (!items.length) return '<div class="muted" style="font-size:12.5px;padding:8px 0">Không có</div>';
-  return `<div class="hb">${items.map((x) => `<div class="hbr" ${open && x.id ? `data-${open}="${x.id}"` : ''} data-tip="${esc(x.tip || `${x.label}: ${fmt(x.value)}`)}"><span class="hbl">${esc(x.label)}</span><span class="hbt"><i style="width:${x.value > 0 ? Math.max(1.5, (x.value / max) * 100) : 0}%;background:${color}"></i><b>${fmt(x.value)}</b></span></div>`).join('')}</div>`;
+  return `<div class="hb">${items.map((x) => `<div class="hbr ${x.act && x.value ? 'go' : ''}" ${x.value ? x.act || '' : ''} data-tip="${esc(x.tip || `${x.label}: ${fmt(x.value)}`)}"><span class="hbl">${esc(x.label)}</span><span class="hbt"><i style="width:${x.value > 0 ? Math.max(1.5, (x.value / max) * 100) : 0}%;background:${color}"></i><b>${fmt(x.value)}</b></span></div>`).join('')}</div>`;
 }
 function sparkline(vals, w = 110, h = 28) {
   const max = Math.max(1, ...vals), st = w / Math.max(1, vals.length - 1);
@@ -1346,64 +1384,73 @@ function months12(today = BK.todayISO()) {
   for (let i = 11; i >= 0; i--) { const d = new Date(Date.UTC(y, m - 1 - i, 1)); out.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`); }
   return out;
 }
+const AGE = ['1–30 ngày', '31–60 ngày', '61–90 ngày', 'Trên 90 ngày'];
+const ageOf = (q) => (q <= 30 ? 0 : q <= 60 ? 1 : q <= 90 ? 2 : 3);
+const gocCls = (s) => (s.done ? 'done' : s.quaHan ? 'qua' : s.goc === 'thieu' ? 'thieu' : 'chua');
+const GOC_CLS = { done: ['Đã nhận đủ', 'p-ok'], thieu: ['Nhận thiếu', 'p-warn'], chua: ['Chưa nhận, trong hạn', 'p-mute'], qua: ['Quá hạn', 'p-err'] };
 function portfolio(kunns) {
   const today = BK.todayISO(), ms = months12(today), byM = Object.fromEntries(ms.map((k) => [k, { v: 0, n: 0 }]));
   const goc = { done: 0, thieu: 0, chua: 0, qua: 0 }, aging = [0, 0, 0, 0], overdue = [];
-  let n = 0, nDone = 0;
   for (const k of kunns) {
     const s = BK.kunnSummary(k, { hanNgay: hanNgay(), today });
     const mk = (k.ngay_gn || '').slice(0, 7);
     if (byM[mk]) { byM[mk].v += s.tong_gn; byM[mk].n++; }
-    n++;
-    if (s.done) { goc.done++; nDone++; } else if (s.quaHan) {
-      goc.qua++; aging[s.quaHan <= 30 ? 0 : s.quaHan <= 60 ? 1 : s.quaHan <= 90 ? 2 : 3]++;
-      overdue.push({ k, s });
-    } else if (s.goc === 'thieu') goc.thieu++; else goc.chua++;
+    const c = gocCls(s); goc[c]++;
+    if (c === 'qua') { aging[ageOf(s.quaHan)]++; overdue.push({ k, s }); }
   }
+  const n = kunns.length;
   const monthly = ms.map((k) => ({ key: k, label: `T${+k.slice(5)}/${k.slice(2, 4)}`, value: byM[k].v, tip: `Tháng ${+k.slice(5)}/${k.slice(0, 4)}: ${money(byM[k].v)} · ${byM[k].n} KUNN` }));
-  return { monthly, gn12: BK.sum(monthly.map((x) => x.value)), goc, aging, overdue: overdue.sort((a, b) => b.s.quaHan - a.s.quaHan), n, pctDone: n ? Math.round((nDone / n) * 100) : 0 };
+  return { monthly, gn12: BK.sum(monthly.map((x) => x.value)), goc, aging, overdue: overdue.sort((a, b) => b.s.quaHan - a.s.quaHan), n, pctDone: n ? Math.round((goc.done / n) * 100) : 0 };
 }
-const gocSegs = (g) => [
-  { label: 'Đã nhận đủ', value: g.done, color: VC.good },
-  { label: 'Nhận thiếu', value: g.thieu, color: VC.warn },
-  { label: 'Chưa nhận, trong hạn', value: g.chua, color: VC.idle },
-  { label: 'Quá hạn', value: g.qua, color: VC.crit },
+// data-act: thuộc tính cho phần tử bấm để xem chi tiết (xử lý chung ở onAct)
+const A = (o) => Object.entries(o).filter(([, v]) => v != null && v !== '').map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ');
+const gocSegs = (g, cid) => [
+  { label: 'Đã nhận đủ', value: g.done, color: VC.good, act: A({ act: 'kl', goc: 'done', cid }) },
+  { label: 'Nhận thiếu', value: g.thieu, color: VC.warn, act: A({ act: 'kl', goc: 'thieu', cid }) },
+  { label: 'Chưa nhận, trong hạn', value: g.chua, color: VC.idle, act: A({ act: 'kl', goc: 'chua', cid }) },
+  { label: 'Quá hạn', value: g.qua, color: VC.crit, act: A({ act: 'kl', goc: 'qua', cid }) },
 ];
-const agingBars = (a) => hBars(['1–30 ngày', '31–60 ngày', '61–90 ngày', 'Trên 90 ngày'].map((l, i) => ({ label: l, value: a[i], tip: `Quá hạn ${l}: ${a[i]} KUNN` })), { color: VC.crit, fmt: (v) => `${v} KUNN` });
-const panel = (title, sub, body, extra = '') => `<section class="card panel"><header><div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>${extra}</header>${body}</section>`;
-function tile(label, value, sub = '', { tone = '', icon = '', spark = '', meter = null } = {}) {
-  return `<div class="card tile ${tone}"><div class="tl">${icon ? `<span class="ic">${icon}</span>` : ''}${label}</div><div class="tv">${value}</div>
-    ${meter != null ? `<div class="meter"><i style="width:${meter}%"></i></div>` : ''}${sub || spark ? `<div class="ts"><span>${sub}</span>${spark}</div>` : ''}</div>`;
+const agingBars = (a, cid) => hBars(AGE.map((l, i) => ({ label: l, value: a[i], tip: `Quá hạn ${l}: ${a[i]} KUNN — bấm để xem`, act: A({ act: 'kl', goc: 'qua', age: i, cid }) })), { color: VC.crit, fmt: (v) => `${v} KUNN` });
+const panel = (title, sub, body, extra = '', cls = '') => `<section class="card panel ${cls}"><header><div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>${extra}</header><div class="pbody">${body}</div></section>`;
+const more = (label, act) => `<button class="lnk" ${act}>${label} →</button>`;
+function tile(label, value, sub = '', { tone = '', icon = '', spark = '', meter = null, act = '' } = {}) {
+  return `<div class="card tile ${tone} ${act ? 'go' : ''}" ${act}><div class="tl">${icon ? `<span class="ic">${icon}</span>` : ''}${label}</div><div class="tv">${value}</div>
+    ${meter != null ? `<div class="meter"><i style="width:${meter}%"></i></div>` : ''}<div class="ts"><span>${sub}</span>${spark}</div>${act ? '<span class="tgo">Xem chi tiết →</span>' : ''}</div>`;
+}
+function chartsRow(pf, cid) {
+  return `<div class="grid-a">
+    ${panel('Giải ngân theo tháng', `12 tháng gần nhất · bấm vào cột để xem các KUNN của tháng`, colChart(pf.monthly, { act: (p) => A({ act: 'kl', month: p.key, cid }) }), more('Tất cả KUNN', A({ act: 'kl', cid })))}
+    ${panel('Hồ sơ gốc', `${pf.n} KUNN · hạn ${hanNgay()} ngày sau GN · bấm để xem`, segBar(gocSegs(pf.goc, cid)) + '<div class="sub2">Quá hạn bao lâu</div>' + agingBars(pf.aging, cid), more('Chưa đủ hồ sơ', A({ act: 'kl', goc: 'pending', cid })))}
+  </div>`;
 }
 
 function renderMain() {
   const el = $('#main');
   tip.style.display = 'none';
-  if (!S.cid) { el.innerHTML = dashboardHtml(); bindDash(el); return; }
+  if (!S.cid) { el.innerHTML = dashboardHtml(); return; }
   const c = cust(S.cid); if (!c) { el.innerHTML = ''; return; }
   const an = S.an || BK.analyze([]);
   const sum = BK.customerSummary(S.kunns, { hanNgay: hanNgay() });
   const pf = portfolio(S.kunns);
   const nErr = an.alerts.filter((a) => a.sev >= 3).length;
+  const cid = S.cid;
   const tabs = [['kunn', 'Khế ước & hóa đơn', S.kunns.length], ['inv', 'Theo dõi hóa đơn', an.invoices.length], ['goc', 'Hồ sơ gốc', sum.n_pending, sum.n_qua_han ? 'r' : ''], ['alert', 'Cảnh báo', an.alerts.length, nErr ? 'r' : ''], ['log', 'Nhật ký', '']];
-  el.innerHTML = `<div class="ph"><div><div class="crumb"><a data-home>Tổng quan</a> / Khách hàng</div><h1 id="custName">${esc(c.name)}</h1><div class="sub">${[c.mst && 'MST ' + c.mst, c.bank, c.owner && 'Phụ trách: ' + c.owner, sum.last_gn && 'GN gần nhất ' + dd(sum.last_gn)].filter(Boolean).map(esc).join(' · ')}</div></div>
-    <span style="flex:1"></span><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn sm pri" id="bImp2">⬆ Tải bảng kê cho KH này</button></div>
+  el.innerHTML = `<div class="ph"><div><div class="crumb"><a data-act="home">Tổng quan</a> / Khách hàng</div><h1 id="custName">${esc(c.name)}</h1><div class="sub">${[c.mst && 'MST ' + c.mst, c.bank, c.owner && 'Phụ trách: ' + c.owner, sum.last_gn && 'GN gần nhất ' + dd(sum.last_gn)].filter(Boolean).map(esc).join(' · ')}</div></div>
+    <span style="flex:1"></span><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
   <div class="tiles">
-    ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫' })}
-    ${tile('Giải ngân 12 tháng', shortMoney(pf.gn12), 'theo tháng →', { spark: sparkline(pf.monthly.map((x) => x.value)) })}
-    ${tile('Còn lại chưa giải ngân', shortMoney(sum.con_lai), `${sum.n_mot_phan} hóa đơn GN 1 phần`, { icon: '◐' })}
-    ${tile('Hóa đơn vượt / trùng', String(sum.n_vuot), sum.n_vuot ? 'cần xử lý' : 'không có', { tone: sum.n_vuot ? 'crit' : 'good', icon: sum.n_vuot ? '⚠' : '✓' })}
-    ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '' })}
-    ${tile('KUNN quá hạn hồ sơ gốc', String(sum.n_qua_han), sum.n_qua_han ? `lâu nhất ${sum.max_qua_han} ngày` : 'không có', { tone: sum.n_qua_han ? 'crit' : 'good', icon: sum.n_qua_han ? '⏱' : '✓' })}
+    ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫', act: A({ act: 'kl', cid }) })}
+    ${tile('Giải ngân 12 tháng', shortMoney(pf.gn12), `tháng này ${shortMoney(pf.monthly[11].value)}`, { spark: sparkline(pf.monthly.map((x) => x.value)), act: A({ act: 'kl', cid, m12: 1 }) })}
+    ${tile('Còn lại chưa giải ngân', shortMoney(sum.con_lai), `${sum.n_mot_phan} hóa đơn GN 1 phần`, { icon: '◐', act: A({ act: 'il', st: 'mot_phan', cid }) })}
+    ${tile('Hóa đơn vượt / trùng', String(sum.n_vuot), sum.n_vuot ? 'cần xử lý' : 'không có', { tone: sum.n_vuot ? 'crit' : 'good', icon: sum.n_vuot ? '⚠' : '✓', act: A({ act: 'il', st: 'loi', cid }) })}
+    ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '', act: A({ act: 'kl', goc: 'pending', cid }) })}
+    ${tile('KUNN quá hạn hồ sơ gốc', String(sum.n_qua_han), sum.n_qua_han ? `lâu nhất ${sum.max_qua_han} ngày` : 'không có', { tone: sum.n_qua_han ? 'crit' : 'good', icon: sum.n_qua_han ? '⏱' : '✓', act: A({ act: 'kl', goc: 'qua', cid }) })}
   </div>
-  ${S.kunns.length ? `<div class="g2">${panel('Giải ngân theo tháng', '12 tháng gần nhất · theo ngày giải ngân KUNN', colChart(pf.monthly))}
-    ${panel('Tình trạng hồ sơ gốc', `theo số KUNN · hạn ${hanNgay()} ngày sau GN`, segBar(gocSegs(pf.goc)) + '<div class="sub2">Tuổi quá hạn</div>' + agingBars(pf.aging))}</div>` : ''}
+  ${S.kunns.length ? chartsRow(pf, cid) : `<div class="card empty" style="margin-bottom:12px">Khách hàng chưa có KUNN nào. Bấm <b>⬆ Nạp bảng kê mới cho KH này</b> để nạp bảng kê khách hàng gửi.</div>`}
   <div class="tabs">${tabs.map(([k, l, n, cls]) => `<button class="tab ${S.tab === k ? 'act' : ''}" data-tab="${k}">${l}${n !== '' ? `<span class="n ${cls || ''}">${n}</span>` : ''}</button>`).join('')}</div>
   <div id="tabBody"></div>`;
   $('#bEditC').onclick = () => editCustomer(c);
   $('#bImp2').onclick = () => openImport(S.cid);
-  $('#bMaster').onclick = () => appendToMaster([...S.kunns].sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || '')).map((k) => ({ ...k, so_tien: k.so_tien })), c.name);
-  $('[data-home]', el).onclick = () => selectCustomer(null);
+  $('#bMaster').onclick = () => appendToMaster([...S.kunns].sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || '')), c.name);
   $$('[data-tab]', el).forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; renderMain(); });
   const body = $('#tabBody');
   ({ kunn: renderKunnTab, inv: renderInvTab, goc: renderGocTab, alert: renderAlertTab, log: renderLogTab }[S.tab])(body, an);
@@ -1411,52 +1458,140 @@ function renderMain() {
 
 function dashboardHtml() {
   const cs = S.customers;
-  const all = cs.flatMap((c) => S.store.kunnsOf(c.id).map((k) => ({ ...k, _c: c })));
+  const all = cs.flatMap((c) => S.store.kunnsOf(c.id));
   const pf = portfolio(all);
   const tot = (k) => BK.sum(cs.map((c) => (summaryOf(c.id) || {})[k]));
   const nVuot = tot('n_vuot'), nQua = tot('n_qua_han');
-  const ms = new Set(months12().map(String));
-  const top = cs.map((c) => ({ id: c.id, label: c.name, value: BK.sum(S.store.kunnsOf(c.id).filter((k) => ms.has((k.ngay_gn || '').slice(0, 7))).map((k) => BK.sum(k.lines.map((l) => l.tien_gn)))) }))
-    .filter((x) => x.value > 0).sort((a, b) => b.value - a.value).slice(0, 8);
+  const ms = new Set(months12());
+  const gn12 = Object.fromEntries(cs.map((c) => [c.id, BK.sum(S.store.kunnsOf(c.id).filter((k) => ms.has((k.ngay_gn || '').slice(0, 7))).map((k) => BK.sum(k.lines.map((l) => l.tien_gn))))]));
+  const maxGn12 = Math.max(1, ...Object.values(gn12));
   const errs = cs.map((c) => ({ c, s: summaryOf(c.id) })).filter((x) => x.s && x.s.n_vuot).sort((a, b) => b.s.n_vuot - a.s.n_vuot);
+  const cname = (id) => (cust(id) || {}).name || '';
   const todo = [
-    ...errs.slice(0, 4).map(({ c, s }) => `<li data-open="${c.id}"><span class="ti crit">⚠</span><div><b>${esc(c.name)}</b><p>${s.n_vuot} hóa đơn giải ngân vượt / trùng — kiểm tra tab Cảnh báo</p></div><em>Lỗi HĐ</em></li>`),
-    ...pf.overdue.slice(0, 8).map(({ k, s }) => `<li data-open="${k._c.id}"><span class="ti warn">⏱</span><div><b>${esc(k._c.name)}</b><p>KUNN ${esc(k.so_kunn)} · GN ${dd(k.ngay_gn)} · ${s.nChua + s.nThieu}/${s.n} dòng chưa đủ hồ sơ</p></div><em>${s.quaHan} ngày</em></li>`),
+    ...errs.map(({ c, s }) => `<li ${A({ act: 'il', st: 'loi', cid: c.id })}><span class="ti crit">⚠</span><div><b>${esc(c.name)}</b><p>${s.n_vuot} hóa đơn giải ngân vượt / trùng</p></div><em>Lỗi HĐ</em></li>`),
+    ...pf.overdue.slice(0, 30).map(({ k, s }) => `<li ${A({ act: 'open', cid: k.customerId, k: k.id })}><span class="ti warn">⏱</span><div><b>${esc(cname(k.customerId))}</b><p>KUNN ${esc(k.so_kunn)} · GN ${dd(k.ngay_gn)} · ${s.nChua + s.nThieu}/${s.n} dòng chưa đủ hồ sơ</p></div><em>${s.quaHan} ngày</em></li>`),
   ];
-  const rows = cs.map((c) => {
+  const rows = [...cs].sort((a, b) => (gn12[b.id] || 0) - (gn12[a.id] || 0) || (summaryOf(b.id) || {}).tong_gn - (summaryOf(a.id) || {}).tong_gn).map((c) => {
     const s = summaryOf(c.id);
-    if (!s) return `<tr data-open="${c.id}"><td><b>${esc(c.name)}</b></td><td colspan="7" class="muted">Chưa có KUNN nào</td></tr>`;
+    if (!s) return `<tr ${A({ act: 'open', cid: c.id })}><td><b>${esc(c.name)}</b></td><td colspan="5" class="muted">Chưa có KUNN — bấm để mở & nạp bảng kê</td></tr>`;
     const pct = s.n_kunn ? Math.round(((s.n_kunn - s.n_pending) / s.n_kunn) * 100) : 0;
-    return `<tr data-open="${c.id}"><td><b>${esc(c.name)}</b><div class="hist">${esc(c.owner || '')}</div></td>
-      <td class="num">${s.n_kunn}</td><td class="num">${money(s.tong_gn)}</td><td>${dd(s.last_gn)}</td>
-      <td class="num">${s.n_mot_phan ? `${money(s.con_lai)}<div class="hist">${s.n_mot_phan} HĐ</div>` : '—'}</td>
-      <td>${s.n_vuot ? `<span class="pill p-err">⚠ ${s.n_vuot} lỗi</span>` : ''} ${s.n_nghi ? `<span class="pill p-warn">${s.n_nghi} nghi trùng</span>` : ''}${!s.n_vuot && !s.n_nghi ? '<span class="pill p-ok">✓ OK</span>' : ''}</td>
-      <td style="min-width:140px"><div class="mini"><i style="width:${pct}%"></i></div><div class="hist">${pct}% · ${s.n_pending ? s.n_pending + ' KUNN chưa đủ' : 'đủ'}</div></td>
-      <td>${s.n_qua_han ? `<span class="pill p-err">⏱ ${s.n_qua_han} KUNN · ${s.max_qua_han} ngày</span>` : '<span class="muted">—</span>'}</td></tr>`;
+    const g = gn12[c.id] || 0;
+    return `<tr ${A({ act: 'open', cid: c.id })}><td><b>${esc(c.name)}</b><div class="hist">${s.n_kunn} KUNN · GN ${dd(s.last_gn)}</div></td>
+      <td class="num">${money(s.tong_gn)}</td>
+      <td style="min-width:150px"><div class="ib"><i style="width:${g ? Math.max(2, (g / maxGn12) * 100) : 0}%"></i></div><div class="hist">${g ? shortMoney(g) : '—'}</div></td>
+      <td class="num">${s.n_mot_phan ? `${shortMoney(s.con_lai)}<div class="hist">${s.n_mot_phan} HĐ</div>` : '—'}</td>
+      <td>${s.n_vuot ? `<span class="pill p-err">⚠ ${s.n_vuot} lỗi</span>` : '<span class="pill p-ok">✓ OK</span>'}</td>
+      <td style="min-width:120px"><div class="mini"><i style="width:${pct}%"></i></div><div class="hist">${pct}% đủ${s.n_qua_han ? ` · <b style="color:var(--err)">${s.n_qua_han} quá hạn</b>` : ''}</div></td></tr>`;
   }).join('');
   const now = new Date();
-  return `<div class="ph"><div><div class="crumb">Danh mục giải ngân theo hóa đơn</div><h1>Tổng quan</h1><div class="sub">${cs.length} khách hàng · ${pf.n} KUNN · số liệu đến ${now.toLocaleDateString('vi-VN')} · hạn hồ sơ gốc ${hanNgay()} ngày sau GN</div></div><span style="flex:1"></span>
-    <button class="btn sm" onclick="BKAPP.exportDashboard()">⬇ Xuất Excel tổng quan</button></div>
-  ${cs.length ? `<div class="tiles">
-    ${tile('Khách hàng theo dõi', String(cs.length), `${pf.n} KUNN`, { icon: '◎' })}
-    ${tile('Giải ngân 12 tháng', shortMoney(pf.gn12), `tháng này ${shortMoney(pf.monthly[11].value)}`, { spark: sparkline(pf.monthly.map((x) => x.value)) })}
-    ${tile('Còn lại chưa giải ngân', shortMoney(tot('con_lai')), `${tot('n_mot_phan')} hóa đơn GN 1 phần`, { icon: '◐' })}
-    ${tile('Hóa đơn vượt / trùng', String(nVuot), nVuot ? `${errs.length} khách hàng cần xử lý` : 'không có', { tone: nVuot ? 'crit' : 'good', icon: nVuot ? '⚠' : '✓' })}
-    ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '' })}
-    ${tile('KUNN quá hạn hồ sơ gốc', String(nQua), nQua ? `lâu nhất ${Math.max(0, ...cs.map((c) => (summaryOf(c.id) || {}).max_qua_han || 0))} ngày` : 'không có', { tone: nQua ? 'crit' : 'good', icon: nQua ? '⏱' : '✓' })}
+  const head = `<div class="ph"><div><div class="crumb">Danh mục giải ngân theo hóa đơn</div><h1>Tổng quan</h1><div class="sub">${cs.length} khách hàng · ${pf.n} KUNN · số liệu đến ${now.toLocaleDateString('vi-VN')} · hạn hồ sơ gốc ${hanNgay()} ngày sau GN</div></div><span style="flex:1"></span>
+    <button class="btn sm" ${A({ act: 'kl' })}>☰ Danh sách KUNN</button><button class="btn sm" onclick="BKAPP.exportDashboard()">⬇ Xuất Excel tổng quan</button><button class="btn pri" ${A({ act: 'import' })}>⬆ Nạp bảng kê mới</button></div>`;
+  if (!cs.length) return head + `<div class="card empty"><p style="font-size:16px;margin-bottom:8px">Chưa có dữ liệu</p><p>Bấm <b>⬆ Nạp bảng kê mới</b> để nạp bảng kê khách hàng gửi, hoặc bảng kê tổng hợp đang theo dõi bằng Excel.</p></div>`;
+  return head + `<div class="tiles">
+    ${tile('Khách hàng theo dõi', String(cs.length), `${pf.n} KUNN`, { icon: '◎', act: A({ act: 'kl' }) })}
+    ${tile('Giải ngân 12 tháng', shortMoney(pf.gn12), `tháng này ${shortMoney(pf.monthly[11].value)}`, { spark: sparkline(pf.monthly.map((x) => x.value)), act: A({ act: 'kl', m12: 1 }) })}
+    ${tile('Còn lại chưa giải ngân', shortMoney(tot('con_lai')), `${tot('n_mot_phan')} hóa đơn GN 1 phần`, { icon: '◐', act: A({ act: 'il', st: 'mot_phan' }) })}
+    ${tile('Hóa đơn vượt / trùng', String(nVuot), nVuot ? `${errs.length} khách hàng cần xử lý` : 'không có', { tone: nVuot ? 'crit' : 'good', icon: nVuot ? '⚠' : '✓', act: A({ act: 'il', st: 'loi' }) })}
+    ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '', act: A({ act: 'kl', goc: 'pending' }) })}
+    ${tile('KUNN quá hạn hồ sơ gốc', String(nQua), nQua ? `lâu nhất ${Math.max(0, ...cs.map((c) => (summaryOf(c.id) || {}).max_qua_han || 0))} ngày` : 'không có', { tone: nQua ? 'crit' : 'good', icon: nQua ? '⏱' : '✓', act: A({ act: 'kl', goc: 'qua' }) })}
   </div>
-  <div class="g2">
-    ${panel('Giải ngân theo tháng', 'Tổng số tiền giải ngân các KUNN · 12 tháng gần nhất', colChart(pf.monthly))}
-    ${panel('Tình trạng hồ sơ gốc', 'Theo số KUNN của toàn danh mục', segBar(gocSegs(pf.goc)) + '<div class="sub2">Tuổi quá hạn hồ sơ gốc</div>' + agingBars(pf.aging))}
-  </div>
-  <div class="g2">
-    ${panel('Khách hàng giải ngân nhiều nhất', '12 tháng gần nhất · bấm để mở', hBars(top, { open: 'open' }))}
-    ${panel('Việc cần làm', `${todo.length ? 'Ưu tiên theo mức độ & số ngày quá hạn' : ''}`, todo.length ? `<ul class="todo">${todo.join('')}</ul>` : '<div class="okbox">✓ Không có việc tồn — không có hóa đơn lỗi, không KUNN nào quá hạn hồ sơ gốc.</div>')}
-  </div>
-  ${panel('Danh sách khách hàng', '', `<div class="tw" style="max-height:none"><table class="t click"><thead><tr><th>Khách hàng</th><th class="right">KUNN</th><th class="right">Tổng giải ngân</th><th>GN gần nhất</th><th class="right">Còn lại chưa GN</th><th>Kiểm tra hóa đơn</th><th>Hồ sơ gốc</th><th>Quá hạn</th></tr></thead><tbody>${rows}</tbody></table></div>`)}`
-    : `<div class="card empty"><p style="font-size:16px;margin-bottom:8px">Chưa có dữ liệu</p><p>Bấm <b>⬆ Tải bảng kê lên</b> để nạp bảng kê khách hàng gửi, hoặc bảng kê tổng hợp đang theo dõi bằng Excel.</p></div>`}`;
+  ${chartsRow(pf, '')}
+  <div class="grid-a grid-b">
+    ${panel('Khách hàng', 'Xếp theo giải ngân 12 tháng · bấm để mở', `<div class="tw"><table class="t click"><thead><tr><th>Khách hàng</th><th class="right">Tổng giải ngân</th><th>GN 12 tháng</th><th class="right">Còn lại chưa GN</th><th>Hóa đơn</th><th>Hồ sơ gốc</th></tr></thead><tbody>${rows}</tbody></table></div>`, '', 'fill')}
+    ${panel('Việc cần làm', todo.length ? `${errs.length} khách hàng lỗi hóa đơn · ${pf.overdue.length} KUNN quá hạn hồ sơ gốc` : '', todo.length ? `<ul class="todo">${todo.join('')}</ul>` : '<div class="okbox">✓ Không có việc tồn — không có hóa đơn lỗi, không KUNN nào quá hạn hồ sơ gốc.</div>', '', 'fill')}
+  </div>`;
 }
-function bindDash(el) { $$('[data-open]', el).forEach((r) => { r.onclick = () => selectCustomer(r.dataset.open); }); }
+
+// ═════════════════ XEM CHI TIẾT (bấm từ dashboard) ═════════════════
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act]');
+  if (!t || t.closest('#iBody')) return;
+  const d = t.dataset;
+  if (d.act === 'home') return selectCustomer(null);
+  if (d.act === 'import') return openImport();
+  if (d.act === 'open') { const m = t.closest('.modal'); if (m) m.remove(); return openKunn(d.cid, d.k); }
+  if (d.act === 'kl') return openKunnList({ cid: d.cid || '', month: d.month || (d.m12 ? '12m' : ''), goc: d.goc || '', age: d.age ?? '' });
+  if (d.act === 'il') return openInvList({ cid: d.cid || '', st: d.st || 'mot_phan' });
+});
+function openKunn(cid, kid) {
+  if (S.cid !== cid) selectCustomer(cid);
+  if (kid) {
+    const k = S.kunns.find((x) => x.id === kid) || (S.store.k.get(kid));
+    S.tab = 'kunn'; S.q = k ? k.so_kunn : ''; S.fGoc = 'all'; S.fFlag = false; S.open.add(kid); renderMain();
+    setTimeout(() => { const el = $('.tabs'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 80 }); const kk = $(`[data-k="${kid}"]`); if (kk) { kk.classList.add('flash'); setTimeout(() => kk.classList.remove('flash'), 1600); } }, 30);
+  }
+}
+function kunnRows() {
+  const today = BK.todayISO();
+  return S.customers.flatMap((c) => S.store.kunnsOf(c.id).map((k) => { const s = BK.kunnSummary(k, { hanNgay: hanNgay(), today }); return { k, c, s, cls: gocCls(s) }; }));
+}
+function openKunnList(f) {
+  const all = kunnRows();
+  const months = [...new Set(all.map((x) => (x.k.ngay_gn || '').slice(0, 7)).filter(Boolean))].sort().reverse();
+  const m = modal(`<div class="mh"><h2>Danh sách KUNN</h2><button class="x" data-close>&times;</button></div><div class="mb">
+    <div class="bar"><select class="inp" id="dC" style="width:auto"><option value="">Mọi khách hàng</option>${S.customers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+    <select class="inp" id="dM" style="width:auto"><option value="">Mọi tháng giải ngân</option><option value="12m">12 tháng gần nhất</option>${months.map((x) => `<option value="${x}">Tháng ${+x.slice(5)}/${x.slice(0, 4)}</option>`).join('')}</select>
+    <select class="inp" id="dG" style="width:auto"><option value="">Mọi tình trạng hồ sơ gốc</option><option value="pending">Chưa đủ hồ sơ gốc</option>${Object.entries(GOC_CLS).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select>
+    <select class="inp" id="dA" style="width:auto"><option value="">Mọi mức quá hạn</option>${AGE.map((l, i) => `<option value="${i}">Quá hạn ${l}</option>`).join('')}</select>
+    <input class="inp" id="dQ" placeholder="Tìm số KUNN…" style="width:170px"><span style="flex:1"></span><button class="btn sm" id="dX">⬇ Xuất Excel danh sách</button></div>
+    <div id="dSum" class="hist" style="margin:4px 0 8px"></div><div class="card tw" style="max-height:62vh"><table class="t click"><thead><tr><th>Khách hàng</th><th>Số KUNN</th><th>Ngày GN</th><th>Ngày ĐH</th><th class="right">Số tiền</th><th class="right">Dòng</th><th>Hồ sơ gốc</th><th>Hạn nộp</th><th>Chứng từ còn thiếu</th></tr></thead><tbody id="dB"></tbody></table></div></div>`);
+  $('#dC', m).value = f.cid; $('#dM', m).value = f.month; $('#dG', m).value = f.goc; $('#dA', m).value = String(f.age);
+  let cur = [];
+  const ms12 = new Set(months12());
+  const draw = () => {
+    const c = $('#dC', m).value, mo = $('#dM', m).value, g = $('#dG', m).value, a = $('#dA', m).value, q = BK.fold($('#dQ', m).value);
+    cur = all.filter((x) => (!c || x.c.id === c) && (!mo || (mo === '12m' ? ms12.has((x.k.ngay_gn || '').slice(0, 7)) : (x.k.ngay_gn || '').startsWith(mo)))
+      && (!g || (g === 'pending' ? x.cls !== 'done' : x.cls === g)) && (a === '' || (x.cls === 'qua' && ageOf(x.s.quaHan) === +a)) && (!q || BK.fold(x.k.so_kunn).includes(q)))
+      .sort((p, r) => (r.s.quaHan || 0) - (p.s.quaHan || 0) || (r.k.ngay_gn || '').localeCompare(p.k.ngay_gn || ''));
+    $('#dSum', m).textContent = `${cur.length} KUNN · tổng ${money(BK.sum(cur.map((x) => x.s.tong_gn)))} · bấm vào dòng để mở KUNN`;
+    $('#dB', m).innerHTML = cur.slice(0, 1000).map(({ k, c: cc, s, cls }) => `<tr ${A({ act: 'open', cid: cc.id, k: k.id })} class="${cls === 'qua' ? 'bad' : ''}"><td>${esc(cc.name)}</td><td><b>${esc(k.so_kunn)}</b></td><td>${dd(k.ngay_gn)}</td><td>${dd(k.ngay_dh)}</td><td class="num">${money(s.tong_gn)}</td><td class="num">${s.n}</td>
+      <td><span class="pill ${GOC_CLS[cls][1]}">${cls === 'qua' ? `Quá hạn ${s.quaHan} ngày` : GOC_CLS[cls][0]}</span><div class="hist">${s.nDa}/${s.n} dòng đã nhận</div></td><td>${dd(s.han)}</td>
+      <td class="hist" style="max-width:260px">${esc([...new Set(k.lines.map((l) => l.thieu).filter(Boolean))].slice(0, 4).join('; '))}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">Không có KUNN khớp bộ lọc</td></tr>';
+  };
+  ['dC', 'dM', 'dG', 'dA'].forEach((id) => { $('#' + id, m).onchange = draw; });
+  $('#dQ', m).oninput = draw;
+  $('#dX', m).onclick = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet('DANH SÁCH KUNN', stamp(), ['KHÁCH HÀNG', 'SỐ KUNN', 'NGÀY GN', 'NGÀY ĐH', 'SỐ TIỀN', 'SỐ DÒNG', 'HỒ SƠ GỐC', 'ĐÃ NHẬN (DÒNG)', 'HẠN NỘP', 'SỐ NGÀY QUÁ HẠN', 'CHỨNG TỪ CÒN THIẾU'],
+      cur.map(({ k, c: cc, s, cls }) => [xc(cc.name), xc(k.so_kunn, { b: true }), xc(k.ngay_gn, { date: true }), xc(k.ngay_dh, { date: true }), xc(s.tong_gn), xc(s.n), xc(GOC_CLS[cls][0], { fill: cls === 'qua' ? FILL.err : cls === 'done' ? FILL.ok : undefined }), xc(s.nDa), xc(s.han, { date: true }), xc(s.quaHan || 0), xc([...new Set(k.lines.map((l) => l.thieu).filter(Boolean))].join('; '), { wrap: true })]),
+      [30, 18, 12, 12, 18, 8, 18, 10, 12, 10, 50]), 'KUNN');
+    download(wb, `DanhSach_KUNN_${BK.todayISO()}.xlsx`);
+  };
+  draw();
+}
+function openInvList(f) {
+  const rows = [];
+  for (const c of S.customers) {
+    if (f.cid && c.id !== f.cid) continue;
+    const ks = S.store.kunnsOf(c.id); if (!ks.length) continue;
+    const an = c.id === S.cid && S.an ? S.an : BK.analyze(ks);
+    for (const iv of an.invoices) rows.push({ c, iv });
+  }
+  const m = modal(`<div class="mh"><h2>Theo dõi hóa đơn</h2><button class="x" data-close>&times;</button></div><div class="mb">
+    <div class="bar"><select class="inp" id="hS" style="width:auto"><option value="mot_phan">Giải ngân 1 phần — còn lại</option><option value="loi">Vượt tiền hóa đơn / đã GN đủ trước đó</option><option value="nhieu">Giải ngân qua nhiều KUNN</option><option value="">Tất cả hóa đơn</option></select>
+    <input class="inp" id="hQ" placeholder="Tìm khách hàng, nhà cung cấp, số HĐ…" style="min-width:260px"><span style="flex:1"></span><button class="btn sm" id="hX">⬇ Xuất Excel</button></div>
+    <div id="hSum" class="hist" style="margin:4px 0 8px"></div><div class="card tw" style="max-height:62vh"><table class="t click"><thead><tr><th>Khách hàng</th><th>Nhà cung cấp</th><th>Số HĐ</th><th>Ngày HĐ</th><th class="right">Tiền HĐ</th><th class="right">Đã GN</th><th class="right">Còn lại</th><th>Các lần giải ngân</th></tr></thead><tbody id="hB"></tbody></table></div></div>`);
+  $('#hS', m).value = f.st;
+  let cur = [];
+  const draw = () => {
+    const st = $('#hS', m).value, q = BK.fold($('#hQ', m).value);
+    cur = rows.filter(({ c, iv }) => (!st || (st === 'loi' ? iv.status === 'vuot' : st === 'nhieu' ? iv.n_kunn > 1 : iv.status === st)) && (!q || BK.fold(`${c.name} ${iv.ncc} ${iv.so_hd}`).includes(q)))
+      .sort((a, b) => (st === 'mot_phan' ? (b.iv.con_lai || 0) - (a.iv.con_lai || 0) : (b.iv.tong_gn - (b.iv.tien_hd || 0)) - (a.iv.tong_gn - (a.iv.tien_hd || 0))));
+    $('#hSum', m).textContent = `${cur.length} hóa đơn${st === 'mot_phan' ? ` · còn lại ${money(BK.sum(cur.map((x) => x.iv.con_lai)))}` : ''} · bấm vào dòng để mở`;
+    $('#hB', m).innerHTML = cur.slice(0, 1000).map(({ c, iv }) => `<tr ${A({ act: 'open', cid: c.id, k: iv.uses[iv.uses.length - 1].kunnId })} class="${iv.status === 'vuot' ? 'bad' : ''}"><td>${esc(c.name)}</td><td>${esc(iv.ncc)}</td><td><b>${esc(iv.so_hd)}</b></td><td>${dd(iv.ngay_hd)}</td>
+      <td class="num">${money(iv.tien_hd, iv.loai_tien)}</td><td class="num">${money(iv.tong_gn, iv.loai_tien)}</td><td class="num"><b>${iv.con_lai != null ? money(iv.con_lai, iv.loai_tien) : ''}</b></td>
+      <td class="hist">${iv.uses.map((u) => `${esc(u.so_kunn)} (${dd(u.ngay_gn)}): ${money(u.tien_gn)}`).join('<br>')}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Không có hóa đơn</td></tr>';
+  };
+  $('#hS', m).onchange = draw; $('#hQ', m).oninput = draw;
+  $('#hX', m).onclick = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet('THEO DÕI HÓA ĐƠN', stamp(), ['KHÁCH HÀNG', 'NHÀ CUNG CẤP', 'SỐ HĐ', 'NGÀY HĐ', 'TIỀN HĐ', 'ĐÃ GN', 'CÒN LẠI', 'CÁC LẦN GIẢI NGÂN'],
+      cur.map(({ c, iv }) => [xc(c.name), xc(iv.ncc), xc(iv.so_hd, { b: true }), xc(iv.ngay_hd, { date: true }), xc(iv.tien_hd), xc(iv.tong_gn), xc(iv.con_lai, { b: true }), xc(iv.uses.map((u) => `${u.so_kunn} · ${dd(u.ngay_gn)} · ${money(u.tien_gn)}`).join('\n'), { wrap: true })]),
+      [28, 40, 12, 12, 16, 16, 16, 50]), 'Hóa đơn');
+    download(wb, `TheoDoi_HoaDon_${BK.todayISO()}.xlsx`);
+  };
+  draw();
+}
 
 // ═════════════════ GHI VÀO FILE BẢNG KÊ TỔNG HỢP CÓ SẴN ═════════════════
 // Mở file Excel bảng kê tổng hợp đang theo dõi → tìm sheet & cột như lúc nạp → thêm các KUNN chưa có vào cuối bảng
@@ -1551,12 +1686,13 @@ function renderKunnTab(body, an) {
   body.innerHTML = `<div class="bar"><input class="inp" id="kq" placeholder="Tìm số KUNN, nhà cung cấp, số hóa đơn…" value="${esc(S.q)}" style="min-width:300px">
     <select class="inp" id="kfg"><option value="all">Mọi KUNN</option><option value="pending" ${S.fGoc === 'pending' ? 'selected' : ''}>Chưa đủ hồ sơ gốc</option><option value="qua_han" ${S.fGoc === 'qua_han' ? 'selected' : ''}>Quá hạn hồ sơ gốc</option></select>
     <label style="font-size:13px"><input type="checkbox" id="kff" ${S.fFlag ? 'checked' : ''}> Chỉ KUNN có cảnh báo</label>
-    <span class="muted" style="font-size:12.5px">${list.length}/${S.kunns.length} KUNN</span><span style="flex:1"></span>
+    <span class="muted" style="font-size:12.5px">${list.length}/${S.kunns.length} KUNN</span>${S.q ? '<button class="btn sm" id="kclr">✕ Bỏ lọc, xem tất cả KUNN</button>' : ''}<span style="flex:1"></span>
     <button class="btn sm" id="kopen">Mở hết</button><button class="btn sm" id="kclose">Thu gọn</button></div>
   ${list.length ? list.slice(0, 300).map(({ k, s }) => kunnCard(k, s, an, q)).join('') : `<div class="card empty">${S.kunns.length ? 'Không có KUNN khớp bộ lọc' : 'Chưa có khế ước nào — bấm “⬆ Tải bảng kê cho KH này”.'}</div>`}`;
   const kq = $('#kq', body);
   kq.oninput = () => { S.q = kq.value; clearTimeout(kq._t); kq._t = setTimeout(() => { renderKunnTab(body, an); const n = $('#kq', body); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
   $('#kfg', body).onchange = (e) => { S.fGoc = e.target.value; renderKunnTab(body, an); };
+  if ($('#kclr', body)) $('#kclr', body).onclick = () => { S.q = ''; renderKunnTab(body, an); };
   $('#kff', body).onchange = (e) => { S.fFlag = e.target.checked; renderKunnTab(body, an); };
   $('#kopen', body).onclick = () => { list.forEach(({ k }) => S.open.add(k.id)); renderKunnTab(body, an); };
   $('#kclose', body).onclick = () => { S.open.clear(); renderKunnTab(body, an); };
