@@ -134,6 +134,7 @@ svg.viz{width:100%;height:auto;display:block}svg .ax{font-size:11px;fill:#8C7E71
 table.click tbody tr{cursor:pointer}
 .vtip{position:fixed;z-index:300;pointer-events:none;background:#14233a;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:var(--shm);display:none;max-width:320px}
 .spark{display:block}
+
 .colchk{padding:10px 14px;margin:10px 0}.cc-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cc-h b{color:var(--navy)}
 .cc-l{margin:8px 0 0 18px;font-size:12.5px}.cc-l li.e{color:var(--err)}.cc-l li.w{color:#8a5a0c}
 .aibox{margin-top:8px;border-radius:10px;padding:9px 12px;font-size:12.5px;border:1px solid}.aibox.ok{background:var(--ok-bg);border-color:#cfe6d8;color:var(--ok)}.aibox.warn{background:var(--blue-bg);border-color:#b9d3ee;color:var(--navy)}
@@ -1057,6 +1058,70 @@ const BK = (() => {
     return { fields, issues: issues.sort((a, b) => b.sev - a.sev) };
   }
 
+  // ─── kiểm tra dữ liệu ĐÃ NẠP (không cần file gốc) ───
+  /** Soát các trường đã lưu của một khách hàng: sức khỏe từng trường + bất thường theo KUNN kèm đề xuất sửa. */
+  function storedProfile(kunns) {
+    const all = kunns.flatMap((k) => (k.lines || []).map((l) => ({ k, l })));
+    const n = all.length;
+    const cnt = (f) => all.filter(f).length;
+    const isDec = (v) => v != null && !Number.isInteger(Math.round(v * 1000) / 1000);
+    const fields = [
+      ['so_hd', 'Số hóa đơn', cnt(({ l }) => !String(l.so_hd || '').trim()), cnt(({ l }) => /^\d+[.,]\d{1,2}$/.test(String(l.so_hd || '').trim())), 'số HĐ có phần lẻ (giống số tiền)'],
+      ['ngay_hd', 'Ngày hóa đơn', cnt(({ l }) => !l.ngay_hd), cnt(({ k, l }) => l.ngay_hd && k.ngay_gn && l.ngay_hd > k.ngay_gn), 'ngày HĐ sau ngày giải ngân'],
+      ['ncc', 'Nhà cung cấp', cnt(({ l }) => !String(l.ncc || '').trim()), cnt(({ l }) => /^\s*[\d.,]+\s*$/.test(String(l.ncc || ''))), 'tên NCC là số'],
+      ['tien_hd', 'Số tiền hóa đơn', cnt(({ l }) => l.tien_hd == null), cnt(({ l }) => !l.loai_tien && isDec(l.tien_hd)), 'số lẻ mà không ghi loại tiền'],
+      ['tien_gn', 'Số tiền giải ngân', cnt(({ l }) => l.tien_gn == null), cnt(({ l }) => l.tien_hd != null && l.tien_gn != null && l.tien_gn > l.tien_hd + 1), 'GN > tiền HĐ'],
+      ['loai_tien', 'Loại tiền', 0, cnt(({ l }) => l.loai_tien && !/^(VND|USD|EUR|JPY|CNY|GBP|KRW|SGD|THB|AUD|HKD|TWD)$/.test(l.loai_tien)), 'loại tiền lạ'],
+    ].map(([k, label, empty, bad, badText]) => ({ k, label, n, empty, bad, badText }));
+    const extra = { lech: cnt(({ l }) => l.lech), noRaw: cnt(({ l }) => !l.raw) };
+    // bất thường theo KUNN
+    const med = (xs) => { const a = xs.filter((x) => x != null && x > 0).sort((p, q) => p - q); return a.length ? a[Math.floor(a.length / 2)] : null; };
+    const st = kunns.map((k) => {
+      const ls = (k.lines || []).filter((l) => !l.lech);
+      const vnd = ls.filter((l) => !l.loai_tien);
+      return { k, ls, vnd, med: med(vnd.map((l) => l.tien_gn ?? l.tien_hd)), dec: ls.length ? ls.filter((l) => !l.loai_tien && (isDec(l.tien_gn) || isDec(l.tien_hd))).length / ls.length : 0,
+        over: ls.filter((l) => l.tien_hd != null && l.tien_gn != null).length ? ls.filter((l) => l.tien_hd != null && l.tien_gn != null && l.tien_gn > l.tien_hd + 1).length / ls.filter((l) => l.tien_hd != null && l.tien_gn != null).length : 0 };
+    });
+    const custMed = med(st.map((x) => x.med));
+    const issues = [];
+    for (const x of st) {
+      const k = x.k, nl = x.ls.length;
+      if (!nl) continue;
+      if (x.dec >= 0.3) issues.push({ kid: k.id, so_kunn: k.so_kunn, type: 'ngoai_te', text: `${Math.round(x.dec * 100)}% dòng có số tiền lẻ mà không ghi loại tiền — có thể là ngoại tệ`, fix: { action: 'currency', currency: 'USD' } });
+      else if (x.med && custMed && x.med * 500 < custMed && nl >= 2) {
+        const factor = custMed / x.med >= 3e5 ? 1e6 : 1000;
+        issues.push({ kid: k.id, so_kunn: k.so_kunn, type: 'don_vi', text: `Số tiền điển hình ${fmtMoney(x.med)} — nhỏ hơn ~${fmtMoney(Math.round(custMed / x.med))} lần các KUNN khác của khách hàng (có thể ghi theo ${factor === 1000 ? 'nghìn' : 'triệu'} đồng)`, fix: { action: 'scale', factor } });
+      }
+      if (k.so_tien != null && x.vnd.length) {
+        const s = sum(x.vnd.map((l) => l.tien_gn));
+        for (const f of [1000, 1e6]) if (s > 0 && Math.abs(s * f - k.so_tien) / k.so_tien < 0.01) issues.push({ kid: k.id, so_kunn: k.so_kunn, type: 'don_vi', text: `Tổng các dòng ${fmtMoney(s)} × ${fmtMoney(f)} ≈ số tiền KUNN ${fmtMoney(k.so_tien)} — dòng đang ghi theo ${f === 1000 ? 'nghìn' : 'triệu'} đồng`, fix: { action: 'scale', factor: f } });
+      }
+      if (x.over >= 0.5 && nl >= 2) {
+        // GN = tổng 2 ô số trong dòng gốc (vd thuế NK + thuế GTGT) → cột tiền HĐ chỉ là một phần, không phải đảo cột
+        const overL = x.ls.filter((l) => l.tien_hd != null && l.tien_gn != null && l.tien_gn > l.tien_hd + 1);
+        const nums = (raw) => (String(raw || '').match(/(?:^|\| )[A-Z]{1,3}: (-?\d+(?:\.\d+)?)(?= \||$)/g) || []).map((t) => +t.replace(/^.*: /, ''));
+        const isSum = (l) => { const a = nums(l.raw); for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) if (Math.abs(a[i] + a[j] - l.tien_gn) <= 1 && (Math.abs(a[i] - l.tien_hd) <= 1 || Math.abs(a[j] - l.tien_hd) <= 1)) return true; return false; };
+        const nSum = overL.filter(isSum).length;
+        if (overL.length && nSum / overL.length >= 0.5) issues.push({ kid: k.id, so_kunn: k.so_kunn, type: 'cot_tong', text: `${nSum}/${overL.length} dòng: tiền GN = tổng 2 khoản trong dòng (vd thuế NK + GTGT), cột tiền HĐ chỉ lấy 1 khoản`, fix: { action: 'hd_from_gn' } });
+        else issues.push({ kid: k.id, so_kunn: k.so_kunn, type: 'dao_cot', text: `${Math.round(x.over * 100)}% dòng có tiền giải ngân > tiền hóa đơn — có thể đảo 2 cột tiền`, fix: { action: 'swap' } });
+      }
+    }
+    const seen = new Set();
+    return { n, fields, extra, issues: issues.filter((i) => { const key = i.kid + i.type; if (seen.has(key)) return false; seen.add(key); return true; }) };
+  }
+  /** Sửa cả KUNN theo đề xuất → danh sách patch dòng. */
+  function kunnFixPatches(k, fix) {
+    const out = [];
+    for (const l of k.lines || []) {
+      if (l.lech) continue;
+      if (fix.action === 'currency' && !l.loai_tien) out.push({ id: l.id, loai_tien: String(fix.currency || 'USD').toUpperCase() });
+      if (fix.action === 'scale' && !l.loai_tien) out.push({ id: l.id, tien_hd: l.tien_hd == null ? null : Math.round(l.tien_hd * fix.factor), tien_gn: l.tien_gn == null ? null : Math.round(l.tien_gn * fix.factor) });
+      if (fix.action === 'swap') out.push({ id: l.id, tien_hd: l.tien_gn ?? null, tien_gn: l.tien_hd ?? null });
+      if (fix.action === 'hd_from_gn' && l.tien_gn != null && (l.tien_hd == null || l.tien_gn > l.tien_hd)) out.push({ id: l.id, tien_hd: l.tien_gn });
+    }
+    return out;
+  }
+
   // ─── rà soát logic bảng kê ───
   const AUDIT = {
     lech_cot: { label: 'Lệch cột', sev: 3 },
@@ -1093,7 +1158,7 @@ const BK = (() => {
     if (k.so_tien != null && lines.length && Math.abs(k.so_tien - tong) > 1 && !(k.ack || []).includes('tong_lech')) out.push({ lineId: null, idx: -1, type: 'tong_lech', sev: 1, text: `Tổng các dòng ${fmtMoney(tong)} ≠ số tiền KUNN ${fmtMoney(k.so_tien)}` });
     return out;
   }
-  return { UNITS, detectUnit, applyUnit, profileColumns, AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
+  return { storedProfile, kunnFixPatches, UNITS, detectUnit, applyUnit, profileColumns, AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
 })();
 </script>
 <script id="bk-app">
@@ -1503,8 +1568,7 @@ function editCustomer(c) {
     try { await S.store.putCustomer(o); m.remove(); if (!c) selectCustomer(o.id); log(o.id, c ? 'sua_kh' : 'them_kh', `${c ? 'Sửa' : 'Thêm'} khách hàng ${name}`); } catch (e) { toast(errMsg(e), 'err'); }
   };
   if (c) $('#cfDel', m).onclick = async () => {
-    if (!confirm(`Xóa khách hàng "${c.name}" cùng TOÀN BỘ khế ước, hóa đơn, nhật ký? Không hoàn tác được.`)) return;
-    try { await S.store.delCustomer(c.id); m.remove(); selectCustomer(null); toast('Đã xóa'); } catch (e) { toast(errMsg(e), 'err'); }
+    m.remove(); await deleteCustomer(c);
   };
 }
 
@@ -1701,7 +1765,7 @@ function renderMain() {
   const cid = S.cid;
   const tabs = [['kunn', 'Khế ước & hóa đơn', S.kunns.length], ['inv', 'Theo dõi hóa đơn', an.invoices.length], ['goc', 'Hồ sơ gốc', sum.n_pending, sum.n_qua_han ? 'r' : ''], ['alert', 'Cảnh báo', an.alerts.length, nErr ? 'r' : ''], ['log', 'Nhật ký', '']];
   el.innerHTML = `<div class="ph"><div><div class="crumb"><a data-act="home">Tổng quan</a> / Khách hàng</div><h1 id="custName">${esc(c.name)}</h1><div class="sub">${[c.mst && 'MST ' + c.mst, c.bank, c.owner && 'Phụ trách: ' + c.owner, sum.last_gn && 'GN gần nhất ' + dd(sum.last_gn)].filter(Boolean).map(esc).join(' · ')}</div></div>
-    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
+    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'oldchk', cid: S.cid })} title="Soát lại các trường đã lưu: đơn vị tiền, loại tiền, đảo cột, thiếu thông tin…">🧪 Kiểm tra dữ liệu đã nạp</button><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
   <div class="tiles">
     ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫', act: A({ act: 'kl', cid }) })}
     ${(() => { const sr = series(S.kunns, 'gn', 'auto'); return tile('Giải ngân 12 tháng gần nhất', shortMoney(sr.total), periodLabel(sr.range), { spark: sparkline(sr.pts.map((x) => x.value)), act: A({ act: 'kl', cid, month: sr.range }) }); })()}
@@ -1777,7 +1841,8 @@ document.addEventListener('click', (e) => {
   if (d.act === 'open') { const m = t.closest('.modal'); if (m) m.remove(); return openKunn(d.cid, d.k); }
   if (d.act === 'kl') return openKunnList({ cid: d.cid || '', month: d.month || '', by: d.by || 'gn', goc: d.goc || '', age: d.age ?? '' });
   if (d.act === 'check') return openImport(d.cid || S.cid || '', true);
-  if (d.act === 'audit') return auditStored(d.cid || S.cid);
+  if (d.act === 'audit') { const m = t.closest('.modal'); if (m) m.remove(); return auditStored(d.cid || S.cid); }
+  if (d.act === 'oldchk') return openOldCheck(d.cid || S.cid);
   if (d.act === 'il') return openInvList({ cid: d.cid || '', st: d.st || 'mot_phan' });
 });
 function openKunn(cid, kid) {
@@ -2227,6 +2292,96 @@ function auditImport() {
       recheck();
     },
   });
+}
+
+// ═════════════════ KIỂM TRA DỮ LIỆU ĐÃ NẠP (khách hàng nạp từ trước) ═════════════════
+const FIX_TXT = (f) => (f.action === 'currency' ? `Gắn loại tiền ${f.currency || 'USD'} cho các dòng chưa ghi loại tiền` : f.action === 'scale' ? `Nhân số tiền các dòng × ${BK.fmtMoney(f.factor)} (đổi sang đồng)` : f.action === 'swap' ? 'Đảo cột: tiền HĐ ↔ tiền giải ngân' : f.action === 'hd_from_gn' ? 'Tiền HĐ = tiền giải ngân (cột GN là tổng các khoản của chứng từ)' : 'Giữ nguyên');
+const KTYPE = { ngoai_te: 'Có thể là ngoại tệ', don_vi: 'Sai đơn vị tiền', dao_cot: 'Đảo cột tiền', cot_tong: 'Tiền HĐ chỉ là 1 phần', ai: 'AI phát hiện' };
+function promptOld(c, ks, prof) {
+  const pick = [...new Set([...prof.issues.map((i) => i.kid), ...ks.map((k) => k.id)])].slice(0, 60);
+  const byId = new Map(ks.map((k) => [k.id, k]));
+  return `Bạn là chuyên viên kiểm soát giải ngân ngân hàng Việt Nam. Dưới đây là dữ liệu bảng kê hóa đơn giải ngân ĐÃ NẠP của khách hàng "${c.name}" (nhiều khế ước nhận nợ — KUNN).
+Hãy rà xem mỗi KUNN có bị sai ĐƠN VỊ TIỀN (ghi theo nghìn/triệu đồng thay vì đồng), sai LOẠI TIỀN (số tiền là USD/EUR… nhưng không ghi loại tiền — số có phần lẻ thường là ngoại tệ),
+hoặc ĐẢO CỘT (tiền hóa đơn ↔ tiền giải ngân) không. So sánh độ lớn số tiền giữa các KUNN của cùng khách hàng. Chỉ đề xuất khi có căn cứ.
+Hành động được phép: "currency" (gắn loại tiền, kèm currency), "scale" (nhân số tiền, kèm factor 1000 hoặc 1000000), "swap" (đảo 2 cột tiền), "hd_from_gn" (tiền HĐ đang chỉ lấy 1 khoản, vd chỉ thuế GTGT, trong khi tiền GN là tổng các khoản của chứng từ → đặt tiền HĐ = tiền GN), "none".
+Trả JSON: {"items":[{"so_kunn":"…","action":"currency|scale|swap|hd_from_gn|none","currency":"USD","factor":1000,"ly_do":"ngắn, tiếng Việt","tin_cay":0.0-1.0}], "summary":"1–2 câu kết luận"}
+
+${pick.map((id) => { const k = byId.get(id); const ls = k.lines.filter((l) => !l.lech); const s = BK.kunnSummary(k);
+    return `KUNN ${k.so_kunn} · GN ${k.ngay_gn || '?'} · số tiền KUNN ${k.so_tien ?? '—'} · ${k.lines.length} dòng · tổng GN các dòng ${s.tong_gn}
+${ls.slice(0, 4).map((l) => `  - ${l.ncc} | HĐ ${l.so_hd} | ${l.ngay_hd || ''} | tiền HĐ ${l.tien_hd ?? ''} | GN ${l.tien_gn ?? ''} | loại tiền ${l.loai_tien || '(trống)'}${l.raw ? ` | gốc: ${l.raw.slice(0, 160)}` : ''}`).join('\n')}`; }).join('\n')}`;
+}
+function openOldCheck(cid) {
+  const c = cust(cid); if (!c) return;
+  const ks = S.store.kunnsOf(cid).sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || ''));
+  if (!ks.length) return toast('Khách hàng chưa có KUNN nào');
+  const prof = BK.storedProfile(ks);
+  const st = { ai: null, busy: false, pick: new Set(prof.issues.map((_, i) => 'r' + i)) };
+  const m = modal(`<div class="mh"><h2>🧪 Kiểm tra dữ liệu đã nạp — ${esc(c.name)}</h2><button class="x" data-close>&times;</button></div><div class="mb" id="ocB"></div>
+    <div class="mf"><span class="hist" style="flex:1">Rà lỗi từng dòng (lệch cột, ngày sau GN…) → <button class="lnk" ${A({ act: 'audit', cid })}>🤖 Rà soát bảng kê</button></span><button class="btn" id="ocAI">🤖 AI rà dữ liệu cũ</button><button class="btn pri" id="ocGo">Áp dụng</button></div>`);
+  const props = () => {
+    const out = prof.issues.map((i, n) => ({ id: 'r' + n, kid: i.kid, so_kunn: i.so_kunn, type: i.type, text: i.text, fix: i.fix, src: 'Luật' }));
+    if (st.ai && st.ai.items) st.ai.items.forEach((x, n) => {
+      if (!x || !x.action || x.action === 'none') return;
+      const k = ks.find((y) => BK.normKunn(y.so_kunn) === BK.normKunn(x.so_kunn)); if (!k) return;
+      out.push({ id: 'a' + n, kid: k.id, so_kunn: k.so_kunn, type: 'ai', text: x.ly_do || '', fix: { action: x.action, currency: x.currency, factor: +x.factor || 1000 }, src: `AI ${x.tin_cay != null ? Math.round(x.tin_cay * 100) + '%' : ''}` });
+    });
+    return out;
+  };
+  const draw = () => {
+    const ps = props();
+    $('#ocB', m).innerHTML = `
+      <div class="sec" style="margin-top:0">Sức khỏe từng trường (${prof.n} dòng · ${ks.length} KUNN)</div>
+      <div class="card tw"><table class="t"><thead><tr><th>Trường</th><th class="right">Bỏ trống</th><th>Bất thường</th><th>Đánh giá</th></tr></thead><tbody>
+      ${prof.fields.map((f) => { const bad = f.bad + f.empty; const pct = f.n ? Math.round((bad / f.n) * 100) : 0;
+        return `<tr class="${f.bad / Math.max(1, f.n) > 0.05 ? 'warn' : ''}"><td><b>${f.label}</b></td><td class="num">${f.empty || '—'}</td><td>${f.bad ? `${f.bad} dòng — ${f.badText}` : '—'}</td><td>${bad ? `<span class="pill ${pct > 5 ? 'p-warn' : 'p-mute'}">${pct}% dòng cần xem</span>` : '<span class="pill p-ok">✓ Tốt</span>'}</td></tr>`; }).join('')}
+      <tr class="${prof.extra.lech ? 'warn' : ''}"><td><b>Dòng ghi lệch cột</b></td><td class="num">—</td><td>${prof.extra.lech || '—'}</td><td>${prof.extra.lech ? `<button class="lnk" ${A({ act: 'audit', cid })}>Sửa bằng 🤖 Rà soát →</button>` : '<span class="pill p-ok">✓ Tốt</span>'}</td></tr>
+      </tbody></table></div>
+      ${prof.extra.noRaw ? `<div class="note">${prof.extra.noRaw}/${prof.n} dòng được nạp từ bản cũ, chưa lưu dữ liệu gốc từng ô — AI chỉ thấy giá trị đã đọc. Muốn AI soát kỹ nhất: nạp lại file gốc (Nạp bảng kê mới → “Thay bản cũ”, giữ nguyên trạng thái hồ sơ gốc).</div>` : ''}
+      <div class="sec">Bất thường theo KUNN — đề xuất sửa</div>
+      ${st.busy ? '<div class="note"><span class="spin"></span> AI đang rà dữ liệu cũ…</div>' : ''}
+      ${st.ai && st.ai.err ? `<div class="note err">AI chưa rà được: ${esc(st.ai.err)}</div>` : ''}
+      ${st.ai && st.ai.summary ? `<div class="aibox warn"><b>🤖 AI: ${esc(st.ai.summary)}</b></div>` : ''}
+      ${ps.length ? `<div class="card tw" style="max-height:45vh"><table class="t"><thead><tr><th></th><th>KUNN</th><th>Vấn đề</th><th>Đề xuất sửa</th><th>Nguồn</th></tr></thead><tbody>
+        ${ps.map((x) => `<tr><td><input type="checkbox" data-op="${x.id}" ${st.pick.has(x.id) ? 'checked' : ''}></td><td><b>${esc(x.so_kunn)}</b></td><td><span class="pill p-warn">${KTYPE[x.type]}</span><div class="hist">${esc(x.text)}</div></td>
+          <td>${x.fix.action === 'currency' ? `Gắn loại tiền <select class="inp" data-cur="${x.id}" style="width:auto;padding:2px 6px">${['USD', 'EUR', 'JPY', 'CNY'].map((u) => `<option ${(x.fix.currency || 'USD') === u ? 'selected' : ''}>${u}</option>`).join('')}</select> cho các dòng chưa ghi loại tiền` : esc(FIX_TXT(x.fix))}</td><td class="hist">${esc(x.src)}</td></tr>`).join('')}
+      </tbody></table></div>` : `<div class="verdict ok"><div><b>✓ Không thấy KUNN nào sai đơn vị tiền / loại tiền / đảo cột</b><span>${st.ai ? '' : 'Có thể bấm “🤖 AI rà dữ liệu cũ” để AI soát thêm.'}</span></div></div>`}`;
+    $$('[data-op]', m).forEach((cb) => { cb.onchange = () => { cb.checked ? st.pick.add(cb.dataset.op) : st.pick.delete(cb.dataset.op); foot(); }; });
+    $$('[data-cur]', m).forEach((s) => { s.onchange = () => { const x = props().find((p) => p.id === s.dataset.cur); if (x) x.fix.currency = s.value; st.cur = { ...(st.cur || {}), [s.dataset.cur]: s.value }; }; });
+    foot();
+  };
+  const foot = () => { const n = props().filter((x) => st.pick.has(x.id)).length; $('#ocGo', m).disabled = !n || st.busy; $('#ocGo', m).textContent = n ? `Áp dụng ${n} đề xuất` : 'Áp dụng'; $('#ocAI', m).disabled = st.busy; };
+  $('#ocAI', m).onclick = async () => {
+    if (!aiKeys().length) { openSettings('ai'); return toast('Nạp API key Gemini trước', 'err'); }
+    st.busy = true; draw();
+    try {
+      const r = await aiJson(promptOld(c, ks, prof), { thinking: 'medium', maxTokens: 16000 });
+      st.ai = r;
+      (r.items || []).forEach((x, n) => { if (x && x.action && x.action !== 'none' && (x.tin_cay ?? 0) >= 0.75) st.pick.add('a' + n); });
+    } catch (e) { st.ai = { err: errMsg(e) }; }
+    st.busy = false; draw();
+  };
+  $('#ocGo', m).onclick = async () => {
+    const list = props().filter((x) => st.pick.has(x.id));
+    const done = new Set();
+    try {
+      for (const x of list) {
+        const key = x.kid + x.fix.action; if (done.has(key)) continue; done.add(key);
+        const fix = { ...x.fix, currency: (st.cur || {})[x.id] || x.fix.currency };
+        const k = S.store.kunnsOf(cid).find((y) => y.id === x.kid); if (!k) continue;
+        const patches = BK.kunnFixPatches(k, fix);
+        if (patches.length) await S.store.patchLines(k.id, patches, meta(), cid);
+        log(cid, 'sua_du_lieu', `Kiểm tra dữ liệu cũ — KUNN ${k.so_kunn}: ${FIX_TXT(fix)} (${patches.length} dòng)`);
+      }
+      m.remove(); toast(`Đã áp dụng ${done.size} đề xuất`, 'ok');
+    } catch (e) { toast(errMsg(e), 'err', 9000); }
+  };
+  draw();
+}
+async function deleteCustomer(c) {
+  if (!c) return;
+  const n = S.store.kunnsOf(c.id).length;
+  if (!confirm(`Xóa khách hàng "${c.name}" khỏi danh sách theo dõi?\nSẽ xóa luôn ${n} KUNN, toàn bộ hóa đơn, trạng thái hồ sơ gốc và nhật ký. Không hoàn tác được.\n(Nên bấm “Sao lưu” trước nếu cần giữ lại.)`)) return;
+  try { await S.store.delCustomer(c.id); if (S.cid === c.id) selectCustomer(null); toast(`Đã xóa ${c.name}`, 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
 }
 
 function editLine(kid, lid) {

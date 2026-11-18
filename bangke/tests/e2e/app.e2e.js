@@ -417,3 +417,36 @@ test('AI tự rà việc gán cột khi tải file: đề xuất đổi cột + 
   assert.match(await k.locator('tbody').innerText(), /OM-1[\s\S]*1\.200,5[\s\S]*USD/);
   await ctx.close();
 });
+
+test('kiểm tra dữ liệu đã nạp: phát hiện KUNN ngoại tệ chưa ghi loại tiền → gắn USD', async () => {
+  const f = join(dir, 'CU.xlsx');
+  const head = ['', 'SỐ KUNN', 'NGÀY GIẢI NGÂN', 'NGÀY ĐẾN HẠN', 'SỐ TIỀN', 'STT', 'NHÀ CUNG CẤP', 'SỐ HỢP ĐỒNG/  ĐĐH', 'HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN (VNĐ)', 'SỐ TIỀN GIẢI  NGÂN (VNĐ)'];
+  await writeFile(f, toXlsx({ 'Sheet2': [head,
+    ['', 'KV-1', 45400, 45500, '', 1, 'Công ty A', 'HĐ 1', '11', 45390, 50000000, 50000000],
+    ['', '', '', '', '', 2, 'Công ty A', '', '12', 45390, 80000000, 80000000],
+    ['', 'KU-2', 45410, 45500, '', 1, 'OMEGA LTD', 'OM', 'INV-1', 45400, 1757.87, 1757.87],
+    ['', '', '', '', '', 2, 'OMEGA LTD', '', 'INV-2', 45400, 920.5, 920.5],
+  ] }));
+  const { ctx, page } = await newPage();
+  await page.goto(base + 'index.html');
+  await page.click('#bImport');
+  await page.setInputFiles('#iFile', f);
+  await page.locator('#iSum', { hasText: '2 KUNN' }).waitFor();
+  await page.fill('#iNew', 'Công ty Omi');
+  await page.click('#iSave');
+  await page.locator('#custName', { hasText: 'Công ty Omi' }).waitFor();
+  await page.locator('[data-act="oldchk"]').click();
+  await page.locator('#ocB', { hasText: 'Có thể là ngoại tệ' }).waitFor();
+  assert.match(await page.locator('#ocB tbody').last().innerText(), /KU-2[\s\S]*Gắn loại tiền/);
+  assert.match(await page.locator('#ocGo').innerText(), /Áp dụng 1 đề xuất/);
+  await page.click('#ocGo');
+  await page.locator('.modal').waitFor({ state: 'detached' });
+  if (!(await page.locator('.kunn', { hasText: 'KU-2' }).locator('table').count())) await page.click('[data-toggle] >> text=KUNN KU-2');
+  assert.match(await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody').innerText(), /1\.757,87 USD/);
+  // không còn nút xóa ngoài danh sách; xóa nằm trong Sửa thông tin
+  assert.equal(await page.locator('[data-cdel]').count(), 0);
+  await page.click('#bEditC');
+  await page.click('#cfDel');                     // hộp xác nhận → OK
+  await page.locator('#cList', { hasText: 'Công ty Omi' }).waitFor({ state: 'detached' });
+  await ctx.close();
+});
