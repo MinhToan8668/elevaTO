@@ -151,3 +151,22 @@ test('AI: ánh xạ cột dạng chữ cái + đọc JSON bọc ```', () => {
   assert.equal(gs[0].lines[0].goc, 'da_nhan');
   assert.match(BK.gridToPrompt([['', 'STT', 'NCC'], [], ['x', 1, 'Công ty']]), /\[3\] A: x \| B: 1 \| C: Công ty/);
 });
+
+test('dòng ghi lệch cột (khối nhập khẩu ngoại tệ) bị đánh dấu, không đưa vào sổ hóa đơn', () => {
+  const head = ['', 'SỐ KUNN', 'NGÀY GIẢI NGÂN', 'NGÀY ĐẾN HẠN', 'SỐ TIỀN', 'STT', 'NHÀ CUNG CẤP', 'SỐ HỢP ĐỒNG/  ĐĐH', 'HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN (VNĐ)', 'SỐ TIỀN GIẢI  NGÂN (VNĐ)'];
+  const r = BK.autoParseSheet([head,
+    ['', 'K1', 45400, 45500, 1000, 1, 'Công ty A', 'HĐ 1', '11', 45390, 1000, 1000],
+    ['', '', '', '', '', 2, 'KOREA CO', 'KO-30/2023', 118679.68, 106206820640, 1757.87, 'KO-040124-4'],   // số tiền USD ở cột HĐ, tờ khai ở cột ngày, số INV ở cột GN
+    ['', '', '', '', '', 3, 'XIAMEN CO', 'HST092/2024', 45453, 94500, 106452391510, 94500],            // số tờ khai ở cột tiền HĐ
+  ]);
+  const [a, b, c] = r.groups[0].lines;
+  assert.equal(a.lech, undefined);
+  assert.match(b.lech, /giống số tiền/);
+  assert.match(b.lech, /cột giải ngân chứa chữ/);
+  assert.match(c.lech, /giống số tờ khai/);
+  assert.equal(c.tien_hd, null, 'số tờ khai không bị coi là tiền hóa đơn');
+  const an = BK.analyze([{ id: 'k', ...r.groups[0], lines: r.groups[0].lines.map((l, i) => ({ ...l, id: 'l' + i })) }]);
+  assert.equal(an.invoices.length, 1, 'chỉ hóa đơn đọc đúng vào sổ');
+  assert.equal(an.lineInfo.get('l1').status, 'lech_cot');
+  assert.equal(an.lineInfo.get('l2').status, 'lech_cot');
+});
