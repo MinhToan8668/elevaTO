@@ -214,3 +214,22 @@ test('kiểm tra phân bổ cột: số HĐ toàn số lẻ, cột tiền lẫn 
   assert.match(t, /Số tiền hóa đơn \(cột E\).*NGOẠI TỆ/);
   assert.deepEqual(p.fields.ncc.samples, ['KOREA CO']);
 });
+
+test('kiểm tra dữ liệu đã nạp: ngoại tệ chưa ghi loại tiền, KUNN ghi theo nghìn đồng, cột GN là tổng các khoản', () => {
+  const L = (id, hd, gn, raw = '') => ({ id, ncc: 'NCC', so_hd: id, ngay_hd: '2026-01-01', tien_hd: hd, tien_gn: gn, raw });
+  const ks = [
+    { id: 'a', so_kunn: 'A', ngay_gn: '2026-01-05', lines: [L('1', 50e6, 50e6), L('2', 80e6, 80e6), L('3', 60e6, 60e6)] },
+    { id: 'b', so_kunn: 'B', ngay_gn: '2026-01-05', lines: [L('4', 1757.87, 1757.87), L('5', 920.5, 920.5)] },                 // USD
+    { id: 'c', so_kunn: 'C', ngay_gn: '2026-01-05', so_tien: 120e6, lines: [L('6', 50000, 50000), L('7', 70000, 70000)] },  // nghìn đồng
+    { id: 'd', so_kunn: 'D', ngay_gn: '2026-01-05', lines: [L('8', 30, 100, 'H: 108 | J: 70 | K: 30 | L: 100'), L('9', 5, 20, 'J: 15 | K: 5 | L: 20')] },
+  ];
+  const p = BK.storedProfile(ks);
+  const t = Object.fromEntries(p.issues.map((i) => [i.so_kunn + ':' + i.type, i.fix]));
+  assert.deepEqual(t['B:ngoai_te'], { action: 'currency', currency: 'USD' });
+  assert.deepEqual(t['C:don_vi'], { action: 'scale', factor: 1000 });
+  assert.deepEqual(t['D:cot_tong'], { action: 'hd_from_gn' });
+  assert.ok(!t['A:ngoai_te'] && !t['A:don_vi']);
+  assert.deepEqual(BK.kunnFixPatches(ks[2], { action: 'scale', factor: 1000 }).map((x) => x.tien_gn), [50e6, 70e6]);
+  assert.deepEqual(BK.kunnFixPatches(ks[3], { action: 'hd_from_gn' }).map((x) => x.tien_hd), [100, 20]);
+  assert.equal(p.fields.find((f) => f.k === 'tien_hd').bad, 2, '2 dòng số lẻ không ghi loại tiền');
+});
