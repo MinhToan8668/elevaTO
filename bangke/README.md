@@ -1,7 +1,7 @@
 # Bảng kê Giải ngân — theo dõi hóa đơn giải ngân & hồ sơ gốc
 
-Một file `index.html` (như AI FinLens / CIC Analyzer): mở là dùng, không đăng nhập.
-Trang chạy tại `https://minhtoan8668.github.io/elevaTO/bangke/`.
+Gửi cho team **một file HTML** (`dist/BangKe_GiaiNgan.html`, tạo bằng `node build.mjs`) — mở bằng Chrome/Edge là chạy,
+không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI Gemini). `index.html` là bản nguồn để sửa & test.
 
 ## Làm được gì
 - **Tải bảng kê khách hàng gửi** (.xls/.xlsx/.csv, mỗi khách một kiểu): tự tìm sheet, hàng tiêu đề, cột
@@ -20,23 +20,19 @@ Trang chạy tại `https://minhtoan8668.github.io/elevaTO/bangke/`.
 - **Nhật ký** ai sửa gì, lúc nào.
 
 ## Cài đặt (nút ⚙ hoặc Alt+F9)
-- **API key Gemini**: dùng chung kho key với AI FinLens (cùng trình duyệt nạp 1 lần là đủ). Không ghi key vào file.
-- **Đồng bộ team** (như CIC Analyzer — Firebase dự án `cic-analyzer`, không màn hình đăng nhập): cả team nhập cùng
-  **mã nhóm**. Dữ liệu nằm ở `bk_teams/<SHA-256 của mã nhóm>/customers/{kh}/kunn|log`, cập nhật tức thì cho mọi người.
-  Để trống mã nhóm = dữ liệu chỉ lưu trên trình duyệt máy đó (IndexedDB).
-  Việc chủ dự án Firebase làm **một lần**:
-  1. Firebase Console → Authentication → Sign-in method → bật **Anonymous**.
-  2. Firestore → Rules, thêm vào trong `match /databases/{database}/documents { … }`:
-     ```
-     match /bk_teams/{team}/{document=**} {
-       allow read, write: if request.auth != null;
-     }
-     ```
-- **Sao lưu / Nạp sao lưu**: file `.json` toàn bộ dữ liệu (gộp theo bản sửa sau cùng) — dùng để chuyển máy
-  hoặc gửi cho người chưa vào nhóm.
+- **API key Gemini**: nạp trong Cài đặt, lưu trên trình duyệt máy đó. Không ghi key vào file.
+- **Thư mục chung (đồng bộ nhiều máy)** — như CIC Analyzer: cả team bấm **📁 Chọn thư mục chung** và chọn cùng một
+  thư mục nội bộ (ổ mạng chung, thư mục OneDrive/Google Drive đồng bộ…). Tool tạo thư mục con `BangKe_GiaiNgan/`:
+  `kh_<id>.json` (khách hàng), `ku_<id>.json` (mỗi KUNN kèm các dòng), `nk_<khách hàng>_<máy>.json` (nhật ký).
+  Sửa ở máy nào thì tệp đó được ghi lại ngay; máy khác quét thư mục 30 giây/lần hoặc bấm **Đồng bộ ngay**, lấy bản
+  có giờ sửa mới hơn. Xóa = ghi đánh dấu `deleted` để máy khác xóa theo. Mỗi lần mở file, trình duyệt có thể hỏi lại
+  quyền → bấm “Kết nối lại” trên thanh trên cùng.
+  Lưu ý: hai người cùng sửa **một KUNN** trong cùng ~30 giây thì bản lưu sau cùng thắng.
+- **Sao lưu / Nạp sao lưu**: file `.json` toàn bộ dữ liệu (gộp theo bản sửa sau cùng).
 
 ## Kiểm thử
 ```bash
+cd bangke && node build.mjs          # tạo dist/BangKe_GiaiNgan.html
 cd bangke && node --test tests/*.test.js
 cd bangke && node --test --test-concurrency=1 tests/e2e/app.e2e.js
 ```

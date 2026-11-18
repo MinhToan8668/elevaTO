@@ -1,4 +1,5 @@
-// E2E: mở index.html thật trong Chromium, chế độ lưu trên máy (không cần Firebase), AI Gemini giả lập.
+// E2E: chạy trong Chromium thật. Luồng chính chạy trên CHÍNH file gửi cho team (dist/BangKe_GiaiNgan.html, mở bằng
+// file://, không mạng); AI Gemini giả lập; thư mục chung giả lập bằng thư mục riêng của trình duyệt (OPFS).
 //   cd bangke && npm run e2e        (E2E_SHOTS=/thư/mục để chụp màn hình)
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import http from 'node:http';
 import { readFile, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, extname, normalize } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { XLSX, bangKeVay, toXlsx } from '../load.js';
 
@@ -32,7 +33,9 @@ before(async () => {
   const pw = await loadPlaywright();
   browser = await pw.chromium.launch(process.env.E2E_CHROME ? { executablePath: process.env.E2E_CHROME } : {});
   dir = await mkdtemp(join(tmpdir(), 'bangke-'));
+  execFileSync(process.execPath, [join(ROOT, 'build.mjs')]);
 });
+const DIST = pathToFileURL(join(ROOT, 'dist/BangKe_GiaiNgan.html')).href;
 after(async () => { await browser?.close(); server?.close(); });
 
 async function newPage() {
@@ -60,7 +63,8 @@ test('tải bảng kê → kiểm tra giải ngân nhầm → hồ sơ gốc →
   ] }) }));
 
   const { ctx, page } = await newPage();
-  await page.goto(base + 'index.html');
+  await page.route(/^https?:/, (r) => r.abort());          // file đóng gói phải chạy được khi không có mạng
+  await page.goto(DIST);
   await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
 
   // ── bảng kê 1
@@ -153,5 +157,61 @@ test('AI nhận dạng cột cho bảng kê không có tiêu đề quen thuộc'
   assert.match(await page.locator('#iSum').innerText(), /1 KUNN · 2 dòng · 8\.000\.000/);
   await page.click('#iSave');
   await page.locator('.kunn', { hasText: 'KUNN 99/2026' }).waitFor();
+  await ctx.close();
+});
+
+test('thư mục chung: máy này ghi tệp JSON, máy khác ghi vào thì bấm Đồng bộ ngay là nhận', async () => {
+  const { ctx, page } = await newPage();
+  // showDirectoryPicker (hộp chọn thư mục thật) → thay bằng thư mục riêng của trình duyệt để test tự động
+  await page.addInitScript(() => { window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM', { create: true }); });
+  await page.goto(base + 'index.html');
+  await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
+  // dữ liệu trên máy trước khi kết nối
+  await page.click('#bAddCust');
+  await page.fill('#cfName', 'Công ty Delta');
+  await page.click('#cfSave');
+  await page.locator('#custName', { hasText: 'Công ty Delta' }).waitFor();
+  await page.click('#bSettings');
+  await page.fill('#skUser', 'Minh Toan');
+  await page.dispatchEvent('#skUser', 'change');
+  await page.click('[data-sy="pick"]');                      // hộp xác nhận "gửi toàn bộ dữ liệu lên" → OK
+  await page.locator('#syncBox', { hasText: 'Đang kết nối: O_CHUNG_TEAM' }).waitFor();
+  const files = async () => page.evaluate(async () => {
+    const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM')).getDirectoryHandle('BangKe_GiaiNgan');
+    const out = {}; for await (const [n, h] of d.entries()) out[n] = JSON.parse(await (await h.getFile()).text()); return out;
+  });
+  await page.waitForFunction(async () => {
+    const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM')).getDirectoryHandle('BangKe_GiaiNgan');
+    for await (const [n] of d.entries()) if (n.startsWith('kh_')) return true; return false;
+  });
+  let fs1 = await files();
+  const kh = Object.values(fs1).find((f) => f.type === 'kh');
+  assert.equal(kh.data.name, 'Công ty Delta');
+  assert.equal(kh.by, 'Minh Toan');
+
+  // "máy khác" ghi một KUNN mới + một khách hàng mới vào thư mục chung
+  await page.evaluate(async (cid) => {
+    const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM')).getDirectoryHandle('BangKe_GiaiNgan');
+    const put = async (name, env) => { const w = await (await d.getFileHandle(name, { create: true })).createWritable(); await w.write(JSON.stringify(env)); await w.close(); };
+    const now = Date.now() + 5000;
+    await put('ku_remote1.json', { app: 'bangke-gn', v: 1, type: 'ku', by: 'Tram Anh', dev: 'mayB', at: now, data: { id: 'remote1', customerId: cid, so_kunn: 'KU-TU-MAY-B', ngay_gn: '2026-05-02', ngay_dh: '', so_tien: null, lines: [{ id: 'l1', ncc: 'Công ty Epsilon', so_hd: '88', ngay_hd: '2026-04-30', tien_hd: 100, tien_gn: 100, goc: 'chua', thieu: '', ghi_chu: '' }], updatedAt: now, updatedBy: 'Tram Anh' } });
+    await put('kh_remote2.json', { app: 'bangke-gn', v: 1, type: 'kh', by: 'Tram Anh', dev: 'mayB', at: now, data: { id: 'remote2', name: 'Công ty Zeta', updatedAt: now } });
+  }, kh.data.id);
+  await page.click('[data-sy="pull"]');
+  await page.locator('#syncBox', { hasText: 'Tram Anh' }).waitFor();
+  await page.locator('.modal [data-close]').first().click();
+  await page.locator('#cList', { hasText: 'Công ty Zeta' }).waitFor();
+  await page.locator('.kunn', { hasText: 'KUNN KU-TU-MAY-B' }).waitFor();
+
+  // sửa ở máy này → tệp KUNN trong thư mục chung được ghi lại
+  await page.click('[data-toggle] >> text=KUNN KU-TU-MAY-B');
+  await page.click('[data-allgoc]');
+  await page.waitForFunction(async () => {
+    const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM')).getDirectoryHandle('BangKe_GiaiNgan');
+    const j = JSON.parse(await (await (await d.getFileHandle('ku_remote1.json')).getFile()).text());
+    return j.by === 'Minh Toan' && j.data.lines[0].goc === 'da_nhan';
+  });
+  fs1 = await files();
+  assert.ok(Object.keys(fs1).some((n) => n.startsWith('nk_')), 'nhật ký cũng được ghi ra thư mục');
   await ctx.close();
 });
