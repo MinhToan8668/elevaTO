@@ -410,6 +410,8 @@ textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospa
                   <span>Gộp các đoạn thành 1 file<br><span class="mut small">VD: bỏ các đoạn quay hỏng, giữ phần còn lại liền mạch</span></span></label>
                 <label class="chk"><span class="switch"><input type="checkbox" id="cutPrecise"><span></span></span>
                   <span>Cắt chính xác từng khung hình<br><span class="mut small">Chậm hơn, có nén lại. Tắt = cắt nhanh, lệch ~1–2s</span></span></label>
+                <label class="chk"><span class="switch"><input type="checkbox" id="cutTrash" checked><span></span></span>
+                  <span>Cắt xong chuyển video gốc vào Thùng rác<br><span class="mut small">Chỉ khi cắt thành công. Lấy lại được bằng Put Back trong Thùng rác</span></span></label>
               </div>
             </div>
           </div>
@@ -439,6 +441,7 @@ textarea{resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospa
               <div class="row"><button class="btn" id="sfPick">📄 Chọn file…</button><span class="small path" id="sfName"></span></div>
               <div class="row" style="margin-top:12px"><label class="f" style="flex-direction:row;align-items:center;gap:6px">Mỗi phần<input type="number" id="sfMb" value="1950" min="1" style="width:100px">MB</label>
                 <button class="btn pri" id="sfGo" disabled>Chia file</button></div>
+              <label class="chk small" style="margin-top:10px"><input type="checkbox" id="sfTrash" checked> Chia xong chuyển file gốc vào Thùng rác</label>
             </div>
             <div class="card">
               <h3>🧷 Ghép các phần lại</h3>
@@ -998,8 +1001,10 @@ $("#cutGo").onclick = () => {
   const value = mode === "duration" ? $("#cutMin").value : mode === "size" ? $("#cutMb").value
               : segs.map(g => `${g.a.toFixed(3)} - ${g.b.toFixed(3)}`).join("\n");
   vp.pause();
-  api("media/split_video", {path: cutVid.path, mode, value, precise: $("#cutPrecise").checked,
-                            join: mode === "ranges" && $("#cutJoin").checked}).catch(() => {});
+  const trash = $("#cutTrash").checked;
+  if (trash && mode === "ranges" && !confirm("Cắt xong sẽ chuyển video gốc vào Thùng rác.\nNhững phần KHÔNG nằm trong các đoạn đã chọn sẽ đi theo video gốc. Tiếp tục?")) return;
+  api("media/split_video", {path: cutVid.path, mode, value, precise: $("#cutPrecise").checked, trash,
+                            join: mode === "ranges" && $("#cutJoin").checked}).then(() => { if (trash) cutPending = true; }).catch(() => {});
 };
 
 // phím tắt (chỉ khi đang ở tab Cắt video và không gõ trong ô nhập)
@@ -1039,7 +1044,9 @@ renderMerge();
 
 let sfPath = null, jfParts = [];
 $("#sfPick").onclick = async () => { const [p] = await pickFiles(false); if (!p) return; sfPath = p; $("#sfName").textContent = p.split("/").pop(); $("#sfGo").disabled = false; };
-$("#sfGo").onclick = () => api("media/split_file", {path: sfPath, mb: +$("#sfMb").value}).catch(() => {});
+$("#sfGo").onclick = () => api("media/split_file", {path: sfPath, mb: +$("#sfMb").value, trash: $("#sfTrash").checked}).catch(() => {});
+// nhớ lựa chọn "chuyển file gốc vào Thùng rác"
+for (const id of ["cutTrash", "sfTrash"]) { $("#" + id).checked = load(id, true); $("#" + id).onchange = e => store(id, e.target.checked); }
 $("#jfPick").onclick = async () => {
   const [p] = await pickFiles(false); if (!p) return;
   try { const r = await api("media/parts", {path: p}); jfParts = r.items; } catch { jfParts = []; }
@@ -1049,7 +1056,11 @@ $("#jfPick").onclick = async () => {
 };
 $("#jfGo").onclick = () => api("media/join", {paths: jfParts.map(x => x.path)}).catch(() => {});
 
+let cutPending = false;
+function closeCutEditor() { cutVid = null; segs = []; selIn = selOut = null; vp.removeAttribute("src"); vp.load();
+  $("#cutEditor").classList.add("hide"); $("#cutEmpty").classList.remove("hide"); renderSegs(); }
 async function loadMedia() {
+  if (cutPending) { cutPending = false; closeCutEditor(); }
   const m = await api("media/result");
   if (!m.result) return;
   $("#mediaOut").classList.remove("hide");

@@ -763,8 +763,31 @@ def api_media_probe():
 @web.post("/api/media/split_video")
 def api_split_video():
     b = body()
-    return media_job("Cắt video", lambda pr: mt.split_video(Path(b["path"]), b["mode"], str(b["value"]), progress=pr,
-                                                             precise=bool(b.get("precise")), join=bool(b.get("join"))))
+    src = Path(b["path"])
+
+    def job(pr):
+        outs = mt.split_video(src, b["mode"], str(b["value"]), progress=pr,
+                              precise=bool(b.get("precise")), join=bool(b.get("join")))
+        if b.get("trash"):
+            # Chỉ bỏ file gốc khi mọi đoạn đã ra file đọc được; chia đều thì tổng thời lượng phải đủ.
+            total = sum(mt.probe(o)["duration"] for o in outs)
+            if b["mode"] != "ranges" and total < mt.probe(src)["duration"] - max(2.0, 0.5 * len(outs)):
+                S.notify("Giữ lại file gốc", f"Các đoạn cắt ra thiếu thời lượng so với {src.name} nên không xoá.", "warn")
+            else:
+                trash_original(src)
+        return outs
+    return media_job("Cắt video", job)
+
+
+def trash_original(src: Path) -> None:
+    core.move_to_trash(src)
+    OPENED_drop(src)
+    S.notify("Đã chuyển file gốc vào Thùng rác", f"{src.name} — cần lại thì mở Thùng rác → Put Back.", "info", mac=False)
+
+
+def OPENED_drop(src: Path) -> None:
+    for k in [k for k, v in OPENED.items() if v["src"] == src]:
+        OPENED.pop(k, None)
 
 
 # ---- xem trước video trong app
@@ -848,7 +871,18 @@ def api_merge():
 @web.post("/api/media/split_file")
 def api_split_file():
     b = body()
-    return media_job("Chia file", lambda pr: mt.split_file(Path(b["path"]), float(b["mb"]), progress=pr))
+    src = Path(b["path"])
+
+    def job(pr):
+        size = src.stat().st_size
+        outs = mt.split_file(src, float(b["mb"]), progress=pr)
+        if b.get("trash"):
+            if sum(o.stat().st_size for o in outs) == size:   # các phần cộng lại đúng bằng file gốc mới bỏ
+                trash_original(src)
+            else:
+                S.notify("Giữ lại file gốc", "Tổng các phần không khớp dung lượng file gốc nên không xoá.", "warn")
+        return outs
+    return media_job("Chia file", job)
 
 
 @web.post("/api/media/join")
@@ -984,33 +1018,40 @@ class JsApi:
 
 
 def ensure_ffmpeg():
-    """Tìm ffmpeg/ffprobe (Homebrew hoặc bản app tự tải). Chưa có thì tự tải 1 lần (~80MB), không cần cài tay."""
+    """Chuẩn bị ffmpeg: Homebrew nếu có, bản kèm app (imageio-ffmpeg), và bản tự tải (static-ffmpeg, có ffprobe)."""
     os.environ["PATH"] = os.pathsep.join(["/opt/homebrew/bin", "/usr/local/bin", os.environ.get("PATH", "")])
-    def works() -> bool:
-        """Có ffmpeg + ffprobe và chạy được thật (không bị macOS chặn / sai kiến trúc)."""
-        try:
-            return all(vs.shutil.which(x) and subprocess.run([x, "-version"], capture_output=True, timeout=20).returncode == 0
-                       for x in ("ffmpeg", "ffprobe"))
-        except (OSError, subprocess.SubprocessError):
-            return False
-    if works():
-        return
-    S.busy["ffmpeg"] = "Đang tải bộ xử lý video (ffmpeg), chỉ lần đầu…"
+
+    def usable() -> list[str]:
+        ok = []
+        for exe in mt.engines(refresh=True):
+            try:
+                if subprocess.run([exe, "-version"], capture_output=True, timeout=20).returncode == 0:
+                    ok.append(exe)
+            except (OSError, subprocess.SubprocessError):
+                pass
+        return ok
+    have = usable()
+    if not have:
+        S.busy["ffmpeg"] = "Đang tải bộ xử lý video (ffmpeg), chỉ lần đầu…"
     try:
         import static_ffmpeg
-        static_ffmpeg.add_paths()
+        static_ffmpeg.add_paths()   # tải 1 lần nếu chưa có
         for x in ("ffmpeg", "ffprobe"):  # bản tải về đôi khi thiếu quyền chạy / bị gắn cờ cách ly
             b = vs.shutil.which(x)
             if b:
                 os.chmod(b, 0o755)
                 subprocess.run(["xattr", "-d", "com.apple.quarantine", b], capture_output=True)
-        if not works():
-            raise RuntimeError("tải xong nhưng ffmpeg không chạy được trên máy này")
-        S.notify("Đã sẵn sàng xử lý video", "Đã tải xong ffmpeg — cắt, gộp, đọc ngày quay dùng được rồi.", "success", mac=False)
     except Exception as e:  # noqa: BLE001
-        S.notify("Chưa tải được ffmpeg", f"Kiểm tra mạng rồi mở lại app, hoặc cài tay: brew install ffmpeg ({e})", "error", mac=False)
+        S.add_log(f"Chưa tải được bản ffmpeg bổ sung: {e}", "warn")
     finally:
         S.busy.pop("ffmpeg", None)
+    now = usable()
+    mt._ENGINES = now
+    S.add_log("ffmpeg dùng được: " + (", ".join(now) or "không có"))
+    if not now:
+        S.notify("Chưa có ffmpeg", "Kiểm tra mạng rồi mở lại app, hoặc cài tay: brew install ffmpeg", "error", mac=False)
+    elif not have:
+        S.notify("Đã sẵn sàng xử lý video", "Cắt, gộp, đọc ngày quay dùng được rồi.", "success", mac=False)
 
 
 def brand_mac_app():

@@ -20,9 +20,53 @@ def _noop(done, total, label=""):
     pass
 
 
-def _need_ffmpeg():
-    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+_ENGINES: list[str] | None = None   # các bản ffmpeg tìm được, bản đang dùng đứng đầu
+
+
+def engines(refresh: bool = False) -> list[str]:
+    """Mọi bản ffmpeg có trên máy: Homebrew → trong PATH → bản kèm app (imageio-ffmpeg) → bản tự tải (static-ffmpeg).
+    Mỗi bản đọc được các loại file hơi khác nhau, nên file nào bản này chê thì thử bản kế."""
+    global _ENGINES
+    if _ENGINES is not None and not refresh:
+        return _ENGINES
+    found = [str(Path(d) / "ffmpeg") for d in ("/opt/homebrew/bin", "/usr/local/bin")]
+    found.append(shutil.which("ffmpeg") or "")
+    try:
+        import imageio_ffmpeg
+        found.append(imageio_ffmpeg.get_ffmpeg_exe())
+    except Exception:  # noqa: BLE001 — chưa cài / không có bản cho máy này
+        pass
+    try:
+        from static_ffmpeg import run as _sf
+        found.append(str(Path(_sf.get_or_fetch_platform_executables_else_raise()[0])))
+    except Exception:  # noqa: BLE001 — chưa tải được
+        pass
+    out = []
+    for f in found:
+        if f and os.path.isfile(f) and os.access(f, os.X_OK) and os.path.realpath(f) not in [os.path.realpath(o) for o in out]:
+            out.append(f)
+    _ENGINES = out
+    return out
+
+
+def _ff() -> str:
+    e = engines() or engines(refresh=True)
+    if not e:
         raise RuntimeError("Chưa có ffmpeg — app đang tải hoặc tải chưa được. Đợi thông báo tải xong, hoặc mở lại app khi có mạng.")
+    return e[0]
+
+
+def _prefer(exe: str) -> None:
+    """Bản vừa đọc được file → dùng nó cho các bước cắt/gộp tiếp theo."""
+    e = engines()
+    if exe in e and e[0] != exe:
+        e.remove(exe)
+        e.insert(0, exe)
+
+
+def _ffprobe_of(exe: str) -> str | None:
+    cand = Path(exe).with_name("ffprobe")
+    return str(cand) if cand.is_file() else None
 
 
 def _unique(p: Path) -> Path:
@@ -69,37 +113,70 @@ def check_readable(path: Path) -> None:
 
 
 def probe(path: Path) -> dict:
-    _need_ffmpeg()
     path = Path(path)
+    _ff()
     check_readable(path)
-    try:
-        r = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_format", "-show_streams", str(path)],
+    reasons = []
+    for exe in list(engines()):
+        try:
+            info = _probe_with(exe, path)
+        except OSError as e:
+            reasons.append(f"không chạy được {exe} ({e.strerror or e})")
+            continue
+        if isinstance(info, dict):
+            _prefer(exe)
+            return info
+        reasons.append(info)
+    why = next((r for r in reasons if r), "file hỏng hoặc không phải video")
+    if "permitted" in why or "denied" in why:
+        why = PERM_HELP
+    tried = f" (đã thử {len(reasons)} bản ffmpeg)" if len(reasons) > 1 else ""
+    raise RuntimeError(f"Không đọc được video {path.name}{tried}: {why}")
+
+
+def _probe_with(exe: str, path: Path):
+    """Trả dict thông tin, hoặc chuỗi lý do nếu bản ffmpeg này không đọc được file."""
+    fp = _ffprobe_of(exe)
+    if fp:
+        r = subprocess.run([fp, "-v", "warning", "-print_format", "json", "-show_format", "-show_streams", str(path)],
                            capture_output=True, text=True, errors="replace")
-    except OSError as e:
-        raise RuntimeError(f"Không chạy được ffprobe ({e.strerror or e}). Thử mở lại app để tải lại ffmpeg.") from e
-    if r.returncode != 0:
-        why = (r.stderr.strip().splitlines() or [""])[-1][:200]
+        if r.returncode == 0:
+            data = json.loads(r.stdout)
+            v = next((x for x in data.get("streams", []) if x.get("codec_type") == "video"), {})
+            a = next((x for x in data.get("streams", []) if x.get("codec_type") == "audio"), {})
+            fps = v.get("r_frame_rate", "0/1").split("/")
+            return {
+                "duration": float(data.get("format", {}).get("duration") or 0),
+                "size": int(data.get("format", {}).get("size") or path.stat().st_size),
+                "vcodec": v.get("codec_name"), "acodec": a.get("codec_name"),
+                "width": v.get("width"), "height": v.get("height"),
+                "fps": round(float(fps[0]) / float(fps[1] or 1), 2) if len(fps) == 2 and float(fps[1] or 0) else None,
+            }
+    # Không có ffprobe (bản kèm app) hoặc ffprobe chê file → đọc thông tin từ chính ffmpeg
+    r = subprocess.run([exe, "-hide_banner", "-i", str(path)], capture_output=True, text=True, errors="replace")
+    err = r.stderr
+    m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", err)
+    vs_ = re.search(r"Stream #.*?Video:\s*(\w+).*?[ ,](\d{2,5})x(\d{2,5})", err)
+    if not m or not vs_:
         if r.returncode < 0:
-            why = f"ffprobe bị hệ thống dừng (tín hiệu {-r.returncode})" + (f" — {why}" if why else "")
-        elif "permitted" in why or "denied" in why:
-            why = PERM_HELP
-        raise RuntimeError(f"Không đọc được video {path.name}: {why or 'file hỏng hoặc không phải video'}")
-    data = json.loads(r.stdout)
-    v = next((s for s in data.get("streams", []) if s.get("codec_type") == "video"), {})
-    a = next((s for s in data.get("streams", []) if s.get("codec_type") == "audio"), {})
-    fps = v.get("r_frame_rate", "0/1").split("/")
+            return f"ffmpeg bị hệ thống dừng (tín hiệu {-r.returncode})"
+        lines = [l.strip() for l in err.splitlines() if l.strip()]
+        # dòng "… is not implemented" nói rõ thiếu tính năng gì, hữu ích hơn dòng lỗi cuối
+        detail = next((l for l in lines if "not implemented" in l or "nsupported" in l), "")
+        last = lines[-1] if lines else ""
+        return (re.sub(r"^\[[^\]]*\]\s*", "", detail) + " — " if detail else "") + last[-200:]
+    as_ = re.search(r"Stream #.*?Audio:\s*(\w+)", err)
+    fps = re.search(r"([\d.]+)\s*fps", err[vs_.start():])
     return {
-        "duration": float(data.get("format", {}).get("duration") or 0),
-        "size": int(data.get("format", {}).get("size") or path.stat().st_size),
-        "vcodec": v.get("codec_name"), "acodec": a.get("codec_name"),
-        "width": v.get("width"), "height": v.get("height"),
-        "fps": round(float(fps[0]) / float(fps[1] or 1), 2) if len(fps) == 2 and float(fps[1] or 0) else None,
+        "duration": int(m[1]) * 3600 + int(m[2]) * 60 + float(m[3]), "size": path.stat().st_size,
+        "vcodec": vs_[1], "acodec": as_[1] if as_ else None, "width": int(vs_[2]), "height": int(vs_[3]),
+        "fps": round(float(fps[1]), 2) if fps else None,
     }
 
 
 def _run_ffmpeg(args: list[str], total_sec: float, progress, label: str):
     """Chạy ffmpeg, đọc tiến độ từ -progress để cập nhật thanh tiến độ."""
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-progress", "pipe:1", "-nostats", *args]
+    cmd = [_ff(), "-hide_banner", "-loglevel", "error", "-y", "-progress", "pipe:1", "-nostats", *args]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     for line in proc.stdout:
         if line.startswith("out_time_us=") or line.startswith("out_time_ms="):
@@ -189,7 +266,7 @@ def thumbnails(path: Path, out: Path, count: int = 12, height: int = 72) -> Path
     info = probe(path)
     dur = max(info["duration"], 0.1)
     fps = count / dur
-    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(path),
+    subprocess.run([_ff(), "-hide_banner", "-loglevel", "error", "-y", "-i", str(path),
                     "-vf", f"fps={fps:.6f},scale=-2:{height},tile={count}x1", "-frames:v", "1", "-q:v", "5", str(out)],
                    check=True, capture_output=True)
     return out
@@ -251,7 +328,7 @@ def merge_videos(paths: list[Path], out: Path | None = None, reencode: bool = Fa
 
 
 def _has_encoder(name: str) -> bool:
-    r = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True)
+    r = subprocess.run([_ff(), "-hide_banner", "-encoders"], capture_output=True, text=True)
     return name in r.stdout
 
 
