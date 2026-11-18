@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_PHAN, taiPhan, taiThang } from '../worker/src/taive.js';
+import { MAX_PHAN, taiLen, taiPhan, taiThang } from '../worker/src/taive.js';
 
 const BI_MAT = 'bi-mat-dung-chung-dai-hon-24-ky-tu';
 const TOKEN = '123456:FAKE-TOKEN';
@@ -460,4 +460,91 @@ test('Telegram nói chắc không có / không cho (token sai, file_id sai) → 
     assert.equal(j2.ma, 'telegram_hong', 'getFile trả 400 cho phần trống đường dẫn → vĩnh viễn');
     assert.doesNotMatch(JSON.stringify(j2), new RegExp(TOKEN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   } finally { globalThis.fetch = that; }
+});
+
+// ─── Gửi thẳng lên Telegram: POST /tailen?d&s&i, thân = byte của phần i ─────────────
+
+async function veGui(sua = {}) {
+  const ve = { k: 'up', id: 'u1', n: 'Buổi 3.mp4', s: 10, p: 3, ps: 4, c: '-100123', e: Date.now() + 600000, ...sua };
+  const d = b64url(Buffer.from(JSON.stringify(ve), 'utf8'));
+  return { d, s: await ky(d) };
+}
+const guiPhan = (d, s, i, than) => new Request(`https://w.example/tailen?d=${d}&s=${encodeURIComponent(s)}&i=${i}`, {
+  method: 'POST', body: than, headers: { 'content-length': String(than.length) },
+});
+/** Telegram giả cho sendDocument: ghi lại mọi thứ nhận được, trả file_id theo kịch bản. */
+function gaGui(traLoi = () => ({ ok: true })) {
+  const that = globalThis.fetch;
+  const nhan = [];
+  globalThis.fetch = async (url, init) => {
+    const f = init.body;   // FormData
+    const doc = f.get('document');
+    const ban = { url: String(url), chat: f.get('chat_id'), caption: f.get('caption'), ten: doc.name, bytes: new Uint8Array(await doc.arrayBuffer()) };
+    nhan.push(ban);
+    const kb = traLoi(ban, nhan.length);
+    if (kb.ok) return new Response(JSON.stringify({ ok: true, result: { message_id: 70 + nhan.length, document: { file_id: `FID-${nhan.length}` } } }));
+    return new Response(JSON.stringify({ ok: false, ...kb }), { status: kb.error_code || 500 });
+  };
+  return { nhan, thoi: () => { globalThis.fetch = that; } };
+}
+
+test('gửi thẳng: đúng chat trong vé, tên .001/.002 như cũ, đúng từng byte, trả file_id', async () => {
+  const ga = gaGui();
+  try {
+    const { d, s } = await veGui();
+    const r = await taiLen(guiPhan(d, s, 1, new Uint8Array([5, 6, 7, 8])), ENV);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('access-control-allow-origin'), '*');
+    assert.deepEqual(await r.json(), { ok: true, fid: 'FID-1', mid: 71 });
+    const [b] = ga.nhan;
+    assert.match(b.url, /\/bot123456:FAKE-TOKEN\/sendDocument$/);
+    assert.equal(b.chat, '-100123');
+    assert.equal(b.ten, 'Buổi 3.mp4.002');
+    assert.equal(b.caption, 'Buổi 3.mp4 — phần 2/3');
+    assert.deepEqual([...b.bytes], [5, 6, 7, 8]);
+    // Phần cuối ngắn hơn (10 = 4 + 4 + 2).
+    assert.equal((await taiLen(guiPhan(d, s, 2, new Uint8Array([1, 2])), ENV)).status, 200);
+    // File một phần thì giữ nguyên tên.
+    const mot = await veGui({ s: 3, p: 1, ps: 4 });
+    await taiLen(guiPhan(mot.d, mot.s, 0, new Uint8Array([1, 2, 3])), ENV);
+    assert.equal(ga.nhan.at(-1).ten, 'Buổi 3.mp4');
+  } finally { ga.thoi(); }
+});
+
+test('gửi thẳng: sai dung lượng / sai chữ ký / vé hết hạn / vé TẢI VỀ / số phần lạ → từ chối, không gửi gì', async () => {
+  const ga = gaGui();
+  try {
+    const { d, s } = await veGui();
+    const ma = async (req) => (await (await taiLen(req, ENV)).json()).ma;
+    assert.equal(await ma(guiPhan(d, s, 0, new Uint8Array(3))), 'hong', 'phần 1 phải đủ 4 byte');
+    assert.equal(await ma(guiPhan(d, 'sai', 0, new Uint8Array(4))), 'sai_ky');
+    const cu = await veGui({ e: Date.now() - 1 });
+    assert.equal(await ma(guiPhan(cu.d, cu.s, 0, new Uint8Array(4))), 'het_han');
+    const taiVe = await veTest();   // vé tải về ký cùng bí mật — không được dùng để gửi
+    assert.equal(await ma(guiPhan(taiVe.d, taiVe.s, 0, new Uint8Array(4))), 'hong');
+    for (const i of [-1, 3, 'x']) assert.equal(await ma(guiPhan(d, s, i, new Uint8Array(4))), 'hong', `i=${i}`);
+    const sai = await veGui({ p: 9 });   // số phần không khớp dung lượng / cỡ phần
+    assert.equal(await ma(guiPhan(sai.d, sai.s, 0, new Uint8Array(4))), 'hong');
+    const to = await veGui({ ps: 30 * 1048576, s: 10, p: 1 });   // phần > 20MB thì bot không tải về được
+    assert.equal(await ma(guiPhan(to.d, to.s, 0, new Uint8Array(10))), 'hong');
+    assert.equal(ga.nhan.length, 0, 'không gửi gì lên Telegram');
+  } finally { ga.thoi(); }
+});
+
+test('gửi thẳng: Telegram bảo chờ (429) → mã cham + số giây; từ chối hẳn (400/403) → telegram_hong; 5xx → telegram', async () => {
+  const kb = [{ error_code: 429, description: 'Too Many Requests', parameters: { retry_after: 7 } },
+    { error_code: 400, description: 'Bad Request: chat not found' }, { error_code: 403, description: 'Forbidden: bot was kicked' },
+    { error_code: 502, description: 'Bad Gateway' }];
+  const ga = gaGui((_, lan) => kb[lan - 1]);
+  try {
+    const { d, s } = await veGui();
+    const r1 = await taiLen(guiPhan(d, s, 0, new Uint8Array(4)), ENV);
+    assert.equal(r1.status, 429);
+    assert.deepEqual(await r1.json(), { ok: false, ma: 'cham', sau: 7, loi: 'Too Many Requests' });
+    assert.equal((await (await taiLen(guiPhan(d, s, 0, new Uint8Array(4)), ENV)).json()).ma, 'telegram_hong');
+    assert.equal((await (await taiLen(guiPhan(d, s, 0, new Uint8Array(4)), ENV)).json()).ma, 'telegram_hong');
+    const r4 = await (await taiLen(guiPhan(d, s, 0, new Uint8Array(4)), ENV)).json();
+    assert.equal(r4.ma, 'telegram');
+    assert.doesNotMatch(JSON.stringify(r4), /FAKE-TOKEN/, 'không lộ token bot');
+  } finally { ga.thoi(); }
 });

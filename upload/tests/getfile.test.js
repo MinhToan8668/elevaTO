@@ -151,3 +151,89 @@ test('loiDrive: Drive đầy / giới hạn tốc độ / lỗi khác đều có
   assert.equal(ctx.loiDrive(res(403, { error: { errors: [{ reason: 'insufficientPermissions' }] } })), 'Drive 403 (insufficientPermissions)');
   assert.equal(ctx.loiDrive(res(500, '<html>lỗi</html>')), 'Drive 500', 'thân không phải JSON vẫn không vỡ');
 });
+
+// ─── Gửi thẳng lên Telegram (không qua Drive): vé ký ở đây, Worker kiểm và gửi ────────────────
+import { createHmac } from 'node:crypto';
+import { taiLen } from '../../ai/worker/src/taive.js';
+
+const BI_MAT = 'bi-mat-thu-dai-hon-24-ky-tu-xx';
+function napGui(them = {}) {
+  const all = { UPLOAD_KEY: 'k', TG_BOT_TOKEN: 'tok', TG_CHAT_ID: '-100777', TAIVE_WORKER_URL: 'https://w.example/taive', TAIVE_SECRET: BI_MAT, ...them };
+  const nhan = [];
+  const b64 = (b) => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
+  const ctx = {
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: (k) => all[k] ?? null, getProperties: () => all,
+      setProperty: (k, v) => { all[k] = String(v); }, setProperties: (o) => Object.assign(all, o), deleteProperty: (k) => { delete all[k]; },
+    }) },
+    Utilities: {
+      sleep() {}, getUuid: () => '0123abcd-4567-89ef-0123-456789abcdef',
+      base64EncodeWebSafe: b64,
+      base64DecodeWebSafe: (s) => [...Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64')],
+      newBlob: (x) => ({ getBytes: () => [...Buffer.from(x)], getDataAsString: () => Buffer.from(x).toString('utf8') }),
+      computeHmacSha256Signature: (d, k) => [...createHmac('sha256', k).update(d).digest()],
+    },
+    Logger: { log() {} }, console: { error() {} },
+    UrlFetchApp: { fetch: (u, o) => { nhan.push(JSON.parse(o.payload).text); return { getResponseCode: () => 200, getContentText: () => '{"ok":true}' }; } },
+  };
+  vm.createContext(ctx);
+  vm.runInContext(readFileSync(PATH, 'utf8'), ctx, { filename: PATH });
+  ctx.kiemKey = () => {};
+  ctx.guiTelegram = (t) => nhan.push(t);
+  return { ctx, all, nhan };
+}
+const ruotVe = (d) => JSON.parse(Buffer.from(d.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+
+test('vé gửi: đúng số phần 19MB, chat, đường /tailen; tên bẩn được làm sạch', () => {
+  const { ctx } = napGui();
+  const v = ctx.guiVe('k', { name: 'a/b\u0001c.mp4', size: 540 * 1048576 });
+  assert.equal(v.url, 'https://w.example/tailen');
+  assert.equal(v.parts, 29);
+  assert.equal(v.ps, 19 * 1048576);
+  const r = ruotVe(v.d);
+  assert.deepEqual([r.k, r.n, r.s, r.p, r.c], ['up', 'a b c.mp4', 540 * 1048576, 29, '-100777']);
+  assert.ok(r.e > Date.now() + 3600000, 'vé đủ dài cho file lớn mạng chậm');
+  assert.throws(() => ctx.guiVe('k', { name: 'x', size: 0 }), /không hợp lệ/);
+  assert.throws(() => ctx.guiVe('k', { name: 'x', size: 3 * 1024 ** 3 }), /lớn quá/);
+  assert.throws(() => napGui({ TAIVE_SECRET: null }).ctx.guiVe('k', { name: 'x', size: 5 }), /Chưa cài Worker/);
+});
+
+test('vé Apps Script ký được Worker nhận thật (cùng bí mật, cùng kiểu base64)', async () => {
+  const { ctx } = napGui();
+  const v = ctx.guiVe('k', { name: 'Buổi 3.mp4', size: 10 });
+  const goc = globalThis.fetch;
+  let gui;
+  globalThis.fetch = async (u, o) => { gui = o.body; return new Response(JSON.stringify({ ok: true, result: { message_id: 5, document: { file_id: 'FID_abcdefghij' } } })); };
+  try {
+    const q = new URL(v.url); q.searchParams.set('d', v.d); q.searchParams.set('s', v.s); q.searchParams.set('i', '0');
+    const res = await taiLen(new Request(q, { method: 'POST', body: new Uint8Array(10), headers: { 'content-length': '10' } }),
+      { UPLOAD_TG_TOKEN: 'tok', TAIVE_SECRET: BI_MAT });
+    const j = await res.json();
+    assert.equal(res.status, 200, JSON.stringify(j));
+    assert.equal(j.fid, 'FID_abcdefghij');
+    assert.equal(gui.get('chat_id'), '-100777');
+  } finally { globalThis.fetch = goc; }
+});
+
+test('gửi xong: ghi vào kho + mã từng phần (đủ cho Tải thẳng), làm lại không ghi đôi; vé giả bị chặn', () => {
+  const { ctx, all, nhan } = napGui();
+  const v = ctx.guiVe('k', { name: 'Lớp.mp4', size: 45 * 19 * 1048576 });
+  const fids = Array.from({ length: 45 }, (_, i) => `FID_phan_${String(i).padStart(3, '0')}`);
+  assert.throws(() => ctx.guiXong('k', v.d, v.s, fids.slice(1)), /Thiếu mã file/);
+  assert.throws(() => ctx.guiXong('k', v.d, v.s.slice(0, -3) + 'AAA', fids), /không hợp lệ/);
+  assert.throws(() => ctx.guiXong('k', v.d, v.s, fids.map((f, i) => (i === 3 ? 'x y' : f))), /Thiếu mã file/);
+  const r = ctx.guiXong('k', v.d, v.s, fids);
+  assert.equal(r.id, v.id);
+  const kho = JSON.parse(all['TGLIB_' + v.id]);
+  assert.deepEqual([kho.name, kho.parts, kho.size], ['Lớp.mp4', 45, 45 * 19 * 1048576]);
+  for (let i = 0; i < 45; i++) assert.equal(ctx.docFid(v.id, i), fids[i]);
+  assert.equal(nhan.length, 1);
+  ctx.guiXong('k', v.d, v.s, fids);
+  assert.equal(nhan.length, 1, 'gửi lại câu xong không nhắn đôi');
+  const [it] = ctx.khoDanhSach('k');
+  assert.equal(it.id, v.id);
+  assert.equal(it.thang, true, 'file gửi thẳng tải thẳng được ngay');
+  // vé tải ký bằng cùng bí mật không được dùng làm vé gửi
+  const veTai = ctx.khoVeTaiThang('k', v.id, true);
+  assert.throws(() => ctx.guiXong('k', veTai.d, veTai.s, fids), /hỏng/);
+});

@@ -31,7 +31,7 @@ import { tgAdmins } from './tg.js';
 import { quenMK, datLaiMKBangMa } from './quenmk.js';
 import { thongTinUngHo } from './ungho.js';
 import { linksChoWeb, linksKiemKey, linksLuu } from './links.js';
-import { taiPhan, taiThang } from './taive.js';
+import { taiLen, taiPhan, taiThang } from './taive.js';
 import { giaCoPhieu } from './gia.js';
 
 const CORS = {
@@ -59,6 +59,11 @@ export default {
     // thân là form chứ không phải JSON, trả về luồng nhị phân chứ không phải {ok,data},
     // và không đụng tới D1 nên Worker chưa nối cơ sở dữ liệu vẫn chạy được.
     if (url.pathname === '/taive' && req.method === 'POST') return taiThang(req, env);
+    // Gửi thẳng lên Telegram từng phần (trang upload, không qua Drive): xem taiLen trong src/taive.js.
+    if (url.pathname === '/tailen') {
+      if (req.method === 'POST') return taiLen(req, env);
+      return json(loi('bad', 'Gửi thẳng chỉ nhận POST kèm vé đã ký'), 405, { allow: 'POST, OPTIONS' });
+    }
     // Tải từng phần (trang tự ghép thành một file trên máy): xem taiPhan trong src/taive.js.
     if (url.pathname === '/taive/phan') {
       if (req.method === 'POST') return taiPhan(req, env);

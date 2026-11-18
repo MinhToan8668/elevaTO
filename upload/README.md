@@ -1,4 +1,4 @@
-# elevaTO Upload — tải file lớn lên Google Drive
+# elevaTO Upload — gửi file lớn thẳng lên Telegram
 
 Công cụ **riêng**, tách hẳn khỏi landing page modeling:
 
@@ -7,15 +7,20 @@ Công cụ **riêng**, tách hẳn khỏi landing page modeling:
   hay bot quản trị. Nó chỉ dùng token bot để **nhắn** link cho bạn.
 
 Mở trang → chọn một hoặc nhiều file (video, tài liệu, ảnh, file nén… mọi loại) →
-**Tải lên**. Các file lần lượt vào thư mục **elevaTO Uploads** trên Google Drive.
-Trang chạy được trên máy không vào được Telegram, vì nó chỉ nói chuyện với Google.
+**Tải lên**. File đi **thẳng lên chat Telegram, không qua Google Drive**: trang cắt file thành
+phần 19MB, gửi từng phần (2 phần cùng lúc) tới Worker Cloudflare, Worker đẩy vào Telegram.
+Gửi đủ thì file vào **Kho** (xem dưới) và bot nhắn báo. File ≤19MB đi nguyên một file;
+lớn hơn thành các phần `.001`, `.002`… trong chat.
 
-Sau đó, tuỳ ô **"Gửi file vào chat Telegram rồi xoá khỏi Drive"** trên trang:
+- Phần nào lỗi (mạng chập, Telegram bận/429, vé hết hạn) thì gửi lại riêng phần đó.
+- Đóng tab giữa chừng: mở lại trang, chọn **đúng file đó** → **Tải lên** là gửi tiếp phần còn
+  thiếu (mã các phần đã gửi được nhớ trong trình duyệt).
+- Mạng chặn `*.workers.dev` (hay gặp ở mạng công ty) thì không gửi được — trang báo rõ sau vài
+  giây. Dùng 4G / mạng nhà.
 
-- **Bật** (mặc định): trong vòng một phút bot gửi file vào chat Telegram. File trên
-  19MB được cắt thành các phần `.001`, `.002`… Gửi đủ thì bản trên Drive vào Thùng
-  rác (Drive tự xoá hẳn sau 30 ngày) và file vào **Kho** (xem dưới).
-- **Tắt**: file ở lại Drive, bot chỉ nhắn link xem và link tải về.
+**Vì sao 19MB một phần:** bot gửi lên Telegram được tới 50MB/file, nhưng bot chỉ **lấy về** được
+file ≤20MB. Phần to hơn 20MB thì Tải thẳng không lấy lại được nữa — nên giữ 19MB. Muốn phần
+to (tới 2GB) phải tự dựng máy chủ Bot API riêng (VPS). Mỗi file tối đa 2GB.
 
 **Kho file trên Telegram** (cuối trang upload): liệt kê file bot đã gửi, tải về được hai
 đường — đường nào cũng không cần vào Telegram và không phải ghép tay.
@@ -153,16 +158,16 @@ tạo bản mới — tạo mới là đổi URL `/exec`, phải điền `WEBAPP
 
 ## Ghi chú
 
-- Vì sao file phải lên Drive trước: trình duyệt ở Việt Nam không gọi được Telegram,
-  máy chủ Google thì gọi được. Chiều về thì **Tải thẳng** đi qua Cloudflare nên bỏ được
-  Drive, còn chiều lên vẫn phải vòng — Worker không nhận nổi file 2GB đẩy lên.
+- Gửi thẳng cần Worker (cùng Worker với Tải thẳng): Worker phải có `UPLOAD_TG_TOKEN` là
+  **đúng bot** của Apps Script (`TG_BOT_TOKEN`) — mã file Telegram gắn với từng bot — và
+  `TAIVE_SECRET` giống Apps Script. Apps Script chỉ cấp **vé gửi có chữ ký** (tên, dung lượng,
+  số phần, chat nhận, hạn 24 giờ) và ghi vào Kho khi gửi xong; Worker chỉ gửi đúng những gì vé
+  cho phép, mỗi phần ≤20MB, nên không ai mượn được bot. Trình duyệt ở Việt Nam không gọi được
+  Telegram, Cloudflare thì gọi được.
 - Kho lưu trong Script Properties: mỗi file một ô `TGLIB_<id>`, mã file_id các phần
   40 mã một ô `TGFID_<id>_<n>` (mỗi ô tối đa 9KB).
-- Chuyển vào Telegram chạy nền: mỗi lượt ~4 phút, nhớ chỗ dừng, lượt sau làm tiếp —
-  file 2GB cũng không chạm giới hạn 6 phút. Telegram lỗi 5 lần liên tiếp thì bot
-  bỏ, **giữ file trên Drive** và nhắn link.
-- Trang cắt file thành mảnh 4MB. Rớt mạng thì tự thử lại; đóng tab giữa chừng thì
-  mở lại trang, chọn **đúng file đó** là tải tiếp từ chỗ dừng. Tối đa 2GB mỗi file.
+- Các action cũ đi qua Drive (`upload_start`/`upload_chunk`, chuyển nền vào Telegram) vẫn còn
+  trong `Code.gs` để làm nốt file cũ đang dở, nhưng trang không dùng nữa.
 - Key nằm sau dấu `#` trong link — phần đó trình duyệt không gửi lên máy chủ nào.
   **Token bot không bao giờ ra tới trình duyệt.** Sai key 20 lần thì khoá 10 phút.
 - Lỡ để lộ link: chạy hàm `doiKey`, link cũ hết dùng, bot nhắn link mới.

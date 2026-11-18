@@ -87,6 +87,7 @@ var JOB_MAX_LOI    = 5;                     // lỗi liên tiếp quá số này
 // Tải thẳng: Cloudflare gói Free cho 50 subrequest mỗi lần gọi, mỗi phần tốn 1 lượt tải.
 // Chừa 6 lượt để Worker còn xin lại được đường dẫn Telegram hết hạn giữa chừng (mỗi lần
 // xin tốn 2). PHẢI khớp MAX_PHAN trong ai/worker/src/taive.js — lệch là Worker từ chối vé.
+var VE_GUI_GIO     = 24;                    // vé gửi thẳng sống 24 giờ (file 2GB mạng chậm vẫn kịp)
 var TAI_THANG_PHAN = 44;                    // 44 × 19MB ≈ 836MB
 var VE_SONG_PHUT   = 50;                    // vé hết hạn sau 50 phút (đường dẫn Telegram sống ≥1 giờ)
 
@@ -133,6 +134,8 @@ function doPost(e) {
     else if (b.action === 'lib_restore') data = khoLayVe(b.key, b.id);
     else if (b.action === 'lib_direct') data = khoVeTaiThang(b.key, b.id, b.phan === 1);
     else if (b.action === 'lib_forget') data = khoBo(b.key, b.id);
+    else if (b.action === 'up_ve') data = guiVe(b.key, b.info);
+    else if (b.action === 'up_xong') data = guiXong(b.key, b.d, b.s, b.fids);
     else return json({ ok: false, error: 'unknown action', code: 'session' });
     return json({ ok: true, data: data });
   } catch (err) {
@@ -561,6 +564,68 @@ function xinDuongDan(token, ids) {
     if (canXin.length && vong + 1 < GETFILE_VONG) Utilities.sleep(cho);
   }
   return duong;   // phần nào còn '' thì Worker tự xin bù
+}
+
+// ────────────────────────────────────────────────────────────
+// Gửi thẳng lên Telegram (không qua Drive): trang gửi từng phần qua Worker, ở đây chỉ cấp vé và
+// ghi vào kho. Xem taiLen trong ai/worker/src/taive.js.
+// ────────────────────────────────────────────────────────────
+
+/** Ký một chuỗi base64url bằng bí mật dùng chung với Worker (giống vé tải thẳng). */
+function kyVe(d, biMat) { return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(d, biMat)); }
+
+/**
+ * Vé gửi thẳng cho một file: tên, dung lượng, số phần, cỡ phần, chat nhận. Worker chỉ gửi đúng
+ * những gì vé cho phép — không ai cầm được vé thì không dùng được bot.
+ */
+function guiVe(key, info) {
+  kiemKey(key);
+  info = info || {};
+  var size = Number(info.size);
+  if (!(size > 0) || Math.floor(size) !== size) throw new Error('PHIEN: File rỗng hoặc dung lượng không hợp lệ');
+  if (size > UP_MAX_BYTES) throw new Error('PHIEN: File lớn quá ' + Math.round(UP_MAX_BYTES / 1048576) + 'MB');
+  var ten = String(info.name || '').replace(/[\\\/\u0000-\u001f]/g, ' ').trim().slice(0, 200) || 'file';
+  var url = props().getProperty(PROP_WORKER), biMat = props().getProperty(PROP_SECRET), chat = props().getProperty(PROP_CHAT);
+  if (!url || !biMat) {
+    throw new Error('PHIEN: Chưa cài Worker — gửi thẳng lên Telegram cần WORKER_URL, WORKER_SECRET (xem upload/README.md, mục Tải thẳng)');
+  }
+  if (!chat || !props().getProperty(PROP_TOKEN)) throw new Error('PHIEN: Chưa chạy caiDat');
+  var ve = { k: 'up', id: 'u' + Utilities.getUuid().replace(/-/g, '').slice(0, 24), n: ten, s: size,
+             p: Math.max(1, Math.ceil(size / TG_PART)), ps: TG_PART, c: String(chat),
+             e: Date.now() + VE_GUI_GIO * 3600000 };
+  var d = Utilities.base64EncodeWebSafe(Utilities.newBlob(JSON.stringify(ve)).getBytes());
+  return { url: url.replace(/\/taive\/?$/, '') + '/tailen', d: d, s: kyVe(d, biMat), id: ve.id, parts: ve.p, ps: ve.ps };
+}
+
+/** Gửi đủ phần: ghi file vào kho (kèm file_id từng phần để Tải thẳng lấy về) và nhắn Telegram. */
+function guiXong(key, d, s, fids) {
+  kiemKey(key);
+  var biMat = props().getProperty(PROP_SECRET);
+  if (!biMat) throw new Error('PHIEN: Chưa cài Worker');
+  d = String(d || '');
+  var bo = function (x) { return String(x || '').replace(/=+$/, ''); };
+  if (!d || bo(kyVe(d, biMat)) !== bo(s)) throw new Error('PHIEN: Vé gửi không hợp lệ');
+  var ve;
+  try { ve = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(d)).getDataAsString('UTF-8')); }
+  catch (e) { throw new Error('PHIEN: Vé gửi hỏng'); }
+  if (!ve || ve.k !== 'up' || !/^[\w-]{1,100}$/.test(String(ve.id || ''))) throw new Error('PHIEN: Vé gửi hỏng');
+  if (props().getProperty(LIB_PREFIX + ve.id)) return { id: ve.id };   // gửi lại câu "xong" lần nữa: đã ghi rồi
+  if (!Array.isArray(fids) || fids.length !== ve.p ||
+      !fids.every(function (f) { return /^[\w-]{10,300}$/.test(String(f || '')); })) {
+    throw new Error('PHIEN: Thiếu mã file của ' + ve.p + ' phần — gửi lại các phần còn thiếu');
+  }
+  // Ghi cả lô một lần (mỗi ô 40 mã) cho đỡ tốn lượt gọi Thuộc tính tập lệnh.
+  var o = {};
+  for (var i = 0; i < fids.length; i++) {
+    var k = oFid(ve.id, i);
+    (o[k] = o[k] || [])[i % FID_MOI_O] = String(fids[i]);
+  }
+  Object.keys(o).forEach(function (k) { o[k] = JSON.stringify(o[k]); });
+  o[LIB_PREFIX + ve.id] = JSON.stringify({ id: ve.id, name: ve.n, size: ve.s, parts: ve.p, ps: ve.ps, date: new Date().toISOString() });
+  props().setProperties(o);
+  guiTelegram('✅ ' + ve.n + ' (' + mbText(ve.s) + ') đã vào Telegram' + (ve.p > 1 ? ' thành ' + ve.p + ' phần' : '') +
+    ' — gửi thẳng, không qua Drive.\n\u{1F4E6} Lấy lại thành một file: mục "Kho file trên Telegram" ở trang tải lên → Tải thẳng.');
+  return { id: ve.id };
 }
 
 /** Bỏ file khỏi kho (tin nhắn trong Telegram vẫn còn). Có bản tạm thì bỏ luôn. */
