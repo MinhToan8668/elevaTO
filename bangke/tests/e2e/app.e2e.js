@@ -369,7 +369,9 @@ test('AI rà soát bảng kê đã lưu: tìm dòng lệch cột, AI đề xuấ
   const one = prompt.slice(prompt.indexOf('### id=0'));
   assert.match(one, /RAW hàng trên: .*F: 1 \| G: Công ty A[\s\S]*RAW dòng này: F: 2 \| G: KOREA CO/, 'gửi AI dữ liệu gốc dòng + hàng kề: ' + one.slice(0, 300));
   assert.match(prompt, /Tiêu đề cột của file: .*HÓA ĐƠN/);
-  assert.match(await page.locator('#auGo').innerText(), /Áp dụng 1 dòng/);      // tin cậy 90% → tự tick
+  assert.match(await page.locator('#auGo').innerText(), /Duyệt dòng để áp dụng/);   // phải duyệt từng dòng
+  await page.locator('#auB [data-dec][data-v="y"]').first().click();
+  assert.match(await page.locator('#auGo').innerText(), /Áp dụng 1 dòng đã duyệt/);
   await page.click('#auGo');
   await page.locator('.modal').waitFor({ state: 'detached' });
   await page.click('[data-tab="kunn"]');
@@ -407,9 +409,12 @@ test('AI tự rà việc gán cột khi tải file: đề xuất đổi cột + 
   assert.match(prompt, /CÔNG CỤ ĐANG GÁN:[\s\S]*tien_gn \(Số tiền giải ngân \(vay\)\) = E/);
   assert.match(prompt, /\[5\] A: 3 \| B: OMEGA LTD/);
   assert.match(await page.locator('.colchk').innerText(), /NGOẠI TỆ/, 'luật cũng báo số lẻ có thể là ngoại tệ');
+  assert.equal(await page.locator('.aitab tr').count(), 1, 'tool đã gán đúng 2 cột tiền → chỉ còn mục khối hàng USD');
+  assert.match(await page.locator('.aitab').innerText(), /Hàng 5–5: loại tiền → USD/);
+  await page.locator('[data-cdall="y"]').click();
   await page.click('#cAIgo');
-  await page.locator('.aibox', { hasText: 'Đã áp dụng' }).waitFor();
-  assert.match(await page.locator('.modal tbody').innerText(), /OM-1[\s\S]*1\.200,5/);
+  await page.locator('.aibox', { hasText: 'đã áp dụng' }).waitFor();
+  assert.match(await page.locator('.modal tbody').last().innerText(), /OM-1[\s\S]*1\.200,5/);
   await page.fill('#iNew', 'Công ty Xi');
   await page.click('#iSave');
   const k = page.locator('.kunn', { hasText: '77/2026' });
@@ -438,11 +443,23 @@ test('kiểm tra dữ liệu đã nạp: phát hiện KUNN ngoại tệ chưa gh
   await page.locator('[data-act="oldchk"]').click();
   await page.locator('#ocB', { hasText: 'Có thể là ngoại tệ' }).waitFor();
   assert.match(await page.locator('#ocB tbody').last().innerText(), /KU-2[\s\S]*Gắn loại tiền/);
-  assert.match(await page.locator('#ocGo').innerText(), /Áp dụng 1 đề xuất/);
+  await page.locator('[data-open]').first().click();                        // xem chi tiết từng dòng bị ảnh hưởng
+  assert.match(await page.locator('tr.sub').innerText(), /INV-1[\s\S]*Loại tiền: .*VND.* → USD[\s\S]*INV-2/);
+  await page.locator('tr.sub [data-dec][data-v="n"]').last().click();         // không lấy dòng INV-2
+  assert.match(await page.locator('[data-open]').first().innerText(), /1\/2 dòng/);
+  await page.locator('#ocB [data-dec][data-v="y"]').first().click();          // duyệt đề xuất
+  assert.match(await page.locator('#ocGo').innerText(), /Áp dụng 1 đề xuất đã duyệt/);
   await page.click('#ocGo');
   await page.locator('.modal').waitFor({ state: 'detached' });
   if (!(await page.locator('.kunn', { hasText: 'KU-2' }).locator('table').count())) await page.click('[data-toggle] >> text=KUNN KU-2');
-  assert.match(await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody').innerText(), /1\.757,87 USD/);
+  const kb = await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody').innerText();
+  assert.match(kb, /INV-1[\s\S]*1\.757,87 USD/);
+  assert.doesNotMatch(kb, /920,5 USD/, 'dòng không duyệt giữ nguyên');
+  // hoàn tác / làm lại
+  await page.click('#bUndo');
+  await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody').filter({ hasNotText: 'USD' }).waitFor();
+  await page.keyboard.press('Control+y');
+  await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody', { hasText: '1.757,87 USD' }).waitFor();
   // không còn nút xóa ngoài danh sách; xóa nằm trong Sửa thông tin
   assert.equal(await page.locator('[data-cdel]').count(), 0);
   await page.click('#bEditC');

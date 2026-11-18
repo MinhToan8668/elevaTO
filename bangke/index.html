@@ -134,6 +134,15 @@ svg.viz{width:100%;height:auto;display:block}svg .ax{font-size:11px;fill:#8C7E71
 table.click tbody tr{cursor:pointer}
 .vtip{position:fixed;z-index:300;pointer-events:none;background:#14233a;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:var(--shm);display:none;max-width:320px}
 .spark{display:block}
+.dec{display:inline-flex;gap:4px}.dec button{border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-size:12px;background:#fff;font-weight:600;color:var(--ink2);white-space:nowrap}
+.dec.sm button{padding:1px 7px}.dec button.y:hover{border-color:var(--ok);color:var(--ok)}.dec button.n:hover{border-color:var(--err);color:var(--err)}
+.dec button.y.on{background:var(--ok);border-color:var(--ok);color:#fff}.dec button.n.on{background:var(--err);border-color:var(--err);color:#fff}
+.decbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px}
+.t tr.ok td{background:#f1faf4}.t tr.no td{background:#f6f4f1;color:var(--ink3)}.t tr.no td s,.t tr.no td ins{opacity:.6}
+.t tr.sub>td{background:#fbf9f5;padding:8px 10px 12px 34px}
+.aitab{margin-top:6px;background:#fff;border-radius:8px}
+.hbtn[disabled]{opacity:.35;cursor:default}
+
 
 .colchk{padding:10px 14px;margin:10px 0}.cc-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cc-h b{color:var(--navy)}
 .cc-l{margin:8px 0 0 18px;font-size:12.5px}.cc-l li.e{color:var(--err)}.cc-l li.w{color:#8a5a0c}
@@ -193,6 +202,7 @@ svg .hit.go{cursor:pointer}svg .hit.go:hover{fill:rgba(0,91,170,.06)}
   <button class="hbtn" id="bExport">⬇ Xuất Excel</button>
   <button class="hbtn" id="bBackup" title="Sao lưu toàn bộ dữ liệu ra file (.json)">Sao lưu</button>
   <button class="hbtn" id="bRestore" title="Nạp file sao lưu (gộp vào dữ liệu hiện có)">Nạp sao lưu</button>
+  <button class="hbtn" id="bUndo" title="Hoàn tác (Ctrl+Z)" disabled>↶</button><button class="hbtn" id="bRedo" title="Làm lại (Ctrl+Y)" disabled>↷</button>
   <button class="hbtn" id="bSettings" title="API key Gemini, mã nhóm đồng bộ (Alt+F9)">⚙ Cài đặt</button>
 </div></header>
 <div class="wrap">
@@ -411,8 +421,13 @@ const BK = (() => {
   function headerField(text) {
     const t = fold(text).replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!t || t.length > 50 || /\d{1,2}\/\d{1,2}\/\d{2,4}/.test(t)) return '';    // câu chữ dài / có ngày tháng: không phải tiêu đề cột
-    if (/^tong\b/.test(t) && !/hoa\s*don/.test(t)) return '';        // "TỔNG TIỀN VAY", "TỔNG (VNĐ)" — cột cộng dồn, bỏ
-    if (/^so\s*tien(\s*\(?(vnd|vnđ)\)?)?$/.test(t)) return 'so_tien_kunn?';   // "SỐ TIỀN" trơn: chỉ là tiền KUNN khi có cột số KUNN
+    if (/^tong\b/.test(t) && !/hoa\s*don|kunn|khe\s*uoc/.test(t)) return '';        // "TỔNG TIỀN VAY", "TỔNG (VNĐ)" — cột cộng dồn, bỏ
+    if (/^so\s*tien(\s*\(?(vnd|vnđ)\)?)?$/.test(t)) return 'so_tien_kunn?';
+    if (/^(so\s*tien|gia\s*tri|tong\s*tien)\s*(cua\s*)?(kunn|khe\s*uoc|ku)\b/.test(t)) return 'so_tien_kunn';   // "SỐ TIỀN" trơn: chỉ là tiền KUNN khi có cột số KUNN
+    if (/(gia\s*tri|so\s*tien|tri\s*gia)\s*(tren\s*)?hop\s*dong|ngay\s*hop\s*dong|so\s*(bill|b\s*\/?\s*l)\b|tien\s*bct|^so\s*lc\b/.test(t)) return '';   // giá trị / ngày hợp đồng, B/L, LC: không phải trường bảng kê
+    if (/(so\s*tien|gia\s*tri|tri\s*gia)\s*(tren\s*)?to\s*khai/.test(t)) return 'tien_tk';
+    if (/^(so\s*)?to\s*khai|^so\s*tk\b/.test(t)) return 'so_tk';
+    if (/^(loai\s*thue|noi\s*dung)/.test(t)) return 'ky_hieu';
     for (const [k, re] of HEAD_RULES) if (re.test(t)) return k;
     return '';
   }
@@ -528,8 +543,37 @@ const BK = (() => {
     });
     return out.join(' | ');
   }
+  const LINE_FIELDS = ['stt', 'ncc', 'mst_ncc', 'so_hdmb', 'ky_hieu', 'so_hd', 'ngay_hd', 'tien_hd', 'tien_gn', 'loai_tien', 'ho_so', 'ghi_chu', 'so_tk', 'tien_tk'];
+  /** Hàng tiêu đề phụ giữa sheet (mỗi khối KUNN một kiểu cột) → bảng ánh xạ cột mới cho các dòng thuộc khối đó. */
+  function subHeaderMap(row, next, base, prev) {
+    const m = {};
+    let score = 0;
+    (row || []).forEach((v, c) => {
+      if (typeof v !== 'string') return;
+      const t = fold(v).replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+      let f = headerField(v);
+      if (f === 'so_tien_kunn?') f = 'tien_hd';
+      if (!f && /^ngay$/.test(t)) f = 'ngay_hd';
+      if (!f || !LINE_FIELDS.includes(f) || m[f] != null) return;
+      m[f] = c; score += ['so_hd', 'so_tk', 'tien_hd', 'tien_gn', 'tien_tk', 'ncc'].includes(f) ? 2 : 1;
+    });
+    if (score < 4 || (m.so_hd == null && m.so_tk == null) || (m.tien_hd == null && m.tien_gn == null && m.tien_tk == null)) return null;
+    // tiêu đề 2 tầng: NCC / STT / hợp đồng có thể nằm ở hàng ngay trên
+    (prev || []).forEach((v, c) => {
+      if (typeof v !== 'string') return;
+      const f = headerField(v);
+      if (['ncc', 'stt', 'so_hdmb'].includes(f) && m[f] == null && !Object.values(m).includes(c)) m[f] = c;
+    });
+    const out = {};
+    for (const [k, v] of Object.entries(base)) if (!LINE_FIELDS.includes(k)) out[k] = v;    // giữ cột cấp KUNN
+    Object.assign(out, m);
+    const txt = [...(row || []), ...(next || [])].map((v) => fold(v)).join(' ');
+    const cur = /\busd\b/.test(txt) ? 'USD' : /\beur\b/.test(txt) ? 'EUR' : /\bjpy\b/.test(txt) ? 'JPY' : /\b(cny|rmb)\b/.test(txt) ? 'CNY' : '';
+    return { map: out, cur };
+  }
   function extractRows(grid, headerRow, map, defaults = {}) {
-    const get = (row, f) => (map[f] == null || map[f] < 0 ? '' : row[map[f]]);
+    let bmap = map, bcur = '', lastHdr = -9;
+    const get = (row, f) => (bmap[f] == null || bmap[f] < 0 ? '' : row[bmap[f]]);
     const hdr = headerRow >= 0 ? [grid[headerRow - 1], grid[headerRow]].filter((x) => x && x.some((v) => String(v).trim())).map((x) => rowText(x, 40)).join(' ‖ ') : '';
     const groups = [];
     let cur = null;
@@ -547,8 +591,9 @@ const BK = (() => {
     for (let r = startRow; r < grid.length; r++) {
       const row = grid[r];
       if (blankRow(row)) continue;
-      // hàng tiêu đề lặp lại giữa bảng
-      if (scoreHeaderRow(row).score >= 4) continue;
+      // hàng tiêu đề phụ / lặp lại giữa bảng (có thể nằm cùng hàng với số KUNN)
+      const sh = subHeaderMap(row, grid[r + 1], map, grid[r - 1]);
+      const isHdr = sh || scoreHeaderRow(row).score >= 4;
       const kunnRaw = get(row, 'so_kunn');
       const kunnTxt = cellText(kunnRaw).trim();
       if (map.so_kunn != null && map.so_kunn >= 0 && kunnTxt && !TOTAL_RE.test(fold(kunnTxt))) {
@@ -558,7 +603,14 @@ const BK = (() => {
           so_kunn: so, ngay_gn: toISO(get(row, 'ngay_gn')), ngay_dh: toISO(get(row, 'ngay_dh')),
           so_tien: parseAmount(get(row, 'so_tien_kunn')), row: r,
         });
+        if (!sh) { bmap = map; bcur = ''; }               // KUNN mới → quay về cột của tiêu đề chính
       }
+      if (sh) {
+        // tiêu đề 2 tầng (hàng trên + hàng dưới) → gộp
+        if (lastHdr === r - 1 && bmap !== map) { bmap = { ...bmap, ...sh.map }; bcur = sh.cur || bcur; } else { bmap = sh.map; bcur = sh.cur; }
+        lastHdr = r; continue;
+      }
+      if (isHdr) continue;
       if (!cur) continue;
       // hàng tổng cộng
       const firstTexts = row.slice(0, Math.max(3, (map.ncc ?? 0) + 1)).map((v) => fold(v)).filter(Boolean);
@@ -577,7 +629,11 @@ const BK = (() => {
         kyHieuLech = cellText(get(row, 'ngay_hd')).trim();         // "NK" / "GTGT NK": 2 khoản thuế của cùng 1 tờ khai
         assumed.push('so_hd');
       }
-      const tien_hd = parseAmount(get(row, 'tien_hd'));
+      const tkRaw = get(row, 'so_tk');
+      const tkTxt = typeof tkRaw === 'number' ? numStr(tkRaw) : cellText(tkRaw).trim();
+      if (!so_hd && tkTxt && !assumed.includes('so_hd')) so_hd = tkTxt;
+      let tien_hd = parseAmount(get(row, 'tien_hd'));
+      if (tien_hd == null && bmap.tien_hd == null) tien_hd = parseAmount(get(row, 'tien_tk'));
       let tien_gn = parseAmount(get(row, 'tien_gn'));
       let nccTxt = cellText(get(row, 'ncc')).replace(/\s+/g, ' ').trim();
       const hdmbTxt = cellText(get(row, 'so_hdmb')).replace(/\s+/g, ' ').trim();
@@ -606,10 +662,10 @@ const BK = (() => {
         ngay_hd,
         tien_hd,
         tien_gn,
-        loai_tien: cellText(get(row, 'loai_tien')).trim().toUpperCase(),
+        loai_tien: cellText(get(row, 'loai_tien')).trim().toUpperCase() || bcur,
         goc: (map.ho_so != null && map.ho_so >= 0) ? hs.goc : 'chua',
         thieu: hs.thieu || '',
-        ghi_chu: [cellText(get(row, 'ghi_chu')).trim(), hs.note || ''].filter(Boolean).join(' · '),
+        ghi_chu: [cellText(get(row, 'ghi_chu')).trim(), hs.note || '', tkTxt && tkTxt !== so_hd ? `TK ${tkTxt}` : ''].filter(Boolean).join(' · '),
         row: r + 1,
         raw: rowText(row),
       };
@@ -646,7 +702,7 @@ const BK = (() => {
         const a = ls[i];
         if (a.tien_gn == null || (a.assumed || []).includes('tien_gn') || a.tien_hd == null) continue;
         let j = i + 1, tot = a.tien_hd;
-        while (j < ls.length && (ls[j].assumed || []).includes('so_hd_tiep') && ls[j].so_hd === a.so_hd && (ls[j].assumed || []).includes('tien_gn')) { tot += ls[j].tien_hd || 0; j++; }
+        while (j < ls.length && (ls[j].assumed || []).includes('tien_gn') && ls[j].ncc === a.ncc && ls[j].tien_hd != null) { tot += ls[j].tien_hd || 0; j++; if (Math.abs(tot - a.tien_gn) <= 1) break; }
         if (j > i + 1 && Math.abs(tot - a.tien_gn) <= 1 && Math.abs(a.tien_gn - a.tien_hd) > 1) {
           a.ghi_chu = [a.ghi_chu, `số vay ghi gộp ${fmtMoney(a.tien_gn)} cho ${j - i} dòng`].filter(Boolean).join(' · ');
           a.tien_gn = a.tien_hd;
@@ -1293,7 +1349,39 @@ class Emitter {
 }
 const live = (x) => x && !x.deleted;
 class LocalStore extends Emitter {
-  constructor() { super(); this.c = new Map(); this.k = new Map(); this.log = []; this.db = null; this.sync = null; }
+  constructor() { super(); this.c = new Map(); this.k = new Map(); this.log = []; this.db = null; this.sync = null; this.undoS = []; this.redoS = []; this._grp = null; }
+  // ── hoàn tác / làm lại: mỗi thao tác ghi lại bản trước & sau của các hồ sơ bị đổi ──
+  _rec(type, before, after) {
+    const it = { type, before: before ? structuredClone(before) : null, after: after ? structuredClone(after) : null };
+    if (this._grp) { this._grp.items.push(it); return; }
+    this._push({ label: this._label || 'Sửa dữ liệu', at: Date.now(), items: [it] });
+  }
+  _push(e) { if (!e.items.length) return; this.undoS.push(e); if (this.undoS.length > 60) this.undoS.shift(); this.redoS = []; this.emit('hist'); }
+  /** Gom nhiều thao tác thành một bước hoàn tác. */
+  async group(label, fn) {
+    if (this._grp) return fn();
+    this._grp = { label, at: Date.now(), items: [] };
+    try { return await fn(); } finally { const g = this._grp; this._grp = null; this._push(g); }
+  }
+  labelNext(label) { this._label = label; setTimeout(() => { this._label = ''; }, 0); }
+  async _restore(items, side) {
+    const now = Date.now(), by = userName();
+    const kh = [], ku = [];
+    for (const it of items) {
+      const cur = (it.type === 'kh' ? this.c : this.k).get((it.before || it.after).id);
+      let rec = it[side];
+      if (!rec) rec = { ...(it.before || it.after), deleted: true };                // hồ sơ mới tạo → hoàn tác = xóa
+      rec = { ...structuredClone(rec), updatedAt: Math.max(now, ((cur && cur.updatedAt) || 0) + 1), updatedBy: by };
+      (it.type === 'kh' ? kh : ku).push(rec);
+    }
+    for (const r of kh) this.c.set(r.id, r);
+    for (const r of ku) this.k.set(r.id, r);
+    await this._w('customers', kh); await this._w('kunn', ku);
+    this._out('kh', kh); this._out('ku', ku);
+    this.emit('c'); this.emit('k');
+  }
+  async undo() { const e = this.undoS.pop(); if (!e) return null; await this._restore([...e.items].reverse(), 'before'); this.redoS.push(e); this.emit('hist'); return e; }
+  async redo() { const e = this.redoS.pop(); if (!e) return null; await this._restore(e.items, 'after'); this.undoS.push(e); this.emit('hist'); return e; }
   async init() {
     try {
       this.db = await new Promise((res, rej) => {
@@ -1320,12 +1408,13 @@ class LocalStore extends Emitter {
   onLog(cid, cb) { const f = () => cb(this.log.filter((x) => x.customerId === cid).slice(0, 300)); f(); return this.on('log', f); }
   async getKunns(cid) { return this.kunnsOf(cid); }
   _out(type, recs) { if (this.sync) this.sync.queue(type, recs); }
-  async putCustomer(c) { const x = structuredClone(c); this.c.set(x.id, x); await this._w('customers', [x]); this._out('kh', [x]); this.emit('c'); }
+  async putCustomer(c) { const x = structuredClone(c); this._rec('kh', this.c.get(x.id), x); this.c.set(x.id, x); await this._w('customers', [x]); this._out('kh', [x]); this.emit('c'); }
   async delCustomer(id) {
     const at = Date.now(), by = userName();
     const ks = [...this.k.values()].filter((k) => k.customerId === id && live(k)).map((k) => ({ id: k.id, customerId: id, so_kunn: k.so_kunn, deleted: true, updatedAt: at, updatedBy: by }));
     ks.forEach((k) => this.k.set(k.id, k));
     const c = { id, name: (this.c.get(id) || {}).name || '', deleted: true, updatedAt: at, updatedBy: by };
+    await this.group(`Xóa khách hàng ${c.name}`, async () => { ks.forEach((k) => this._rec('ku', this.k.get(k.id), k)); this._rec('kh', this.c.get(id), c); });
     this.c.set(id, c);
     await this._w('kunn', ks); await this._w('customers', [c]);
     this._out('ku', ks); this._out('kh', [c]);
@@ -1333,14 +1422,16 @@ class LocalStore extends Emitter {
   }
   async putKunns(ks) {
     const xs = ks.map((k) => structuredClone(k));
+    xs.forEach((k) => this._rec('ku', this.k.get(k.id), k));
     xs.forEach((k) => this.k.set(k.id, k));
     await this._w('kunn', xs); this._out('ku', xs); this.emit('k');
   }
   async putKunn(k) { return this.putKunns([k]); }
-  async updateKunn(id, patch) { const k = this.k.get(id); if (!live(k)) return; Object.assign(k, patch); await this.putKunns([k]); }
+  async updateKunn(id, patch) { const k0 = this.k.get(id); if (!live(k0)) return; const k = structuredClone(k0); Object.assign(k, patch); await this.putKunns([k]); }
   async delKunn(id) { const k = this.k.get(id); if (!k) return; await this.putKunns([{ id, customerId: k.customerId, so_kunn: k.so_kunn, deleted: true, updatedAt: Date.now(), updatedBy: userName() }]); }
   async patchLines(kid, patches, meta) {
-    const k = this.k.get(kid); if (!live(k)) throw new Error('Không thấy KUNN (có thể máy khác vừa xóa)');
+    const k0 = this.k.get(kid); if (!live(k0)) throw new Error('Không thấy KUNN (có thể máy khác vừa xóa)');
+    const k = structuredClone(k0);                     // sửa trên bản sao → giữ được bản trước để hoàn tác
     const by = new Map(patches.map((p) => [p.id, p]));
     k.lines = k.lines.map((l) => (by.has(l.id) ? { ...l, ...by.get(l.id), id: l.id } : l));
     Object.assign(k, meta);
@@ -1503,6 +1594,7 @@ async function startStore() {
   const st = new LocalStore(); await st.init();
   S.store = st;
   S.sync = st.sync = new FolderSync(st);
+  st.on('hist', renderHist); renderHist();
   S.sync.on('state', () => { renderSyncPill(); if ($('#syncBox')) renderSyncBox(document); });
   S.sync.on('pulled', ({ changed, nLog }) => { if (changed) toast(`Đã cập nhật ${changed} hồ sơ từ thư mục chung`, 'ok'); else if (nLog && S.tab === 'log') renderMain(); });
   S.unsubC = st.onCustomers((cs) => { S.customers = cs.sort(sortCust); renderSide(); if (!S.cid) renderMain(); else if (!cust(S.cid)) selectCustomer(null); else renderHeaderOnly(); });
@@ -2165,7 +2257,7 @@ function openAudit(src) {
     for (const [idx, list] of byLine) rows.push({ k, l: k.lines[idx], idx, issues: list, id: `${k._key}|${idx}`, prev: (k.lines[idx - 1] || {}).raw, next: (k.lines[idx + 1] || {}).raw });
   }
   const nLines = BK.sum(src.kunns.map((k) => k.lines.length));
-  const st = { flt: '', sug: new Map(), pick: new Set(), busy: false };
+  const st = { flt: '', sug: new Map(), dec: new Map(), busy: false };
   const m = modal(`<div class="mh"><h2>🤖 Rà soát bảng kê — ${esc(src.title)}</h2><button class="x" data-close>&times;</button></div><div class="mb" id="auB"></div>
     <div class="mf"><span id="auF" class="hist" style="flex:1"></span><button class="btn" id="auX">⬇ Xuất Excel danh sách</button><button class="btn" id="auAI">✨ AI đề xuất cách sửa</button><button class="btn pri" id="auGo" disabled>Áp dụng</button></div>`);
   const lineRows = () => rows.filter((r) => r.l);
@@ -2176,9 +2268,10 @@ function openAudit(src) {
     $('#auB', m).innerHTML = `
       ${rows.length ? `<div class="verdict ${nSev3 ? 'err' : 'warn'}"><div><b>${nSev3 ? '✗' : '⚠'} ${rows.length} dòng cần xem trên tổng ${nLines} dòng · ${src.kunns.length} KUNN</b><span>Bấm <b>✨ AI đề xuất cách sửa</b> để Gemini đọc lại dữ liệu gốc từng ô (kèm hàng trên/dưới để bắt lệch dòng) và đề xuất giá trị đúng. Tick dòng muốn sửa rồi bấm <b>Áp dụng</b>.</span></div></div>`
         : `<div class="verdict ok"><div><b>✓ Không thấy dòng nào lệch cột hay sai logic</b><span>Đã rà ${nLines} dòng · ${src.kunns.length} KUNN.</span></div></div>`}
+      ${st.sug.size ? decBar(decCount([...st.sug.keys()], st.dec), '<button class="btn sm" data-decai>✓ Duyệt các đề xuất AI ≥75%</button>') : ''}
       ${rows.length ? `<div class="au-sum"><button data-af="" class="${st.flt ? '' : 'on'}">Tất cả<b>${rows.length}</b></button>${types.map(([t, n]) => `<button data-af="${t}" class="${st.flt === t ? 'on' : ''}">${BK.AUDIT[t].label}<b>${n}</b></button>`).join('')}</div>
       ${st.flt && st.flt !== 'tong_lech' && st.flt !== 'lech_cot' ? `<div class="bar"><span class="hist">Nếu nhóm “${BK.AUDIT[st.flt].label}” là hợp lệ theo hồ sơ (vd hóa đơn bổ sung sau giải ngân):</span><button class="btn sm" id="auAck">✓ Xác nhận ${vis.filter((r) => r.l).length} dòng nhóm này là hợp lệ — không báo lại</button></div>` : ''}
-      <div class="card tw" style="max-height:60vh"><table class="t"><thead><tr><th><input type="checkbox" id="auAll"></th><th>KUNN · hàng</th><th>Công cụ đang đọc</th><th>Vấn đề</th><th>Dữ liệu gốc trong file</th><th>AI đề xuất</th></tr></thead><tbody>
+      <div class="card tw" style="max-height:60vh"><table class="t"><thead><tr><th>Quyết định</th><th>KUNN · hàng</th><th>Công cụ đang đọc</th><th>Vấn đề</th><th>Dữ liệu gốc trong file</th><th>AI đề xuất</th></tr></thead><tbody>
       ${vis.slice(0, 800).map((r) => {
         const sg = st.sug.get(r.id), l = r.l;
         const ch = l ? auChanges(l, sg) : {};
@@ -2188,7 +2281,8 @@ function openAudit(src) {
           : !sg ? (st.busy ? '<span class="hist"><span class="spin"></span></span>' : '<span class="hist">—</span>')
           : sg.err ? `<span class="hist" style="color:var(--err)">${esc(sg.err)}</span>`
           : `${conf != null ? `<span class="conf ${conf >= 75 ? 'hi' : conf >= 50 ? 'mid' : 'lo'}">${conf}%</span> ` : ''}${sg.ok || !Object.keys(ch).length ? '<b style="color:var(--ok)">Dòng này đúng</b>' : `<div class="diff">${Object.entries(ch).map(([f, v]) => `${AU_FIELDS.find((x) => x[0] === f)[1]}: <s>${esc(auFmt(f, l[f], l.loai_tien))}</s> → <ins>${esc(auFmt(f, v, ch.loai_tien ?? l.loai_tien))}</ins>`).join('<br>')}</div>`}<div class="hist">${esc(sg.ly_do || '')}</div>`;
-        return `<tr class="${sev >= 3 ? 'bad' : 'warn'}"><td>${l ? `<input type="checkbox" data-pk="${esc(r.id)}" ${st.pick.has(r.id) ? 'checked' : ''} ${sg ? '' : 'disabled'}>` : ''}</td>
+        const dv = st.dec.get(r.id) || '';
+        return `<tr class="${dv === 'y' ? 'ok' : dv === 'n' ? 'no' : sev >= 3 ? 'bad' : 'warn'}"><td>${l ? (sg && !sg.err ? decHtml(r.id, dv) + (!dv && (sg.tin_cay ?? 0) >= 0.75 ? '<div class="hist">AI khuyên duyệt</div>' : '') : '<span class="hist">chờ AI đề xuất</span>') : ''}</td>
           <td><b>${esc(r.k.so_kunn)}</b><div class="hist">${l ? `hàng ${esc(l.row || r.idx + 1)}` : 'cả KUNN'}</div></td>
           <td style="min-width:200px">${l ? `<div>${esc(l.ncc)}</div><div><b>${esc(l.so_hd)}</b>${l.ky_hieu ? ' · ' + esc(l.ky_hieu) : ''} · ${dd(l.ngay_hd) || '—'}</div><div class="hist">HĐ ${money(l.tien_hd, l.loai_tien) || '—'} · GN ${money(l.tien_gn, l.loai_tien) || '—'} ${esc(l.loai_tien || '')}</div>` : ''}</td>
           <td style="min-width:180px">${r.issues.map((i) => `<div><span class="pill ${i.sev >= 3 ? 'p-err' : 'p-warn'}">${BK.AUDIT[i.type].label}</span><div class="hist">${esc(i.text)}</div></div>`).join('')}</td>
@@ -2203,16 +2297,17 @@ function openAudit(src) {
       if (!confirm(`Xác nhận ${list.length} dòng “${BK.AUDIT[t].label}” là hợp lệ? Các dòng này sẽ không bị báo lỗi này nữa.`)) return;
       try { await src.apply(list); m.remove(); toast(`Đã xác nhận ${list.length} dòng`, 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
     };
-    $$('[data-pk]', m).forEach((c) => { c.onchange = () => { c.checked ? st.pick.add(c.dataset.pk) : st.pick.delete(c.dataset.pk); foot(); }; });
-    const all = $('#auAll', m); if (all) all.onchange = () => { vis.forEach((r) => { if (r.l && st.sug.has(r.id) && !st.sug.get(r.id).err) all.checked ? st.pick.add(r.id) : st.pick.delete(r.id); }); draw(); };
+    $$('[data-dec]', m).forEach((b) => { b.onclick = () => { const id = b.dataset.dec; st.dec.set(id, st.dec.get(id) === b.dataset.v ? '' : b.dataset.v); draw(); }; });
+    $$('[data-decall]', m).forEach((b) => { b.onclick = () => { for (const [id, sg] of st.sug) if (!sg.err) st.dec.set(id, b.dataset.decall); draw(); }; });
+    const dai = $('[data-decai]', m); if (dai) dai.onclick = () => { for (const [id, sg] of st.sug) if (!sg.err && (sg.tin_cay ?? 0) >= 0.75 && !st.dec.get(id)) st.dec.set(id, 'y'); draw(); };
     foot();
   };
   const foot = () => {
-    const n = st.pick.size;
+    const n = [...st.dec.values()].filter((v) => v === 'y').length;
     $('#auGo', m).disabled = !n || st.busy;
-    $('#auGo', m).textContent = n ? `Áp dụng ${n} dòng đã chọn` : 'Áp dụng';
+    $('#auGo', m).textContent = n ? `Áp dụng ${n} dòng đã duyệt` : 'Duyệt dòng để áp dụng';
     $('#auAI', m).disabled = st.busy || !lineRows().length;
-    $('#auF', m).textContent = st.sug.size ? `AI đã xem ${st.sug.size}/${lineRows().length} dòng · tick dòng muốn áp dụng (dòng AI xác nhận đúng sẽ không bị báo lại)` : '';
+    $('#auF', m).textContent = st.sug.size ? `AI đã xem ${st.sug.size}/${lineRows().length} dòng · duyệt / không duyệt từng dòng (dòng AI xác nhận đúng mà bạn duyệt sẽ không bị báo lại)` : '';
   };
   $('#auAI', m).onclick = async () => {
     const todo = lineRows().filter((r) => !st.sug.has(r.id)).sort((a, b) => Math.max(...b.issues.map((i) => i.sev)) - Math.max(...a.issues.map((i) => i.sev)));
@@ -2232,7 +2327,6 @@ function openAudit(src) {
         part.forEach((x, j) => {
           const sg = got.get(String(j)) || { err: 'AI không trả lời dòng này' };
           st.sug.set(x.id, sg);
-          if (!sg.err && (sg.tin_cay ?? 0) >= 0.75) st.pick.add(x.id);
         });
         draw();
       }
@@ -2241,7 +2335,7 @@ function openAudit(src) {
     st.busy = false; btn.textContent = '✨ AI đề xuất cách sửa'; draw();
   };
   $('#auGo', m).onclick = async () => {
-    const list = rows.filter((r) => st.pick.has(r.id) && r.l).map((r) => {
+    const list = rows.filter((r) => st.dec.get(r.id) === 'y' && r.l).map((r) => {
       const sg = st.sug.get(r.id);
       const patch = auChanges(r.l, sg);
       const ack = new Set(r.l.ack || []);
@@ -2253,7 +2347,7 @@ function openAudit(src) {
       return { k: r.k, l: r.l, patch };
     });
     $('#auGo', m).disabled = true;
-    try { await src.apply(list); m.remove(); toast(`Đã áp dụng ${list.length} dòng`, 'ok'); }
+    try { await S.store.group(`Rà soát: áp dụng ${list.length} dòng`, () => src.apply(list)); m.remove(); toast(`Đã áp dụng ${list.length} dòng — bấm ↶ (Ctrl+Z) nếu muốn hoàn tác`, 'ok', 6000); }
     catch (e) { toast(errMsg(e), 'err', 9000); $('#auGo', m).disabled = false; }
   };
   $('#auX', m).onclick = () => {
@@ -2294,6 +2388,11 @@ function auditImport() {
   });
 }
 
+/** Cặp nút quyết định cho từng mục đề xuất: 'y' = duyệt, 'n' = không duyệt, '' = chưa quyết. */
+const decHtml = (id, v, small) => `<span class="dec ${small ? 'sm' : ''}"><button class="y ${v === 'y' ? 'on' : ''}" data-dec="${esc(id)}" data-v="y" title="Duyệt — áp dụng thay đổi này">✓${small ? '' : ' Duyệt'}</button><button class="n ${v === 'n' ? 'on' : ''}" data-dec="${esc(id)}" data-v="n" title="Không duyệt — giữ nguyên">✗${small ? '' : ' Không'}</button></span>`;
+const decCount = (ids, dec) => { let y = 0, n = 0; for (const i of ids) { const v = dec.get(i); if (v === 'y') y++; else if (v === 'n') n++; } return { y, n, u: ids.length - y - n }; };
+const decBar = (c, extra = '') => `<div class="decbar"><span class="pill p-ok">✓ Duyệt ${c.y}</span><span class="pill p-err">✗ Không ${c.n}</span><span class="pill p-mute">Chưa quyết ${c.u}</span><span style="flex:1"></span>${extra}<button class="btn sm" data-decall="y">✓ Duyệt tất cả</button><button class="btn sm" data-decall="n">✗ Không duyệt tất cả</button><button class="btn sm" data-decall="">↺ Bỏ quyết định</button></div>`;
+
 // ═════════════════ KIỂM TRA DỮ LIỆU ĐÃ NẠP (khách hàng nạp từ trước) ═════════════════
 const FIX_TXT = (f) => (f.action === 'currency' ? `Gắn loại tiền ${f.currency || 'USD'} cho các dòng chưa ghi loại tiền` : f.action === 'scale' ? `Nhân số tiền các dòng × ${BK.fmtMoney(f.factor)} (đổi sang đồng)` : f.action === 'swap' ? 'Đảo cột: tiền HĐ ↔ tiền giải ngân' : f.action === 'hd_from_gn' ? 'Tiền HĐ = tiền giải ngân (cột GN là tổng các khoản của chứng từ)' : 'Giữ nguyên');
 const KTYPE = { ngoai_te: 'Có thể là ngoại tệ', don_vi: 'Sai đơn vị tiền', dao_cot: 'Đảo cột tiền', cot_tong: 'Tiền HĐ chỉ là 1 phần', ai: 'AI phát hiện' };
@@ -2315,7 +2414,7 @@ function openOldCheck(cid) {
   const ks = S.store.kunnsOf(cid).sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || ''));
   if (!ks.length) return toast('Khách hàng chưa có KUNN nào');
   const prof = BK.storedProfile(ks);
-  const st = { ai: null, busy: false, pick: new Set(prof.issues.map((_, i) => 'r' + i)) };
+  const st = { ai: null, busy: false, dec: new Map(), lineNo: new Set(), open: new Set() };
   const m = modal(`<div class="mh"><h2>🧪 Kiểm tra dữ liệu đã nạp — ${esc(c.name)}</h2><button class="x" data-close>&times;</button></div><div class="mb" id="ocB"></div>
     <div class="mf"><span class="hist" style="flex:1">Rà lỗi từng dòng (lệch cột, ngày sau GN…) → <button class="lnk" ${A({ act: 'audit', cid })}>🤖 Rà soát bảng kê</button></span><button class="btn" id="ocAI">🤖 AI rà dữ liệu cũ</button><button class="btn pri" id="ocGo">Áp dụng</button></div>`);
   const props = () => {
@@ -2341,38 +2440,62 @@ function openOldCheck(cid) {
       ${st.busy ? '<div class="note"><span class="spin"></span> AI đang rà dữ liệu cũ…</div>' : ''}
       ${st.ai && st.ai.err ? `<div class="note err">AI chưa rà được: ${esc(st.ai.err)}</div>` : ''}
       ${st.ai && st.ai.summary ? `<div class="aibox warn"><b>🤖 AI: ${esc(st.ai.summary)}</b></div>` : ''}
-      ${ps.length ? `<div class="card tw" style="max-height:45vh"><table class="t"><thead><tr><th></th><th>KUNN</th><th>Vấn đề</th><th>Đề xuất sửa</th><th>Nguồn</th></tr></thead><tbody>
-        ${ps.map((x) => `<tr><td><input type="checkbox" data-op="${x.id}" ${st.pick.has(x.id) ? 'checked' : ''}></td><td><b>${esc(x.so_kunn)}</b></td><td><span class="pill p-warn">${KTYPE[x.type]}</span><div class="hist">${esc(x.text)}</div></td>
-          <td>${x.fix.action === 'currency' ? `Gắn loại tiền <select class="inp" data-cur="${x.id}" style="width:auto;padding:2px 6px">${['USD', 'EUR', 'JPY', 'CNY'].map((u) => `<option ${(x.fix.currency || 'USD') === u ? 'selected' : ''}>${u}</option>`).join('')}</select> cho các dòng chưa ghi loại tiền` : esc(FIX_TXT(x.fix))}</td><td class="hist">${esc(x.src)}</td></tr>`).join('')}
+      ${ps.length ? `${decBar(decCount(ps.map((x) => x.id), st.dec))}<div class="card tw" style="max-height:55vh"><table class="t"><thead><tr><th>Quyết định</th><th>KUNN</th><th>Vấn đề phát hiện</th><th>Đề xuất sửa</th><th>Dòng bị ảnh hưởng</th><th>Nguồn</th></tr></thead><tbody>
+        ${ps.map((x) => { const det = oldDetail(x); const nOk = det.filter((d) => !st.lineNo.has(x.id + '|' + d.l.id)).length; const op = st.open.has(x.id);
+          return `<tr class="${st.dec.get(x.id) === 'y' ? 'ok' : st.dec.get(x.id) === 'n' ? 'no' : ''}"><td>${decHtml(x.id, st.dec.get(x.id) || '')}</td><td><b>${esc(x.so_kunn)}</b></td><td><span class="pill p-warn">${KTYPE[x.type]}</span><div class="hist">${esc(x.text)}</div></td>
+          <td>${x.fix.action === 'currency' ? `Gắn loại tiền <select class="inp" data-cur="${x.id}" style="width:auto;padding:2px 6px">${['USD', 'EUR', 'JPY', 'CNY'].map((u) => `<option ${(curOf(x)) === u ? 'selected' : ''}>${u}</option>`).join('')}</select> cho các dòng chưa ghi loại tiền` : esc(FIX_TXT(x.fix))}</td>
+          <td><button class="lnk" data-open="${x.id}">${op ? '▾' : '▸'} ${nOk}/${det.length} dòng — xem chi tiết</button></td><td class="hist">${esc(x.src)}</td></tr>
+          ${op ? `<tr class="sub"><td colspan="6"><div class="tw" style="max-height:320px"><table class="t"><thead><tr><th>Lấy dòng này?</th><th>Hàng</th><th>Nhà cung cấp</th><th>Số HĐ</th><th>Thay đổi</th><th>Dữ liệu gốc</th></tr></thead><tbody>
+            ${det.map((d) => { const key = x.id + '|' + d.l.id; const no = st.lineNo.has(key);
+              return `<tr class="${no ? 'no' : ''}"><td>${decHtml('L|' + key, no ? 'n' : 'y', true)}</td><td>${esc(d.l.row || '')}</td><td>${esc(d.l.ncc)}</td><td><b>${esc(d.l.so_hd)}</b></td><td class="diff">${d.ch.map((c) => `${c.lab}: <s>${esc(c.o)}</s> → <ins>${esc(c.n)}</ins>`).join('<br>')}</td><td><div class="raw">${esc(d.l.raw || '')}</div></td></tr>`; }).join('')}
+          </tbody></table></div></td></tr>` : ''}`; }).join('')}
       </tbody></table></div>` : `<div class="verdict ok"><div><b>✓ Không thấy KUNN nào sai đơn vị tiền / loại tiền / đảo cột</b><span>${st.ai ? '' : 'Có thể bấm “🤖 AI rà dữ liệu cũ” để AI soát thêm.'}</span></div></div>`}`;
-    $$('[data-op]', m).forEach((cb) => { cb.onchange = () => { cb.checked ? st.pick.add(cb.dataset.op) : st.pick.delete(cb.dataset.op); foot(); }; });
-    $$('[data-cur]', m).forEach((s) => { s.onchange = () => { const x = props().find((p) => p.id === s.dataset.cur); if (x) x.fix.currency = s.value; st.cur = { ...(st.cur || {}), [s.dataset.cur]: s.value }; }; });
+    $$('[data-dec]', m).forEach((b) => { b.onclick = () => {
+      const id = b.dataset.dec, v = b.dataset.v;
+      if (id.startsWith('L|')) { const key = id.slice(2); v === 'n' ? st.lineNo.add(key) : st.lineNo.delete(key); }
+      else st.dec.set(id, st.dec.get(id) === v ? '' : v);
+      draw(); }; });
+    $$('[data-decall]', m).forEach((b) => { b.onclick = () => { props().forEach((x) => st.dec.set(x.id, b.dataset.decall)); draw(); }; });
+    $$('[data-open]', m).forEach((b) => { b.onclick = () => { st.open.has(b.dataset.open) ? st.open.delete(b.dataset.open) : st.open.add(b.dataset.open); draw(); }; });
+    $$('[data-cur]', m).forEach((s) => { s.onchange = () => { st.cur = { ...(st.cur || {}), [s.dataset.cur]: s.value }; draw(); }; });
     foot();
   };
-  const foot = () => { const n = props().filter((x) => st.pick.has(x.id)).length; $('#ocGo', m).disabled = !n || st.busy; $('#ocGo', m).textContent = n ? `Áp dụng ${n} đề xuất` : 'Áp dụng'; $('#ocAI', m).disabled = st.busy; };
+  const curOf = (x) => (st.cur || {})[x.id] || x.fix.currency || 'USD';
+  // chi tiết từng dòng bị ảnh hưởng: giá trị hiện tại → giá trị sau khi sửa
+  const LAB = { tien_hd: 'Tiền HĐ', tien_gn: 'Tiền GN', loai_tien: 'Loại tiền' };
+  function oldDetail(x) {
+    const k = ks.find((y) => y.id === x.kid); if (!k) return [];
+    const fix = { ...x.fix, currency: curOf(x) };
+    const byId = new Map(k.lines.map((l) => [l.id, l]));
+    return BK.kunnFixPatches(k, fix).map((pt) => { const l = byId.get(pt.id);
+      return { l, pt, ch: Object.keys(pt).filter((f) => f !== 'id').map((f) => ({ lab: LAB[f] || f, o: f === 'loai_tien' ? l[f] || '(trống = VND)' : money(l[f], l.loai_tien) || '—', n: f === 'loai_tien' ? pt[f] : money(pt[f], l.loai_tien) || '—' })) }; });
+  }
+  const foot = () => { const n = props().filter((x) => st.dec.get(x.id) === 'y').length; $('#ocGo', m).disabled = !n || st.busy; $('#ocGo', m).textContent = n ? `Áp dụng ${n} đề xuất đã duyệt` : 'Duyệt đề xuất để áp dụng'; $('#ocAI', m).disabled = st.busy; };
   $('#ocAI', m).onclick = async () => {
     if (!aiKeys().length) { openSettings('ai'); return toast('Nạp API key Gemini trước', 'err'); }
     st.busy = true; draw();
     try {
       const r = await aiJson(promptOld(c, ks, prof), { thinking: 'medium', maxTokens: 16000 });
       st.ai = r;
-      (r.items || []).forEach((x, n) => { if (x && x.action && x.action !== 'none' && (x.tin_cay ?? 0) >= 0.75) st.pick.add('a' + n); });
+
     } catch (e) { st.ai = { err: errMsg(e) }; }
     st.busy = false; draw();
   };
   $('#ocGo', m).onclick = async () => {
-    const list = props().filter((x) => st.pick.has(x.id));
+    const list = props().filter((x) => st.dec.get(x.id) === 'y');
     const done = new Set();
     try {
-      for (const x of list) {
-        const key = x.kid + x.fix.action; if (done.has(key)) continue; done.add(key);
-        const fix = { ...x.fix, currency: (st.cur || {})[x.id] || x.fix.currency };
-        const k = S.store.kunnsOf(cid).find((y) => y.id === x.kid); if (!k) continue;
-        const patches = BK.kunnFixPatches(k, fix);
-        if (patches.length) await S.store.patchLines(k.id, patches, meta(), cid);
-        log(cid, 'sua_du_lieu', `Kiểm tra dữ liệu cũ — KUNN ${k.so_kunn}: ${FIX_TXT(fix)} (${patches.length} dòng)`);
-      }
-      m.remove(); toast(`Đã áp dụng ${done.size} đề xuất`, 'ok');
+      await S.store.group(`Kiểm tra dữ liệu cũ: áp dụng ${list.length} đề xuất`, async () => {
+        for (const x of list) {
+          const key = x.kid + x.fix.action; if (done.has(key)) continue; done.add(key);
+          const fix = { ...x.fix, currency: curOf(x) };
+          const k = S.store.kunnsOf(cid).find((y) => y.id === x.kid); if (!k) continue;
+          const patches = BK.kunnFixPatches(k, fix).filter((pt) => !st.lineNo.has(x.id + '|' + pt.id));
+          if (patches.length) await S.store.patchLines(k.id, patches, meta(), cid);
+          log(cid, 'sua_du_lieu', `Kiểm tra dữ liệu cũ — KUNN ${k.so_kunn}: ${FIX_TXT(fix)} (${patches.length} dòng duyệt)`);
+        }
+      });
+      m.remove(); toast(`Đã áp dụng ${done.size} đề xuất — bấm ↶ (Ctrl+Z) nếu muốn hoàn tác`, 'ok', 6000);
     } catch (e) { toast(errMsg(e), 'err', 9000); }
   };
   draw();
@@ -2403,6 +2526,7 @@ function editLine(kid, lid) {
 }
 async function patch(kid, patches, what) {
   const k = S.kunns.find((x) => x.id === kid);
+  S.store.labelNext(`KUNN ${k ? k.so_kunn : ''}: ${what}`);
   try { await S.store.patchLines(kid, patches, meta(), S.cid); log(S.cid, 'sua_dong', `KUNN ${k ? k.so_kunn : ''}: ${what} (${patches.length} dòng)`); refreshSummary(); }
   catch (e) { toast(errMsg(e), 'err'); }
 }
@@ -2638,7 +2762,7 @@ Trả JSON:
 async function aiColCheck(auto) {
   if (!aiKeys().length) { if (!auto) aiJson('').catch((e) => toast(e.message, 'err', 8000)); return; }
   if (IMP.colBusy) return;
-  IMP.colBusy = true; IMP.colAI = null; renderImport();
+  IMP.colBusy = true; IMP.colAI = null; IMP.colDec = new Map(); renderImport();
   try {
     const r = await aiJson(promptColCheck(), { thinking: 'medium', maxTokens: 12000 });
     const cols = BK.aiMappingToMap(r.columns || {});
@@ -2649,12 +2773,20 @@ async function aiColCheck(auto) {
   IMP.colBusy = false;
   if (IMP.m && document.body.contains(IMP.m)) renderImport();
 }
+function colItems(a) {
+  return [...a.changes.map((c) => ({ id: 'f:' + c.k, kind: 'col', c })), ...(a.unitChange ? [{ id: 'unit', kind: 'unit' }] : []), ...a.curRows.map((x, i) => ({ id: 'cur:' + i, kind: 'cur', x }))];
+}
 function applyColAI() {
   const a = IMP.colAI; if (!a || a.err) return;
-  for (const c of a.changes) { if (c.to == null) delete IMP.map[c.k]; else IMP.map[c.k] = c.to; }
-  if (a.unitChange) IMP.unit = a.unitChange;
-  IMP.curRows = a.curRows || [];
-  IMP.colAI = { ...a, applied: true };
+  const dec = IMP.colDec || new Map();
+  const ok = colItems(a).filter((it) => dec.get(it.id) === 'y');
+  if (!ok.length) return toast('Chưa duyệt mục nào', 'err');
+  for (const it of ok) {
+    if (it.kind === 'col') { if (it.c.to == null) delete IMP.map[it.c.k]; else IMP.map[it.c.k] = it.c.to; }
+    if (it.kind === 'unit') IMP.unit = a.unitChange;
+  }
+  IMP.curRows = ok.filter((it) => it.kind === 'cur').map((it) => it.x);
+  IMP.colAI = { ...a, applied: true, nApplied: ok.length };
   IMP.aiRows = null;
   extract(); renderImport();
   toast('Đã áp dụng đề xuất của AI — kiểm tra lại kết quả bên dưới', 'ok');
@@ -2669,10 +2801,12 @@ function colCheckHtml() {
     : a.err ? `<div class="note err">AI chưa rà được: ${esc(a.err)}</div>`
     : `<div class="aibox ${a.ok && !a.changes.length && !a.unitChange && !a.curRows.length ? 'ok' : 'warn'}"><b>🤖 AI: ${esc(a.summary || (a.ok ? 'Gán cột hợp lý' : 'Có điểm cần sửa'))}</b>
       ${(a.issues || []).length ? `<ul>${a.issues.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul>` : ''}
-      ${a.changes.length || a.unitChange || a.curRows.length ? `<div class="aich">${a.changes.map((c) => `<span class="pill p-info">${esc(c.label)}: ${colLbl(c.from)} → <b>${colLbl(c.to)}</b></span>`).join(' ')}
-        ${a.unitChange ? `<span class="pill p-info">Đơn vị: ${esc(BK.UNITS[IMP.unit].label)} → <b>${esc(BK.UNITS[a.unitChange].label)}</b></span>` : ''}
-        ${a.curRows.map((x) => `<span class="pill p-info">Hàng ${x.from}–${x.to}: <b>${esc(x.currency)}</b></span>`).join(' ')}</div>
-        ${a.applied ? '<div class="hist" style="color:var(--ok)">✓ Đã áp dụng</div>' : '<button class="btn sm pri" id="cAIgo">✓ Áp dụng đề xuất của AI</button>'}` : ''}</div>`;
+      ${colItems(a).length ? (() => { const dec = IMP.colDec || new Map(); const its = colItems(a); const ny = its.filter((it) => dec.get(it.id) === 'y').length;
+        const hdr = IMP.sheets[IMP.sheet][IMP.headerRow] || [];
+        const lbl = (it) => it.kind === 'col' ? `<b>${esc(it.c.label)}</b>: cột ${colLbl(it.c.from)}${it.c.from != null && hdr[it.c.from] ? ` “${esc(String(hdr[it.c.from]).trim().slice(0, 24))}”` : ''} → cột <ins>${colLbl(it.c.to)}${it.c.to != null && hdr[it.c.to] ? ` “${esc(String(hdr[it.c.to]).trim().slice(0, 24))}”` : ''}</ins>`
+          : it.kind === 'unit' ? `<b>Đơn vị tiền</b>: ${esc(BK.UNITS[IMP.unit].label)} → <ins>${esc(BK.UNITS[a.unitChange].label)}</ins>` : `<b>Hàng ${it.x.from}–${it.x.to}</b>: loại tiền → <ins>${esc(it.x.currency)}</ins>`;
+        return `<table class="t aitab"><tbody>${its.map((it) => `<tr class="${dec.get(it.id) === 'y' ? 'ok' : dec.get(it.id) === 'n' ? 'no' : ''}"><td style="width:150px">${a.applied ? (dec.get(it.id) === 'y' ? '<span class="pill p-ok">✓ đã áp dụng</span>' : '<span class="pill p-mute">không áp dụng</span>') : decHtml('C|' + it.id, dec.get(it.id) || '')}</td><td class="diff">${lbl(it)}</td></tr>`).join('')}</tbody></table>
+          ${a.applied ? '' : `<div class="bar" style="margin:6px 0 0"><button class="btn sm" data-cdall="y">✓ Duyệt tất cả</button><button class="btn sm" data-cdall="n">✗ Không duyệt tất cả</button><button class="btn sm pri" id="cAIgo" ${ny ? '' : 'disabled'}>Áp dụng ${ny} mục đã duyệt</button></div>`}`; })() : ''}</div>`;
   return `<div class="card colchk"><div class="cc-h"><b>Kiểm tra phân bổ cột & đơn vị tiền</b>
       ${p.issues.length ? `<span class="pill ${bad ? 'p-err' : 'p-warn'}">${bad ? `${bad} lỗi` : ''}${bad && warn ? ' · ' : ''}${warn ? `${warn} cần xem` : ''}</span>` : '<span class="pill p-ok">✓ Các cột đúng kiểu dữ liệu</span>'}
       <span style="flex:1"></span>
@@ -2687,6 +2821,8 @@ function bindColCheck(m) {
   const u = $('#cUnit', m); if (u) u.onchange = () => { IMP.unit = u.value; IMP.unitSrc = ''; extract(); renderImport(); };
   const b = $('#cAI', m); if (b) b.onclick = () => aiColCheck(false);
   const g = $('#cAIgo', m); if (g) g.onclick = applyColAI;
+  $$('[data-dec^="C|"]', m).forEach((b) => { b.onclick = () => { IMP.colDec = IMP.colDec || new Map(); const id = b.dataset.dec.slice(2); IMP.colDec.set(id, IMP.colDec.get(id) === b.dataset.v ? '' : b.dataset.v); renderImport(); }; });
+  $$('[data-cdall]', m).forEach((b) => { b.onclick = () => { IMP.colDec = new Map(colItems(IMP.colAI).map((it) => [it.id, b.dataset.cdall])); renderImport(); }; });
   const c = $('#cCurClr', m); if (c) c.onclick = () => { IMP.curRows = []; extract(); renderImport(); };
 }
 
@@ -2833,7 +2969,7 @@ async function saveImport(opt = {}) {
     }
     await S.store.putKunns(docs);
     if (!docs.length) { btns.forEach((b) => { b.disabled = false; }); btn.textContent = '⬆ Nạp vào sổ theo dõi'; return toast('Không còn dòng hợp lệ nào để nạp', 'err'); }
-    await S.store.putKunns(docs);
+    await S.store.group(`Nạp ${IMP.file} (${docs.length} KUNN)`, () => S.store.putKunns(docs));
     log(cid, 'tai_bang_ke', `Nạp ${IMP.file}: ${n} KUNN, ${nl} dòng${nBo ? ` — bỏ ${nBo} dòng lỗi (đã GN / vượt / trùng)` : ch.errors ? ` (gồm ${ch.errors} dòng cảnh báo)` : ''}`);
     m.remove();
     toast(`Đã nạp ${n} KUNN, ${nl} dòng vào sổ${nBo ? ` · bỏ ${nBo} dòng lỗi` : ''}`, 'ok', 6000);
@@ -3107,6 +3243,30 @@ async function syncAction(a, btn) {
   if ($('#syncBox')) renderSyncBox(document);
 }
 $('#bSettings').onclick = () => openSettings();
+function renderHist() {
+  const st = S.store; if (!st) return;
+  const u = st.undoS[st.undoS.length - 1], r = st.redoS[st.redoS.length - 1];
+  $('#bUndo').disabled = !u; $('#bRedo').disabled = !r;
+  $('#bUndo').title = u ? `Hoàn tác: ${u.label} (Ctrl+Z)` : 'Không có gì để hoàn tác';
+  $('#bRedo').title = r ? `Làm lại: ${r.label} (Ctrl+Y)` : 'Không có gì để làm lại';
+}
+async function doUndo(redo) {
+  const st = S.store; if (!st) return;
+  const e = redo ? await st.redo() : await st.undo();
+  if (!e) return toast(redo ? 'Không có gì để làm lại' : 'Không có gì để hoàn tác');
+  toast(`${redo ? '↷ Đã làm lại' : '↶ Đã hoàn tác'}: ${e.label}`, 'ok');
+  if (S.cid) log(S.cid, redo ? 'lam_lai' : 'hoan_tac', `${redo ? 'Làm lại' : 'Hoàn tác'}: ${e.label}`);
+}
+$('#bUndo').onclick = () => doUndo(false);
+$('#bRedo').onclick = () => doUndo(true);
+document.addEventListener('keydown', (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;   // để ô nhập tự hoàn tác chữ
+  const k = e.key.toLowerCase();
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(false); }
+  else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); doUndo(true); }
+});
 $('#syncPill').onclick = () => { if (S.sync && S.sync.state === 'reconnect') syncAction('re'); else openSettings(); };
 document.addEventListener('keydown', (e) => { if (e.altKey && e.key === 'F9') { e.preventDefault(); openSettings(); } });
 
