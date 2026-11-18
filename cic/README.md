@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.9 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v8.0 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.9.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v8.0.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -320,6 +320,15 @@ như đơ (máy ít dữ liệu / mạng nhanh thì không thấy). Đo với tr
 - **Dán S10A / R20 ngay trong ô kỳ thiếu**: kiểm tra đúng MST (sai MST thì không lưu), lưu vào kho, tự gửi lên thư mục chung; bản tra cách
   kỳ ≤ 10 ngày tự chọn làm đại diện kỳ đó, xa hơn thì lưu vào kỳ của nó.
 - Bảng công ty × kỳ có cả khi xem 1 công ty; tooltip biểu đồ ghi đúng "kỳ xếp theo tháng tra / ngày số liệu".
+
+## v8.0 — Bấm cột biểu đồ để chọn / dán bản tra, đồng bộ nhanh hơn
+- **Bấm một cột trên biểu đồ Diễn biến** (kể cả cột trống): xem 1 công ty → mở ngay hộp chọn bản tra đại diện / dán S10A, R20 cho kỳ đó;
+  xem nhóm → danh sách công ty của kỳ (chưa tra lên đầu) với nút "Chọn / dán" / "Đổi". Xem 1 công ty, trục thời gian kéo tới tháng mới
+  nhất trong kho để các tháng còn thiếu có cột trống bấm vào được. Tooltip ghi "Bấm cột: chọn / dán bản tra kỳ này".
+- **Đồng bộ nhanh hơn**: mục lục ghi khoá bản tra, ngày tra, có R20 → bản tra máy đã có thì bỏ qua, không tải (máy vừa nâng cấp đã có dữ
+  liệu: 3,1 s → 0,22 s ở trễ 40 ms, 568 bản); không tải lại tệp đã nhận bằng bản cũ; quét toàn thư mục (máy chạy bản cũ) chỉ khi bấm tay
+  hoặc tối đa 1 lần/ngày; đọc / ghi song song 16 tệp (gửi toàn kho 8,8 → 4,6 s; máy mới nhận 3,3 → 1,9 s). Khung thư mục chung nêu tên
+  máy còn chạy bản cũ.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).
