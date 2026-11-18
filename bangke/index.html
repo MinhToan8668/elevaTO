@@ -97,6 +97,44 @@ label.f{display:block;font-size:12px;color:var(--ink2);font-weight:600}label.f .
 @keyframes sp{to{transform:rotate(360deg)}}
 .hist{font-size:11.5px;color:var(--ink3)}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .muted{color:var(--ink3)}.right{text-align:right}
+/* dashboard */
+.crumb{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}.crumb a{cursor:pointer;color:var(--blue)}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:14px}
+@media(max-width:1350px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:640px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{padding:14px 16px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+.tile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue)}
+.tile.crit::before{background:#d03b3b}.tile.good::before{background:#0ca30c}
+.tl{font-size:12px;color:var(--ink2);font-weight:600;display:flex;gap:6px;align-items:center}
+.ic{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-size:12px}
+.tile.crit .ic{background:var(--err-bg);color:var(--err)}.tile.good .ic{background:var(--ok-bg);color:var(--ok)}
+.tv{font-size:22px;white-space:nowrap;font-weight:700;color:var(--navy);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.ts{display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;color:var(--ink3);gap:6px}
+.meter{height:6px;border-radius:999px;background:#cfe0f1;overflow:hidden;margin:2px 0}.meter i{display:block;height:100%;background:var(--blue);border-radius:999px}
+.g2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;margin-bottom:12px;align-items:start}
+@media(max-width:1100px){.g2{grid-template-columns:1fr}}
+.panel{padding:14px 16px;margin-bottom:12px}.g2 .panel{margin-bottom:0}
+.panel header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.panel h3{font-size:14.5px;color:var(--navy)}.panel header p{font-size:12px;color:var(--ink3)}
+.sub2{font-size:12px;font-weight:600;color:var(--ink2);margin:16px 0 6px}
+svg.viz{width:100%;height:auto;display:block}svg .ax{font-size:11px;fill:#8C7E71}svg .vl{font-size:11.5px;fill:#20160F;font-weight:600}
+.seg{display:flex;gap:2px;height:16px;border-radius:5px;overflow:hidden}.seg i{display:block;min-width:3px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12.5px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legend b{color:var(--ink)}.legend em{font-style:normal;color:var(--ink3)}
+.hb{display:flex;flex-direction:column;gap:7px}.hbr{display:grid;grid-template-columns:minmax(90px,38%) 1fr;gap:10px;align-items:center;font-size:12.5px}
+.hbr[data-open]{cursor:pointer}.hbr[data-open]:hover .hbl{color:var(--blue);text-decoration:underline}
+.hbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+.hbt{display:flex;align-items:center;gap:8px}.hbt i{display:block;height:14px;border-radius:0 4px 4px 0}.hbt b{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.todo{list-style:none;display:flex;flex-direction:column;max-height:300px;overflow:auto}
+.todo li{display:flex;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line2);cursor:pointer}.todo li:hover{background:var(--card2)}
+.todo b{font-size:13px}.todo p{font-size:12px;color:var(--ink3)}.todo div{flex:1;min-width:0}.todo em{font-style:normal;font-weight:700;font-size:12.5px;white-space:nowrap}
+.ti{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}.ti.crit{background:var(--err-bg);color:var(--err)}.ti.warn{background:var(--warn-bg);color:var(--warn)}
+.okbox{padding:18px;text-align:center;color:var(--ok);background:var(--ok-bg);border-radius:10px;font-size:13px}
+.mini{height:6px;border-radius:999px;background:#e9e2d4;overflow:hidden}.mini i{display:block;height:100%;background:#0ca30c}
+table.click tbody tr{cursor:pointer}
+.vtip{position:fixed;z-index:300;pointer-events:none;background:#14233a;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:var(--shm);display:none;max-width:320px}
+.spark{display:block}
+
 </style>
 </head>
 <body>
@@ -1046,6 +1084,7 @@ class FolderSync extends Emitter {
     return ask ? (await h.requestPermission(o)) === 'granted' : false;
   }
   _set(s, err = '') { this.state = s; this.err = err; this.emit('state'); }
+  _busy(t) { const now = Date.now(); if (t && now - (this._bt || 0) < 300) return; this._bt = now; this.busy = t; this.emit('state'); }
   async pick() {
     if (!this.supported) throw new Error('Trình duyệt này không chọn được thư mục — dùng Chrome hoặc Edge trên máy tính.');
     const h = await window.showDirectoryPicker({ id: 'bangke-gn', mode: 'readwrite' });
@@ -1059,8 +1098,7 @@ class FolderSync extends Emitter {
     try {
       this.dir = await this.root.getDirectoryHandle(SYNC_DIR, { create: true });
       this._set('on');
-      await this.pull();
-      await this.flush();
+      (async () => { await this.pull(); await this.flush(); })().catch((e) => this._set('error', e.message));
       clearInterval(this.poll);
       this.poll = setInterval(() => { if (document.visibilityState === 'visible') this.pull().catch(() => {}); }, 30000);
     } catch (e) { console.error(e); this._set('error', e.message); }
@@ -1076,14 +1114,21 @@ class FolderSync extends Emitter {
   async flush() {
     if (this.state !== 'on' || !this.dir || !this.pending.size) return;
     const items = [...this.pending.entries()]; this.pending.clear();
-    for (const [name, it] of items) {
+    let done = 0;
+    const one = async ([name, it]) => {
       let data = it.rec;
       if (it.type === 'nk') data = this.store.log.filter((x) => x.customerId === it.cid && x.dev === DEVICE);
       const body = JSON.stringify({ app: 'bangke-gn', v: 1, type: it.type, by: userName(), dev: DEVICE, at: Date.now(), data });
       const fh = await this.dir.getFileHandle(name + '.json', { create: true });
       const w = await fh.createWritable(); await w.write(body); await w.close();
       const f = await fh.getFile(); this.seen.set(name + '.json', { sig: f.lastModified + ':' + f.size, by: userName() });
-    }
+      done++;
+      if (items.length > 8) this._busy(`Đang ghi lên thư mục chung ${done}/${items.length} tệp…`);
+    };
+    try {
+      for (let i = 0; i < items.length; i += 4) await Promise.all(items.slice(i, i + 4).map(one));
+    } catch (e) { items.forEach(([k, v]) => { if (!this.pending.has(k)) this.pending.set(k, v); }); throw e; }   // lỗi ghi → giữ lại để lần sau ghi tiếp
+    finally { this._busy(''); }
     this.last = Date.now(); this.emit('state');
   }
   /** Gửi toàn bộ kho trên máy này lên thư mục. */
@@ -1107,6 +1152,7 @@ class FolderSync extends Emitter {
       for await (const [name, h] of this.dir.entries()) {
         if (h.kind !== 'file' || !/^(kh|ku|nk)_.+\.json$/.test(name)) continue;
         n++;
+        if (n % 25 === 0) this._busy(`Đang đọc thư mục chung… ${n} tệp`);
         const f = await h.getFile();
         const sig = f.lastModified + ':' + f.size;
         const cached = this.seen.get(name);
@@ -1124,10 +1170,10 @@ class FolderSync extends Emitter {
       changed = a + b;
       if (a) this.store.emit('c');
       if (b) this.store.emit('k');
-      this.people = people; this.nFiles = n; this.last = Date.now(); this.emit('state');
+      this.busy = ''; this.people = people; this.nFiles = n; this.last = Date.now(); this.emit('state');
       if (changed || nLog) this.emit('pulled', { changed, nLog });
     } catch (e) { console.error(e); this._set(/NotAllowed|permission/i.test(e.name + e.message) ? 'reconnect' : 'error', e.message); }
-    finally { this._pulling = false; }
+    finally { this._pulling = false; if (this.busy) this._busy(''); }
     return changed;
   }
 }
@@ -1145,14 +1191,14 @@ function renderSyncPill() {
   const p = $('#syncPill'), sy = S.sync;
   const st = sy ? sy.state : 'off';
   p.className = 'sync' + (st === 'on' ? ' on' : st === 'error' || st === 'reconnect' ? ' err' : '');
-  p.lastChild.textContent = st === 'on' ? `Thư mục chung: ${sy.name}${sy.last ? ' · ' + new Date(sy.last).toLocaleTimeString('vi-VN') : ''}`
+  p.lastChild.textContent = st === 'on' ? (sy.busy || `Thư mục chung: ${sy.name}${sy.last ? ' · ' + new Date(sy.last).toLocaleTimeString('vi-VN') : ''}`)
     : st === 'reconnect' ? `Bấm để kết nối lại thư mục “${sy.name}”` : st === 'error' ? 'Lỗi thư mục chung — bấm để xem' : 'Chỉ trên máy này';
 }
 async function startStore() {
   const st = new LocalStore(); await st.init();
   S.store = st;
   S.sync = st.sync = new FolderSync(st);
-  S.sync.on('state', () => { renderSyncPill(); const m = $('#syncBox'); if (m) renderSyncBox(m); });
+  S.sync.on('state', () => { renderSyncPill(); if ($('#syncBox')) renderSyncBox(document); });
   S.sync.on('pulled', ({ changed, nLog }) => { if (changed) toast(`Đã cập nhật ${changed} hồ sơ từ thư mục chung`, 'ok'); else if (nLog && S.tab === 'log') renderMain(); });
   S.unsubC = st.onCustomers((cs) => { S.customers = cs.sort(sortCust); renderSide(); if (!S.cid) renderMain(); else if (!cust(S.cid)) selectCustomer(null); else renderHeaderOnly(); });
   st.on('k', () => { if (!S.cid) renderMain(); renderSide(); });
@@ -1233,27 +1279,131 @@ function modal(html, size = '') {
 
 function renderHeaderOnly() { if (S.cid) { const h = $('#custName'); const c = cust(S.cid); if (h && c) h.textContent = c.name; } else renderMain(); }
 
+// ═════════════════ BIỂU ĐỒ (SVG/HTML thuần, không thư viện) ═════════════════
+// Màu theo vai trò: 1 chuỗi = xanh thương hiệu; trạng thái hồ sơ gốc = bảng màu trạng thái cố định
+// (đã kiểm tra phân biệt mù màu; vàng/xám tương phản thấp → luôn kèm nhãn số + chú giải).
+const VC = { series: '#005baa', good: '#0ca30c', warn: '#fab219', idle: '#b9b2a6', crit: '#d03b3b', grid: '#ece6da', axis: '#8C7E71' };
+function shortMoney(n) {
+  if (n == null || !Number.isFinite(n)) return '—';
+  const a = Math.abs(n), f = (x, d) => x.toLocaleString('vi-VN', { maximumFractionDigits: d });
+  if (a >= 1e12) return f(n / 1e12, 2) + ' nghìn tỷ';
+  if (a >= 1e9) return f(n / 1e9, a >= 1e11 ? 0 : 1) + ' tỷ';
+  if (a >= 1e6) return f(n / 1e6, a >= 1e8 ? 0 : 1) + ' tr';
+  return f(n, 0);
+}
+const axisMoney = (n) => (n >= 1e12 ? +(n / 1e12).toFixed(1) + 'N tỷ' : n >= 1e9 ? +(n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + ' tỷ' : n >= 1e6 ? +(n / 1e6).toFixed(0) + ' tr' : String(Math.round(n)));
+function niceMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p; return 10 * p; }
+/** Cột theo thời gian (1 chuỗi): nhãn giá trị chỉ ở cột cao nhất & cột cuối; rê chuột xem từng tháng. */
+function colChart(pts, { h = 190, fmt = shortMoney } = {}) {
+  const W = 640, L = 52, R = 8, T = 18, B = 26, ih = h - T - B, iw = W - L - R;
+  const max = niceMax(Math.max(0, ...pts.map((p) => p.value)));
+  const slot = iw / Math.max(1, pts.length), bw = Math.min(24, slot * 0.62);
+  const y = (v) => T + ih - (v / max) * ih;
+  const imax = pts.reduce((b, p, i) => (p.value > pts[b].value ? i : b), 0);
+  let s = `<svg viewBox="0 0 ${W} ${h}" class="viz" role="img">`;
+  for (let i = 0; i <= 4; i++) { const v = (max / 4) * i, yy = y(v); s += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${VC.grid}" stroke-width="1"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" class="ax">${axisMoney(v)}</text>`; }
+  pts.forEach((p, i) => {
+    const cx = L + slot * i + slot / 2, x = cx - bw / 2, top = y(p.value), bh = T + ih - top;
+    if (p.value > 0) { const r = Math.min(4, bh); s += `<path d="M${x},${T + ih}V${top + r}Q${x},${top} ${x + r},${top}H${x + bw - r}Q${x + bw},${top} ${x + bw},${top + r}V${T + ih}Z" fill="${VC.series}"/>`; }
+    if (p.value > 0 && (i === imax || i === pts.length - 1)) s += `<text x="${cx}" y="${top - 5}" text-anchor="middle" class="vl">${fmt(p.value)}</text>`;
+    s += `<text x="${cx}" y="${h - 8}" text-anchor="middle" class="ax">${esc(p.label)}</text>`;
+    s += `<rect x="${L + slot * i}" y="${T}" width="${slot}" height="${ih}" fill="transparent" data-tip="${esc(p.tip || `${p.label}: ${money(p.value)}`)}"/>`;
+  });
+  return s + `<line x1="${L}" x2="${W - R}" y1="${T + ih}" y2="${T + ih}" stroke="${VC.axis}" stroke-width="1"/></svg>`;
+}
+/** Một tổng chia phần (thanh ngang có khe 2px) + chú giải có số & %. */
+function segBar(segs, unit = '') {
+  const tot = BK.sum(segs.map((s) => s.value));
+  if (!tot) return '<div class="muted" style="font-size:12.5px">Chưa có dữ liệu</div>';
+  return `<div class="seg">${segs.filter((s) => s.value > 0).map((s) => `<i style="flex:${s.value};background:${s.color}" data-tip="${esc(`${s.label}: ${s.value}${unit} (${Math.round((s.value / tot) * 100)}%)`)}"></i>`).join('')}</div>
+  <div class="legend">${segs.map((s) => `<span><i style="background:${s.color}"></i>${s.label} <b>${s.value}${unit}</b> <em>${Math.round((s.value / tot) * 100)}%</em></span>`).join('')}</div>`;
+}
+/** Thanh ngang xếp hạng: nhãn trái, giá trị ở đầu thanh. */
+function hBars(items, { color = VC.series, fmt = shortMoney, open = '' } = {}) {
+  const max = Math.max(0, ...items.map((x) => x.value)) || 1;
+  if (!items.length) return '<div class="muted" style="font-size:12.5px;padding:8px 0">Không có</div>';
+  return `<div class="hb">${items.map((x) => `<div class="hbr" ${open && x.id ? `data-${open}="${x.id}"` : ''} data-tip="${esc(x.tip || `${x.label}: ${fmt(x.value)}`)}"><span class="hbl">${esc(x.label)}</span><span class="hbt"><i style="width:${x.value > 0 ? Math.max(1.5, (x.value / max) * 100) : 0}%;background:${color}"></i><b>${fmt(x.value)}</b></span></div>`).join('')}</div>`;
+}
+function sparkline(vals, w = 110, h = 28) {
+  const max = Math.max(1, ...vals), st = w / Math.max(1, vals.length - 1);
+  const pts = vals.map((v, i) => `${(i * st).toFixed(1)},${(h - 3 - (v / max) * (h - 6)).toFixed(1)}`);
+  const last = pts[pts.length - 1].split(',');
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="spark"><polyline points="${pts.join(' ')}" fill="none" stroke="#9fb9d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="${VC.series}" stroke="#fff" stroke-width="2"/></svg>`;
+}
+const tip = document.createElement('div'); tip.className = 'vtip'; document.body.appendChild(tip);
+document.addEventListener('click', () => { tip.style.display = 'none'; }, true);
+document.addEventListener('mousemove', (e) => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (!t) { tip.style.display = 'none'; return; }
+  tip.textContent = t.dataset.tip; tip.style.display = 'block';
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8), y = e.clientY + 16 + tip.offsetHeight > innerHeight ? e.clientY - tip.offsetHeight - 10 : e.clientY + 16;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+});
+
+// ─── số liệu danh mục cho biểu đồ ───
+function months12(today = BK.todayISO()) {
+  const [y, m] = today.split('-').map(Number), out = [];
+  for (let i = 11; i >= 0; i--) { const d = new Date(Date.UTC(y, m - 1 - i, 1)); out.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`); }
+  return out;
+}
+function portfolio(kunns) {
+  const today = BK.todayISO(), ms = months12(today), byM = Object.fromEntries(ms.map((k) => [k, { v: 0, n: 0 }]));
+  const goc = { done: 0, thieu: 0, chua: 0, qua: 0 }, aging = [0, 0, 0, 0], overdue = [];
+  let n = 0, nDone = 0;
+  for (const k of kunns) {
+    const s = BK.kunnSummary(k, { hanNgay: hanNgay(), today });
+    const mk = (k.ngay_gn || '').slice(0, 7);
+    if (byM[mk]) { byM[mk].v += s.tong_gn; byM[mk].n++; }
+    n++;
+    if (s.done) { goc.done++; nDone++; } else if (s.quaHan) {
+      goc.qua++; aging[s.quaHan <= 30 ? 0 : s.quaHan <= 60 ? 1 : s.quaHan <= 90 ? 2 : 3]++;
+      overdue.push({ k, s });
+    } else if (s.goc === 'thieu') goc.thieu++; else goc.chua++;
+  }
+  const monthly = ms.map((k) => ({ key: k, label: `T${+k.slice(5)}/${k.slice(2, 4)}`, value: byM[k].v, tip: `Tháng ${+k.slice(5)}/${k.slice(0, 4)}: ${money(byM[k].v)} · ${byM[k].n} KUNN` }));
+  return { monthly, gn12: BK.sum(monthly.map((x) => x.value)), goc, aging, overdue: overdue.sort((a, b) => b.s.quaHan - a.s.quaHan), n, pctDone: n ? Math.round((nDone / n) * 100) : 0 };
+}
+const gocSegs = (g) => [
+  { label: 'Đã nhận đủ', value: g.done, color: VC.good },
+  { label: 'Nhận thiếu', value: g.thieu, color: VC.warn },
+  { label: 'Chưa nhận, trong hạn', value: g.chua, color: VC.idle },
+  { label: 'Quá hạn', value: g.qua, color: VC.crit },
+];
+const agingBars = (a) => hBars(['1–30 ngày', '31–60 ngày', '61–90 ngày', 'Trên 90 ngày'].map((l, i) => ({ label: l, value: a[i], tip: `Quá hạn ${l}: ${a[i]} KUNN` })), { color: VC.crit, fmt: (v) => `${v} KUNN` });
+const panel = (title, sub, body, extra = '') => `<section class="card panel"><header><div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>${extra}</header>${body}</section>`;
+function tile(label, value, sub = '', { tone = '', icon = '', spark = '', meter = null } = {}) {
+  return `<div class="card tile ${tone}"><div class="tl">${icon ? `<span class="ic">${icon}</span>` : ''}${label}</div><div class="tv">${value}</div>
+    ${meter != null ? `<div class="meter"><i style="width:${meter}%"></i></div>` : ''}${sub || spark ? `<div class="ts"><span>${sub}</span>${spark}</div>` : ''}</div>`;
+}
+
 function renderMain() {
   const el = $('#main');
-  if (!S.cid) { el.innerHTML = dashboardHtml(); return; }
+  tip.style.display = 'none';
+  if (!S.cid) { el.innerHTML = dashboardHtml(); bindDash(el); return; }
   const c = cust(S.cid); if (!c) { el.innerHTML = ''; return; }
   const an = S.an || BK.analyze([]);
   const sum = BK.customerSummary(S.kunns, { hanNgay: hanNgay() });
+  const pf = portfolio(S.kunns);
   const nErr = an.alerts.filter((a) => a.sev >= 3).length;
   const tabs = [['kunn', 'Khế ước & hóa đơn', S.kunns.length], ['inv', 'Theo dõi hóa đơn', an.invoices.length], ['goc', 'Hồ sơ gốc', sum.n_pending, sum.n_qua_han ? 'r' : ''], ['alert', 'Cảnh báo', an.alerts.length, nErr ? 'r' : ''], ['log', 'Nhật ký', '']];
-  el.innerHTML = `<div class="ph"><div><h1 id="custName">${esc(c.name)}</h1><div class="sub">${[c.mst && 'MST ' + c.mst, c.bank, c.owner && 'Phụ trách: ' + c.owner].filter(Boolean).map(esc).join(' · ')}</div></div>
-    <span style="flex:1"></span><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm pri" id="bImp2">⬆ Tải bảng kê cho KH này</button></div>
-  <div class="kpis">
-    <div class="card kpi"><span>Số KUNN / dòng</span><b>${sum.n_kunn} / ${sum.n_lines}</b></div>
-    <div class="card kpi"><span>Tổng đã giải ngân</span><b>${money(sum.tong_gn)}</b></div>
-    <div class="card kpi w"><span>Hóa đơn GN 1 phần — còn lại</span><b>${sum.n_mot_phan} · ${money(sum.con_lai)}</b></div>
-    <div class="card kpi ${sum.n_vuot ? 'r' : 'g'}"><span>Vượt / trùng hóa đơn</span><b>${sum.n_vuot}</b></div>
-    <div class="card kpi ${sum.n_qua_han ? 'r' : sum.n_pending ? 'w' : 'g'}"><span>KUNN chưa đủ hồ sơ gốc (quá hạn)</span><b>${sum.n_pending} (${sum.n_qua_han})</b></div>
+  el.innerHTML = `<div class="ph"><div><div class="crumb"><a data-home>Tổng quan</a> / Khách hàng</div><h1 id="custName">${esc(c.name)}</h1><div class="sub">${[c.mst && 'MST ' + c.mst, c.bank, c.owner && 'Phụ trách: ' + c.owner, sum.last_gn && 'GN gần nhất ' + dd(sum.last_gn)].filter(Boolean).map(esc).join(' · ')}</div></div>
+    <span style="flex:1"></span><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn sm pri" id="bImp2">⬆ Tải bảng kê cho KH này</button></div>
+  <div class="tiles">
+    ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫' })}
+    ${tile('Giải ngân 12 tháng', shortMoney(pf.gn12), 'theo tháng →', { spark: sparkline(pf.monthly.map((x) => x.value)) })}
+    ${tile('Còn lại chưa giải ngân', shortMoney(sum.con_lai), `${sum.n_mot_phan} hóa đơn GN 1 phần`, { icon: '◐' })}
+    ${tile('Hóa đơn vượt / trùng', String(sum.n_vuot), sum.n_vuot ? 'cần xử lý' : 'không có', { tone: sum.n_vuot ? 'crit' : 'good', icon: sum.n_vuot ? '⚠' : '✓' })}
+    ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '' })}
+    ${tile('KUNN quá hạn hồ sơ gốc', String(sum.n_qua_han), sum.n_qua_han ? `lâu nhất ${sum.max_qua_han} ngày` : 'không có', { tone: sum.n_qua_han ? 'crit' : 'good', icon: sum.n_qua_han ? '⏱' : '✓' })}
   </div>
+  ${S.kunns.length ? `<div class="g2">${panel('Giải ngân theo tháng', '12 tháng gần nhất · theo ngày giải ngân KUNN', colChart(pf.monthly))}
+    ${panel('Tình trạng hồ sơ gốc', `theo số KUNN · hạn ${hanNgay()} ngày sau GN`, segBar(gocSegs(pf.goc)) + '<div class="sub2">Tuổi quá hạn</div>' + agingBars(pf.aging))}</div>` : ''}
   <div class="tabs">${tabs.map(([k, l, n, cls]) => `<button class="tab ${S.tab === k ? 'act' : ''}" data-tab="${k}">${l}${n !== '' ? `<span class="n ${cls || ''}">${n}</span>` : ''}</button>`).join('')}</div>
   <div id="tabBody"></div>`;
   $('#bEditC').onclick = () => editCustomer(c);
   $('#bImp2').onclick = () => openImport(S.cid);
+  $('#bMaster').onclick = () => appendToMaster([...S.kunns].sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || '')).map((k) => ({ ...k, so_tien: k.so_tien })), c.name);
+  $('[data-home]', el).onclick = () => selectCustomer(null);
   $$('[data-tab]', el).forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; renderMain(); });
   const body = $('#tabBody');
   ({ kunn: renderKunnTab, inv: renderInvTab, goc: renderGocTab, alert: renderAlertTab, log: renderLogTab }[S.tab])(body, an);
@@ -1261,29 +1411,123 @@ function renderMain() {
 
 function dashboardHtml() {
   const cs = S.customers;
+  const all = cs.flatMap((c) => S.store.kunnsOf(c.id).map((k) => ({ ...k, _c: c })));
+  const pf = portfolio(all);
   const tot = (k) => BK.sum(cs.map((c) => (summaryOf(c.id) || {})[k]));
+  const nVuot = tot('n_vuot'), nQua = tot('n_qua_han');
+  const ms = new Set(months12().map(String));
+  const top = cs.map((c) => ({ id: c.id, label: c.name, value: BK.sum(S.store.kunnsOf(c.id).filter((k) => ms.has((k.ngay_gn || '').slice(0, 7))).map((k) => BK.sum(k.lines.map((l) => l.tien_gn)))) }))
+    .filter((x) => x.value > 0).sort((a, b) => b.value - a.value).slice(0, 8);
+  const errs = cs.map((c) => ({ c, s: summaryOf(c.id) })).filter((x) => x.s && x.s.n_vuot).sort((a, b) => b.s.n_vuot - a.s.n_vuot);
+  const todo = [
+    ...errs.slice(0, 4).map(({ c, s }) => `<li data-open="${c.id}"><span class="ti crit">⚠</span><div><b>${esc(c.name)}</b><p>${s.n_vuot} hóa đơn giải ngân vượt / trùng — kiểm tra tab Cảnh báo</p></div><em>Lỗi HĐ</em></li>`),
+    ...pf.overdue.slice(0, 8).map(({ k, s }) => `<li data-open="${k._c.id}"><span class="ti warn">⏱</span><div><b>${esc(k._c.name)}</b><p>KUNN ${esc(k.so_kunn)} · GN ${dd(k.ngay_gn)} · ${s.nChua + s.nThieu}/${s.n} dòng chưa đủ hồ sơ</p></div><em>${s.quaHan} ngày</em></li>`),
+  ];
   const rows = cs.map((c) => {
     const s = summaryOf(c.id);
-    if (!s) return `<tr data-open="${c.id}" style="cursor:pointer"><td><b>${esc(c.name)}</b></td><td colspan="7" class="muted">Chưa có KUNN nào</td></tr>`;
-    return `<tr data-open="${c.id}" style="cursor:pointer" class="${s.n_vuot ? 'bad' : s.n_qua_han ? 'warn' : ''}"><td><b>${esc(c.name)}</b><div class="hist">${esc(c.owner || '')}</div></td>
+    if (!s) return `<tr data-open="${c.id}"><td><b>${esc(c.name)}</b></td><td colspan="7" class="muted">Chưa có KUNN nào</td></tr>`;
+    const pct = s.n_kunn ? Math.round(((s.n_kunn - s.n_pending) / s.n_kunn) * 100) : 0;
+    return `<tr data-open="${c.id}"><td><b>${esc(c.name)}</b><div class="hist">${esc(c.owner || '')}</div></td>
       <td class="num">${s.n_kunn}</td><td class="num">${money(s.tong_gn)}</td><td>${dd(s.last_gn)}</td>
-      <td class="num">${s.n_mot_phan ? `${s.n_mot_phan} HĐ · ${money(s.con_lai)}` : '—'}</td>
-      <td>${s.n_vuot ? `<span class="pill p-err">${s.n_vuot} lỗi</span>` : ''} ${s.n_nghi ? `<span class="pill p-warn">${s.n_nghi} nghi trùng</span>` : ''}${!s.n_vuot && !s.n_nghi ? '<span class="pill p-ok">OK</span>' : ''}</td>
-      <td>${s.n_pending ? `<span class="pill ${s.n_qua_han ? 'p-err' : 'p-warn'}">${s.n_pending} KUNN</span>` : '<span class="pill p-ok">Đủ</span>'}</td>
-      <td>${s.n_qua_han ? `<span class="pill p-err">${s.n_qua_han} KUNN · tới ${s.max_qua_han} ngày</span>` : '—'}</td></tr>`;
+      <td class="num">${s.n_mot_phan ? `${money(s.con_lai)}<div class="hist">${s.n_mot_phan} HĐ</div>` : '—'}</td>
+      <td>${s.n_vuot ? `<span class="pill p-err">⚠ ${s.n_vuot} lỗi</span>` : ''} ${s.n_nghi ? `<span class="pill p-warn">${s.n_nghi} nghi trùng</span>` : ''}${!s.n_vuot && !s.n_nghi ? '<span class="pill p-ok">✓ OK</span>' : ''}</td>
+      <td style="min-width:140px"><div class="mini"><i style="width:${pct}%"></i></div><div class="hist">${pct}% · ${s.n_pending ? s.n_pending + ' KUNN chưa đủ' : 'đủ'}</div></td>
+      <td>${s.n_qua_han ? `<span class="pill p-err">⏱ ${s.n_qua_han} KUNN · ${s.max_qua_han} ngày</span>` : '<span class="muted">—</span>'}</td></tr>`;
   }).join('');
-  setTimeout(() => $$('[data-open]').forEach((r) => r.onclick = () => selectCustomer(r.dataset.open)));
-  return `<div class="ph"><div><h1>Tổng quan</h1><div class="sub">${cs.length} khách hàng · hạn nộp hồ sơ gốc mặc định ${hanNgay()} ngày sau giải ngân</div></div><span style="flex:1"></span>
-    <button class="btn sm" id="bExpAll" onclick="BKAPP.exportDashboard()">⬇ Xuất Excel tổng quan</button></div>
-  <div class="kpis">
-    <div class="card kpi"><span>Khách hàng</span><b>${cs.length}</b></div>
-    <div class="card kpi"><span>Tổng đã giải ngân</span><b>${money(tot('tong_gn'))}</b></div>
-    <div class="card kpi w"><span>HĐ giải ngân 1 phần — còn lại</span><b>${money(tot('con_lai'))}</b></div>
-    <div class="card kpi ${tot('n_vuot') ? 'r' : 'g'}"><span>Lỗi vượt / trùng hóa đơn</span><b>${tot('n_vuot')}</b></div>
-    <div class="card kpi ${tot('n_qua_han') ? 'r' : 'g'}"><span>KUNN quá hạn hồ sơ gốc</span><b>${tot('n_qua_han')}</b></div>
+  const now = new Date();
+  return `<div class="ph"><div><div class="crumb">Danh mục giải ngân theo hóa đơn</div><h1>Tổng quan</h1><div class="sub">${cs.length} khách hàng · ${pf.n} KUNN · số liệu đến ${now.toLocaleDateString('vi-VN')} · hạn hồ sơ gốc ${hanNgay()} ngày sau GN</div></div><span style="flex:1"></span>
+    <button class="btn sm" onclick="BKAPP.exportDashboard()">⬇ Xuất Excel tổng quan</button></div>
+  ${cs.length ? `<div class="tiles">
+    ${tile('Khách hàng theo dõi', String(cs.length), `${pf.n} KUNN`, { icon: '◎' })}
+    ${tile('Giải ngân 12 tháng', shortMoney(pf.gn12), `tháng này ${shortMoney(pf.monthly[11].value)}`, { spark: sparkline(pf.monthly.map((x) => x.value)) })}
+    ${tile('Còn lại chưa giải ngân', shortMoney(tot('con_lai')), `${tot('n_mot_phan')} hóa đơn GN 1 phần`, { icon: '◐' })}
+    ${tile('Hóa đơn vượt / trùng', String(nVuot), nVuot ? `${errs.length} khách hàng cần xử lý` : 'không có', { tone: nVuot ? 'crit' : 'good', icon: nVuot ? '⚠' : '✓' })}
+    ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '' })}
+    ${tile('KUNN quá hạn hồ sơ gốc', String(nQua), nQua ? `lâu nhất ${Math.max(0, ...cs.map((c) => (summaryOf(c.id) || {}).max_qua_han || 0))} ngày` : 'không có', { tone: nQua ? 'crit' : 'good', icon: nQua ? '⏱' : '✓' })}
   </div>
-  ${cs.length ? `<div class="card tw"><table class="t"><thead><tr><th>Khách hàng</th><th class="right">KUNN</th><th class="right">Tổng giải ngân</th><th>GN gần nhất</th><th class="right">GN 1 phần còn lại</th><th>Kiểm tra hóa đơn</th><th>Hồ sơ gốc chưa đủ</th><th>Quá hạn</th></tr></thead><tbody>${rows}</tbody></table></div>`
+  <div class="g2">
+    ${panel('Giải ngân theo tháng', 'Tổng số tiền giải ngân các KUNN · 12 tháng gần nhất', colChart(pf.monthly))}
+    ${panel('Tình trạng hồ sơ gốc', 'Theo số KUNN của toàn danh mục', segBar(gocSegs(pf.goc)) + '<div class="sub2">Tuổi quá hạn hồ sơ gốc</div>' + agingBars(pf.aging))}
+  </div>
+  <div class="g2">
+    ${panel('Khách hàng giải ngân nhiều nhất', '12 tháng gần nhất · bấm để mở', hBars(top, { open: 'open' }))}
+    ${panel('Việc cần làm', `${todo.length ? 'Ưu tiên theo mức độ & số ngày quá hạn' : ''}`, todo.length ? `<ul class="todo">${todo.join('')}</ul>` : '<div class="okbox">✓ Không có việc tồn — không có hóa đơn lỗi, không KUNN nào quá hạn hồ sơ gốc.</div>')}
+  </div>
+  ${panel('Danh sách khách hàng', '', `<div class="tw" style="max-height:none"><table class="t click"><thead><tr><th>Khách hàng</th><th class="right">KUNN</th><th class="right">Tổng giải ngân</th><th>GN gần nhất</th><th class="right">Còn lại chưa GN</th><th>Kiểm tra hóa đơn</th><th>Hồ sơ gốc</th><th>Quá hạn</th></tr></thead><tbody>${rows}</tbody></table></div>`)}`
     : `<div class="card empty"><p style="font-size:16px;margin-bottom:8px">Chưa có dữ liệu</p><p>Bấm <b>⬆ Tải bảng kê lên</b> để nạp bảng kê khách hàng gửi, hoặc bảng kê tổng hợp đang theo dõi bằng Excel.</p></div>`}`;
+}
+function bindDash(el) { $$('[data-open]', el).forEach((r) => { r.onclick = () => selectCustomer(r.dataset.open); }); }
+
+// ═════════════════ GHI VÀO FILE BẢNG KÊ TỔNG HỢP CÓ SẴN ═════════════════
+// Mở file Excel bảng kê tổng hợp đang theo dõi → tìm sheet & cột như lúc nạp → thêm các KUNN chưa có vào cuối bảng
+// (giữ nguyên các sheet, cột, dòng cũ; định dạng dòng mới chép theo dòng cuối) → tải file đã cập nhật về.
+function appendToMaster(groups, label) {
+  if (!groups.length) return toast('Chưa có KUNN nào để ghi');
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.xls,.xlsx,.xlsm';
+  inp.onchange = () => { if (inp.files[0]) appendToMasterFile(inp.files[0], groups, label).catch((e) => toast('Không ghi được: ' + errMsg(e), 'err', 9000)); };
+  inp.click();
+}
+async function appendToMasterFile(file, groups, label) {
+  const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellStyles: true, cellNF: true });
+  const sheets = {};
+  for (const n of wb.SheetNames) { const ws = wb.Sheets[n]; if (ws && ws['!ref']) sheets[n] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }); }
+  const pick = BK.pickSheet(sheets);
+  if (!pick || !pick.header.ok) throw new Error('không nhận ra bảng kê trong file (cần các cột số hóa đơn, số tiền)');
+  const name = pick.name, g = sheets[name], h = pick.header, map = h.map;
+  if (map.so_kunn == null) throw new Error(`sheet “${name}” không có cột Số KUNN — đây không phải bảng kê tổng hợp nhiều KUNN`);
+  const hdr = h.twoRow ? h.row + 1 : h.row;
+  const have = new Set();
+  let last = hdr;
+  for (let r = hdr + 1; r < g.length; r++) {
+    const row = g[r] || [];
+    if (['so_kunn', 'so_hd', 'ncc', 'tien_gn', 'tien_hd'].some((f) => map[f] != null && String(row[map[f]] ?? '').trim() !== '')) last = r;
+    const k = BK.normKunn(row[map.so_kunn]); if (k) have.add(k);
+  }
+  const add = groups.filter((x) => !have.has(BK.normKunn(x.so_kunn)));
+  const skip = groups.length - add.length;
+  const nLines = BK.sum(add.map((x) => x.lines.length));
+  const cols = BK.FIELDS.filter((f) => map[f.k] != null);
+  const m = modal(`<div class="mh"><h2>Ghi vào file bảng kê có sẵn</h2><button class="x" data-close>&times;</button></div><div class="mb">
+    <div class="grid2"><div><div class="hist">File</div><b>${esc(file.name)}</b></div><div><div class="hist">Sheet bảng kê</div><b>${esc(name)}</b> · tiêu đề hàng ${h.row + 1} · dữ liệu đến hàng ${last + 1}</div></div>
+    <div class="sec">Cột nhận ra trong file</div><div class="chips">${cols.map((f) => `<span class="pill p-info">${BK.colName(map[f.k])} · ${f.label}</span>`).join('')}</div>
+    ${add.length ? `<div class="note ok">Sẽ thêm <b>${add.length} KUNN · ${nLines} dòng</b> từ hàng ${last + 2}: ${add.slice(0, 12).map((x) => esc(x.so_kunn)).join(', ')}${add.length > 12 ? '…' : ''}</div>` : '<div class="note">File đã có đủ các KUNN này — không có gì để thêm.</div>'}
+    ${skip ? `<div class="note warn">Bỏ qua ${skip} KUNN đã có sẵn trong file (không ghi trùng).</div>` : ''}
+    <div class="hist">Các sheet, dòng cũ giữ nguyên. File cập nhật được tải về dạng .xlsx (tên thêm “_capnhat”); file gốc trên máy không bị sửa.</div></div>
+    <div class="mf"><button class="btn" data-close>Hủy</button><button class="btn pri" id="mGo" ${add.length ? '' : 'disabled'}>⬇ Ghi & tải file</button></div>`, 'sm');
+  $('#mGo', m).onclick = () => {
+    const ws = wb.Sheets[name];
+    const rng = XLSX.utils.decode_range(ws['!ref']);
+    const styleOf = (c) => { const cell = ws[XLSX.utils.encode_cell({ r: last, c })]; return cell && cell.s ? JSON.parse(JSON.stringify(cell.s)) : undefined; };
+    const put = (r, f, v, kind) => {
+      const c = map[f]; if (c == null || v == null || v === '') return;
+      const addr = XLSX.utils.encode_cell({ r, c }), s = styleOf(c);
+      let cell;
+      if (kind === 'date') { const d = Date.parse(v + 'T00:00:00Z'); if (isNaN(d)) return; cell = { t: 'n', v: d / 86400000 + 25569, z: 'dd/mm/yyyy' }; }
+      else if (typeof v === 'number') cell = { t: 'n', v, z: Number.isInteger(v) ? '#,##0' : '#,##0.00' };
+      else cell = { t: 's', v: String(v) };
+      if (s) { cell.s = s; if (cell.z) cell.s.numFmt = cell.z; }
+      ws[addr] = cell;
+      if (c > rng.e.c) rng.e.c = c;
+    };
+    let r = last + 1;
+    for (const x of add) {
+      x.lines.forEach((l, i) => {
+        if (i === 0) { put(r, 'so_kunn', x.so_kunn); put(r, 'ngay_gn', x.ngay_gn, 'date'); put(r, 'ngay_dh', x.ngay_dh, 'date'); put(r, 'so_tien_kunn', x.so_tien ?? BK.sum(x.lines.map((y) => y.tien_gn))); }
+        put(r, 'stt', i + 1); put(r, 'ncc', l.ncc); put(r, 'mst_ncc', l.mst_ncc); put(r, 'so_hdmb', l.so_hdmb); put(r, 'ky_hieu', l.ky_hieu);
+        put(r, 'so_hd', l.so_hd); put(r, 'ngay_hd', l.ngay_hd, 'date'); put(r, 'tien_hd', l.tien_hd); put(r, 'tien_gn', l.tien_gn); put(r, 'loai_tien', l.loai_tien);
+        put(r, 'ho_so', l.goc === 'da_nhan' ? 'ok' : l.thieu || (l.goc === 'chua' ? 'chưa nhận' : ''));
+        put(r, 'ghi_chu', l.ghi_chu);
+        r++;
+      });
+    }
+    rng.e.r = Math.max(rng.e.r, r - 1);
+    ws['!ref'] = XLSX.utils.encode_range(rng);
+    if (ws['!autofilter']) ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: h.row, c: rng.s.c }, e: rng.e }) };
+    download(wb, file.name.replace(/\.[^.]+$/, '') + `_capnhat_${BK.todayISO()}.xlsx`);
+    m.remove();
+    toast(`Đã thêm ${add.length} KUNN (${nLines} dòng) vào ${file.name}`, 'ok');
+    if (S.cid) log(S.cid, 'ghi_file', `Ghi ${add.length} KUNN vào file ${file.name} (${label || ''})`);
+  };
 }
 
 // ── tab Khế ước ──
@@ -1470,7 +1714,7 @@ function openImport(cid) {
     <div class="drop" id="iDrop"><b>Kéo thả file Excel vào đây</b> hoặc bấm để chọn (.xls, .xlsx, .csv)<div class="hist" style="margin-top:6px">Bảng kê khách hàng gửi (mỗi khách một kiểu) hoặc bảng kê tổng hợp nhiều KUNN đang theo dõi bằng Excel.</div><input type="file" id="iFile" accept=".xls,.xlsx,.xlsm,.csv" hidden></div>
     <div id="iBody"></div></div>
   <div class="mf" id="iFoot" style="display:none"><span id="iSum" style="flex:1;font-size:13px"></span>
-    <button class="btn" id="iExp">⬇ Xuất kết quả kiểm tra</button><button class="btn pri" id="iSave">Lưu vào bảng kê</button></div>`);
+    <button class="btn" id="iExp">⬇ Xuất kết quả kiểm tra</button><button class="btn" id="iMaster" title="Thêm KUNN này vào cuối file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="iSave">Lưu vào bảng kê</button></div>`);
   IMP.m = m;
   const sel = $('#iCust', m);
   sel.onchange = async () => { $('#iNewWrap', m).style.display = sel.value === '__new' ? '' : 'none'; IMP.cid = sel.value === '__new' ? '' : sel.value; await loadExisting(); recheck(); };
@@ -1482,6 +1726,7 @@ function openImport(cid) {
   fi.onchange = () => { if (fi.files[0]) gotFile(fi.files[0]); fi.value = ''; };
   $('#iSave', m).onclick = saveImport;
   $('#iExp', m).onclick = () => exportCheck();
+  $('#iMaster', m).onclick = () => { if (IMP.check) appendToMaster(IMP.check.groups.filter((g) => g.so_kunn), IMP.file); };
   loadExisting();
 }
 async function loadExisting() {
@@ -1591,6 +1836,7 @@ function renderImport() {
   $('#iSum', m).innerHTML = nLines ? `${ch.groups.length} KUNN · ${nLines} dòng · ${money(BK.sum(ch.groups.flatMap((g) => g.lines.map((l) => l.tien_gn))))}${ch.errors ? ` · <b style="color:var(--err)">${ch.errors} dòng lỗi</b>` : ''}` : '';
   $('#iSave', m).disabled = !nLines;
   $('#iExp', m).disabled = !nLines;
+  $('#iMaster', m).disabled = !nLines;
   $('#iSheet', m).onchange = (e) => { autoDetect(e.target.value); renderImport(); };
   $('#iHdr', m).onchange = (e) => { IMP.headerRow = IMP.dataHeader = Math.max(0, (+e.target.value || 1) - 1); IMP.map = BK.scoreHeaderRow(IMP.sheets[IMP.sheet][IMP.headerRow]).map; IMP.aiRows = null; extract(); renderImport(); };
   $('#iAuto', m).onclick = () => { IMP.aiNote = ''; autoDetect(IMP.sheet); renderImport(); };
@@ -1877,7 +2123,7 @@ function renderSyncBox(m) {
   const sy = S.sync; if (!sy) return;
   const st = sy.state;
   const chips = Object.entries(sy.people || {}).map(([n, c]) => `<span class="pill p-info">${esc(n)} <b>${c}</b></span>`).join(' ');
-  const info = st === 'on' ? `<b>✓ Đang kết nối: ${esc(sy.name)}</b><div class="hist">Lần đồng bộ cuối: ${sy.last ? new Date(sy.last).toLocaleString('vi-VN') : '—'} · ${sy.nFiles} tệp trong thư mục</div><div class="chips">${chips}</div>`
+  const info = st === 'on' ? `<b>✓ Đang kết nối: ${esc(sy.name)}</b>${sy.busy ? `<div class="hist" style="color:var(--blue)"><span class="spin"></span> ${esc(sy.busy)}</div>` : ''}<div class="hist">Lần đồng bộ cuối: ${sy.last ? new Date(sy.last).toLocaleString('vi-VN') : '—'} · ${sy.nFiles} tệp trong thư mục</div><div class="chips">${chips}</div>`
     : st === 'reconnect' ? `<b>Thư mục “${esc(sy.name)}” cần cấp quyền lại</b><div class="hist">Trình duyệt hỏi lại quyền mỗi lần mở file — bấm “Kết nối lại”.</div>`
     : st === 'error' ? `<b style="color:var(--err)">Lỗi thư mục chung</b><div class="hist">${esc(sy.err)}</div>`
     : '<b>Chưa kết nối thư mục chung</b><div class="hist">Dữ liệu đang chỉ lưu trên trình duyệt máy này.</div>';
@@ -1896,13 +2142,17 @@ async function syncAction(a, btn) {
     if (a === 'pick') {
       await sy.pick();
       toast(`Đã kết nối thư mục “${sy.name}”`, 'ok');
-      if (S.store.customers().length && confirm('Gửi toàn bộ dữ liệu đang có trên máy này lên thư mục chung để cả team thấy?')) await sy.pushAll();
+      if (S.store.customers().length && confirm('Gửi toàn bộ dữ liệu đang có trên máy này lên thư mục chung để cả team thấy?')) sy.pushAll().then((n) => toast(`Đã gửi ${n} hồ sơ lên thư mục chung`, 'ok')).catch((e) => toast(errMsg(e), 'err', 9000));
     } else if (a === 're') { await sy.reconnect(); if (sy.state === 'on') toast('Đã kết nối lại thư mục chung', 'ok'); }
     else if (a === 'pull') { const n = await sy.pull(); await sy.flush(); if (!n) toast('Đã đồng bộ — không có gì mới'); }
     else if (a === 'push') { const n = await sy.pushAll(); toast(`Đã gửi ${n} hồ sơ lên thư mục chung`, 'ok'); }
     else if (a === 'off') { if (confirm('Ngắt kết nối thư mục chung? Dữ liệu trên máy này vẫn giữ nguyên.')) await sy.disconnect(); }
-  } catch (e) { if (e.name !== 'AbortError') toast(errMsg(e), 'err', 8000); }
-  const box = $('#syncBox'); if (box) renderSyncBox(box.closest('.modal'));
+  } catch (e) {
+    if (e.name === 'AbortError') toast('Đã hủy chọn thư mục');
+    else if (e.name === 'SecurityError' || e.name === 'NotAllowedError') toast('Trình duyệt không cho dùng thư mục này (thư mục hệ thống, hoặc bạn bấm “Không cho phép”). Chọn một thư mục con trong ổ chung, vd Z:\\BangKe, rồi bấm “Cho phép sửa”.', 'err', 12000);
+    else toast(errMsg(e), 'err', 9000);
+  }
+  if ($('#syncBox')) renderSyncBox(document);
 }
 $('#bSettings').onclick = () => openSettings();
 $('#syncPill').onclick = () => { if (S.sync && S.sync.state === 'reconnect') syncAction('re'); else openSettings(); };

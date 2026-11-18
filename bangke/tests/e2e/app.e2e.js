@@ -215,3 +215,59 @@ test('thư mục chung: máy này ghi tệp JSON, máy khác ghi vào thì bấm
   assert.ok(Object.keys(fs1).some((n) => n.startsWith('nk_')), 'nhật ký cũng được ghi ra thư mục');
   await ctx.close();
 });
+
+test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN đã có) + dashboard có biểu đồ', async () => {
+  const master = join(dir, 'BANG_KE_TONG_HOP.xlsx');
+  const head = ['', 'SỐ KUNN', 'NGÀY GIẢI NGÂN', 'NGÀY ĐẾN HẠN', 'SỐ TIỀN', 'STT', 'NHÀ CUNG CẤP', 'SỐ HỢP ĐỒNG/  ĐĐH', 'HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN (VNĐ)', 'SỐ TIỀN GIẢI  NGÂN (VNĐ)', 'TỔNG (VNĐ)', '', 'CHỨNG TỪ THIẾU CẦN BỔ SUNG'];
+  await writeFile(master, toXlsx({
+    'Ghi chu': [['Bảng theo dõi nội bộ']],
+    'Sheet2': [head,
+      ['', '5500777(1).25', 45700, 45850, 300, 1, 'Công ty Omega', 'HĐ 01', '11', 45690, 300, 300, 300, '', 'ok'],
+      ['', '', '', '', '', 2, 'Công ty Omega', '', '12', 45690, 50, 50, '', '', 'ok']],
+  }));
+  const f = join(dir, 'TONG_HOP_MOI.xlsx');
+  await writeFile(f, toXlsx({ 'Sheet2': [head,
+    ['', '5500777(1).25', 45700, 45850, 300, 1, 'Công ty Omega', 'HĐ 01', '11', 45690, 300, 300, 300, '', 'ok'],
+    ['', '5500777(9).26', 46100, 46280, 900, 1, 'Công ty Sigma', 'HĐ 07', '701', 46090, 1000, 600, 600, '', 'Biên bản giao hàng'],
+    ['', '', '', '', '', 2, 'Công ty Sigma', '', '702', 46091, 300, 300, '', '', ''],
+  ] }));
+  const { ctx, page } = await newPage();
+  await page.goto(base + 'index.html');
+  await page.click('#bImport');
+  await page.setInputFiles('#iFile', f);
+  await page.locator('#iSum', { hasText: '2 KUNN' }).waitFor();
+  await page.fill('#iNew', 'Công ty Kappa');
+  await page.click('#iSave');
+  await page.locator('.kunn', { hasText: '5500777(9).26' }).waitFor();
+  // tile + biểu đồ ở trang khách hàng
+  assert.match(await page.locator('.tiles').innerText(), /Hồ sơ gốc đã nhận đủ\s*50%/);
+  assert.equal(await page.locator('svg.viz rect[data-tip]').count(), 12);
+
+  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('#bMaster')]);
+  await fc.setFiles(master);
+  await page.locator('.note.ok', { hasText: 'Sẽ thêm 1 KUNN · 2 dòng' }).waitFor();
+  assert.match(await page.locator('.modal').innerText(), /Bỏ qua 1 KUNN đã có sẵn/);
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#mGo')]);
+  assert.match(dl.suggestedFilename(), /^BANG_KE_TONG_HOP_capnhat_\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const out = join(dir, 'master_out.xlsx'); await dl.saveAs(out);
+  const wb = XLSX.read(await readFile(out));
+  assert.deepEqual(wb.SheetNames, ['Ghi chu', 'Sheet2'], 'giữ nguyên các sheet');
+  const g = XLSX.utils.sheet_to_json(wb.Sheets.Sheet2, { header: 1, raw: true, defval: '' });
+  assert.equal(g.length, 5, 'dòng cũ giữ nguyên + 2 dòng mới');
+  assert.deepEqual(g[1].slice(1, 3), ['5500777(1).25', 45700]);
+  assert.deepEqual([g[3][1], g[3][2], g[3][4], g[3][6], g[3][8], g[3][11], g[3][14]], ['5500777(9).26', 46100, 900, 'Công ty Sigma', '701', 600, 'Biên bản giao hàng']);
+  assert.deepEqual([g[4][1], g[4][5], g[4][8], g[4][9], g[4][11], g[4][14]], ['', 2, '702', 46091, 300, 'chưa nhận']);
+
+  // dashboard tổng quan
+  await page.click('#navAll');
+  await page.locator('.panel h3', { hasText: 'Việc cần làm' }).waitFor();
+  const t = await page.locator('.tiles').innerText();
+  assert.match(t, /Khách hàng theo dõi\s*1/);
+  assert.match(t, /KUNN quá hạn hồ sơ gốc\s*1/);
+  assert.equal(await page.locator(".todo li").count(), 1);
+  assert.match(await page.locator('.legend').first().innerText(), /Quá hạn\s+1\s+50%/);
+  await shot(page, '5-dashboard');
+  await page.locator('.todo li').first().click();
+  await page.locator('#custName', { hasText: 'Công ty Kappa' }).waitFor();
+  await ctx.close();
+});
