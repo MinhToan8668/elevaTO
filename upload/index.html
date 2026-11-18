@@ -90,9 +90,8 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
 </head>
 <body>
 <main class="wrap">
-  <h1>Tải file lên Google Drive</h1>
-  <p class="sub">Video, tài liệu, ảnh, file nén… đều được. File lên thư mục <b>elevaTO Uploads</b>
-    trên Drive, rồi bot Telegram gửi file vào chat và xoá bản trên Drive — hoặc chỉ nhắn link, tuỳ bạn chọn bên dưới.</p>
+  <h1>Tải file lên Telegram</h1>
+  <p class="sub">Video, tài liệu, ảnh, file nén… đều được. Bot gửi file vào chat Telegram của bạn; cần lại thì tải về thành một file ở mục Kho.</p>
 
   <section class="card">
     <div class="row">
@@ -108,13 +107,9 @@ label{display:block;color:var(--white);font-size:13px;font-weight:600;margin-bot
       <input type="file" id="file" multiple hidden>
       <ul class="list" id="list"></ul>
     </div>
-    <div class="row">
-      <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="tele" checked>
-        <span>Gửi file vào chat Telegram rồi xoá khỏi Drive (file trên 19MB được cắt thành
-          nhiều phần, ghép lại bằng <a href="ghep.html" target="_blank" rel="noopener" style="color:var(--emerald-lt)">trang ghép file</a>)</span></label>
-      <label class="chk"><input type="checkbox" id="share" checked>
-        <span>Ai có link đều xem và tải được (cần bật để tải về ở máy khác mà không phải đăng nhập)</span></label>
-    </div>
+    <p class="note" style="margin:0 0 14px">File đi thẳng từ máy bạn lên chat Telegram — không qua Google Drive.
+      File trên 19MB được cắt thành nhiều phần (Telegram chỉ cho bot lấy lại phần ≤20MB); lấy về thành một file
+      ở mục Kho bên dưới, không phải ghép tay. Lỡ đóng trang thì chọn lại đúng file, bấm Tải lên là gửi tiếp phần còn thiếu.</p>
     <button class="btn" id="go" disabled>Tải lên</button>
 
     <div id="prog" hidden style="margin-top:20px">
@@ -149,15 +144,14 @@ var API = '';
 var CFG_KEY = 'elevato_upload_cfg';
 var API_RE = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/;
 
-// Mảnh 4MB: phải là bội số của 256KB theo luật resumable upload của Drive.
-// Đổi sang base64 thành ~5.3MB mỗi lần gọi /exec — xa giới hạn
-// 50MB, và rớt mạng thì chỉ phải gửi lại một mảnh nhỏ.
-var CHUNK = 4 * 1024 * 1024;
 var MAX_BYTES = 2 * 1024 * 1024 * 1024;
-var RETRIES = 5;
-var SAVE_KEY = 'elevato_upload_sessions';   // { chữ ký file: URL phiên } — để tải tiếp
-var TELE_KEY = 'elevato_upload_tele';       // nhớ lựa chọn "gửi vào Telegram"
-var TG_PART = 19 * 1024 * 1024;             // cỡ mỗi phần bot gửi — khớp TG_PART trong Code.gs
+var RETRIES = 5;                            // gọi Apps Script (xin vé, báo xong)
+var SAVE_KEY = 'elevato_upload_tg';         // { chữ ký file: { ps, fids } } — mã các phần đã gửi, để gửi tiếp
+var LUONG_GUI = 2;                          // gửi 2 phần cùng lúc
+var GUI_THU_TOI_DA = 8;                     // mỗi phần thử tối đa 8 lần
+var GUI_IM_LANG = 60000;                    // đang đẩy dữ liệu mà 60 giây không nhích → cắt, gửi lại
+var GUI_CHO_TELEGRAM = 180000;              // gửi xong một phần, chờ Telegram nhận tối đa 3 phút
+var TG_PART = 19 * 1024 * 1024;             // cỡ mỗi phần — khớp TG_PART trong Code.gs (Tải thẳng chỉ lấy được ≤20MB/phần)
 
 var $ = function (id) { return document.getElementById(id); };
 var queue = [];          // [{ file, sig, status: 'wait'|'up'|'done'|'err', note, result }]
@@ -199,29 +193,14 @@ function errText(e) {
 }
 function isFatal(e) { return !!e && (e.code === 'key' || e.code === 'session' || e.code === 'expired'); }
 
-function readB64(blob) {
-  return new Promise(function (ok, fail) {
-    var fr = new FileReader();
-    fr.onload = function () { ok(String(fr.result).split(',')[1] || ''); };
-    fr.onerror = function () { fail(fr.error || new Error('Không đọc được file')); };
-    fr.readAsDataURL(blob);
-  });
-}
-
 function show(kind, text) {
   var m = $('msg');
   m.className = 'msg' + (kind ? ' ' + kind : '');
   m.textContent = text || '';
 }
 
-// ─── Phiên đang dở: lỡ đóng tab / rớt mạng thì chọn lại đúng file là tải tiếp ───
+// ─── Mã các phần đã gửi: lỡ đóng tab / rớt mạng thì chọn lại đúng file là gửi tiếp ───
 function fileSig(f) { return f.name + '|' + f.size + '|' + f.lastModified; }
-function savedSession(sig) { return (load(SAVE_KEY) || {})[sig] || null; }
-function saveSession(sig, session) {
-  var all = load(SAVE_KEY) || {};
-  if (session) all[sig] = session; else delete all[sig];
-  store(SAVE_KEY, all);
-}
 
 // ─── Danh sách file ───
 function pending() { return queue.filter(function (q) { return q.status === 'wait' || q.status === 'err'; }); }
@@ -241,7 +220,7 @@ function addFiles(list) {
     if (f.size > MAX_BYTES) { tooBig.push(f.name); return; }
     if (!f.size) { tooBig.push(f.name + ' (rỗng)'); return; }
     queue.push({ file: f, sig: sig, status: 'wait',
-                 note: savedSession(sig) ? 'Chờ tải · sẽ tải tiếp phần còn dở' : 'Chờ tải' });
+                 note: daGui(sig) ? 'Chờ gửi · sẽ gửi tiếp phần còn thiếu' : 'Chờ gửi' });
   });
   if (tooBig.length) show('err', 'Bỏ qua (quá 2GB hoặc rỗng): ' + tooBig.join(', '));
   else if (API) show();
@@ -282,16 +261,6 @@ function render() {
     st.textContent = q.note;
     li.appendChild(st);
 
-    if (q.result) {
-      var links = document.createElement('div');
-      links.className = 'item-links';
-      var view = document.createElement('a');
-      view.href = q.result.viewUrl; view.target = '_blank'; view.rel = 'noopener';
-      view.textContent = 'Mở xem';
-      links.appendChild(view);
-      links.appendChild(copyBtn('Chép link tải', q.result.downloadUrl));
-      li.appendChild(links);
-    }
     ul.appendChild(li);
   });
   refresh();
@@ -311,7 +280,7 @@ function copyBtn(text, value) {
 
 function setItem(q, status, note) { q.status = status; q.note = note; render(); }
 
-// ─── Tiến độ file đang tải ───
+// ─── Tiến độ file đang gửi ───
 var t0, sent0;
 function progress(q, done, text) {
   var total = q.file.size, pct = total ? Math.floor(done / total * 100) : 0;
@@ -329,103 +298,184 @@ function progress(q, done, text) {
   }
 }
 
-// ─── Tải một file ───
-async function findOffset(q, key, session, opt) {
-  var r = await call('upload_status', { key: key, session: session, total: q.file.size,
-                                         share: opt.share, tele: opt.tele });
-  if (r.expired) {
-    saveSession(q.sig);
-    var e = new Error('Phiên tải lên đã hết hạn — bấm Tải lên để bắt đầu lại');
-    e.code = 'expired';
-    throw e;
-  }
-  return r;
+// ─── Gửi thẳng lên Telegram, không qua Drive ───
+// Trang cắt file thành phần 19MB, gửi từng phần tới máy chủ Cloudflare (Worker) kèm vé Apps Script đã ký;
+// Worker đẩy phần đó vào chat Telegram và trả mã file. Đủ mã thì Apps Script ghi file vào Kho.
+// Phần nào hỏng gửi lại riêng phần đó; mã đã có được nhớ trong trình duyệt nên lỡ đóng trang,
+// chọn lại đúng file là gửi tiếp phần còn thiếu.
+var LOI_GUI_CHET = { sai_ky: 1, cai_dat: 1, hong: 1, telegram_hong: 1 };
+
+function daGui(sig) { return (load(SAVE_KEY) || {})[sig] || null; }
+function luuDaGui(sig, v) {
+  var all = load(SAVE_KEY) || {};
+  if (v) all[sig] = v; else delete all[sig];
+  store(SAVE_KEY, all);
 }
 
-async function sendChunk(q, key, session, offset, opt) {
-  var b64 = await readB64(q.file.slice(offset, Math.min(offset + CHUNK, q.file.size)));
-  for (var attempt = 1; ; attempt++) {
-    try {
-      return await call('upload_chunk', { key: key, session: session, start: offset,
-                                          total: q.file.size, data: b64, share: opt.share, tele: opt.tele });
-    } catch (e) {
-      if (isFatal(e) || attempt >= RETRIES) throw e;
-      progress(q, offset, 'Mạng chập chờn, thử lại lần ' + attempt + '…');
-      await sleep(2000 * Math.pow(2, attempt - 1));
-      // Có khi mảnh đã tới Drive mà câu trả lời lạc đường — hỏi lại rồi gửi đúng chỗ.
-      try {
-        var r = await findOffset(q, key, session, opt);
-        if (r.done || r.next !== offset) return r;
-      } catch (e2) { if (isFatal(e2)) throw e2; }
-    }
-  }
-}
-
-async function uploadOne(q, key, opt) {
-  var session = savedSession(q.sig), r = { next: 0 };
-  if (session) {
-    try { r = await findOffset(q, key, session, opt); }
+/** Xin vé gửi (Apps Script). Mạng chập thì thử lại; sai key / chưa cài thì báo luôn. */
+async function xinVeGui(q, key) {
+  for (var lan = 1; ; lan++) {
+    try { return await call('up_ve', { key: key, info: { name: q.file.name, size: q.file.size } }); }
     catch (e) {
-      // Phiên cũ hỏng / hết hạn thì mở phiên mới; lỗi khác (sai key, mất mạng) thì báo.
-      if (e.code !== 'session' && e.code !== 'expired') throw e;
-      session = null; r = { next: 0 }; saveSession(q.sig);
+      if (isFatal(e) || lan >= RETRIES) throw e;
+      progress(q, 0, 'Chưa xin được vé gửi, thử lại lần ' + lan + '…');
+      await sleep(2000 * lan);
     }
   }
-  if (!session) {
-    progress(q, 0, 'Đang mở phiên tải lên…');
-    session = await call('upload_start', { key: key, info: { name: q.file.name, size: q.file.size, type: q.file.type } });
-    saveSession(q.sig, session);
-  }
-  t0 = Date.now(); sent0 = r.next || 0;
-  while (!r.done) {
-    progress(q, r.next);
-    r = await sendChunk(q, key, session, r.next, opt);
-  }
-  progress(q, q.file.size, 'Xong');
-  saveSession(q.sig);
-  return r;
 }
 
-// ─── Tải cả hàng đợi, lần lượt từng file ───
+/**
+ * Gửi một phần bằng XHR (fetch không báo được tiến độ khi gửi). Im lặng quá lâu thì cắt và báo lỗi mạng
+ * để gửi lại — đỡ cảnh treo mãi ở một con số.
+ */
+function guiPhanXhr(ve, i, blob, khiTien, dk) {
+  return new Promise(function (ok, fail) {
+    var x = new XMLHttpRequest(), hen = 0, xong = false;
+    function het(e) { if (!xong) { xong = true; clearTimeout(hen); dk.huy = null; fail(e); } }
+    function canh(ms) { clearTimeout(hen); hen = setTimeout(function () { x.abort(); het(loiMang('Mạng im lặng quá lâu')); }, ms); }
+    dk.huy = function () { x.abort(); het(Object.assign(new Error('Đã dừng'), { dung: true })); };
+    x.open('POST', ve.url + '?d=' + encodeURIComponent(ve.d) + '&s=' + encodeURIComponent(ve.s) + '&i=' + i);
+    x.upload.onprogress = function (e) { khiTien(e.loaded); canh(GUI_IM_LANG); };
+    x.upload.onload = function () { khiTien(blob.size); canh(GUI_CHO_TELEGRAM); };   // đã gửi hết, chờ Telegram nhận
+    x.onerror = function () { het(loiMang()); };
+    x.onload = function () {
+      if (xong) return;
+      var j = null;
+      try { j = JSON.parse(x.responseText); } catch (e) { /* trang lỗi lạ */ }
+      if (x.status === 200 && j && j.ok && j.fid) { xong = true; clearTimeout(hen); dk.huy = null; return ok(j); }
+      var e = new Error((j && j.loi) || ('Máy chủ gửi trả lỗi ' + x.status));
+      e.ma = j && j.ma; e.sau = j && j.sau; e.status = x.status;
+      het(e);
+    };
+    canh(GUI_IM_LANG);
+    x.send(blob);
+  });
+}
+function loiMang(chu) { var e = new Error(chu || 'Mất kết nối tới máy chủ gửi'); e.mang = true; return e; }
+function choMang() {
+  if (navigator.onLine !== false) return Promise.resolve();
+  return new Promise(function (ok) { window.addEventListener('online', function () { ok(); }, { once: true }); });
+}
+
+async function guiMotFile(q, key) {
+  var size = q.file.size, ps = TG_PART, n = Math.max(1, Math.ceil(size / ps));
+  var cu = daGui(q.sig);
+  var fids = cu && cu.ps === ps && cu.fids && cu.fids.length === n ? cu.fids.slice() : Array(n).fill(null);
+  var coSan = fids.filter(Boolean).length;
+  function canPhan(i) { return Math.min(ps, size - i * ps); }
+
+  progress(q, 0, 'Đang xin vé gửi…');
+  var ve = await xinVeGui(q, key), veMoi = null;
+  if (ve.ps !== ps || ve.parts !== n) throw new Error('Vé gửi không khớp cỡ phần — tải lại trang (bản trang cũ?)');
+  function doiVe() {   // vé hết hạn: xin vé mới, mã các phần đã gửi vẫn dùng được
+    if (!veMoi) veMoi = xinVeGui(q, key).then(function (v) { ve = v; }).finally(function () { veMoi = null; });
+    return veMoi;
+  }
+
+  var dangGui = {}, daXong = 0, loiChung = null, mangHongLienTiep = 0, dieuKhien = [], doiVeLan = 0;
+  fids.forEach(function (f, i) { if (f) daXong += canPhan(i); });
+  t0 = Date.now(); sent0 = daXong;
+  function tong() { var s = daXong; for (var k in dangGui) s += dangGui[k]; return s; }
+  function bao(chu) { progress(q, tong(), chu ? mb(tong()) + ' / ' + mb(size) + ' · ' + chu : ''); }
+  var hang = []; fids.forEach(function (f, i) { if (!f) hang.push(i); });
+
+  async function motPhan(i, dk) {
+    for (var lan = 1; ; lan++) {
+      if (loiChung) throw loiChung;
+      await choMang();
+      try {
+        var j = await guiPhanXhr(ve, i, q.file.slice(i * ps, i * ps + canPhan(i)),
+          function (b) { dangGui[i] = b; bao(); }, dk);
+        delete dangGui[i];
+        mangHongLienTiep = 0;
+        return j.fid;
+      } catch (e) {
+        delete dangGui[i];
+        if (e.dung || loiChung) throw loiChung || e;
+        if (LOI_GUI_CHET[e.ma]) throw e;
+        if (e.mang) {
+          // Chưa phần nào qua được mà lần nào cũng không tới nổi máy chủ: mạng chặn hẳn, thử mãi vô ích.
+          if (++mangHongLienTiep >= 3 && !coSan && fids.every(function (f) { return !f; })) {
+            throw new Error('Không kết nối được máy chủ gửi (workers.dev) — thường là mạng đang chặn nó ' +
+                            '(hay gặp ở mạng công ty). Gửi bằng 4G / mạng nhà.');
+          }
+        }
+        if (e.ma === 'het_han' && ++doiVeLan <= 3) { bao('vé hết hạn, đang xin vé mới…'); await doiVe(); lan--; continue; }
+        if (lan >= GUI_THU_TOI_DA) throw e;
+        var cho = e.ma === 'cham' ? Math.min(120, Math.max(1, Number(e.sau) || 5)) * 1000
+                                  : Math.min(30000, 2000 * Math.pow(2, lan - 1));
+        bao('phần ' + (i + 1) + ': ' + errText(e) + ' — thử lại sau ' + Math.ceil(cho / 1000) + ' giây');
+        await sleep(cho);
+      }
+    }
+  }
+  async function luong() {
+    var dk = { huy: null };
+    dieuKhien.push(dk);
+    while (hang.length && !loiChung) {
+      var i = hang.shift();
+      try {
+        fids[i] = await motPhan(i, dk);
+      } catch (e) {
+        if (!loiChung) { loiChung = e; dieuKhien.forEach(function (d) { if (d.huy) d.huy(); }); }
+        throw loiChung;
+      }
+      daXong += canPhan(i);
+      luuDaGui(q.sig, { ps: ps, fids: fids });
+      bao();
+    }
+  }
+  bao(coSan ? 'gửi tiếp ' + hang.length + '/' + n + ' phần còn thiếu' : '');
+  var ds = [];
+  for (var k = 0; k < Math.min(LUONG_GUI, hang.length); k++) ds.push(luong());
+  var kq = await Promise.allSettled(ds);
+  if (loiChung || kq.some(function (r) { return r.status === 'rejected'; })) {
+    throw loiChung || kq.filter(function (r) { return r.status === 'rejected'; })[0].reason;
+  }
+
+  progress(q, size, 'Đã gửi đủ ' + n + ' phần, đang ghi vào Kho…');
+  for (var lan = 1; ; lan++) {
+    try { await call('up_xong', { key: key, d: ve.d, s: ve.s, fids: fids }); break; }
+    catch (e) {
+      if (isFatal(e) || lan >= RETRIES) throw e;
+      await sleep(2000 * lan);
+    }
+  }
+  luuDaGui(q.sig);
+  progress(q, size, 'Xong');
+  return { parts: n };
+}
+
+// ─── Gửi cả hàng đợi, lần lượt từng file ───
 async function uploadAll() {
   var key = $('key').value.trim();
-  var opt = { share: $('share').checked, tele: $('tele').checked };
   busy = true; show(); $('prog').hidden = false;
   store(CFG_KEY, { api: API, key: key });
-  store(TELE_KEY, opt.tele);
   render();
 
   var list = pending(), ok = 0;
   for (var i = 0; i < list.length; i++) {
     var q = list[i];
-    setItem(q, 'up', 'Đang tải…');
+    setItem(q, 'up', 'Đang gửi…');
     try {
-      q.result = await uploadOne(q, key, opt);
+      var r = await guiMotFile(q, key);
       ok++;
-      setItem(q, 'done', q.result.tele
-        ? '✓ Đã lên Drive · bot đang chuyển vào Telegram' +
-          (q.file.size > TG_PART ? ' (' + Math.ceil(q.file.size / TG_PART) + ' phần)' : '') + ', xong sẽ xoá khỏi Drive'
-        : '✓ Đã lên Drive' + (q.result.shared ? '' : ' · chưa bật chia sẻ theo link'));
+      setItem(q, 'done', '✓ Đã vào Telegram' + (r.parts > 1 ? ' (' + r.parts + ' phần)' : '') + ' · có trong Kho bên dưới');
     } catch (e) {
-      setItem(q, 'err', errText(e));
-      // Sai key hay mất mạng hẳn thì file sau cũng hỏng y vậy — dừng, để người dùng bấm lại.
-      show('err', errText(e) + (isFatal(e) ? '' : '. Bấm Tải lên lần nữa để tải tiếp từ chỗ dừng.'));
+      var con = daGui(q.sig) ? ' Bấm Tải lên lần nữa để gửi tiếp phần còn thiếu.' : '';
+      setItem(q, 'err', errText(e) + (con ? ' · đã nhớ phần gửi xong' : ''));
+      var t = errText(e);
+      show('err', t + (/[.!?…]$/.test(t) ? '' : '.') + con);
       break;
     }
   }
   busy = false;
   if (!pending().length) {
     $('prog').hidden = true;
-    show('ok', 'Xong ' + ok + ' file. Chọn thêm file nếu cần tải tiếp.');
+    show('ok', 'Xong ' + ok + ' file — đã vào chat Telegram. Lấy lại thành một file ở mục Kho bên dưới (Tải thẳng).');
   }
-  var xong = queue.filter(function (q) { return q.status === 'done'; });
-  var tele = xong.some(function (q) { return q.result.tele; }), drive = xong.some(function (q) { return !q.result.tele; });
-  $('note').textContent = (tele ? 'Bot gửi file vào Telegram trong vài phút (lịch chạy mỗi phút). Trong lúc chờ, ' +
-                                  'link Drive vẫn dùng được; gửi xong bot bỏ file khỏi Drive và link hết hạn. ' : '') +
-    (drive ? 'Mở link tải về ở máy khác — file lớn thì Drive báo "không quét được virus", bấm "Vẫn tải xuống". ' +
-             'Bot Telegram cũng đã nhận các link này.' : '');
-  $('note').hidden = !xong.length;
   render();
+  if (ok) khoTai();
 }
 
 // ─── Kho file trên Telegram ───
@@ -1041,8 +1091,6 @@ window.addEventListener('beforeunload', function (e) { if (busy || dangTaiPhan >
   if (location.hash) try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
   API = API_RE.test(cfg.api || '') ? cfg.api : '';
   $('key').value = cfg.key || '';
-  var tele = load(TELE_KEY);
-  if (tele === false) $('tele').checked = false;
   if (!API) show('warn', 'Trang chưa biết máy chủ tải lên. Mở trang bằng link bot Telegram đã gửi ' +
                          '(chạy hàm caiDat trong Apps Script để bot gửi lại).');
   refresh();

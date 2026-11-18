@@ -361,3 +361,81 @@ function tenAscii(ten) {
   const sach = String(ten).replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_').trim();
   return sach || 'file';
 }
+
+// ─── GỬI THẲNG LÊN TELEGRAM (chiều tải lên) ─────────────────────────────────────
+
+/**
+ * GỬI THẲNG — POST /tailen?d=…&s=…&i=…, thân là đúng các byte của phần thứ i.
+ *
+ * Trước đây chiều tải lên phải vòng qua Google Drive (trình duyệt ở Việt Nam không gọi được
+ * api.telegram.org): máy → Drive → Apps Script đẩy dần sang Telegram mỗi phút → bỏ bản Drive vào
+ * Thùng rác. Chậm, và Thùng rác vẫn tính dung lượng 30 ngày nên tải vài video là Drive đầy
+ * ("Drive 403"). Worker gọi được Telegram mà ở Việt Nam vào được, nên đứng giữa thay Drive:
+ * trang cắt file thành từng phần, gửi từng phần qua đây, Worker đẩy thẳng vào chat bằng
+ * sendDocument và trả file_id. Không đụng Drive.
+ *
+ * Vé (ký bởi Apps Script, k:'up') mang tên, dung lượng, số phần, cỡ phần, chat_id — Worker chỉ
+ * gửi đúng những gì vé cho phép, nên không ai dùng được bot này để gửi lung tung.
+ *
+ * Cỡ phần 19MB: bot gửi được tới 50MB nhưng chỉ TẢI VỀ được tới 20MB — phải nhỏ hơn 20MB thì
+ * sau này Tải thẳng mới lấy về được. Gói Free nhận thân yêu cầu tới 100MB, thừa sức.
+ * Byte đi ngoài JavaScript: arrayBuffer / File / FormData đều do runtime làm (gói Free 10ms CPU).
+ */
+export async function taiLen(req, env) {
+  if (!env.UPLOAD_TG_TOKEN || !env.TAIVE_SECRET) return loiPhan('cai_dat', 'Worker chưa cài UPLOAD_TG_TOKEN / TAIVE_SECRET', 503);
+  const url = new URL(req.url);
+  const d = url.searchParams.get('d') || '', s = url.searchParams.get('s') || '', i = Number(url.searchParams.get('i'));
+  if (!d || !s) return loiPhan('hong', 'Thiếu vé gửi', 400);
+  if (!(await kiemChuKy(env.TAIVE_SECRET, d, s))) return loiPhan('sai_ky', 'Vé gửi không hợp lệ', 403);
+  let ve;
+  try { ve = JSON.parse(new TextDecoder().decode(b64urlBytes(d))); } catch { return loiPhan('hong', 'Vé gửi hỏng', 400); }
+  // Vé TẢI VỀ cũng ký bằng cùng bí mật — phải là vé GỬI (k:'up') mới được gửi gì lên.
+  if (!ve || ve.k !== 'up') return loiPhan('hong', 'Không phải vé gửi', 400);
+  if (!Number.isFinite(ve.e) || ve.e < Date.now()) return loiPhan('het_han', 'Vé gửi đã hết hạn', 410);
+  const { n, s: tong, p, ps, c } = ve;
+  if (typeof n !== 'string' || !n || !Number.isInteger(tong) || tong <= 0 || !Number.isInteger(ps) || ps <= 0 || ps > 20 * 1048576
+      || !Number.isInteger(p) || p !== Math.max(1, Math.ceil(tong / ps)) || !c) {
+    return loiPhan('hong', 'Vé gửi thiếu thông tin', 400);
+  }
+  if (!Number.isInteger(i) || i < 0 || i >= p) return loiPhan('hong', 'Số phần không hợp lệ', 400);
+  const can = Math.min(ps, tong - i * ps);
+  // Kiểm dung lượng TRƯỚC khi đọc thân: sai thì từ chối ngay, khỏi nhận 19MB rồi mới biết.
+  const khai = req.headers.get('content-length');
+  if (khai !== null && Number(khai) !== can) return loiPhan('hong', `Phần ${i + 1} sai dung lượng (${khai}/${can})`, 400);
+  let buf;
+  try { buf = await req.arrayBuffer(); } catch { return loiPhan('mang', 'Đứt kết nối khi đang nhận phần này', 400); }
+  if (buf.byteLength !== can) return loiPhan('hong', `Phần ${i + 1} sai dung lượng (${buf.byteLength}/${can})`, 400);
+
+  const ten = p === 1 ? n : `${n}.${String(i + 1).padStart(3, '0')}`;
+  const form = new FormData();
+  form.set('chat_id', String(c));
+  form.set('caption', p === 1 ? `${n} (${(tong / 1048576).toFixed(1)}MB)` : `${n} — phần ${i + 1}/${p}`);
+  form.set('disable_content_type_detection', 'true');
+  form.set('document', new File([buf], ten, { type: 'application/octet-stream' }));
+  let r, j = null;
+  try {
+    r = await fetch(TG_API + env.UPLOAD_TG_TOKEN + '/sendDocument', { method: 'POST', body: form });
+    j = await r.json();
+  } catch (err) {
+    console.error(`taiLen: ${err && err.message ? err.message : err}`);
+    return loiPhan('telegram', 'Không gửi được tới Telegram (mất kết nối)', 502);
+  }
+  const doc = j && j.ok && j.result && j.result.document;
+  if (doc && doc.file_id) {
+    return new Response(JSON.stringify({ ok: true, fid: doc.file_id, mid: j.result.message_id }), {
+      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...CORS_PHAN },
+    });
+  }
+  const ma = (j && j.error_code) || (r && r.status) || 0;
+  const ly = (j && j.description) || `Telegram trả ${ma}`;
+  if (ma === 429) {
+    // Gửi dồn quá nhanh vào một chat: Telegram bảo chờ — trang chờ đúng chừng ấy rồi gửi lại phần này.
+    const sau = Number(j && j.parameters && j.parameters.retry_after) || 5;
+    return new Response(JSON.stringify({ ok: false, ma: 'cham', sau, loi: ly }), {
+      status: 429, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...CORS_PHAN },
+    });
+  }
+  // 400 (chat không tồn tại…), 401 (token sai), 403 (bot bị chặn / bị đuổi khỏi nhóm): gửi lại cũng vậy.
+  if (ma === 400 || ma === 401 || ma === 403) return loiPhan('telegram_hong', `Telegram từ chối: ${ly}`, 502);
+  return loiPhan('telegram', `Telegram trục trặc: ${ly}`, 502);
+}
