@@ -134,6 +134,12 @@ svg.viz{width:100%;height:auto;display:block}svg .ax{font-size:11px;fill:#8C7E71
 table.click tbody tr{cursor:pointer}
 .vtip{position:fixed;z-index:300;pointer-events:none;background:#14233a;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:var(--shm);display:none;max-width:320px}
 .spark{display:block}
+.colchk{padding:10px 14px;margin:10px 0}.cc-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cc-h b{color:var(--navy)}
+.cc-l{margin:8px 0 0 18px;font-size:12.5px}.cc-l li.e{color:var(--err)}.cc-l li.w{color:#8a5a0c}
+.aibox{margin-top:8px;border-radius:10px;padding:9px 12px;font-size:12.5px;border:1px solid}.aibox.ok{background:var(--ok-bg);border-color:#cfe6d8;color:var(--ok)}.aibox.warn{background:var(--blue-bg);border-color:#b9d3ee;color:var(--navy)}
+.aibox ul{margin:4px 0 4px 18px}.aich{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.map label.bad{border-color:#f0c4be;background:var(--err-bg)}.map label em{display:block;font-style:normal;font-size:11px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+
 .au-sum{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.au-sum button{border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12.5px;background:#fff}
 .au-sum button.on{background:var(--blue);border-color:var(--blue);color:#fff}.au-sum button b{margin-left:4px}
 .diff{font-size:12px;line-height:1.5}.diff s{color:var(--ink3)}.diff ins{text-decoration:none;color:var(--ok);font-weight:700}
@@ -953,6 +959,104 @@ const BK = (() => {
     return out;
   }
 
+  // ─── kiểm tra phân bổ cột & đơn vị tiền khi nạp ───
+  const UNITS = {
+    dong: { label: 'Đồng (VND)', scale: 1, cur: '' },
+    nghin: { label: 'Nghìn đồng', scale: 1000, cur: '' },
+    trieu: { label: 'Triệu đồng', scale: 1e6, cur: '' },
+    USD: { label: 'USD', scale: 1, cur: 'USD' },
+    EUR: { label: 'EUR', scale: 1, cur: 'EUR' },
+    JPY: { label: 'JPY', scale: 1, cur: 'JPY' },
+    CNY: { label: 'CNY', scale: 1, cur: 'CNY' },
+  };
+  /** Đoán đơn vị tiền từ dòng "ĐVT: …" phía trên bảng hoặc chữ trong tiêu đề cột tiền. */
+  function detectUnit(grid, headerRow, map = {}) {
+    const top = grid.slice(0, Math.max(0, headerRow) + 2).flat().filter((v) => typeof v === 'string').map(fold);
+    for (const t of top) {
+      const m = /(dvt|don vi tinh|don vi)\s*[:.]?\s*(.{0,24})/.exec(t);
+      if (!m) continue;
+      const u = m[2];
+      if (/trieu/.test(u)) return { unit: 'trieu', src: 'dòng ĐVT trong file' };
+      if (/nghin|ngan|1\.?000|1,000/.test(u)) return { unit: 'nghin', src: 'dòng ĐVT trong file' };
+      if (/usd|do la|dollar/.test(u)) return { unit: 'USD', src: 'dòng ĐVT trong file' };
+      if (/eur/.test(u)) return { unit: 'EUR', src: 'dòng ĐVT trong file' };
+      if (/dong|vnd/.test(u)) return { unit: 'dong', src: 'dòng ĐVT trong file' };
+    }
+    const hdr = grid[headerRow] || [];
+    for (const f of ['tien_gn', 'tien_hd']) {
+      const t = map[f] != null ? fold(hdr[map[f]]) : '';
+      if (/usd/.test(t)) return { unit: 'USD', src: 'tiêu đề cột tiền ghi USD' };
+      if (/eur/.test(t)) return { unit: 'EUR', src: 'tiêu đề cột tiền ghi EUR' };
+      if (/trieu/.test(t)) return { unit: 'trieu', src: 'tiêu đề cột tiền ghi triệu' };
+      if (/nghin|1\.000/.test(t)) return { unit: 'nghin', src: 'tiêu đề cột tiền ghi nghìn' };
+    }
+    return { unit: 'dong', src: '' };
+  }
+  /** Áp đơn vị: nhân hệ số (nghìn/triệu đồng) hoặc gắn loại tiền; curRows: [{from,to,currency}] theo số hàng Excel. */
+  function applyUnit(groups, unit = 'dong', curRows = []) {
+    const u = UNITS[unit] || UNITS.dong;
+    for (const g of groups) {
+      if (u.scale !== 1 && g.so_tien != null) g.so_tien *= u.scale;
+      for (const l of g.lines) {
+        const cr = curRows.find((x) => l.row >= x.from && l.row <= x.to);
+        const cur = (cr && cr.currency && !/^VN/i.test(cr.currency) ? cr.currency.toUpperCase() : '') || l.loai_tien || u.cur;
+        if (!l.loai_tien && cur) l.loai_tien = cur;
+        if (u.scale !== 1 && !l.loai_tien) { if (l.tien_hd != null) l.tien_hd = Math.round(l.tien_hd * u.scale); if (l.tien_gn != null) l.tien_gn = Math.round(l.tien_gn * u.scale); }
+      }
+      g.tong_gn = sum(g.lines.map((l) => l.tien_gn));
+    }
+    return groups;
+  }
+  /**
+   * Kiểm tra từng cột đã chọn có đúng kiểu dữ liệu không (số HĐ, ngày, số tiền…) trên các dòng dữ liệu.
+   * Trả về { fields: {field: {col, n, samples, issues[]}}, issues: [{field, sev, text}] }.
+   */
+  function profileColumns(grid, dataHeader, map, groups = [], unit = 'dong') {
+    const rows = grid.slice(dataHeader + 1, dataHeader + 1 + 4000).filter((r) => r && r.some((v) => String(v).trim() !== ''));
+    const fields = {}, issues = [];
+    const isDateNum = (v) => typeof v === 'number' && Number.isInteger(v) && v > 30000 && v < 60000;
+    const isId = (v) => typeof v === 'number' && Number.isInteger(v) && v >= 1e11;   // số tờ khai 11–12 chữ số (≥ 100 tỷ — hiếm khi là tiền 1 hóa đơn)
+    for (const f of FIELDS) {
+      const c = map[f.k]; if (c == null || c < 0) continue;
+      const vals = rows.map((r) => r[c]).filter((v) => v != null && String(v).trim() !== '' && !(typeof v === 'string' && TOTAL_RE.test(fold(v))));
+      const n = vals.length;
+      const st = { n, num: 0, dec: 0, date: 0, id: 0, text: 0 };
+      for (const v of vals) {
+        if (typeof v === 'number') { st.num++; if (!Number.isInteger(v)) st.dec++; if (isDateNum(v)) st.date++; if (isId(v)) st.id++; }
+        else if (toISO(v)) st.date++;
+        else if (parseAmount(v) != null) { st.num++; if (!Number.isInteger(parseAmount(v))) st.dec++; }
+        else st.text++;
+      }
+      const pct = (x) => (n ? x / n : 0);
+      const fi = { col: c, n, samples: [...new Set(vals.slice(0, 40).map((v) => (typeof v === 'number' ? numStr(v) : String(v).trim().slice(0, 30))))].slice(0, 3), issues: [] };
+      const add = (sev, text) => { fi.issues.push(text); issues.push({ field: f.k, sev, text: `${f.label} (cột ${colName(c)}): ${text}` }); };
+      if (n >= 3) {
+        if (f.k === 'so_hd') {
+          if (pct(st.dec) > 0.2) add(3, `${Math.round(pct(st.dec) * 100)}% giá trị có phần lẻ — giống SỐ TIỀN, không phải số hóa đơn`);
+          else if (pct(st.date) > 0.5 && st.text < n / 4) add(2, 'phần lớn giá trị giống NGÀY (số sê-ri Excel)');
+        }
+        if (f.type === 'date' && pct(st.date) < 0.6) add(3, `chỉ ${Math.round(pct(st.date) * 100)}% giá trị là ngày${st.id ? ` — có ${st.id} số dài giống số tờ khai` : ''}`);
+        if (f.type === 'num') {
+          if (pct(st.text) > 0.15) add(3, `${st.text}/${n} ô là chữ (vd “${String(vals.find((v) => typeof v === 'string' && parseAmount(v) == null && !toISO(v))).slice(0, 24)}”) — có thể chọn nhầm cột`);
+          if (f.k !== 'so_tien_kunn' && pct(st.id) > 0.15) add(3, `${st.id}/${n} ô là số 11–13 chữ số — giống số tờ khai, không phải số tiền`);
+          if (pct(st.dec) > 0.25 && (UNITS[unit] || UNITS.dong).cur === '' && unit === 'dong') add(2, `${Math.round(pct(st.dec) * 100)}% số tiền có phần lẻ — có thể là NGOẠI TỆ (USD…), chọn lại đơn vị tiền`);
+          const nums = vals.map((v) => parseAmount(v)).filter((x) => x != null && x > 0).sort((a, b) => a - b);
+          const med = nums.length ? nums[Math.floor(nums.length / 2)] : null;
+          if (med != null && unit === 'dong' && med < 10000 && pct(st.dec) <= 0.25) add(2, `số tiền điển hình chỉ ${numStr(med)} — đơn vị có thể là NGHÌN / TRIỆU đồng hoặc ngoại tệ`);
+          fi.median = med;
+        }
+        if ((f.k === 'ncc') && pct(st.num) > 0.5) add(3, 'phần lớn là số — không phải tên nhà cung cấp');
+      }
+      fields[f.k] = fi;
+    }
+    const ls = groups.flatMap((g) => g.lines).filter((l) => l.tien_hd != null && l.tien_gn != null && !l.lech);
+    const over = ls.filter((l) => l.tien_gn > l.tien_hd + 1).length;
+    if (ls.length >= 5 && over / ls.length > 0.3) issues.push({ field: 'tien_gn', sev: 2, text: `Tiền giải ngân > tiền hóa đơn ở ${over}/${ls.length} dòng — có thể chọn đảo 2 cột tiền, hoặc cột giải ngân là cột tổng` });
+    if (map.so_hd == null) issues.push({ field: 'so_hd', sev: 3, text: 'Chưa chọn cột Số hóa đơn' });
+    if (map.tien_gn == null && map.tien_hd == null) issues.push({ field: 'tien_gn', sev: 3, text: 'Chưa chọn cột số tiền' });
+    return { fields, issues: issues.sort((a, b) => b.sev - a.sev) };
+  }
+
   // ─── rà soát logic bảng kê ───
   const AUDIT = {
     lech_cot: { label: 'Lệch cột', sev: 3 },
@@ -989,7 +1093,7 @@ const BK = (() => {
     if (k.so_tien != null && lines.length && Math.abs(k.so_tien - tong) > 1 && !(k.ack || []).includes('tong_lech')) out.push({ lineId: null, idx: -1, type: 'tong_lech', sev: 1, text: `Tổng các dòng ${fmtMoney(tong)} ≠ số tiền KUNN ${fmtMoney(k.so_tien)}` });
     return out;
   }
-  return { AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
+  return { UNITS, detectUnit, applyUnit, profileColumns, AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
 })();
 </script>
 <script id="bk-app">
@@ -2261,6 +2365,7 @@ async function gotFile(file) {
     }
     await loadExisting();
     renderImport();
+    if (aiKeys().length && IMP.groups.length) aiColCheck(true);          // AI tự rà việc gán cột & đơn vị tiền
   } catch (e) { console.error(e); body.innerHTML = `<div class="note err">Không đọc được file: ${esc(e.message)}</div>`; }
 }
 function autoDetect(sheet) {
@@ -2273,6 +2378,8 @@ function autoDetect(sheet) {
   IMP.kinfo = { so_kunn: (r.title || {}).so_kunn || '', ngay_gn: (r.title || {}).ngay_gn || '', ngay_dh: '', so_tien_kunn: null };
   IMP.how = r.header.row >= 0 ? `Tự nhận dạng: tiêu đề ở hàng ${r.header.row + 1}` : 'Không tự nhận dạng được tiêu đề cột';
   IMP.aiRows = null;
+  const du = BK.detectUnit(g, Math.max(0, IMP.headerRow), IMP.map);
+  IMP.unit = du.unit; IMP.unitSrc = du.src; IMP.curRows = []; IMP.colAI = null;
   extract();
 }
 function extract() {
@@ -2280,6 +2387,8 @@ function extract() {
   if (IMP.aiRows) { IMP.groups = BK.aiRowsToGroups(IMP.aiRows, IMP.kinfo); IMP.warnings = []; }
   else if (IMP.dataHeader >= 0 || IMP.map.so_hd != null || IMP.map.tien_gn != null) { const r = BK.extractRows(g, IMP.dataHeader, IMP.map, IMP.kinfo); IMP.groups = r.groups; IMP.warnings = r.warnings; }
   else { IMP.groups = []; IMP.warnings = []; }
+  BK.applyUnit(IMP.groups, IMP.unit || 'dong', IMP.curRows || []);
+  IMP.prof = IMP.aiRows ? { issues: [], fields: {} } : BK.profileColumns(g, IMP.dataHeader, IMP.map, IMP.groups, IMP.unit || 'dong');
   recheck(false);
 }
 function recheck(render = true) {
@@ -2340,6 +2449,92 @@ function checkExplain(l) {
     default: return 'Chưa từng giải ngân';
   }
 }
+// ═════════════════ KIỂM TRA PHÂN BỔ CỘT & ĐƠN VỊ TIỀN (luật + AI) ═════════════════
+function promptColCheck() {
+  const g = IMP.sheets[IMP.sheet], hr = Math.max(0, IMP.dataHeader);
+  const data = g.map((r, i) => ({ r, i })).filter(({ r, i }) => i > hr && r && r.some((v) => String(v).trim() !== ''));
+  const mid = data.length > 40 ? data.filter((_, j) => j > 15 && j % Math.ceil(data.length / 20) === 0).slice(0, 20) : [];
+  const sample = [...data.slice(0, 15), ...mid];
+  const mapTxt = BK.FIELDS.map((f) => `${f.k} (${f.label}) = ${IMP.map[f.k] != null ? BK.colName(IMP.map[f.k]) : 'null'}`).join('\n');
+  return `Bạn là chuyên viên kiểm soát giải ngân ngân hàng Việt Nam. Công cụ vừa đọc một file Excel "bảng kê chứng từ/hóa đơn giải ngân" và tự gán cột → trường dữ liệu. Hãy KIỂM TRA việc gán cột và đơn vị tiền đã đúng chưa.
+Kiểm tra kỹ:
+1. Mỗi trường có đúng cột không (số hóa đơn không phải số tiền; ngày là ngày; số tiền hóa đơn vs số tiền vay/giải ngân không bị đảo; không lấy nhầm cột TỔNG cộng dồn; số tờ khai 10–12 chữ số không phải số tiền).
+2. Đơn vị tiền: đồng / nghìn đồng / triệu đồng hay ngoại tệ (USD…). Số có phần lẻ (vd 1757.87) thường là ngoại tệ. Xem dòng "ĐVT" phía trên bảng.
+3. Có khối dòng nào dùng loại tiền khác hoặc ghi lệch cột không (ghi rõ từ hàng nào đến hàng nào).
+Số hàng tính như Excel (số trong ngoặc vuông). Số dạng 45453 trong cột ngày là ngày Excel.
+
+PHẦN ĐẦU FILE (tiêu đề, ĐVT):
+${BK.gridToPrompt(g.slice(0, hr + 1), 20, 70)}
+
+MẪU DỮ LIỆU:
+${sample.map(({ r, i }) => `[${i + 1}] ${BK.rowText(r)}`).join('\n')}
+
+CÔNG CỤ ĐANG GÁN:
+${mapTxt}
+Đơn vị tiền đang chọn: ${(BK.UNITS[IMP.unit] || BK.UNITS.dong).label}
+Luật tự kiểm phát hiện: ${(IMP.prof?.issues || []).map((x) => x.text).join('; ') || 'không'}
+
+Trả JSON:
+{"ok": true/false, "columns": {"so_kunn": "B" hoặc null, … đủ các trường như trên — chỉ đổi khi chắc chắn}, "unit": "dong"|"nghin"|"trieu"|"USD"|"EUR"|"JPY"|"CNY",
+ "currency_rows": [{"from": 3044, "to": 3344, "currency": "USD"}],
+ "issues": [{"field": "so_hd", "text": "mô tả vấn đề & cách sửa, tiếng Việt, ngắn"}],
+ "summary": "1–2 câu kết luận tiếng Việt"}`;
+}
+async function aiColCheck(auto) {
+  if (!aiKeys().length) { if (!auto) aiJson('').catch((e) => toast(e.message, 'err', 8000)); return; }
+  if (IMP.colBusy) return;
+  IMP.colBusy = true; IMP.colAI = null; renderImport();
+  try {
+    const r = await aiJson(promptColCheck(), { thinking: 'medium', maxTokens: 12000 });
+    const cols = BK.aiMappingToMap(r.columns || {});
+    const changes = BK.FIELDS.filter((f) => r.columns && Object.prototype.hasOwnProperty.call(r.columns, f.k) && (cols[f.k] ?? null) !== (IMP.map[f.k] ?? null))
+      .map((f) => ({ k: f.k, label: f.label, from: IMP.map[f.k], to: cols[f.k] }));
+    IMP.colAI = { ...r, cols, changes, unitChange: r.unit && BK.UNITS[r.unit] && r.unit !== IMP.unit ? r.unit : null, curRows: (r.currency_rows || []).filter((x) => x && x.from && x.to && x.currency && !/^VN/i.test(x.currency)) };
+  } catch (e) { IMP.colAI = { err: errMsg(e) }; }
+  IMP.colBusy = false;
+  if (IMP.m && document.body.contains(IMP.m)) renderImport();
+}
+function applyColAI() {
+  const a = IMP.colAI; if (!a || a.err) return;
+  for (const c of a.changes) { if (c.to == null) delete IMP.map[c.k]; else IMP.map[c.k] = c.to; }
+  if (a.unitChange) IMP.unit = a.unitChange;
+  IMP.curRows = a.curRows || [];
+  IMP.colAI = { ...a, applied: true };
+  IMP.aiRows = null;
+  extract(); renderImport();
+  toast('Đã áp dụng đề xuất của AI — kiểm tra lại kết quả bên dưới', 'ok');
+}
+function colCheckHtml() {
+  const p = IMP.prof || { issues: [], fields: {} };
+  const bad = p.issues.filter((x) => x.sev >= 3).length, warn = p.issues.length - bad;
+  const a = IMP.colAI;
+  const colLbl = (c) => (c == null ? '—' : BK.colName(c));
+  const aiBox = IMP.colBusy ? '<div class="note"><span class="spin"></span> AI đang rà việc gán cột & đơn vị tiền…</div>'
+    : !a ? (aiKeys().length ? '' : '<div class="hist">Nạp API key Gemini (⚙ Cài đặt) để AI tự rà việc gán cột mỗi khi tải file.</div>')
+    : a.err ? `<div class="note err">AI chưa rà được: ${esc(a.err)}</div>`
+    : `<div class="aibox ${a.ok && !a.changes.length && !a.unitChange && !a.curRows.length ? 'ok' : 'warn'}"><b>🤖 AI: ${esc(a.summary || (a.ok ? 'Gán cột hợp lý' : 'Có điểm cần sửa'))}</b>
+      ${(a.issues || []).length ? `<ul>${a.issues.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul>` : ''}
+      ${a.changes.length || a.unitChange || a.curRows.length ? `<div class="aich">${a.changes.map((c) => `<span class="pill p-info">${esc(c.label)}: ${colLbl(c.from)} → <b>${colLbl(c.to)}</b></span>`).join(' ')}
+        ${a.unitChange ? `<span class="pill p-info">Đơn vị: ${esc(BK.UNITS[IMP.unit].label)} → <b>${esc(BK.UNITS[a.unitChange].label)}</b></span>` : ''}
+        ${a.curRows.map((x) => `<span class="pill p-info">Hàng ${x.from}–${x.to}: <b>${esc(x.currency)}</b></span>`).join(' ')}</div>
+        ${a.applied ? '<div class="hist" style="color:var(--ok)">✓ Đã áp dụng</div>' : '<button class="btn sm pri" id="cAIgo">✓ Áp dụng đề xuất của AI</button>'}` : ''}</div>`;
+  return `<div class="card colchk"><div class="cc-h"><b>Kiểm tra phân bổ cột & đơn vị tiền</b>
+      ${p.issues.length ? `<span class="pill ${bad ? 'p-err' : 'p-warn'}">${bad ? `${bad} lỗi` : ''}${bad && warn ? ' · ' : ''}${warn ? `${warn} cần xem` : ''}</span>` : '<span class="pill p-ok">✓ Các cột đúng kiểu dữ liệu</span>'}
+      <span style="flex:1"></span>
+      <label class="hist">Đơn vị số tiền trong file <select class="inp" id="cUnit" style="width:auto;padding:3px 6px">${Object.entries(BK.UNITS).map(([k, u]) => `<option value="${k}" ${IMP.unit === k ? 'selected' : ''}>${u.label}</option>`).join('')}</select></label>
+      ${IMP.unitSrc ? `<span class="hist">(tự nhận từ ${esc(IMP.unitSrc)})</span>` : ''}
+      <button class="btn sm" id="cAI">🤖 AI rà việc gán cột</button></div>
+    ${p.issues.length ? `<ul class="cc-l">${p.issues.map((x) => `<li class="${x.sev >= 3 ? 'e' : 'w'}">${esc(x.text)}</li>`).join('')}</ul>` : ''}
+    ${(IMP.curRows || []).length ? `<div class="hist">Loại tiền theo khối hàng: ${IMP.curRows.map((x) => `hàng ${x.from}–${x.to}: ${esc(x.currency)}`).join('; ')} <button class="lnk" id="cCurClr">bỏ</button></div>` : ''}
+    ${aiBox}</div>`;
+}
+function bindColCheck(m) {
+  const u = $('#cUnit', m); if (u) u.onchange = () => { IMP.unit = u.value; IMP.unitSrc = ''; extract(); renderImport(); };
+  const b = $('#cAI', m); if (b) b.onclick = () => aiColCheck(false);
+  const g = $('#cAIgo', m); if (g) g.onclick = applyColAI;
+  const c = $('#cCurClr', m); if (c) c.onclick = () => { IMP.curRows = []; extract(); renderImport(); };
+}
+
 function renderImport() {
   const m = IMP.m, body = $('#iBody', m);
   const ch = IMP.check || { groups: [], counts: {}, errors: 0 };
@@ -2357,8 +2552,10 @@ function renderImport() {
     <button class="btn sm" id="iAudit" title="Tìm dòng lệch cột / lệch dòng / sai logic và nhờ AI đề xuất sửa trước khi nạp">🤖 Rà soát</button></div>
   ${IMP.aiNote ? `<div class="note">${esc(IMP.aiNote)}</div>` : ''}
   ${IMP.aiRows ? `<div class="note warn">Đang dùng kết quả AI đọc toàn bộ (${IMP.aiRows.length} dòng). Bấm “Tự nhận dạng lại” để quay về đọc theo cột.</div>` : `
-  <details class="mapbox" ${nLines ? '' : 'open'}><summary class="sec">Cột trong file → trường bảng kê <span class="hist">(${BK.FIELDS.filter((f) => IMP.map[f.k] != null).length} cột đã nhận — bấm để xem / sửa)</span></summary>
-  <div class="map">${BK.FIELDS.map((f) => `<label class="${IMP.map[f.k] != null ? 'on' : ''}"><span>${f.label}</span><select data-map="${f.k}">${colOptions(IMP.map[f.k])}</select></label>`).join('')}</div></details>`}
+  ${colCheckHtml()}
+  <details class="mapbox" ${!nLines || (IMP.prof && IMP.prof.issues.length) ? 'open' : ''}><summary class="sec">Cột trong file → trường bảng kê <span class="hist">(${BK.FIELDS.filter((f) => IMP.map[f.k] != null).length} cột đã nhận — bấm để xem / sửa)</span></summary>
+  <div class="map">${BK.FIELDS.map((f) => { const fi = (IMP.prof && IMP.prof.fields[f.k]) || null; const iss = fi && fi.issues.length;
+    return `<label class="${IMP.map[f.k] != null ? 'on' : ''} ${iss ? 'bad' : ''}" title="${esc(fi ? (iss ? fi.issues.join('\n') : 'Ví dụ: ' + fi.samples.join(' · ')) : '')}"><span>${f.label}${fi && fi.samples.length ? `<em>${esc(fi.samples.slice(0, 2).join(' · '))}</em>` : ''}</span><select data-map="${f.k}">${colOptions(IMP.map[f.k])}</select></label>`; }).join('')}</div></details>`}
   ${single ? `<div class="sec">Thông tin khế ước (KUNN) của bảng kê này</div><div class="grid2">
     <label class="f">Số KUNN *<input class="inp" data-ki="so_kunn" value="${esc(IMP.kinfo.so_kunn)}"></label>
     <label class="f">Ngày giải ngân *<input class="inp" type="date" data-ki="ngay_gn" value="${esc(IMP.kinfo.ngay_gn)}"></label>
@@ -2393,6 +2590,7 @@ function renderImport() {
   $('#iAI', m).onclick = (e) => aiDetect(e.target);
   $('#iAIall', m).onclick = (e) => aiReadAll(e.target);
   $('#iAudit', m).onclick = () => auditImport();
+  bindColCheck(m);
   $$('[data-map]', m).forEach((s) => s.onchange = () => { const v = s.value; if (v === '') delete IMP.map[s.dataset.map]; else IMP.map[s.dataset.map] = +v; extract(); renderImport(); });
   $$('[data-ki]', m).forEach((s) => s.onchange = () => { const k = s.dataset.ki; IMP.kinfo[k] = k === 'so_tien_kunn' ? BK.parseAmount(s.value) : s.value.trim(); recheck(); });
   $$('[data-mode]', m).forEach((s) => s.onchange = () => { IMP.mode[s.dataset.mode] = s.value; });

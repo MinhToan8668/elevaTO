@@ -188,3 +188,29 @@ test('rà soát luật: GN > tiền HĐ, HĐ sau ngày GN, số lẻ không ghi 
   assert.ok(!t.some((x) => x.startsWith('e:')), 'lỗi đã xác nhận đúng không báo lại');
   assert.match(BK.rowText([1, '', 'KIO KOREA', 118679.68]), /^A: 1 \| C: KIO KOREA \| D: 118679\.68$/);
 });
+
+test('đơn vị tiền: nhận "ĐVT: nghìn đồng" và quy đổi; khối hàng USD gắn loại tiền', () => {
+  const g = bangKeVay({ rows: [['CÔNG TY A', 'HĐ 1', '11', 46217, 1500, 1500, 1500], ['CÔNG TY B', 'HĐ 2', '12', 46217, 2000, 1000, 1000]] });
+  g[6][8] = 'ĐVT: nghìn đồng';
+  const r = BK.autoParseSheet(g);
+  const du = BK.detectUnit(g, r.header.row, r.header.map);
+  assert.equal(du.unit, 'nghin');
+  BK.applyUnit(r.groups, du.unit, [{ from: 11, to: 11, currency: 'USD' }]);
+  const [a, b] = r.groups[0].lines;
+  assert.deepEqual([a.tien_hd, a.tien_gn, a.loai_tien], [1500000, 1500000, '']);
+  assert.deepEqual([b.tien_hd, b.tien_gn, b.loai_tien], [2000, 1000, 'USD'], 'hàng 11 là USD → không nhân nghìn');
+});
+
+test('kiểm tra phân bổ cột: số HĐ toàn số lẻ, cột tiền lẫn chữ / số tờ khai, số lẻ có thể là ngoại tệ', () => {
+  const head = ['STT', 'NHÀ CUNG CẤP', 'HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN', 'SỐ TIỀN VAY'];
+  const rows = [1, 2, 3, 4, 5].map((i) => [i, 'KOREA CO', 1000 + i + 0.5, 106206820640 + i, 1757.87 + i, 'INV-' + i]);
+  const g = [head, ...rows];
+  const map = { stt: 0, ncc: 1, so_hd: 2, ngay_hd: 3, tien_hd: 4, tien_gn: 5 };
+  const p = BK.profileColumns(g, 0, map, [], 'dong');
+  const t = p.issues.map((x) => x.text).join('\n');
+  assert.match(t, /Số hóa đơn \(cột C\).*giống SỐ TIỀN/);
+  assert.match(t, /Ngày hóa đơn \(cột D\).*số tờ khai/);
+  assert.match(t, /Số tiền giải ngân.*\(cột F\).*là chữ/);
+  assert.match(t, /Số tiền hóa đơn \(cột E\).*NGOẠI TỆ/);
+  assert.deepEqual(p.fields.ncc.samples, ['KOREA CO']);
+});
