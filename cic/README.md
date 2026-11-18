@@ -1,6 +1,6 @@
-# AI CIC Analyzer v8.0 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v8.1 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v8.0.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v8.1.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -329,6 +329,16 @@ như đơ (máy ít dữ liệu / mạng nhanh thì không thấy). Đo với tr
   liệu: 3,1 s → 0,22 s ở trễ 40 ms, 568 bản); không tải lại tệp đã nhận bằng bản cũ; quét toàn thư mục (máy chạy bản cũ) chỉ khi bấm tay
   hoặc tối đa 1 lần/ngày; đọc / ghi song song 16 tệp (gửi toàn kho 8,8 → 4,6 s; máy mới nhận 3,3 → 1,9 s). Khung thư mục chung nêu tên
   máy còn chạy bản cũ.
+
+## v8.1 — Tệp đồng bộ không đọc được: chỉ rõ tệp nào, vì sao, nên làm gì
+Trước đây đồng bộ chỉ báo "N tệp không đọc được (sai mật khẩu / hỏng)". Nay Dữ liệu › Thư mục chung có bảng từng tệp lỗi:
+đường dẫn, của công ty / MST / ngày tra / người gửi (hoặc mục lục của máy nào, nhóm nào), lý do cụ thể và gợi ý:
+- mã hoá bằng mật khẩu khác (máy gửi dùng mật khẩu khác / nhóm khác) · chưa nhập mật khẩu nhóm
+- tệp rỗng 0 byte (OneDrive / SharePoint chưa tải về, ghi dở) · tệp hỏng / bản xung đột OneDrive
+- tệp bị xoá / di chuyển khi đang đọc · tệp đang bị khoá · chưa cấp quyền thư mục
+Nút: Thử lại · Bỏ qua (máy này không báo tệp đó nữa; tệp được ghi lại thì đọc lại) · Bỏ qua tất cả · Xoá tệp (chỉ tệp rỗng / hỏng, có xác
+nhận). Nút "Thư mục chung" ghi "Đồng bộ · N tệp lỗi". Sửa thêm: đồng bộ tự động không quét tệp bản cũ trước đây làm lỗi của các tệp đó
+"biến mất" khỏi danh sách dù tệp vẫn hỏng — nay giữ nguyên tới khi tệp được kiểm tra lại; lỗi lúc mở tệp trước đây bị bỏ qua không ghi.
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v8.0 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v8.1 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1190,6 +1190,17 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 .cpk-row .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)}.cpk-row .s{color:var(--tx3);white-space:nowrap}
 .cpk-row .btn{padding:.15rem .5rem;font-size:.64rem}
 #tlMainCanvas{cursor:pointer}
+.tls-err{margin-top:.8rem;padding:.55rem .7rem;border:1px solid var(--bd);border-left:3px solid var(--st-crit);border-radius:8px;background:var(--sf);font-size:.72rem}
+.tls-err .hd{display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.4rem}.tls-err .hd span{display:flex;gap:.3rem}
+.tls-err .btn{padding:.15rem .5rem;font-size:.64rem}
+.tls-err td{vertical-align:top}
+.tls-err table{width:100%;table-layout:fixed}
+.tls-err th,.tls-err td{white-space:normal!important;word-break:break-word}
+.tls-err th:nth-child(1),.tls-err td:nth-child(1){width:22%}
+.tls-err th:nth-child(2),.tls-err td:nth-child(2){width:20%}
+.tls-err th:nth-child(3),.tls-err td:nth-child(3){width:22%}
+.tls-err th:nth-child(5),.tls-err td:nth-child(5){width:150px;white-space:nowrap!important}
+.tls-err .tl-mtx{overflow:visible}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -7462,7 +7473,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='8.0';
+const APP_VERSION='8.1';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8417,7 +8428,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='8.0';
+const TL_VER='8.1';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -10001,7 +10012,7 @@ async function tlsSync(loud,pushAll){
   try{
     const pr=await _tlsPull();const ps=await _tlsPushSnaps(!!pushAll);const pg=await _tlsPushGroups();
     TLS.last=Date.now();TLS.err='';
-    const msg=[];if(pr.n||pr.u)msg.push('nhận '+pr.n+' bản tra mới'+(pr.u?' · '+pr.u+' cập nhật':''));if(pr.g)msg.push('cập nhật '+pr.g+' nhóm');if(ps.n)msg.push('gửi '+ps.n+' bản tra');if(pg)msg.push('gửi '+pg+' nhóm');if(pr.bad)msg.push('⚠ '+pr.bad+' tệp không đọc được (sai mật khẩu / hỏng)');
+    const msg=[];if(pr.n||pr.u)msg.push('nhận '+pr.n+' bản tra mới'+(pr.u?' · '+pr.u+' cập nhật':''));if(pr.g)msg.push('cập nhật '+pr.g+' nhóm');if(ps.n)msg.push('gửi '+ps.n+' bản tra');if(pg)msg.push('gửi '+pg+' nhóm');if(pr.bad)msg.push('⚠ '+pr.bad+' tệp không đọc được — xem từng tệp và chọn cách xử lý ở Dữ liệu › Thư mục chung');
     if(loud||msg.length)toast(msg.length?'⇅ Thư mục chung: '+msg.join(' · '):'⇅ Thư mục chung: đã khớp, không có gì mới');
   }catch(e){TLS.err=e.message;console.warn('Đồng bộ lỗi:',e);if(String(e.name)==='NotAllowedError'){TLS.state='need-perm';}toast('⚠ Đồng bộ lỗi: '+e.message);}
   TLS.busy=false;tlsBadge();tlsRenderPane();_tlFillScopeSel();
@@ -11539,32 +11550,36 @@ _tlsPull=async function(loud){
   // tệp đã nhận bằng bản cũ (theo thời điểm sửa tệp) → không tải lại
   if(!seen.__mig){const old=(await _tlKv.get('sync.seen'))||{};Object.keys(old).forEach(k=>{const p=k.replace(/^snap\//,'');if(!seen[p])seen[p]='m'+old[k];});seen.__mig=1;}
   const snapDir=await _tlsSub('snap');const idxDir=await _tlsSub('index');
+  const ign=(await _tlKv.get('sync.ignore'))||{};const errs=[];
+  const chk=new Set();   // tệp được kiểm tra trong lượt này
+  const _bad=(kind,p,e,f)=>{const m=f&&f.lastModified;if(ign[p]&&(ign[p]===true||!m||ign[p]===m))return;errs.push({kind,p,name:(e&&e.name)||'',msg:String((e&&e.message)||e||''),size:f?f.size:null,mod:m||null});bad++;};
   // 1) mục lục của các máy
   _tlsProg('Đọc mục lục',0,0);const want=[];const idxUsers=new Set();const myIdx=_tlsSlug(_tlsUser())+'_'+_tlsMachine()+'.json';
-  for await(const [fn,fh] of idxDir.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;try{const o=await _tlsDec(await (await fh.getFile()).text());if(!o||!o.files)continue;idxUsers.add(o.user||'');
+  for await(const [fn,fh] of idxDir.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;let fi=null;chk.add('index/'+fn);try{fi=await fh.getFile();const o=await _tlsDec(await fi.text());if(!o||!o.files)continue;idxUsers.add(o.user||'');
     if(fn===myIdx)continue;Object.entries(o.files).forEach(([p,e])=>{byUser[o.user||'?']=(byUser[o.user||'?']||0)+1;const st=typeof e==='string'?e:e.t;if(seen[p]===st)return;
       // máy này đã có đúng bản tra đó (cùng khoá, ngày tra không cũ hơn, có R20 nếu bên kia có) → không tải
       if(e&&typeof e==='object'&&e.k){const cu=_TL_IDX.get(e.k);if(cu&&cu.S10A&&cu.ts>=e.ts&&(!e.r||cu.R20)){seen[p]=st;skipped++;return;}}
-      want.push({p,st,by:o.user});});}catch(e){bad++;}}
+      want.push({p,st,by:o.user});});}catch(e){_bad('index','index/'+fn,e,fi);}}
   // 2) quét toàn thư mục: chỉ khi bấm tay hoặc lần đầu trong phiên — nhận tệp của máy chạy bản cũ (chưa có mục lục)
   const lastScan=(await _tlKv.get('sync.legacyScan'))||0;const legacyUsers=new Set();
   if(loud||TLS._loud||Date.now()-lastScan>24*3600e3){TLS._scanned=true;await _tlKv.set('sync.legacyScan',Date.now());_tlsProg('Quét thư mục (máy chạy bản cũ)',0,0);const legacy=[];
     for await(const [mst,h] of snapDir.entries()){if(h.kind!=='directory')continue;for await(const [fn,fh] of h.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;
       const u=fn.replace(/\.json$/,'').split('_').slice(2).join('_')||'?';if(idxUsers.has(u))continue;legacy.push({p:mst+'/'+fn,fh,u});legacyUsers.add(u);}}
-    await _tlsPool(legacy,16,async x=>{const f=await x.fh.getFile();const st='m'+f.lastModified;byUser[x.u]=(byUser[x.u]||0)+1;if(seen[x.p]!==st)want.push({p:x.p,st,f,by:x.u});},(d,t)=>_tlsProg('Quét thư mục (máy chạy bản cũ)',d,t));}
+    await _tlsPool(legacy,16,async x=>{chk.add('snap/'+x.p);let f;try{f=await x.fh.getFile();}catch(e){_bad('snap','snap/'+x.p,e,null);return;}const st='m'+f.lastModified;byUser[x.u]=(byUser[x.u]||0)+1;if(seen[x.p]!==st)want.push({p:x.p,st,f,by:x.u});},(d,t)=>_tlsProg('Quét thư mục (máy chạy bản cũ)',d,t));}
   // 3) tải đúng các tệp mới
-  await _tlsPool(want,16,async x=>{let f=x.f;if(!f){const [mst,fn]=x.p.split('/');const d=await snapDir.getDirectoryHandle(mst);f=await (await d.getFileHandle(fn)).getFile();}
-    try{const o=await _tlsDec(await f.text());if(o&&(o.S10A||o.R20))list.push({s10a:o.S10A,r20:o.R20,hint:o.ts?new Date(o.ts):null,src:'sync:'+(o.by||x.by||'?')});seen[x.p]=x.st;}catch(e){bad++;}},(d,t)=>_tlsProg('Nhận bản tra mới',d,t));
+  await _tlsPool(want,16,async x=>{chk.add('snap/'+x.p);let f=x.f;if(!f){try{const [mst,fn]=x.p.split('/');const d=await snapDir.getDirectoryHandle(mst);f=await (await d.getFileHandle(fn)).getFile();}catch(e){_bad('snap','snap/'+x.p,e,null);return;}}
+    try{if(f.size===0)throw Object.assign(new Error('empty'),{name:'EmptyFile'});const o=await _tlsDec(await f.text());if(o&&(o.S10A||o.R20))list.push({s10a:o.S10A,r20:o.R20,hint:o.ts?new Date(o.ts):null,src:'sync:'+(o.by||x.by||'?')});seen[x.p]=x.st;}catch(e){_bad('snap','snap/'+x.p,e,f);}},(d,t)=>_tlsProg('Nhận bản tra mới',d,t));
   _tlsProg('Ghi vào kho',list.length,list.length);
   const r=list.length?_tlIngest(list,'sync'):{new:[],upd:[]};
   // 4) nhóm theo dõi (ít tệp)
   const gd=await _tlsSub('groups');let ng=0;const gm=(await _tlKv.get('sync.gpushed'))||{};
-  for await(const [fn,fh] of gd.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;
-    try{const o=await _tlsDec(await (await fh.getFile()).text());const all=_tlGroups();
+  for await(const [fn,fh] of gd.entries()){if(fh.kind!=='file'||!fn.endsWith('.json'))continue;let fi=null;chk.add('groups/'+fn);
+    try{fi=await fh.getFile();const o=await _tlsDec(await fi.text());const all=_tlGroups();
       if(o.deleted){const cu=all.find(x=>x.id===o.id);if(cu&&(cu.t||0)<=o.at){TLS._applying=true;_tlGroupsSave(all.filter(x=>x.id!==o.id));TLS._applying=false;gm[o.id]='del';ng++;}continue;}
       const g=o.group;if(!g||!g.id)continue;const cu=all.find(x=>x.id===g.id);
-      if(!cu||(g.t||0)>(cu.t||0)){if(cu)Object.assign(cu,g);else all.push(g);TLS._applying=true;_tlGroupsSave(all);TLS._applying=false;gm[g.id]=g.t;ng++;}}catch(e){bad++;}}
-  await _tlKv.set('sync.gpushed',gm);await _tlKv.set('sync.seen2',seen);
+      if(!cu||(g.t||0)>(cu.t||0)){if(cu)Object.assign(cu,g);else all.push(g);TLS._applying=true;_tlGroupsSave(all);TLS._applying=false;gm[g.id]=g.t;ng++;}}catch(e){_bad('group','groups/'+fn,e,fi);}}
+  await _tlKv.set('sync.gpushed',gm);await _tlKv.set('sync.seen2',seen);// lỗi của tệp KHÔNG được kiểm tra lại ở lượt này (vd đồng bộ tự động không quét tệp bản cũ) thì giữ nguyên
+  const keepE=(TLS.errs||[]).filter(x=>!chk.has(x.p)&&!(ign[x.p]&&(ign[x.p]===true||!x.mod||ign[x.p]===x.mod)));TLS.errs=errs.concat(keepE);bad=TLS.errs.length;await _tlKv.set('sync.errs',{at:Date.now(),errs:TLS.errs});
   if(legacyUsers.size)await _tlKv.set('sync.legacyUsers',[...legacyUsers]);
   TLS.stat={byUser,files:Object.values(byUser).reduce((s,v)=>s+v,0),skipped,legacy:[...legacyUsers].length?[...legacyUsers]:((await _tlKv.get('sync.legacyUsers'))||[])};
   return {n:r.new.length,u:r.upd.length,g:ng,bad};
@@ -11592,6 +11607,30 @@ _tlsPushSnaps=async function(all){
     p.innerHTML=_tlsProgHtml();el.querySelectorAll('button').forEach(b=>{if(/tlsSync/.test(b.getAttribute('onclick')||''))b.disabled=!!TLS.busy;});}catch(e){}};
   const _b=tlsBadge;tlsBadge=function(){_b();try{const b=document.getElementById('tlsBtn');if(b&&TLS.busy&&TLS.prog&&TLS.prog.t)b.lastChild.textContent='Đang đồng bộ '+TLS.prog.d+'/'+TLS.prog.t;}catch(e){}};
 })();
+// ── Tệp không đọc được: lý do cụ thể + quyết định (thử lại / bỏ qua / xoá tệp hỏng) ──
+function _tlsWhy(x){const n=x.name,m=x.msg||'';
+  if(m==='need-pass')return {why:'Tệp được mã hoá nhưng máy này chưa nhập mật khẩu nhóm',hint:'Nhập mật khẩu nhóm ở trên rồi bấm Thử lại',del:false};
+  if(n==='OperationError')return {why:'Tệp mã hoá bằng MẬT KHẨU KHÁC với mật khẩu máy này đang dùng',hint:'Máy gửi tệp này đang dùng mật khẩu khác (có thể của nhóm khác, hoặc tạo lại thư mục với mật khẩu mới). Hỏi người gửi; nếu không cần thì Bỏ qua',del:false};
+  if(n==='EmptyFile'||x.size===0)return {why:'Tệp rỗng (0 byte)',hint:'Thường do OneDrive / SharePoint chưa tải tệp về máy, hoặc máy gửi bị ngắt khi đang ghi. Bật "Always keep on this device" cho thư mục rồi Thử lại; vẫn rỗng thì xoá',del:true};
+  if(n==='SyntaxError')return {why:'Tệp hỏng / ghi dở (không phải JSON hợp lệ)',hint:'Máy gửi bị ngắt khi đang ghi, hoặc bản xung đột do OneDrive tạo (tên có thêm "-TÊNMÁY"). Nhờ người gửi đồng bộ lại; có thể xoá tệp này',del:true};
+  if(n==='NotFoundError')return {why:'Tệp đã bị xoá / di chuyển trong lúc đang đọc',hint:'Bấm Thử lại',del:false};
+  if(n==='NotReadableError'||n==='NoModificationAllowedError')return {why:'Không đọc được — tệp đang bị khoá (OneDrive đang đồng bộ / máy khác đang mở)',hint:'Đợi OneDrive đồng bộ xong rồi Thử lại',del:false};
+  if(n==='NotAllowedError'||n==='SecurityError')return {why:'Trình duyệt chưa cấp quyền đọc thư mục',hint:'Bấm "Kết nối lại" thư mục chung',del:false};
+  return {why:'Lỗi '+(n||'không rõ')+(m?': '+m.slice(0,80):''),hint:'Thử lại; nếu vẫn lỗi thì gửi ảnh chụp dòng này',del:false};}
+function _tlsWho(p){const parts=p.split('/');const fn=parts[parts.length-1].replace(/\.json$/,'');if(parts[0]==='snap'){const mst=parts[1];const seg=fn.split('_');const d=seg[1]||'';return {mst,co:_tlNameOfMst(mst),user:seg.slice(2).join('_'),day:d.length===8?d.slice(6,8)+'/'+d.slice(4,6)+'/'+d.slice(0,4):''};}
+  if(parts[0]==='index'){const seg=fn.split('_');return {user:seg[0],machine:seg[1]||''};}return {group:fn};}
+async function cicSyncIgnore(p){const ign=(await _tlKv.get('sync.ignore'))||{};const x=(TLS.errs||[]).find(e=>e.p===p);ign[p]=(x&&x.mod)||true;await _tlKv.set('sync.ignore',ign);TLS.errs=(TLS.errs||[]).filter(e=>e.p!==p);tlsRenderPane();tlsBadge();toast('Bỏ qua tệp '+p+' (tệp đổi nội dung sẽ được đọc lại)');}
+async function cicSyncIgnoreAll(){const ign=(await _tlKv.get('sync.ignore'))||{};(TLS.errs||[]).forEach(e=>{ign[e.p]=e.mod||true;});await _tlKv.set('sync.ignore',ign);const n=(TLS.errs||[]).length;TLS.errs=[];tlsRenderPane();tlsBadge();toast('Bỏ qua '+n+' tệp lỗi');}
+async function cicSyncDelete(p){const ok=await _xnXoa({tieuDe:'Xoá tệp khỏi thư mục chung?',ten:p,dong:['Tệp bị xoá khỏi thư mục chung — mọi máy đều không còn thấy','Không ảnh hưởng kho của máy nào (bản tra đã nhận vẫn giữ)'],ghiChu:'<b>KHÔNG HOÀN TÁC ĐƯỢC</b> (trừ khi thư mục có thùng rác / lịch sử phiên bản của OneDrive, SharePoint).'});if(!ok)return;
+  try{const parts=p.split('/');let d=TLS.dir;for(let i=0;i<parts.length-1;i++)d=await d.getDirectoryHandle(parts[i]);await d.removeEntry(parts[parts.length-1]);TLS.errs=(TLS.errs||[]).filter(e=>e.p!==p);tlsRenderPane();tlsBadge();toast('Đã xoá '+p);}catch(e){toast('⚠ Không xoá được: '+e.message);}}
+(function(){const _rp=tlsRenderPane;tlsRenderPane=function(){_rp();try{const el=document.getElementById('tlgPaneS');if(!el||TLS.state!=='ready')return;const E=TLS.errs||[];let box=document.getElementById('tlsErrs');if(!box){box=document.createElement('div');box.id='tlsErrs';const det=el.querySelector('details');if(det)el.insertBefore(box,det);else el.appendChild(box);}
+  if(!E.length){box.innerHTML='';return;}
+  box.innerHTML='<div class="tls-err"><div class="hd"><b>⚠ '+E.length+' tệp không đọc được ở lần đồng bộ gần nhất</b><span><button class="btn btn-o" onclick="tlsSync(true)">Thử lại</button><button class="btn btn-o" onclick="cicSyncIgnoreAll()">Bỏ qua tất cả</button></span></div><div class="tl-mtx tl-wrap"><table class="d"><thead><tr><th>Tệp</th><th>Của</th><th>Lý do</th><th>Nên làm</th><th></th></tr></thead><tbody>'
+    +E.slice(0,100).map(x=>{const w=_tlsWhy(x),o=_tlsWho(x.p);const who=o.mst?_dmEsc(shortName(o.co||o.mst).substring(0,32))+'<div class="tl-mini">MST '+o.mst+(o.day?' · tra '+o.day:'')+(o.user?' · gửi bởi '+_dmEsc(o.user):'')+'</div>':o.user?'Mục lục của <b>'+_dmEsc(o.user)+'</b>'+(o.machine?' (máy '+_dmEsc(o.machine)+')':''):'Nhóm theo dõi '+_dmEsc(o.group||'');
+      return '<tr><td class="tl-mini" style="word-break:break-all">'+_dmEsc(x.p)+(x.mod?'<div>sửa '+new Date(x.mod).toLocaleString('vi-VN')+'</div>':'')+'</td><td>'+who+'</td><td><b>'+_dmEsc(w.why)+'</b></td><td class="tl-mini">'+_dmEsc(w.hint)+'</td><td style="white-space:nowrap"><button class="btn btn-o" onclick="cicSyncIgnore(\''+x.p.replace(/'/g,"\\'")+'\')">Bỏ qua</button>'+(w.del?' <button class="btn btn-rd" onclick="cicSyncDelete(\''+x.p.replace(/'/g,"\\'")+'\')">Xoá tệp</button>':'')+'</td></tr>';}).join('')
+    +'</tbody></table></div><div class="tl-mini" style="margin-top:.3rem">Bỏ qua = máy này không báo lỗi tệp đó nữa (nếu tệp được ghi lại, tool đọc lại). Xoá tệp = xoá khỏi thư mục chung cho mọi máy, chỉ có với tệp rỗng / hỏng.</div></div>';}catch(e){console.warn(e);}};
+  const _b=tlsBadge;tlsBadge=function(){_b();try{const b=document.getElementById('tlsBtn');const n=(TLS.errs||[]).length;if(b&&n&&!TLS.busy&&TLS.state==='ready'){b.lastChild.textContent='Đồng bộ · '+n+' tệp lỗi';b.title='Có '+n+' tệp trong thư mục chung không đọc được — mở Dữ liệu › Thư mục chung để xem từng tệp';}}catch(e){}};
+  _tlReady.then(async()=>{try{const o=await _tlKv.get('sync.errs');if(o&&o.errs&&!TLS.errs)TLS.errs=o.errs;}catch(e){}});})();
 
 
 /* ═══════════ v7.9 — NHÓM ẨN THEO MÁY · GỬI ĐỦ BẢN TRA · CHỌN BẢN TRA ĐẠI DIỆN THÁNG · DÁN NGAY TRONG Ô ═══════════ */
