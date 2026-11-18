@@ -6,3 +6,5 @@
 - Không merge khi test của phần đã sửa còn đỏ; khi đó báo lại cho chủ repo thay vì merge.
 - App AI BCTC ở `ai/`: test unit `cd ai && node --test tests/*.test.js`, test trình duyệt
   `cd ai && node --test --test-concurrency=1 tests/e2e/app.e2e.js`.
+- Tool Bảng kê giải ngân ở `bangke/` (1 file `index.html`): test unit `cd bangke && node --test tests/*.test.js`,
+  test trình duyệt `cd bangke && node --test --test-concurrency=1 tests/e2e/app.e2e.js`.
