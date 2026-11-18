@@ -113,7 +113,7 @@ test('tải bảng kê → kiểm tra giải ngân nhầm → hồ sơ gốc →
   await page.locator('tr', { hasText: '8800123(37).26' }).locator('[data-g]').click();
   await page.locator('tr', { hasText: '8800123(37).26' }).waitFor({ state: 'detached' });
   await page.click('[data-tab="kunn"]');
-  await page.click('[data-toggle] >> text=KUNN 8800123(38).26');
+  if (!(await page.locator('.kunn', { hasText: '8800123(38).26' }).locator('[data-thieu]').count())) await page.click('[data-toggle] >> text=KUNN 8800123(38).26');   // nạp xong KUNN đã được mở sẵn
   await page.locator('[data-thieu]').first().fill('Biên bản giao hàng');
   await page.locator('[data-thieu]').first().press('Tab');
   await page.locator('.kunn', { hasText: '8800123(38).26' }).locator('.pill', { hasText: 'Nhận thiếu' }).waitFor();
@@ -300,5 +300,34 @@ test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN 
   // việc cần làm → mở khách hàng
   await page.locator('.todo li').first().click();
   await page.locator('#custName', { hasText: 'Công ty Kappa' }).waitFor();
+  await ctx.close();
+});
+
+test('kiểm tra xong nạp luôn: bỏ các dòng lỗi, chỉ nạp dòng hợp lệ, mở thẳng KUNN vừa nạp', async () => {
+  const f1 = join(dir, 'KU_A.xlsx'), f2 = join(dir, 'KU_B.xlsx');
+  await writeFile(f1, toXlsx({ 'Bang ke': bangKeVay({ ku: 'KU-A', ngay: '01/03/2026', rows: [['CÔNG TY TNHH LAMBDA', 'HĐ 1', '501', 46050, 1000, 1000, 1000]] }) }));
+  await writeFile(f2, toXlsx({ 'Bang ke': bangKeVay({ ku: 'KU-B', ngay: '01/04/2026', rows: [
+    ['CÔNG TY TNHH LAMBDA', 'HĐ 1', '501', 46050, 1000, 1000, 1000],      // đã GN đủ ở KU-A → lỗi
+    ['CÔNG TY TNHH LAMBDA', '', '502', 46060, 700, 700, 700],             // mới
+  ] }) }));
+  const { ctx, page } = await newPage();
+  await page.goto(base + 'index.html');
+  await page.click('#bCheck');
+  await page.setInputFiles('#iFile', f1);
+  await page.locator('.verdict.ok').waitFor();
+  await page.fill('#iNew', 'Công ty Mu');
+  await page.locator('[data-save="all"]').click();                       // ĐẠT → nạp luôn từ khung kết luận
+  await page.locator('.kunn', { hasText: 'KUNN KU-A' }).locator('table').waitFor();
+  await page.click('#bCheck');
+  await page.setInputFiles('#iFile', f2);
+  await page.locator('.verdict.err', { hasText: 'KHÔNG ĐẠT — 1/2' }).waitFor();
+  assert.match(await page.locator('[data-save="skip"]').innerText(), /Nạp 1 dòng hợp lệ \(700\), bỏ 1 dòng lỗi/);
+  await page.locator('[data-save="skip"]').click();
+  const k = page.locator('.kunn', { hasText: 'KUNN KU-B' });
+  await k.locator('table').waitFor();                                     // mở thẳng KUNN vừa nạp
+  const body = await k.locator('tbody').innerText();
+  assert.match(body, /502/);
+  assert.doesNotMatch(body, /501/, 'dòng lỗi không được nạp');
+  assert.match(await page.locator('.tab', { hasText: 'Cảnh báo' }).innerText(), /Cảnh báo\s*0/);
   await ctx.close();
 });

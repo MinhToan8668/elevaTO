@@ -137,7 +137,8 @@ table.click tbody tr{cursor:pointer}
 .mapbox summary{cursor:pointer;list-style:none}.mapbox summary::before{content:'▸ ';color:var(--ink3)}.mapbox[open] summary::before{content:'▾ '}
 .hsearch input{border:0;border-radius:9px;padding:7px 12px;width:240px;background:rgba(255,255,255,.95);color:var(--ink);font-size:13px}
 .chctl{display:flex;gap:6px;flex-wrap:wrap}.chctl .inp{width:auto;padding:4px 8px;font-size:12.5px}
-.verdict{border-radius:12px;padding:12px 16px;margin:6px 0 10px;display:flex;flex-direction:column;gap:3px;border:1px solid}
+.verdict{border-radius:12px;padding:12px 16px;margin:6px 0 10px;display:flex;gap:12px;border:1px solid;align-items:center;flex-wrap:wrap}
+.verdict>div:first-child{display:flex;flex-direction:column;gap:3px;flex:1;min-width:280px}.vact{display:flex;gap:8px;flex-wrap:wrap}
 .verdict b{font-size:15px}.verdict span{font-size:12.5px}
 .verdict.err{background:var(--err-bg);border-color:#f0c4be;color:var(--err)}.verdict.warn{background:var(--warn-bg);border-color:#f0dcb0;color:#8a5a0c}.verdict.ok{background:var(--ok-bg);border-color:#cfe6d8;color:var(--ok)}
 .vcards{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:4px}
@@ -1927,10 +1928,10 @@ function openImport(cid, checkOnly) {
   <div class="mb"><div class="grid2" style="margin-bottom:12px">
     <label class="f">Khách hàng<select class="inp" id="iCust"><option value="">— chọn khách hàng —</option>${S.customers.map((c) => `<option value="${c.id}" ${c.id === IMP.cid ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="__new">＋ Khách hàng mới…</option></select></label>
     <label class="f" id="iNewWrap" style="display:none">Tên khách hàng mới<input class="inp" id="iNew" placeholder="vd: Công ty TNHH ABC"></label></div>
-    <div class="drop" id="iDrop"><b>Kéo thả file Excel vào đây</b> hoặc bấm để chọn (.xls, .xlsx, .csv)<div class="hist" style="margin-top:6px">Bảng kê khách hàng gửi (mỗi khách một kiểu) hoặc bảng kê tổng hợp nhiều KUNN đang theo dõi bằng Excel.<br>Tool đối chiếu từng hóa đơn với mọi KUNN đã lưu của khách hàng: hóa đơn nào <b>đã giải ngân</b>, giải ngân <b>vượt</b>, <b>kê trùng</b>… — chỉ kiểm tra, chưa lưu gì cho tới khi bạn bấm “Lưu vào sổ”.</div><input type="file" id="iFile" accept=".xls,.xlsx,.xlsm,.csv" hidden></div>
+    <div class="drop" id="iDrop"><b>Kéo thả file Excel vào đây</b> hoặc bấm để chọn (.xls, .xlsx, .csv)<div class="hist" style="margin-top:6px">Bảng kê khách hàng gửi (mỗi khách một kiểu) hoặc bảng kê tổng hợp nhiều KUNN đang theo dõi bằng Excel.<br>Tool đối chiếu từng hóa đơn với mọi KUNN đã lưu của khách hàng: hóa đơn nào <b>đã giải ngân</b>, giải ngân <b>vượt</b>, <b>kê trùng</b>… — chỉ kiểm tra; xem kết luận xong bấm “Nạp” để đưa bảng kê vào sổ.</div><input type="file" id="iFile" accept=".xls,.xlsx,.xlsm,.csv" hidden></div>
     <div id="iBody"></div></div>
   <div class="mf" id="iFoot" style="display:none"><span id="iSum" style="flex:1;font-size:13px"></span>
-    <button class="btn" id="iExp">⬇ Xuất kết quả kiểm tra</button><button class="btn" id="iMaster" title="Thêm KUNN này vào cuối file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="iSave">Lưu vào sổ theo dõi</button></div>`);
+    <button class="btn" id="iExp">⬇ Xuất kết quả kiểm tra</button><button class="btn" id="iMaster" title="Thêm KUNN này vào cuối file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="iSave">⬆ Nạp vào sổ theo dõi</button></div>`);
   IMP.m = m;
   const sel = $('#iCust', m);
   sel.onchange = async () => { $('#iNewWrap', m).style.display = sel.value === '__new' ? '' : 'none'; IMP.cid = sel.value === '__new' ? '' : sel.value; await loadExisting(); recheck(); };
@@ -1940,7 +1941,7 @@ function openImport(cid, checkOnly) {
   drop.ondragleave = () => drop.classList.remove('ov');
   drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('ov'); if (e.dataTransfer.files[0]) gotFile(e.dataTransfer.files[0]); };
   fi.onchange = () => { if (fi.files[0]) gotFile(fi.files[0]); fi.value = ''; };
-  $('#iSave', m).onclick = saveImport;
+  $('#iSave', m).onclick = () => saveImport();
   $('#iExp', m).onclick = () => exportCheck();
   $('#iMaster', m).onclick = () => { if (IMP.check) appendToMaster(IMP.check.groups.filter((g) => g.so_kunn), IMP.file); };
   loadExisting();
@@ -2019,9 +2020,12 @@ function verdictHtml(ch) {
   const n = all.length, sumOf = (st) => BK.sum(all.filter((l) => st.includes(l.check.status)).map((l) => l.tien_gn));
   const err = ['da_du', 'vuot', 'trung_file'], warn = ['nghi_trung', 'thieu_tt'];
   const nErr = all.filter((l) => err.includes(l.check.status)).length, nWarn = all.filter((l) => warn.includes(l.check.status)).length;
-  const head = nErr ? `<div class="verdict err"><b>✗ KHÔNG ĐẠT — ${nErr}/${n} hóa đơn không được giải ngân</b><span>Số tiền các dòng lỗi: ${money(sumOf(err))} · loại các dòng này ra (hoặc yêu cầu KH thay hóa đơn khác) trước khi giải ngân.</span></div>`
-    : nWarn ? `<div class="verdict warn"><b>⚠ CẦN XEM LẠI ${nWarn}/${n} hóa đơn</b><span>Không thấy hóa đơn nào đã giải ngân / vượt, nhưng có dòng nghi trùng hoặc thiếu thông tin.</span></div>`
-    : `<div class="verdict ok"><b>✓ ĐẠT — ${n}/${n} hóa đơn hợp lệ để giải ngân</b><span>Không hóa đơn nào đã giải ngân trước đó, không vượt số tiền còn lại, không kê trùng.</span></div>`;
+  const okSum = BK.sum(all.filter((l) => !err.includes(l.check.status)).map((l) => l.tien_gn));
+  const acts = nErr ? `<div class="vact"><button class="btn pri" data-save="skip">⬆ Nạp ${n - nErr} dòng hợp lệ (${money(okSum)}), bỏ ${nErr} dòng lỗi</button><button class="btn" data-save="all">Nạp cả ${n} dòng</button></div>`
+    : `<div class="vact"><button class="btn pri" data-save="all">⬆ Nạp bảng kê này vào sổ (${n} dòng · ${money(okSum)})</button></div>`;
+  const head = nErr ? `<div class="verdict err"><div><b>✗ KHÔNG ĐẠT — ${nErr}/${n} hóa đơn không được giải ngân</b><span>Số tiền các dòng lỗi: ${money(sumOf(err))} · loại các dòng này ra (hoặc yêu cầu KH thay hóa đơn khác) trước khi giải ngân.</span></div>${acts}</div>`
+    : nWarn ? `<div class="verdict warn"><div><b>⚠ CẦN XEM LẠI ${nWarn}/${n} hóa đơn</b><span>Không thấy hóa đơn nào đã giải ngân / vượt, nhưng có dòng nghi trùng hoặc thiếu thông tin.</span></div>${acts}</div>`
+    : `<div class="verdict ok"><div><b>✓ ĐẠT — ${n}/${n} hóa đơn hợp lệ để giải ngân</b><span>Không hóa đơn nào đã giải ngân trước đó, không vượt số tiền còn lại, không kê trùng.</span></div>${acts}</div>`;
   const ex = ch.groups.filter((g) => g.exists).map((g) => g.so_kunn);
   const exNote = ex.length ? `<div class="note warn" style="margin-top:-4px">KUNN ${ex.slice(0, 5).map(esc).join(', ')}${ex.length > 5 ? '…' : ''} đã có trong sổ → đang đối chiếu với <b>các KUNN khác</b> (nạp lại / thay bản cũ). Nếu đây là lần giải ngân mới, kiểm tra lại số KUNN.</div>` : '';
   return head + exNote + `<div class="vcards">${VERDICT.map(([k, l, d, t]) => { const c = all.filter((x) => x.check.status === k); return `<button class="vcard ${t} ${c.length ? '' : 'zero'} ${IMP.flt === k ? 'on' : ''}" data-flt="${k}" ${c.length ? '' : 'disabled'}><b>${c.length}</b><span>${l}</span><em>${c.length ? money(BK.sum(c.map((x) => x.tien_gn))) : d}</em></button>`; }).join('')}</div>
@@ -2094,6 +2098,7 @@ function renderImport() {
   $$('[data-ki]', m).forEach((s) => s.onchange = () => { const k = s.dataset.ki; IMP.kinfo[k] = k === 'so_tien_kunn' ? BK.parseAmount(s.value) : s.value.trim(); recheck(); });
   $$('[data-mode]', m).forEach((s) => s.onchange = () => { IMP.mode[s.dataset.mode] = s.value; });
   $$('[data-flt]', m).forEach((b) => b.onclick = () => { IMP.flt = IMP.flt === b.dataset.flt ? '' : b.dataset.flt; renderImport(); });
+  $$('[data-save]', m).forEach((b) => b.onclick = () => saveImport(b.dataset.save === 'skip' ? { skipErr: true } : { all: true }));
 }
 async function aiDetect(btn) {
   const old = btn.innerHTML; btn.innerHTML = '<span class="spin"></span> AI đang đọc…'; btn.disabled = true;
@@ -2135,7 +2140,8 @@ async function aiReadAll(btn) {
     extract(); renderImport(); toast(`AI đọc được ${out.length} dòng`, 'ok');
   } catch (e) { toast(e.message, 'err', 8000); btn.disabled = false; btn.innerHTML = '✨ AI đọc toàn bộ'; }
 }
-async function saveImport() {
+const ERR_ST = ['da_du', 'vuot', 'trung_file'];
+async function saveImport(opt = {}) {
   const m = IMP.m;
   let cid = IMP.cid;
   if (!cid) {
@@ -2150,8 +2156,9 @@ async function saveImport() {
   const todo = ch.groups.map((g, gi) => ({ g, gi })).filter(({ gi }) => IMP.mode[gi] !== 'skip');
   const missing = todo.filter(({ g }) => !g.so_kunn || !g.ngay_gn);
   if (missing.length) return toast('Còn KUNN thiếu số KUNN hoặc ngày giải ngân — điền ở mục “Thông tin khế ước”', 'err', 7000);
-  if (ch.errors && !confirm(`Có ${ch.errors} dòng bị cảnh báo giải ngân nhầm (vượt / đã GN đủ / trùng). Vẫn lưu vào bảng kê?`)) return;
-  const btn = $('#iSave', m); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang lưu…';
+  if (ch.errors && !opt.skipErr && !opt.all && !confirm(`Có ${ch.errors} dòng bị cảnh báo giải ngân nhầm (vượt / đã GN đủ / trùng). Vẫn nạp cả các dòng này vào sổ?\n(Bấm Hủy rồi chọn “Nạp … bỏ dòng lỗi” nếu chỉ muốn nạp dòng hợp lệ.)`)) return;
+  const btns = $$('#iSave, [data-save]', m); btns.forEach((b) => { b.disabled = true; }); const btn = $('#iSave', m); btn.innerHTML = '<span class="spin"></span> Đang nạp…';
+  let nBo = 0;
   try {
     let n = 0, nl = 0;
     const docs = [];
@@ -2159,7 +2166,10 @@ async function saveImport() {
       const old = (IMP.existing || []).find((k) => BK.normKunn(k.so_kunn) === BK.normKunn(g.so_kunn));
       // thay bản cũ: giữ trạng thái hồ sơ gốc của dòng trùng hóa đơn
       const oldBy = new Map((old ? old.lines : []).map((l) => [BK.strongKey(l), l]));
-      const lines = g.lines.map((l) => {
+      const keep = opt.skipErr ? g.lines.filter((l) => !ERR_ST.includes(l.check.status)) : g.lines;
+      nBo += g.lines.length - keep.length;
+      if (!keep.length) continue;
+      const lines = keep.map((l) => {
         const o = oldBy.get(BK.strongKey(l));
         const c = BK.cleanLine(l);
         if (o) { c.id = o.id; if (l.goc === 'chua' && !l.thieu) { c.goc = o.goc; c.thieu = o.thieu; c.ngay_nhan = o.ngay_nhan; } if (!c.ghi_chu) c.ghi_chu = o.ghi_chu; }
@@ -2170,13 +2180,13 @@ async function saveImport() {
       docs.push(k); n++; nl += lines.length;
     }
     await S.store.putKunns(docs);
-    log(cid, 'tai_bang_ke', `Tải ${IMP.file}: ${n} KUNN, ${nl} dòng${ch.errors ? ` (${ch.errors} dòng cảnh báo)` : ''}`);
+    if (!docs.length) { btns.forEach((b) => { b.disabled = false; }); btn.textContent = '⬆ Nạp vào sổ theo dõi'; return toast('Không còn dòng hợp lệ nào để nạp', 'err'); }
+    await S.store.putKunns(docs);
+    log(cid, 'tai_bang_ke', `Nạp ${IMP.file}: ${n} KUNN, ${nl} dòng${nBo ? ` — bỏ ${nBo} dòng lỗi (đã GN / vượt / trùng)` : ch.errors ? ` (gồm ${ch.errors} dòng cảnh báo)` : ''}`);
     m.remove();
-    toast(`Đã lưu ${n} KUNN, ${nl} dòng`, 'ok');
-    S.tab = 'kunn';
-    selectCustomer(cid);
-    setTimeout(refreshSummary, 300);
-  } catch (e) { toast(errMsg(e), 'err', 9000); btn.disabled = false; btn.textContent = 'Lưu vào sổ theo dõi'; }
+    toast(`Đã nạp ${n} KUNN, ${nl} dòng vào sổ${nBo ? ` · bỏ ${nBo} dòng lỗi` : ''}`, 'ok', 6000);
+    if (docs.length === 1) openKunn(cid, docs[0].id); else { S.tab = 'kunn'; selectCustomer(cid); }
+  } catch (e) { toast(errMsg(e), 'err', 9000); btns.forEach((b) => { b.disabled = false; }); btn.textContent = '⬆ Nạp vào sổ theo dõi'; }
 }
 
 // ═════════════════ XUẤT EXCEL ═════════════════
