@@ -647,7 +647,7 @@ def api_sort_result():
                     "source": x["source"], "status": x["status"], "dup_of": x["dup_of"],
                     "dst": str(x["dst"].relative_to(lib)) if x["dst"] else None,
                     "size": x["src"].stat().st_size if x["src"].exists() else 0})
-    return ok(rows=out, library=str(lib), applied=r.get("applied", False), ffprobe=bool(vs.shutil.which("ffprobe")))
+    return ok(rows=out, library=str(lib), applied=r.get("applied", False), ffprobe=bool(mt.engines()))
 
 
 @web.post("/api/sort/apply")
@@ -1059,14 +1059,20 @@ def brand_mac_app():
     try:
         from AppKit import NSApplication, NSImage
         from Foundation import NSBundle
+    except Exception:  # noqa: BLE001 — không phải macOS hoặc thiếu pyobjc: bỏ qua
+        return
+    try:  # icon và tên tách riêng: đổi tên lỗi thì icon vẫn đổi
+        icon = NSImage.alloc().initWithContentsOfFile_(str(HERE / "ui" / "assets" / "icon.png"))
+        if icon:
+            NSApplication.sharedApplication().setApplicationIconImage_(icon)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
         info = NSBundle.mainBundle().localizedInfoDictionary() or NSBundle.mainBundle().infoDictionary()
         if info is not None:
             info["CFBundleName"] = "Media Hub"
             info["CFBundleDisplayName"] = "Media Hub"
-        icon = NSImage.alloc().initWithContentsOfFile_(str(HERE / "ui" / "assets" / "icon.png"))
-        if icon:
-            NSApplication.sharedApplication().setApplicationIconImage_(icon)
-    except Exception:  # noqa: BLE001 — không phải macOS hoặc thiếu pyobjc: bỏ qua
+    except Exception:  # noqa: BLE001
         pass
 
 

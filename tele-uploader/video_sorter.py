@@ -80,18 +80,13 @@ def _parse_dt(s: str) -> datetime | None:
 def shot_date(path: Path) -> tuple[datetime, str]:
     """Trả (thời điểm quay, nguồn). Ưu tiên metadata gốc, sau đó ngày tạo file."""
     ext = path.suffix.lower().lstrip(".")
-    if shutil.which("ffprobe") and ext in VIDEO | AUDIO:
-        r = subprocess.run(["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", str(path)],
-                           capture_output=True, text=True)
-        if r.returncode == 0:
-            data = json.loads(r.stdout or "{}")
-            tags = dict((data.get("format") or {}).get("tags") or {})
-            for st in data.get("streams") or []:
-                tags.update({k: v for k, v in (st.get("tags") or {}).items() if k not in tags})
-            # iPhone ghi giờ địa phương ở key này, chính xác hơn creation_time (UTC)
-            for key in ("com.apple.quicktime.creationdate", "creation_time", "date"):
-                if key in tags and (dt := _parse_dt(tags[key])):
-                    return dt, "metadata"
+    if ext in VIDEO | AUDIO:
+        import media_tools
+        tags = media_tools.media_tags(path)
+        # iPhone ghi giờ địa phương ở key này, chính xác hơn creation_time (UTC)
+        for key in ("com.apple.quicktime.creationdate", "creation_time", "date"):
+            if key in tags and (dt := _parse_dt(tags[key])):
+                return dt, "metadata"
     if ext in PHOTO:
         dt = _exif_date(path)
         if dt:
@@ -169,7 +164,8 @@ def card_sources() -> list[Path]:
 
 
 def sidecars(path: Path) -> list[Path]:
-    return [p for p in path.parent.glob(path.stem + ".*")
+    import media_tools  # tên file có [ ] * ? thì phải thoát ký tự khi tìm file phụ
+    return [p for p in path.parent.glob(media_tools.glob_escape(path.stem) + ".*")
             if p != path and p.suffix.lower().lstrip(".") in SIDECAR]
 
 
@@ -326,8 +322,9 @@ def main() -> None:
     sources = [s.expanduser().resolve() for s in args.sources] + (card_sources() if args.cards else [])
     if not sources:
         ap.error("cần chỉ định folder nguồn hoặc --cards")
-    if not shutil.which("ffprobe"):
-        console.print("[yellow]Chưa có ffprobe → ngày quay video kém chính xác hơn. Cài: brew install ffmpeg[/]")
+    import media_tools
+    if not media_tools.engines():
+        console.print("[yellow]Chưa có ffmpeg → ngày quay video kém chính xác hơn. Cài: brew install ffmpeg[/]")
 
     files = collect(sources, cfg)
     if not files:

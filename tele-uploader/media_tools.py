@@ -262,14 +262,59 @@ def _encode_args() -> list[str]:
 
 
 def thumbnails(path: Path, out: Path, count: int = 12, height: int = 72) -> Path:
-    """Dải ảnh thu nhỏ (count khung hình, ghép ngang) cho thanh timeline."""
-    info = probe(path)
-    dur = max(info["duration"], 0.1)
-    fps = count / dur
-    subprocess.run([_ff(), "-hide_banner", "-loglevel", "error", "-y", "-i", str(path),
-                    "-vf", f"fps={fps:.6f},scale=-2:{height},tile={count}x1", "-frames:v", "1", "-q:v", "5", str(out)],
-                   check=True, capture_output=True)
+    """Dải ảnh thu nhỏ (count khung hình, ghép ngang) cho thanh timeline.
+    Tua thẳng tới từng mốc (-ss trước -i) thay vì giải mã cả video → video dài 1–2 giờ vẫn ra trong vài giây."""
+    dur = max(probe(path)["duration"], 0.1)
+    with tempfile.TemporaryDirectory() as tmp:
+        frames = []
+        for i in range(count):
+            t = dur * (i + 0.5) / count
+            f = Path(tmp) / f"f{i:03d}.jpg"
+            subprocess.run([_ff(), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{t:.3f}", "-i", str(path),
+                            "-frames:v", "1", "-vf", f"scale=-2:{height}", "-q:v", "5", str(f)], capture_output=True)
+            if f.exists():
+                frames.append(f)
+            elif frames:  # mốc không lấy được khung hình (cuối file…) → dùng lại khung trước
+                shutil.copy(frames[-1], f)
+                frames.append(f)
+        if not frames:
+            raise RuntimeError("Không tạo được ảnh thu nhỏ")
+        while len(frames) < count:
+            extra = Path(tmp) / f"f{len(frames):03d}.jpg"
+            shutil.copy(frames[-1], extra)
+            frames.append(extra)
+        subprocess.run([_ff(), "-hide_banner", "-loglevel", "error", "-y", "-i", str(Path(tmp) / "f%03d.jpg"),
+                        "-vf", f"tile={count}x1", "-frames:v", "1", "-q:v", "5", str(out)], check=True, capture_output=True)
     return out
+
+
+def media_tags(path: Path) -> dict:
+    """Các thẻ metadata (creation_time, com.apple.quicktime.creationdate…) của video/âm thanh.
+    Dùng ffprobe nếu có, không thì đọc từ thông tin `ffmpeg -i` — chạy được với mọi bản ffmpeg của app."""
+    for exe in list(engines()):
+        fp = _ffprobe_of(exe)
+        try:
+            if fp:
+                r = subprocess.run([fp, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", str(path)],
+                                   capture_output=True, text=True, errors="replace", timeout=60)
+                if r.returncode == 0:
+                    data = json.loads(r.stdout or "{}")
+                    tags = dict((data.get("format") or {}).get("tags") or {})
+                    for st in data.get("streams") or []:
+                        tags.update({k: v for k, v in (st.get("tags") or {}).items() if k not in tags})
+                    return tags
+            r = subprocess.run([exe, "-hide_banner", "-i", str(path)], capture_output=True, text=True,
+                               errors="replace", timeout=60)
+            if "Duration:" in r.stderr:
+                tags = {}
+                for line in r.stderr.splitlines():
+                    m = re.match(r"\s+([\w.:-]+)\s*:\s*(.+)$", line)
+                    if m and m[1] not in tags:
+                        tags[m[1]] = m[2].strip()
+                return tags
+        except (OSError, subprocess.SubprocessError, ValueError):
+            continue
+    return {}
 
 
 def make_preview(path: Path, out: Path, progress=_noop) -> Path:

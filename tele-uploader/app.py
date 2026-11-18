@@ -262,11 +262,15 @@ def split_file(it: Item, limit: int) -> list[Path]:
 def move_to_trash(path: Path) -> None:
     if platform.system() == "Darwin":
         # Dùng Finder để file vào Thùng rác đúng chuẩn, có thể "Put Back".
-        script = f'tell application "Finder" to delete (POSIX file "{path.as_posix().replace(chr(34), chr(92) + chr(34))}")'
-        r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-        if r.returncode == 0:
+        # Đường dẫn truyền qua tham số (argv) → không lo ký tự đặc biệt trong tên file.
+        script = ('on run argv\n'
+                  'set f to POSIX file (item 1 of argv)\n'
+                  'tell application "Finder" to delete f\n'
+                  'end run')
+        r = subprocess.run(["osascript", "-e", script, str(path)], capture_output=True, text=True)
+        if r.returncode == 0 or not path.exists():
             return
-    from send2trash import send2trash
+    from send2trash import send2trash  # Finder bị chặn quyền Automation → dùng cách khác, vẫn vào Thùng rác
     send2trash(str(path))
 
 

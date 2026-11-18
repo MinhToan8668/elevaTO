@@ -394,6 +394,10 @@ def queue_files(paths: list[Path], q: Path) -> int:
         except ValueError:
             rel = Path(*p.parts[1:])
         dst = q / rel
+        i = 1
+        while dst.exists():  # đã có file cùng tên trong hàng chờ → đặt tên khác, không ghi đè
+            dst = (q / rel).with_name(f"{rel.stem} ({i}){rel.suffix}")
+            i += 1
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(p, dst)
         n += 1
