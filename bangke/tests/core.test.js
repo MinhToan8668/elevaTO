@@ -170,3 +170,21 @@ test('dòng ghi lệch cột (khối nhập khẩu ngoại tệ) bị đánh d�
   assert.equal(an.lineInfo.get('l1').status, 'lech_cot');
   assert.equal(an.lineInfo.get('l2').status, 'lech_cot');
 });
+
+test('rà soát luật: GN > tiền HĐ, HĐ sau ngày GN, số lẻ không ghi loại tiền, thiếu số HĐ, tổng lệch; bỏ qua lỗi đã xác nhận', () => {
+  const k = { id: 'k', so_kunn: 'K', ngay_gn: '2026-03-01', so_tien: 999, lines: [
+    { id: 'a', ncc: 'A', so_hd: '1', ngay_hd: '2026-02-01', tien_hd: 100, tien_gn: 150 },
+    { id: 'b', ncc: 'B', so_hd: '2', ngay_hd: '2026-04-01', tien_hd: 100, tien_gn: 100 },
+    { id: 'c', ncc: 'C', so_hd: '3', ngay_hd: '2026-02-01', tien_hd: 1757.87, tien_gn: 1757.87 },
+    { id: 'd', ncc: '', so_hd: '', ngay_hd: '', tien_hd: 5, tien_gn: 5 },
+    { id: 'e', ncc: 'E', so_hd: '5', ngay_hd: '2026-04-02', tien_hd: 1, tien_gn: 1, ack: ['hd_sau_gn'] },
+  ] };
+  const t = BK.auditKunn(k).map((x) => `${x.lineId}:${x.type}`);
+  assert.ok(t.includes('a:gn_gt_hd'));
+  assert.ok(t.includes('b:hd_sau_gn'));
+  assert.ok(t.includes('c:ngoai_te'));
+  assert.ok(t.includes('d:thieu_so_hd') && t.includes('d:thieu_ncc'));
+  assert.ok(t.includes('null:tong_lech'));
+  assert.ok(!t.some((x) => x.startsWith('e:')), 'lỗi đã xác nhận đúng không báo lại');
+  assert.match(BK.rowText([1, '', 'KIO KOREA', 118679.68]), /^A: 1 \| C: KIO KOREA \| D: 118679\.68$/);
+});

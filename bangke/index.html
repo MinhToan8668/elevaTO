@@ -134,6 +134,12 @@ svg.viz{width:100%;height:auto;display:block}svg .ax{font-size:11px;fill:#8C7E71
 table.click tbody tr{cursor:pointer}
 .vtip{position:fixed;z-index:300;pointer-events:none;background:#14233a;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:var(--shm);display:none;max-width:320px}
 .spark{display:block}
+.au-sum{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.au-sum button{border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12.5px;background:#fff}
+.au-sum button.on{background:var(--blue);border-color:var(--blue);color:#fff}.au-sum button b{margin-left:4px}
+.diff{font-size:12px;line-height:1.5}.diff s{color:var(--ink3)}.diff ins{text-decoration:none;color:var(--ok);font-weight:700}
+.raw{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--ink3);max-width:360px;word-break:break-word}
+.conf{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}.conf.hi{background:var(--ok-bg);color:var(--ok)}.conf.mid{background:var(--warn-bg);color:var(--warn)}.conf.lo{background:var(--err-bg);color:var(--err)}
+
 .mapbox summary{cursor:pointer;list-style:none}.mapbox summary::before{content:'▸ ';color:var(--ink3)}.mapbox[open] summary::before{content:'▾ '}
 .hsearch input{border:0;border-radius:9px;padding:7px 12px;width:240px;background:rgba(255,255,255,.95);color:var(--ink);font-size:13px}
 .chctl{display:flex;gap:6px;flex-wrap:wrap}.chctl .inp{width:auto;padding:4px 8px;font-size:12.5px}
@@ -295,7 +301,7 @@ const BK = (() => {
   /** Đọc số tiền: nhận số, "19,246,587,302", "1.234.567", "1.234.567,89", "(1.000)" … Không đọc được → null. */
   function parseAmount(v) {
     if (v == null || v === '') return null;
-    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    if (typeof v === 'number') return Number.isFinite(v) ? (Number.isInteger(v) ? v : +v.toPrecision(12)) : null;
     let s = String(v).replace(/[ \s]/g, '').replace(/(vnd|vnđ|đ|usd|eur)$/i, '');
     if (!s) return null;
     let neg = false;
@@ -502,15 +508,29 @@ const BK = (() => {
    * map: { field: colIndex }. Trường cấp KUNN điền xuôi xuống (dòng đầu khối mới có giá trị).
    * defaults: { so_kunn, ngay_gn, ngay_dh, so_tien_kunn } dùng khi sheet không có cột KUNN.
    */
+  /** Một hàng Excel → chữ gọn "F: 2 | G: KIO KOREA | …" (giữ để rà soát, AI đọc lại khi cần). */
+  /** Số Excel → chữ, bỏ sai số dấu phẩy động (53726.399999999994 → 53726.4). */
+  function numStr(v) { return String(Number.isInteger(v) ? v : +v.toPrecision(12)); }
+  function rowText(row, maxCell = 60) {
+    const out = [];
+    (row || []).forEach((v, c) => {
+      if (v == null || String(v).trim() === '') return;
+      let t = typeof v === 'number' ? numStr(v) : String(v).replace(/\s+/g, ' ').trim();
+      if (t.length > maxCell) t = t.slice(0, maxCell) + '…';
+      out.push(`${colName(c)}: ${t}`);
+    });
+    return out.join(' | ');
+  }
   function extractRows(grid, headerRow, map, defaults = {}) {
     const get = (row, f) => (map[f] == null || map[f] < 0 ? '' : row[map[f]]);
+    const hdr = headerRow >= 0 ? [grid[headerRow - 1], grid[headerRow]].filter((x) => x && x.some((v) => String(v).trim())).map((x) => rowText(x, 40)).join(' ‖ ') : '';
     const groups = [];
     let cur = null;
     let lastNcc = '', lastHdmb = '';
     const warnings = [];
     const startRow = headerRow + 1;
     const newGroup = (info) => {
-      cur = { so_kunn: info.so_kunn || '', ngay_gn: info.ngay_gn || '', ngay_dh: info.ngay_dh || '', so_tien: info.so_tien ?? null, lines: [], row: info.row };
+      cur = { so_kunn: info.so_kunn || '', ngay_gn: info.ngay_gn || '', ngay_dh: info.ngay_dh || '', so_tien: info.so_tien ?? null, lines: [], row: info.row, hdr };
       groups.push(cur);
       lastNcc = ''; lastHdmb = '';
     };
@@ -539,7 +559,7 @@ const BK = (() => {
       if (TOTAL_RE.test(fold(get(row, 'ncc'))) || TOTAL_RE.test(fold(get(row, 'stt')))) continue;
 
       const so_hd_raw = get(row, 'so_hd');
-      let so_hd = typeof so_hd_raw === 'number' ? String(so_hd_raw) : cellText(so_hd_raw).trim();
+      let so_hd = typeof so_hd_raw === 'number' ? numStr(so_hd_raw) : cellText(so_hd_raw).trim();
       let ngay_hd = toISO(get(row, 'ngay_hd'));
       const assumed = [];
       let kyHieuLech = '';
@@ -584,6 +604,7 @@ const BK = (() => {
         thieu: hs.thieu || '',
         ghi_chu: [cellText(get(row, 'ghi_chu')).trim(), hs.note || ''].filter(Boolean).join(' · '),
         row: r + 1,
+        raw: rowText(row),
       };
       if (assumed.length) line.assumed = assumed;
       // Dòng ghi lệch cột so với tiêu đề (hay gặp ở khối nhập khẩu ngoại tệ): số tờ khai 11–12 chữ số rơi vào cột tiền,
@@ -863,7 +884,7 @@ const BK = (() => {
       id: l.id && !String(l.id).startsWith('__new') ? l.id : uid(),
       stt: l.stt || '', ncc: l.ncc || '', mst_ncc: l.mst_ncc || '', so_hdmb: l.so_hdmb || '', ky_hieu: l.ky_hieu || '',
       so_hd: l.so_hd || '', ngay_hd: l.ngay_hd || '', tien_hd: l.tien_hd ?? null, tien_gn: l.tien_gn ?? null,
-      loai_tien: l.loai_tien || '', goc: l.goc || 'chua', thieu: l.thieu || '', ngay_nhan: l.ngay_nhan || '', ghi_chu: l.ghi_chu || '', lech: l.lech || '',
+      loai_tien: l.loai_tien || '', goc: l.goc || 'chua', thieu: l.thieu || '', ngay_nhan: l.ngay_nhan || '', ghi_chu: l.ghi_chu || '', lech: l.lech || '', raw: l.raw || '', row: l.row || '', ack: l.ack || [],
     };
     return o;
   }
@@ -932,7 +953,43 @@ const BK = (() => {
     return out;
   }
 
-  return { FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
+  // ─── rà soát logic bảng kê ───
+  const AUDIT = {
+    lech_cot: { label: 'Lệch cột', sev: 3 },
+    gn_gt_hd: { label: 'Giải ngân > tiền hóa đơn', sev: 3 },
+    hd_sau_gn: { label: 'Ngày HĐ sau ngày giải ngân', sev: 2 },
+    hd_qua_cu: { label: 'Hóa đơn cũ hơn 2 năm', sev: 1 },
+    ngoai_te: { label: 'Số lẻ — có thể là ngoại tệ', sev: 2 },
+    thieu_so_hd: { label: 'Thiếu / lạ số hóa đơn', sev: 2 },
+    thieu_ncc: { label: 'Thiếu nhà cung cấp', sev: 2 },
+    thieu_tien: { label: 'Thiếu số tiền', sev: 2 },
+    thieu_ngay: { label: 'Thiếu ngày hóa đơn', sev: 1 },
+    tong_lech: { label: 'Tổng dòng ≠ số tiền KUNN', sev: 1 },
+  };
+  /** Rà một KUNN theo luật → [{lineId, idx, type, sev, text}]. Bỏ qua loại lỗi người dùng đã xác nhận đúng (line.ack). */
+  function auditKunn(k) {
+    const out = [];
+    const lines = k.lines || [];
+    lines.forEach((l, i) => {
+      const add = (type, text) => { if (!(l.ack || []).includes(type)) out.push({ lineId: l.id, idx: i, type, sev: AUDIT[type].sev, text }); };
+      const cur = l.loai_tien || '';
+      const vnd = !cur || /VN/i.test(cur);
+      if (l.lech) add('lech_cot', l.lech);
+      if (l.tien_hd != null && l.tien_gn != null && l.tien_gn > l.tien_hd + (vnd ? 1 : 0.01)) add('gn_gt_hd', `GN ${fmtMoney(l.tien_gn, cur)} > tiền HĐ ${fmtMoney(l.tien_hd, cur)}`);
+      if (l.ngay_hd && k.ngay_gn && l.ngay_hd > k.ngay_gn) add('hd_sau_gn', `HĐ ngày ${fmtDate(l.ngay_hd)} — sau ngày GN ${fmtDate(k.ngay_gn)}`);
+      if (l.ngay_hd && k.ngay_gn && daysBetween(l.ngay_hd, k.ngay_gn) > 730) add('hd_qua_cu', `HĐ ngày ${fmtDate(l.ngay_hd)}, trước GN ${daysBetween(l.ngay_hd, k.ngay_gn)} ngày`);
+      if (vnd && [l.tien_hd, l.tien_gn].some((v) => v != null && !Number.isInteger(Math.round(v * 1000) / 1000) && Math.abs(v) < 1e8)) add('ngoai_te', 'Số tiền có phần lẻ mà không ghi loại tiền');
+      const so = String(l.so_hd || '').trim();
+      if (!l.lech && (!so || !/\d/.test(so) || so.length > 30)) add('thieu_so_hd', so ? `Số HĐ “${so.slice(0, 40)}” bất thường` : 'Không có số hóa đơn');
+      if (!String(l.ncc || '').trim()) add('thieu_ncc', 'Không có tên nhà cung cấp');
+      if (!l.lech && l.tien_gn == null && l.tien_hd == null) add('thieu_tien', 'Không có số tiền');
+      if (!l.lech && so && !l.ngay_hd) add('thieu_ngay', 'Không có ngày hóa đơn');
+    });
+    const tong = sum(lines.map((l) => l.tien_gn));
+    if (k.so_tien != null && lines.length && Math.abs(k.so_tien - tong) > 1 && !(k.ack || []).includes('tong_lech')) out.push({ lineId: null, idx: -1, type: 'tong_lech', sev: 1, text: `Tổng các dòng ${fmtMoney(tong)} ≠ số tiền KUNN ${fmtMoney(k.so_tien)}` });
+    return out;
+  }
+  return { AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
 })();
 </script>
 <script id="bk-app">
@@ -1540,7 +1597,7 @@ function renderMain() {
   const cid = S.cid;
   const tabs = [['kunn', 'Khế ước & hóa đơn', S.kunns.length], ['inv', 'Theo dõi hóa đơn', an.invoices.length], ['goc', 'Hồ sơ gốc', sum.n_pending, sum.n_qua_han ? 'r' : ''], ['alert', 'Cảnh báo', an.alerts.length, nErr ? 'r' : ''], ['log', 'Nhật ký', '']];
   el.innerHTML = `<div class="ph"><div><div class="crumb"><a data-act="home">Tổng quan</a> / Khách hàng</div><h1 id="custName">${esc(c.name)}</h1><div class="sub">${[c.mst && 'MST ' + c.mst, c.bank, c.owner && 'Phụ trách: ' + c.owner, sum.last_gn && 'GN gần nhất ' + dd(sum.last_gn)].filter(Boolean).map(esc).join(' · ')}</div></div>
-    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
+    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
   <div class="tiles">
     ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫', act: A({ act: 'kl', cid }) })}
     ${(() => { const sr = series(S.kunns, 'gn', 'auto'); return tile('Giải ngân 12 tháng gần nhất', shortMoney(sr.total), periodLabel(sr.range), { spark: sparkline(sr.pts.map((x) => x.value)), act: A({ act: 'kl', cid, month: sr.range }) }); })()}
@@ -1616,6 +1673,7 @@ document.addEventListener('click', (e) => {
   if (d.act === 'open') { const m = t.closest('.modal'); if (m) m.remove(); return openKunn(d.cid, d.k); }
   if (d.act === 'kl') return openKunnList({ cid: d.cid || '', month: d.month || '', by: d.by || 'gn', goc: d.goc || '', age: d.age ?? '' });
   if (d.act === 'check') return openImport(d.cid || S.cid || '', true);
+  if (d.act === 'audit') return auditStored(d.cid || S.cid);
   if (d.act === 'il') return openInvList({ cid: d.cid || '', st: d.st || 'mot_phan' });
 });
 function openKunn(cid, kid) {
@@ -1873,6 +1931,200 @@ function bindKunnEvents(body, an) {
     else if (t.dataset.knote != null) { await updKunn(t.dataset.knote, { ghi_chu: t.value.trim() }, 'sửa ghi chú KUNN'); }
   };
 }
+// ═════════════════ RÀ SOÁT BẢNG KÊ (luật + AI Gemini) ═════════════════
+// Nguồn: KUNN đã lưu của một khách hàng (sửa thẳng vào sổ) hoặc bảng kê đang tải lên (sửa trước khi nạp).
+// B1 luật: lệch cột, GN > tiền HĐ, ngày HĐ sau ngày GN, số lẻ không ghi loại tiền, thiếu số HĐ/NCC/tiền… (chạy ngay).
+// B2 AI: gửi nội dung gốc từng ô của dòng nghi vấn + dòng trước/sau + tiêu đề cột → AI trả giá trị đúng, lý do, độ tin cậy.
+// B3 người dùng chọn đề xuất → áp dụng (hoặc xác nhận dòng đúng → không báo lại loại lỗi đó).
+function promptAudit(hdr, items) {
+  return `Bạn là chuyên viên kiểm soát giải ngân của ngân hàng Việt Nam, rà soát "bảng kê chứng từ/hóa đơn giải ngân vốn vay" do khách hàng gửi.
+Công cụ đã đọc file Excel theo hàng tiêu đề, nhưng có thể đọc SAI vì dòng bị ghi lệch cột, lệch dòng (số liệu dòng này nằm ở dòng trên/dưới),
+số tờ khai hải quan (10–12 chữ số) bị hiểu là số tiền, số tiền ngoại tệ (có phần lẻ) bị hiểu là số hóa đơn, v.v.
+
+Tiêu đề cột của file: ${hdr || '(không rõ)'}
+
+Với MỖI dòng dưới đây bạn có: nội dung gốc từng ô (RAW, kèm hàng trên/dưới để phát hiện lệch dòng), cách công cụ đang hiểu (DOC) và vấn đề luật phát hiện (LOI).
+Hãy xác định giá trị ĐÚNG của dòng:
+- so_hd: số hóa đơn / số invoice / số tờ khai (nếu chứng từ là tờ khai thuế), KHÔNG phải số tiền;
+- ky_hieu: ký hiệu HĐ hoặc nội dung phân biệt (vd "NK", "GTGT NK") nếu có;
+- ngay_hd: ngày hóa đơn YYYY-MM-DD (số 5 chữ số 36000–60000 là ngày dạng số của Excel, 45453 = 2024-06-10);
+- tien_hd: trị giá hóa đơn; tien_gn: số tiền đề nghị giải ngân cho dòng đó; loai_tien: "VND" hoặc "USD"/"EUR"… (số có phần lẻ thường là ngoại tệ);
+- ncc: nhà cung cấp.
+Nếu cách hiểu hiện tại đã đúng (vấn đề chỉ là đặc thù hợp lệ, vd hóa đơn xuất sau ngày giải ngân theo hợp đồng) thì ok=true và giải thích.
+Không bịa số: chỉ dùng số có trong RAW. Không chắc thì để null và tin_cay thấp.
+Trả JSON: {"items":[{"id":"…","ok":false,"so_hd":"…","ky_hieu":"…","ngay_hd":"YYYY-MM-DD","tien_hd":0,"tien_gn":0,"loai_tien":"USD","ncc":"…","ly_do":"giải thích ngắn tiếng Việt","tin_cay":0.0-1.0}]}
+
+${items.map((x) => `### id=${x.id}
+RAW hàng trên: ${x.prev || '—'}
+RAW dòng này: ${x.l.raw || '(không lưu dữ liệu gốc)'}
+RAW hàng dưới: ${x.next || '—'}
+DOC: ncc=${x.l.ncc || ''}; so_hd=${x.l.so_hd || ''}; ky_hieu=${x.l.ky_hieu || ''}; ngay_hd=${x.l.ngay_hd || ''}; tien_hd=${x.l.tien_hd ?? ''}; tien_gn=${x.l.tien_gn ?? ''}; loai_tien=${x.l.loai_tien || 'VND'}; KUNN ${x.k.so_kunn} GN ${x.k.ngay_gn || '?'}
+LOI: ${x.issues.map((i) => i.text).join('; ')}`).join('\n\n')}`;
+}
+const AU_FIELDS = [['so_hd', 'Số HĐ'], ['ky_hieu', 'Ký hiệu'], ['ngay_hd', 'Ngày HĐ'], ['tien_hd', 'Tiền HĐ'], ['tien_gn', 'Giải ngân'], ['loai_tien', 'Loại tiền'], ['ncc', 'NCC']];
+function auFmt(f, v, cur) { if (v == null || v === '') return '—'; if (f === 'ngay_hd') return dd(v) || v; if (f === 'tien_hd' || f === 'tien_gn') return money(v, cur); return String(v); }
+/** Đề xuất AI → thay đổi thật (chỉ các trường khác giá trị hiện tại). */
+function auChanges(l, s) {
+  const ch = {};
+  if (!s || s.ok) return ch;
+  for (const [f] of AU_FIELDS) {
+    let v = s[f];
+    if (v == null || v === '') continue;
+    if (f === 'tien_hd' || f === 'tien_gn') { v = BK.parseAmount(v); if (v == null) continue; }
+    if (f === 'ngay_hd') { v = BK.toISO(v); if (!v) continue; }
+    if (f === 'loai_tien') { v = String(v).toUpperCase(); if (/^VN/.test(v)) v = ''; }
+    if (f === 'so_hd' || f === 'ky_hieu' || f === 'ncc') v = String(v).trim();
+    if (String(v) !== String(l[f] ?? '')) ch[f] = v;
+  }
+  return ch;
+}
+
+/**
+ * Mở bảng rà soát. src = { title, kunns: [{k, key}], hdrOf(k), apply(list) } — list: [{k, l, patch}]
+ * (k = KUNN dạng {so_kunn, ngay_gn, so_tien, lines}, l = dòng; patch = trường cần đổi, {} + ack để xác nhận đúng).
+ */
+function openAudit(src) {
+  const rows = [];
+  for (const k of src.kunns) {
+    const iss = BK.auditKunn(k);
+    const byLine = new Map();
+    for (const x of iss) {
+      if (x.idx < 0) { rows.push({ k, l: null, idx: -1, issues: [x], id: `${k._key}|KUNN` }); continue; }
+      if (!byLine.has(x.idx)) byLine.set(x.idx, []);
+      byLine.get(x.idx).push(x);
+    }
+    for (const [idx, list] of byLine) rows.push({ k, l: k.lines[idx], idx, issues: list, id: `${k._key}|${idx}`, prev: (k.lines[idx - 1] || {}).raw, next: (k.lines[idx + 1] || {}).raw });
+  }
+  const nLines = BK.sum(src.kunns.map((k) => k.lines.length));
+  const st = { flt: '', sug: new Map(), pick: new Set(), busy: false };
+  const m = modal(`<div class="mh"><h2>🤖 Rà soát bảng kê — ${esc(src.title)}</h2><button class="x" data-close>&times;</button></div><div class="mb" id="auB"></div>
+    <div class="mf"><span id="auF" class="hist" style="flex:1"></span><button class="btn" id="auX">⬇ Xuất Excel danh sách</button><button class="btn" id="auAI">✨ AI đề xuất cách sửa</button><button class="btn pri" id="auGo" disabled>Áp dụng</button></div>`);
+  const lineRows = () => rows.filter((r) => r.l);
+  const draw = () => {
+    const types = Object.keys(BK.AUDIT).map((t) => [t, rows.filter((r) => r.issues.some((i) => i.type === t)).length]).filter(([, n]) => n);
+    const vis = rows.filter((r) => !st.flt || r.issues.some((i) => i.type === st.flt));
+    const nSev3 = rows.filter((r) => r.issues.some((i) => i.sev >= 3)).length;
+    $('#auB', m).innerHTML = `
+      ${rows.length ? `<div class="verdict ${nSev3 ? 'err' : 'warn'}"><div><b>${nSev3 ? '✗' : '⚠'} ${rows.length} dòng cần xem trên tổng ${nLines} dòng · ${src.kunns.length} KUNN</b><span>Bấm <b>✨ AI đề xuất cách sửa</b> để Gemini đọc lại dữ liệu gốc từng ô (kèm hàng trên/dưới để bắt lệch dòng) và đề xuất giá trị đúng. Tick dòng muốn sửa rồi bấm <b>Áp dụng</b>.</span></div></div>`
+        : `<div class="verdict ok"><div><b>✓ Không thấy dòng nào lệch cột hay sai logic</b><span>Đã rà ${nLines} dòng · ${src.kunns.length} KUNN.</span></div></div>`}
+      ${rows.length ? `<div class="au-sum"><button data-af="" class="${st.flt ? '' : 'on'}">Tất cả<b>${rows.length}</b></button>${types.map(([t, n]) => `<button data-af="${t}" class="${st.flt === t ? 'on' : ''}">${BK.AUDIT[t].label}<b>${n}</b></button>`).join('')}</div>
+      ${st.flt && st.flt !== 'tong_lech' && st.flt !== 'lech_cot' ? `<div class="bar"><span class="hist">Nếu nhóm “${BK.AUDIT[st.flt].label}” là hợp lệ theo hồ sơ (vd hóa đơn bổ sung sau giải ngân):</span><button class="btn sm" id="auAck">✓ Xác nhận ${vis.filter((r) => r.l).length} dòng nhóm này là hợp lệ — không báo lại</button></div>` : ''}
+      <div class="card tw" style="max-height:60vh"><table class="t"><thead><tr><th><input type="checkbox" id="auAll"></th><th>KUNN · hàng</th><th>Công cụ đang đọc</th><th>Vấn đề</th><th>Dữ liệu gốc trong file</th><th>AI đề xuất</th></tr></thead><tbody>
+      ${vis.slice(0, 800).map((r) => {
+        const sg = st.sug.get(r.id), l = r.l;
+        const ch = l ? auChanges(l, sg) : {};
+        const sev = Math.max(...r.issues.map((i) => i.sev));
+        const conf = sg && sg.tin_cay != null ? Math.round(sg.tin_cay * 100) : null;
+        const aiCell = !l ? '<span class="hist">Mức KUNN — kiểm tra số tiền KUNN</span>'
+          : !sg ? (st.busy ? '<span class="hist"><span class="spin"></span></span>' : '<span class="hist">—</span>')
+          : sg.err ? `<span class="hist" style="color:var(--err)">${esc(sg.err)}</span>`
+          : `${conf != null ? `<span class="conf ${conf >= 75 ? 'hi' : conf >= 50 ? 'mid' : 'lo'}">${conf}%</span> ` : ''}${sg.ok || !Object.keys(ch).length ? '<b style="color:var(--ok)">Dòng này đúng</b>' : `<div class="diff">${Object.entries(ch).map(([f, v]) => `${AU_FIELDS.find((x) => x[0] === f)[1]}: <s>${esc(auFmt(f, l[f], l.loai_tien))}</s> → <ins>${esc(auFmt(f, v, ch.loai_tien ?? l.loai_tien))}</ins>`).join('<br>')}</div>`}<div class="hist">${esc(sg.ly_do || '')}</div>`;
+        return `<tr class="${sev >= 3 ? 'bad' : 'warn'}"><td>${l ? `<input type="checkbox" data-pk="${esc(r.id)}" ${st.pick.has(r.id) ? 'checked' : ''} ${sg ? '' : 'disabled'}>` : ''}</td>
+          <td><b>${esc(r.k.so_kunn)}</b><div class="hist">${l ? `hàng ${esc(l.row || r.idx + 1)}` : 'cả KUNN'}</div></td>
+          <td style="min-width:200px">${l ? `<div>${esc(l.ncc)}</div><div><b>${esc(l.so_hd)}</b>${l.ky_hieu ? ' · ' + esc(l.ky_hieu) : ''} · ${dd(l.ngay_hd) || '—'}</div><div class="hist">HĐ ${money(l.tien_hd, l.loai_tien) || '—'} · GN ${money(l.tien_gn, l.loai_tien) || '—'} ${esc(l.loai_tien || '')}</div>` : ''}</td>
+          <td style="min-width:180px">${r.issues.map((i) => `<div><span class="pill ${i.sev >= 3 ? 'p-err' : 'p-warn'}">${BK.AUDIT[i.type].label}</span><div class="hist">${esc(i.text)}</div></div>`).join('')}</td>
+          <td><div class="raw">${esc(l ? l.raw || '(bản nạp cũ — chưa lưu dữ liệu gốc)' : '')}</div></td>
+          <td style="min-width:220px">${aiCell}</td></tr>`; }).join('')}
+      </tbody></table></div>${vis.length > 800 ? `<div class="hist">Hiện 800/${vis.length} dòng — lọc theo loại để xem tiếp.</div>` : ''}` : ''}`;
+    $$('[data-af]', m).forEach((b) => { b.onclick = () => { st.flt = b.dataset.af; draw(); }; });
+    const ackB = $('#auAck', m);
+    if (ackB) ackB.onclick = async () => {
+      const t = st.flt;
+      const list = vis.filter((r) => r.l).map((r) => ({ k: r.k, l: r.l, patch: { ack: [...new Set([...(r.l.ack || []), t])] } }));
+      if (!confirm(`Xác nhận ${list.length} dòng “${BK.AUDIT[t].label}” là hợp lệ? Các dòng này sẽ không bị báo lỗi này nữa.`)) return;
+      try { await src.apply(list); m.remove(); toast(`Đã xác nhận ${list.length} dòng`, 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
+    };
+    $$('[data-pk]', m).forEach((c) => { c.onchange = () => { c.checked ? st.pick.add(c.dataset.pk) : st.pick.delete(c.dataset.pk); foot(); }; });
+    const all = $('#auAll', m); if (all) all.onchange = () => { vis.forEach((r) => { if (r.l && st.sug.has(r.id) && !st.sug.get(r.id).err) all.checked ? st.pick.add(r.id) : st.pick.delete(r.id); }); draw(); };
+    foot();
+  };
+  const foot = () => {
+    const n = st.pick.size;
+    $('#auGo', m).disabled = !n || st.busy;
+    $('#auGo', m).textContent = n ? `Áp dụng ${n} dòng đã chọn` : 'Áp dụng';
+    $('#auAI', m).disabled = st.busy || !lineRows().length;
+    $('#auF', m).textContent = st.sug.size ? `AI đã xem ${st.sug.size}/${lineRows().length} dòng · tick dòng muốn áp dụng (dòng AI xác nhận đúng sẽ không bị báo lại)` : '';
+  };
+  $('#auAI', m).onclick = async () => {
+    const todo = lineRows().filter((r) => !st.sug.has(r.id)).sort((a, b) => Math.max(...b.issues.map((i) => i.sev)) - Math.max(...a.issues.map((i) => i.sev)));
+    const MAX = 400;
+    if (!todo.length) return;
+    if (todo.length > MAX && !confirm(`Có ${todo.length} dòng nghi vấn — AI xem trước ${MAX} dòng nặng nhất (chạy lại để xem tiếp). Tiếp tục?`)) return;
+    st.busy = true; draw();
+    const btn = $('#auAI', m);
+    try {
+      const list = todo.slice(0, MAX);
+      for (let i = 0; i < list.length; i += 30) {
+        btn.innerHTML = `<span class="spin"></span> AI đang xem ${Math.min(i + 30, list.length)}/${list.length} dòng…`;
+        const part = list.slice(i, i + 30);
+        const hdr = src.hdrOf(part[0].k);
+        const r = await aiJson(promptAudit(hdr, part.map((x, j) => ({ ...x, id: String(j) }))), { thinking: 'medium', maxTokens: 30000 });
+        const got = new Map((r.items || []).map((x) => [String(x.id), x]));
+        part.forEach((x, j) => {
+          const sg = got.get(String(j)) || { err: 'AI không trả lời dòng này' };
+          st.sug.set(x.id, sg);
+          if (!sg.err && (sg.tin_cay ?? 0) >= 0.75) st.pick.add(x.id);
+        });
+        draw();
+      }
+      toast(`AI đã xem ${list.length} dòng — kiểm tra đề xuất rồi bấm Áp dụng`, 'ok');
+    } catch (e) { toast(errMsg(e), 'err', 9000); }
+    st.busy = false; btn.textContent = '✨ AI đề xuất cách sửa'; draw();
+  };
+  $('#auGo', m).onclick = async () => {
+    const list = rows.filter((r) => st.pick.has(r.id) && r.l).map((r) => {
+      const sg = st.sug.get(r.id);
+      const patch = auChanges(r.l, sg);
+      const ack = new Set(r.l.ack || []);
+      if (sg.ok || !Object.keys(patch).length) r.issues.forEach((i) => ack.add(i.type));   // AI xác nhận đúng → không báo lại
+      else r.issues.forEach((i) => { if (i.type !== 'lech_cot') ack.add(i.type); });
+      patch.lech = '';                                                                       // đã được người dùng duyệt
+      patch.ack = [...ack];
+      patch.ghi_chu = [r.l.ghi_chu, `AI rà soát ${BK.todayISO()}: ${sg.ly_do || ''}`].filter(Boolean).join(' · ').slice(0, 400);
+      return { k: r.k, l: r.l, patch };
+    });
+    $('#auGo', m).disabled = true;
+    try { await src.apply(list); m.remove(); toast(`Đã áp dụng ${list.length} dòng`, 'ok'); }
+    catch (e) { toast(errMsg(e), 'err', 9000); $('#auGo', m).disabled = false; }
+  };
+  $('#auX', m).onclick = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet(`RÀ SOÁT BẢNG KÊ — ${src.title}`, stamp(), ['SỐ KUNN', 'HÀNG', 'NHÀ CUNG CẤP', 'SỐ HĐ', 'NGÀY HĐ', 'TIỀN HĐ', 'GIẢI NGÂN', 'VẤN ĐỀ', 'DỮ LIỆU GỐC', 'AI ĐỀ XUẤT', 'LÝ DO', 'TIN CẬY'],
+      rows.map((r) => { const l = r.l || {}; const sg = st.sug.get(r.id) || {}; const ch = r.l ? auChanges(r.l, sg) : {};
+        return [xc(r.k.so_kunn, { b: true }), xc(l.row || ''), xc(l.ncc), xc(l.so_hd), xc(l.ngay_hd, { date: true }), xc(l.tien_hd), xc(l.tien_gn), xc(r.issues.map((i) => `${BK.AUDIT[i.type].label}: ${i.text}`).join('\n'), { wrap: true, fill: r.issues.some((i) => i.sev >= 3) ? FILL.err : FILL.warn }),
+          xc(l.raw, { wrap: true }), xc(sg.ok ? 'Dòng đúng' : Object.entries(ch).map(([f, v]) => `${f}: ${v}`).join('\n'), { wrap: true }), xc(sg.ly_do, { wrap: true }), xc(sg.tin_cay)]; }),
+      [16, 8, 30, 14, 12, 14, 14, 40, 50, 30, 40, 8]), 'Rà soát');
+    download(wb, `RaSoat_${slug(src.title)}_${BK.todayISO()}.xlsx`);
+  };
+  draw();
+}
+function auditStored(cid) {
+  const c = cust(cid); if (!c) return toast('Chọn khách hàng trước');
+  const ks = S.store.kunnsOf(cid).sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || '')).map((k) => ({ ...k, _key: k.id }));
+  if (!ks.length) return toast('Khách hàng chưa có KUNN nào');
+  openAudit({
+    title: c.name, kunns: ks, hdrOf: (k) => k.hdr || '',
+    apply: async (list) => {
+      const byK = new Map();
+      for (const x of list) { if (!byK.has(x.k.id)) byK.set(x.k.id, []); byK.get(x.k.id).push({ id: x.l.id, ...x.patch }); }
+      for (const [kid, patches] of byK) await S.store.patchLines(kid, patches, meta(), cid);
+      log(cid, 'ra_soat', `Rà soát bảng kê: áp dụng ${list.length} dòng (AI đề xuất)`);
+    },
+  });
+}
+function auditImport() {
+  if (!IMP.groups || !IMP.groups.length) return toast('Chưa đọc được dòng nào để rà soát');
+  const ks = IMP.groups.map((g, gi) => ({ ...g, so_kunn: g.so_kunn || '(chưa số)', _key: 'g' + gi, _g: g }));
+  openAudit({
+    title: IMP.file, kunns: ks, hdrOf: (k) => k.hdr || '',
+    apply: async (list) => {
+      for (const x of list) Object.assign(x.l, x.patch);      // sửa thẳng vào dòng đang xem trước
+      IMP.edited = true;
+      recheck();
+    },
+  });
+}
+
 function editLine(kid, lid) {
   const k = S.kunns.find((x) => x.id === kid); const l = k && k.lines.find((x) => x.id === lid); if (!l) return;
   const f = (id, lab, v, type = 'text') => `<label class="f">${lab}<input class="inp" id="${id}" type="${type}" value="${esc(v ?? '')}"></label>`;
@@ -2101,7 +2353,8 @@ function renderImport() {
     <span class="hist">${esc(IMP.how)}</span><span style="flex:1"></span>
     <button class="btn sm" id="iAuto">↻ Tự nhận dạng lại</button>
     <button class="btn sm pri" id="iAI" title="Gemini đọc tiêu đề & chọn đúng cột">✨ AI nhận dạng cột</button>
-    <button class="btn sm" id="iAIall" title="Bảng lộn xộn, không có hàng tiêu đề rõ: Gemini đọc từng dòng">✨ AI đọc toàn bộ</button></div>
+    <button class="btn sm" id="iAIall" title="Bảng lộn xộn, không có hàng tiêu đề rõ: Gemini đọc từng dòng">✨ AI đọc toàn bộ</button>
+    <button class="btn sm" id="iAudit" title="Tìm dòng lệch cột / lệch dòng / sai logic và nhờ AI đề xuất sửa trước khi nạp">🤖 Rà soát</button></div>
   ${IMP.aiNote ? `<div class="note">${esc(IMP.aiNote)}</div>` : ''}
   ${IMP.aiRows ? `<div class="note warn">Đang dùng kết quả AI đọc toàn bộ (${IMP.aiRows.length} dòng). Bấm “Tự nhận dạng lại” để quay về đọc theo cột.</div>` : `
   <details class="mapbox" ${nLines ? '' : 'open'}><summary class="sec">Cột trong file → trường bảng kê <span class="hist">(${BK.FIELDS.filter((f) => IMP.map[f.k] != null).length} cột đã nhận — bấm để xem / sửa)</span></summary>
@@ -2139,6 +2392,7 @@ function renderImport() {
   $('#iAuto', m).onclick = () => { IMP.aiNote = ''; autoDetect(IMP.sheet); renderImport(); };
   $('#iAI', m).onclick = (e) => aiDetect(e.target);
   $('#iAIall', m).onclick = (e) => aiReadAll(e.target);
+  $('#iAudit', m).onclick = () => auditImport();
   $$('[data-map]', m).forEach((s) => s.onchange = () => { const v = s.value; if (v === '') delete IMP.map[s.dataset.map]; else IMP.map[s.dataset.map] = +v; extract(); renderImport(); });
   $$('[data-ki]', m).forEach((s) => s.onchange = () => { const k = s.dataset.ki; IMP.kinfo[k] = k === 'so_tien_kunn' ? BK.parseAmount(s.value) : s.value.trim(); recheck(); });
   $$('[data-mode]', m).forEach((s) => s.onchange = () => { IMP.mode[s.dataset.mode] = s.value; });
@@ -2221,7 +2475,7 @@ async function saveImport(opt = {}) {
         return c;
       });
       const k = { ...(old || {}), id: old ? old.id : BK.uid(), customerId: cid, so_kunn: String(g.so_kunn), ngay_gn: g.ngay_gn, ngay_dh: g.ngay_dh || '', so_tien: g.so_tien ?? null,
-        han_bs: old ? old.han_bs || '' : '', ghi_chu: old ? old.ghi_chu || '' : '', source: IMP.file, lines, createdAt: old ? old.createdAt : Date.now(), createdBy: old ? old.createdBy : userName(), ...meta() };
+        han_bs: old ? old.han_bs || '' : '', ghi_chu: old ? old.ghi_chu || '' : '', source: IMP.file, hdr: g.hdr || '', lines, createdAt: old ? old.createdAt : Date.now(), createdBy: old ? old.createdBy : userName(), ...meta() };
       docs.push(k); n++; nl += lines.length;
     }
     await S.store.putKunns(docs);

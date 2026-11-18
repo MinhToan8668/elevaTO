@@ -338,3 +338,46 @@ test('kiểm tra xong nạp luôn: bỏ các dòng lỗi, chỉ nạp dòng hợ
   assert.match(await page.locator('.kunn', { hasText: 'KUNN KU-B' }).locator('tbody').innerText(), /503[\s\S]*700[\s\S]*650/);
   await ctx.close();
 });
+
+test('AI rà soát bảng kê đã lưu: tìm dòng lệch cột, AI đề xuất sửa, áp dụng vào sổ', async () => {
+  const head = ['', 'SỐ KUNN', 'NGÀY GIẢI NGÂN', 'NGÀY ĐẾN HẠN', 'SỐ TIỀN', 'STT', 'NHÀ CUNG CẤP', 'SỐ HỢP ĐỒNG/  ĐĐH', 'HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN (VNĐ)', 'SỐ TIỀN GIẢI  NGÂN (VNĐ)'];
+  const f = join(dir, 'TH_LECH.xlsx');
+  await writeFile(f, toXlsx({ 'Sheet2': [head,
+    ['', 'K-NK', 45400, 45500, '', 1, 'Công ty A', 'HĐ 1', '11', 45390, 1000, 1000],
+    ['', '', '', '', '', 2, 'KOREA CO', 'KO-30/2023', 118679.68, 106206820640, 1757.87, 'KO-040124-4'],
+  ] }));
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => localStorage.setItem('finlens_ai_settings_v1', JSON.stringify({ keys: [{ key: 'AIzaTEST-KEY-1234567890', on: true }], model: 'gemini-3.6-flash', active: 0 })));
+  let prompt = '';
+  await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, async (r) => {
+    prompt = JSON.parse(r.request().postData()).contents[0].parts[0].text;
+    const items = [{ id: '0', ok: false, so_hd: 'KO-040124-4', ngay_hd: '2024-04-01', tien_hd: 1757.87, tien_gn: 1757.87, loai_tien: 'USD', ly_do: 'Số invoice nằm ở cột giải ngân; 118679.68 là trị giá hợp đồng USD; 106206820640 là số tờ khai', tin_cay: 0.9 }];
+    await r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items }) }] }, finishReason: 'STOP' }] }) });
+  });
+  await page.goto(base + 'index.html');
+  await page.click('#bImport');
+  await page.setInputFiles('#iFile', f);
+  await page.locator('#iSum', { hasText: '2 dòng' }).waitFor();
+  await page.fill('#iNew', 'Công ty Nu');
+  await page.click('#iSave');
+  await page.locator('#custName', { hasText: 'Công ty Nu' }).waitFor();
+  await page.locator('[data-act="audit"]').click();
+  await page.locator('.au-sum', { hasText: 'Lệch cột' }).waitFor();
+  assert.match(await page.locator('#auB tbody').innerText(), /KO-040124-4/, 'hiện dữ liệu gốc trong file');
+  await page.click('#auAI');
+  await page.locator('.diff', { hasText: 'KO-040124-4' }).waitFor();
+  const one = prompt.slice(prompt.indexOf('### id=0'));
+  assert.match(one, /RAW hàng trên: .*F: 1 \| G: Công ty A[\s\S]*RAW dòng này: F: 2 \| G: KOREA CO/, 'gửi AI dữ liệu gốc dòng + hàng kề: ' + one.slice(0, 300));
+  assert.match(prompt, /Tiêu đề cột của file: .*HÓA ĐƠN/);
+  assert.match(await page.locator('#auGo').innerText(), /Áp dụng 1 dòng/);      // tin cậy 90% → tự tick
+  await page.click('#auGo');
+  await page.locator('.modal').waitFor({ state: 'detached' });
+  await page.click('[data-tab="kunn"]');
+  if (!(await page.locator('[data-editl]').count())) await page.click('[data-toggle] >> text=KUNN K-NK');
+  const body = await page.locator('.kunn', { hasText: 'K-NK' }).locator('tbody').innerText();
+  assert.match(body, /KO-040124-4[\s\S]*1\.757,87[\s\S]*USD/);
+  assert.doesNotMatch(body, /Đọc sai cột/);
+  await page.locator('[data-act="audit"]').click();
+  await page.locator('#auB', { hasText: 'Không thấy dòng nào' }).waitFor();
+  await ctx.close();
+});
