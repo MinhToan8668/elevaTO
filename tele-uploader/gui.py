@@ -986,14 +986,26 @@ class JsApi:
 def ensure_ffmpeg():
     """Tìm ffmpeg/ffprobe (Homebrew hoặc bản app tự tải). Chưa có thì tự tải 1 lần (~80MB), không cần cài tay."""
     os.environ["PATH"] = os.pathsep.join(["/opt/homebrew/bin", "/usr/local/bin", os.environ.get("PATH", "")])
-    if vs.shutil.which("ffmpeg") and vs.shutil.which("ffprobe"):
+    def works() -> bool:
+        """Có ffmpeg + ffprobe và chạy được thật (không bị macOS chặn / sai kiến trúc)."""
+        try:
+            return all(vs.shutil.which(x) and subprocess.run([x, "-version"], capture_output=True, timeout=20).returncode == 0
+                       for x in ("ffmpeg", "ffprobe"))
+        except (OSError, subprocess.SubprocessError):
+            return False
+    if works():
         return
     S.busy["ffmpeg"] = "Đang tải bộ xử lý video (ffmpeg), chỉ lần đầu…"
     try:
         import static_ffmpeg
         static_ffmpeg.add_paths()
-        if not (vs.shutil.which("ffmpeg") and vs.shutil.which("ffprobe")):
-            raise RuntimeError("tải xong nhưng không tìm thấy ffmpeg")
+        for x in ("ffmpeg", "ffprobe"):  # bản tải về đôi khi thiếu quyền chạy / bị gắn cờ cách ly
+            b = vs.shutil.which(x)
+            if b:
+                os.chmod(b, 0o755)
+                subprocess.run(["xattr", "-d", "com.apple.quarantine", b], capture_output=True)
+        if not works():
+            raise RuntimeError("tải xong nhưng ffmpeg không chạy được trên máy này")
         S.notify("Đã sẵn sàng xử lý video", "Đã tải xong ffmpeg — cắt, gộp, đọc ngày quay dùng được rồi.", "success", mac=False)
     except Exception as e:  # noqa: BLE001
         S.notify("Chưa tải được ffmpeg", f"Kiểm tra mạng rồi mở lại app, hoặc cài tay: brew install ffmpeg ({e})", "error", mac=False)

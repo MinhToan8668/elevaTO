@@ -51,12 +51,39 @@ def fmt_time(sec: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
+PERM_HELP = ("macOS chưa cho app quyền đọc chỗ này. Mở System Settings → Privacy & Security → Full Disk Access "
+             "(hoặc Files and Folders) → bật cho Media Hub / Python / Terminal, rồi mở lại app.")
+
+
+def check_readable(path: Path) -> None:
+    """Báo rõ lý do khi không mở được file (không tồn tại / macOS chặn quyền)."""
+    if not path.exists():
+        raise RuntimeError(f"Không thấy file: {path}")
+    try:
+        with open(path, "rb") as f:
+            f.read(16)
+    except PermissionError as e:
+        raise RuntimeError(f"Không được phép đọc {path.name}. {PERM_HELP}") from e
+    except OSError as e:
+        raise RuntimeError(f"Không mở được {path.name}: {e.strerror or e}") from e
+
+
 def probe(path: Path) -> dict:
     _need_ffmpeg()
-    r = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_format", "-show_streams", str(path)],
-                       capture_output=True, text=True)
+    path = Path(path)
+    check_readable(path)
+    try:
+        r = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_format", "-show_streams", str(path)],
+                           capture_output=True, text=True, errors="replace")
+    except OSError as e:
+        raise RuntimeError(f"Không chạy được ffprobe ({e.strerror or e}). Thử mở lại app để tải lại ffmpeg.") from e
     if r.returncode != 0:
-        raise RuntimeError(f"Không đọc được video: {path.name}")
+        why = (r.stderr.strip().splitlines() or [""])[-1][:200]
+        if r.returncode < 0:
+            why = f"ffprobe bị hệ thống dừng (tín hiệu {-r.returncode})" + (f" — {why}" if why else "")
+        elif "permitted" in why or "denied" in why:
+            why = PERM_HELP
+        raise RuntimeError(f"Không đọc được video {path.name}: {why or 'file hỏng hoặc không phải video'}")
     data = json.loads(r.stdout)
     v = next((s for s in data.get("streams", []) if s.get("codec_type") == "video"), {})
     a = next((s for s in data.get("streams", []) if s.get("codec_type") == "audio"), {})
@@ -133,7 +160,8 @@ def split_video(path: Path, mode: str, value: str, out_dir: Path | None = None, 
         out = _unique(out_dir / f"{path.stem}_{i:02d}{path.suffix.lower()}")
         label = f"Cắt {path.name} ({i}/{len(ranges)})"
         # -ss trước -i: tua nhanh; cắt không nén lại nên điểm cắt rơi vào keyframe gần nhất
-        codec = _encode_args() if precise else ["-map", "0", "-c", "copy"]
+        # Sony/DJI/GoPro ghi kèm luồng dữ liệu (rtmd, djmd, gpmd…) mà mp4 không chép được → chỉ lấy hình + tiếng
+        codec = _encode_args() if precise else ["-map", "0:v", "-map", "0:a?", "-c", "copy"]
         if precise:
             out = out.with_suffix(".mp4")
         _run_ffmpeg(["-ss", f"{a:.3f}", "-i", str(path), "-t", f"{b - a:.3f}", *codec,
@@ -196,7 +224,7 @@ def merge_videos(paths: list[Path], out: Path | None = None, reencode: bool = Fa
                 f.write("file '" + str(p).replace("'", "'\\''") + "'\n")
             lst = f.name
         try:
-            _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", lst, "-map", "0", "-c", "copy",
+            _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", lst, "-map", "0:v", "-map", "0:a?", "-c", "copy",
                          "-movflags", "+faststart", str(out)], total, progress, f"Gộp {len(paths)} video")
         finally:
             os.unlink(lst)
