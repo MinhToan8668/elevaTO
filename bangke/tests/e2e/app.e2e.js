@@ -381,3 +381,39 @@ test('AI rà soát bảng kê đã lưu: tìm dòng lệch cột, AI đề xuấ
   await page.locator('#auB', { hasText: 'Không thấy dòng nào' }).waitFor();
   await ctx.close();
 });
+
+test('AI tự rà việc gán cột khi tải file: đề xuất đổi cột + khối hàng USD → áp dụng', async () => {
+  const f = join(dir, 'GAN_COT.xlsx');
+  await writeFile(f, toXlsx({ 'Data': [
+    ['BẢNG KÊ CHỨNG TỪ GIẢI NGÂN — KU số 77/2026 ngày 05/05/2026'],
+    ['STT', 'NHÀ CUNG CẤP', 'SỐ HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN VAY', 'SỐ TIỀN HÓA ĐƠN'],          // 2 cột tiền ghi đảo vị trí quen thuộc
+    [1, 'Công ty Alpha', '101', '01/05/2026', 400000, 1000000],
+    [2, 'Công ty Beta', '102', '02/05/2026', 500000, 500000],
+    [3, 'OMEGA LTD', 'OM-1', '03/05/2026', 1200.5, 1200.5],
+  ] }));
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => localStorage.setItem('finlens_ai_settings_v1', JSON.stringify({ keys: [{ key: 'AIzaTEST-KEY-1234567890', on: true }], model: 'gemini-3.6-flash', active: 0 })));
+  let prompt = '';
+  await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, async (r) => {
+    prompt = JSON.parse(r.request().postData()).contents[0].parts[0].text;
+    const reply = { ok: false, columns: { stt: 'A', ncc: 'B', so_hd: 'C', ngay_hd: 'D', tien_hd: 'F', tien_gn: 'E' }, unit: 'dong', currency_rows: [{ from: 5, to: 5, currency: 'USD' }],
+      issues: [{ field: 'tien_gn', text: 'Hàng 5 là số tiền USD (có phần lẻ)' }], summary: 'Gán cột đúng; hàng 5 là ngoại tệ USD' };
+    await r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(reply) }] }, finishReason: 'STOP' }] }) });
+  });
+  await page.goto(base + 'index.html');
+  await page.click('#bImport');
+  await page.setInputFiles('#iFile', f);
+  await page.locator('.aibox', { hasText: 'hàng 5 là ngoại tệ USD' }).waitFor();          // AI tự chạy, không cần bấm
+  assert.match(prompt, /CÔNG CỤ ĐANG GÁN:[\s\S]*tien_gn \(Số tiền giải ngân \(vay\)\) = E/);
+  assert.match(prompt, /\[5\] A: 3 \| B: OMEGA LTD/);
+  assert.match(await page.locator('.colchk').innerText(), /NGOẠI TỆ/, 'luật cũng báo số lẻ có thể là ngoại tệ');
+  await page.click('#cAIgo');
+  await page.locator('.aibox', { hasText: 'Đã áp dụng' }).waitFor();
+  assert.match(await page.locator('.modal tbody').innerText(), /OM-1[\s\S]*1\.200,5/);
+  await page.fill('#iNew', 'Công ty Xi');
+  await page.click('#iSave');
+  const k = page.locator('.kunn', { hasText: '77/2026' });
+  await k.locator('table').waitFor();
+  assert.match(await k.locator('tbody').innerText(), /OM-1[\s\S]*1\.200,5[\s\S]*USD/);
+  await ctx.close();
+});
