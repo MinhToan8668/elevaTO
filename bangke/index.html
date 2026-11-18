@@ -102,7 +102,7 @@ label.f{display:block;font-size:12px;color:var(--ink2);font-weight:600}label.f .
 <body>
 <header class="hdr"><div class="hdr-in">
   <div class="logo">Bảng kê Giải ngân<small>Theo dõi hóa đơn giải ngân · hồ sơ gốc</small></div>
-  <span class="sync" id="syncPill" title="Bấm để cài đặt đồng bộ team"><i></i><span>Chỉ trên máy này</span></span>
+  <span class="sync" id="syncPill" title="Thư mục chung của team (đồng bộ nhiều máy)"><i></i><span>Chỉ trên máy này</span></span>
   <div class="sp"></div>
   <button class="hbtn pri" id="bImport">⬆ Tải bảng kê lên</button>
   <button class="hbtn" id="bExport">⬇ Xuất Excel</button>
@@ -826,7 +826,7 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n, cur) => (n == null || !Number.isFinite(n) ? '' : BK.fmtMoney(n, cur));
 const dd = BK.fmtDate;
-const LS = { team: 'bangke_team_v1', user: 'bangke_user_v1', han: 'bangke_han_ngay_v1' };
+const LS = { user: 'bangke_user_v1', han: 'bangke_han_ngay_v1' };
 const lsGet = (k, d = '') => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* bị chặn */ } };
 const userName = () => lsGet(LS.user) || 'Không tên';
@@ -938,20 +938,24 @@ Trả về JSON: {"rows":[{"row": số hàng Excel, "so_kunn":null,"ngay_gn":nul
 ${text}`;
 }
 
-// ═════════════════ LƯU TRỮ: máy này (IndexedDB) hoặc đồng bộ team (Firebase như CIC Analyzer) ═════════════════
+// ═════════════════ LƯU TRỮ: trình duyệt máy này (IndexedDB) + THƯ MỤC CHUNG của team (như CIC Analyzer) ═════════════════
+// Không máy chủ, không đăng nhập. Mỗi khách hàng / mỗi KUNN là một tệp JSON trong thư mục chung
+// (ổ mạng chung, thư mục OneDrive/Google Drive đồng bộ…). Máy nào sửa thì ghi đè tệp đó; máy khác quét
+// thư mục (tự động mỗi 30 giây, hoặc bấm "Đồng bộ ngay") và lấy bản có giờ sửa mới hơn.
+// Xóa = ghi tệp đánh dấu deleted (không xóa tệp) để máy khác biết mà xóa theo.
 class Emitter {
   constructor() { this.l = new Map(); }
   on(ev, cb) { if (!this.l.has(ev)) this.l.set(ev, new Set()); this.l.get(ev).add(cb); return () => this.l.get(ev).delete(cb); }
   emit(ev, ...a) { (this.l.get(ev) || []).forEach((cb) => { try { cb(...a); } catch (e) { console.error(e); } }); }
 }
-
+const live = (x) => x && !x.deleted;
 class LocalStore extends Emitter {
-  constructor() { super(); this.mode = 'local'; this.c = new Map(); this.k = new Map(); this.log = []; this.db = null; }
+  constructor() { super(); this.c = new Map(); this.k = new Map(); this.log = []; this.db = null; this.sync = null; }
   async init() {
     try {
       this.db = await new Promise((res, rej) => {
-        const r = indexedDB.open('bangke_gn', 1);
-        r.onupgradeneeded = () => { const d = r.result; for (const s of ['customers', 'kunn', 'log']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' }); };
+        const r = indexedDB.open('bangke_gn', 2);
+        r.onupgradeneeded = () => { const d = r.result; for (const s of ['customers', 'kunn', 'log', 'meta']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' }); };
         r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
       });
       const all = (s) => new Promise((res, rej) => { const q = this.db.transaction(s).objectStore(s).getAll(); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
@@ -960,159 +964,202 @@ class LocalStore extends Emitter {
       this.log = (await all('log')).sort((a, b) => b.at - a.at);
     } catch (e) { console.warn('IndexedDB không dùng được — dữ liệu chỉ giữ tới khi đóng trang', e); this.db = null; }
   }
-  _w(store, op, val) {
-    if (!this.db) return Promise.resolve();
-    return new Promise((res, rej) => { const t = this.db.transaction(store, 'readwrite'); const s = t.objectStore(store); op === 'put' ? s.put(val) : s.delete(val); t.oncomplete = res; t.onerror = () => rej(t.error); });
+  _w(store, vals) {
+    if (!this.db || !vals.length) return Promise.resolve();
+    return new Promise((res, rej) => { const t = this.db.transaction(store, 'readwrite'); const s = t.objectStore(store); vals.forEach((v) => s.put(v)); t.oncomplete = res; t.onerror = () => rej(t.error); });
   }
-  onCustomers(cb) { cb([...this.c.values()]); return this.on('c', () => cb([...this.c.values()])); }
-  onKunns(cid, cb) { const f = () => cb([...this.k.values()].filter((k) => k.customerId === cid)); f(); return this.on('k', f); }
+  async getMeta(id) { if (!this.db) return null; return new Promise((res) => { const q = this.db.transaction('meta').objectStore('meta').get(id); q.onsuccess = () => res(q.result ? q.result.v : null); q.onerror = () => res(null); }); }
+  async setMeta(id, v) { if (!this.db) return; await new Promise((res) => { const t = this.db.transaction('meta', 'readwrite'); v == null ? t.objectStore('meta').delete(id) : t.objectStore('meta').put({ id, v }); t.oncomplete = res; t.onerror = res; }); }
+  customers() { return [...this.c.values()].filter(live); }
+  kunnsOf(cid) { return [...this.k.values()].filter((k) => live(k) && k.customerId === cid); }
+  onCustomers(cb) { cb(this.customers()); return this.on('c', () => cb(this.customers())); }
+  onKunns(cid, cb) { const f = () => cb(this.kunnsOf(cid)); f(); return this.on('k', f); }
   onLog(cid, cb) { const f = () => cb(this.log.filter((x) => x.customerId === cid).slice(0, 300)); f(); return this.on('log', f); }
-  async getKunns(cid) { return [...this.k.values()].filter((k) => k.customerId === cid); }
-  async putCustomer(c) { this.c.set(c.id, structuredClone(c)); await this._w('customers', 'put', c); this.emit('c'); }
+  async getKunns(cid) { return this.kunnsOf(cid); }
+  _out(type, recs) { if (this.sync) this.sync.queue(type, recs); }
+  async putCustomer(c) { const x = structuredClone(c); this.c.set(x.id, x); await this._w('customers', [x]); this._out('kh', [x]); this.emit('c'); }
   async delCustomer(id) {
-    for (const k of [...this.k.values()]) if (k.customerId === id) { this.k.delete(k.id); await this._w('kunn', 'del', k.id); }
-    this.c.delete(id); await this._w('customers', 'del', id); this.emit('c'); this.emit('k');
+    const at = Date.now(), by = userName();
+    const ks = [...this.k.values()].filter((k) => k.customerId === id && live(k)).map((k) => ({ id: k.id, customerId: id, so_kunn: k.so_kunn, deleted: true, updatedAt: at, updatedBy: by }));
+    ks.forEach((k) => this.k.set(k.id, k));
+    const c = { id, name: (this.c.get(id) || {}).name || '', deleted: true, updatedAt: at, updatedBy: by };
+    this.c.set(id, c);
+    await this._w('kunn', ks); await this._w('customers', [c]);
+    this._out('ku', ks); this._out('kh', [c]);
+    this.emit('c'); this.emit('k');
   }
-  async putKunn(k) { this.k.set(k.id, structuredClone(k)); await this._w('kunn', 'put', k); this.emit('k'); }
   async putKunns(ks) {
-    for (const k of ks) this.k.set(k.id, structuredClone(k));
-    if (this.db) await new Promise((res, rej) => { const t = this.db.transaction('kunn', 'readwrite'); const s = t.objectStore('kunn'); ks.forEach((k) => s.put(k)); t.oncomplete = res; t.onerror = () => rej(t.error); });
-    this.emit('k');
+    const xs = ks.map((k) => structuredClone(k));
+    xs.forEach((k) => this.k.set(k.id, k));
+    await this._w('kunn', xs); this._out('ku', xs); this.emit('k');
   }
-  async updateKunn(id, patch) { const k = this.k.get(id); if (!k) return; Object.assign(k, patch); await this._w('kunn', 'put', k); this.emit('k'); }
-  async delKunn(id) { this.k.delete(id); await this._w('kunn', 'del', id); this.emit('k'); }
+  async putKunn(k) { return this.putKunns([k]); }
+  async updateKunn(id, patch) { const k = this.k.get(id); if (!live(k)) return; Object.assign(k, patch); await this.putKunns([k]); }
+  async delKunn(id) { const k = this.k.get(id); if (!k) return; await this.putKunns([{ id, customerId: k.customerId, so_kunn: k.so_kunn, deleted: true, updatedAt: Date.now(), updatedBy: userName() }]); }
   async patchLines(kid, patches, meta) {
-    const k = this.k.get(kid); if (!k) throw new Error('Không thấy KUNN');
+    const k = this.k.get(kid); if (!live(k)) throw new Error('Không thấy KUNN (có thể máy khác vừa xóa)');
     const by = new Map(patches.map((p) => [p.id, p]));
     k.lines = k.lines.map((l) => (by.has(l.id) ? { ...l, ...by.get(l.id), id: l.id } : l));
     Object.assign(k, meta);
-    await this._w('kunn', 'put', k); this.emit('k');
+    await this.putKunns([k]);
   }
-  async addLog(e) { const x = { id: BK.uid(12), ...e }; this.log.unshift(x); await this._w('log', 'put', x); this.emit('log'); }
-  async dump() { return { customers: [...this.c.values()], kunn: [...this.k.values()], log: this.log }; }
+  async addLog(e, fromSync) {
+    if (e.id && this.log.some((x) => x.id === e.id)) return;
+    const x = { id: BK.uid(12), dev: DEVICE, ...e };
+    this.log.unshift(x); this.log.sort((a, b) => b.at - a.at);
+    await this._w('log', [x]);
+    if (!fromSync && x.dev === DEVICE) this._out('nk', [x]);
+    this.emit('log');
+  }
+  /** Nhận bản ghi từ thư mục chung: chỉ lấy nếu mới hơn bản đang có. Trả về true nếu có thay đổi. */
+  async applyRemote(type, recs) {
+    const map = type === 'kh' ? this.c : this.k, store = type === 'kh' ? 'customers' : 'kunn';
+    const take = recs.filter((r) => r && r.id && (!map.has(r.id) || (r.updatedAt || 0) > (map.get(r.id).updatedAt || 0)));
+    take.forEach((r) => map.set(r.id, r));
+    await this._w(store, take);
+    return take.length;
+  }
+  async dump(withDeleted) {
+    const f = (xs) => (withDeleted ? xs : xs.filter(live));
+    return { customers: f([...this.c.values()]), kunn: f([...this.k.values()]), log: this.log };
+  }
 }
 
-// Firebase: cùng dự án với CIC Analyzer. Không có màn hình đăng nhập — tool tự đăng nhập ẩn danh.
-// Dữ liệu nằm trong bk_teams/<băm SHA-256 của mã nhóm>/… — ai có cùng mã nhóm thì thấy cùng dữ liệu.
-const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyB5Gix7lLBXxwZ8enqxwEJnRO2SmRcBc98',
-  authDomain: 'cic-analyzer.firebaseapp.com',
-  projectId: 'cic-analyzer',
-  storageBucket: 'cic-analyzer.firebasestorage.app',
-  messagingSenderId: '489855658362',
-  appId: '1:489855658362:web:da2541836b925b29324ec3',
-};
-const FB_VER = '10.12.2';
-function loadScript(src) {
-  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Không tải được ' + src)); document.head.appendChild(s); });
-}
-class CloudStore extends Emitter {
-  constructor(team) { super(); this.mode = 'cloud'; this.team = team; }
+const DEVICE = (() => { let d = lsGet('bangke_device_v1'); if (!d) { d = BK.uid(8); lsSet('bangke_device_v1', d); } return d; })();
+const SYNC_DIR = 'BangKe_GiaiNgan';
+class FolderSync extends Emitter {
+  constructor(store) {
+    super(); this.store = store; this.root = null; this.dir = null; this.state = 'off'; this.seen = new Map();
+    this.pending = new Map(); this.timer = null; this.poll = null; this.last = 0; this.people = {}; this.nFiles = 0; this.err = '';
+  }
+  get supported() { return typeof window.showDirectoryPicker === 'function'; }
   async init() {
-    if (!window.firebase || !firebase.firestore) {
-      for (const m of ['app', 'auth', 'firestore']) await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-${m}-compat.js`);
+    this.root = await this.store.getMeta('syncDir');
+    if (!this.root) return this._set('off');
+    if (await this._perm(false)) await this.start(); else this._set('reconnect');
+  }
+  async _perm(ask) {
+    const h = this.root;
+    if (!h || typeof h.queryPermission !== 'function') return !!h;
+    const o = { mode: 'readwrite' };
+    if ((await h.queryPermission(o)) === 'granted') return true;
+    return ask ? (await h.requestPermission(o)) === 'granted' : false;
+  }
+  _set(s, err = '') { this.state = s; this.err = err; this.emit('state'); }
+  async pick() {
+    if (!this.supported) throw new Error('Trình duyệt này không chọn được thư mục — dùng Chrome hoặc Edge trên máy tính.');
+    const h = await window.showDirectoryPicker({ id: 'bangke-gn', mode: 'readwrite' });
+    this.root = h; await this.store.setMeta('syncDir', h);
+    this.seen.clear();
+    await this.start();
+  }
+  async reconnect() { if (await this._perm(true)) await this.start(); else this._set('reconnect'); }
+  async disconnect() { clearInterval(this.poll); this.root = this.dir = null; await this.store.setMeta('syncDir', null); this.seen.clear(); this._set('off'); }
+  async start() {
+    try {
+      this.dir = await this.root.getDirectoryHandle(SYNC_DIR, { create: true });
+      this._set('on');
+      await this.pull();
+      await this.flush();
+      clearInterval(this.poll);
+      this.poll = setInterval(() => { if (document.visibilityState === 'visible') this.pull().catch(() => {}); }, 30000);
+    } catch (e) { console.error(e); this._set('error', e.message); }
+  }
+  get name() { return this.root ? this.root.name : ''; }
+  // ── ghi ra thư mục
+  queue(type, recs) {
+    if (type === 'nk') { for (const r of recs) this.pending.set(`nk_${r.customerId}_${DEVICE}`, { type: 'nk', cid: r.customerId }); }
+    else for (const r of recs) this.pending.set(`${type}_${r.id}`, { type, rec: r });
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush().catch((e) => this._set('error', e.message)), 400);
+  }
+  async flush() {
+    if (this.state !== 'on' || !this.dir || !this.pending.size) return;
+    const items = [...this.pending.entries()]; this.pending.clear();
+    for (const [name, it] of items) {
+      let data = it.rec;
+      if (it.type === 'nk') data = this.store.log.filter((x) => x.customerId === it.cid && x.dev === DEVICE);
+      const body = JSON.stringify({ app: 'bangke-gn', v: 1, type: it.type, by: userName(), dev: DEVICE, at: Date.now(), data });
+      const fh = await this.dir.getFileHandle(name + '.json', { create: true });
+      const w = await fh.createWritable(); await w.write(body); await w.close();
+      const f = await fh.getFile(); this.seen.set(name + '.json', { sig: f.lastModified + ':' + f.size, by: userName() });
     }
-    this.app = firebase.apps.find((a) => a.name === 'bangke') || firebase.initializeApp(FIREBASE_CONFIG, 'bangke');
-    this.fs = this.app.firestore();
-    try { this.fs.settings({ ignoreUndefinedProperties: true, merge: true }); } catch (e) { /* đã cấu hình */ }
-    try { await this.fs.enablePersistence({ synchronizeTabs: true }); } catch (e) { /* tab khác đã bật / trình duyệt không hỗ trợ */ }
-    try { if (!this.app.auth().currentUser) await this.app.auth().signInAnonymously(); } catch (e) { console.warn('Đăng nhập ẩn danh không được (chưa bật Anonymous trong Firebase?)', e); }
-    this.root = this.fs.collection('bk_teams').doc((await sha256hex('bangke:' + this.team)).slice(0, 40));
-    // thử đọc một lần để báo lỗi quyền sớm
-    await this.root.collection('customers').limit(1).get();
+    this.last = Date.now(); this.emit('state');
   }
-  _c() { return this.root.collection('customers'); }
-  _k(cid) { return this._c().doc(cid).collection('kunn'); }
-  _err(e) { this.emit('error', e); }
-  onCustomers(cb) { return this._c().onSnapshot((s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), (e) => this._err(e)); }
-  onKunns(cid, cb) { return this._k(cid).onSnapshot((s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), (e) => this._err(e)); }
-  onLog(cid, cb) { return this._c().doc(cid).collection('log').orderBy('at', 'desc').limit(300).onSnapshot((s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), (e) => this._err(e)); }
-  async getKunns(cid) { const s = await this._k(cid).get(); return s.docs.map((d) => ({ id: d.id, ...d.data() })); }
-  async putCustomer(c) { const { id, ...d } = c; await this._c().doc(id).set(d); }
-  async delCustomer(id) {
-    for (const sub of ['kunn', 'log']) {
-      const s = await this._c().doc(id).collection(sub).get();
-      for (let i = 0; i < s.docs.length; i += 400) { const b = this.fs.batch(); s.docs.slice(i, i + 400).forEach((d) => b.delete(d.ref)); await b.commit(); }
-    }
-    await this._c().doc(id).delete();
+  /** Gửi toàn bộ kho trên máy này lên thư mục. */
+  async pushAll() {
+    const d = await this.store.dump(true);
+    this.queue('kh', d.customers); this.queue('ku', d.kunn);
+    const cids = new Set(d.log.filter((x) => x.dev === DEVICE).map((x) => x.customerId));
+    cids.forEach((cid) => this.pending.set(`nk_${cid}_${DEVICE}`, { type: 'nk', cid }));
+    clearTimeout(this.timer); await this.flush();
+    return d.customers.length + d.kunn.length;
   }
-  async putKunn(k) {
-    const { id, ...d } = k;
-    if (JSON.stringify(d).length > 950000) throw new Error(`KUNN ${k.so_kunn} quá lớn (${d.lines.length} dòng) để lưu một lần — tách bảng kê làm 2 file`);
-    await this._k(k.customerId).doc(id).set(d);
-  }
-  async putKunns(ks) {
-    for (const k of ks) if (JSON.stringify(k).length > 950000) throw new Error(`KUNN ${k.so_kunn} quá lớn (${k.lines.length} dòng) để lưu một lần — tách bảng kê làm 2 file`);
-    for (let i = 0; i < ks.length; i += 15) {     // mỗi lần ghi ≤ 15 KUNN để không vượt giới hạn 10MB/lần của Firestore
-      const b = this.fs.batch();
-      ks.slice(i, i + 15).forEach(({ id, ...d }) => b.set(this._k(d.customerId).doc(id), d));
-      await b.commit();
-    }
-  }
-  async updateKunn(id, patch, cid) { await this._k(cid).doc(id).update(patch); }
-  async delKunn(id, cid) { await this._k(cid).doc(id).delete(); }
-  async patchLines(kid, patches, meta, cid) {
-    const ref = this._k(cid).doc(kid);
-    await this.fs.runTransaction(async (t) => {
-      const d = await t.get(ref);
-      if (!d.exists) throw new Error('KUNN đã bị xóa ở máy khác');
-      const by = new Map(patches.map((p) => [p.id, p]));
-      const lines = d.data().lines.map((l) => (by.has(l.id) ? { ...l, ...by.get(l.id), id: l.id } : l));
-      t.update(ref, { lines, ...meta });
-    });
-  }
-  async addLog(e) { if (!e.customerId) return; await this._c().doc(e.customerId).collection('log').add(e); }
-  async dump() {
-    const cs = (await this._c().get()).docs.map((d) => ({ id: d.id, ...d.data() }));
-    const kunn = [], log = [];
-    for (const c of cs) {
-      (await this._k(c.id).get()).docs.forEach((d) => kunn.push({ id: d.id, ...d.data() }));
-      (await this._c().doc(c.id).collection('log').get()).docs.forEach((d) => log.push({ id: d.id, ...d.data() }));
-    }
-    return { customers: cs, kunn, log };
+  // ── đọc từ thư mục
+  async pull() {
+    if (this.state !== 'on' || !this.dir) return 0;
+    if (this._pulling) return 0;
+    this._pulling = true;
+    let changed = 0, nLog = 0, n = 0;
+    const people = {};
+    try {
+      const kh = [], ku = [];
+      for await (const [name, h] of this.dir.entries()) {
+        if (h.kind !== 'file' || !/^(kh|ku|nk)_.+\.json$/.test(name)) continue;
+        n++;
+        const f = await h.getFile();
+        const sig = f.lastModified + ':' + f.size;
+        const cached = this.seen.get(name);
+        if (cached && cached.sig === sig) { if (cached.by) people[cached.by] = (people[cached.by] || 0) + 1; continue; }
+        let env;
+        try { env = JSON.parse(await f.text()); } catch (e) { continue; }   // tệp đang được máy khác ghi dở → lần sau đọc lại
+        if (!env || env.app !== 'bangke-gn') continue;
+        this.seen.set(name, { sig, by: env.by });
+        people[env.by || '?'] = (people[env.by || '?'] || 0) + 1;
+        if (env.type === 'kh') kh.push(env.data);
+        else if (env.type === 'ku') ku.push(env.data);
+        else if (env.type === 'nk' && env.dev !== DEVICE) for (const x of env.data || []) { const before = this.store.log.length; await this.store.addLog(x, true); if (this.store.log.length > before) nLog++; }
+      }
+      const a = await this.store.applyRemote('kh', kh), b = await this.store.applyRemote('ku', ku);
+      changed = a + b;
+      if (a) this.store.emit('c');
+      if (b) this.store.emit('k');
+      this.people = people; this.nFiles = n; this.last = Date.now(); this.emit('state');
+      if (changed || nLog) this.emit('pulled', { changed, nLog });
+    } catch (e) { console.error(e); this._set(/NotAllowed|permission/i.test(e.name + e.message) ? 'reconnect' : 'error', e.message); }
+    finally { this._pulling = false; }
+    return changed;
   }
 }
 
 // ═════════════════ TRẠNG THÁI ═════════════════
 const S = {
-  store: null, customers: [], cid: null, tab: 'kunn', kunns: [], an: null, logs: [],
+  store: null, sync: null, customers: [], cid: null, tab: 'kunn', kunns: [], an: null, logs: [],
   open: new Set(), q: '', fGoc: 'all', fFlag: false, fInv: 'all', qInv: '', unsubK: null, unsubL: null,
 };
 const cust = (id) => S.customers.find((c) => c.id === id);
 const sortCust = (a, b) => (a.name || '').localeCompare(b.name || '', 'vi');
 const sortKunnDesc = (a, b) => (b.ngay_gn || '').localeCompare(a.ngay_gn || '') || (b.createdAt || 0) - (a.createdAt || 0);
 
+function renderSyncPill() {
+  const p = $('#syncPill'), sy = S.sync;
+  const st = sy ? sy.state : 'off';
+  p.className = 'sync' + (st === 'on' ? ' on' : st === 'error' || st === 'reconnect' ? ' err' : '');
+  p.lastChild.textContent = st === 'on' ? `Thư mục chung: ${sy.name}${sy.last ? ' · ' + new Date(sy.last).toLocaleTimeString('vi-VN') : ''}`
+    : st === 'reconnect' ? `Bấm để kết nối lại thư mục “${sy.name}”` : st === 'error' ? 'Lỗi thư mục chung — bấm để xem' : 'Chỉ trên máy này';
+}
 async function startStore() {
-  const team = lsGet(LS.team).trim();
-  const pill = $('#syncPill');
-  if (S.unsubC) S.unsubC();
-  if (S.unsubK) S.unsubK(); if (S.unsubL) S.unsubL();
-  let st;
-  if (team) {
-    pill.className = 'sync'; pill.lastChild.textContent = 'Đang kết nối nhóm…';
-    try {
-      st = new CloudStore(team); await st.init();
-      pill.className = 'sync on'; pill.lastChild.textContent = `Đồng bộ nhóm “${team.length > 14 ? team.slice(0, 12) + '…' : team}”`;
-      st.on('error', (e) => { pill.className = 'sync err'; pill.lastChild.textContent = 'Lỗi đồng bộ'; toast(fbErr(e), 'err', 9000); });
-    } catch (e) {
-      console.error(e);
-      toast(fbErr(e) + ' — đang dùng dữ liệu trên máy này.', 'err', 10000);
-      pill.className = 'sync err'; pill.lastChild.textContent = 'Không vào được nhóm — dữ liệu máy này';
-      st = null;
-    }
-  }
-  if (!st) { st = new LocalStore(); await st.init(); if (!team) { pill.className = 'sync'; pill.lastChild.textContent = 'Chỉ trên máy này'; } }
+  const st = new LocalStore(); await st.init();
   S.store = st;
+  S.sync = st.sync = new FolderSync(st);
+  S.sync.on('state', () => { renderSyncPill(); const m = $('#syncBox'); if (m) renderSyncBox(m); });
+  S.sync.on('pulled', ({ changed, nLog }) => { if (changed) toast(`Đã cập nhật ${changed} hồ sơ từ thư mục chung`, 'ok'); else if (nLog && S.tab === 'log') renderMain(); });
   S.unsubC = st.onCustomers((cs) => { S.customers = cs.sort(sortCust); renderSide(); if (!S.cid) renderMain(); else if (!cust(S.cid)) selectCustomer(null); else renderHeaderOnly(); });
-  if (S.cid && cust(S.cid)) selectCustomer(S.cid); else renderMain();
+  st.on('k', () => { if (!S.cid) renderMain(); renderSide(); });
+  renderMain();
+  await S.sync.init();
 }
-function fbErr(e) {
-  const m = String(e && (e.code || e.message) || e);
-  if (/permission/i.test(m)) return 'Firebase từ chối quyền ghi/đọc bảng kê (chưa thêm luật Firestore cho bk_teams — xem hướng dẫn trong Cài đặt)';
-  if (/Không tải được/.test(m)) return 'Không tải được thư viện Firebase (mạng chặn gstatic.com?)';
-  if (/unavailable|offline|network/i.test(m)) return 'Mất kết nối máy chủ đồng bộ — thay đổi sẽ tự gửi khi có mạng lại';
-  return 'Lỗi đồng bộ: ' + m;
-}
+const errMsg = (e) => String((e && e.message) || e);
 const meta = () => ({ updatedAt: Date.now(), updatedBy: userName() });
 const log = (cid, action, text) => S.store.addLog({ customerId: cid, at: Date.now(), by: userName(), action, text }).catch(() => {});
 
@@ -1121,28 +1168,30 @@ function selectCustomer(id) {
   if (S.unsubK) S.unsubK(); if (S.unsubL) S.unsubL();
   S.kunns = []; S.an = null; S.logs = [];
   if (id) {
-    S.unsubK = S.store.onKunns(id, (ks) => { S.kunns = ks.sort(sortKunnDesc); S.an = BK.analyze(S.kunns); renderMain(); syncSummary(id); });
+    S.unsubK = S.store.onKunns(id, (ks) => { S.kunns = ks.sort(sortKunnDesc); S.an = BK.analyze(S.kunns); renderMain(); });
     S.unsubL = S.store.onLog(id, (ls) => { S.logs = ls; if (S.tab === 'log') renderMain(); });
   }
   renderSide(); renderMain();
 }
-// Tóm tắt lưu kèm hồ sơ khách hàng để trang Tổng quan không phải tải hết KUNN của mọi khách.
-// Chỉ ghi khi số liệu thực sự đổi → nhiều người cùng mở một khách hàng không ghi qua ghi lại.
-const sumKey = (s) => (s ? JSON.stringify({ ...s, at: 0 }) : '');
-function syncSummary(cid) {
-  const c = cust(cid); if (!c || cid !== S.cid) return;
-  const summary = BK.customerSummary(S.kunns, { hanNgay: hanNgay() });
-  if (sumKey(summary) === sumKey(c.summary)) return;
-  S.store.putCustomer({ ...c, summary }).catch((e) => toast(fbErr(e), 'err'));
+// Tóm tắt từng khách hàng cho trang Tổng quan — tính từ dữ liệu trên máy, nhớ tạm theo giờ sửa.
+const sumCache = new Map();
+function summaryOf(cid) {
+  const ks = S.store ? S.store.kunnsOf(cid) : [];
+  const key = ks.length + ':' + Math.max(0, ...ks.map((k) => k.updatedAt || 0)) + ':' + hanNgay() + ':' + BK.todayISO();
+  const c = sumCache.get(cid);
+  if (c && c.key === key) return c.s;
+  const s = ks.length ? BK.customerSummary(ks, { hanNgay: hanNgay() }) : null;
+  sumCache.set(cid, { key, s });
+  return s;
 }
-function refreshSummary() { /* tóm tắt tự cập nhật khi danh sách KUNN đổi (syncSummary) */ }
+function refreshSummary() { /* tổng quan tự tính lại (summaryOf) */ }
 
 // ═════════════════ GIAO DIỆN ═════════════════
 function renderSide() {
   const q = BK.fold($('#cSearch').value);
   $('#navAll').classList.toggle('act', !S.cid);
   $('#cList').innerHTML = S.customers.filter((c) => !q || BK.fold(c.name).includes(q) || (c.mst || '').includes(q)).map((c) => {
-    const s = c.summary || {};
+    const s = summaryOf(c.id) || {};
     const warn = (s.n_vuot || 0) > 0 ? ' <span class="pill p-err">!</span>' : (s.n_qua_han || 0) > 0 ? ' <span class="pill p-warn">⏱</span>' : '';
     return `<button class="citem ${c.id === S.cid ? 'act' : ''}" data-cid="${c.id}">${esc(c.name)}${warn}<small>${s.n_kunn != null ? `${s.n_kunn} KUNN · ${money(s.tong_gn)}` : 'chưa có số liệu'}</small></button>`;
   }).join('') || '<div class="muted" style="padding:10px;font-size:12.5px">Chưa có khách hàng. Bấm ＋ hoặc “Tải bảng kê lên”.</div>';
@@ -1165,11 +1214,11 @@ function editCustomer(c) {
     const name = $('#cfName', m).value.trim();
     if (!name) return toast('Nhập tên khách hàng', 'err');
     const o = { ...(c || { id: BK.uid(), createdAt: Date.now(), createdBy: userName() }), name, mst: $('#cfMst', m).value.trim(), bank: $('#cfBank', m).value.trim(), owner: $('#cfOwner', m).value.trim(), note: $('#cfNote', m).value.trim(), ...meta() };
-    try { await S.store.putCustomer(o); m.remove(); if (!c) selectCustomer(o.id); log(o.id, c ? 'sua_kh' : 'them_kh', `${c ? 'Sửa' : 'Thêm'} khách hàng ${name}`); } catch (e) { toast(fbErr(e), 'err'); }
+    try { await S.store.putCustomer(o); m.remove(); if (!c) selectCustomer(o.id); log(o.id, c ? 'sua_kh' : 'them_kh', `${c ? 'Sửa' : 'Thêm'} khách hàng ${name}`); } catch (e) { toast(errMsg(e), 'err'); }
   };
   if (c) $('#cfDel', m).onclick = async () => {
     if (!confirm(`Xóa khách hàng "${c.name}" cùng TOÀN BỘ khế ước, hóa đơn, nhật ký? Không hoàn tác được.`)) return;
-    try { await S.store.delCustomer(c.id); m.remove(); selectCustomer(null); toast('Đã xóa'); } catch (e) { toast(fbErr(e), 'err'); }
+    try { await S.store.delCustomer(c.id); m.remove(); selectCustomer(null); toast('Đã xóa'); } catch (e) { toast(errMsg(e), 'err'); }
   };
 }
 
@@ -1212,10 +1261,10 @@ function renderMain() {
 
 function dashboardHtml() {
   const cs = S.customers;
-  const tot = (k) => BK.sum(cs.map((c) => (c.summary || {})[k]));
+  const tot = (k) => BK.sum(cs.map((c) => (summaryOf(c.id) || {})[k]));
   const rows = cs.map((c) => {
-    const s = c.summary;
-    if (!s) return `<tr data-open="${c.id}" style="cursor:pointer"><td><b>${esc(c.name)}</b></td><td colspan="7" class="muted">Chưa có số liệu — mở khách hàng để tính</td></tr>`;
+    const s = summaryOf(c.id);
+    if (!s) return `<tr data-open="${c.id}" style="cursor:pointer"><td><b>${esc(c.name)}</b></td><td colspan="7" class="muted">Chưa có KUNN nào</td></tr>`;
     return `<tr data-open="${c.id}" style="cursor:pointer" class="${s.n_vuot ? 'bad' : s.n_qua_han ? 'warn' : ''}"><td><b>${esc(c.name)}</b><div class="hist">${esc(c.owner || '')}</div></td>
       <td class="num">${s.n_kunn}</td><td class="num">${money(s.tong_gn)}</td><td>${dd(s.last_gn)}</td>
       <td class="num">${s.n_mot_phan ? `${s.n_mot_phan} HĐ · ${money(s.con_lai)}` : '—'}</td>
@@ -1325,7 +1374,7 @@ function bindKunnEvents(body, an) {
     if (t.dataset.delk) {
       const k = S.kunns.find((x) => x.id === t.dataset.delk);
       if (!confirm(`Xóa KUNN ${k.so_kunn} (${k.lines.length} dòng)? Lịch sử giải ngân các hóa đơn trong KUNN này sẽ mất.`)) return;
-      try { await S.store.delKunn(k.id, S.cid); log(S.cid, 'xoa_kunn', `Xóa KUNN ${k.so_kunn} (${k.lines.length} dòng, ${money(BK.sum(k.lines.map((l) => l.tien_gn)))})`); refreshSummary(); } catch (er) { toast(fbErr(er), 'err'); }
+      try { await S.store.delKunn(k.id, S.cid); log(S.cid, 'xoa_kunn', `Xóa KUNN ${k.so_kunn} (${k.lines.length} dòng, ${money(BK.sum(k.lines.map((l) => l.tien_gn)))})`); refreshSummary(); } catch (er) { toast(errMsg(er), 'err'); }
     }
   };
   body.onchange = async (e) => {
@@ -1340,11 +1389,11 @@ function bindKunnEvents(body, an) {
 async function patch(kid, patches, what) {
   const k = S.kunns.find((x) => x.id === kid);
   try { await S.store.patchLines(kid, patches, meta(), S.cid); log(S.cid, 'sua_dong', `KUNN ${k ? k.so_kunn : ''}: ${what} (${patches.length} dòng)`); refreshSummary(); }
-  catch (e) { toast(fbErr(e), 'err'); }
+  catch (e) { toast(errMsg(e), 'err'); }
 }
 async function updKunn(kid, p, what) {
   const k = S.kunns.find((x) => x.id === kid);
-  try { await S.store.updateKunn(kid, { ...p, ...meta() }, S.cid); log(S.cid, 'sua_kunn', `KUNN ${k ? k.so_kunn : ''}: ${what}`); refreshSummary(); } catch (e) { toast(fbErr(e), 'err'); }
+  try { await S.store.updateKunn(kid, { ...p, ...meta() }, S.cid); log(S.cid, 'sua_kunn', `KUNN ${k ? k.so_kunn : ''}: ${what}`); refreshSummary(); } catch (e) { toast(errMsg(e), 'err'); }
 }
 async function setGoc(k, ids, v) {
   const today = BK.todayISO();
@@ -1633,7 +1682,7 @@ async function saveImport() {
     S.tab = 'kunn';
     selectCustomer(cid);
     setTimeout(refreshSummary, 300);
-  } catch (e) { toast(fbErr(e), 'err', 9000); btn.disabled = false; btn.textContent = 'Lưu vào bảng kê'; }
+  } catch (e) { toast(errMsg(e), 'err', 9000); btn.disabled = false; btn.textContent = 'Lưu vào bảng kê'; }
 }
 
 // ═════════════════ XUẤT EXCEL ═════════════════
@@ -1715,7 +1764,7 @@ function exportCustomer() {
 function exportDashboard() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, sheet('TỔNG QUAN BẢNG KÊ GIẢI NGÂN', stamp(), ['KHÁCH HÀNG', 'MST', 'PHỤ TRÁCH', 'SỐ KUNN', 'SỐ DÒNG', 'TỔNG GIẢI NGÂN', 'GN GẦN NHẤT', 'HĐ GN 1 PHẦN', 'CÒN LẠI CHƯA GN', 'LỖI VƯỢT/TRÙNG', 'NGHI TRÙNG', 'KUNN CHƯA ĐỦ HỒ SƠ', 'KUNN QUÁ HẠN', 'QUÁ HẠN LÂU NHẤT (NGÀY)'],
-    S.customers.map((c) => { const s = c.summary || {}; return [xc(c.name, { b: true }), xc(c.mst), xc(c.owner), xc(s.n_kunn), xc(s.n_lines), xc(s.tong_gn), xc(s.last_gn, { date: true }), xc(s.n_mot_phan), xc(s.con_lai), xc(s.n_vuot, { fill: s.n_vuot ? FILL.err : undefined }), xc(s.n_nghi), xc(s.n_pending), xc(s.n_qua_han, { fill: s.n_qua_han ? FILL.err : undefined }), xc(s.max_qua_han)]; }),
+    S.customers.map((c) => { const s = summaryOf(c.id) || {}; return [xc(c.name, { b: true }), xc(c.mst), xc(c.owner), xc(s.n_kunn), xc(s.n_lines), xc(s.tong_gn), xc(s.last_gn, { date: true }), xc(s.n_mot_phan), xc(s.con_lai), xc(s.n_vuot, { fill: s.n_vuot ? FILL.err : undefined }), xc(s.n_nghi), xc(s.n_pending), xc(s.n_qua_han, { fill: s.n_qua_han ? FILL.err : undefined }), xc(s.max_qua_han)]; }),
     [40, 14, 16, 8, 8, 18, 12, 10, 18, 10, 10, 12, 10, 12]), 'Tổng quan');
   download(wb, `BangKe_TongQuan_${BK.todayISO()}.xlsx`);
 }
@@ -1750,12 +1799,13 @@ async function restore(file) {
   } catch (e) { toast('Không nạp được: ' + e.message, 'err', 8000); }
 }
 async function mergeData(d) {
-  const curC = new Map(S.customers.map((c) => [c.id, c]));
-  for (const c of d.customers) { const o = curC.get(c.id); if (!o || (c.updatedAt || 0) >= (o.updatedAt || 0)) await S.store.putCustomer(c); }
-  const byCust = new Map();
-  for (const k of d.kunn) { if (!byCust.has(k.customerId)) byCust.set(k.customerId, await S.store.getKunns(k.customerId)); }
-  for (const k of d.kunn) { const o = byCust.get(k.customerId).find((x) => x.id === k.id); if (!o || (k.updatedAt || 0) >= (o.updatedAt || 0)) await S.store.putKunn(k); }
-  for (const x of (d.log || []).slice(0, 3000)) await S.store.addLog(x).catch(() => {});
+  const st = S.store;
+  const newer = (map, r) => !map.has(r.id) || (r.updatedAt || 0) > (map.get(r.id).updatedAt || 0);
+  const cs = d.customers.filter((c) => newer(st.c, c)), ks = d.kunn.filter((k) => newer(st.k, k));
+  await st.applyRemote('kh', cs); await st.applyRemote('ku', ks);
+  st._out('kh', cs); st._out('ku', ks);
+  for (const x of (d.log || []).slice(0, 5000)) await st.addLog(x, true).catch(() => {});
+  st.emit('c'); st.emit('k');
   if (S.cid) selectCustomer(S.cid);
 }
 $('#bBackup').onclick = () => backup().catch((e) => toast(e.message, 'err'));
@@ -1769,22 +1819,18 @@ function openSettings(focus) {
   const o = aiSettings();
   const mask = (k) => (k.length > 12 ? k.slice(0, 6) + '…' + k.slice(-4) : '••••');
   const curModel = o.model || AI_MODEL_FALLBACK;
-  const team = lsGet(LS.team);
   const m = modal(`<div class="mh"><h2>Cài đặt</h2><button class="x" data-close>&times;</button></div><div class="mb">
     <div class="sec" style="margin-top:0">1. API key Gemini</div>
-    <div class="hist" style="margin-bottom:8px">Lưu trên trình duyệt máy này (dùng chung với AI FinLens). Key hết lượt thì tool tự chuyển sang key bật kế tiếp. Lấy key miễn phí tại aistudio.google.com/apikey.</div>
+    <div class="hist" style="margin-bottom:8px">Lưu trên trình duyệt máy này . Key hết lượt thì tool tự chuyển sang key bật kế tiếp. Lấy key miễn phí tại aistudio.google.com/apikey.</div>
     <table class="t" style="margin-bottom:8px"><thead><tr><th>Dùng trước</th><th>Bật</th><th>Tên</th><th>Key</th><th></th></tr></thead><tbody>
     ${o.keys.map((k, i) => `<tr><td><input type="radio" name="sk-act" value="${i}" ${(o.active | 0) === i ? 'checked' : ''}></td><td><input type="checkbox" data-on="${i}" ${k.on !== false ? 'checked' : ''}></td><td>${esc(k.name) || '<i class="muted">(không tên)</i>'}</td><td class="mono">${esc(mask(k.key))}</td>
       <td><button class="btn sm" data-test="${i}">Thử</button> <button class="btn sm danger" data-del="${i}">Xóa</button> <span data-res="${i}" class="hist"></span></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Chưa có key nào.</td></tr>'}</tbody></table>
     <div class="bar"><input class="inp" id="skName" placeholder="Tên gợi nhớ" style="width:150px"><input class="inp" id="skKey" placeholder="Dán API key (AIza…) — nhiều key thì cách nhau dấu phẩy" style="flex:1;min-width:240px"><button class="btn pri" id="skAdd">Thêm key</button></div>
     <label class="f" style="max-width:320px">Model<select class="inp" id="skModel">${[...new Set([curModel, ...AI_MODELS])].map((x) => `<option ${x === curModel ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
-    <div class="sec">2. Đồng bộ dữ liệu cả team</div>
-    <div class="hist" style="margin-bottom:8px">Giống CIC Analyzer: dữ liệu lưu trên Firebase, ai mở tool cũng thấy bản mới nhất ngay lập tức — không cần đăng nhập. Cả team nhập <b>cùng một mã nhóm</b> (đặt khó đoán, như mật khẩu; chỉ người có mã mới xem được). Để trống = dữ liệu chỉ nằm trên máy này.</div>
-    <div class="grid2"><label class="f">Mã nhóm<input class="inp" id="skTeam" value="${esc(team)}" placeholder="vd: vib-qlkh-2026-xyz" autocomplete="off"></label>
-    <label class="f">Tên của bạn (ghi vào nhật ký)<input class="inp" id="skUser" value="${esc(lsGet(LS.user))}" placeholder="vd: Thu Hà"></label></div>
-    ${S.store && S.store.mode === 'local' && team === '' ? '' : ''}
-    <div class="note" style="font-size:12px">Lần đầu bật đồng bộ: chủ dự án Firebase <b>cic-analyzer</b> vào Firebase Console → Authentication → bật <b>Anonymous</b>; Firestore → Rules thêm:<br><span class="mono">match /bk_teams/{team}/{document=**} { allow read, write: if request.auth != null; }</span><br>Có dữ liệu cũ trên máy: sau khi vào nhóm bấm “Đẩy dữ liệu máy này lên nhóm”.</div>
-    <div class="bar"><button class="btn" id="skPush" ${S.store && S.store.mode === 'cloud' ? '' : 'disabled'}>⬆ Đẩy dữ liệu máy này lên nhóm</button></div>
+    <div class="sec">2. Thư mục chung (đồng bộ nhiều máy)</div>
+    <div class="hist" style="margin-bottom:8px">Như CIC Analyzer: cả team cùng chọn <b>một thư mục chung nội bộ</b> (ổ mạng chung, thư mục OneDrive / Google Drive đồng bộ…). Mỗi khách hàng, mỗi KUNN được ghi thành một tệp JSON trong thư mục con <b>BangKe_GiaiNgan</b>; máy khác tự quét về (30 giây/lần hoặc bấm “Đồng bộ ngay”). Không qua máy chủ nào. Cần Chrome hoặc Edge trên máy tính.</div>
+    <label class="f" style="max-width:340px">Tên của bạn (ghi vào từng tệp & nhật ký)<input class="inp" id="skUser" value="${esc(lsGet(LS.user))}" placeholder="vd: Thu Hà"></label>
+    <div id="syncBox" style="margin-top:10px"></div>
     <div class="sec">3. Hồ sơ gốc</div>
     <label class="f" style="max-width:320px">Hạn nộp hồ sơ gốc mặc định (số ngày sau giải ngân)<input class="inp" id="skHan" type="number" min="1" value="${hanNgay()}"></label>
     <div id="skMsg" class="hist" style="margin-top:8px"></div></div>
@@ -1814,27 +1860,52 @@ function openSettings(focus) {
     }
     out.textContent = ok ? `✓ chạy được (${ok})` : `✗ ${why}`; out.style.color = ok ? 'var(--ok)' : 'var(--err)';
   });
-  $('#skPush', m).onclick = async () => {
-    const loc = new LocalStore(); await loc.init(); const d = await loc.dump();
-    if (!d.customers.length) return toast('Máy này không có dữ liệu riêng để đẩy lên');
-    if (!confirm(`Đẩy ${d.customers.length} khách hàng, ${d.kunn.length} KUNN trên máy này lên nhóm?`)) return;
-    try { await mergeData(d); toast('Đã đẩy lên nhóm', 'ok'); } catch (e) { toast(fbErr(e), 'err'); }
-  };
+  renderSyncBox(m);
+  $('#skUser', m).onchange = (e) => lsSet(LS.user, e.target.value.trim());
   $('#skSave', m).onclick = async () => {
     collect(); aiSave(o);
     lsSet(LS.user, $('#skUser', m).value.trim());
     lsSet(LS.han, String(Math.max(1, +$('#skHan', m).value || 30)));
-    const nt = $('#skTeam', m).value.trim();
-    const changed = nt !== lsGet(LS.team);
-    lsSet(LS.team, nt);
     m.remove();
     toast('Đã lưu cài đặt', 'ok');
-    if (changed) await startStore(); else renderMain();
+    renderMain();
   };
   if (focus === 'ai') setTimeout(() => $('#skKey', m).focus(), 50);
 }
+function renderSyncBox(m) {
+  const box = $('#syncBox', m); if (!box) return;
+  const sy = S.sync; if (!sy) return;
+  const st = sy.state;
+  const chips = Object.entries(sy.people || {}).map(([n, c]) => `<span class="pill p-info">${esc(n)} <b>${c}</b></span>`).join(' ');
+  const info = st === 'on' ? `<b>✓ Đang kết nối: ${esc(sy.name)}</b><div class="hist">Lần đồng bộ cuối: ${sy.last ? new Date(sy.last).toLocaleString('vi-VN') : '—'} · ${sy.nFiles} tệp trong thư mục</div><div class="chips">${chips}</div>`
+    : st === 'reconnect' ? `<b>Thư mục “${esc(sy.name)}” cần cấp quyền lại</b><div class="hist">Trình duyệt hỏi lại quyền mỗi lần mở file — bấm “Kết nối lại”.</div>`
+    : st === 'error' ? `<b style="color:var(--err)">Lỗi thư mục chung</b><div class="hist">${esc(sy.err)}</div>`
+    : '<b>Chưa kết nối thư mục chung</b><div class="hist">Dữ liệu đang chỉ lưu trên trình duyệt máy này.</div>';
+  const btns = st === 'on' ? '<button class="btn pri" data-sy="pull">Đồng bộ ngay</button><button class="btn" data-sy="push">Gửi toàn bộ kho lên</button><button class="btn" data-sy="pick">Đổi thư mục</button><button class="btn danger" data-sy="off">Ngắt kết nối</button>'
+    : st === 'reconnect' ? '<button class="btn pri" data-sy="re">Kết nối lại</button><button class="btn" data-sy="pick">Chọn thư mục khác</button><button class="btn danger" data-sy="off">Ngắt kết nối</button>'
+    : '<button class="btn pri" data-sy="pick">📁 Chọn thư mục chung</button>' + (st === 'error' ? '<button class="btn danger" data-sy="off">Ngắt kết nối</button>' : '');
+  box.innerHTML = !sy.supported
+    ? '<div class="note err">Trình duyệt này không hỗ trợ chọn thư mục. Mở file bằng <b>Chrome</b> hoặc <b>Edge</b> trên máy tính. Tạm thời dùng Sao lưu / Nạp sao lưu để chuyển dữ liệu.</div>'
+    : `<div class="card" style="padding:12px 14px;border-left:4px solid ${st === 'on' ? 'var(--ok)' : st === 'off' ? 'var(--line)' : 'var(--err)'}">${info}<div class="bar" style="margin:10px 0 0">${btns}</div></div>`;
+  $$('[data-sy]', box).forEach((b) => { b.onclick = () => syncAction(b.dataset.sy, b); });
+}
+async function syncAction(a, btn) {
+  const sy = S.sync;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> ' + btn.textContent; }
+  try {
+    if (a === 'pick') {
+      await sy.pick();
+      toast(`Đã kết nối thư mục “${sy.name}”`, 'ok');
+      if (S.store.customers().length && confirm('Gửi toàn bộ dữ liệu đang có trên máy này lên thư mục chung để cả team thấy?')) await sy.pushAll();
+    } else if (a === 're') { await sy.reconnect(); if (sy.state === 'on') toast('Đã kết nối lại thư mục chung', 'ok'); }
+    else if (a === 'pull') { const n = await sy.pull(); await sy.flush(); if (!n) toast('Đã đồng bộ — không có gì mới'); }
+    else if (a === 'push') { const n = await sy.pushAll(); toast(`Đã gửi ${n} hồ sơ lên thư mục chung`, 'ok'); }
+    else if (a === 'off') { if (confirm('Ngắt kết nối thư mục chung? Dữ liệu trên máy này vẫn giữ nguyên.')) await sy.disconnect(); }
+  } catch (e) { if (e.name !== 'AbortError') toast(errMsg(e), 'err', 8000); }
+  const box = $('#syncBox'); if (box) renderSyncBox(box.closest('.modal'));
+}
 $('#bSettings').onclick = () => openSettings();
-$('#syncPill').onclick = () => openSettings();
+$('#syncPill').onclick = () => { if (S.sync && S.sync.state === 'reconnect') syncAction('re'); else openSettings(); };
 document.addEventListener('keydown', (e) => { if (e.altKey && e.key === 'F9') { e.preventDefault(); openSettings(); } });
 
 window.BKAPP = { exportDashboard, state: S, buildCustomerWorkbook };
