@@ -1,6 +1,6 @@
-# AI CIC Analyzer v7.8 — Diễn biến tín dụng theo thời gian
+# AI CIC Analyzer v7.9 — Diễn biến tín dụng theo thời gian
 
-File chạy độc lập: `cic/AI_CIC_Analyzer_v7.8.html` (mở trực tiếp trong trình duyệt, không cần server).
+File chạy độc lập: `cic/AI_CIC_Analyzer_v7.9.html` (mở trực tiếp trong trình duyệt, không cần server).
 Toàn bộ tính năng của bản 4.1 (1 KH · Nhóm KH · Theo thời kỳ · Lịch sử · Quản lý dữ liệu) giữ nguyên;
 bản 5.0 thêm chế độ thứ tư **Diễn biến**.
 
@@ -306,6 +306,20 @@ như đơ (máy ít dữ liệu / mạng nhanh thì không thấy). Đo với tr
 - Đo lại: đồng bộ không có gì mới 0,13 s; gửi toàn kho 8,8 s; máy thứ hai nhận đủ 568/568 bản tra trong 3,2 s; tệp từ máy bản cũ nhận đủ khi
   bấm tay. Mọi máy nên dùng cùng bản mới (máy bản cũ vẫn đồng bộ kiểu cũ — chậm).
 - Thư mục OneDrive / SharePoint: nên bật "Always keep on this device" cho thư mục chung, nếu không mỗi tệp chưa tải về sẽ bị tải lúc đọc.
+
+## v7.9 — Nhóm ẩn theo máy, gửi đủ bản tra, chọn bản tra đại diện tháng, dán ngay trong ô
+- **Xoá nhóm theo dõi = ẩn trên máy này** (mặc định): đồng bộ không kéo về lại, máy đồng nghiệp không mất nhóm. Trước đây xoá một nhóm
+  của đồng nghiệp ghi lệnh xoá lên thư mục chung (xoá cho mọi máy), rồi máy họ đẩy lại → nhóm "sống lại". Ô tuỳ chọn "Xoá luôn trên
+  thư mục chung" khi thật sự muốn xoá cho mọi máy. Dữ liệu › Nhóm theo dõi › "Nhóm đã ẩn" → Hiện lại.
+- **Gửi đủ bản tra**: trước đây chỉ gửi bản tra trong hàng đợi của phiên — bản nhập lúc chưa kết nối thư mục / mất quyền không bao giờ được
+  gửi (máy đồng nghiệp thiếu bản tra). Nay mỗi lần đồng bộ gửi mọi bản tra chưa gửi; tự đồng bộ khi mở tool và ngay sau mỗi lần nhập.
+  Lưu ý: máy chọn "Chỉ công ty thuộc nhóm theo dõi" chỉ gửi công ty có trong nhóm.
+- **Chọn bản tra đại diện tháng** (nút ⋯ ở ô Dư nợ theo công ty × kỳ): mặc định bản tra mới nhất của kỳ; chọn bản khác trong kỳ hoặc bản
+  của tháng liền trước / liền sau cách ranh giới tháng ≤ 10 ngày. Kỳ không có bản tra mặc định TRỐNG, chỉ có số khi tự chọn; ô được chọn
+  ghi "◆ chọn tra dd/mm". Lựa chọn lưu trên máy, áp cho mọi tab và file xuất.
+- **Dán S10A / R20 ngay trong ô kỳ thiếu**: kiểm tra đúng MST (sai MST thì không lưu), lưu vào kho, tự gửi lên thư mục chung; bản tra cách
+  kỳ ≤ 10 ngày tự chọn làm đại diện kỳ đó, xa hơn thì lưu vào kỳ của nó.
+- Bảng công ty × kỳ có cả khi xem 1 công ty; tooltip biểu đồ ghi đúng "kỳ xếp theo tháng tra / ngày số liệu".
 
 ## Lưu ý dữ liệu
 Dữ liệu CIC là dữ liệu khách hàng — **không commit** tệp JSON xuất ra vào repo này (repo công khai).

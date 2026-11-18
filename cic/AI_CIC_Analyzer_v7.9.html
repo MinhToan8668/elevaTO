@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIC Analyzer v7.8 — VIB Wholesale Banking</title>
+<title>CIC Analyzer v7.9 — VIB Wholesale Banking</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -1177,6 +1177,14 @@ body.tl-printing .tl-grid2>*{margin-bottom:.8rem}
 @media print{.tl-ctx{display:none}}
 .tls-prog{position:relative;margin-top:.45rem;height:18px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);overflow:hidden;font-size:.64rem;color:var(--tx2)}
 .tls-prog span{position:relative;z-index:1;padding:0 .45rem;line-height:16px}.tls-prog i{position:absolute;left:0;top:0;bottom:0;background:#cde2fb}
+.tl-mtx td{position:relative}
+.cpk{position:absolute;top:2px;left:3px;font-style:normal;font-size:.7rem;line-height:1;color:var(--tx3);cursor:pointer;opacity:0;padding:1px 3px;border-radius:4px}
+.tl-mtx td:hover .cpk{opacity:1}.cpk:hover{background:var(--bg);color:var(--ac)}
+.tl-tag.pk{color:#6250d6;font-weight:600}
+.cpk-opts{display:flex;flex-direction:column;gap:.35rem;margin:.4rem 0;font-size:.74rem}
+.cpk-opts label{display:flex;gap:.45rem;align-items:flex-start;cursor:pointer;padding:.25rem .4rem;border:1px solid var(--bd);border-radius:6px}
+.cpk-paste{margin-top:.5rem;font-size:.72rem}.cpk-paste summary{cursor:pointer;font-weight:600;color:var(--ac)}
+.cpk-paste textarea{width:100%;box-sizing:border-box;height:80px;margin-top:.35rem;font-size:.7rem;border:1px solid var(--bd);border-radius:6px;padding:.35rem}
 </style>
 <script>/* Bảo vệ font: một số máy (thường do phần mềm Adobe/Office cài kèm) có font bị lệch bảng mã — chữ hiện lệch 1 ký tự
    ("CIC Analyzer" thành "BHB @m`kxydq"). Tool không biết trước font nào hỏng, nên ĐO trực tiếp: font đúng thì chữ I hẹp
@@ -7449,7 +7457,7 @@ function doMergeGroup(){
 // Đọc một tệp JSON đặt ngoài (schema 7 khoá: active · id · title · type · content · latestVersion ·
 // downloadUrl). Bản nào thấp hơn latestVersion thì bị CHẶN; còn lại chỉ hiện thông báo đóng được.
 // Mất mạng hoặc tệp lỗi → KHÔNG chặn (fail-open), vì khoá người dùng vì sự cố mạng là tệ hơn.
-const APP_VERSION='7.8';
+const APP_VERSION='7.9';
 const ANNOUNCEMENT_URL='https://gist.githubusercontent.com/iamnga/3a875fab979de7f9f35a46523618fdf4/raw/cic-announcement.json';
 const DOWNLOAD_URL='https://vibonline.sharepoint.com/sites/WB-DS/Shared%20Documents/1.%20Product%20Development/6.%20WB%20Tools/AI%20CIC%20Analyzer';
 // So phiên bản theo TỪNG SỐ. Bản v3.1 so bằng chuỗi nên '3.1' < '10' cho kết quả SAI — đến phiên bản 10
@@ -8404,7 +8412,7 @@ function _syncPrimaryBtn(m){
    (khác với Lịch sử: cùng MST chỉ giữ bản mới nhất). "Nhóm theo dõi" chỉ là danh sách MST cố định →
    diễn biến của nhóm dựng thẳng từ kho, không cần người dùng sắp xếp hay dán lại gì.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
-const TL_VER='7.8';
+const TL_VER='7.9';
 // ─────────── 1. KHO BẢN TRA THEO THỜI GIAN (IndexedDB riêng, dự phòng localStorage) ───────────
 const _TL_DB='cic_timeline_db',_TL_STORE='snapshots',_TL_LS='cic_tl_snaps_v1';
 let _TL_CACHE=[],_TL_IDX=new Map(),_tlDBP=null,_TL_USE_LS=false,_TL_LOI='';
@@ -9514,9 +9522,9 @@ function tlHtmlCoMatrix(M){
     return {title:r.name+' · MST '+r.mst,name:'<a style="cursor:pointer;color:var(--ac);font-weight:600" onclick="tlFocusCo(\''+r.mst+'\')">'+_dmEsc(shortName(r.name).substring(0,40))+'</a>',
       fix:[_spark(cells,'#0A3A8C'),f!==l?_tlDelta(cells[l],cells[f]):'—',(cells[l]==null?'<span class="tl-mini" title="Chưa có bản tra kỳ '+A[l].label+'">chưa tra kỳ '+A[l].label+'</span>':((cells[l]||0)/tot1*100).toFixed(1).replace('.',',')+'%'),gTag],
       cells:r.cells.map((c,i)=>{const v=cells[i];
-        const tag=c.kind==='real'?'<span class="tl-tag r">● SL '+_tlDM(c.dd)+'</span>':c.kind==='cic'?'<span class="tl-tag i">◐ CIC 12T</span>':c.kind==='carry'?'<span class="tl-tag c">○ kéo '+_tlDM(c.dd)+'</span>':(c.stale?'<span class="tl-tag e">chưa tra</span>':'');
-        const tt=c.kind==='real'?'Bản tra ngày '+_tlDayLbl(c.qd)+' · số liệu TCTD đến '+_tlDayLbl(c.dd):c.kind==='cic'?'Nợ vay cuối tháng theo bảng 12 tháng in trên bản tra '+_tlDayLbl(c.qd)+(c.snap?' · ngoại bảng/TP/TSBĐ kéo từ bản '+_tlDayLbl(c.snap.day):' · chưa có bản tra trước đó nên chỉ có nợ vay'):c.kind==='carry'?'Không tra trong kỳ → kéo bản tra '+_tlDayLbl(c.qd)+' (cũ '+c.age+' tháng)':(c.stale?'Chưa có bản tra kỳ '+M.cols[i].label+' — để trống, không cộng vào tổng kỳ. Bản gần nhất: tra '+_tlDayLbl(c.stale.day)+', số liệu kỳ '+_tlMonLbl(_tlB(c.stale)):'Chưa có bản tra');
-        return {h:'<span class="d1">'+(v==null?'·':fmD(v))+'</span>'+(sub?(v!=null&&_tlPrevNN(cells,i)!=null?_tlDeltaS(v,_tlPrevNN(cells,i)):''):tag),cls:c.kind,title:tt};})};
+        const tag=(c.picked&&c.pickFrom?'<span class="tl-tag pk" title="Bạn chọn bản tra tháng liền kề làm đại diện kỳ này">◆ chọn tra '+_tlDM(c.pickFrom)+'</span>':c.picked?'<span class="tl-tag pk">◆ chọn tra '+_tlDM(c.qd)+'</span>':'')+(c.picked?'':c.kind==='real'?'<span class="tl-tag r">● SL '+_tlDM(c.dd)+'</span>':c.kind==='cic'?'<span class="tl-tag i">◐ CIC 12T</span>':c.kind==='carry'?'<span class="tl-tag c">○ kéo '+_tlDM(c.dd)+'</span>':(c.stale?'<span class="tl-tag e">chưa tra</span>':''));const pick='<i class="cpk" onclick="event.stopPropagation();cicCellPick(\''+r.mst+'\',\''+M.cols[i].key+'\')" title="Chọn bản tra đại diện kỳ '+M.cols[i].label+' / dán bản tra cho kỳ này">⋯</i>';
+        const tt=(c.picked?'Bản tra được CHỌN làm đại diện kỳ (bấm ⋯ để đổi) · ':'')+(c.kind==='real'?'Bản tra ngày '+_tlDayLbl(c.qd)+' · số liệu TCTD đến '+_tlDayLbl(c.dd):c.kind==='cic'?'Nợ vay cuối tháng theo bảng 12 tháng in trên bản tra '+_tlDayLbl(c.qd)+(c.snap?' · ngoại bảng/TP/TSBĐ kéo từ bản '+_tlDayLbl(c.snap.day):' · chưa có bản tra trước đó nên chỉ có nợ vay'):c.kind==='carry'?'Không tra trong kỳ → kéo bản tra '+_tlDayLbl(c.qd)+' (cũ '+c.age+' tháng)':(c.stale?'Chưa có bản tra kỳ '+M.cols[i].label+' — để trống, không cộng vào tổng kỳ. Bản gần nhất: tra '+_tlDayLbl(c.stale.day)+', số liệu kỳ '+_tlMonLbl(_tlB(c.stale)):'Chưa có bản tra'));
+        return {h:pick+'<span class="d1">'+(v==null?'·':fmD(v))+'</span>'+(sub?(v!=null&&_tlPrevNN(cells,i)!=null?_tlDeltaS(v,_tlPrevNN(cells,i)):''):tag),cls:c.kind,title:tt};})};
   });
   const tc=A.map(a=>a.has?_tlMv(a):null);
   rows.push({cls:'tot',name:'Toàn nhóm',fix:[_spark(tc,'#0A3A8C'),f!==l?_tlSameDelta(M,f,l,c=>_tlMv(c)):'—','100%',''],cells:tc.map((v,i)=>_tlCellSame(M,i,v,c=>_tlMv(c),'','',true))});
@@ -9625,12 +9633,11 @@ function tlRenderBody(keepTab){
     return;
   }
   const tabs=[['ov','Tổng quan'],['tctd','Dư nợ theo TCTD'],['co','Dư nợ theo công ty'],['od','Nợ quá hạn / nhóm ≥2'],['tsbd','Tài sản bảo đảm'],['cal','Độ phủ bản tra'],['src','Nguồn dữ liệu']];
-  if(M.scope.kind==='co'&&TL.tab==='co')TL.tab='ov';
   const keep={};if(keepTab)document.querySelectorAll('#tlBody .tl-mtx').forEach((m,i)=>{keep[i]=m.scrollLeft;});
-  let h='<div class="tl-tabs">'+tabs.filter(t=>!(t[0]==='co'&&M.scope.kind==='co')).map(t=>'<button class="tl-tab'+(TL.tab===t[0]?' on':'')+'" data-t="'+t[0]+'" onclick="tlTab(\''+t[0]+'\',this)">'+t[1]+'</button>').join('')+'</div>';
+  let h='<div class="tl-tabs">'+tabs.map(t=>'<button class="tl-tab'+(TL.tab===t[0]?' on':'')+'" data-t="'+t[0]+'" onclick="tlTab(\''+t[0]+'\',this)">'+t[1]+'</button>').join('')+'</div>';
   const pn=(id,html)=>'<div class="tl-pn'+(TL.tab===id?' on':'')+'" id="tlpn-'+id+'">'+(TL._print?'<h2 class="tl-ph">'+(tabs.find(t=>t[0]===id)||[])[1]+'</h2>':'')+(typeof _tlCtxStrip==='function'?_tlCtxStrip(M,id):'')+html+'</div>';
   h+=pn('ov',tlHtmlOverview(M))+pn('tctd',tlHtmlBankMatrix(M));
-  if(M.scope.kind!=='co')h+=pn('co',tlHtmlCoMatrix(M));
+  h+=pn('co',tlHtmlCoMatrix(M));
   h+=pn('od',typeof tlHtmlOverdue==='function'?tlHtmlOverdue(M):'')+pn('tsbd',tlHtmlColl(M))+pn('cal',tlHtmlCal(M));
   if(!TL._print)h+=pn('src',tlHtmlSources(M));
   const sy=window.scrollY;el.innerHTML=h;if(keepTab)window.scrollTo(0,sy);
@@ -10780,7 +10787,7 @@ _tlReady.then(()=>{const ch=[];_TL_CACHE.forEach(s=>{if(_tlFixGroups(s.S10A)){de
 })();
 // biểu đồ: nhãn trục X kèm ngày tra
 (function(){const _d=tlDrawCharts;tlDrawCharts=function(){_d();try{const M=tlModelCache;if(!M||!tlMainChart||M.gran!=='month')return;
-  tlMainChart.options.plugins.tooltip.callbacks.afterTitle=items=>{const k=items[0].dataIndex+(window._tlWinS||0);const q=[];M.rows.forEach(r=>{const x=r.cells[k];if(x&&x.kind==='real')q.push(x.qd);});q.sort();return q.length?'Ngày tra trong kỳ: '+_tlDM(q[0])+(q[0]!==q[q.length-1]?' → '+_tlDM(q[q.length-1]):'')+' (kỳ xếp theo ngày số liệu)':'';};tlMainChart.update('none');}catch(e){}};})();
+  tlMainChart.options.plugins.tooltip.callbacks.afterTitle=items=>{const k=items[0].dataIndex+(window._tlWinS||0);const q=[];M.rows.forEach(r=>{const x=r.cells[k];if(x&&x.kind==='real')q.push(x.qd);});q.sort();return q.length?'Ngày tra trong kỳ: '+_tlDM(q[0])+(q[0]!==q[q.length-1]?' → '+_tlDM(q[q.length-1]):'')+(TL.basis==='data'?' (kỳ xếp theo ngày số liệu)':' (kỳ xếp theo tháng tra)'):'';};tlMainChart.update('none');}catch(e){}};})();
 // Khung cảnh báo: nhóm nợ ≥2 của bản tra chưa có số tiền theo nhóm trong phạm vi đang xem → cần đối chiếu / dán lại
 function _tlOldGrpList(M){
   const out=[];const seen=new Set();
@@ -11552,7 +11559,8 @@ _tlsPull=async function(loud){
 // ── gửi lên: song song + cập nhật mục lục của máy này ──
 _tlsPushSnaps=async function(all){
   const pushed=(await _tlKv.get('sync.pushed'))||{};const user=_tlsSlug(_tlsUser());const snapDir=await _tlsSub('snap');let n=0,skip=0;
-  const list=(all?_TL_CACHE.slice():[..._tlsQ].map(k=>_TL_IDX.get(k)).filter(Boolean)).filter(s=>{if(!_tlsEligible(s)){skip++;return false;}if(String(s.src||'').startsWith('sync:')&&!all)return false;return pushed[s.key]!==s.t;});
+  // mọi bản tra chưa gửi (không chỉ hàng đợi của phiên này — bản nhập lúc chưa kết nối / mất quyền trước đây không bao giờ được gửi)
+  const list=_TL_CACHE.slice().filter(s=>{if(!_tlsEligible(s)){skip++;return false;}if(String(s.src||'').startsWith('sync:')&&!all)return false;return pushed[s.key]!==s.t;});
   const fname=s=>s.mst+'_'+s.day.replace(/-/g,'')+'_'+user+'.json';
   await _tlsPool(list,8,async s=>{const d=await snapDir.getDirectoryHandle(s.mst,{create:true});await _tlsWrite(d,fname(s),await _tlsEnc({v:1,by:_tlsUser(),at:Date.now(),mst:s.mst,name:s.name,ts:s.ts,S10A:s.S10A,R20:s.R20}));pushed[s.key]=s.t;n++;},(d,t)=>_tlsProg('Gửi bản tra',d,t));
   _tlsQ.clear();await _tlKv.set('sync.pushed',pushed);
@@ -11571,6 +11579,76 @@ _tlsPushSnaps=async function(all){
     p.innerHTML=_tlsProgHtml();el.querySelectorAll('button').forEach(b=>{if(/tlsSync/.test(b.getAttribute('onclick')||''))b.disabled=!!TLS.busy;});}catch(e){}};
   const _b=tlsBadge;tlsBadge=function(){_b();try{const b=document.getElementById('tlsBtn');if(b&&TLS.busy&&TLS.prog&&TLS.prog.t)b.lastChild.textContent='Đang đồng bộ '+TLS.prog.d+'/'+TLS.prog.t;}catch(e){}};
 })();
+
+
+/* ═══════════ v7.9 — NHÓM ẨN THEO MÁY · GỬI ĐỦ BẢN TRA · CHỌN BẢN TRA ĐẠI DIỆN THÁNG · DÁN NGAY TRONG Ô ═══════════ */
+// ── A) Xoá nhóm theo dõi = ẩn trên MÁY NÀY (mặc định): đồng bộ không kéo về lại, không xoá nhóm của máy khác ──
+const _GHID='cic_tl_grp_hidden';
+function _gHidden(){try{return JSON.parse(localStorage.getItem(_GHID)||'{}')||{};}catch(e){return {};}}
+function _gHideSet(h){try{localStorage.setItem(_GHID,JSON.stringify(h));}catch(e){}}
+tlgDel=function(){const g=_tlGroupOf(_tlgCur);if(!g)return;
+  _xnXoa({tieuDe:'Xoá nhóm theo dõi khỏi máy này?',ten:g.name+' · '+g.msts.length+' công ty',dong:['Không xoá bản tra nào trong kho','Đồng bộ thư mục chung sẽ KHÔNG kéo nhóm này về lại máy này','Máy đồng nghiệp vẫn giữ nhóm (trừ khi tích ô bên dưới)'],
+    than:'<label class="tl-mini" style="display:flex;gap:.45rem;align-items:center;margin-top:.5rem;cursor:pointer"><input type="checkbox" id="gDelShared"> Xoá luôn trên thư mục chung — mọi máy đồng bộ sẽ mất nhóm này</label>',
+    nhan:'Xoá khỏi máy này',ghiChu:'Hiện lại được ở Dữ liệu › Nhóm theo dõi › Nhóm đã ẩn.'}).then(ok=>{if(!ok)return;
+    const shared=!!(document.getElementById('gDelShared')||{}).checked;if(!shared){const h=_gHidden();h[g.id]={name:g.name,n:g.msts.length,t:Date.now()};_gHideSet(h);}
+    _tlGroupsSave(_tlGroups().filter(x=>x.id!==g.id));if(TL.scope.kind==='group'&&TL.scope.id===g.id)TL.scope={kind:'all',id:''};_tlgCur=null;
+    try{tlgRenderList();document.getElementById('tlgEdit').innerHTML='<div class="tl-empty" style="padding:1.6rem"><h3>Đã xoá nhóm "'+_dmEsc(g.name)+'"'+(shared?' trên mọi máy':' khỏi máy này')+'</h3></div>';}catch(e){}
+    _tlFillScopeSel();if(MODE==='timeline')tlRender();toast(shared?'Đã xoá nhóm "'+g.name+'" trên thư mục chung':'Đã ẩn nhóm "'+g.name+'" trên máy này — máy khác không bị ảnh hưởng');});};
+function cicUnhideGroup(id){const h=_gHidden();const x=h[id];delete h[id];_gHideSet(h);_tlKv.get('sync.gpushed').then(gm=>{gm=gm||{};delete gm[id];return _tlKv.set('sync.gpushed',gm);}).then(()=>{toast('Đã bỏ ẩn nhóm "'+((x&&x.name)||id)+'" — đồng bộ để nhận lại');if(TLS.state==='ready')tlsSync(true);});try{tlgRenderList();}catch(e){}}
+(function(){const _r=tlgRenderList;tlgRenderList=function(){_r();try{const el=document.getElementById('tlgList');const h=_gHidden();const ks=Object.keys(h);if(!el||!ks.length)return;
+  el.insertAdjacentHTML('beforeend','<div class="tl-hidden-g"><div class="tl-mini" style="font-weight:600;margin:.6rem 0 .3rem">Nhóm đã ẩn trên máy này ('+ks.length+') — đồng bộ không kéo về</div>'+ks.map(id=>'<div class="tg-row"><div class="i"><div class="n">'+_dmEsc(h[id].name||id)+'</div><div class="s">'+(h[id].n||'?')+' công ty · ẩn '+new Date(h[id].t).toLocaleDateString('vi-VN')+'</div></div><button class="btn btn-o" style="padding:.2rem .5rem;font-size:.66rem" onclick="cicUnhideGroup(\''+id+'\')">Hiện lại</button></div>').join('')+'</div>');}catch(e){}};})();
+_tlsPushGroups=async function(){const gd=await _tlsSub('groups');const mine=(await _tlKv.get('sync.gpushed'))||{};const hid=_gHidden();let n=0;
+  for(const g of _tlGroups()){if(mine[g.id]===g.t)continue;await _tlsWrite(gd,g.id+'.json',await _tlsEnc({v:1,by:_tlsUser(),at:Date.now(),group:g}));mine[g.id]=g.t;n++;}
+  for(const id of Object.keys(mine)){if(!_tlGroupOf(id)&&mine[id]!=='del'&&!hid[id]){await _tlsWrite(gd,id+'.json',await _tlsEnc({v:1,by:_tlsUser(),at:Date.now(),deleted:true,id}));mine[id]='del';n++;}}
+  await _tlKv.set('sync.gpushed',mine);return n;};
+// nhóm đã ẩn không được nhận về (bọc lưu nhóm: bỏ nhóm ẩn khi đang áp dữ liệu đồng bộ)
+(function(){const _gs=_tlGroupsSave;_tlGroupsSave=function(g){if(TLS._applying){const h=_gHidden();g=(g||[]).filter(x=>!h[x.id]);}return _gs(g);};})();
+// ── B) tự đồng bộ khi mở tool (sau khi kho sẵn sàng) ──
+_tlReady.then(()=>setTimeout(()=>{try{if(TLS.state==='ready')tlsSync(false);}catch(e){}},3000));
+// ── C) Chọn bản tra đại diện cho tháng (theo công ty) ──
+const _REPOV='cic_tl_repov';
+function _repOv(){try{return JSON.parse(localStorage.getItem(_REPOV)||'{}')||{};}catch(e){return {};}}
+function _repOvSet(o){try{localStorage.setItem(_REPOV,JSON.stringify(o));}catch(e){}}
+function _snapDate(s){return TL.basis==='data'?_tlDataInfo(s).ts:s.ts;}
+function _monRange(mon){const y=+mon.slice(0,4),m=+mon.slice(5,7);return [new Date(y,m-1,1).getTime(),new Date(y,m,1).getTime()-1];}
+// ứng viên: bản tra trong kỳ + bản tra tháng liền trước / liền sau cách ranh giới tháng ≤ 10 ngày
+function cicRepCands(mst,mon){const [a,b]=_monRange(mon);const D=10*864e5;const out=[];
+  _TL_CACHE.forEach(s=>{if(s.mst!==mst||!s.S10A)return;const t=_snapDate(s),bk=_tlB(s);let where=null,gap=0;
+    if(bk===mon)where='in';else if(t>=a-D&&t<a){where='prev';gap=Math.ceil((a-t)/864e5);}else if(t>b&&t<=b+D){where='next';gap=Math.ceil((t-b)/864e5);}
+    if(where)out.push({s,where,gap});});
+  return out.sort((x,y)=>(x.where==='in'?0:1)-(y.where==='in'?0:1)||y.s.ts-x.s.ts);}
+(function(){const _bm=tlBuildModel;tlBuildModel=function(opt){const ov=_repOv();const ks=Object.keys(ov).filter(k=>ov[k]);if(!ks.length)return _bm(opt);
+  const keep=_TL_CACHE;const drop=new Set(),add=[];
+  ks.forEach(k=>{const i=k.lastIndexOf('|');const mst=k.slice(0,i),mon=k.slice(i+1);const s=_TL_IDX.get(ov[k]);if(!s||s.mst!==mst||!s.S10A)return;
+    keep.forEach(x=>{if(x.mst===mst&&x!==s&&_tlB(x)===mon)drop.add(x);});
+    if(_tlB(s)!==mon){const v=Object.assign({},s,{mon,_pickFor:mon,_pickFrom:s.day});delete v._m;v._d=Object.assign({},_tlDataInfo(s),{mon,src:'pick'});add.push(v);}});
+  _TL_CACHE=keep.filter(x=>!drop.has(x)).concat(add);let M;try{M=_bm(opt);}finally{_TL_CACHE=keep;}
+  try{M.rows.forEach(r=>r.cells.forEach((c,ci)=>{const k=r.mst+'|'+M.cols[ci].key;if(c&&c.snap&&ov[k]&&c.snap.key===ov[k]){c.picked=true;if(c.snap._pickFrom)c.pickFrom=c.snap._pickFrom;}}));}catch(e){}
+  return M;};})();
+function cicCellPick(mst,mon){
+  const nm=_tlNameOfMst(mst);const C=cicRepCands(mst,mon);const ov=_repOv();const k=mst+'|'+mon;const cur=ov[k]||'';const hasIn=C.some(x=>x.where==='in');
+  const lab=x=>'Tra '+_tlDayLbl(x.s.day)+' · số liệu '+_tlDayLbl(_tlDD(x.s))+(x.s.R20?' · có R20':'')+' — '+(x.where==='in'?'trong kỳ':x.where==='prev'?'tháng trước, cách '+x.gap+' ngày':'tháng sau, cách '+x.gap+' ngày');
+  const opts='<div class="cpk-opts"><label><input type="radio" name="cpk" value=""'+(cur?'':' checked')+'> '+(hasIn?'Mặc định — bản tra mới nhất của kỳ':'Để trống (mặc định — không có bản tra trong kỳ)')+'</label>'
+    +C.map(x=>'<label><input type="radio" name="cpk" value="'+x.s.key+'"'+(cur===x.s.key?' checked':'')+'> '+_dmEsc(lab(x))+'</label>').join('')
+    +(C.some(x=>x.where!=='in')?'<div class="tl-mini" style="margin-top:.2rem">Chọn bản tra tháng liền kề: ô kỳ '+_tlMonLbl(mon)+' sẽ ghi rõ "chọn bản tra dd/mm" — số đó là của ngày tra ấy, không phải số cuối tháng.</div>':'')+'</div>'
+    +'<details class="cpk-paste"'+(C.length?'':' open')+'><summary>Dán bản tra cho kỳ '+_tlMonLbl(mon)+' (S10A, R20)</summary><textarea id="cpkS" placeholder="Dán nội dung S10A (Báo cáo chi tiết quan hệ tín dụng) của '+_dmEsc(shortName(nm))+'"></textarea><textarea id="cpkR" placeholder="Dán R20 (nếu có)"></textarea><div class="tl-mini">Tool kiểm tra đúng MST '+mst+', lưu vào kho và tự gửi lên thư mục chung.</div></details>';
+  _xnXoa({nhe:true,tieuDe:'Kỳ '+_tlMonLbl(mon)+' · '+shortName(nm).substring(0,40),ten:'MST '+mst,than:opts,nhan:'Áp dụng',nutKieu:'btn-p',ghiChu:'Lựa chọn chỉ áp cho máy này, cho mọi tab và file xuất.'}).then(ok=>{if(!ok)return;
+    const tS=(document.getElementById('cpkS')||{}).value||'',tR=(document.getElementById('cpkR')||{}).value||'';
+    if(tS.trim()||tR.trim()){_cpkPaste(mst,mon,tS,tR);return;}
+    const v=(document.querySelector('input[name="cpk"]:checked')||{}).value||'';const o=_repOv();if(v)o[k]=v;else delete o[k];_repOvSet(o);tlRender();
+    toast(v?'Kỳ '+_tlMonLbl(mon)+': dùng bản tra '+_tlDayLbl((_TL_IDX.get(v)||{}).day||''):'Kỳ '+_tlMonLbl(mon)+': về mặc định');});}
+function _cpkPaste(mst,mon,tS,tR){
+  let s=null,r=null;try{if(tS.trim()){if(!_isS10A(tS)){toast('⚠ Ô S10A không phải báo cáo S10A');return;}s=parseS10A(tS);}if(tR.trim()){if(!_isR20(tR)){toast('⚠ Ô R20 không phải báo cáo R20');return;}r=parseR20(tR);}}catch(e){toast('⚠ Không đọc được báo cáo: '+e.message);return;}
+  const mOf=x=>_normMstCic(x&&x.customer&&x.customer.taxCode);
+  if(s&&mOf(s)!==mst){toast('⚠ S10A là của MST '+mOf(s)+' ('+shortName(s.customer.name||'')+'), không phải '+mst+' — không lưu');return;}
+  if(r&&mOf(r)&&mOf(r)!==mst){toast('⚠ R20 là của MST '+mOf(r)+', không phải '+mst+' — không lưu');return;}
+  const res=_tlIngest([{s10a:s,r20:r,src:'single'}],'single');const sn=(res.new||[]).concat(res.upd||[]).filter(x=>x&&x.mst===mst&&x.S10A).pop()||(s?_tlSnapsOf(mst).filter(x=>_qDate(x.S10A)===_qDate(s)).pop():null);
+  if(sn){const bk=_tlB(sn);const o=_repOv();const k=mst+'|'+mon;
+    if(bk===mon){delete o[k];_repOvSet(o);toast('✓ Đã lưu bản tra '+_tlDayLbl(sn.day)+' vào kỳ '+_tlMonLbl(mon)+' — đang gửi lên thư mục chung');}
+    else if(cicRepCands(mst,mon).some(x=>x.s.key===sn.key)){o[k]=sn.key;_repOvSet(o);toast('✓ Bản tra '+_tlDayLbl(sn.day)+' thuộc kỳ '+_tlMonLbl(bk)+' (cách ranh giới ≤10 ngày) — đã chọn làm đại diện kỳ '+_tlMonLbl(mon));}
+    else toast('Bản tra '+_tlDayLbl(sn.day)+' thuộc kỳ '+_tlMonLbl(bk)+' (cách kỳ '+_tlMonLbl(mon)+' quá 10 ngày) — đã lưu vào kho ở kỳ '+_tlMonLbl(bk));}
+  else toast('✓ Đã lưu R20 vào kho');
+  try{tlRender();}catch(e){}}
 
 </script>
 </body>
