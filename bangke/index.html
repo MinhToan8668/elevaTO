@@ -141,7 +141,7 @@ table.click tbody tr{cursor:pointer}
 .verdict>div:first-child{display:flex;flex-direction:column;gap:3px;flex:1;min-width:280px}.vact{display:flex;gap:8px;flex-wrap:wrap}
 .verdict b{font-size:15px}.verdict span{font-size:12.5px}
 .verdict.err{background:var(--err-bg);border-color:#f0c4be;color:var(--err)}.verdict.warn{background:var(--warn-bg);border-color:#f0dcb0;color:#8a5a0c}.verdict.ok{background:var(--ok-bg);border-color:#cfe6d8;color:var(--ok)}
-.vcards{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:4px}
+.vcards{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-bottom:4px}
 @media(max-width:1100px){.vcards{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .vcard{text-align:left;border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:#fff;display:flex;flex-direction:column;gap:1px;border-top:3px solid var(--line)}
 .vcard b{font-size:20px;color:var(--navy)}.vcard span{font-size:12px;font-weight:600;color:var(--ink2)}.vcard em{font-style:normal;font-size:11.5px;color:var(--ink3)}
@@ -243,6 +243,7 @@ const BK = (() => {
     trung_file: { label: 'Trùng trong cùng bảng kê', sev: 3 },
     nghi_trung: { label: 'Nghi trùng (cùng số HĐ, khác ngày)', sev: 2 },
     thieu_tt: { label: 'Thiếu thông tin', sev: 2 },
+    lech_cot: { label: 'Đọc sai cột — cần kiểm tra', sev: 2 },
   };
 
   // ─── chuẩn hóa chữ ───────────────────────────────────────────
@@ -585,6 +586,29 @@ const BK = (() => {
         row: r + 1,
       };
       if (assumed.length) line.assumed = assumed;
+      // Dòng ghi lệch cột so với tiêu đề (hay gặp ở khối nhập khẩu ngoại tệ): số tờ khai 11–12 chữ số rơi vào cột tiền,
+      // số tiền có phần lẻ rơi vào cột số hóa đơn, chữ rơi vào cột tiền, số lạ rơi vào cột ngày.
+      const why = [];
+      const isId = (v) => typeof v === 'number' && Number.isInteger(v) && v >= 1e10 && v < 1e13;
+      const other = (v) => [line.tien_hd, line.tien_gn].filter((x) => x != null && x !== v && !isId(x));
+      for (const f of ['tien_hd', 'tien_gn']) {
+        const v = line[f];
+        if (isId(v) && (other(v).length === 0 || other(v).every((o) => v / Math.max(1, Math.abs(o)) > 1000))) {
+          why.push(`${f === 'tien_hd' ? 'cột tiền HĐ' : 'cột giải ngân'} chứa ${v} (giống số tờ khai)`);
+          line[f] = null;
+        }
+      }
+      const rawHd = get(row, 'so_hd');
+      if (!(assumed.includes('so_hd') || assumed.includes('so_hd_tiep')) && ((typeof rawHd === 'number' && !Number.isInteger(rawHd)) || /^\d+[.,]\d{1,2}$/.test(String(rawHd).trim()))) why.push(`số HĐ “${rawHd}” giống số tiền`);
+      const rawGn = get(row, 'tien_gn');
+      if (map.tien_gn != null && typeof rawGn === 'string' && rawGn.trim() && parseAmount(rawGn) == null) why.push(`cột giải ngân chứa chữ “${rawGn.trim().slice(0, 24)}”`);
+      const rawNg = get(row, 'ngay_hd');
+      if (typeof rawNg === 'number' && rawNg > 80000 && !assumed.includes('so_hd')) why.push(`cột ngày HĐ chứa ${rawNg}`);
+      if (why.length) {
+        line.lech = why.join('; ');
+        if (line.tien_gn == null && line.tien_hd != null && !assumed.includes('tien_gn')) line.tien_gn = line.tien_hd;
+        if (assumed.includes('tien_gn') && why.some((w) => /giải ngân/.test(w))) line.tien_gn = null;
+      }
       cur.lines.push(line);
     }
     const out = groups.filter((g) => g.lines.length);
@@ -671,6 +695,7 @@ const BK = (() => {
       (k.lines || []).forEach((l, i) => {
         const key = strongKey(l);
         const lid = l.id || `${k.id}#${i}`;
+        if (l.lech) { lineInfo.set(lid, { key: '', status: 'lech_cot', flags: ['lech_cot'] }); return; }
         if (!key) { lineInfo.set(lid, { key: '', status: 'thieu_tt', flags: ['thieu_tt'] }); return; }
         let iv = inv.get(key);
         if (!iv) {
@@ -761,7 +786,7 @@ const BK = (() => {
     const base = existingKunns.filter((k) => !replacing.has(normKunn(k.so_kunn)));
     const res = analyze([...base, ...pending]);
     const invByKey = new Map(res.invoices.map((iv) => [iv.key, iv]));
-    const counts = { moi: 0, tiep: 0, vuot: 0, da_du: 0, trung_file: 0, nghi_trung: 0, thieu_tt: 0 };
+    const counts = { moi: 0, tiep: 0, vuot: 0, da_du: 0, trung_file: 0, nghi_trung: 0, thieu_tt: 0, lech_cot: 0 };
     const out = pending.map((k, gi) => ({
       ...newGroups[gi],
       exists: existingKunns.some((e) => normKunn(e.so_kunn) && normKunn(e.so_kunn) === normKunn(newGroups[gi].so_kunn)),
@@ -838,7 +863,7 @@ const BK = (() => {
       id: l.id && !String(l.id).startsWith('__new') ? l.id : uid(),
       stt: l.stt || '', ncc: l.ncc || '', mst_ncc: l.mst_ncc || '', so_hdmb: l.so_hdmb || '', ky_hieu: l.ky_hieu || '',
       so_hd: l.so_hd || '', ngay_hd: l.ngay_hd || '', tien_hd: l.tien_hd ?? null, tien_gn: l.tien_gn ?? null,
-      loai_tien: l.loai_tien || '', goc: l.goc || 'chua', thieu: l.thieu || '', ngay_nhan: l.ngay_nhan || '', ghi_chu: l.ghi_chu || '',
+      loai_tien: l.loai_tien || '', goc: l.goc || 'chua', thieu: l.thieu || '', ngay_nhan: l.ngay_nhan || '', ghi_chu: l.ghi_chu || '', lech: l.lech || '',
     };
     return o;
   }
@@ -1806,7 +1831,7 @@ function kunnCard(k, s, an, q) {
       return `<tr class="${sev >= 3 ? 'bad' : sev === 2 ? 'warn' : ''}"><td><input type="checkbox" data-sel="${l.id}"></td><td>${esc(l.stt)}</td><td>${esc(l.ncc)}${l.mst_ncc ? `<div class="hist">MST ${esc(l.mst_ncc)}</div>` : ''}</td><td>${esc(l.so_hdmb)}</td>
       <td><b>${esc(l.so_hd)}</b>${l.ky_hieu ? `<div class="hist">${esc(l.ky_hieu)}</div>` : ''}</td><td>${dd(l.ngay_hd)}</td><td class="num">${money(l.tien_hd, l.loai_tien)}</td><td class="num"><b>${money(l.tien_gn, l.loai_tien)}</b>${l.loai_tien && !/VN/.test(l.loai_tien) ? ' ' + esc(l.loai_tien) : ''}</td>
       <td class="num">${money(li.luy_ke_sau, l.loai_tien)}</td><td class="num">${li.con_lai_sau != null ? money(li.con_lai_sau, l.loai_tien) : ''}</td>
-      <td>${flagPill(li.status || 'moi')}${historyHtml(li, an, l.id)}</td>
+      <td>${flagPill(li.status || 'moi')}${l.lech ? `<div class="hist" style="color:var(--warn);max-width:220px">${esc(l.lech)}</div>` : ''}${historyHtml(li, an, l.id)}<div><button class="lnk" data-editl="${k.id}|${l.id}">✎ Sửa dòng</button></div></td>
       <td><select class="cell-in" data-goc="${k.id}|${l.id}">${Object.entries(BK.GOC).map(([v, t]) => `<option value="${v}" ${l.goc === v ? 'selected' : ''}>${t}</option>`).join('')}</select>${l.ngay_nhan ? `<div class="hist">nhận ${dd(l.ngay_nhan)}</div>` : ''}</td>
       <td><input class="cell-in" data-thieu="${k.id}|${l.id}" value="${esc(l.thieu)}" placeholder="vd: Biên bản giao hàng"></td>
       <td><input class="cell-in" data-note="${k.id}|${l.id}" value="${esc(l.ghi_chu)}"></td></tr>`; }).join('')}
@@ -1831,6 +1856,7 @@ function bindKunnEvents(body, an) {
       if (!ids.length) return toast('Chưa chọn dòng nào (tick ô đầu dòng)');
       await setGoc(k, ids, t.dataset.v); return;
     }
+    if (t.dataset.editl) { const [kid, lid] = t.dataset.editl.split('|'); return editLine(kid, lid); }
     if (t.dataset.selall) { $$(`[data-k="${t.dataset.selall}"] [data-sel]`, body).forEach((c) => { c.checked = t.checked; }); return; }
     if (t.dataset.delk) {
       const k = S.kunns.find((x) => x.id === t.dataset.delk);
@@ -1845,6 +1871,23 @@ function bindKunnEvents(body, an) {
     else if (t.dataset.note != null) { const [kid, lid] = t.dataset.note.split('|'); await patch(kid, [{ id: lid, ghi_chu: t.value.trim() }], 'sửa ghi chú dòng'); }
     else if (t.dataset.han != null) { await updKunn(t.dataset.han, { han_bs: t.value }, `đặt hạn bổ sung ${dd(t.value) || '(bỏ)'}`); }
     else if (t.dataset.knote != null) { await updKunn(t.dataset.knote, { ghi_chu: t.value.trim() }, 'sửa ghi chú KUNN'); }
+  };
+}
+function editLine(kid, lid) {
+  const k = S.kunns.find((x) => x.id === kid); const l = k && k.lines.find((x) => x.id === lid); if (!l) return;
+  const f = (id, lab, v, type = 'text') => `<label class="f">${lab}<input class="inp" id="${id}" type="${type}" value="${esc(v ?? '')}"></label>`;
+  const m = modal(`<div class="mh"><h2>Sửa dòng — KUNN ${esc(k.so_kunn)}</h2><button class="x" data-close>&times;</button></div><div class="mb">
+    ${l.lech ? `<div class="note warn">Tool đọc dòng này bị lệch cột: ${esc(l.lech)}. Nhập lại đúng các ô dưới đây.</div>` : ''}
+    <div class="grid2">${f('elNcc', 'Nhà cung cấp', l.ncc)}${f('elHdmb', 'Số hợp đồng / ĐĐH', l.so_hdmb)}${f('elSo', 'Số hóa đơn *', l.so_hd)}${f('elKh', 'Ký hiệu / nội dung', l.ky_hieu)}
+    ${f('elNg', 'Ngày hóa đơn', l.ngay_hd, 'date')}${f('elCur', 'Loại tiền (để trống = VND)', l.loai_tien)}${f('elHd', 'Số tiền hóa đơn', l.tien_hd != null ? BK.fmtMoney(l.tien_hd, l.loai_tien) : '')}${f('elGn', 'Số tiền giải ngân', l.tien_gn != null ? BK.fmtMoney(l.tien_gn, l.loai_tien) : '')}</div></div>
+    <div class="mf"><button class="btn" data-close>Hủy</button><button class="btn pri" id="elSave">Lưu dòng</button></div>`, 'sm');
+  $('#elSave', m).onclick = async () => {
+    const so = $('#elSo', m).value.trim();
+    if (!so) return toast('Nhập số hóa đơn', 'err');
+    const p = { id: lid, ncc: $('#elNcc', m).value.trim(), so_hdmb: $('#elHdmb', m).value.trim(), so_hd: so, ky_hieu: $('#elKh', m).value.trim(), ngay_hd: $('#elNg', m).value,
+      loai_tien: $('#elCur', m).value.trim().toUpperCase(), tien_hd: BK.parseAmount($('#elHd', m).value), tien_gn: BK.parseAmount($('#elGn', m).value), lech: '' };
+    m.remove();
+    await patch(kid, [p], `sửa tay dòng HĐ ${so}`);
   };
 }
 async function patch(kid, patches, what) {
@@ -2012,13 +2055,14 @@ const VERDICT = [
   ['trung_file', 'Kê trùng trong bảng kê', 'Một hóa đơn xuất hiện 2 lần trong file này', 'err'],
   ['nghi_trung', 'Nghi trùng', 'Cùng NCC & số HĐ nhưng khác ngày — xem có phải cùng hóa đơn', 'warn'],
   ['thieu_tt', 'Thiếu thông tin', 'Thiếu số HĐ / NCC — không đối chiếu được', 'warn'],
+  ['lech_cot', 'Đọc sai cột', 'Dòng ghi lệch cột so với tiêu đề — sửa tay hoặc nhờ AI đọc', 'warn'],
   ['tiep', 'GN tiếp phần còn lại', 'Hóa đơn đã GN 1 phần, lần này GN tiếp trong số còn lại', 'info'],
   ['moi', 'Hóa đơn mới', 'Chưa từng giải ngân', 'ok'],
 ];
 function verdictHtml(ch) {
   const all = ch.groups.flatMap((g) => g.lines);
   const n = all.length, sumOf = (st) => BK.sum(all.filter((l) => st.includes(l.check.status)).map((l) => l.tien_gn));
-  const err = ['da_du', 'vuot', 'trung_file'], warn = ['nghi_trung', 'thieu_tt'];
+  const err = ['da_du', 'vuot', 'trung_file'], warn = ['nghi_trung', 'thieu_tt', 'lech_cot'];
   const nErr = all.filter((l) => err.includes(l.check.status)).length, nWarn = all.filter((l) => warn.includes(l.check.status)).length;
   const okSum = BK.sum(all.filter((l) => !err.includes(l.check.status)).map((l) => l.tien_gn));
   const acts = nErr ? `<div class="vact"><button class="btn pri" data-save="skip">⬆ Nạp ${n - nErr} dòng hợp lệ (${money(okSum)}), bỏ ${nErr} dòng lỗi</button><button class="btn" data-save="all">Nạp cả ${n} dòng</button></div>`
@@ -2040,6 +2084,7 @@ function checkExplain(l) {
     case 'tiep': return `Đã GN ${money(c.luy_ke_truoc, cur)}, còn ${money(c.con_lai_truoc, cur)} → lần này ${money(l.tien_gn, cur)}`;
     case 'nghi_trung': return '<b style="color:var(--warn)">Cùng số HĐ, khác ngày với hóa đơn đã có</b>';
     case 'thieu_tt': return 'Thiếu số hóa đơn / nhà cung cấp';
+    case 'lech_cot': return `<b style="color:var(--warn)">Dòng ghi lệch cột: ${esc(l.lech)}</b> — sửa tay sau khi nạp, hoặc bấm “✨ AI đọc toàn bộ”`;
     default: return 'Chưa từng giải ngân';
   }
 }

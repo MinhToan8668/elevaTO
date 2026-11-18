@@ -329,5 +329,12 @@ test('kiểm tra xong nạp luôn: bỏ các dòng lỗi, chỉ nạp dòng hợ
   assert.match(body, /502/);
   assert.doesNotMatch(body, /501/, 'dòng lỗi không được nạp');
   assert.match(await page.locator('.tab', { hasText: 'Cảnh báo' }).innerText(), /Cảnh báo\s*0/);
+  // sửa tay một dòng
+  await k.locator('[data-editl]').first().click();
+  await page.fill('#elSo', '503');
+  await page.fill('#elGn', '650');
+  await page.click('#elSave');
+  await page.locator('.kunn', { hasText: 'KUNN KU-B' }).locator('tbody', { hasText: '503' }).waitFor();
+  assert.match(await page.locator('.kunn', { hasText: 'KUNN KU-B' }).locator('tbody').innerText(), /503[\s\S]*700[\s\S]*650/);
   await ctx.close();
 });
