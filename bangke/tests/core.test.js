@@ -233,3 +233,21 @@ test('kiểm tra dữ liệu đã nạp: ngoại tệ chưa ghi loại tiền, K
   assert.deepEqual(BK.kunnFixPatches(ks[3], { action: 'hd_from_gn' }).map((x) => x.tien_hd), [100, 20]);
   assert.equal(p.fields.find((f) => f.k === 'tien_hd').bad, 2, '2 dòng số lẻ không ghi loại tiền');
 });
+
+test('tiêu đề phụ giữa sheet: hàng chứa số KUNN + tiêu đề riêng của khối, có (USD) → đọc đúng cột, không gộp nhầm KUNN', () => {
+  const head = ['', 'SỐ KUNN', 'NGÀY GIẢI NGÂN', 'NGÀY ĐẾN HẠN', 'SỐ TIỀN', 'STT', 'NHÀ CUNG CẤP', 'SỐ HỢP ĐỒNG/  ĐĐH', 'HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN (VNĐ)', 'SỐ TIỀN GIẢI  NGÂN (VNĐ)'];
+  const r = BK.autoParseSheet([head,
+    ['', 'K-34', 45120, 45300, 100, 1, 'Công ty A', 'HĐ 1', '34', 45110, 100, 100],
+    ['', 'K-35', 45205, 45387, 9000, 'STT', 'ĐỐI TÁC', 'SỐ HỢP ĐỒNG', 'GIÁ TRỊ HỢP ĐỒNG', 'SỐ TỜ KHAI', 'SỐ TIỀN TRÊN TỜ KHAI (USD)', 'SỐ HÓA ĐƠN', 'SỐ TIỀN TRÊN INVOICE (USD)', '', 'SỐ TIỀN TT (USD)'],
+    [],
+    ['', '', '', '', '', 1, 'STAR CO LTD', 'SOI 027/2023', 17640, 105599426110, 9000, 'SOI 027B/2023', 9000, '', 17640],
+    ['', '', '', '', '', 2, 'STAR CO LTD', 'SOI 027/2023', '', 105598263520, 8640, 'SOI 027A/2023', 8640],
+    ['', 'K-36', 45210, 45400, 50, 1, 'Công ty B', 'HĐ 2', '36', 45200, 50, 50],
+  ]);
+  assert.deepEqual(r.groups.map((g) => [g.so_kunn, g.lines.length]), [['K-34', 1], ['K-35', 2], ['K-36', 1]]);
+  const [a, b] = r.groups[1].lines;
+  assert.deepEqual([a.so_hd, a.tien_hd, a.tien_gn, a.loai_tien, a.lech], ['SOI 027B/2023', 9000, 9000, 'USD', undefined], 'số TT 17.640 ghi gộp cho 2 invoice → chia lại');
+  assert.deepEqual([b.so_hd, b.tien_hd, b.tien_gn, b.loai_tien], ['SOI 027A/2023', 8640, 8640, 'USD']);
+  assert.match(a.ghi_chu, /TK 105599426110/);
+  assert.equal(r.groups[2].lines[0].loai_tien, '', 'KUNN sau quay về cột của tiêu đề chính');
+});
