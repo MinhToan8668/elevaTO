@@ -136,14 +136,15 @@ function doPost(e) {
     else if (b.action === 'lib_forget') data = khoBo(b.key, b.id);
     else if (b.action === 'up_ve') data = guiVe(b.key, b.info);
     else if (b.action === 'up_xong') data = guiXong(b.key, b.d, b.s, b.fids);
+    else if (b.action === 'up_phan') data = guiPhanQuaGoogle(b.key, b.d, b.s, b.i, b.data);
     else return json({ ok: false, error: 'unknown action', code: 'session' });
     return json({ ok: true, data: data });
   } catch (err) {
     var msg = String(err && err.message || err);
-    var m = msg.match(/^(KEY|PHIEN): ?/);
+    var m = msg.match(/^(KEY|PHIEN|HETHAN): ?/);
     if (!m) ghiLoi(b.action, err);
-    return json({ ok: false, error: msg.replace(/^(KEY|PHIEN): ?/, ''),
-                  code: m ? (m[1] === 'KEY' ? 'key' : 'session') : 'retry' });
+    return json({ ok: false, error: msg.replace(/^(KEY|PHIEN|HETHAN): ?/, ''),
+                  code: m ? ({ KEY: 'key', PHIEN: 'session', HETHAN: 'het_han' })[m[1]] : 'retry' });
   }
 }
 
@@ -586,22 +587,21 @@ function guiVe(key, info) {
   if (size > UP_MAX_BYTES) throw new Error('PHIEN: File lớn quá ' + Math.round(UP_MAX_BYTES / 1048576) + 'MB');
   var ten = String(info.name || '').replace(/[\\\/\u0000-\u001f]/g, ' ').trim().slice(0, 200) || 'file';
   var url = props().getProperty(PROP_WORKER), biMat = props().getProperty(PROP_SECRET), chat = props().getProperty(PROP_CHAT);
-  if (!url || !biMat) {
-    throw new Error('PHIEN: Chưa cài Worker — gửi thẳng lên Telegram cần WORKER_URL, WORKER_SECRET (xem upload/README.md, mục Tải thẳng)');
+  if (!biMat) {
+    throw new Error('PHIEN: Chưa cài bí mật ký vé — điền WORKER_SECRET rồi chạy lại caiDat (xem upload/README.md, mục Tải thẳng)');
   }
   if (!chat || !props().getProperty(PROP_TOKEN)) throw new Error('PHIEN: Chưa chạy caiDat');
   var ve = { k: 'up', id: 'u' + Utilities.getUuid().replace(/-/g, '').slice(0, 24), n: ten, s: size,
              p: Math.max(1, Math.ceil(size / TG_PART)), ps: TG_PART, c: String(chat),
              e: Date.now() + VE_GUI_GIO * 3600000 };
   var d = Utilities.base64EncodeWebSafe(Utilities.newBlob(JSON.stringify(ve)).getBytes());
-  return { url: url.replace(/\/taive\/?$/, '') + '/tailen', d: d, s: kyVe(d, biMat), id: ve.id, parts: ve.p, ps: ve.ps };
+  return { url: url ? url.replace(/\/taive\/?$/, '') + '/tailen' : '', d: d, s: kyVe(d, biMat), id: ve.id, parts: ve.p, ps: ve.ps };
 }
 
-/** Gửi đủ phần: ghi file vào kho (kèm file_id từng phần để Tải thẳng lấy về) và nhắn Telegram. */
-function guiXong(key, d, s, fids) {
-  kiemKey(key);
+/** Kiểm chữ ký và mở vé gửi (dùng chung cho gửi qua Google và báo xong). */
+function docVeGui(d, s) {
   var biMat = props().getProperty(PROP_SECRET);
-  if (!biMat) throw new Error('PHIEN: Chưa cài Worker');
+  if (!biMat) throw new Error('PHIEN: Chưa cài bí mật ký vé');
   d = String(d || '');
   var bo = function (x) { return String(x || '').replace(/=+$/, ''); };
   if (!d || bo(kyVe(d, biMat)) !== bo(s)) throw new Error('PHIEN: Vé gửi không hợp lệ');
@@ -609,6 +609,46 @@ function guiXong(key, d, s, fids) {
   try { ve = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(d)).getDataAsString('UTF-8')); }
   catch (e) { throw new Error('PHIEN: Vé gửi hỏng'); }
   if (!ve || ve.k !== 'up' || !/^[\w-]{1,100}$/.test(String(ve.id || ''))) throw new Error('PHIEN: Vé gửi hỏng');
+  return ve;
+}
+
+/**
+ * Đường dự phòng khi mạng chặn Worker (workers.dev — hay gặp ở mạng công ty): trang gửi nguyên một
+ * phần (≤19MB, base64) cho Apps Script, Apps Script đẩy thẳng vào Telegram. Vẫn KHÔNG qua Drive.
+ * Trả { fid } hoặc { ma: 'cham', sau } khi Telegram bảo chờ.
+ */
+function guiPhanQuaGoogle(key, d, s, i, data) {
+  kiemKey(key);
+  var ve = docVeGui(d, s);
+  if (!(Number(ve.e) > Date.now())) throw new Error('HETHAN: Vé gửi đã hết hạn');
+  i = Number(i);
+  if (Math.floor(i) !== i || i < 0 || i >= ve.p) throw new Error('PHIEN: Số phần không hợp lệ');
+  var can = Math.min(ve.ps, ve.s - i * ve.ps);
+  var bytes;
+  try { bytes = Utilities.base64Decode(String(data || '')); } catch (e) { throw new Error('Dữ liệu phần ' + (i + 1) + ' hỏng'); }
+  if (bytes.length !== can) throw new Error('Phần ' + (i + 1) + ' thiếu dữ liệu (' + bytes.length + '/' + can + ' byte)');
+  var ten = ve.p === 1 ? ve.n : ve.n + '.' + ('00' + (i + 1)).slice(-3);
+  var token = props().getProperty(PROP_TOKEN);
+  if (!token) throw new Error('PHIEN: Chưa chạy caiDat');
+  var res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendDocument', {
+    method: 'post', muteHttpExceptions: true,
+    payload: { chat_id: String(ve.c), disable_content_type_detection: 'true',
+               caption: ve.p === 1 ? ve.n + ' (' + mbText(ve.s) + ')' : ve.n + ' — phần ' + (i + 1) + '/' + ve.p,
+               document: Utilities.newBlob(bytes, 'application/octet-stream', ten) }
+  });
+  var ma = res.getResponseCode(), j = null;
+  try { j = JSON.parse(res.getContentText()); } catch (e) { /* trang lỗi lạ */ }
+  if (ma === 200 && j && j.ok && j.result && j.result.document) return { fid: j.result.document.file_id };
+  var mo = (j && j.description) || ('lỗi ' + ma);
+  if (ma === 429) return { ma: 'cham', sau: (j && j.parameters && j.parameters.retry_after) || 5, loi: 'Telegram bảo chờ' };
+  if (ma === 400 || ma === 401 || ma === 403) throw new Error('PHIEN: Telegram từ chối: ' + mo);
+  throw new Error('Telegram chưa nhận phần ' + (i + 1) + ' (' + mo + ')');
+}
+
+/** Gửi đủ phần: ghi file vào kho (kèm file_id từng phần để Tải thẳng lấy về) và nhắn Telegram. */
+function guiXong(key, d, s, fids) {
+  kiemKey(key);
+  var ve = docVeGui(d, s);
   if (props().getProperty(LIB_PREFIX + ve.id)) return { id: ve.id };   // gửi lại câu "xong" lần nữa: đã ghi rồi
   if (!Array.isArray(fids) || fids.length !== ve.p ||
       !fids.every(function (f) { return /^[\w-]{10,300}$/.test(String(f || '')); })) {

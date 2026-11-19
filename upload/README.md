@@ -15,8 +15,10 @@ lớn hơn thành các phần `.001`, `.002`… trong chat.
 - Phần nào lỗi (mạng chập, Telegram bận/429, vé hết hạn) thì gửi lại riêng phần đó.
 - Đóng tab giữa chừng: mở lại trang, chọn **đúng file đó** → **Tải lên** là gửi tiếp phần còn
   thiếu (mã các phần đã gửi được nhớ trong trình duyệt).
-- Mạng chặn `*.workers.dev` (hay gặp ở mạng công ty) thì không gửi được — trang báo rõ sau vài
-  giây. Dùng 4G / mạng nhà.
+- Mạng chặn `*.workers.dev` hoặc **cho file đi nhưng nuốt câu trả lời** (hay gặp ở mạng công ty —
+  Telegram nhận rồi mà trang tưởng lỗi, gửi lại thành nhiều bản): trang thử Worker trước, phần đầu
+  gửi một mình; không đọc được trả lời thì chuyển sang **gửi qua Apps Script** (máy chủ Google đẩy
+  thẳng vào Telegram, vẫn không qua Drive) và nhớ 3 ngày. Trùng tối đa 1 bản ở lần đầu.
 
 **Vì sao 19MB một phần:** bot gửi lên Telegram được tới 50MB/file, nhưng bot chỉ **lấy về** được
 file ≤20MB. Phần to hơn 20MB thì Tải thẳng không lấy lại được nữa — nên giữ 19MB. Muốn phần
