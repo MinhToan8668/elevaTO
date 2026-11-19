@@ -134,6 +134,8 @@ svg.viz{width:100%;height:auto;display:block}svg .ax{font-size:11px;fill:#8C7E71
 table.click tbody tr{cursor:pointer}
 .vtip{position:fixed;z-index:300;pointer-events:none;background:#14233a;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:var(--shm);display:none;max-width:320px}
 .spark{display:block}
+.grid-b table.t td:first-child{min-width:150px;max-width:230px}.grid-b .tw{overflow-x:auto}
+.hdr-in{row-gap:8px}
 .dec{display:inline-flex;gap:4px}.dec button{border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-size:12px;background:#fff;font-weight:600;color:var(--ink2);white-space:nowrap}
 .dec.sm button{padding:1px 7px}.dec button.y:hover{border-color:var(--ok);color:var(--ok)}.dec button.n:hover{border-color:var(--err);color:var(--err)}
 .dec button.y.on{background:var(--ok);border-color:var(--ok);color:#fff}.dec button.n.on{background:var(--err);border-color:var(--err);color:#fff}
@@ -157,7 +159,7 @@ table.click tbody tr{cursor:pointer}
 .conf{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}.conf.hi{background:var(--ok-bg);color:var(--ok)}.conf.mid{background:var(--warn-bg);color:var(--warn)}.conf.lo{background:var(--err-bg);color:var(--err)}
 
 .mapbox summary{cursor:pointer;list-style:none}.mapbox summary::before{content:'▸ ';color:var(--ink3)}.mapbox[open] summary::before{content:'▾ '}
-.hsearch input{border:0;border-radius:9px;padding:7px 12px;width:240px;background:rgba(255,255,255,.95);color:var(--ink);font-size:13px}
+.hsearch input{border:0;border-radius:9px;padding:7px 12px;width:210px;background:rgba(255,255,255,.95);color:var(--ink);font-size:13px}
 .chctl{display:flex;gap:6px;flex-wrap:wrap}.chctl .inp{width:auto;padding:4px 8px;font-size:12.5px}
 .verdict{border-radius:12px;padding:12px 16px;margin:6px 0 10px;display:flex;gap:12px;border:1px solid;align-items:center;flex-wrap:wrap}
 .verdict>div:first-child{display:flex;flex-direction:column;gap:3px;flex:1;min-width:280px}.vact{display:flex;gap:8px;flex-wrap:wrap}
@@ -200,8 +202,6 @@ svg .hit.go{cursor:pointer}svg .hit.go:hover{fill:rgba(0,91,170,.06)}
   <button class="hbtn" id="bCheck">🔍 Kiểm tra bảng kê</button>
   <button class="hbtn pri" id="bImport">⬆ Nạp bảng kê</button>
   <button class="hbtn" id="bExport">⬇ Xuất Excel</button>
-  <button class="hbtn" id="bBackup" title="Sao lưu toàn bộ dữ liệu ra file (.json)">Sao lưu</button>
-  <button class="hbtn" id="bRestore" title="Nạp file sao lưu (gộp vào dữ liệu hiện có)">Nạp sao lưu</button>
   <button class="hbtn" id="bUndo" title="Hoàn tác (Ctrl+Z)" disabled>↶</button><button class="hbtn" id="bRedo" title="Làm lại (Ctrl+Y)" disabled>↷</button>
   <button class="hbtn" id="bSettings" title="API key Gemini, mã nhóm đồng bộ (Alt+F9)">⚙ Cài đặt</button>
 </div></header>
@@ -3100,8 +3100,7 @@ async function mergeData(d) {
   st.emit('c'); st.emit('k');
   if (S.cid) selectCustomer(S.cid);
 }
-$('#bBackup').onclick = () => backup().catch((e) => toast(e.message, 'err'));
-$('#bRestore').onclick = () => $('#fileRestore').click();
+
 $('#fileRestore').onchange = (e) => { if (e.target.files[0]) restore(e.target.files[0]); e.target.value = ''; };
 $('#bImport').onclick = () => openImport();
 $('#bCheck').onclick = () => openImport(S.cid || '', true);
@@ -3165,7 +3164,10 @@ function openSettings(focus) {
     <div class="hist" style="margin-bottom:8px">Như CIC Analyzer: cả team cùng chọn <b>một thư mục chung nội bộ</b> (ổ mạng chung, thư mục OneDrive / Google Drive đồng bộ…). Mỗi khách hàng, mỗi KUNN được ghi thành một tệp JSON trong thư mục con <b>BangKe_GiaiNgan</b>; máy khác tự quét về (30 giây/lần hoặc bấm “Đồng bộ ngay”). Không qua máy chủ nào. Cần Chrome hoặc Edge trên máy tính.</div>
     <label class="f" style="max-width:340px">Tên của bạn (ghi vào từng tệp & nhật ký)<input class="inp" id="skUser" value="${esc(lsGet(LS.user))}" placeholder="vd: Thu Hà"></label>
     <div id="syncBox" style="margin-top:10px"></div>
-    <div class="sec">3. Hồ sơ gốc</div>
+    <div class="sec">3. Sao lưu dữ liệu</div>
+    <div class="hist" style="margin-bottom:6px">Xuất toàn bộ dữ liệu ra 1 file .json (để chuyển máy / gửi người chưa vào thư mục chung) hoặc nạp file sao lưu — gộp theo bản sửa sau cùng.</div>
+    <div class="bar"><button class="btn" id="skBackup">⬇ Sao lưu ra file</button><button class="btn" id="skRestore">⬆ Nạp file sao lưu</button></div>
+    <div class="sec">4. Hồ sơ gốc</div>
     <label class="f" style="max-width:320px">Hạn nộp hồ sơ gốc mặc định (số ngày sau giải ngân)<input class="inp" id="skHan" type="number" min="1" value="${hanNgay()}"></label>
     <div id="skMsg" class="hist" style="margin-top:8px"></div></div>
     <div class="mf"><button class="btn" data-close>Đóng</button><button class="btn pri" id="skSave">Lưu cài đặt</button></div>`, 'sm');
@@ -3195,6 +3197,8 @@ function openSettings(focus) {
     out.textContent = ok ? `✓ chạy được (${ok})` : `✗ ${why}`; out.style.color = ok ? 'var(--ok)' : 'var(--err)';
   });
   renderSyncBox(m);
+  $('#skBackup', m).onclick = () => backup().catch((e) => toast(e.message, 'err'));
+  $('#skRestore', m).onclick = () => { m.remove(); $('#fileRestore').click(); };
   $('#skUser', m).onchange = (e) => lsSet(LS.user, e.target.value.trim());
   $('#skSave', m).onclick = async () => {
     collect(); aiSave(o);
