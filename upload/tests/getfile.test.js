@@ -170,11 +170,15 @@ function napGui(them = {}) {
       sleep() {}, getUuid: () => '0123abcd-4567-89ef-0123-456789abcdef',
       base64EncodeWebSafe: b64,
       base64DecodeWebSafe: (s) => [...Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64')],
-      newBlob: (x) => ({ getBytes: () => [...Buffer.from(x)], getDataAsString: () => Buffer.from(x).toString('utf8') }),
+      newBlob: (x, type, name) => ({ getBytes: () => [...Buffer.from(x)], getDataAsString: () => Buffer.from(x).toString('utf8'), name, len: x.length }),
+      base64Decode: (t) => [...Buffer.from(t, 'base64')],
       computeHmacSha256Signature: (d, k) => [...createHmac('sha256', k).update(d).digest()],
     },
     Logger: { log() {} }, console: { error() {} },
-    UrlFetchApp: { fetch: (u, o) => { nhan.push(JSON.parse(o.payload).text); return { getResponseCode: () => 200, getContentText: () => '{"ok":true}' }; } },
+    UrlFetchApp: { fetch: (u, o) => {
+      if (/sendDocument$/.test(u)) { const t = ctx.traLoiTg ? ctx.traLoiTg(o.payload) : [200, { ok: true, result: { document: { file_id: 'FID_qua_google_' + o.payload.document.name.length } } }];
+        nhan.push(o.payload); return { getResponseCode: () => t[0], getContentText: () => JSON.stringify(t[1]) }; }
+      nhan.push(JSON.parse(o.payload).text); return { getResponseCode: () => 200, getContentText: () => '{"ok":true}' }; } },
   };
   vm.createContext(ctx);
   vm.runInContext(readFileSync(PATH, 'utf8'), ctx, { filename: PATH });
@@ -195,7 +199,7 @@ test('vé gửi: đúng số phần 19MB, chat, đường /tailen; tên bẩn đ
   assert.ok(r.e > Date.now() + 3600000, 'vé đủ dài cho file lớn mạng chậm');
   assert.throws(() => ctx.guiVe('k', { name: 'x', size: 0 }), /không hợp lệ/);
   assert.throws(() => ctx.guiVe('k', { name: 'x', size: 3 * 1024 ** 3 }), /lớn quá/);
-  assert.throws(() => napGui({ TAIVE_SECRET: null }).ctx.guiVe('k', { name: 'x', size: 5 }), /Chưa cài Worker/);
+  assert.throws(() => napGui({ TAIVE_SECRET: null }).ctx.guiVe('k', { name: 'x', size: 5 }), /Chưa cài bí mật/);
 });
 
 test('vé Apps Script ký được Worker nhận thật (cùng bí mật, cùng kiểu base64)', async () => {
@@ -236,4 +240,29 @@ test('gửi xong: ghi vào kho + mã từng phần (đủ cho Tải thẳng), l�
   // vé tải ký bằng cùng bí mật không được dùng làm vé gửi
   const veTai = ctx.khoVeTaiThang('k', v.id, true);
   assert.throws(() => ctx.guiXong('k', veTai.d, veTai.s, fids), /hỏng/);
+});
+
+test('đường Google (mạng chặn Worker): Apps Script đẩy thẳng phần vào Telegram, không qua Drive', () => {
+  const { ctx, nhan } = napGui({ TAIVE_WORKER_URL: null });
+  const v = ctx.guiVe('k', { name: 'Bảng.xlsx', size: 30 });
+  assert.equal(v.url, '', 'chưa cài Worker vẫn cấp vé — trang đi đường Google');
+  const ok = ctx.guiPhanQuaGoogle('k', v.d, v.s, 0, Buffer.alloc(30, 7).toString('base64'));
+  assert.ok(ok.fid);
+  const pl = nhan.at(-1);
+  assert.deepEqual([pl.chat_id, pl.document.name, pl.document.len, pl.caption], ['-100777', 'Bảng.xlsx', 30, 'Bảng.xlsx (0.0MB)'.replace('0.0MB', pl.caption.match(/\((.+)\)/)[1])]);
+  assert.throws(() => ctx.guiPhanQuaGoogle('k', v.d, v.s, 0, Buffer.alloc(29).toString('base64')), /thiếu dữ liệu/);
+  assert.throws(() => ctx.guiPhanQuaGoogle('k', v.d, v.s, 1, ''), /Số phần/);
+  assert.throws(() => ctx.guiPhanQuaGoogle('k', v.d, v.s.slice(0, -3) + 'AAA', 0, ''), /không hợp lệ/);
+  ctx.traLoiTg = () => [429, { ok: false, description: 'Too Many Requests', parameters: { retry_after: 9 } }];
+  assert.deepEqual({ ...ctx.guiPhanQuaGoogle('k', v.d, v.s, 0, Buffer.alloc(30).toString('base64')) }, { ma: 'cham', sau: 9, loi: 'Telegram bảo chờ' });
+  ctx.traLoiTg = () => [400, { ok: false, description: 'chat not found' }];
+  assert.throws(() => ctx.guiPhanQuaGoogle('k', v.d, v.s, 0, Buffer.alloc(30).toString('base64')), /PHIEN: Telegram từ chối: chat not found/);
+  ctx.traLoiTg = () => [502, 'x'];
+  assert.throws(() => ctx.guiPhanQuaGoogle('k', v.d, v.s, 0, Buffer.alloc(30).toString('base64')), /chưa nhận phần 1/);
+  // phần lớn: tên .002
+  const big = ctx.guiVe('k', { name: 'v.mp4', size: 19 * 1048576 + 5 });
+  ctx.traLoiTg = null;
+  ctx.guiPhanQuaGoogle('k', big.d, big.s, 1, Buffer.alloc(5).toString('base64'));
+  assert.equal(nhan.at(-1).document.name, 'v.mp4.002');
+  assert.equal(nhan.at(-1).caption, 'v.mp4 — phần 2/2');
 });
