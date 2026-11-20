@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, extname, normalize } from 'node:path';
 import { execSync, execFileSync } from 'node:child_process';
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { XLSX, bangKeVay, toXlsx } from '../load.js';
+import { XLSX, JSZip, DOCX, bangKeVay, toXlsx, docx, KUNN_BODY, PDGN_BODY } from '../load.js';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SHOTS = process.env.E2E_SHOTS || '';
@@ -41,8 +41,8 @@ after(async () => { await browser?.close(); server?.close(); });
 async function newPage() {
   const ctx = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
-  const vendor = await readFile(join(ROOT, 'vendor/xlsx-js-style.bundle.js'));
-  await page.route('https://cdn.jsdelivr.net/**', (r) => r.fulfill({ body: vendor, contentType: 'text/javascript' }));
+  const vendor = await readFile(join(ROOT, 'vendor/xlsx-js-style.bundle.js')), zipLib = await readFile(join(ROOT, 'vendor/jszip.min.js'));
+  await page.route('https://cdn.jsdelivr.net/**', (r) => r.fulfill({ body: /jszip/.test(r.request().url()) ? zipLib : vendor, contentType: 'text/javascript' }));
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ body: '', contentType: 'text/css' }));
   page.on('pageerror', (e) => { throw e; });
   page.on('dialog', (d) => d.accept());
@@ -465,5 +465,98 @@ test('kiểm tra dữ liệu đã nạp: phát hiện KUNN ngoại tệ chưa gh
   await page.click('#bEditC');
   await page.click('#cfDel');                     // hộp xác nhận → OK
   await page.locator('#cList', { hasText: 'Công ty Omi' }).waitFor({ state: 'detached' });
+  await ctx.close();
+});
+
+test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → điền từ bảng kê → sửa tay → xuất Word → lưu, mở lại', async () => {
+  const fx = join(dir, 'BK_HS.xlsx');
+  await writeFile(fx, toXlsx({ 'Bang ke': bangKeVay({ ku: '5500777(3).26', ngay: '19/11/2026', rows: [
+    ['CÔNG TY TNHH MỚI X', 'HĐ 9', '101', '01/11/2026', 600000000, 600000000, 900000000],
+    ['CÔNG TY TNHH MỚI X', 'HĐ 9', '102', '02/11/2026', 300000000, 300000000, ''],
+    ['CÔNG TY TNHH MỚI Y', '', '7', '03/11/2026', 100000000, 100000000, 100000000],
+  ] }) }));
+  const fk = join(dir, 'KUNN_lan_truoc.docx'), fp = join(dir, 'PDGN_lan_truoc.docx');
+  await writeFile(fk, await docx(KUNN_BODY)); await writeFile(fp, await docx(PDGN_BODY));
+  const { ctx, page } = await newPage();
+  await page.goto(base + 'index.html');
+  await page.click('#bImport');
+  await page.setInputFiles('#iFile', fx);
+  await page.fill('#iNew', 'Công ty TNHH Thử nghiệm An Bình');
+  await page.click('#iSave');
+  await page.locator('#custName', { hasText: 'An Bình' }).waitFor();
+  await page.click('#bHs');
+  await page.locator('[data-pick]', { hasText: '5500777(3).26' }).click();
+  await page.locator('.hs-empty', { hasText: 'Chưa có mẫu KUNN' }).waitFor();
+  // nạp KUNN lần trước → mẫu riêng KH (hộp xác nhận: OK = mẫu riêng)
+  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('.hs-empty [data-tplload]')]);
+  await fc.setFiles(fk);
+  await page.locator('.dpage .df[data-f="so_kunn"]', { hasText: '5500777(3).26' }).waitFor();
+  const kunn = page.locator('.dpage[data-kind="kunn"]');
+  assert.match(await kunn.innerText(), /CÔNG TY TNHH THỬ NGHIỆM AN BÌNH/, 'thông tin KH lấy từ bản cũ');
+  assert.match(await kunn.innerText(), /Bằng số: 1,000,000,000 VND/, 'số tiền = tổng bảng kê mới');
+  assert.match(await kunn.innerText(), /Một tỷ đồng/);
+  assert.doesNotMatch(await kunn.innerText(), /Công ty Cũ B/, 'bảng thụ hưởng theo bảng kê mới');
+  assert.equal(await kunn.locator('table.lt tbody tr').count(), 3, 'tiêu đề + 2 bên thụ hưởng');
+  assert.match(await page.locator('.hs-ck').innerText(), /“CÔNG TY TNHH MỚI X” chưa có số tài khoản/);
+  // nhập dư nợ trước → tổng dư nợ + bằng chữ tự tính
+  await page.fill('[data-v="du_no_truoc"]', '4,000,000,000'); await page.press('[data-v="du_no_truoc"]', 'Tab');
+  await kunn.locator('.df[data-f="tong_du_no_chu"]', { hasText: 'Năm tỷ đồng' }).waitFor();
+  // bấm vào chữ đỏ để sửa trường ngay trên văn bản
+  await kunn.locator('.df[data-f="lai_suat"]').click();
+  await page.fill('.fpop input', '9.2'); await page.click('.fpop [data-ok]');
+  await kunn.locator('.df[data-f="lai_suat"]', { hasText: '9.2' }).waitFor();
+  assert.equal(await page.inputValue('[data-v="lai_suat"]'), '9.2');
+  // nhập TK bên thụ hưởng ở bảng bên trái
+  await page.fill('[data-l="tth|0|tk"]', '0123456789'); await page.press('[data-l="tth|0|tk"]', 'Tab');
+  await kunn.locator('.df', { hasText: '0123456789' }).waitFor();
+  // sửa tay một đoạn + thêm đoạn mới (Enter)
+  const p = kunn.locator('.dp', { hasText: 'Tài sản bảo đảm riêng' });
+  await p.click(); await page.keyboard.press('End'); await page.keyboard.type(' Bổ sung thêm.');
+  await page.keyboard.press('Enter'); await page.keyboard.type('Đoạn mới gõ tay.');
+  await kunn.locator('.dp.ed', { hasText: 'Đoạn mới gõ tay.' }).waitFor();
+  // thêm 1 dòng vào bảng thông tin KH bằng thanh dòng
+  await kunn.locator('table:not(.lt) tr', { hasText: 'Đại diện' }).hover();
+  await page.click('.rowbar [data-rb="down"]');
+  assert.equal(await kunn.locator('table:not(.lt)').first().locator('tr').count(), 5);
+  // PDGN
+  await page.click('[data-hk="pdgn"]');
+  const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('.hs-empty [data-tplload]')]);
+  await fc2.setFiles(fp);
+  const pdgn = page.locator('.dpage[data-kind="pdgn"]');
+  await pdgn.locator('.df[data-f="cif"]', { hasText: '00123456' }).waitFor();
+  const ctT = pdgn.locator('table.lt');
+  assert.equal(await ctT.locator('tbody tr').count(), 5, 'tiêu đề + 3 chứng từ + tổng');
+  assert.match(await ctT.innerText(), /101[\s\S]*900,000,000[\s\S]*102[\s\S]*TỔNG CỘNG[\s\S]*1,000,000,000/);
+  assert.match(await pdgn.innerText(), /đồng ý ngày 19\/11\/2026/);
+  await pdgn.locator('.dc').first().click();
+  assert.equal(await pdgn.locator('.dc').first().innerText(), '☐');
+  // xuất Word PDGN rồi KUNN, đọc lại file
+  const [d1] = await Promise.all([page.waitForEvent('download'), page.click('#hsExp')]);
+  const zp = await JSZip.loadAsync(await readFile(await d1.path()));
+  const xp = await zp.file('word/document.xml').async('string');
+  assert.match(xp, /w14:checked w14:val="0"/);
+  assert.match(xp, /<w:vMerge w:val="restart"\/>/);
+  assert.doesNotMatch(xp, /\{\{/, 'không còn trường chưa thay');
+  await page.click('[data-hk="kunn"]');
+  await page.check('#hsRed');
+  const [d2] = await Promise.all([page.waitForEvent('download'), page.click('#hsExp')]);
+  assert.match(d2.suggestedFilename(), /^KUNN_5500777_3_\.26/);
+  const xk = await (await JSZip.loadAsync(await readFile(await d2.path()))).file('word/document.xml').async('string');
+  const tk = []; DOCX.walk(DOCX.parse(xk).blocks, (q) => tk.push(DOCX.ptext(q)));
+  assert.ok(tk.includes('Tài sản bảo đảm riêng của khách hàng An Bình. Bổ sung thêm.') && tk.includes('Đoạn mới gõ tay.'));
+  assert.ok(tk.includes('Lãi suất tại thời điểm giải ngân: 9.2%/năm.'));
+  assert.ok(tk.includes('Bằng chữ: Năm tỷ đồng.'));
+  assert.match(xk, /<w:color w:val="FF0000"\/>/, 'bản soát giữ chữ đỏ');
+  // lưu → đóng → mở lại: phần sửa tay và số liệu còn nguyên
+  await page.click('#hsSave');
+  await page.locator('.toast div', { hasText: 'Đã lưu hồ sơ' }).waitFor();
+  await page.click('#hsClose');
+  await page.click('#bHs');
+  assert.match(await page.locator('[data-pick]', { hasText: '5500777(3).26' }).innerText(), /✓/, 'danh sách đánh dấu KUNN đã soạn');
+  await page.locator('[data-pick]', { hasText: '5500777(3).26' }).click();
+  await page.locator('.dpage[data-kind="kunn"] .dp', { hasText: 'Đoạn mới gõ tay.' }).waitFor();
+  assert.equal(await page.inputValue('[data-v="lai_suat"]'), '9.2');
+  assert.match(await page.locator('.dpage[data-kind="kunn"]').innerText(), /0123456789/, 'TK thụ hưởng được nhớ');
+  await shot(page, '9-soan-kunn');
   await ctx.close();
 });

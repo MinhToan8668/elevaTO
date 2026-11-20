@@ -18,6 +18,20 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Xuất Excel**: bảng kê tổng hợp (bố cục như file đang theo dõi + lũy kế, còn lại, kiểm tra, hồ sơ gốc),
   theo dõi hóa đơn, cảnh báo, hồ sơ gốc chưa đủ; xuất kết quả kiểm tra một bảng kê; tổng quan mọi khách hàng.
 - **Nhật ký** ai sửa gì, lúc nào.
+- **📝 Soạn KUNN & PDGN** (nút trong trang khách hàng / trong từng KUNN):
+  - **Mẫu riêng từng KH**: nạp file Word KUNN và PDGN của KH — *bản lần trước đã điền cũng được*. Tool tự nhận các ô
+    cần điền (số/ngày KUNN, HĐTD, số tiền + bằng chữ, tổng dư nợ, ngày GN, đáo hạn, lãi suất, ngày trả lãi, CIF, TTKD,
+    QLKH, TestKey, CLTF, CIC, bảng thụ hưởng, bảng chứng từ…) và thay bằng `{{trường}}`; phần riêng của KH (TSBĐ, điều
+    kiện…) giữ nguyên. Mẫu lưu trên máy + `BangKe_GiaiNgan/mau/<loại>_<id KH>.docx` ở thư mục chung. Có thể tự viết
+    mẫu bằng Word với `{{so_kunn}}`, dòng bảng `{{ct.so}}` / `{{tth.ten}}` (`:gop` = gộp ô dọc cùng bên thụ hưởng).
+  - Điền từ thông tin KH đã nhớ + KUNN + các dòng bảng kê; tự tính bằng chữ (như hàm DocSoTien), tổng dư nợ,
+    đáo hạn (số ngày vay hoặc số tháng, cảnh báo rơi vào lễ Tết), ngày trả lãi đầu, CLTF khả dụng, **TestKey**
+    (cùng công thức tool `giaingan/`, bảng key nạp riêng trên từng máy — không nằm trong file).
+  - Giao diện giống bản Word: **chữ đỏ = tool điền** (bấm để sửa, áp dụng mọi chỗ), sửa tự do từng đoạn (nền vàng),
+    Enter thêm đoạn, thêm/xóa dòng bảng, tick ô ☐. Kiểm tra: số tiền ≠ tổng chứng từ, bằng chữ sai, vượt khả dụng,
+    chứng từ sau ngày GN / quá 90 ngày (đối chiếu công nợ), CIC quá 10 ngày, GN trước HĐTD / sau hạn HM, thiếu TK thụ
+    hưởng, LS < FTP, ô còn trống; **🤖 AI rà soát** đối chiếu chéo KUNN ↔ PDGN.
+  - **Xuất Word** (tùy chọn giữ chữ đỏ để soát), **Lưu** (nhớ thông tin KH cho lần sau, phần sửa tay theo KUNN).
 
 ## Cài đặt (nút ⚙ hoặc Alt+F9)
 - **API key Gemini**: nạp trong Cài đặt, lưu trên trình duyệt máy đó. Không ghi key vào file.
