@@ -1949,6 +1949,320 @@ const DOCX = (() => {
     testKey, keyTableError, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH };
 })();
 </script>
+<script id="bk-hs">
+const HSC = (() => {
+'use strict';
+  // Hồ sơ giải ngân theo từng công ty — thuần logic (chạy được trong Node để kiểm thử).
+  //   Một hồ sơ = các FILE khách hàng gửi → mỗi file có 1..n CHỨNG TỪ (AI nhận loại + đọc số liệu)
+  //   + các DÒNG bảng kê (đọc bằng bộ đọc bảng kê sẵn có) + các MỐC (xin số KUNN, gửi KH ký…).
+  //   Danh sách kiểm tra được SINH RA theo đúng bộ chứng từ của lần đó: có tờ khai mới soát NSNN, có HĐMB mới soát hạn HĐ…
+  const fold = BK.fold;
+  const num = (v) => { if (v == null || v === '') return null; if (typeof v === 'number') return v; const n = BK.parseAmount(String(v)); return Number.isFinite(n) ? n : null; };
+  const iso = (v) => BK.toISO(v);
+  const dmy = (v) => BK.fmtDate(iso(v) || '');
+  const fmtN = (n) => (n == null || !Number.isFinite(n) ? '' : Math.round(n).toLocaleString('vi-VN'));
+  const digits = (s) => String(s == null ? '' : s).replace(/\D/g, '');
+  const normNo = (s) => BK.invNo(s);
+
+  // ── loại chứng từ & trường AI cần đọc ──
+  const F = (k, l, t = '') => ({ k, l, t });
+  const TYPES = {
+    bang_ke: { l: 'Bảng kê', g: 'Bảng kê', ord: 3, fields: [] },
+    hoa_don: { l: 'Hóa đơn GTGT', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số hóa đơn'), F('ky_hieu', 'Ký hiệu'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên bán'), F('mst_ban', 'MST bên bán'), F('ben_mua', 'Bên mua'), F('mst_mua', 'MST bên mua'), F('tien', 'Tổng tiền thanh toán', 'money'), F('loai_tien', 'Loại tiền')] },
+    hdmb: { l: 'Hợp đồng mua bán / đơn đặt hàng', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số hợp đồng'), F('ngay', 'Ngày ký', 'date'), F('ben_ban', 'Bên bán'), F('ben_mua', 'Bên mua'), F('tien', 'Giá trị', 'money'), F('hieu_luc_den', 'Hiệu lực đến', 'date'), F('thanh_toan', 'Điều khoản thanh toán')] },
+    giao_hang: { l: 'Phiếu giao hàng / nhập kho / biên bản', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên giao')] },
+    de_nghi_tt: { l: 'Đề nghị thanh toán', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên nhận tiền'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận tiền'), F('ngan_hang', 'Ngân hàng')] },
+    tien_dien: { l: 'Thông báo tiền điện / nước', g: 'Tiền điện, nước', ord: 6, fields: [F('so', 'Mã KH / số thông báo'), F('ky', 'Kỳ'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Đơn vị thu'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận tiền'), F('ngan_hang', 'Ngân hàng'), F('ben_mua', 'Tên khách hàng')] },
+    to_khai: { l: 'Tờ khai hải quan', g: 'Hải quan & thuế', ord: 7, fields: [F('so', 'Số tờ khai'), F('ngay', 'Ngày đăng ký', 'date'), F('ben_mua', 'Người nhập khẩu'), F('mst_mua', 'MST'), F('tien', 'Tổng thuế phải nộp', 'money'), F('hai_quan', 'Chi cục hải quan')] },
+    nsnn: { l: 'Giấy nộp tiền NSNN', g: 'Hải quan & thuế', ord: 8, fields: [F('so', 'Số chứng từ'), F('ngay', 'Ngày', 'date'), F('to_khai', 'Số tờ khai (cách nhau dấu phẩy)'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK KBNN'), F('ngan_hang', 'KBNN / ngân hàng')] },
+    unc: { l: 'UNC / lệnh chi', g: 'Thanh toán', ord: 4, fields: [F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên nhận'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận'), F('ngan_hang', 'Ngân hàng nhận')] },
+    cic: { l: 'CIC', g: 'Thẩm định', ord: 9, fields: [F('ngay', 'Ngày tra cứu', 'date'), F('nhom_no', 'Nhóm nợ cao nhất'), F('ben_mua', 'Tên khách hàng')] },
+    invoice: { l: 'Invoice / hợp đồng ngoại', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Người bán'), F('tien', 'Số tiền', 'money'), F('loai_tien', 'Loại tiền')] },
+    tra_cuu: { l: 'Kết quả tra cứu hóa đơn', g: 'Thẩm định', ord: 9, fields: [F('so', 'Các số hóa đơn đã tra')] },
+    kunn_ky: { l: 'KUNN đã ký', g: 'Văn bản đã ký', ord: 1, fields: [F('so', 'Số KUNN')] },
+    pdgn_ky: { l: 'PDGN đã ký', g: 'Văn bản đã ký', ord: 2, fields: [F('so', 'Số KUNN')] },
+    khac: { l: 'Khác', g: 'Khác', ord: 10, fields: [F('mo_ta', 'Mô tả')] },
+  };
+  const GROUP_ORDER = ['Bảng kê', 'Hóa đơn & hợp đồng', 'Tiền điện, nước', 'Hải quan & thuế', 'Thanh toán', 'Thẩm định', 'Văn bản đã ký', 'Khác'];
+
+  /** Câu lệnh cho Gemini đọc MỘT file (PDF/ảnh gửi kèm, hoặc văn bản đã trích). */
+  function promptRead(fileName, khName, text) {
+    const types = Object.entries(TYPES).filter(([k]) => k !== 'bang_ke').map(([k, t]) => `- ${k}: ${t.l} — trường: ${t.fields.map((f) => `${f.k} (${f.l})`).join(', ')}`).join('\n');
+    return `Bạn là chuyên viên hồ sơ giải ngân ngân hàng Việt Nam. File "${fileName}" do khách hàng ${khName ? `"${khName}" ` : ''}gửi. Một file có thể chứa NHIỀU chứng từ (vd PDF 36 trang gồm nhiều tờ khai): tách từng chứng từ riêng.
+Các loại chứng từ và trường cần đọc:
+${types}
+Quy tắc: ngày ghi dd/mm/yyyy; số tiền ghi số nguyên không dấu phân cách (vd 1116900000); chép đúng số hiệu như trên giấy; trường không thấy thì để "". Tờ khai: "tien" là tổng thuế phải nộp. conf = độ chắc chắn 0..1 về loại chứng từ.
+Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830","ngay":"04/11/2026",...}}]}${text ? `\n\nNỘI DUNG FILE:\n${text.slice(0, 60000)}` : ''}`;
+  }
+  /** Chuẩn hóa kết quả AI → danh sách chứng từ. */
+  function normDocs(ai, fileId) {
+    const docs = (ai && Array.isArray(ai.docs) ? ai.docs : []).map((d, i) => {
+      const loai = TYPES[d.loai] ? d.loai : 'khac';
+      const f = {};
+      for (const fd of TYPES[loai].fields) {
+        let v = d.f && d.f[fd.k] != null ? String(d.f[fd.k]).trim() : '';
+        if (fd.t === 'date' && v) v = dmy(v) || v;
+        if (fd.t === 'money' && v) { const n = num(v); v = n != null ? String(n) : v; }
+        f[fd.k] = v;
+      }
+      return { id: `${fileId}_${i}`, fileId, loai, trang: d.trang ? String(d.trang) : '', conf: Math.max(0, Math.min(1, +d.conf || 0)), f, ok: false };
+    });
+    return docs;
+  }
+
+  // ── mốc của một hồ sơ (bỏ bớt / thêm được) ──
+  const MILESTONES = [
+    ['nhan', 'Nhận chứng từ'], ['kiem_tra', 'Kiểm tra'], ['so_kunn', 'Xin số KUNN'], ['gui_ky', 'Gửi KH ký KUNN + bảng kê'],
+    ['nhan_ky', 'Nhận bản ký'], ['pdgn_ky', 'GĐ TTKD ký PDGN'], ['he_thong', 'Đưa lên hệ thống + UNC'], ['giai_ngan', 'Đã giải ngân'],
+  ];
+  /** Trạng thái các mốc: done (ngày) / skip / cur (đang làm) / todo. */
+  function milestones(hs, nErr) {
+    const ms = hs.ms || {}, out = [];
+    const list = (hs.msList || MILESTONES.map((m) => m[0])).map((k) => MILESTONES.find((m) => m[0] === k) || [k, (hs.msNames || {})[k] || k]);
+    let cur = false;
+    for (const [k, l] of list) {
+      let st = ms[k] === 'skip' ? 'skip' : ms[k] ? 'done' : 'todo';
+      if (k === 'nhan' && st === 'todo' && (hs.files || []).length) st = 'done';
+      if (k === 'kiem_tra' && st === 'todo' && (hs.files || []).length && nErr === 0 && (hs.docs || []).length) st = 'auto';
+      if (k === 'so_kunn' && st === 'todo' && hs.so_kunn) st = 'done';
+      if ((st === 'todo') && !cur) { st = 'cur'; cur = true; }
+      out.push({ k, l, st, at: typeof ms[k] === 'string' && ms[k] !== 'skip' ? ms[k] : '' });
+    }
+    return out;
+  }
+  const stageOf = (hs, nErr) => { const m = milestones(hs, nErr); const c = m.find((x) => x.st === 'cur'); return c ? c : { k: 'xong', l: 'Đã giải ngân', st: 'done' }; };
+
+  // ── kiểm tra tự sinh theo bộ chứng từ ──
+  const sameName = (a, b) => { const x = BK.supKey(a), y = BK.supKey(b); return !!x && !!y && (x === y || x.includes(y) || y.includes(x)); };
+  const findDoc = (docs, types, so) => { const n = normNo(so), d = digits(so); return docs.find((x) => types.includes(x.loai) && x.f.so && (normNo(x.f.so) === n || (d.length >= 6 && digits(x.f.so).includes(d)))); };
+  /**
+   * @param hs   { lines, docs, ngay_gn, so_tien, so_kunn, ack }
+   * @param ctx  { kh: {name, mst, hs:{...}}, kunns: KUNN đã có (để soát trùng), ledger: sổ Excel, today, hol }
+   * @returns [{key, sev 3 lỗi | 2 cần xem | 0 đạt, title, detail, refs:[docId|lineId]}]
+   */
+  function checks(hs, ctx = {}) {
+    const out = [], add = (key, sev, title, detail = '', refs = []) => out.push({ key, sev, title, detail, refs });
+    const lines = hs.lines || [], docs = (hs.docs || []).filter((d) => !d.del), kh = ctx.kh || {}, prof = kh.hs || {};
+    const gn = iso(hs.ngay_gn) || ctx.today || BK.todayISO();
+    const types = new Set(docs.map((d) => d.loai));
+    const total = BK.sum(lines.map((l) => l.tien_gn));
+    // bảng kê
+    if (!lines.length) add('bk_none', 2, 'Chưa có bảng kê', 'Thả file Excel bảng kê KH gửi (hoặc nhập dòng tay) để tool soát giải ngân trùng và lập KUNN.');
+    else {
+      add('bk_total', 0, `Bảng kê ${lines.length} dòng · tổng ${fmtN(total)} đ`);
+      const so = num(hs.so_tien);
+      if (so != null && Math.abs(so - total) > 0.5) add('bk_sum', 3, 'Số tiền đề nghị khác tổng bảng kê', `Đề nghị ${fmtN(so)} đ, bảng kê cộng được ${fmtN(total)} đ.`);
+      // giải ngân trùng / vượt so với sổ hóa đơn
+      const others = (ctx.kunns || []).filter((k) => k.id !== hs.kid);
+      const chk = BK.checkNew(others, [{ so_kunn: hs.so_kunn || 'mới', ngay_gn: gn, lines }]);
+      const cl = chk.groups[0].lines.map((x, i) => ({ line: lines[i], status: x.check.status, note: (x.check.history || []).map((u) => `đã GN ở KUNN ${u.so_kunn} ngày ${dmy(u.ngay_gn)}: ${fmtN(u.tien_gn)} đ`).join('; ') }));
+      const bad = cl.filter((x) => ['da_du', 'vuot', 'trung_file'].includes(x.status));
+      const warn = cl.filter((x) => x.status === 'nghi_trung');
+      bad.forEach((x) => add('dup_' + (x.line.id || x.line.so_hd), 3, `${BK.CHECK[x.status].label}: HĐ ${x.line.so_hd} · ${x.line.ncc}`, x.note || '', [x.line.id]));
+      warn.forEach((x) => add('ngh_' + (x.line.id || x.line.so_hd), 2, `Nghi trùng: HĐ ${x.line.so_hd} · ${x.line.ncc}`, x.note || '', [x.line.id]));
+      if (!bad.length) add('dup_ok', 0, 'Không hóa đơn nào đã giải ngân đủ trước đó');
+      const tiep = cl.filter((x) => x.status === 'tiep');
+      if (tiep.length) add('tiep', 0, `${tiep.length} hóa đơn giải ngân tiếp phần còn lại`);
+    }
+    // từng dòng bảng kê ↔ chứng từ
+    if (docs.length && lines.length) {
+      let nOk = 0;
+      for (const l of lines) {
+        const d = findDoc(docs, ['hoa_don', 'to_khai', 'tien_dien', 'invoice', 'de_nghi_tt', 'nsnn'], l.so_hd);
+        if (!d) { add('ct_' + l.id, 2, `Chưa thấy chứng từ cho dòng HĐ ${l.so_hd || '?'} · ${l.ncc}`, 'Thả thêm file, hoặc mở chứng từ để sửa số AI đọc sai.', [l.id]); continue; }
+        const errs = [];
+        const dn = iso(d.f.ngay), ln = iso(l.ngay_hd);
+        if (dn && ln && dn !== ln) errs.push(`ngày: bảng kê ${dmy(ln)}, chứng từ ${dmy(dn)}`);
+        const dt = num(d.f.tien), lt = l.tien_hd != null ? l.tien_hd : l.tien_gn;
+        if (dt != null && lt != null && d.loai !== 'to_khai' && Math.abs(dt - lt) > 1) errs.push(`tiền: bảng kê ${fmtN(lt)}, chứng từ ${fmtN(dt)}`);
+        if (d.loai === 'to_khai' && dt != null && l.tien_gn != null && l.tien_gn > dt + 1) errs.push(`giải ngân ${fmtN(l.tien_gn)} > thuế phải nộp ${fmtN(dt)}`);
+        if (d.f.ben_ban && l.ncc && d.loai !== 'to_khai' && d.loai !== 'nsnn' && !sameName(d.f.ben_ban, l.ncc)) errs.push(`bên bán “${d.f.ben_ban}” khác bảng kê “${l.ncc}”`);
+        if (errs.length) add('ln_' + l.id, 3, `Bảng kê ghi khác ${TYPES[d.loai].l} ${d.f.so}`, errs.join('; '), [l.id, d.id]);
+        else nOk++;
+      }
+      if (nOk) add('ln_ok', 0, `${nOk}/${lines.length} dòng bảng kê khớp số, ngày, tiền với chứng từ`);
+    }
+    // hóa đơn: bên mua, tuổi hóa đơn, HĐMB
+    for (const d of docs.filter((x) => x.loai === 'hoa_don' || x.loai === 'invoice')) {
+      const dn = iso(d.f.ngay);
+      if (d.f.mst_mua && kh.mst && digits(d.f.mst_mua) !== digits(kh.mst)) add('mua_' + d.id, 3, `Hóa đơn ${d.f.so}: MST bên mua ${d.f.mst_mua} không phải của KH`, `MST KH: ${kh.mst}`, [d.id]);
+      else if (d.f.ben_mua && kh.name && !sameName(d.f.ben_mua, kh.name) && !(prof.ten_kh && sameName(d.f.ben_mua, prof.ten_kh))) add('mua_' + d.id, 2, `Hóa đơn ${d.f.so}: bên mua “${d.f.ben_mua}” khác tên KH`, '', [d.id]);
+      if (dn) {
+        const age = BK.daysBetween(dn, gn);
+        if (age < 0) add('hd_sau_' + d.id, 3, `Hóa đơn ${d.f.so} ngày ${dmy(dn)} sau ngày giải ngân`, '', [d.id]);
+        else if (age > 90) add('hd90_' + d.id, 2, `Hóa đơn ${d.f.so} đã ${age} ngày (> 90 ngày) — cần đối chiếu công nợ`, '', [d.id]);
+      }
+    }
+    if (types.has('hoa_don') || types.has('hdmb')) {
+      for (const l of lines.filter((x) => x.so_hdmb)) {
+        const c = findDoc(docs, ['hdmb'], String(l.so_hdmb).replace(/^(hđmb|hdmb|hợp đồng|hd)[:\s]*/i, ''));
+        if (!c) { if (types.has('hdmb')) add('hdmb_' + l.id, 2, `Chưa thấy HĐMB ${l.so_hdmb} của dòng HĐ ${l.so_hd}`, '', [l.id]); continue; }
+        const cn = iso(c.f.ngay), hl = iso(c.f.hieu_luc_den), ln = iso(l.ngay_hd);
+        if (cn && ln && ln < cn) add('hdtr_' + l.id, 3, `Hóa đơn ${l.so_hd} (${dmy(ln)}) lập trước ngày ký HĐMB ${c.f.so} (${dmy(cn)})`, '', [l.id, c.id]);
+        if (hl && (hl < gn || (ln && hl < ln))) add('hdhh_' + l.id, 3, `HĐMB ${c.f.so} hết hiệu lực ${dmy(hl)}`, '', [l.id, c.id]);
+      }
+      const hdOk = docs.filter((x) => x.loai === 'hdmb' && (!iso(x.f.hieu_luc_den) || iso(x.f.hieu_luc_den) >= gn));
+      if (hdOk.length) add('hdmb_ok', 0, `${hdOk.length} HĐMB còn hiệu lực đến ngày giải ngân`);
+    }
+    // tiền điện / đề nghị thanh toán / UNC: tài khoản nhận tiền
+    const memo = prof.tk || {};
+    for (const d of docs.filter((x) => ['tien_dien', 'de_nghi_tt', 'unc'].includes(x.loai) && x.f.tk_nhan)) {
+      const known = memo[BK.supKey(d.f.ben_ban)] || null;
+      const ref = (ctx.tth || []).find((t) => sameName(t.ten, d.f.ben_ban)) || known;
+      if (ref && ref.tk && digits(ref.tk) !== digits(d.f.tk_nhan)) add('tk_' + d.id, 3, `Số tài khoản nhận tiền ${d.f.ben_ban || ''} không khớp`, `${TYPES[d.loai].l} ${d.f.so || ''} ghi TK ${d.f.tk_nhan}${d.f.ngan_hang ? ' — ' + d.f.ngan_hang : ''}, hồ sơ đang dùng ${ref.tk}${ref.nh ? ' — ' + ref.nh : ''}.`, [d.id]);
+    }
+    // tờ khai ↔ giấy nộp NSNN
+    const tks = docs.filter((x) => x.loai === 'to_khai'), nss = docs.filter((x) => x.loai === 'nsnn');
+    if (tks.length || nss.length) {
+      const paid = new Map();
+      for (const n of nss) for (const s of String(n.f.to_khai || '').split(/[,;\s]+/).filter((x) => digits(x).length >= 8)) paid.set(digits(s), (paid.get(digits(s)) || 0) + (num(n.f.tien) || 0) / Math.max(1, String(n.f.to_khai).split(/[,;\s]+/).filter((x) => digits(x).length >= 8).length));
+      let ok = 0;
+      for (const t of tks) {
+        const k = digits(t.f.so);
+        if (!nss.length) continue;
+        if (!paid.has(k)) add('nsnn_' + t.id, 2, `Tờ khai ${t.f.so}: chưa thấy giấy nộp NSNN`, '', [t.id]);
+        else ok++;
+      }
+      if (ok) add('nsnn_ok', 0, `${ok} tờ khai có giấy nộp NSNN tương ứng`);
+      if (tks.length && !nss.length) add('nsnn_none', 2, 'Có tờ khai nhưng chưa có giấy nộp tiền NSNN', 'Nếu giải ngân nộp thuế nhập khẩu, cần giấy nộp NSNN / chứng từ thu của KBNN.');
+    }
+    // CIC
+    const cic = docs.filter((x) => x.loai === 'cic').sort((a, b) => (iso(b.f.ngay) || '').localeCompare(iso(a.f.ngay) || ''))[0];
+    const cicDate = cic ? iso(cic.f.ngay) : iso(prof.ngay_cic_cuoi);
+    if (!cic) add('cic_none', 2, 'Chưa có CIC trong hồ sơ', cicDate ? `Lần tra gần nhất ${dmy(cicDate)}.` : 'Thả file CIC vào hồ sơ, AI đọc ngày tra và nhóm nợ.');
+    else {
+      const age = cicDate ? BK.daysBetween(cicDate, gn) : null;
+      if (age != null && age > 10) add('cic_old', 2, `CIC tra ngày ${dmy(cicDate)} — đã ${age} ngày (hiệu lực 10 ngày)`, '', [cic.id]);
+      const nhom = num(cic.f.nhom_no);
+      if (nhom != null && nhom >= 2) add('cic_nhom', 3, `CIC: KH có nợ nhóm ${nhom}`, '', [cic.id]);
+      if ((age == null || age <= 10) && !(nhom >= 2)) add('cic_ok', 0, `CIC ngày ${dmy(cicDate)} còn hiệu lực, không có nợ nhóm 2 trở lên`);
+    }
+    // hạn mức (sổ Excel) & hạn HĐTD
+    const L = ctx.ledger;
+    if (L && L.hm) {
+      const kd = L.hm - L.du_no;
+      if (total > kd + 0.5) add('hm_vuot', 3, `Vượt hạn mức khả dụng: còn ${fmtN(kd)} đ, đề nghị ${fmtN(total)} đ`, `Theo file Excel (${L.file || 'sổ khế ước'}), dư nợ ${fmtN(L.du_no)} / hạn mức ${fmtN(L.hm)}.`);
+      else if (total) add('hm_ok', 0, `Khả dụng hạn mức đủ — còn ${fmtN(kd - total)} đ sau lần này`);
+    } else if (lines.length) add('hm_none', 2, 'Chưa đọc file Excel quản lý giải ngân của công ty', 'Vào tab Thông tin & mẫu Word → chọn file để tool lấy dư nợ, hạn mức.');
+    const han = iso(prof.han_hm), hdtd = iso(prof.ngay_hdtd);
+    if (han && gn > han) add('hm_het', 3, `Ngày giải ngân sau ngày hết hạn duy trì hạn mức ${dmy(han)}`);
+    if (hdtd && gn < hdtd) add('hdtd_truoc', 3, `Ngày giải ngân trước ngày ký HĐTD ${dmy(hdtd)}`);
+    // bỏ qua có lý do
+    const ack = hs.ack || {};
+    for (const c of out) if (c.sev > 0 && ack[c.key]) { c.ack = ack[c.key]; c.sev = 1; }
+    return out.sort((a, b) => b.sev - a.sev);
+  }
+  const counts = (cs) => ({ err: cs.filter((c) => c.sev === 3).length, warn: cs.filter((c) => c.sev === 2).length, ok: cs.filter((c) => c.sev === 0).length, ack: cs.filter((c) => c.sev === 1).length });
+
+  // ── file Excel QUẢN LÝ GIẢI NGÂN (sổ khế ước, danh mục, UBG) ──
+  const DM = { TEN_KH: 'ten_kh', TEN_KH_NGAN: 'ten_kh_ngan', CIF: 'cif', GCN_DKKD: 'gcn', DIA_CHI_KH: 'dia_chi', NGUOI_DAI_DIEN: 'dai_dien', CHUC_DANH: 'chuc_danh', SO_HDTD: 'so_hdtd', NGAY_HDTD: 'ngay_hdtd', NGAY_HET_HAN_HM: 'han_hm', SO_PDTD: 'so_pdtd', NGAY_PDTD: 'ngay_pdtd', SO_NGAY_VAY_MD: 'so_ngay_vay', TEN_TTKD: 'ttkd', MA_TTKD: 'ma_ttkd', TEN_QLKH: 'qlkh', MA_QLKH: 'ma_qlkh', PROFIT_CENTER: 'profit', TK_GHI_CO: 'tk_ghi_co', TEN_TK_GHI_CO: 'ten_tk_ghi_co', LOAN_SUB_TYPE: 'loan_sub', MA_TT41: 'ma_tt41', MA_ANALYSIS: 'ma_an1', MA_INFOR: 'ma_inf1', LOAI_TIEN: 'loai_tien', PREFIX_KUNN: 'prefix_kunn', HAU_TO_KUNN: 'hau_to_kunn', BEN_BAO_LANH: 'ben_bao_lanh' };
+  const LCOLS = [['so', /^so kunn/], ['hm', /^han muc/], ['ngay_gn', /^ngay gn|^ngay giai ngan/], ['dao_han', /^ngay dao han|^dao han/], ['so_ngay', /^so ngay/], ['ls', /^lai suat/], ['goi', /^goi/], ['goc', /^goc vay|^so tien giai ngan/], ['da_thu', /^da thu/], ['ngay_thu', /^ngay thu/], ['con_lai', /^goc con lai|^du no/], ['ben', /^ben thu huong/], ['ct', /^chung tu/], ['note', /^ghi chu/]];
+  /** grids: {TEN_SHEET: mảng 2 chiều (raw)}. Trả { profile, kunns, ubg, hm, hmList, du_no } */
+  function readLedger(grids, opts = {}) {
+    const g = (n) => { const k = Object.keys(grids).find((x) => fold(x).replace(/\s/g, '_') === fold(n)); return k ? grids[k] : null; };
+    const ku = g('khe_uoc');
+    if (!ku) throw new Error('Không thấy sheet KHE_UOC — chọn đúng file QUẢN LÝ GIẢI NGÂN của công ty');
+    const hi = ku.findIndex((r) => r.some((c) => /^so kunn$/.test(fold(c))));
+    if (hi < 0) throw new Error('Sheet KHE_UOC không có cột “Số KUNN”');
+    const col = {};
+    ku[hi].forEach((c, i) => { const f = fold(c); const r = LCOLS.find(([k, re]) => col[k] == null && re.test(f)); if (r) col[r[0]] = i; });
+    const kunns = [];
+    for (const r of ku.slice(hi + 1)) {
+      const so = r[col.so] == null ? '' : String(r[col.so]).trim();
+      if (!so || /^tong/.test(fold(so))) continue;
+      const goc = num(r[col.goc]) || 0, thu = num(r[col.da_thu]) || 0;
+      const cl = col.con_lai != null ? num(r[col.con_lai]) : null;
+      const k = { so, hm: String(r[col.hm] || '').trim(), ngay_gn: iso(r[col.ngay_gn]), dao_han: iso(r[col.dao_han]), so_ngay: num(r[col.so_ngay]), ls: num(r[col.ls]), goi: String(r[col.goi] || '').trim(), goc, da_thu: thu, ngay_thu: iso(r[col.ngay_thu]), con_lai: cl != null && cl !== 0 ? cl : Math.max(0, goc - thu), ben: String(r[col.ben] || '').trim(), ct: String(r[col.ct] || '').trim(), note: String(r[col.note] || '').trim() };
+      if (k.ls != null && k.ls < 1) k.ls = +(k.ls * 100).toFixed(4);
+      kunns.push(k);
+    }
+    const profile = {}, hmList = [];
+    const dm = g('danh_muc');
+    if (dm) for (const r of dm) {
+      const code = String(r[3] || '').trim(), v = r[2];
+      if (/^HM\d$/.test(code) && num(v)) hmList.push({ ma: `HMTD ${code.slice(2)}`, ten: String(r[1] || '').trim(), han_muc: num(v) });
+      const k = DM[code]; if (!k || v == null || v === '') continue;
+      profile[k] = /^ngay_|han_hm/.test(k) ? dmy(v) || String(v) : String(v).trim();
+    }
+    const ubg = [];
+    const ub = g('ubg');
+    if (ub) {
+      const h = ub.findIndex((r) => r.some((c) => /^ma goi/.test(fold(c))));
+      if (h >= 0) for (const r of ub.slice(h + 1)) {
+        if (!r[1]) continue;
+        const ls = num(r[6]);
+        ubg.push({ ma: String(r[1]).trim(), so: String(r[2] || ''), ngay: iso(r[3]), hieu_luc: iso(r[4]), ten: String(r[5] || ''), ls: ls != null && ls < 1 ? +(ls * 100).toFixed(4) : ls, so_ngay: num(r[7]), ma_ls: String(r[8] || ''), tong: num(r[9]) });
+      }
+    }
+    const today = opts.today || BK.todayISO();
+    const live = kunns.filter((k) => k.con_lai > 0.5);
+    const du_no = BK.sum(live.map((k) => k.con_lai));
+    const hm = BK.sum(hmList.map((x) => x.han_muc)) || null;
+    hmList.forEach((h) => { h.du_no = BK.sum(live.filter((k) => fold(k.hm) === fold(h.ma)).map((k) => k.con_lai)); });
+    return { profile, kunns, ubg, hm, hmList, du_no, n_live: live.length, at: Date.now(), today };
+  }
+  /** Dư nợ trước một lần giải ngân (bỏ chính KUNN đó nếu sổ đã ghi, so phần trước dấu ")"). */
+  function duNoTruoc(L, soKunn) {
+    if (!L) return null;
+    const key = (s) => String(s || '').split(')')[0].replace(/\s/g, '');
+    const k = key(soKunn);
+    return BK.sum(L.kunns.filter((x) => x.con_lai > 0.5 && (!k || key(x.so) !== k)).map((x) => x.con_lai));
+  }
+
+  // ── việc cần làm (mỗi việc thuộc một công ty, không cộng số liệu giữa các công ty) ──
+  /** input: [{c, hoso:[{hs, checks}], kunns, ledger, hanNgay}] → [{sev, cid, cname, text, when, go}] */
+  function tasks(rows, today = BK.todayISO()) {
+    const out = [];
+    for (const { c, hoso = [], kunns = [], ledger, hanNgay = 30 } of rows) {
+      for (const { hs, checks: cs } of hoso) {
+        if (hs.done) continue;
+        const n = counts(cs || []);
+        const label = `Hồ sơ GN ${hs.ngay_gn ? dmy(hs.ngay_gn).slice(0, 5) : 'mới'}`;
+        if (n.err) out.push({ sev: 3, cid: c.id, cname: c.name, text: `${label}: ${(cs.find((x) => x.sev === 3) || {}).title}${n.err > 1 ? ` (+${n.err - 1} lỗi)` : ''}`, when: hs.ngay_gn ? `GN ${dmy(hs.ngay_gn)}` : '', go: { hs: hs.id } });
+        const st = stageOf(hs, n.err);
+        const ms = hs.ms || {};
+        const prev = Object.values(ms).filter((x) => x && x !== 'skip').sort().pop();
+        if (!n.err && st.k !== 'xong') {
+          const wait = prev ? BK.daysBetween(prev, today) : null;
+          out.push({ sev: wait >= 2 ? 2 : 1, cid: c.id, cname: c.name, text: `${label}: ${st.l}${wait >= 2 ? ` — chờ ${wait} ngày` : ''}`, when: hs.ngay_gn ? `GN ${dmy(hs.ngay_gn)}` : '', go: { hs: hs.id } });
+        }
+        for (const b of hs.bo_sung || []) if (!b.xong && b.han && BK.daysBetween(today, b.han) <= 7) out.push({ sev: BK.daysBetween(today, b.han) < 0 ? 3 : 2, cid: c.id, cname: c.name, text: `Bổ sung ${b.ten} — KUNN ${hs.so_kunn || ''}`, when: `hạn ${dmy(b.han)}`, go: { hs: hs.id } });
+      }
+      for (const k of kunns) {
+        const s = BK.kunnSummary(k, { hanNgay, today });
+        if (s.quaHan) out.push({ sev: 3, cid: c.id, cname: c.name, text: `KUNN ${k.so_kunn} quá hạn hồ sơ gốc ${s.quaHan} ngày`, when: 'quá hạn', go: { kunn: k.id } });
+        else if (!s.done && s.han && BK.daysBetween(today, s.han) <= 5) out.push({ sev: 2, cid: c.id, cname: c.name, text: `KUNN ${k.so_kunn} sắp hết hạn hồ sơ gốc`, when: `hạn ${dmy(s.han)}`, go: { kunn: k.id } });
+      }
+      if (ledger) for (const k of ledger.kunns) {
+        if (!(k.con_lai > 0.5) || !k.dao_han) continue;
+        const d = BK.daysBetween(today, k.dao_han);
+        if (d >= 0 && d <= 15) out.push({ sev: d <= 5 ? 2 : 1, cid: c.id, cname: c.name, text: `KUNN ${k.so} đáo hạn ${dmy(k.dao_han)} — ${fmtN(k.con_lai)} đ`, when: `còn ${d} ngày`, go: { tab: 'kunn' } });
+        else if (d < 0) out.push({ sev: 3, cid: c.id, cname: c.name, text: `KUNN ${k.so} quá hạn trả nợ ${-d} ngày (theo sổ Excel)`, when: 'quá hạn', go: { tab: 'kunn' } });
+      }
+    }
+    return out.sort((a, b) => b.sev - a.sev);
+  }
+
+  /** Tên file trong gói tải lên hệ thống: 01_KUNN…, theo thứ tự loại chứng từ. */
+  function packageNames(hs, files, order) {
+    const ord = order || Object.fromEntries(Object.entries(TYPES).map(([k, t]) => [k, t.ord]));
+    const byFile = new Map();
+    for (const d of hs.docs || []) if (!d.del) { const o = ord[d.loai] || 10; if (!byFile.has(d.fileId) || byFile.get(d.fileId).o > o) byFile.set(d.fileId, { o, loai: d.loai, so: d.f.so }); }
+    const used = {};
+    return files.filter((f) => !(hs.skipUp || {})[f.id]).map((f) => {
+      const t = byFile.get(f.id) || { o: f.name && /\.xlsx?$/i.test(f.name) ? 3 : 10, loai: f.name && /\.xlsx?$/i.test(f.name) ? 'bang_ke' : 'khac', so: '' };
+      const base = `${String(t.o).padStart(2, '0')}_${fold(TYPES[t.loai].l).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24)}${t.so ? '_' + String(t.so).replace(/[^\w.-]+/g, '') : ''}`;
+      const ext = (f.name.match(/\.[a-z0-9]+$/i) || [''])[0].toLowerCase();
+      let name = base + ext, i = 2;
+      while (used[name]) name = `${base}_${i++}${ext}`;
+      used[name] = 1;
+      return { id: f.id, name, o: t.o, i: used.n = (used.n || 0) + 1 };
+    }).sort((a, b) => a.o - b.o || a.i - b.i).map(({ i, ...x }) => x);
+  }
+
+  return { TYPES, GROUP_ORDER, promptRead, normDocs, MILESTONES, milestones, stageOf, checks, counts, readLedger, duNoTruoc, tasks, packageNames, sameName, fmtN };
+})();
+</script>
 <script id="bk-app">
 (() => {
 'use strict';
