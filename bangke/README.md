@@ -19,6 +19,13 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   - Hồ sơ không cần nữa: nút 🗑 ở từng dòng / trong hồ sơ (hoàn tác bằng ↶). Việc cần làm của công ty ẩn được (✕).
   - Theo dõi KUNN: dòng tổng dư nợ; **ghi chú từng KUNN** — KH trả nợ 1 phần (trừ vào dư nợ hiển thị), gia hạn / đổi
     ngày trả (đáo hạn theo ngày mới), quá hạn đang xử lý, đã tất toán (thôi nhắc), ghi chú tự do.
+  - **Bổ sung ngay trong mục kiểm tra**: thiếu hạn mức → nhập tại chỗ; thiếu / cũ CIC → thả file hoặc nhập tay ngày + nhóm nợ;
+    thiếu giấy nộp NSNN, HĐMB / PO, chứng từ của một dòng → thả file đúng loại; dòng bảng kê sai → sửa dòng; TK lệch → dùng TK
+    trên chứng từ. Mục đạt tick xanh, lỗi đỏ. Bảng kê sửa / thêm / xóa dòng được, mọi thay đổi ghi **Lịch sử thay đổi**,
+    hoàn tác / làm lại bằng ↶ ↷. **Xem nhanh** file đã up (👁) không rời trang.
+  - **Số KUNN**: gợi ý số tiếp theo theo số lớn nhất trong file Excel / sổ hóa đơn, chỉnh ±, chọn hậu tố (.26/.27), báo trùng.
+  - **Gói tải lên**: tên từng file sửa được, tải lẻ từng file, kèm bảng kê Excel chuẩn; tên gói `HoSoGN_<KH>_KUNN_<số>_<ngày>.zip`.
+  - Nút **🏢 Công ty** trên thanh đầu trang (Ctrl+K) để chuyển nhanh giữa các công ty.
   - Xem từng chứng từ: bản scan cạnh số liệu AI đọc, sửa tay → kiểm tra chạy lại.
   - **Dải mốc**: bấm một mốc → tool viền đỏ đúng chỗ cần làm và ghi việc phải làm. Mốc tự tick chỉ khi việc đã có thật
     (có file, hết lỗi + có bảng kê, có số KUNN, có bản KUNN / PDGN đã ký trong hồ sơ); các mốc còn lại bấm “Đã xong”,

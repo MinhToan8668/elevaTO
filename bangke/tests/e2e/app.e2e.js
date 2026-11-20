@@ -609,6 +609,24 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.goBack();
   await page.locator('.hs3').waitFor();
   assert.equal(await page.locator('.ck.s3').count(), 0, 'hết lỗi sau khi sửa');
+  // sửa dòng bảng kê ngay trong hồ sơ → lưu vết; xem nhanh file đã up
+  await page.locator('details.okl', { hasText: 'Bảng kê ·' }).locator('summary').evaluate((e) => { e.parentElement.open = true; });
+  await page.locator('[data-fxline]').first().click();
+  await page.fill('[data-lf="ghi_chu"]', 'đã đối chiếu');
+  await page.click('#lfSave');
+  await page.locator('.trail li', { hasText: 'Sửa dòng 830: Ghi chú: — → đã đối chiếu' }).waitFor({ state: 'attached' });
+  await page.locator('[data-fprev]').first().click();
+  await page.locator('#pvT', { hasText: '1/2' }).waitFor();
+  await page.click('#pvN');
+  await page.locator('#pvT', { hasText: '2/2' }).waitFor();
+  await page.locator('.modal [data-close]').first().click();
+  // chọn công ty nhanh: Ctrl+K
+  await page.keyboard.press('Control+k');
+  await page.fill('#cpQ', 'An Bình');
+  await page.press('#cpQ', 'Enter');
+  await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
+  await page.goBack();
+  await page.locator('.hs3').waitFor();
   // mốc: nhập số KUNN → mốc “Xin số KUNN” tự xong; bấm mốc gửi KH ký
   await page.fill('#hsKunn', '1000001(9).26'); await page.press('#hsKunn', 'Tab');
   await page.locator('.ms.done', { hasText: 'Xin số KUNN' }).waitFor();
@@ -625,7 +643,8 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.obox', { hasText: 'Đã ghi' }).waitFor();
   const [dz] = await Promise.all([page.waitForEvent('download'), page.click('#hsZip')]);
   const zz = await JSZip.loadAsync(await readFile(await dz.path()));
-  assert.deepEqual(Object.keys(zz.files).sort(), ['03_BANG_KE.xlsx', '04_UNC_LENH_CHI.pdf']);
+  assert.deepEqual(Object.keys(zz.files).sort(), ['03_BANG_KE.xlsx', '03_BANG_KE_CHUAN_1000001_9_.26.xlsx', '04_UNC_LENH_CHI.pdf']);
+  assert.match(dz.suggestedFilename(), /^HoSoGN_.*_KUNN_1000001_9_?\.26_26112026\.zip$/);
   await page.click('[data-ctab="kunn"]');
   await page.click('[data-kf="all"]');
   assert.match(await page.locator('.kwrap').innerText(), /1000001\(9\)\.26/);

@@ -301,14 +301,14 @@ a.logo{color:#fff;text-decoration:none}
 
 /* ═══ LIQUID GLASS — cùng bộ màu & kính với PDF Studio (pdf/index.html) ═══ */
 :root{
-  --navy:#1F4C42;--blue:#2E6A5C;--blue2:#3B8C77;--blue-bg:rgba(46,106,92,.14);
+  --navy:#14532D;--blue:#15924F;--blue2:#22C55E;--blue-bg:rgba(34,197,94,.14);
   --ink:#19232B;--ink2:#3D4A54;--ink3:#68767F;
-  --ok:#2E6A5C;--ok-bg:rgba(46,106,92,.13);--err:#A83A2C;--err-bg:rgba(168,58,44,.10);--warn:#8A6A1F;--warn-bg:rgba(232,196,96,.22);
+  --ok:#15924F;--ok-bg:rgba(34,197,94,.14);--err:#A83A2C;--err-bg:rgba(168,58,44,.10);--warn:#8A6A1F;--warn-bg:rgba(232,196,96,.22);
   --card:rgba(255,255,255,.62);--card2:rgba(255,255,255,.38);--line:rgba(31,52,46,.10);--line2:rgba(31,52,46,.07);
   --glass:rgba(255,255,255,.46);--glass-hi:rgba(255,255,255,.85);--glass-brd:rgba(255,255,255,.7);
   --glass-shadow:0 1px 1px rgba(255,255,255,.6) inset,0 -1px 1px rgba(255,255,255,.18) inset,0 10px 34px -14px rgba(22,52,44,.32),0 2px 6px -2px rgba(22,52,44,.10);
   --blur:saturate(185%) blur(22px);
-  --bg-base:#E6EEEA;--blob-1:rgba(70,170,140,.55);--blob-2:rgba(240,190,90,.45);--blob-3:rgba(110,150,230,.45);--blob-4:rgba(235,120,110,.32);
+  --bg-base:#EAF6E8;--blob-1:rgba(110,231,160,.62);--blob-2:rgba(190,242,100,.52);--blob-3:rgba(103,232,249,.38);--blob-4:rgba(250,204,21,.22);
   --r:18px;--sh:var(--glass-shadow);--shm:0 1px 1px rgba(255,255,255,.6) inset,0 16px 40px -14px rgba(22,52,44,.42);
   --field:rgba(255,255,255,.72);--solid:rgba(255,255,255,.92);
 }
@@ -342,14 +342,14 @@ body::before{content:"";position:fixed;inset:-20vmax;z-index:-1;pointer-events:n
 .hdr{border-radius:0;border-width:0 0 1px;color:var(--ink);box-shadow:0 10px 30px -18px rgba(22,52,44,.35)}
 a.logo{color:var(--ink);display:flex;align-items:center;gap:11px;text-decoration:none}a.logo b{color:var(--blue2)}
 .logo>span:last-child{font-weight:800;font-size:19px;letter-spacing:-.02em}
-.logo .lg{width:36px;height:36px;border-radius:11px;background:linear-gradient(180deg,rgba(255,255,255,.38) 0%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#3B8C77,#24604F);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 0 rgba(255,255,255,.45) inset,0 8px 20px -8px rgba(36,96,79,.75);flex:none}
+.logo .lg{width:36px;height:36px;border-radius:11px;background:linear-gradient(180deg,rgba(255,255,255,.38) 0%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#4ADE80,#16A34A);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 0 rgba(255,255,255,.45) inset,0 8px 20px -8px rgba(22,163,74,.55);flex:none}
 .logo small{color:var(--ink3);opacity:1;letter-spacing:.06em;text-transform:uppercase;font-size:10.5px;font-weight:600}
 .hbtn,.btn,.theme-btn{border-radius:12px;border:1px solid var(--glass-brd);color:var(--ink);background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.32));
   -webkit-backdrop-filter:saturate(170%) blur(12px);backdrop-filter:saturate(170%) blur(12px);box-shadow:0 1px 0 rgba(255,255,255,.75) inset,0 3px 10px -5px rgba(22,52,44,.28);transition:transform .12s,box-shadow .15s,background .15s}
 .hbtn:hover,.btn:hover,.theme-btn:hover{background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.45));transform:translateY(-1px);color:var(--ink)}
 .btn:active,.hbtn:active{transform:scale(.98)}.btn[disabled]:hover{transform:none}
-.btn.pri,.hbtn.pri,.chip.on{border-color:rgba(255,255,255,.35);color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.38) 0%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#3B8C77,#24604F);box-shadow:0 1px 0 rgba(255,255,255,.45) inset,0 -2px 6px rgba(0,0,0,.18) inset,0 8px 20px -8px rgba(36,96,79,.75)}
-.btn.pri:hover,.hbtn.pri:hover{filter:brightness(1.08);color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#3B8C77,#24604F)}
+.btn.pri,.hbtn.pri,.chip.on{border-color:rgba(255,255,255,.35);color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.38) 0%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#4ADE80,#16A34A);box-shadow:0 1px 0 rgba(255,255,255,.45) inset,0 -2px 6px rgba(0,0,0,.18) inset,0 8px 20px -8px rgba(22,163,74,.55)}
+.btn.pri:hover,.hbtn.pri:hover{filter:brightness(1.08);color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#4ADE80,#16A34A)}
 .btn.danger{color:var(--err)}
 .theme-btn{width:38px;height:36px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;padding:0}
 .sync{background:var(--field);color:var(--ink2);border:1px solid var(--glass-brd)}
@@ -365,10 +365,10 @@ a.logo{color:var(--ink);display:flex;align-items:center;gap:11px;text-decoration
 .ms{border-radius:99px}.ms.done,.ms.auto{color:var(--ok);background:linear-gradient(155deg,var(--glass-hi),transparent 34%),var(--ok-bg)}
 .ms.cur{color:var(--navy);border:2px solid var(--blue2);background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.7))}
 .chip{border-radius:99px;color:var(--ink2)}
-.drop{border-style:dashed;border-width:2px;border-color:rgba(46,106,92,.35);color:var(--blue)}.drop span{color:var(--ink)}
+.drop{border-style:dashed;border-width:2px;border-color:rgba(22,163,74,.35);color:var(--blue)}.drop span{color:var(--ink)}
 .drop:hover,.drop.over{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-bg),var(--glass-shadow)}
 .stage{background:var(--blue-bg);color:var(--navy)}.stage.e{background:var(--err-bg);color:var(--err)}.stage.o{background:var(--ok-bg);color:var(--ok)}
-.cbar u{background:linear-gradient(90deg,#3B8C77,#7FD1B9)}.cbar i{background:rgba(0,0,0,.08)}
+.cbar u{background:linear-gradient(90deg,#22C55E,#A3E635)}.cbar i{background:rgba(0,0,0,.08)}
 .chips span{background:rgba(255,255,255,.5);border:1px solid var(--glass-brd)}
 .t th{background:rgba(255,255,255,.45);color:var(--ink2);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 .t td{border-bottom:1px solid var(--line2)}.t tr.sel td{background:var(--blue-bg)}
@@ -398,7 +398,7 @@ a,.lnk{color:var(--blue)}
 .hrow2:hover{background:rgba(255,255,255,.7)}.t tr.warn td{background:var(--warn-bg)}.t tr.bad td{background:var(--err-bg)}
 .tile.warn .tv{color:var(--warn)}
 .lgmap{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:10px 0 6px}@media(max-width:1000px){.lgmap{grid-template-columns:repeat(3,minmax(0,1fr))}}.lgmap em{font-style:normal;font-size:10.5px;color:var(--blue);font-weight:600}
-.note.ok{background:var(--ok-bg);border:1px solid rgba(46,106,92,.25);color:var(--ok)}
+.note.ok{background:var(--ok-bg);border:1px solid rgba(22,163,74,.25);color:var(--ok)}
 .ms.sel{outline:2px solid var(--err);outline-offset:2px}.ms.todo{opacity:.85}
 .msfocus{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-2px 0 12px;padding:10px 14px;border-radius:16px;background:linear-gradient(155deg,var(--glass-hi),transparent 34%),var(--glass);border:1.5px solid rgba(168,58,44,.45);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);font-size:13.5px}
 .msfocus>div{max-width:760px}
@@ -425,11 +425,27 @@ a,.lnk{color:var(--blue)}
 @keyframes fadeup{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){.home>*,.rarc{animation:none}}
 .tile::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(127,209,185,.35),transparent 70%);pointer-events:none}
+.okli b{color:var(--ok)}.okl li.okli{color:var(--ink)}
+.ck.s0 .ic,.ck .ic.okc{background:var(--ok-bg);color:var(--ok)}.ck.s3 .ic{background:var(--err);color:#fff}.ck.s3 b{color:var(--err)}
+.fx{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%;padding:6px 0 2px}.fx .inp{width:auto;min-width:120px;padding:5px 8px;font-size:12.5px}
+.dline2{display:flex;align-items:flex-start;gap:4px}.dline2 .dline{flex:1}.eye{width:28px;height:26px;border-radius:8px;opacity:.55;flex:none}.eye:hover{opacity:1;background:var(--blue-bg)}
+.trail{list-style:none;display:flex!important;flex-direction:column;gap:5px!important}.trail small{color:var(--ink3)}
+.kn-sg{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.kn-sg b{font-size:14px}.kn-sg .inp{width:auto;padding:4px 6px}
+.pkr{display:flex;gap:4px;align-items:center}.pkr .cell-in{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;min-width:0}
+.rowbtns{display:flex;gap:2px;justify-self:end}.hsrow{grid-template-columns:minmax(170px,1fr) minmax(180px,1.4fr) minmax(200px,1.6fr) 150px 66px}
+.pvb{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;flex:1;min-height:0;overflow:hidden}.pvm{display:flex;min-height:0}.pvm iframe{flex:1;border:0;border-radius:12px;background:#fff;min-height:74vh}
+.pvi{flex:1;overflow:auto;text-align:center}.pvi img{max-width:100%;background:#fff;border-radius:8px}.pvx{flex:1;overflow:auto}.pvt{flex:1;overflow:auto;white-space:pre-wrap;font-size:12.5px;background:rgba(255,255,255,.6);padding:12px;border-radius:12px}
+.pvs{display:flex;flex-direction:column;gap:6px;overflow:auto}
+.cplist{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:55vh;overflow:auto}.cpi{display:flex;flex-direction:column;padding:10px 12px;border-radius:12px;text-decoration:none;color:var(--ink);border:1px solid var(--glass-brd);background:rgba(255,255,255,.45)}
+.cpi:hover,.cpi.on{background:var(--blue-bg);border-color:var(--blue2)}.cpi small{color:var(--ink3);font-size:12px}
+.hbtn.copick{font-weight:700}
+.nowrap{white-space:nowrap}
 </style>
 </head>
 <body>
 <header class="hdr"><div class="hdr-in">
   <a class="logo" href="#/" title="Về danh sách công ty"><span class="lg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"></rect><path d="M9 8h6M9 12h6M9 16h4"></path></svg></span><span>Hồ sơ <b>Giải ngân</b><small>Quản lý theo từng công ty · chạy trên máy bạn</small></span></a>
+  <button class="hbtn copick" id="bCoPick" title="Chọn công ty (Ctrl+K)">🏢 Công ty ▾</button>
   <span class="sync" id="syncPill" title="Thư mục chung của team (đồng bộ nhiều máy)"><i></i><span>Chỉ trên máy này</span></span>
   <div class="sp"></div>
   <form id="qInv" class="hsearch" autocomplete="off"><input id="qInvT" placeholder="🔎 Tra hóa đơn: số HĐ, NCC…" title="Hóa đơn này đã giải ngân chưa? Gõ số hóa đơn (có thể kèm tên NCC) rồi Enter"></form>
@@ -2474,12 +2490,14 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     const byFile = new Map();
     for (const d of hs.docs || []) if (!d.del) { const o = ord[d.loai] || 10; if (!byFile.has(d.fileId) || byFile.get(d.fileId).o > o) byFile.set(d.fileId, { o, loai: d.loai, so: d.f.so }); }
     const used = {};
+    const own = hs.pkgNames || {};
     return files.filter((f) => !(hs.skipUp || {})[f.id]).map((f) => {
       const t = byFile.get(f.id) || { o: f.name && /\.xlsx?$/i.test(f.name) ? 3 : 10, loai: f.name && /\.xlsx?$/i.test(f.name) ? 'bang_ke' : 'khac', so: '' };
       const base = `${String(t.o).padStart(2, '0')}_${fold(TYPES[t.loai].l).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24)}${t.so ? '_' + String(t.so).replace(/[^\w.-]+/g, '') : ''}`;
       const ext = (f.name.match(/\.[a-z0-9]+$/i) || [''])[0].toLowerCase();
-      let name = base + ext, i = 2;
-      while (used[name]) name = `${base}_${i++}${ext}`;
+      let name = own[f.id] ? (/\.[a-z0-9]+$/i.test(own[f.id]) ? own[f.id] : own[f.id] + ext) : base + ext, i = 2;
+      const stem = own[f.id] ? own[f.id].replace(/\.[a-z0-9]+$/i, '') : base;
+      while (used[name]) name = `${stem}_${i++}${ext}`;
       used[name] = 1;
       return { id: f.id, name, o: t.o, i: used.n = (used.n || 0) + 1 };
     }).sort((a, b) => a.o - b.o || a.i - b.i).map(({ i, ...x }) => x);
@@ -3113,7 +3131,7 @@ function renderHeaderOnly() { renderMain(); }
 // ═════════════════ BIỂU ĐỒ (SVG/HTML thuần, không thư viện) ═════════════════
 // Màu theo vai trò: 1 chuỗi = xanh thương hiệu; trạng thái hồ sơ gốc = bảng màu trạng thái cố định
 // (đã kiểm tra phân biệt mù màu; vàng/xám tương phản thấp → luôn kèm nhãn số + chú giải).
-const VC = { series: '#2E6A5C', good: '#0ca30c', warn: '#fab219', idle: '#b9b2a6', crit: '#d03b3b', grid: '#ece6da', axis: '#8C7E71' };
+const VC = { series: '#16A34A', good: '#0ca30c', warn: '#fab219', idle: '#b9b2a6', crit: '#d03b3b', grid: '#ece6da', axis: '#8C7E71' };
 function shortMoney(n) {
   if (n == null || !Number.isFinite(n)) return '—';
   const a = Math.abs(n), f = (x, d) => x.toLocaleString('vi-VN', { maximumFractionDigits: d });
@@ -5202,7 +5220,7 @@ function goTask(t) {
 // ── hình ảnh cho dashboard: vòng hạn mức, lịch đáo hạn dạng ô màu ──
 function ring(pct, label, sub, tip, act = '') {
   const r = 30, C = 2 * Math.PI * r, p = Math.max(0, Math.min(100, pct || 0));
-  const col = p >= 90 ? 'var(--err)' : p >= 75 ? '#C8962A' : '#2E6A5C';
+  const col = p >= 90 ? 'var(--err)' : p >= 75 ? '#E0A100' : '#16A34A';
   return `<div class="ring ${act ? 'go' : ''}" ${act} data-tip="${esc(tip)}"><svg viewBox="0 0 80 80" width="88" height="88" role="img" aria-label="${esc(label)} dùng ${Math.round(p)}% hạn mức"><circle cx="40" cy="40" r="${r}" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="9"/>
     <circle cx="40" cy="40" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(C * p) / 100} ${C}" transform="rotate(-90 40 40)" class="rarc"/><text x="40" y="44" text-anchor="middle" class="rpct">${Math.round(p)}%</text></svg>
     <b>${esc(label)}</b><small>${esc(sub)}</small></div>`;
@@ -5217,7 +5235,7 @@ function dueCalendar(items, weeks = 6) {
   for (let i = 0; i < weeks * 7; i++) {
     const d = BK.addDays(start, i), xs = by[d] || [], v = BK.sum(xs.map((x) => x.tien)), off = DOCX.offDay(d, hol);
     const a = v ? 0.18 + 0.72 * (v / max) : 0;
-    h += `<div class="cd ${d < today ? 'past' : ''} ${d === today ? 'today' : ''} ${off ? 'off' : ''}" ${xs.length ? `data-cal="${d}"` : ''} data-tip="${esc(`${dd(d)}${off ? ' · ' + off : ''}${xs.length ? ` — ${xs.length} KUNN đáo hạn: ${vnd(v)}\n` + xs.map((x) => `${x.c.name} · ${x.so}`).join('\n') : ''}`)}" style="${v ? `background:rgba(46,106,92,${a.toFixed(2)});color:${a > 0.5 ? '#fff' : 'inherit'}` : ''}"><span>${+d.slice(8)}</span>${xs.length ? `<i>${xs.length}</i>` : ''}</div>`;
+    h += `<div class="cd ${d < today ? 'past' : ''} ${d === today ? 'today' : ''} ${off ? 'off' : ''}" ${xs.length ? `data-cal="${d}"` : ''} data-tip="${esc(`${dd(d)}${off ? ' · ' + off : ''}${xs.length ? ` — ${xs.length} KUNN đáo hạn: ${vnd(v)}\n` + xs.map((x) => `${x.c.name} · ${x.so}`).join('\n') : ''}`)}" style="${v ? `background:rgba(22,163,74,${a.toFixed(2)});color:${a > 0.5 ? '#fff' : 'inherit'}` : ''}"><span>${+d.slice(8)}</span>${xs.length ? `<i>${xs.length}</i>` : ''}</div>`;
   }
   return h + `</div><div class="hist" style="margin-top:6px">Ô càng đậm = gốc đến hạn càng lớn · ô gạch = cuối tuần / lễ · bấm ô để xem</div></div>`;
 }
@@ -5284,7 +5302,7 @@ function renderHome(el) {
         ${withL.length ? `<div class="rings">${withL.slice().sort((a, b) => b.ledger.du_no / (hmLedger(b) || 1e18) - a.ledger.du_no / (hmLedger(a) || 1e18)).slice(0, 8).map((c) => { const hm = hmLedger(c); return ring(hm ? (c.ledger.du_no / hm) * 100 : 0, c.name, hm ? `còn ${trieu(hm - c.ledger.du_no)}` : 'chưa có hạn mức', `${c.name}: dư nợ ${vnd(c.ledger.du_no)}${hm ? ' / hạn mức ' + vnd(hm) : ''}`, A({ cgo: c.id })); }).join('')}</div>` : '<div class="empty">Đọc file Excel quản lý giải ngân của từng công ty để thấy hạn mức đã dùng</div>'}</section>
       <section class="card panel"><header><h3>Lịch đáo hạn 6 tuần</h3></header>${dueCalendar(dueList(42).filter((x) => x.d >= -7))}</section>
       <section class="card panel"><header><h3>KUNN còn dư nợ theo mức độ gấp</h3></header>${(() => { const live = S.customers.flatMap((c) => (c.ledger ? c.ledger.kunns.filter((k) => k.con_lai > 0.5).map((k) => ({ c, k, a: applyNotes(c, k) })).filter((x) => !x.a.closed && x.a.con > 0.5) : [])); const d = (x) => (x.a.due ? BK.daysBetween(today, x.a.due) : 999);
-        return live.length ? segBar([{ label: 'Quá hạn', value: live.filter((x) => d(x) < 0).length, color: '#A83A2C' }, { label: '≤ 7 ngày', value: live.filter((x) => d(x) >= 0 && d(x) <= 7).length, color: '#C8962A' }, { label: '8–30 ngày', value: live.filter((x) => d(x) > 7 && d(x) <= 30).length, color: '#7FB8A6' }, { label: 'Trên 30 ngày', value: live.filter((x) => d(x) > 30).length, color: '#2E6A5C' }], ' KUNN') + `<div class="bignum"><b>${live.length}</b> KUNN còn dư nợ · <b>${trieu(BK.sum(live.map((x) => x.a.con)))}</b></div>` : '<div class="empty">Chưa có dữ liệu dư nợ</div>'; })()}</section>
+        return live.length ? segBar([{ label: 'Quá hạn', value: live.filter((x) => d(x) < 0).length, color: '#A83A2C' }, { label: '≤ 7 ngày', value: live.filter((x) => d(x) >= 0 && d(x) <= 7).length, color: '#C8962A' }, { label: '8–30 ngày', value: live.filter((x) => d(x) > 7 && d(x) <= 30).length, color: '#A3E635' }, { label: 'Trên 30 ngày', value: live.filter((x) => d(x) > 30).length, color: '#16A34A' }], ' KUNN') + `<div class="bignum"><b>${live.length}</b> KUNN còn dư nợ · <b>${trieu(BK.sum(live.map((x) => x.a.con)))}</b></div>` : '<div class="empty">Chưa có dữ liệu dư nợ</div>'; })()}</section>
     </div>
     <div class="g2x">
       <section class="card panel"><header><h3>KUNN sắp đáo hạn · 30 ngày tới</h3><span class="hist">bấm dòng để mở công ty</span></header>
@@ -5341,7 +5359,7 @@ function hosoRow(hs) {
     <div><b>${hs.done ? '✓ ' : ''}Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : '(chưa định ngày)'}</b><small>${vnd(BK.sum((hs.lines || []).map((l) => l.tien_gn)))} · ${(hs.files || []).length} file${hs.so_kunn ? ' · KUNN ' + esc(hs.so_kunn) : ''}</small></div>
     <div class="chips">${Object.entries(types).map(([k, v]) => `<span>${esc(HSC.TYPES[k].l)}${v > 1 ? ' ×' + v : ''}</span>`).join('') || '<span class="m">chưa có chứng từ</span>'}</div>
     <div class="iss">${top.map((x) => `<span class="${SEV[x.sev][1]}">${SEV[x.sev][0]} ${esc(x.title)}</span>`).join('') || `<span class="o">✓ ${hs.done ? 'Đã giải ngân' : 'Không có lỗi'}</span>`}</div>
-    <span class="stage ${n.err ? 'e' : st.k === 'xong' ? 'o' : ''}">${n.err ? `${n.err} lỗi${n.warn ? ' · ' + n.warn + ' cần xem' : ''}` : esc(st.l)}</span><button class="rowdel" data-hsdel="${hs.id}" title="Xóa hồ sơ (không cần nữa)" aria-label="Xóa hồ sơ">🗑</button></div>`;
+    <span class="stage ${n.err ? 'e' : st.k === 'xong' ? 'o' : ''}">${n.err ? `${n.err} lỗi${n.warn ? ' · ' + n.warn + ' cần xem' : ''}` : esc(st.l)}</span><span class="rowbtns">${(hs.files || []).length ? `<button class="rowdel eyeb" data-hsprev="${hs.id}" title="Xem nhanh các file đã up" aria-label="Xem nhanh">👁</button>` : ''}<button class="rowdel" data-hsdel="${hs.id}" title="Xóa hồ sơ (không cần nữa)" aria-label="Xóa hồ sơ">🗑</button></span></div>`;
 }
 function dropZone(id, text) {
   return `<label class="drop" id="${id}"><input type="file" multiple hidden>
@@ -5396,6 +5414,8 @@ function renderCoOverview(body, c) {
   if ($('#tMore', body)) $('#tMore', body).onclick = () => { V.allTasks = true; renderMain(); };
 }
 document.addEventListener('click', async (e) => {
+  const pv = e.target.closest('[data-hsprev]');
+  if (pv) { e.stopPropagation(); const h = hsGet(pv.dataset.hsprev); if (h && h.files.length) previewFiles(h, h.files[0].id); return; }
   const del = e.target.closest('[data-hsdel]');
   if (del) { e.stopPropagation(); const h = hsGet(del.dataset.hsdel); if (h && confirm(`Xóa hồ sơ giải ngân${h.ngay_gn ? ' ' + dd(h.ngay_gn) : ''} (${(h.files || []).length} file)? Có thể hoàn tác bằng nút ↶.`)) { await S.store.delHoso(h.id); toast('Đã xóa hồ sơ', 'ok'); } return; }
   const r = e.target.closest('[data-href]'); if (r && !e.target.closest('button,input,select,a')) location.hash = r.dataset.href;
@@ -5684,11 +5704,12 @@ const hsGet = (id) => S.store.h.get(id);
 async function hsPatch(id, fn, label) {
   const cur = hsGet(id); if (!cur || cur.deleted) return null;
   const x = structuredClone(cur); fn(x); Object.assign(x, meta());
+  if (label) x.trail = [...(x.trail || []), { at: Date.now(), by: userName(), what: label }].slice(-300);
   await S.store.putHoso(x, label); return x;
 }
 const isExcel = (f) => /\.(xlsx?|xlsm|csv)$/i.test(f.name);
 const mimeOf = (f) => f.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : /\.png$/i.test(f.name) ? 'image/png' : /\.jpe?g$/i.test(f.name) ? 'image/jpeg' : 'application/octet-stream');
-async function addFiles(hsId, files) {
+async function addFiles(hsId, files, opt = {}) {
   const hs0 = hsGet(hsId); if (!hs0) return;
   const added = [];
   for (const f of files) {
@@ -5699,9 +5720,15 @@ async function addFiles(hsId, files) {
   await hsPatch(hsId, (x) => { x.files.push(...added.map(({ file, ...m }) => m)); if (!x.ms.nhan) x.ms.nhan = BK.todayISO(); }, `Thêm ${added.length} file vào hồ sơ`);
   toast(`Đã thêm ${added.length} file — đang đọc…`);
   for (const a of added) {
-    if (isExcel(a.file)) { await readBangKeFile(hsId, a).catch((e) => toast(`${a.name}: ${errMsg(e)}`, 'err', 7000)); continue; }
+    if (isExcel(a.file) && (!opt.loai || opt.loai === 'bang_ke')) { await readBangKeFile(hsId, a).catch((e) => toast(`${a.name}: ${errMsg(e)}`, 'err', 7000)); continue; }
     if (aiKeys().length) await aiReadFile(hsId, a.id).catch((e) => toast(`AI đọc ${a.name}: ${errMsg(e)}`, 'err', 8000));
+    if (opt.loai) await hsPatch(hsId, (x) => {           // bổ sung đúng loại chứng từ đang thiếu
+      const ds = x.docs.filter((d) => d.fileId === a.id);
+      if (!ds.length) x.docs.push({ id: a.id + '_0', fileId: a.id, loai: opt.loai, f: {}, conf: 1, ok: false });
+      else if (!ds.some((d) => d.loai === opt.loai)) { const d = ds.find((q) => q.loai === 'khac') || ds[0]; d.loai = opt.loai; d.conf = 1; }
+    }, `Bổ sung ${HSC.TYPES[opt.loai].l}: ${a.name}`);
   }
+  if (opt.loai && !aiKeys().length) { const d = (hsGet(hsId).docs || []).find((q) => q.fileId === added[0].id); if (d) go({ hs: hsId, doc: d.id }); }
   if (!aiKeys().length && added.some((a) => !isExcel(a.file))) toast('Chưa có API key Gemini — file PDF/ảnh chưa được AI đọc. Nạp key trong Cài đặt rồi bấm “AI đọc”.', 'err', 8000);
 }
 async function readBangKeFile(hsId, meta0) {
@@ -5791,7 +5818,22 @@ function renderHoso(el, c) {
     const t = HSC.TYPES[d.loai], bad = cs.some((x) => x.sev >= 2 && x.refs.includes(d.id));
     const main = d.loai === 'bang_ke' ? `${fileName(d.fileId)}` : `${t.l}${d.f.so ? ' ' + d.f.so : ''}`;
     const sub = d.loai === 'bang_ke' ? `${hs.lines.length} dòng · ${vnd(total)}` : [d.f.ben_ban, d.f.ngay, d.f.tien && vnd(+d.f.tien)].filter(Boolean).join(' · ');
-    return `<a class="dline ${bad ? 'bad' : ''} ${d.conf < 0.6 && d.loai !== 'bang_ke' ? 'unsure' : ''}" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}"><i></i><span>${esc(main)}<small>${esc(sub)}${d.conf < 0.6 && d.loai !== 'bang_ke' ? ' · AI chưa chắc — bấm để xem' : ''}</small></span></a>`;
+    return `<div class="dline2"><a class="dline ${bad ? 'bad' : ''} ${d.conf < 0.6 && d.loai !== 'bang_ke' ? 'unsure' : ''}" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}"><i></i><span>${esc(main)}<small>${esc(sub)}${d.manual ? ' · nhập tay' : ''}${d.conf < 0.6 && d.loai !== 'bang_ke' ? ' · AI chưa chắc — bấm để xem' : ''}</small></span></a>${d.fileId ? `<button class="eye" data-fprev="${d.fileId}" title="Xem nhanh file">👁</button>` : ''}</div>`;
+  };
+  const FXF = { cic: 'cic', nsnn: 'nsnn', hdmb: 'hdmb', bk: 'bang_ke' };
+  const fixHtml = (x) => {
+    if (x.sev < 1) return '';
+    const k = x.key, line = x.refs.find((r) => hs.lines.some((l) => l.id === r));
+    const file = (loai, label) => `<button class="btn sm" data-fxfile="${loai}">📎 ${label}</button>`;
+    if (/^hm_/.test(k)) return `<span class="fx"><input class="inp" data-fxhm placeholder="Hạn mức (triệu)" value="${esc(p.hm_tong || '')}"><button class="btn sm pri" data-fx="hm">Lưu hạn mức</button>${!c.ledger ? `<button class="btn sm" data-xlpick="${c.id}">📂 Chọn file Excel dư nợ</button>` : ''}</span>`;
+    if (/^cic_/.test(k)) return `<span class="fx">${file('cic', 'Thả file CIC')}<input class="inp" type="date" data-fxcic title="hoặc nhập ngày tra CIC"><select class="inp" data-fxnhom><option value="1">Nhóm 1</option><option value="2">Nhóm 2</option><option value="3">Nhóm 3+</option></select><button class="btn sm" data-fx="cic">Lưu CIC nhập tay</button></span>`;
+    if (/^nsnn/.test(k)) return `<span class="fx">${file('nsnn', 'Bổ sung giấy nộp NSNN')}</span>`;
+    if (/^hdmb_/.test(k)) return `<span class="fx">${file('hdmb', 'Bổ sung HĐMB / PO')}${line ? `<button class="btn sm" data-fxline="${line}">✎ Sửa dòng bảng kê</button>` : ''}</span>`;
+    if (k === 'bk_none') return `<span class="fx">${file('bang_ke', 'Thả file bảng kê Excel')}<button class="btn sm" data-fxadd="1">＋ Nhập dòng tay</button></span>`;
+    if (/^ct_/.test(k)) return `<span class="fx">${file('', 'Bổ sung chứng từ cho dòng này')}<button class="btn sm" data-fxline="${line}">✎ Sửa dòng</button></span>`;
+    if (/^tk_/.test(k)) return `<span class="fx"><button class="btn sm pri" data-fxtk="${esc(x.refs[0])}">Dùng TK trên chứng từ</button></span>`;
+    if (line) return `<span class="fx"><button class="btn sm" data-fxline="${line}">✎ Sửa dòng bảng kê</button></span>`;
+    return '';
   };
   const ackBtn = (x) => x.sev >= 2 ? `<button class="lnk" data-ack="${esc(x.key)}">Bỏ qua — ghi lý do</button>` : x.sev === 1 ? `<button class="lnk" data-unack="${esc(x.key)}">↺ Bỏ “bỏ qua”</button>` : '';
   const refLinks = (x) => x.refs.map((r) => hs.docs.find((d) => d.id === r)).filter(Boolean).map((d) => `<a class="lnk" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}">Xem ${esc(HSC.TYPES[d.loai].l.toLowerCase())} ${esc(d.f.so || '')}</a>`).join(' ');
@@ -5818,20 +5860,23 @@ function renderHoso(el, c) {
         <header><h3>Chứng từ KH gửi · ${hs.files.length} file</h3></header>
         ${dropZone('dzAdd', '+ Thả thêm file vào đây')}
         ${HSC.GROUP_ORDER.filter((g) => docsBy[g]).map((g) => `<div class="dgrp"><h4>${esc(g)}</h4>${docsBy[g].map(docLine).join('')}</div>`).join('')}
-        ${unread.length ? `<div class="dgrp unr"><h4>Chưa đọc · ${unread.length} file</h4>${unread.map((f) => `<div class="dline"><i></i><span>${esc(f.name)}<small>${BUSY.has(f.id) ? '⏳ AI đang đọc…' : `${Math.round(f.size / 1024)} KB`}</small></span>${BUSY.has(f.id) ? '' : `<button class="btn sm" data-aread="${f.id}">🤖 AI đọc</button>`}</div>`).join('')}</div>` : ''}
-        ${hs.files.length ? `<details class="dgrp"><summary>Tất cả file (${hs.files.length})</summary>${hs.files.map((f) => `<div class="fline"><span>${esc(f.name)}</span><button class="lnk" data-fopen="${f.id}">Mở</button>${!isExcel(f) ? `<button class="lnk" data-aread="${f.id}">AI đọc lại</button>` : ''}<button class="lnk" data-fdel="${f.id}">Xóa</button></div>`).join('')}</details>` : ''}
+        ${unread.length ? `<div class="dgrp unr"><h4>Chưa đọc · ${unread.length} file</h4>${unread.map((f) => `<div class="dline"><i></i><span>${esc(f.name)}<small>${BUSY.has(f.id) ? '⏳ AI đang đọc…' : `${Math.round(f.size / 1024)} KB`}</small></span><button class="eye" data-fprev="${f.id}" title="Xem nhanh">👁</button>${BUSY.has(f.id) ? '' : `<button class="btn sm" data-aread="${f.id}">🤖 AI đọc</button>`}</div>`).join('')}</div>` : ''}
+        ${hs.files.length ? `<details class="dgrp"><summary>Tất cả file (${hs.files.length})</summary>${hs.files.map((f) => `<div class="fline"><span>${esc(f.name)}</span><button class="lnk" data-fprev="${f.id}">👁 Xem</button><button class="lnk" data-fdl="${f.id}">⬇ Tải</button>${!isExcel(f) ? `<button class="lnk" data-aread="${f.id}">AI đọc lại</button>` : ''}<button class="lnk" data-fdel="${f.id}">Xóa</button></div>`).join('')}</details>` : ''}
       </section>
       <section class="hscol mid">
         <header><h3>Kiểm tra — tự sinh theo bộ chứng từ này</h3><span class="cnt"><b class="e">${n.err} lỗi</b><b class="w">${n.warn} cần xem</b><b class="o">${n.ok} đạt</b></span></header>
-        ${cs.filter((x) => x.sev >= 1).map((x) => `<div class="ck s${x.sev}"><span class="ic">${SEV[x.sev][0]}</span><div><b>${esc(x.title)}</b>${x.detail ? `<p>${esc(x.detail)}</p>` : ''}${x.ack ? `<p class="ack">Đã bỏ qua: ${esc(x.ack)}</p>` : ''}<div class="act">${refLinks(x)}${ackBtn(x)}</div></div></div>`).join('') || '<div class="ck s0"><span class="ic">✓</span><div><b>Không thấy lỗi hay điểm cần xem</b></div></div>'}
-        <details class="okl" ${n.err + n.warn === 0 ? 'open' : ''}><summary>${n.ok} mục đạt — xem chi tiết</summary><ul>${cs.filter((x) => x.sev === 0).map((x) => `<li>✓ ${esc(x.title)}</li>`).join('')}</ul></details>
-        <details class="okl" ${hs.lines.length && hs.lines.length <= 12 ? 'open' : ''}><summary>Bảng kê · ${hs.lines.length} dòng</summary>${hs.lines.length ? `<div class="tw"><table class="t"><thead><tr><th>Nhà cung cấp</th><th>HĐMB</th><th>Số HĐ</th><th>Ngày</th><th class="right">Tiền HĐ</th><th class="right">Giải ngân</th></tr></thead><tbody>${hs.lines.map((l) => `<tr><td>${esc(l.ncc)}</td><td>${esc(l.so_hdmb)}</td><td><b>${esc(l.so_hd)}</b></td><td>${dd(l.ngay_hd)}</td><td class="num">${money(l.tien_hd)}</td><td class="num">${money(l.tien_gn)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Thả file Excel bảng kê KH gửi vào hồ sơ</div>'}</details>
+        ${cs.filter((x) => x.sev >= 1).map((x) => `<div class="ck s${x.sev}"><span class="ic">${SEV[x.sev][0]}</span><div><b>${esc(x.title)}</b>${x.detail ? `<p>${esc(x.detail)}</p>` : ''}${x.ack ? `<p class="ack">Đã bỏ qua: ${esc(x.ack)}</p>` : ''}<div class="act">${fixHtml(x)}${refLinks(x)}${ackBtn(x)}</div></div></div>`).join('') || '<div class="ck s0"><span class="ic">✓</span><div><b>Không thấy lỗi hay điểm cần xem</b></div></div>'}
+        <details class="okl" ${n.err + n.warn === 0 ? 'open' : ''}><summary>${n.ok} mục đạt — xem chi tiết</summary><ul>${cs.filter((x) => x.sev === 0).map((x) => `<li class="okli"><b>✓</b> ${esc(x.title)}</li>`).join('')}</ul></details>
+        <details class="okl" ${hs.lines.length && hs.lines.length <= 12 ? 'open' : ''}><summary>Bảng kê · ${hs.lines.length} dòng</summary>${hs.lines.length ? `<div class="tw"><table class="t"><thead><tr><th>Nhà cung cấp</th><th>HĐMB / PO</th><th>Số HĐ / PO</th><th>Ngày</th><th class="right">Tiền HĐ</th><th class="right">Giải ngân</th><th></th></tr></thead><tbody>${hs.lines.map((l) => `<tr class="${cs.some((x) => x.sev >= 2 && x.refs.includes(l.id)) ? 'bad' : ''}"><td>${esc(l.ncc)}</td><td>${esc(l.so_hdmb)}</td><td><b>${esc(l.so_hd)}</b></td><td>${dd(l.ngay_hd)}</td><td class="num">${money(l.tien_hd)}</td><td class="num">${money(l.tien_gn)}</td><td class="nowrap"><button class="lnk" data-fxline="${l.id}" title="Sửa dòng">✎</button> <button class="lnk" data-ldel2="${l.id}" title="Xóa dòng">✕</button></td></tr>`).join('')}</tbody><tfoot><tr><td colspan="4"><b>Tổng · ${hs.lines.length} dòng</b></td><td class="num"><b>${money(BK.sum(hs.lines.map((l) => l.tien_hd)))}</b></td><td class="num"><b>${money(total)}</b></td><td></td></tr></tfoot></table></div>` : '<div class="empty">Thả file Excel bảng kê KH gửi vào hồ sơ</div>'}<button class="lnk" data-fxadd="1">＋ Thêm dòng</button></details>
+        <details class="okl"><summary>Lịch sử thay đổi · ${(hs.trail || []).length}</summary><ul class="trail">${(hs.trail || []).slice().reverse().slice(0, 60).map((t) => `<li><small>${new Date(t.at).toLocaleString('vi-VN')} · ${esc(t.by || '')}</small> ${esc(t.what)}</li>`).join('') || '<li class="hist">Chưa có</li>'}</ul><div class="hist">Sửa nhầm: bấm ↶ (Ctrl+Z) để hoàn tác, ↷ (Ctrl+Y) để làm lại.</div></details>
         <div class="hist">Tra cứu hóa đơn với cơ quan thuế bạn tự làm — thả file kết quả tra cứu vào hồ sơ để lưu cùng.</div>
       </section>
       <section class="hscol">
         <header><h3>Làm ra từ hồ sơ này</h3></header>
         <div class="obox" id="oxKunn"><div class="oh"><b>KUNN &amp; PDGN</b><span class="${hs.so_kunn ? 'o' : 'w'}">${hs.so_kunn ? 'Có số KUNN' : 'Chờ số KUNN'}</span></div>
           <label class="f">Số KUNN admin cấp<input class="inp" id="hsKunn" value="${esc(hs.so_kunn || '')}" placeholder="${esc(p.prefix_kunn ? p.prefix_kunn + '(…)' + (p.hau_to_kunn || '') : 'vd 1082154(3).26')}"></label>
+          ${(() => { const sg = suggestKunn(c, hs); if (!sg) return ''; const dup = hs.so_kunn && kunnTaken(c, hs).has(kkey(hs.so_kunn));
+            return `${dup ? '<div class="note warn" style="margin:0">! Số KUNN này đã có trong sổ / hồ sơ khác</div>' : ''}<div class="kn-sg"><span class="hist">Số tiếp theo</span><button class="btn sm" data-kn="-1" title="Giảm 1">−</button><b>${esc(sg.pre)}(${sg.n})</b><select class="inp" data-knsuf>${sg.sufs.map((x) => `<option ${x === sg.suf ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select><button class="btn sm" data-kn="1" title="Tăng 1">+</button><button class="btn sm pri" data-knuse="${esc(sg.pre)}(${sg.n})">Dùng số này</button></div><div class="hist">Gợi ý theo số lớn nhất trong file Excel / sổ hóa đơn (${esc(sg.last || '—')}). Chỉnh ± nếu admin cấp số khác.</div>`; })()}
           <button class="btn pri" id="hsSoan">📝 Soạn KUNN &amp; PDGN</button>
           <div class="hist">${kunnRec && kunnRec.doc ? `Đã soạn, lưu ${new Date(kunnRec.doc.at).toLocaleString('vi-VN')}` : 'Mẫu Word riêng của công ty · tự điền từ hồ sơ, thông tin công ty, file Excel'}</div></div>
         <div class="obox"><div class="oh"><b>Sổ hóa đơn</b><span class="${kunnRec ? 'o' : ''}">${kunnRec ? 'Đã ghi' : 'Chưa ghi'}</span></div>
@@ -5841,8 +5886,9 @@ function renderHoso(el, c) {
           ${(hs.bo_sung || []).map((b, i) => `<label class="bsr"><input type="checkbox" data-bsx="${i}" ${b.xong ? 'checked' : ''}><span>${esc(b.ten)}<small>hạn ${esc(b.han)}</small></span><button class="lnk" data-bsdel="${i}">✕</button></label>`).join('') || '<div class="hist">Không có</div>'}
           <button class="lnk" id="hsBsAdd">＋ Thêm (vd tờ khai sao — 30 ngày)</button></div>
         <div class="obox" id="oxUp"><div class="oh"><b>Tải lên hệ thống</b><span>${pkg.length} file</span></div>
-          <div class="pk">${pkg.slice(0, 8).map((x) => `<div>${esc(x.name)}</div>`).join('')}${pkg.length > 8 ? `<div class="hist">+ ${pkg.length - 8} file</div>` : ''}</div>
-          <button class="btn sm" id="hsZip" ${pkg.length ? '' : 'disabled'}>⬇ Tải gói file đã đặt tên (.zip)</button></div>
+          <div class="pk">${pkg.map((x) => `<div class="pkr"><input class="cell-in" data-pkn="${x.id}" value="${esc(x.name)}" title="Sửa tên file khi tải về"><button class="lnk" data-fdl="${x.id}" title="Tải file này với tên đã đặt">⬇</button></div>`).join('')}</div>
+          <label class="hist"><input type="checkbox" id="hsPkBk" ${hs.pkgBk === false ? '' : 'checked'} ${hs.lines.length ? '' : 'disabled'}> Kèm bảng kê Excel chuẩn (03_BANG_KE…xlsx)</label>
+          <button class="btn sm pri" id="hsZip" ${pkg.length || hs.lines.length ? '' : 'disabled'}>⬇ Tải gói file đã đặt tên (.zip)</button><div class="hist">Tên gói: ${esc(zipName(hs, c))}</div></div>
         <div class="bar" style="margin-top:6px"><button class="btn sm danger" id="hsDel">Xóa hồ sơ</button></div>
       </section>
     </div>`;
@@ -5866,6 +5912,8 @@ function renderHoso(el, c) {
   $('#hsDel2', el).onclick = () => $('#hsDel', el).click();
   $('#hsDel', el).onclick = async () => { if (!confirm('Xóa hồ sơ giải ngân này? (file đính kèm vẫn còn trong thư mục chung; KUNN đã ghi sổ không bị xóa)')) return; await S.store.delHoso(hs.id); go({ cid: c.id, tab: 'hoso', hs: null, doc: null }); };
   el.onclick = async (e) => {
+    const fx = e.target.closest('[data-fx],[data-fxfile],[data-fxline],[data-fxadd],[data-fxtk],[data-ldel2],[data-fprev],[data-fdl],[data-kn],[data-knuse]');
+    if (fx) return hsFixAction(fx, hs, c, el);
     const t = e.target.closest('[data-ms],[data-msok],[data-msundo],[data-msskip],[data-msclose],[data-ack],[data-unack],[data-aread],[data-fopen],[data-fdel],[data-bsdel]'); if (!t) return;
     const d = t.dataset;
     if (d.ms) { V.msFocus = V.msFocus === d.ms ? null : d.ms; renderMain(); return; }
@@ -5880,7 +5928,11 @@ function renderHoso(el, c) {
     if (d.fdel) { if (!confirm('Bỏ file này khỏi hồ sơ?')) return; return patch((x) => { x.files = x.files.filter((f) => f.id !== d.fdel); x.docs = x.docs.filter((q) => q.fileId !== d.fdel); }, 'Bỏ file khỏi hồ sơ'); }
     if (d.bsdel) return patch((x) => { x.bo_sung.splice(+d.bsdel, 1); }, 'Xóa chứng từ bổ sung');
   };
-  el.onchange = (e) => { const t = e.target; if (t.dataset.bsx != null) patch((x) => { x.bo_sung[+t.dataset.bsx].xong = t.checked; }, 'Đánh dấu đã bổ sung'); };
+  el.onchange = (e) => { const t = e.target;
+    if (t.dataset.pkn) { const v = t.value.trim(); return patch((x) => { x.pkgNames = { ...(x.pkgNames || {}) }; if (v) x.pkgNames[t.dataset.pkn] = v; else delete x.pkgNames[t.dataset.pkn]; }, `Đặt tên file tải lên: ${v}`); }
+    if (t.dataset.knsuf != null) { V.knSuf = t.value; return renderMain(); }
+    if (t.id === 'hsPkBk') return patch((x) => { x.pkgBk = t.checked; });
+    if (t.dataset.bsx != null) patch((x) => { x.bo_sung[+t.dataset.bsx].xong = t.checked; }, 'Đánh dấu đã bổ sung'); };
 }
 // xem một chứng từ: bản scan cạnh số liệu AI đọc (sửa được)
 function renderDocView(el, c, hs) {
@@ -5912,7 +5964,9 @@ function renderDocView(el, c, hs) {
   if ($('#dDel', el)) $('#dDel', el).onclick = () => { patch((x) => { x.docs = x.docs.filter((y) => y.id !== d.id); }, 'Bỏ chứng từ'); go({ doc: null, hs: hs.id }); };
   $('#dUp', el).onchange = (e) => patch((x) => { x.skipUp = { ...(x.skipUp || {}) }; if (e.target.checked) delete x.skipUp[d.fileId]; else x.skipUp[d.fileId] = true; }, 'Chọn file tải lên');
   (async () => {
-    const box = $('#scan', el); const r = await S.store.getFile(d.fileId);
+    const box = $('#scan', el);
+    if (box && !d.fileId) { box.innerHTML = '<div class="empty">Chứng từ nhập tay — không có file đính kèm. Thả file vào hồ sơ để lưu bản scan.</div>'; return; }
+    const r = await S.store.getFile(d.fileId);
     if (!box) return;
     if (!r) { box.innerHTML = '<div class="empty">File không có trên máy này (chưa đồng bộ từ thư mục chung)</div>'; return; }
     const url = URL.createObjectURL(r.blob);
@@ -5945,21 +5999,150 @@ async function hsOpenEditor(hsId) {
   if (hs.lines.length) kid = (await hsToLedger(hsId, true)).id;
   await openHoSo(hs.customerId, kid || null, hsId);
 }
-function hsExportBangKe(hs, c) {
+function hsExportBangKe(hs, c) { download(bkWorkbook(hs, c), `BangKe_${slug((c.hs || {}).ten_kh_ngan || c.name)}_${(hs.so_kunn || 'chua_so').replace(/[()]/g, '_')}_${(BK.toISO(hs.ngay_gn) || BK.todayISO()).split('-').reverse().join('')}.xlsx`); }
+function bkWorkbook(hs, c) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, sheet(`BẢNG KÊ CHỨNG TỪ GIẢI NGÂN — ${c.name}`, `KUNN ${hs.so_kunn || '…'} · ngày ${dd(BK.toISO(hs.ngay_gn)) || '…'} · ${stamp()}`, ['STT', 'NHÀ CUNG CẤP', 'SỐ HĐMB/ĐĐH', 'SỐ HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN', 'SỐ TIỀN GIẢI NGÂN'],
     [...hs.lines.map((l, i) => [xc(i + 1), xc(l.ncc), xc(l.so_hdmb), xc(l.so_hd, { b: true }), xc(l.ngay_hd, { date: true }), xc(l.tien_hd), xc(l.tien_gn)]), [xc('TỔNG CỘNG', { b: true }), xc(''), xc(''), xc(''), xc(''), xc(BK.sum(hs.lines.map((l) => l.tien_hd)), { b: true }), xc(BK.sum(hs.lines.map((l) => l.tien_gn)), { b: true })]],
     [6, 40, 22, 16, 13, 18, 18]), 'Bảng kê');
-  download(wb, `BangKe_${slug(c.name)}_${(hs.so_kunn || 'moi').replace(/[()]/g, '_')}.xlsx`);
+  return wb;
 }
+// ── số KUNN: gợi ý số tiếp theo theo file Excel / sổ hóa đơn / các hồ sơ khác ──
+const KUNN_NO = /^(.*?)\(\s*(\d+)\s*\)\s*(\.\s*\d+)?\s*$/;
+function kunnTaken(c, hs) {
+  const xs = [...(c.ledger ? c.ledger.kunns.map((k) => k.so) : []), ...S.store.kunnsOf(c.id).filter((k) => !hs || k.id !== hs.kid).map((k) => k.so_kunn), ...S.store.hosoOf(c.id).filter((h) => !hs || h.id !== hs.id).map((h) => h.so_kunn)];
+  return new Set(xs.filter(Boolean).map(kkey));
+}
+function suggestKunn(c, hs) {
+  const all = [...(c.ledger ? c.ledger.kunns.map((k) => ({ so: k.so, d: k.ngay_gn })) : []), ...S.store.kunnsOf(c.id).filter((k) => k.id !== hs.kid).map((k) => ({ so: k.so_kunn, d: k.ngay_gn })), ...S.store.hosoOf(c.id).filter((h) => h.id !== hs.id).map((h) => ({ so: h.so_kunn, d: BK.toISO(h.ngay_gn) }))]
+    .map((x) => { const m = KUNN_NO.exec(String(x.so || '').trim()); return m ? { pre: m[1].trim(), n: +m[2], suf: (m[3] || '').replace(/\s/g, ''), so: x.so, d: x.d || '' } : null; }).filter(Boolean);
+  const p = c.hs || {};
+  if (!all.length && !p.prefix_kunn) return null;
+  const pre = p.prefix_kunn || all.slice().sort((a, b) => (b.d || '').localeCompare(a.d || '') || b.n - a.n)[0].pre;
+  const same = all.filter((x) => x.pre === pre);
+  const top = same.sort((a, b) => b.n - a.n)[0];
+  const sufs = [...new Set([...(p.hau_to_kunn ? [p.hau_to_kunn] : []), ...same.map((x) => x.suf).filter(Boolean)])].sort().reverse();
+  const off = (V.knOff && V.knOff[hs.id]) || 0;
+  return { pre, n: (top ? top.n : 0) + 1 + off, suf: V.knSuf && sufs.includes(V.knSuf) ? V.knSuf : (top && top.suf) || p.hau_to_kunn || sufs[0] || '', sufs: sufs.length ? sufs : [''], last: top ? top.so : '' };
+}
+const zipName = (hs, c) => `HoSoGN_${slug((c.hs || {}).ten_kh_ngan || c.name).toUpperCase()}_${hs.so_kunn ? 'KUNN_' + hs.so_kunn.replace(/[()]/g, '_').replace(/_+/g, '_').replace(/_\./, '.').replace(/[^\w.]+/g, '') : 'chua_so'}_${(BK.toISO(hs.ngay_gn) || BK.todayISO()).split('-').reverse().join('')}.zip`;
+
+// ── bổ sung / sửa ngay từ mục kiểm tra ──
+async function hsFixAction(t, hs, c, el) {
+  const d = t.dataset;
+  const patch = (fn, label) => hsPatch(hs.id, fn, label).catch((e) => toast(errMsg(e), 'err'));
+  if (d.fx === 'hm') {
+    const v = DOCX.num($('[data-fxhm]', t.closest('.fx')).value); if (!v) return toast('Nhập hạn mức (triệu đồng)', 'err');
+    const c0 = cust(c.id); S.store.labelNext('Nhập hạn mức');
+    await S.store.putCustomer({ ...c0, hs: { ...(c0.hs || {}), hm_tong: v.toLocaleString('en-US') }, ...(c0.ledger && !c0.ledger.hm ? { ledger: { ...c0.ledger, hm: v * 1e6, hmList: [{ ma: 'Hạn mức', han_muc: v * 1e6, du_no: c0.ledger.du_no }] } } : {}), ...meta() });
+    return toast('Đã lưu hạn mức — kiểm tra chạy lại', 'ok');
+  }
+  if (d.fx === 'cic') {
+    const box = t.closest('.fx'), ngay = $('[data-fxcic]', box).value, nhom = $('[data-fxnhom]', box).value;
+    if (!ngay) return toast('Chọn ngày tra CIC (hoặc thả file CIC)', 'err');
+    return patch((x) => { x.docs = x.docs.filter((q) => !(q.manual && q.loai === 'cic')); x.docs.push({ id: 'm_' + BK.uid(8), fileId: null, manual: true, loai: 'cic', f: { ngay: dd(ngay), nhom_no: nhom }, conf: 1, ok: true }); }, `Nhập tay CIC ngày ${dd(ngay)}, nhóm ${nhom}`);
+  }
+  if (d.fxfile != null) {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true;
+    if (d.fxfile === 'bang_ke') inp.accept = '.xls,.xlsx,.xlsm,.csv';
+    inp.onchange = () => { if (inp.files.length) addFiles(hs.id, [...inp.files], { loai: d.fxfile || null }); };
+    return inp.click();
+  }
+  if (d.fxline) return editHsLine(hs.id, d.fxline);
+  if (d.fxadd) return editHsLine(hs.id, null);
+  if (d.ldel2) { const l = hs.lines.find((q) => q.id === d.ldel2); if (l && confirm(`Xóa dòng ${l.ncc} · ${l.so_hd} khỏi bảng kê hồ sơ?`)) patch((x) => { x.lines = x.lines.filter((q) => q.id !== d.ldel2); }, `Xóa dòng bảng kê ${l.so_hd} · ${l.ncc}`); return; }
+  if (d.fxtk) {
+    const doc = hs.docs.find((q) => q.id === d.fxtk); if (!doc) return;
+    const c0 = cust(c.id), tk = { ...((c0.hs || {}).tk || {}) }; tk[BK.supKey(doc.f.ben_ban)] = { ten: doc.f.ben_ban, tk: doc.f.tk_nhan, nh: doc.f.ngan_hang || '' };
+    S.store.labelNext('Đổi TK thụ hưởng theo chứng từ');
+    await S.store.putCustomer({ ...c0, hs: { ...(c0.hs || {}), tk }, ...meta() });
+    await patch((x) => { x.ack = { ...(x.ack || {}) }; for (const q of x.docs) if (q.loai === 'unc' && HSC.sameName(q.f.ben_ban, doc.f.ben_ban)) q.f.tk_nhan = doc.f.tk_nhan; }, `Dùng TK ${doc.f.tk_nhan} của ${doc.f.ben_ban}`);
+    return toast(`Đã dùng TK ${doc.f.tk_nhan} cho ${doc.f.ben_ban} — nhớ sửa lệnh chi / UNC`, 'ok', 6000);
+  }
+  if (d.fprev) return previewFiles(hs, d.fprev);
+  if (d.fdl) { const r = await S.store.getFile(d.fdl); if (!r) return toast('File không có trên máy này', 'err'); const nm = (HSC.packageNames(hs, hs.files).find((x) => x.id === d.fdl) || {}).name || (hs.files.find((f) => f.id === d.fdl) || {}).name; return saveBlob(r.blob, nm); }
+  if (d.kn) { V.knOff = { ...(V.knOff || {}), [hs.id]: ((V.knOff || {})[hs.id] || 0) + +d.kn }; return renderMain(); }
+  if (d.knuse) {
+    const so = d.knuse + ($('[data-knsuf]', el) ? $('[data-knsuf]', el).value : '');
+    if (kunnTaken(c, hs).has(kkey(so)) && !confirm(`Số ${so} đã có trong sổ / hồ sơ khác. Vẫn dùng?`)) return;
+    V.knOff = { ...(V.knOff || {}), [hs.id]: 0 };
+    return patch((x) => { x.so_kunn = so; }, `Lấy số KUNN ${so}`);
+  }
+}
+function editHsLine(hsId, lineId) {
+  const hs = hsGet(hsId), l0 = lineId ? hs.lines.find((q) => q.id === lineId) : null;
+  const l = l0 || { ncc: '', so_hdmb: '', so_hd: '', ngay_hd: '', tien_hd: null, tien_gn: null };
+  const F = [['ncc', 'Nhà cung cấp'], ['so_hdmb', 'HĐMB / PO'], ['so_hd', 'Số hóa đơn / PO'], ['ngay_hd', 'Ngày chứng từ', 'date'], ['tien_hd', 'Tiền hóa đơn / chứng từ', 'money'], ['tien_gn', 'Số tiền giải ngân', 'money'], ['ghi_chu', 'Ghi chú']];
+  const m = modal(`<div class="mh"><h2>${l0 ? 'Sửa dòng bảng kê' : 'Thêm dòng bảng kê'}</h2><button class="x" data-close>&times;</button></div>
+    <div class="mb"><div class="grid2">${F.map(([k, lb, ty]) => `<label class="f">${lb}<input class="inp" data-lf="${k}" ${ty === 'date' ? 'type="date"' : ''} value="${esc(ty === 'money' ? (l[k] != null ? Math.round(l[k]).toLocaleString('vi-VN') : '') : l[k] || '')}"></label>`).join('')}</div>
+    <div class="hist" style="margin-top:8px">Thay đổi được ghi vào lịch sử hồ sơ · sửa nhầm thì bấm ↶ để hoàn tác.</div></div>
+    <div class="mf"><button class="btn" data-close>Hủy</button><button class="btn pri" id="lfSave">Lưu</button></div>`, 'sm');
+  $('#lfSave', m).onclick = async () => {
+    const v = {};
+    $$('[data-lf]', m).forEach((i) => { const k = i.dataset.lf; v[k] = /^tien/.test(k) ? DOCX.num(i.value) : i.value.trim(); });
+    if (!v.so_hd && !v.ncc) return toast('Nhập ít nhất nhà cung cấp hoặc số chứng từ', 'err');
+    const diff = l0 ? F.filter(([k]) => String(l0[k] ?? '') !== String(v[k] ?? '')).map(([k, lb, ty]) => `${lb}: ${ty === 'money' ? money(l0[k]) : ty === 'date' ? dd(l0[k]) : l0[k] || '—'} → ${ty === 'money' ? money(v[k]) : ty === 'date' ? dd(v[k]) : v[k] || '—'}`) : [];
+    if (l0 && !diff.length) { m.remove(); return; }
+    await hsPatch(hsId, (x) => {
+      if (l0) { const q = x.lines.find((y) => y.id === lineId); Object.assign(q, v); } else x.lines.push({ ...v, id: BK.uid(10), goc: 'chua' });
+    }, l0 ? `Sửa dòng ${l0.so_hd || l0.ncc}: ${diff.join('; ')}` : `Thêm dòng bảng kê ${v.so_hd} · ${v.ncc}`);
+    m.remove();
+  };
+}
+// ── xem nhanh file đã up (không rời trang) ──
+async function previewFiles(hs, fileId) {
+  const files = hs.files;
+  let i = Math.max(0, files.findIndex((f) => f.id === fileId));
+  const urls = [];
+  const m = modal(`<div class="mh"><h2 id="pvT"></h2><span style="flex:1"></span><button class="btn sm" id="pvP">‹ Trước</button><button class="btn sm" id="pvN">Sau ›</button><button class="btn sm" id="pvD">⬇ Tải</button><button class="x" data-close>&times;</button></div><div class="mb pvb" id="pvB"></div>`, 'full');
+  const show = async () => {
+    const f = files[i]; $('#pvT', m).textContent = `${i + 1}/${files.length} · ${f.name}`;
+    const box = $('#pvB', m); box.innerHTML = '<div class="hist">Đang mở…</div>';
+    const r = await S.store.getFile(f.id);
+    if (!r) { box.innerHTML = '<div class="empty">File không có trên máy này (chưa đồng bộ từ thư mục chung)</div>'; return; }
+    const docs = hs.docs.filter((d) => d.fileId === f.id && !d.del);
+    const side = `<aside class="pvs"><b>Tool đọc được</b>${docs.map((d) => `<a class="dline" href="${hashOf({ cid: hs.customerId, hs: hs.id, doc: d.id })}" data-close><i></i><span>${esc(HSC.TYPES[d.loai].l)} ${esc(d.f.so || '')}<small>${esc([d.f.ben_ban, d.f.ngay, d.f.tien && vnd(+d.f.tien)].filter(Boolean).join(' · '))}</small></span></a>`).join('') || '<div class="hist">Chưa đọc</div>'}</aside>`;
+    const u = URL.createObjectURL(r.blob); urls.push(u);
+    const ty = f.type || '';
+    let main;
+    if (/pdf/.test(ty)) main = `<iframe title="Xem file" src="${u}"></iframe>`;
+    else if (/^image\//.test(ty)) main = `<div class="pvi"><img alt="" src="${u}"></div>`;
+    else if (isExcel(f)) { const g = await readWorkbook(r.blob); main = `<div class="pvx">${Object.entries(g).slice(0, 4).map(([n, rows]) => `<h4>${esc(n)}</h4><div class="tw"><table class="t">${rows.slice(0, 80).map((row) => `<tr>${row.slice(0, 14).map((v) => `<td>${esc(typeof v === 'number' && v > 30000 && v < 80000 && Number.isInteger(v) ? dd(BK.toISO(v)) : typeof v === 'number' ? v.toLocaleString('vi-VN') : v)}</td>`).join('')}</tr>`).join('')}</table></div>`).join('')}</div>`; }
+    else { const tx = await fileText(r, f.name).catch(() => null); main = tx != null ? `<pre class="pvt">${esc(tx.slice(0, 20000))}</pre>` : `<div class="empty">Không xem trước được loại file này — bấm ⬇ Tải để mở bằng ứng dụng khác</div>`; }
+    box.innerHTML = `<div class="pvm">${main}</div>${side}`;
+  };
+  $('#pvP', m).onclick = () => { i = (i - 1 + files.length) % files.length; show(); };
+  $('#pvN', m).onclick = () => { i = (i + 1) % files.length; show(); };
+  $('#pvD', m).onclick = async () => { const f = files[i], r = await S.store.getFile(f.id); if (r) saveBlob(r.blob, (HSC.packageNames(hs, hs.files).find((x) => x.id === f.id) || {}).name || f.name); };
+  m.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') $('#pvN', m).click(); if (e.key === 'ArrowLeft') $('#pvP', m).click(); });
+  new MutationObserver((_, o) => { if (!m.isConnected) { urls.forEach((u) => URL.revokeObjectURL(u)); o.disconnect(); } }).observe(document.body, { childList: true });
+  show();
+}
+// ── chọn công ty nhanh (thanh đầu trang) ──
+function openCompanyPicker() {
+  const m = modal(`<div class="mh"><h2>Chọn công ty</h2><button class="x" data-close>&times;</button></div><div class="mb"><input class="inp" id="cpQ" placeholder="Gõ tên, MST, CIF… (Enter = chọn dòng đầu)"><div class="cplist" id="cpL"></div>
+    <div class="bar" style="margin-top:8px"><a class="btn" href="#/" data-close>📊 Tổng quan tất cả</a><span style="flex:1"></span><button class="btn pri" id="cpAdd">＋ Thêm công ty</button></div></div>`, 'sm');
+  const draw = () => {
+    const q = BK.fold($('#cpQ', m).value);
+    const xs = S.customers.filter((c) => !q || BK.fold(c.name).includes(q) || (c.mst || '').includes(q) || BK.fold((c.hs || {}).cif).includes(q));
+    $('#cpL', m).innerHTML = xs.map((c) => { const L = c.ledger, act = activeHoso(c.id).length; return `<a class="cpi ${c.id === S.cid ? 'on' : ''}" href="${hashOf({ cid: c.id, tab: 'tong' })}" data-close><b>${esc(c.name)}</b><small>${esc([L ? 'Dư nợ ' + trieu(L.du_no) : 'chưa có file Excel', act ? act + ' hồ sơ đang làm' : '', (c.hs || {}).cif && 'CIF ' + c.hs.cif].filter(Boolean).join(' · '))}</small></a>`; }).join('') || '<div class="empty">Không có công ty khớp</div>';
+  };
+  draw();
+  const q = $('#cpQ', m); q.focus();
+  q.oninput = draw;
+  q.onkeydown = (e) => { if (e.key === 'Enter') { const a = $('.cpi', m); if (a) { location.hash = a.getAttribute('href'); m.remove(); } } };
+  $('#cpAdd', m).onclick = () => { m.remove(); editCustomer(); };
+}
+
 async function hsZip(hs, c) {
   const JSZip = await jszip();
   const z = new JSZip();
   const names = HSC.packageNames(hs, hs.files);
   let n = 0;
   for (const x of names) { const r = await S.store.getFile(x.id); if (r) { z.file(x.name, await r.blob.arrayBuffer()); n++; } }
+  if (hs.lines.length && hs.pkgBk !== false) { z.file(`03_BANG_KE_CHUAN_${(hs.so_kunn || 'chua_so').replace(/[()]/g, '_')}.xlsx`, XLSX.write(bkWorkbook(hs, c), { type: 'array', bookType: 'xlsx', compression: true })); n++; }
   if (!n) throw new Error('Không có file nào trên máy này');
-  saveBlob(await z.generateAsync({ type: 'blob', compression: 'DEFLATE' }), `HoSoGN_${slug(c.name)}_${(hs.so_kunn || BK.toISO(hs.ngay_gn) || 'moi').replace(/[()]/g, '_')}.zip`);
+  saveBlob(await z.generateAsync({ type: 'blob', compression: 'DEFLATE' }), zipName(hs, c));
   toast('Đã tải gói file — đưa lên hệ thống xong thì bấm mốc “Đưa lên hệ thống + UNC” → Đã xong', 'ok', 6000);
 }
 
@@ -6095,6 +6278,8 @@ async function syncAction(a, btn) {
   if ($('#syncBox')) renderSyncBox(document);
 }
 $('#bSettings').onclick = () => openSettings();
+$('#bCoPick').onclick = () => openCompanyPicker();
+document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openCompanyPicker(); } });
 function themeIcon() { const d = document.documentElement.dataset.theme === 'dark'; $('#bTheme').textContent = d ? '☾' : '☀'; }
 $('#bTheme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark'; lsSet('bangke_theme', r.dataset.theme); themeIcon(); };
 themeIcon();
