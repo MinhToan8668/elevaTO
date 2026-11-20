@@ -628,3 +628,35 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d.]+ tr \/ 120\.000 tr/);
   await ctx.close();
 });
+
+test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty, xem trước, lưu cách đọc; file sửa (chèn cột) đọc lại vẫn đúng', async () => {
+  const head = ['Số KUNN', 'Ngày GN', 'Ngày đáo hạn', 'Lãi suất', 'Số tiền GN', 'Đã trả', 'Dư nợ'];
+  const rows = [['HMTD 2025'], ['1050807(1).26', 46217, 46353, 0.0835, 10933435095, 10933435095, 0], ['1050807(5).26', 46226, 46363, 0.0835, 7533742585, 0, 7533742585]];
+  const f1 = join(dir, 'TONG_HOP_KIM_TIN.xlsx');
+  await writeFile(f1, toXlsx({ 'Tổng hợp Kim Tín Group': [['Tổng hợp']], KES: [head, ['9990001(1).26', 46200, 46300, 0.08, 100000000, 0, 100000000]], KTLA: [['THEO DÕI KUNN'], head, ...rows], 'Dòng tiền': [['x']] }));
+  const f2 = join(dir, 'TONG_HOP_KIM_TIN_sua.xlsx');
+  await writeFile(f2, toXlsx({ KES: [head], KTLA: [['THEO DÕI KUNN'], ['Cập nhật'], ['Ghi chú', ...head], ...rows.map((r) => ['', ...r]), ['', '1050807(10).26', 46260, 46420, 0.0835, 6969976665, 0, 6969976665]] }));
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { window.showOpenFilePicker = undefined; });
+  await page.goto(base + 'index.html');
+  await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty TNHH Kim Tín Long An'); await page.click('#cfSave');
+  await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
+  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ hiện tại' }).click()]);   // bấm ô dư nợ là chọn file
+  await fc.setFiles(f1);
+  await page.locator('.chip.on', { hasText: 'KTLA' }).waitFor();                 // tự gợi ý đúng sheet của công ty
+  assert.match(await page.locator('#lgPrev').innerText(), /2 KUNN · 1 còn dư nợ · dư nợ 7\.533\.742\.585 đ/);
+  await page.locator('.chip', { hasText: 'KES' }).click();
+  await page.locator('#lgPrev', { hasText: '1 KUNN' }).waitFor();
+  await page.locator('.chip', { hasText: 'KTLA' }).click();
+  await page.fill('#lgHm', '20,000');
+  await page.click('#lgSave');
+  await page.locator('.tile', { hasText: 'Dư nợ hiện tại' }).filter({ hasText: '7.534 tr' }).waitFor();
+  assert.match(await page.locator('.tile', { hasText: 'Hạn mức còn khả dụng' }).innerText(), /12\.466 tr/);
+  // file đã sửa: chèn cột, dời tiêu đề, thêm KUNN → Đọc lại
+  await page.click('[data-ctab="info"]');
+  const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('#xlRe')]);
+  await fc2.setFiles(f2);
+  await page.locator('.xlbox', { hasText: '3 dòng · 2 KUNN còn dư nợ' }).waitFor();
+  assert.match(await page.locator('.xlbox').innerText(), /Sheet KTLA/);
+  await ctx.close();
+});

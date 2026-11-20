@@ -20,6 +20,10 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
     thống → đã giải ngân), bấm để đánh dấu, chuột phải để bỏ qua mốc. Chứng từ bổ sung sau GN có hạn.
   - Kết quả: soạn KUNN & PDGN (mẫu Word riêng công ty), ghi vào sổ hóa đơn, bảng kê Excel, **gói file tải lên hệ
     thống** đã đặt tên theo thứ tự (.zip).
+  - **Sổ theo dõi KUNN tự lập, nhiều sheet** (mỗi công ty một sheet, tiêu đề cột tự đặt): tool gợi ý sheet theo tên
+    viết tắt công ty, dò cột (số KUNN, ngày GN, đáo hạn, lãi suất, số tiền, đã trả, dư nợ; hàng nhóm “HMTD 2025”),
+    cho xem trước, đổi sheet / cột, hoặc nhờ AI nhận cột. Cách đọc lưu theo công ty; file sửa (thêm dòng, chèn cột,
+    dời tiêu đề) bấm **Đọc lại** vẫn đúng — tool tìm lại cột theo tên tiêu đề đã nhớ.
   - **Dư nợ đọc từ file Excel QUẢN LÝ GIẢI NGÂN** của công ty (sheet KHE_UOC, DANH_MUC, UBG — xem `giaingan/`):
     gốc còn lại, hạn mức, khả dụng, đáo hạn, thu nợ; thông tin công ty còn trống được lấy từ DANH_MUC. Tool chỉ đọc file.
   - File KH gửi lưu trên máy (IndexedDB) và thư mục chung (`BangKe_GiaiNgan/files/`), hồ sơ ở `hs_<id>.json`.

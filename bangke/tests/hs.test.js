@@ -111,3 +111,41 @@ test('gói tải lên hệ thống: đặt tên theo loại chứng từ, xếp 
   const r = HSC.packageNames(hs, [{ id: 'a', name: 'x.PDF' }, { id: 'b', name: 'thue.pdf' }, { id: 'c', name: 'y.pdf' }, { id: 'd', name: 'bk.xls' }]);
   assert.deepEqual(r.map((x) => x.name), ['03_BANG_KE.xls', '05_HOA_DON_GTGT_830.pdf', '05_HOA_DON_GTGT_830_2.pdf', '07_TO_KHAI_HAI_QUAN_1088.pdf']);
 });
+
+test('sổ theo dõi KUNN tự lập (file nhiều sheet): gợi ý đúng sheet công ty, dò cột, nhóm HMTD, file sửa vẫn đọc lại được', () => {
+  const head = ['Số KUNN', 'Ngày GN', 'Ngày đáo hạn', 'Lãi suất', 'Số tiền GN', 'Đã trả', 'Dư nợ'];
+  const ktla = [
+    ['THEO DÕI KHẾ ƯỚC — KIM TÍN LONG AN'], [], head,
+    ['HMTD 2025'],
+    ['1050807(1).26', 46217, 46353, 0.0835, 10933435095, 10933435095, 0],
+    ['1050807(2).26', 46218, 46352, 0.0835, 17924201640, 17924201640, 0],
+    ['1050807(5).26', 46226, 46363, 0.0835, 7533742585, 0, 7533742585],
+    ['HMTD 2026'],
+    ['1050807(9).26', 46258, 46415, 0.082, 32010146610, 0, 32010146610],
+  ];
+  const grids = { 'Tổng hợp Kim Tín Group': [['Tổng'], ['KES', 1]], KES: [['Số KUNN'], ['9990001(1).26', 46200]], KTLA: ktla, 'KTLA - theo dõi GN': [['x']], 'Dòng tiền': [] };
+  const pick = HSC.pickLedgerSheet(grids, 'Công ty TNHH Kim Tín Long An');
+  assert.equal(pick[0].name, 'KTLA');
+  const g = HSC.ledgerGuess(ktla);
+  assert.equal(g.hr, 2);
+  assert.deepEqual([g.cols.so, g.cols.ngay_gn, g.cols.dao_han, g.cols.ls, g.cols.goc, g.cols.da_thu, g.cols.con_lai], [0, 1, 2, 3, 4, 5, 6]);
+  const cfg = { sheet: 'KTLA', hr: g.hr, cols: g.cols };
+  const L = HSC.readLedgerSheet(ktla, cfg, { hm: 60e9 });
+  assert.equal(L.kunns.length, 4);
+  assert.equal(L.n_live, 2);
+  assert.equal(L.du_no, 7533742585 + 32010146610);
+  assert.deepEqual([L.kunns[0].hm, L.kunns[3].hm, L.kunns[3].ls, L.kunns[3].dao_han], ['HMTD 2025', 'HMTD 2026', 8.2, '2027-01-28']);
+  // không có tiêu đề: dò theo dữ liệu (khoản cũ hơn = cột đã trả)
+  const raw = ktla.slice(3);
+  const g2 = HSC.ledgerGuess(raw);
+  assert.deepEqual([g2.cols.so, g2.cols.ngay_gn, g2.cols.dao_han, g2.cols.ls, g2.cols.goc, g2.cols.da_thu, g2.cols.con_lai], [0, 1, 2, 3, 4, 5, 6]);
+  // file sửa: chèn 2 hàng trên cùng + chèn cột "Ghi chú" ở đầu → đọc lại theo tên tiêu đề đã nhớ
+  const labels = HSC.ledgerLabels(ktla, cfg);
+  const edited = [[''], ['Cập nhật 20/11'], ...ktla.map((r, i) => (i === 2 ? ['Ghi chú', ...r] : ['', ...r])), ['', '1050807(10).26', 46260, 46420, 0.0835, 6969976665, 0, 6969976665]];
+  const cf = HSC.relocateLedger(edited, { ...cfg, labels });
+  assert.equal(cf.moved, true);
+  assert.equal(cf.hr, 4);
+  assert.equal(cf.cols.so, 1);
+  const L2 = HSC.readLedgerSheet(edited, cf);
+  assert.equal(L2.n_live, 3, 'thấy cả KUNN mới thêm');
+});
