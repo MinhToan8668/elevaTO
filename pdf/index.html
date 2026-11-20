@@ -1967,6 +1967,29 @@ html.rdopen,html.rdopen body{overflow:hidden}
 .rdh mark{background:rgba(255,216,61,.7);border-radius:2px;padding:0 1px}
 .rdh-empty{padding:14px 10px;font-size:12.5px;color:var(--muted);line-height:1.5}
 @media (max-width:860px){.rdbody{grid-template-columns:1fr}.rdside{display:none}}
+
+/* menu Hiển thị: nền đặc để đọc được */
+.uvmenu,.xfmenu,.gemdlg .sheet,.rdbar,.rdside,.sendmenu,.menu{background:#FFFFFF !important;-webkit-backdrop-filter:none;backdrop-filter:none}
+.uvmenu{box-shadow:0 10px 30px -10px rgba(0,0,0,.35)}
+:root[data-theme="dark"] .uvmenu,:root[data-theme="dark"] .xfmenu,:root[data-theme="dark"] .gemdlg .sheet,:root[data-theme="dark"] .rdbar,:root[data-theme="dark"] .rdside,:root[data-theme="dark"] .menu{background:#1A2126 !important}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .uvmenu,:root:not([data-theme="light"]) .xfmenu,:root:not([data-theme="light"]) .gemdlg .sheet,:root:not([data-theme="light"]) .rdbar,:root:not([data-theme="light"]) .rdside,:root:not([data-theme="light"]) .menu{background:#1A2126 !important}}
+/* hộp key Gemini */
+.gemdlg{z-index:80}
+.gemdlg .sheet{background:var(--surface) !important}
+.gemtb{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 4px}
+.gemtb th{text-align:left;font-size:11.5px;color:var(--muted);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--line)}
+.gemtb td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.gemtb td.gkey{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--ink-2)}
+.gemtb td.gname{min-width:90px;outline:none;border-radius:4px;padding:3px 6px}
+.gemtb td.gname:focus{background:var(--accent-soft)}
+.gemtb td.gstat{font-size:11.5px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gemtb .zb.bad{color:#b42318}
+.gemtb input{accent-color:var(--accent);width:16px;height:16px}
+.gemdlg input[type=text],.gemdlg select{font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line-strong);border-radius:7px;background:var(--paper);color:var(--ink)}
+/* nút nổi Xem & tìm */
+.dockfab.find{right:270px;color:var(--ink-2)}
+html:not(.dockmin) .dockfab.find{right:148px;bottom:calc(var(--dockh,120px) + 24px)}
+.dockfab.find[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -2610,6 +2633,7 @@ html.rdopen,html.rdopen body{overflow:hidden}
               <input type="password" id="xGemKey" placeholder="Khoá API Gemini (AIza…)" autocomplete="off">
               <input type="text" id="xGemModel" placeholder="gemini-2.5-flash" title="Tên model">
               <button class="zb" id="xGemSave" type="button">Lưu</button>
+              <button class="zb" id="xGemMgr" type="button" title="Quản lý nhiều key, chọn model (Alt+F9)">Quản lý key…</button>
             </div>
             <div class="adjstats muted" id="xGemKeyInfo"></div>
             <div class="adjbtns">
@@ -2798,6 +2822,25 @@ html.rdopen,html.rdopen body{overflow:hidden}
   </div>
 </div>
 
+<div class="modal gemdlg" id="gemDlg" hidden>
+  <div class="sheet" style="max-width:720px">
+    <h4>API key Gemini <span class="muted" style="font-weight:400;font-size:12.5px">· Alt+F9</span></h4>
+    <p class="sub">Lưu trên trình duyệt máy này, chỉ gửi thẳng tới Google. Key hết lượt thì tool tự chuyển sang key bật kế tiếp. Lấy key miễn phí tại <b>aistudio.google.com/apikey</b>.</p>
+    <table class="gemtb"><thead><tr><th>Dùng trước</th><th>Bật</th><th>Tên</th><th>Key</th><th>Trạng thái</th><th></th></tr></thead><tbody id="gemRows"></tbody></table>
+    <div class="row" style="gap:6px">
+      <input type="text" id="gemNewName" placeholder="Tên gợi nhớ" style="width:130px">
+      <input type="text" id="gemNewKey" placeholder="Dán API key (AIza…) — nhiều key thì cách nhau bằng dấu cách / xuống dòng" style="flex:1;min-width:200px" autocomplete="off">
+      <button class="btn primary" id="gemAdd" type="button">Thêm key</button>
+    </div>
+    <div class="row" style="gap:8px;align-items:center">
+      <span class="fl" style="min-width:0">Model</span>
+      <select id="gemModelSel"></select>
+      <input type="text" id="gemModelOther" placeholder="tên model, vd gemini-3-flash-preview" hidden style="flex:1">
+      <span class="muted" style="font-size:12px">Flash-lite rẻ và nhanh, đủ cho đọc chữ; Pro chính xác hơn cho khớp nét.</span>
+    </div>
+    <div class="row"><button class="btn" id="gemClose" type="button" style="margin-left:auto">Đóng</button></div>
+  </div>
+</div>
 <div class="rd" id="rd" hidden>
   <div class="rdbar">
     <button class="zb xhome" id="rdClose" type="button" title="Đóng (Esc)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9.5 3L4.5 8l5 5"/></svg>Đóng</button>
@@ -2810,6 +2853,8 @@ html.rdopen,html.rdopen body{overflow:hidden}
     </span>
     <span class="rdzoom"><button class="zb" id="rdZOut" type="button">&minus;</button><button class="zb" id="rdZIn" type="button">+</button></span>
     <button class="zb" id="rdOcrBtn" type="button" title="Dùng Gemini đọc chữ trên các trang scan chưa có lớp chữ để tìm kiếm được">&#10024; Nhận diện trang scan</button>
+    <button class="zb" id="rdOcrAll" type="button" title="Đọc lại mọi trang bằng AI (kể cả trang đã có lớp chữ nhưng chữ sai / không tìm thấy)">AI đọc mọi trang</button>
+    <button class="zb" id="rdKeyBtn" type="button" title="Quản lý API key Gemini (Alt+F9)">&#128273;</button>
     <span class="rdcount" id="rdCount"></span>
   </div>
   <div class="rdkey" id="rdKeyBox" hidden>
@@ -2838,6 +2883,8 @@ html.rdopen,html.rdopen body{overflow:hidden}
 </button>
 <button class="dockfab xfer" id="xferFab" type="button" title="Chuyển file (hoặc kết quả) sang công cụ khác: Ghép, Chỉnh sửa, Nén, Làm nét, Cắt tách">
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 5.5h9l-2.5-2.5M13.5 10.5h-9l2.5 2.5"/></svg><span>Chuyển</span></button>
+<button class="dockfab find" id="findFab" type="button" title="Xem toàn bộ trang và tìm chữ (Ctrl+F)" hidden>
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg><span>Xem &amp; tìm</span></button>
 <div class="docktoast" id="dockToast" hidden></div>
 
 <script>
@@ -9953,26 +10000,138 @@ async function adjMatch(){
 }
 
 /* ================= GEMINI: so sánh mẫu và lớp, gợi ý chỉnh ================= */
-var GEM = { key:'', model:'gemini-2.5-flash' };
-try{ GEM.key = localStorage.getItem('pdfGemKey') || ''; GEM.model = localStorage.getItem('pdfGemModel') || GEM.model; }catch(e){}
-function gemSave(){
-  GEM.key = $('xGemKey').value.trim(); GEM.model = $('xGemModel').value.trim() || 'gemini-2.5-flash';
-  try{ localStorage.setItem('pdfGemKey', GEM.key); localStorage.setItem('pdfGemModel', GEM.model); }catch(e){}
-  $('xGemKeyInfo').textContent = GEM.key ? 'Đã lưu khoá trong trình duyệt này.' : 'Chưa có khoá.';
+/* ================= KHOÁ API GEMINI (Alt+F9) =================
+   Nhiều key, bật/tắt từng key, chọn key dùng trước; key hết lượt thì tự chuyển sang key bật kế tiếp.
+   Lưu trong trình duyệt máy này. */
+var GEM = { key:'', model:'gemini-2.5-flash', keys:[], pref:0 };
+var GEM_MODELS = ['gemini-3.1-flash-lite','gemini-3-flash','gemini-3-pro','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro'];
+function gemLoad(){
+  try{
+    var j = JSON.parse(localStorage.getItem('pdfGemKeys') || 'null');
+    if(j && Array.isArray(j.keys)){ GEM.keys = j.keys; GEM.pref = j.pref || 0; GEM.model = j.model || GEM.model; }
+    else{
+      var old = localStorage.getItem('pdfGemKey') || '';
+      if(old) GEM.keys = [{ name:'Key 1', key:old, on:true }];
+      GEM.model = localStorage.getItem('pdfGemModel') || GEM.model;
+    }
+  }catch(e){}
+  gemSync();
 }
-async function gemCall(parts, wantJson){
-  if(!GEM.key) throw new Error('Chưa nhập khoá API Gemini.');
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(GEM.model) + ':generateContent?key=' + encodeURIComponent(GEM.key);
+function gemSync(){
+  var on = GEM.keys.filter(function(k){ return k.on && k.key; });
+  var pref = GEM.keys[GEM.pref];
+  GEM.key = (pref && pref.on && pref.key) ? pref.key : (on.length ? on[0].key : '');
+  try{ localStorage.setItem('pdfGemKeys', JSON.stringify({ keys:GEM.keys, pref:GEM.pref, model:GEM.model })); localStorage.setItem('pdfGemKey', GEM.key); localStorage.setItem('pdfGemModel', GEM.model); }catch(e){}
+  if($('xGemKey')) $('xGemKey').value = GEM.key;
+  if($('xGemModel')) $('xGemModel').value = GEM.model;
+  if($('xGemKeyInfo')) $('xGemKeyInfo').textContent = GEM.key ? ('Đang dùng ' + on.length + ' key · model ' + GEM.model + ' · Alt+F9 để quản lý') : 'Chưa có khoá — bấm Alt+F9 để thêm.';
+}
+function gemSave(){
+  /* ô nhập nhanh ở bảng Chỉnh nét: thêm thành key mới nếu chưa có */
+  var k = $('xGemKey').value.trim(), m = $('xGemModel').value.trim();
+  if(k && !GEM.keys.some(function(x){ return x.key === k; })) GEM.keys.push({ name:'Key ' + (GEM.keys.length + 1), key:k, on:true });
+  if(m) GEM.model = m;
+  gemSync();
+}
+/* thứ tự key sẽ thử: key dùng trước, rồi các key bật còn lại */
+function gemOrder(){
+  var on = GEM.keys.map(function(k, i){ return { k:k, i:i }; }).filter(function(x){ return x.k.on && x.k.key; });
+  var pi = on.findIndex(function(x){ return x.i === GEM.pref; });
+  if(pi > 0) on = on.slice(pi).concat(on.slice(0, pi));
+  return on;
+}
+function gemQuotaErr(status, msg){ return status === 429 || /quota|exhaust|rate|resource.*exhausted|limit/i.test(msg || ''); }
+function gemKeyErr(status, msg){ return (status === 400 || status === 403) && /api key|API_KEY|permission|invalid|expired|not valid/i.test(msg || ''); }
+async function gemRaw(key, model, parts, wantJson){
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
   var body = { contents:[{ role:'user', parts:parts }], generationConfig:{ temperature:0.2 } };
   if(wantJson) body.generationConfig.responseMimeType = 'application/json';
   var r = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(body) });
   var j = await r.json().catch(function(){ return {}; });
-  if(!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+  if(!r.ok){ var e = new Error((j.error && j.error.message) || ('HTTP ' + r.status)); e.status = r.status; throw e; }
   var txt = '';
-  try{ j.candidates[0].content.parts.forEach(function(p){ if(p.text) txt += p.text; }); }catch(e){}
-  if(!txt) throw new Error('AI không trả lời được (có thể bị chặn nội dung hoặc hết hạn mức).');
+  try{ j.candidates[0].content.parts.forEach(function(p){ if(p.text) txt += p.text; }); }catch(e2){}
+  if(!txt){
+    var why = (j.promptFeedback && j.promptFeedback.blockReason) || (j.candidates && j.candidates[0] && j.candidates[0].finishReason) || '';
+    throw new Error('AI không trả lời được' + (why ? ' (' + why + ')' : '') + '.');
+  }
   return txt;
 }
+async function gemCall(parts, wantJson){
+  var order = gemOrder();
+  if(!order.length) throw new Error('Chưa có khoá API Gemini — bấm Alt+F9 để thêm.');
+  var last = null;
+  for(var i = 0; i < order.length; i++){
+    var ent = order[i];
+    try{
+      var out = await gemRaw(ent.k.key, GEM.model, parts, wantJson);
+      ent.k.last = 'ok ' + new Date().toLocaleTimeString(); ent.k.err = '';
+      if(i > 0){ GEM.pref = ent.i; gemSync(); say('Key "' + (order[0].k.name || 'trước') + '" hết lượt — đã tự chuyển sang "' + (ent.k.name || 'key kế') + '".', 'ok'); }
+      return out;
+    }catch(e){
+      last = e; ent.k.err = (e.message || String(e)).slice(0, 120); ent.k.last = 'lỗi ' + new Date().toLocaleTimeString();
+      if(gemQuotaErr(e.status, e.message) || gemKeyErr(e.status, e.message)) continue;   /* hết lượt / key hỏng → thử key kế */
+      break;                                                                                /* lỗi khác (model, nội dung) → không đổi key */
+    }
+  }
+  gemSync();
+  throw new Error((last && last.message) || 'Gemini lỗi') ;
+}
+/* ---- hộp quản lý key ---- */
+function gemDlg(show){
+  var d = $('gemDlg'); if(!d) return;
+  if(show === undefined) show = d.hidden;
+  d.hidden = !show;
+  if(show) gemDlgPaint();
+}
+function gemDlgPaint(){
+  var tb = $('gemRows'); tb.innerHTML = '';
+  if(!GEM.keys.length) tb.innerHTML = '<tr><td colspan="6" class="muted">Chưa có key nào. Dán key vào ô dưới rồi bấm Thêm key.</td></tr>';
+  GEM.keys.forEach(function(k, i){
+    var tr = document.createElement('tr');
+    var mask = k.key.length > 10 ? k.key.slice(0, 6) + '…' + k.key.slice(-4) : k.key;
+    tr.innerHTML = '<td><input type="radio" name="gemPref" ' + (GEM.pref === i ? 'checked' : '') + ' title="Dùng trước"></td>' +
+      '<td><input type="checkbox" ' + (k.on ? 'checked' : '') + ' title="Bật / tắt key này"></td>' +
+      '<td class="gname" contenteditable="true" spellcheck="false"></td><td class="gkey"></td><td class="gstat"></td>' +
+      '<td><button type="button" class="zb" data-a="test">Thử</button> <button type="button" class="zb bad" data-a="del">Xoá</button></td>';
+    tr.querySelector('.gname').textContent = k.name || ('Key ' + (i + 1));
+    tr.querySelector('.gkey').textContent = mask;
+    tr.querySelector('.gstat').textContent = k.err ? ('⚠ ' + k.err.slice(0, 40)) : (k.last || '');
+    tr.querySelector('.gstat').title = k.err || '';
+    tr.querySelector('input[type=radio]').addEventListener('change', function(){ GEM.pref = i; gemSync(); });
+    tr.querySelector('input[type=checkbox]').addEventListener('change', function(e){ k.on = e.target.checked; gemSync(); });
+    tr.querySelector('.gname').addEventListener('blur', function(e){ k.name = e.target.textContent.trim() || ('Key ' + (i + 1)); gemSync(); });
+    tr.querySelector('.gname').addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+    tr.querySelector('[data-a=del]').addEventListener('click', function(){ GEM.keys.splice(i, 1); if(GEM.pref >= GEM.keys.length) GEM.pref = 0; gemSync(); gemDlgPaint(); });
+    tr.querySelector('[data-a=test]').addEventListener('click', async function(e){
+      var b = e.target; b.disabled = true; b.textContent = '…';
+      var t0 = Date.now();
+      try{ await gemRaw(k.key, GEM.model, [{ text:'Trả lời đúng một chữ: OK' }], false); k.err = ''; k.last = 'OK ' + (Date.now() - t0) + ' ms'; }
+      catch(err){ k.err = (err.message || String(err)).slice(0, 120); k.last = 'lỗi'; }
+      b.disabled = false; b.textContent = 'Thử'; gemSync(); gemDlgPaint();
+    });
+    tb.appendChild(tr);
+  });
+  var sel = $('gemModelSel'), cur = GEM.model;
+  sel.innerHTML = '';
+  GEM_MODELS.concat(GEM_MODELS.indexOf(cur) < 0 ? [cur] : []).forEach(function(m){ var o = document.createElement('option'); o.value = m; o.textContent = m; if(m === cur) o.selected = true; sel.appendChild(o); });
+  var oo = document.createElement('option'); oo.value = '__other'; oo.textContent = 'Model khác…'; sel.appendChild(oo);
+  $('gemModelOther').hidden = true;
+}
+function gemAddKeys(){
+  var raw = $('gemNewKey').value, name = $('gemNewName').value.trim();
+  var ks = raw.split(/[\s,;]+/).map(function(x){ return x.trim(); }).filter(function(x){ return x.length > 20; });
+  if(!ks.length){ say('Chưa có key hợp lệ. Dán key bắt đầu bằng AIza…', 'bad'); return; }
+  var added = 0;
+  ks.forEach(function(k, j){
+    if(GEM.keys.some(function(x){ return x.key === k; })) return;
+    GEM.keys.push({ name:(name ? (ks.length > 1 ? name + ' ' + (j + 1) : name) : ('Key ' + (GEM.keys.length + 1))), key:k, on:true }); added++;
+  });
+  $('gemNewKey').value = ''; $('gemNewName').value = '';
+  gemSync(); gemDlgPaint();
+  say(added ? ('Đã thêm ' + added + ' key.') : 'Các key này đã có sẵn.', added ? 'ok' : 'bad');
+}
+gemLoad();
 function gemImgPart(dataUrl){ return { inlineData:{ mimeType:'image/png', data:String(dataUrl).split(',')[1] } }; }
 function gemJson(txt){
   var m = String(txt).match(/\{[\s\S]*\}/);
@@ -10682,33 +10841,44 @@ async function rdOcrPage(it){
   var url = cv.toDataURL('image/jpeg', 0.85); cv.width = cv.height = 1;
   var prompt = 'Đọc toàn bộ chữ trong ảnh trang tài liệu này (tiếng Việt có dấu, giữ nguyên số và ký hiệu). Trả về JSON là một mảng các dòng, mỗi dòng {"text": "nội dung dòng", "box_2d": [ymin, xmin, ymax, xmax]} với toạ độ theo thang 0-1000 của ảnh. Đọc theo thứ tự từ trên xuống, trái sang phải, kể cả chữ trong bảng. Chỉ trả JSON.';
   var txt = await gemCall([{ text:prompt }, { inlineData:{ mimeType:'image/jpeg', data:url.split(',')[1] } }], true);
-  var arr; try{ arr = JSON.parse(txt); }catch(e){ var m = txt.match(/\[[\s\S]*\]/); arr = m ? JSON.parse(m[0]) : []; }
-  if(!Array.isArray(arr)) arr = [];
-  it.ocr = arr.filter(function(l){ return l && l.text; }).map(function(l){
-    var b = Array.isArray(l.box_2d) && l.box_2d.length === 4 ? l.box_2d.map(Number) : [0, 0, 1000, 1000];
-    return { str:String(l.text), x:b[1]/1000, y:b[0]/1000, w:Math.max(0.01, (b[3] - b[1])/1000), h:Math.max(0.01, (b[2] - b[0])/1000), ai:true };
-  });
+  var arr = null;
+  try{ arr = JSON.parse(txt); }catch(e){ var m = txt.match(/\[[\s\S]*\]/); try{ arr = m ? JSON.parse(m[0]) : null; }catch(e2){ arr = null; } }
+  if(arr && !Array.isArray(arr)){ arr = arr.lines || arr.items || arr.text || arr.rows || Object.keys(arr).map(function(k){ return arr[k]; }).find(Array.isArray) || null; }
+  if(!Array.isArray(arr)){
+    /* AI trả chữ thường: mỗi dòng một mục, không có vị trí → tô cả trang khi khớp */
+    arr = String(txt).split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){ return { text:l }; });
+  }
+  var H = arr.length || 1;
+  it.ocr = arr.map(function(l, i){ return typeof l === 'string' ? { text:l, i:i } : (l && (l.text || l.line || l.content)) ? { text:String(l.text || l.line || l.content), box_2d:l.box_2d || l.box || l.bbox, i:i } : null; })
+    .filter(Boolean).map(function(l){
+      var b = Array.isArray(l.box_2d) && l.box_2d.length === 4 && l.box_2d.every(function(v){ return isFinite(+v); }) ? l.box_2d.map(Number) : null;
+      if(b && Math.max.apply(null, b) <= 1.0001) b = b.map(function(v){ return v*1000; });
+      if(!b) b = [l.i/H*1000, 0, (l.i + 1)/H*1000, 1000];
+      return { str:l.text, x:Math.max(0, b[1]/1000), y:Math.max(0, b[0]/1000), w:Math.max(0.01, (b[3] - b[1])/1000), h:Math.max(0.01, (b[2] - b[0])/1000), ai:true };
+    });
+  if(!it.ocr.length) throw new Error('AI không đọc ra chữ nào trên trang này.');
   it.ocrUsed = true;
   rdIndex(it);
   if(it.el){ var bb = it.el.querySelector('.rdpg-ocr'); bb.hidden = false; bb.innerHTML = 'AI đã đọc ' + it.ocr.length + ' dòng'; }
 }
 async function rdOcr(scope, one){
   if(RD.ocrBusy) return;
-  if(!GEM.key){ $('rdKeyBox').hidden = false; $('rdKey').focus(); say('Nhập khoá API Gemini rồi bấm Lưu để nhận diện chữ.', 'bad'); return; }
+  if(!gemOrder().length){ gemDlg(true); say('Thêm API key Gemini (Alt+F9) rồi bấm nhận diện lại.', 'bad'); return; }
   var list = one ? [one] : RD.items.filter(function(it){ return scope === 'all' ? !it.ocr : (!it.ocr && it.text && !it.hasText); });
-  if(scope !== 'all' && !one){
+  if(scope === 'all' && !one){ list = RD.items.filter(function(it){ return !it.ocr; }); }
+  else if(scope !== 'all' && !one){
     /* trang chưa đọc chữ thì đọc trước để biết có lớp chữ hay không */
     await rdIndexAll();
     list = RD.items.filter(function(it){ return !it.ocr && !it.hasText; });
   }
   if(!list.length){ say('Không có trang nào cần nhận diện.', 'ok'); return; }
-  RD.ocrBusy = true; $('rdOcrBtn').disabled = true;
+  RD.ocrBusy = true; $('rdOcrBtn').disabled = true; $('rdOcrAll').disabled = true;
   var ok = 0, bad = 0;
   for(var i = 0; i < list.length; i++){
     $('rdCount').textContent = 'AI đang đọc trang ' + (i + 1) + '/' + list.length + '…';
     try{ await rdOcrPage(list[i]); ok++; }catch(e){ bad++; say('Gemini lỗi ở trang ' + (RD.items.indexOf(list[i]) + 1) + ': ' + (e.message || e), 'bad'); if(/API key|permission|401|403/i.test(String(e.message))) break; }
   }
-  RD.ocrBusy = false; $('rdOcrBtn').disabled = false;
+  RD.ocrBusy = false; $('rdOcrBtn').disabled = false; $('rdOcrAll').disabled = false;
   $('rdCount').textContent = RD.items.length + ' trang';
   say('AI đã đọc ' + ok + ' trang' + (bad ? ', ' + bad + ' trang lỗi' : '') + '. Giờ tìm được cả chữ trên trang scan.', bad ? 'bad' : 'ok');
   if(RD.q) rdSearch();
@@ -12226,6 +12396,7 @@ async function dlEach(list){
 }
 function setDock(tab){
   linkBar();
+  if(typeof findFabPaint === 'function') findFabPaint();
   var xf = $('xferFab'), can = !!dockSend(tab) && !busy;
   if(xf) xf.disabled = !can;
   var spec = [];
@@ -12597,6 +12768,19 @@ $('mBatchGo').addEventListener('click', mBatchRun);
 function rdOpenMerge(){ var it = rdMergeItems(); if(!it.length){ say('Chưa có trang nào trong danh sách ghép.', 'bad'); return; } rdOpen(it, 'Bản gộp · ' + it.length + ' trang', 'merge'); }
 function rdOpenEdit(){ if(!X.pdoc) return; var it = []; for(var i = 1; i <= X.pages; i++) it.push({ key:'x' + X.skey, file:X.file, n:i, label:'' }); rdOpen(it, X.file.name, 'text'); }
 $('mReader').addEventListener('click', rdOpenMerge);
+function findFabPaint(){ var f = $('findFab'); if(!f) return; f.hidden = !((active === 'merge' && rdMergeItems().length) || (active === 'text' && X.pdoc)); }
+$('findFab').addEventListener('click', function(){ if(active === 'merge') rdOpenMerge(); else if(active === 'text') rdOpenEdit(); });
+/* hộp key Gemini */
+$('gemAdd').addEventListener('click', gemAddKeys);
+$('gemClose').addEventListener('click', function(){ gemDlg(false); });
+$('gemDlg').addEventListener('click', function(e){ if(e.target === $('gemDlg')) gemDlg(false); });
+$('gemNewKey').addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); gemAddKeys(); } });
+$('gemNewName').addEventListener('keydown', function(e){ e.stopPropagation(); });
+$('gemModelSel').addEventListener('change', function(){ if(this.value === '__other'){ $('gemModelOther').hidden = false; $('gemModelOther').focus(); } else { GEM.model = this.value; gemSync(); } });
+$('gemModelOther').addEventListener('change', function(){ var v = this.value.trim(); if(v){ GEM.model = v; gemSync(); gemDlgPaint(); } });
+$('gemModelOther').addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); this.blur(); } });
+document.addEventListener('keydown', function(e){ if(e.altKey && e.key === 'F9'){ e.preventDefault(); gemDlg(); } }, true);
+$('rdKeySave').textContent = 'Lưu';
 $('xFind').addEventListener('click', rdOpenEdit);
 $('rdClose').addEventListener('click', rdClose);
 $('rdQ').addEventListener('input', rdSearchSoon);
@@ -12610,8 +12794,10 @@ $('rdNext').addEventListener('click', function(){ rdGo(RD.cur + 1); });
 $('rdZIn').addEventListener('click', function(){ rdZoom(1.25); });
 $('rdZOut').addEventListener('click', function(){ rdZoom(0.8); });
 $('rdOcrBtn').addEventListener('click', function(){ rdOcr('scan'); });
+$('rdOcrAll').addEventListener('click', function(){ if(confirm('Gửi ảnh của ' + RD.items.filter(function(it){ return !it.ocr; }).length + ' trang cho Gemini để đọc chữ?')) rdOcr('all'); });
+$('rdKeyBtn').addEventListener('click', function(){ gemDlg(true); });
 $('rdPages').addEventListener('click', function(e){ var b = e.target.closest('[data-ocr]'); if(!b) return; var card = b.closest('.rdpg'); rdOcr('one', RD.items[+card.dataset.i]); });
-$('rdKeySave').addEventListener('click', function(){ GEM.key = $('rdKey').value.trim(); GEM.model = $('rdModel').value.trim() || GEM.model; try{ localStorage.setItem('pdfGemKey', GEM.key); localStorage.setItem('pdfGemModel', GEM.model); }catch(e){} $('rdKeyBox').hidden = !!GEM.key; if($('xGemKey')) $('xGemKey').value = GEM.key; say(GEM.key ? 'Đã lưu khoá. Bấm "Nhận diện trang scan" lần nữa.' : 'Chưa có khoá.', GEM.key ? 'ok' : 'bad'); });
+$('rdKeySave').addEventListener('click', function(){ $('gemNewKey').value = $('rdKey').value.trim(); var m = $('rdModel').value.trim(); if(m) GEM.model = m; gemAddKeys(); $('rdKeyBox').hidden = !!gemOrder().length; });
 ['rdKey','rdModel'].forEach(function(id){ $(id).addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); $('rdKeySave').click(); } }); });
 $('rdModel').value = GEM.model;
 document.addEventListener('keydown', function(e){
@@ -13061,6 +13247,7 @@ $('xAdjMatch').addEventListener('click', adjMatch);
 $('xAdjAi').addEventListener('click', gemAnalyze);
 $('xAdjAiApply').addEventListener('click', gemApply);
 $('xGemSave').addEventListener('click', gemSave);
+$('xGemMgr').addEventListener('click', function(){ gemDlg(true); });
 $('xGemKey').value = GEM.key; $('xGemModel').value = GEM.model;
 $('xGemKeyInfo').textContent = GEM.key ? 'Đã lưu khoá trong trình duyệt này.' : 'Khoá chỉ lưu trong trình duyệt của bạn và chỉ gửi thẳng tới Google.';
 ['xGemKey','xGemModel'].forEach(function(id){ $(id).addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); gemSave(); } }); });
