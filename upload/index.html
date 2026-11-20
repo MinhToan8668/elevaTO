@@ -357,6 +357,46 @@ function choMang() {
   return new Promise(function (ok) { window.addEventListener('online', function () { ok(); }, { once: true }); });
 }
 
+// ─── Đường dự phòng qua Google ───
+// Có mạng (hay gặp ở mạng công ty) để file đi tới Worker nhưng CHẶN câu trả lời về trình duyệt: Telegram
+// nhận rồi mà trang tưởng lỗi, gửi lại thành nhiều bản. Gặp vậy thì gửi qua Apps Script (máy chủ Google,
+// không bị chặn) — Apps Script đẩy thẳng vào Telegram, vẫn KHÔNG qua Drive — và nhớ cho các lần sau.
+var DUONG_KEY = 'elevato_upload_duong', NHO_DUONG = 3 * 86400000;
+function chanWorker() { var v = load(DUONG_KEY); return !!(v && v.google && Date.now() - v.t < NHO_DUONG); }
+function nhoChanWorker() { store(DUONG_KEY, { google: true, t: Date.now() }); }
+
+/** Thử Worker bằng một yêu cầu nhỏ không vé: đọc được câu trả lời (403 "vé sai") là đường thông. */
+function thuWorker(url) {
+  return new Promise(function (ok) {
+    var x = new XMLHttpRequest(), xong = false;
+    function kq(v) { if (!xong) { xong = true; clearTimeout(hen); ok(v); } }
+    var hen = setTimeout(function () { x.abort(); kq(false); }, 15000);
+    try { x.open('POST', url + '?d=thu&s=thu&i=0'); } catch (e) { return kq(false); }
+    x.upload.onprogress = function () {};
+    x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) { /* trang chặn */ } kq(!!(j && j.ma)); };
+    x.onerror = function () { kq(false); };
+    x.send(new Blob([new Uint8Array(64)]));
+  });
+}
+
+function readB64(blob) {
+  return new Promise(function (ok, fail) {
+    var fr = new FileReader();
+    fr.onload = function () { ok(String(fr.result).split(',')[1] || ''); };
+    fr.onerror = function () { fail(fr.error || new Error('Không đọc được file')); };
+    fr.readAsDataURL(blob);
+  });
+}
+async function guiPhanGoogle(ve, i, blob, key, khiTien) {
+  var b64 = await readB64(blob);
+  khiTien(0);
+  var r;
+  try { r = await call('up_phan', { key: key, d: ve.d, s: ve.s, i: i, data: b64 }); }
+  catch (e) { if (e.code === 'het_han') e.ma = 'het_han'; throw e; }
+  if (r && r.fid) { khiTien(blob.size); return r; }
+  var e = new Error((r && r.loi) || 'Telegram chưa nhận'); e.ma = r && r.ma; e.sau = r && r.sau; throw e;
+}
+
 async function guiMotFile(q, key) {
   var size = q.file.size, ps = TG_PART, n = Math.max(1, Math.ceil(size / ps));
   var cu = daGui(q.sig);
@@ -372,34 +412,44 @@ async function guiMotFile(q, key) {
     return veMoi;
   }
 
-  var dangGui = {}, daXong = 0, loiChung = null, mangHongLienTiep = 0, dieuKhien = [], doiVeLan = 0;
+  var dangGui = {}, daXong = 0, loiChung = null, dieuKhien = [], doiVeLan = 0;
   fids.forEach(function (f, i) { if (f) daXong += canPhan(i); });
   t0 = Date.now(); sent0 = daXong;
   function tong() { var s = daXong; for (var k in dangGui) s += dangGui[k]; return s; }
   function bao(chu) { progress(q, tong(), chu ? mb(tong()) + ' / ' + mb(size) + ' · ' + chu : ''); }
   var hang = []; fids.forEach(function (f, i) { if (!f) hang.push(i); });
 
+  var quaGoogle = !ve.url || chanWorker();
+  if (!quaGoogle && hang.length) {
+    bao('đang thử đường gửi…');
+    if (!(await thuWorker(ve.url))) { quaGoogle = true; nhoChanWorker(); }
+  }
+  // Đi Worker thì phần đầu gửi MỘT MÌNH: lỡ mạng nuốt câu trả lời thì chỉ trùng tối đa một bản.
+  var moLuong, choMoLuong = new Promise(function (r) { moLuong = r; });
+  if (quaGoogle) moLuong();
+  function sangGoogle() {
+    if (quaGoogle) return;
+    quaGoogle = true; nhoChanWorker(); moLuong();
+    bao('mạng này chặn máy chủ Cloudflare, chuyển sang gửi qua Google');
+  }
+
   async function motPhan(i, dk) {
     for (var lan = 1; ; lan++) {
       if (loiChung) throw loiChung;
       await choMang();
       try {
-        var j = await guiPhanXhr(ve, i, q.file.slice(i * ps, i * ps + canPhan(i)),
-          function (b) { dangGui[i] = b; bao(); }, dk);
+        var manh = q.file.slice(i * ps, i * ps + canPhan(i)), tien = function (b) { dangGui[i] = b; bao(); };
+        var j = quaGoogle ? await guiPhanGoogle(ve, i, manh, key, tien) : await guiPhanXhr(ve, i, manh, tien, dk);
         delete dangGui[i];
-        mangHongLienTiep = 0;
+        moLuong();
         return j.fid;
       } catch (e) {
         delete dangGui[i];
         if (e.dung || loiChung) throw loiChung || e;
-        if (LOI_GUI_CHET[e.ma]) throw e;
-        if (e.mang) {
-          // Chưa phần nào qua được mà lần nào cũng không tới nổi máy chủ: mạng chặn hẳn, thử mãi vô ích.
-          if (++mangHongLienTiep >= 3 && !coSan && fids.every(function (f) { return !f; })) {
-            throw new Error('Không kết nối được máy chủ gửi (workers.dev) — thường là mạng đang chặn nó ' +
-                            '(hay gặp ở mạng công ty). Gửi bằng 4G / mạng nhà.');
-          }
-        }
+        if (LOI_GUI_CHET[e.ma] || isFatal(e)) throw e;
+        // Worker không trả lời được về trình duyệt (mạng chặn / nuốt câu trả lời): KHÔNG gửi lại qua Worker
+        // — có thể Telegram đã nhận rồi — mà chuyển hẳn sang Google.
+        if (e.mang && !quaGoogle) { sangGoogle(); lan--; continue; }
         if (e.ma === 'het_han' && ++doiVeLan <= 3) { bao('vé hết hạn, đang xin vé mới…'); await doiVe(); lan--; continue; }
         if (lan >= GUI_THU_TOI_DA) throw e;
         var cho = e.ma === 'cham' ? Math.min(120, Math.max(1, Number(e.sau) || 5)) * 1000
@@ -409,15 +459,16 @@ async function guiMotFile(q, key) {
       }
     }
   }
-  async function luong() {
+  async function luong(thu) {
     var dk = { huy: null };
     dieuKhien.push(dk);
+    if (thu > 0) await choMoLuong;
     while (hang.length && !loiChung) {
       var i = hang.shift();
       try {
         fids[i] = await motPhan(i, dk);
       } catch (e) {
-        if (!loiChung) { loiChung = e; dieuKhien.forEach(function (d) { if (d.huy) d.huy(); }); }
+        if (!loiChung) { loiChung = e; moLuong(); dieuKhien.forEach(function (d) { if (d.huy) d.huy(); }); }
         throw loiChung;
       }
       daXong += canPhan(i);
@@ -427,7 +478,7 @@ async function guiMotFile(q, key) {
   }
   bao(coSan ? 'gửi tiếp ' + hang.length + '/' + n + ' phần còn thiếu' : '');
   var ds = [];
-  for (var k = 0; k < Math.min(LUONG_GUI, hang.length); k++) ds.push(luong());
+  for (var k = 0; k < Math.min(LUONG_GUI, hang.length); k++) ds.push(luong(k));
   var kq = await Promise.allSettled(ds);
   if (loiChung || kq.some(function (r) { return r.status === 'rejected'; })) {
     throw loiChung || kq.filter(function (r) { return r.status === 'rejected'; })[0].reason;
