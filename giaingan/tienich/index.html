@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TestKey & Đáo hạn</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--ink:#1f2937;--mute:#6b7280;--line:#dde3ec;--acc:#2e5fa3;--ok:#0f7b3f;--inp:#fff8e1}
+@media (prefers-color-scheme:dark){#his tr.cur td{background:#1e3a5f!important}:root{--bg:#12161d;--card:#1b212b;--ink:#e5e7eb;--mute:#9aa3b2;--line:#2c3542;--acc:#7aa7e6;--ok:#4ade80;--inp:#262d38}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",Arial,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mute);margin:0 0 18px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+h2{font-size:16px;margin:0 0 12px;color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label{display:block;font-size:12px;color:var(--mute);margin-bottom:4px;font-weight:600}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--inp);color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:0}
+.big{font-size:20px;font-weight:700}
+.out{margin-top:14px;padding:14px;border-radius:10px;background:var(--bg);border:1px dashed var(--line)}
+.key{font-size:34px;font-weight:800;color:var(--ok);letter-spacing:1px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+button{border:0;border-radius:8px;background:var(--acc);color:#fff;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.sec{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+.words{font-size:17px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+td,th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}th{color:var(--mute);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;color:var(--mute);font-size:13px;margin-top:10px}
+.note{font-size:12px;color:var(--mute)}
+
+/* ---- bố cục toàn màn hình ---- */
+html,body{height:100%}
+body{font-size:14px}
+main{max-width:none;height:100vh;padding:10px 14px;display:grid;gap:10px;
+ grid-template-columns:1.05fr 1fr 1.1fr;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr) auto;
+ grid-template-areas:"hd hd hd" "info tk dh" "info his dh" "sum his dh"}
+header{grid-area:hd;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+h1{font-size:18px;margin:0}.sub{margin:0;font-size:12px}
+.a-info{grid-area:info}.a-tk{grid-area:tk}.a-dh{grid-area:dh}.a-sum{grid-area:sum}.a-his{grid-area:his}
+.chuBox{margin-top:8px}.chuBox .words{font-size:16px;line-height:1.45}
+.hisWrap{flex:1;min-height:0;overflow:auto;margin-top:6px;border:1px solid var(--line);border-radius:8px}
+#his{margin:0}#his th{position:sticky;top:0;background:var(--card);z-index:1}#his tr.cur td{background:#dbeafe;font-weight:600}#his tr.cur td:first-child{box-shadow:inset 4px 0 0 var(--acc)}#his tr:hover td{background:rgba(46,95,163,.07)}#his input{width:auto;cursor:pointer}#his td.ct{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card{margin:0;padding:12px 14px;overflow:auto;min-height:0;display:flex;flex-direction:column}
+h2{font-size:14px;margin:0 0 8px}
+.grid{gap:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+input,select{padding:6px 8px}
+label{font-size:11px;margin-bottom:2px}
+.big{font-size:18px}
+.out{margin-top:8px;padding:10px}
+.key{font-size:40px;line-height:1.1}
+.words{font-size:15px}
+button{padding:6px 10px;font-size:13px}
+.note{font-size:11px;line-height:1.4}
+label.nf{padding:4px 8px;font-size:13px}label.nf .note{display:none}
+#nfBox{gap:6px}
+.a-dh details textarea{height:150px}
+#his{font-size:12px}#sum{font-size:13px!important}
+table{margin-top:6px}td,th{padding:3px 5px}
+details summary{margin-top:6px}
+.a-tk details{overflow:auto}
+@media (max-width:1200px){main{height:auto;grid-template-columns:1fr 1fr;grid-template-rows:auto;
+ grid-template-areas:"hd hd" "info tk" "dh his" "sum his"}.hisWrap{max-height:320px}.card{overflow:visible}}
+@media (max-width:760px){main{grid-template-columns:1fr;grid-template-areas:"hd" "info" "tk" "dh" "sum" "his"}}
+label.nf{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink);font-weight:400;margin:0;padding:6px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer}label.nf input{width:auto}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:8px 14px;border-radius:8px;opacity:0;transition:.2s}
+.toast.on{opacity:1}
+</style></head><body><main>
+<header><h1>TestKey · Ngày đáo hạn · Số tiền bằng chữ</h1>
+<p class="sub">Bản mở rộng của file QUẢN LÝ GIẢI NGÂN · chạy offline · Enter = ô kế tiếp · Ctrl+S lưu · Ctrl+Shift+C chép tóm tắt · Esc làm mới</p></header>
+
+<section class="card a-info">
+<h2>1. Thông tin giao dịch</h2>
+<div class="grid">
+ <div><label for="cn">Mã chi nhánh / TTKD</label><input id="cn" inputmode="numeric" value="" placeholder="VD: 123"></div>
+ <div><label for="ngay">Ngày giải ngân</label><input id="ngay" type="date"></div>
+ <div><label for="lt">Loại tiền</label><select id="lt"></select></div>
+</div>
+<div style="margin-top:12px"><label for="tien">Số tiền (dán kiểu nào cũng được: 2.027.125.382 · 2,027,125,382 · 2027125382)</label>
+<div class="row"><input id="tien" class="big" inputmode="decimal" placeholder="VD: 2.027.125.382" autocomplete="off" style="flex:1;min-width:150px"><button id="cpTien">Chép số tiền</button></div></div>
+<div class="out chuBox"><div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><div class="words" id="chu">–</div><button id="cpChu" style="flex:none">Chép chữ</button></div>
+<div class="note">Đọc theo kiểu "linh / tư / mốt / lăm" giống hàm DocSoTien trong Excel · phần lẻ được làm tròn.</div></div>
+<div style="margin-top:10px"><label for="ct">Công ty / ghi chú (lưu cùng lịch sử để dễ tìm lại)</label><input id="ct" placeholder="VD: Công ty A – KƯ số 23" autocomplete="off"></div>
+<div style="margin-top:10px"><label>Định dạng số khi hiển thị &amp; sao chép</label>
+<div class="row" id="nfBox">
+ <label class="nf"><input type="radio" name="nf" value="vn"> 1.234.567 <span class="note">(chấm ngăn nghìn – Excel/Windows tiếng Việt)</span></label>
+ <label class="nf"><input type="radio" name="nf" value="us"> 1,234,567 <span class="note">(phẩy ngăn nghìn – Excel/Windows tiếng Anh)</span></label>
+ <label class="nf"><input type="radio" name="nf" value="raw"> 1234567 <span class="note">(số liền – dán vào ô Excel nào cũng nhận là số)</span></label>
+</div>
+<div class="note" id="nfHint"></div></div>
+</section>
+
+<section class="card a-tk">
+<h2>2. TestKey</h2>
+<div id="keyBox" class="out" style="margin-top:0;border-color:#c2410c">
+ <b>Chưa nạp bảng key TestKey trên máy này.</b>
+ <div class="note">Bảng key là tài liệu nội bộ nên không nằm trong file công cụ. Chọn file bảng key (.json) bạn giữ riêng – chỉ cần làm 1 lần trên mỗi máy, trình duyệt sẽ nhớ.</div>
+ <div class="row" style="margin-top:8px"><input type="file" id="keyFile" accept=".json,application/json" style="width:auto"></div>
+</div>
+<div class="out">
+ <div class="row"><span class="key" id="tk">–</span><button id="cpTk">Sao chép</button><button class="sec" id="cpTk2">Sao chép dạng CN/xxxx</button></div>
+ <div class="note" id="tkNote"></div>
+ <div class="row note" style="margin-top:4px"><span id="keyOk"></span><button class="sec" id="keyClear" style="padding:2px 8px;font-size:11px">Gỡ bảng key khỏi máy này</button></div>
+ <details open><summary>Chi tiết cách tính</summary><table id="tkTbl"></table></details>
+</div>
+</section>
+
+<section class="card a-dh">
+<h2>3. Ngày đáo hạn</h2>
+<div class="grid">
+ <div><label for="songay">Số ngày vay</label><input id="songay" inputmode="numeric" value="137"></div>
+ <div><label for="dh">Ngày đáo hạn (tự tính, sửa được)</label><input id="dh" type="date"></div>
+</div>
+<div class="out">
+ <div class="row"><span class="words" id="dhTxt">–</span><button id="cpDh">Sao chép</button></div>
+ <div class="note" id="dhNote"></div>
+</div>
+<div class="grid" style="margin-top:12px">
+ <div><label for="ls">Lãi suất (%/năm)</label><input id="ls" inputmode="decimal" placeholder="VD: 8,4"></div>
+ <div><label for="ntl">Ngày trả lãi hàng tháng</label><input id="ntl" inputmode="numeric" value="25"></div>
+</div>
+<div class="out" id="laiBox"><div class="note" id="laiTxt">Nhập lãi suất để ra lãi dự kiến và ngày trả lãi đầu tiên.</div></div>
+<p class="note">Ngày đáo hạn = ngày giải ngân + số ngày vay. Sửa ô ngày đáo hạn thì số ngày vay tự tính lại. Rơi vào thứ Bảy, Chủ nhật hoặc ngày lễ Tết sẽ có cảnh báo và gợi ý ngày làm việc gần nhất.</p>
+<details><summary>Danh sách ngày nghỉ lễ Tết (sửa được)</summary>
+<p class="note">Mỗi dòng: <b>ngày</b> hoặc <b>từ ngày → đến ngày</b> rồi tên, dạng dd/mm/yyyy. Ngày Tết âm lịch và Giỗ Tổ là <b>dự kiến</b> – khi có thông báo chính thức của Chính phủ thì sửa lại tại đây. File tự nhớ danh sách bạn sửa.</p>
+<textarea id="hol" rows="14" style="width:100%;font:13px/1.5 Consolas,monospace;border:1px solid var(--line);border-radius:8px;background:var(--inp);color:var(--ink);padding:8px"></textarea>
+<div class="row" style="margin-top:6px"><button class="sec" id="holReset">Khôi phục danh sách mặc định</button><span class="note" id="holMsg"></span></div>
+</details>
+</section>
+
+<section class="card a-sum">
+<div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">4. Tóm tắt nhanh</h2>
+<div class="row" style="gap:6px"><button id="cpSum" title="Ctrl+Shift+C">Chép tất cả</button><button class="sec" id="save" title="Ctrl+S">Lưu lịch sử</button><button class="sec" id="clr" title="Esc">Làm mới</button></div></div>
+<pre id="sum" style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:12px!important;line-height:1.45;max-height:150px;overflow:auto"></pre>
+</section>
+<section class="card a-his">
+<h2>5. Lịch sử <span class="note" id="hisCount"></span></h2>
+<div class="row" style="flex-wrap:nowrap"><input id="hisQ" placeholder="Tìm theo công ty, số tiền, TestKey, ngày…" style="flex:1"></div>
+<div class="row" style="margin-top:8px"><button class="sec" id="hisAll">Chọn tất cả</button><button class="sec" id="hisCopy">Chép các mục đã chọn</button><button class="sec" id="hisDel">Xoá mục đã chọn</button></div>
+<div class="hisWrap"><table id="his"></table></div>
+<p class="note">Tick 1 dòng = hiển thị lại số liệu đó lên các ô bên trên (dòng đang hiển thị tô xanh). Tick nhiều dòng để chép hoặc xoá cùng lúc. Lưu tối đa 200 lần gần nhất, chỉ trên trình duyệt của máy này. Lưu trùng ngày + số tiền + công ty thì ghi đè dòng cũ.</p>
+</section>
+<div class="toast" id="toast">Đã sao chép</div>
+</main>
+<script>
+// Bảng key TestKey là tài liệu nội bộ ngân hàng: KHÔNG ghi vào file này (repo công khai).
+// Người dùng nạp file .json riêng một lần; bảng được giữ trong localStorage của trình duyệt máy đó.
+const TK_KEY='tk_table';
+let T=null;try{T=JSON.parse(localStorage.getItem(TK_KEY)||'null')}catch(e){}
+function validTable(x){return x&&typeof x==='object'&&['day','mon','cur','dig'].every(k=>x[k]&&typeof x[k]==='object')&&Object.keys(x.day).length>=28&&Object.keys(x.mon).length===12}
+const $=id=>document.getElementById(id);
+function fillCur(){const sel=$('lt'),cur=sel.value||'VND';sel.innerHTML='';(T?Object.keys(T.cur):['VND','USD','EUR','JPY']).forEach(k=>{const o=document.createElement('option');o.textContent=k;sel.appendChild(o)});sel.value=cur}
+function keyStatus(){const ok=!!T;$('keyBox').style.display=ok?'none':'';$('keyOk').textContent=ok?'Đã nạp bảng key trên máy này.':''}
+fillCur();
+const d=new Date();$('ngay').value=d.toISOString().slice(0,10);
+try{const s=localStorage.getItem('tk_cn');if(s)$('cn').value=s}catch(e){}
+
+function parseAmt(s){s=(s||'').trim().replace(/\s/g,'');if(!s)return null;
+ // "2.027.125.382" hoặc "2,027,125,382" -> nghìn; "1.234,5" hoặc "1,234.5" -> lẻ
+ const lc=s.lastIndexOf(','),ld=s.lastIndexOf('.');let dec='';
+ if(lc>=0&&ld>=0)dec=lc>ld?',':'.';
+ else if(lc>=0&&s.length-lc-1!==3)dec=','; else if(ld>=0&&s.length-ld-1!==3)dec='.';
+ let t=s;if(dec){const th=dec===','?'.':',';t=t.split(th).join('').replace(dec,'.')}else t=t.replace(/[.,]/g,'');
+ const n=Number(t);return isFinite(n)&&n>=0?n:null}
+let NF='vn';try{NF=localStorage.getItem('tk_nf')||(/,/.test((1.5).toLocaleString())?'vn':'us')}catch(e){}
+function fmt(n){const s=String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g,NF==='vn'?'.':NF==='us'?',':'');return (n<0?'-':'')+s}
+
+const SO=['không','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+const DV=['','nghìn','triệu','tỷ','nghìn tỷ','triệu tỷ'];
+function doc3(x,dau){const tr=Math.floor(x/100),ch=Math.floor(x/10)%10,dv=x%10;let s='';
+ if(x===0)return '';
+ if(tr>0)s=SO[tr]+' trăm';else if(!dau)s='không trăm';
+ if(ch>1){s+=' '+SO[ch]+' mươi';if(dv===1)s+=' mốt';else if(dv===4)s+=' tư';else if(dv===5)s+=' lăm';else if(dv>0)s+=' '+SO[dv]}
+ else if(ch===1){s+=' mười';if(dv===5)s+=' lăm';else if(dv>0)s+=' '+SO[dv]}
+ else if(dv>0){if(s)s+=' linh';s+=' '+SO[dv]}
+ return s.trim()}
+function docTien(n){n=Math.round(n);if(n===0)return 'Không đồng';const g=[];while(n>0){g.push(n%1000);n=Math.floor(n/1000)}
+ let s='';for(let i=g.length-1;i>=0;i--){const t=doc3(g[i],i===g.length-1);if(t)s+=t+' '+DV[i]+' '}
+ s=(s.trim()+' đồng').replace(/\s+/g,' ');return s[0].toUpperCase()+s.slice(1)}
+
+const LET='ABCDEFGHIKMN';
+function calc(){
+ const cn=$('cn').value.trim();try{localStorage.setItem('tk_cn',cn)}catch(e){}
+ const amt=parseAmt($('tien').value);const dt=$('ngay').value;const lt=$('lt').value;
+ $('chu').textContent=amt===null?'–':docTien(amt);
+ if(!T){$('tk').textContent='–';$('tkNote').textContent='Chưa nạp bảng key TestKey trên máy này.';$('tkTbl').innerHTML='';return}
+ if(amt===null||!dt){$('tk').textContent='–';$('tkNote').textContent=amt===null?'Nhập số tiền để tính.':'Chọn ngày.';$('tkTbl').innerHTML='';return}
+ if(Math.round(amt)>=1e12){$('tk').textContent='–';$('tkNote').textContent='Số tiền vượt 12 chữ số, bảng key không hỗ trợ.';return}
+ const [y,m,dd]=dt.split('-').map(Number);
+ const kCN=Number(cn)||0,kD=T.day[dd]||0,kM=T.mon[m]||0,kL=T.cur[lt]||0;
+ const digits=String(Math.round(amt)).padStart(12,'0');let kS=0;
+ let rows='<tr><th>Thành phần</th><th>Giá trị</th><th class="n">Key</th></tr>';
+ rows+=`<tr><td>Mã chi nhánh</td><td>${cn}</td><td class="n">${kCN}</td></tr><tr><td>Ngày</td><td>${dd}</td><td class="n">${kD}</td></tr><tr><td>Tháng</td><td>${m}</td><td class="n">${kM}</td></tr><tr><td>Loại tiền</td><td>${lt}</td><td class="n">${kL}</td></tr>`;
+ let det='';for(let i=0;i<12;i++){const c=LET[i]+digits[i];const k=T.dig[c]||0;kS+=k;det+=`<tr><td>&nbsp;&nbsp;Vị trí ${i+1} (${LET[i]})</td><td>${digits[i]}</td><td class="n">${k}</td></tr>`}
+ rows+=`<tr><td>Số tiền (12 chữ số: ${digits})</td><td>${fmt(amt)}</td><td class="n">${kS}</td></tr>`+det;
+ const key=kCN+kD+kM+kL+kS;
+ rows+=`<tr><th>TESTKEY</th><th></th><th class="n">${key}</th></tr>`;
+ $('tk').textContent=key;$('tkNote').textContent=`${cn}/${key} · ngày ${String(dd).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y} · ${fmt(amt)} ${lt}`;
+ $('tkTbl').innerHTML=rows}
+['cn','ngay','lt','tien'].forEach(i=>$(i).addEventListener('input',calc));
+const THU=['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+const pd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const vn=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const diff=(a,b)=>Math.round((b-a)/864e5);
+const HOL_DEF=`01/01/2026 Tết Dương lịch
+14/02/2026 → 22/02/2026 Tết Nguyên đán Bính Ngọ
+26/04/2026 Giỗ Tổ Hùng Vương (dự kiến)
+30/04/2026 → 01/05/2026 Giải phóng miền Nam, Quốc tế Lao động
+01/09/2026 → 02/09/2026 Quốc khánh (dự kiến ngày liền kề)
+01/01/2027 Tết Dương lịch
+04/02/2027 → 10/02/2027 Tết Nguyên đán Đinh Mùi (dự kiến)
+16/04/2027 Giỗ Tổ Hùng Vương (dự kiến)
+30/04/2027 → 01/05/2027 Giải phóng miền Nam, Quốc tế Lao động
+02/09/2027 → 03/09/2027 Quốc khánh (dự kiến ngày liền kề)
+01/01/2028 Tết Dương lịch
+24/01/2028 → 30/01/2028 Tết Nguyên đán Mậu Thân (dự kiến)
+04/04/2028 Giỗ Tổ Hùng Vương (dự kiến)
+30/04/2028 → 01/05/2028 Giải phóng miền Nam, Quốc tế Lao động
+01/09/2028 → 02/09/2028 Quốc khánh (dự kiến ngày liền kề)`;
+let HOL={};
+function parseHol(txt){const m={};let bad=0;
+ txt.split(/\n/).forEach(l=>{l=l.trim();if(!l)return;const r=l.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s*(?:→|->|-)\s*(\d{1,2})\/(\d{1,2})\/(\d{4}))?\s*(.*)$/);
+  if(!r){bad++;return}const a=new Date(+r[3],r[2]-1,+r[1]),b=r[4]?new Date(+r[6],r[5]-1,+r[4]):a;
+  for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))m[iso(d)]=r[7]||'Ngày nghỉ'});
+ return [m,bad]}
+function loadHol(){let t=HOL_DEF;try{t=localStorage.getItem('tk_hol')||HOL_DEF}catch(e){}$('hol').value=t;applyHol()}
+function applyHol(){const[m,bad]=parseHol($('hol').value);HOL=m;$('holMsg').textContent=bad?`⚠ ${bad} dòng sai định dạng, đã bỏ qua`:`${Object.keys(m).length} ngày nghỉ`;try{localStorage.setItem('tk_hol',$('hol').value)}catch(e){}}
+const nghi=d=>d.getDay()===0||d.getDay()===6||!!HOL[iso(d)];
+const lyDo=d=>HOL[iso(d)]||THU[d.getDay()];
+function lamViec(d,step){let x=new Date(d);while(nghi(x))x=addD(x,step);return x}
+function showDh(){const g=$('ngay').value,h=$('dh').value;const t=$('dhTxt'),n=$('dhNote');
+ if(!g||!h){t.textContent='–';n.textContent='';return}
+ const G=pd(g),H=pd(h),w=H.getDay();t.textContent=`${THU[w]}, ${vn(H)}`+(HOL[iso(H)]?` – ${HOL[iso(H)]}`:'');
+ let m=`Giải ngân ${THU[G.getDay()]}, ${vn(G)} · ${diff(G,H)} ngày`;
+ if(nghi(H)){const tr=lamViec(H,-1),sa=lamViec(H,1);m=`⚠ Rơi vào ngày nghỉ (${lyDo(H)}) – ngày làm việc gần nhất: trước ${THU[tr.getDay()]} ${vn(tr)} (${diff(G,tr)} ngày) · sau ${THU[sa.getDay()]} ${vn(sa)} (${diff(G,sa)} ngày). `+m;t.style.color='#c2410c'}else t.style.color='';
+ if(nghi(G))m+=` · ⚠ ngày giải ngân là ngày nghỉ (${lyDo(G)})`;
+ n.textContent=m;lai()}
+function pct(s){s=(s||'').trim().replace(',','.').replace('%','');const v=parseFloat(s);return isFinite(v)?v:null}
+function ngayTraLaiDau(G,k){let d=new Date(G.getFullYear(),G.getMonth(),k);if(G.getDate()>=k)d=new Date(G.getFullYear(),G.getMonth()+1,k);return d}
+function lai(){const box=$('laiTxt');const amt=parseAmt($('tien').value),r=pct($('ls').value),g=$('ngay').value,h=$('dh').value,k=parseInt($('ntl').value,10);
+ let out=[];if(g&&k>=1&&k<=31){const d=ngayTraLaiDau(pd(g),k);out.push(`Trả lãi đầu tiên: ${THU[d.getDay()]}, ${vn(d)}`+(nghi(d)?` ⚠ ngày nghỉ (${lyDo(d)}) → ${vn(lamViec(d,1))}`:''))}
+ if(amt!==null&&r!==null&&g&&h){const n=diff(pd(g),pd(h)),l=amt*r/100*n/365;out.push(`Lãi dự kiến cả kỳ: ${fmt(l)} đ (${n} ngày × ${r}%/365) · bình quân ${fmt(amt*r/100*30/365)} đ/30 ngày`)}
+ box.textContent=out.join('  ·  ')||'Nhập lãi suất để ra lãi dự kiến và ngày trả lãi đầu tiên.';tomTat()}
+function tomTat(){const amt=parseAmt($('tien').value),g=$('ngay').value,h=$('dh').value;
+ const L=[];if($('ct').value.trim())L.push(`Công ty: ${$('ct').value.trim()}`);if(g)L.push(`Ngày GN: ${THU[pd(g).getDay()]}, ${vn(pd(g))}`);if(amt!==null)L.push(`Số tiền: ${fmt(amt)} ${$('lt').value}`);
+ if(amt!==null)L.push(`Bằng chữ: ${$('chu').textContent}`);if($('tk').textContent!=='–')L.push(`TestKey: ${$('cn').value.trim()}/${$('tk').textContent}`);
+ if(h)L.push(`Số ngày vay: ${$('songay').value} · Đáo hạn: ${$('dhTxt').textContent}`);const r=pct($('ls').value);if(r!==null)L.push(`Lãi suất: ${r}%/năm`);
+ $('sum').textContent=L.join('\n')||'–'}
+const HK='tk_his';const getHis=()=>{try{return JSON.parse(localStorage.getItem(HK)||'[]')}catch(e){return[]}};
+const putHis=a=>{try{localStorage.setItem(HK,JSON.stringify(a.slice(0,200)))}catch(e){}};
+let CUR=null;const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function hisRow(x){const a=parseAmt(x.tien);return{...x,amt:a,txt:[x.ct,x.at,x.tien,a!==null?String(Math.round(a)):'',x.tk,x.ngay&&vn(pd(x.ngay)),x.dh&&vn(pd(x.dh)),x.ls].join(' ').toLowerCase()}}
+let TICK=new Set();
+function drawHis(){const q=($('hisQ').value||'').trim().toLowerCase().replace(/[.,\s]/g,'');const all=getHis();
+ const rows=all.map((x,i)=>({...hisRow(x),i})).filter(r=>!q||r.txt.replace(/[.,\s]/g,'').includes(q));
+ $('hisCount').textContent=all.length?`(${rows.length}/${all.length})`:'';
+ if(!all.length){$('his').innerHTML='<tr><td class="note" style="padding:10px">Chưa có lịch sử. Nhập xong bấm "Lưu vào lịch sử" (Ctrl+S).</td></tr>';return}
+ $('his').innerHTML='<tr><th style="width:26px"></th><th>Công ty / ghi chú</th><th>Ngày GN</th><th class="n">Số tiền</th><th>TestKey</th><th>Đáo hạn</th><th>LS</th></tr>'+
+  rows.map(r=>`<tr data-i="${r.i}" class="${CUR===r.i?'cur':''}"><td><input type="checkbox" data-i="${r.i}" ${TICK.has(r.i)?"checked":""}></td><td class="ct" title="${esc(r.ct)} · lưu ${esc(r.at)}">${esc(r.ct)||'<span class="note">'+esc(r.at)+'</span>'}</td><td>${r.ngay?vn(pd(r.ngay)):''}</td><td class="n">${r.amt!==null?fmt(r.amt):esc(r.tien)}</td><td>${esc(r.tk)}</td><td>${r.dh?vn(pd(r.dh)):''}</td><td>${esc(r.ls)}</td></tr>`).join('');
+ $('his').querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{c.checked?TICK.add(+c.dataset.i):TICK.delete(+c.dataset.i);const ticked=[...$('his').querySelectorAll('input:checked')];if(c.checked&&ticked.length===1)showHis(+c.dataset.i)});
+ $('his').querySelectorAll('tr[data-i]').forEach(tr=>tr.ondblclick=()=>showHis(+tr.dataset.i))}
+function showHis(i){const x=getHis()[i];if(!x)return;['cn','ngay','lt','songay','ls','ct','ntl'].forEach(k=>{if(x[k]!==undefined)$(k).value=x[k]});
+ const a=parseAmt(x.tien);$('tien').value=a!==null?fmt(a):x.tien;CUR=i;calc();fromDays();
+ $('his').querySelectorAll('tr[data-i]').forEach(tr=>tr.classList.toggle('cur',+tr.dataset.i===i));toast('Đã hiển thị lại')}
+function selIdx(){return[...TICK]}
+function saveHis(){if($('tk').textContent==='–'){toast('Chưa đủ số liệu để lưu');return}const a=getHis();
+ const x={at:new Date().toLocaleString('vi-VN'),ct:$('ct').value.trim(),cn:$('cn').value,ngay:$('ngay').value,lt:$('lt').value,tien:$('tien').value,songay:$('songay').value,ls:$('ls').value,ntl:$('ntl').value,tk:$('cn').value.trim()+'/'+$('tk').textContent,dh:$('dh').value};
+ const amt=parseAmt(x.tien),j=a.findIndex(y=>y.ngay===x.ngay&&(y.ct||'')===x.ct&&parseAmt(y.tien)===amt);
+ if(j>=0)a.splice(j,1);a.unshift(x);putHis(a);CUR=0;TICK=new Set();$('hisQ').value='';drawHis();toast(j>=0?'Đã cập nhật dòng cũ':'Đã lưu')}
+$('hisQ').addEventListener('input',drawHis);
+$('hisAll').onclick=()=>{const cs=[...$('his').querySelectorAll('input[type=checkbox]')];const on=cs.some(c=>!c.checked);cs.forEach(c=>{c.checked=on;on?TICK.add(+c.dataset.i):TICK.delete(+c.dataset.i)})};
+$('hisDel').onclick=()=>{const s=selIdx();if(!s.length){toast('Chưa tick dòng nào');return}if(!confirm(`Xoá ${s.length} dòng lịch sử đã chọn?`))return;
+ putHis(getHis().filter((_,i)=>!s.includes(i)));CUR=null;TICK=new Set();drawHis();toast('Đã xoá')};
+$('hisCopy').onclick=()=>{const s=selIdx(),a=getHis();if(!s.length){toast('Chưa tick dòng nào');return}
+ copy(s.map(i=>{const x=a[i],m=parseAmt(x.tien);return[x.ct||'',x.ngay?vn(pd(x.ngay)):'',m!==null?fmt(m):x.tien,x.tk,x.dh?vn(pd(x.dh)):'',x.ls||''].join('\t')}).join('\n'))};
+function toast(t){const x=$('toast');x.textContent=t;x.classList.add('on');setTimeout(()=>{x.classList.remove('on');x.textContent='Đã sao chép'},1200)}
+function fromDays(){const g=$('ngay').value,k=parseInt($('songay').value,10);if(g&&k>=0)$('dh').value=iso(addD(pd(g),k));showDh()}
+function fromDate(){const g=$('ngay').value,h=$('dh').value;if(g&&h)$('songay').value=diff(pd(g),pd(h));showDh()}
+$('songay').addEventListener('input',fromDays);$('ngay').addEventListener('input',fromDays);$('dh').addEventListener('input',fromDate);
+$('hol').addEventListener('input',()=>{applyHol();showDh()});
+$('holReset').onclick=()=>{$('hol').value=HOL_DEF;applyHol();showDh()};
+['ls','ntl','tien','lt','cn','ct'].forEach(i=>$(i).addEventListener('input',lai));
+$('cpSum').onclick=()=>copy($('sum').textContent);$('save').onclick=saveHis;
+$('clr').onclick=()=>{$('tien').value='';$('ls').value='';$('ct').value='';CUR=null;drawHis();calc();fromDays();$('tien').focus()};
+const ORDER=['cn','ngay','lt','tien','ct','songay','dh','ls','ntl'];
+ORDER.forEach((id,i)=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const n=$(ORDER[(i+1)%ORDER.length]);n.focus();n.select&&n.select()}}));
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&(e.key==='C'||e.key==='c')){e.preventDefault();copy($('sum').textContent)}
+ else if(e.ctrlKey&&(e.key==='s'||e.key==='S')){e.preventDefault();saveHis()}else if(e.key==='Escape'){$('clr').click()}});
+$('cpDh').onclick=()=>copy(vn(pd($('dh').value)));
+try{const k=localStorage.getItem('tk_songay');if(k)$('songay').value=k}catch(e){}
+$('songay').addEventListener('change',()=>{try{localStorage.setItem('tk_songay',$('songay').value)}catch(e){}});
+$('tien').addEventListener('blur',()=>{const a=parseAmt($('tien').value);if(a!==null&&Number.isInteger(a))$('tien').value=fmt(a)});
+function copy(t){if(!t||t==='–')return;navigator.clipboard?.writeText(t).then(()=>{const x=$('toast');x.classList.add('on');setTimeout(()=>x.classList.remove('on'),1200)})}
+$('cpTk').onclick=()=>copy($('tk').textContent);
+$('cpTk2').onclick=()=>copy($('cn').value.trim()+'/'+$('tk').textContent);
+$('cpChu').onclick=()=>copy($('chu').textContent);
+document.querySelectorAll('input[name=nf]').forEach(r=>{r.checked=r.value===NF;r.addEventListener('change',()=>{NF=r.value;try{localStorage.setItem('tk_nf',NF)}catch(e){}
+ const a=parseAmt($('tien').value);if(a!==null)$('tien').value=fmt(a);calc();showDh();nfHint();drawHis()})});
+function nfHint(){const sep=(1.5).toLocaleString().includes(',')?'phẩy (,)':'chấm (.)';$('nfHint').textContent=`Máy này đang dùng dấu ${sep} cho phần thập phân. `+
+ (NF==='raw'?'Đang chép số liền – an toàn nhất khi dán vào Excel.':(NF==='vn')===(sep.startsWith('phẩy'))?'Định dạng đang chọn khớp với máy, dán vào Excel sẽ nhận là số.':'⚠ Định dạng đang chọn NGƯỢC với máy – dán vào Excel có thể thành chữ hoặc sai số. Nên chọn kiểu khác hoặc "số liền".')}
+$('cpTien').onclick=()=>{const a=parseAmt($('tien').value);if(a!==null)copy(fmt(a))};
+nfHint();
+$('keyFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());
+ if(!validTable(x))throw new Error('File không đúng cấu trúc bảng key (cần day, mon, cur, dig).');T=x;try{localStorage.setItem(TK_KEY,JSON.stringify(x))}catch(_){}
+ fillCur();keyStatus();calc();toast('Đã nạp bảng key')}catch(err){alert('Không nạp được bảng key: '+err.message)}e.target.value=''});
+$('keyClear').onclick=()=>{if(!confirm('Gỡ bảng key TestKey khỏi trình duyệt máy này?'))return;T=null;try{localStorage.removeItem(TK_KEY)}catch(_){}fillCur();keyStatus();calc()};
+keyStatus();
+loadHol();calc();fromDays();drawHis();$('tien').focus();
+</script></body></html>

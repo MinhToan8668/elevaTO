@@ -8,3 +8,5 @@
   `cd ai && node --test --test-concurrency=1 tests/e2e/app.e2e.js`.
 - Tool Bảng kê giải ngân ở `bangke/` (1 file `index.html`): test unit `cd bangke && node --test tests/*.test.js`,
   test trình duyệt `cd bangke && node --test --test-concurrency=1 tests/e2e/app.e2e.js`.
+- Tiện ích giải ngân ở `giaingan/` (TestKey / đáo hạn / số tiền bằng chữ + module VBA): test `cd giaingan && npm test`,
+  test trình duyệt `cd giaingan && npm run e2e`. Repo công khai: KHÔNG đưa bảng key TestKey thật, file Excel hay số liệu khách hàng vào đây.
