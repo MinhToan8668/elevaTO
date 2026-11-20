@@ -135,29 +135,24 @@ export function taoBot({ ten, bien, nhan, menu: menu0, lenh, nut, hoi = {} }) {
     });
     if (!r || !r.ok) { console.error(`setWebhook ${ten}: ${(r && r.description) || 'không gọi được Telegram'}`); return; }
     console.warn(`Webhook ${ten} bị giành (${cu || 'trống'}) — đã lấy lại`);
+    // Không nhắn Telegram nữa: tự lấy lại là đủ, nhắn đi nhắn lại chỉ làm phiền. Ghi lại để xem
+    // được qua GET / (mục "webhook") khi cần dò xem chỗ nào đang giành: đếm, lúc nào, giành về đâu.
     const dem = Number(await docCaiDat(env.DB, `tg_cuop_dem_${ten}`) || 0) + 1;
-    // Nhắn tối đa 6 tiếng một lần, không thì giằng co với chỗ khác sẽ thành spam; số lần bị giành
-    // trong lúc im lặng vẫn đếm, để tin báo sau nói được là chuyện lẻ tẻ hay đều đặn.
-    if (bay - Number(await docCaiDat(env.DB, `tg_cuop_${ten}`) || 0) < 6 * 3600) {
-      await ghiCaiDat(env.DB, `tg_cuop_dem_${ten}`, String(dem));
-      return;
-    }
-    await ghiCaiDat(env.DB, `tg_cuop_${ten}`, String(bay));
-    await ghiCaiDat(env.DB, `tg_cuop_dem_${ten}`, '0');
-    const lan = dem > 1 ? `\nTừ lần báo trước đã phải lấy lại <b>${dem} lần</b>.` : '';
-    if (/script\.google/.test(cu)) {
-      await bao(env, `⚠️ Webhook bot <b>${esc(nhan)}</b> đang trỏ về <b>Apps Script cũ</b> — đã lấy lại về Cloudflare.${lan}\n\n`
-        + 'Muốn dứt điểm: vào script.google.com → dự án Apps Script cũ → ⏰ Trình kích hoạt → xoá '
-        + '<code>canhWebhook</code> và <code>hoiTelegram</code>.');
-      return;
-    }
-    // Webhook chỉ bị gỡ / đổi khi có ai CẦM TOKEN bot gọi lệnh đó — Telegram không tự làm. Không biết
-    // chỗ đó ở đâu thì đổi token là cách duy nhất chắc chắn: mọi chỗ giữ token cũ chết ngay.
-    const noi = cu ? `đang trỏ về <code>${esc(cu.replace(/\?.*$/, ''))}</code>` : 'vừa bị gỡ (để trống)';
-    await bao(env, `⚠️ Webhook bot <b>${esc(nhan)}</b> ${noi} — đã lấy lại về Cloudflare.${lan}\n\n`
-      + 'Chỉ chương trình đang giữ <b>token của bot</b> mới làm được việc này, nên còn một chỗ khác '
-      + '(script, n8n/Make, máy khác…) đang dùng chung token. Cách dứt điểm: @BotFather → /mybots → chọn bot → '
-      + `API Token → <b>Revoke</b>, rồi dán token mới vào Cloudflare (Worker elevato → Settings → Variables and Secrets → <code>${esc(bien)}</code>).`);
+    await ghiCaiDat(env.DB, `tg_cuop_dem_${ten}`, String(dem));
+    await ghiCaiDat(env.DB, `tg_cuop_luc_${ten}`, String(bay));
+    await ghiCaiDat(env.DB, `tg_cuop_ve_${ten}`, cu ? cu.replace(/^https?:\/\//, '').replace(/[?#].*$/, '').slice(0, 120) : '(trống)');
+  }
+
+  /** Tình hình webhook cho trang tình trạng: chỉ số đếm, thời điểm và địa chỉ bị giành về — không có token. */
+  async function tinhHinh(env) {
+    const doc = (k) => docCaiDat(env.DB, `${k}_${ten}`);
+    const luc = Number(await doc('tg_cuop_luc') || 0);
+    return {
+      lay_lai: Number(await doc('tg_cuop_dem') || 0),
+      lan_cuoi: luc ? new Date(luc * 1000).toISOString() : null,
+      ve: (await doc('tg_cuop_ve')) || null,
+      soat_luc: (Number(await doc('tg_kiem') || 0) && new Date(Number(await doc('tg_kiem')) * 1000).toISOString()) || null,
+    };
   }
 
   /** Menu lệnh: nút "Menu" cạnh ô soạn tin và gõ "/" ra gợi ý. Chỉ đặt cho riêng chat quản trị. */
@@ -277,5 +272,5 @@ export function taoBot({ ten, bien, nhan, menu: menu0, lenh, nut, hoi = {} }) {
     } catch (e) { console.error(`nhanTin ${ten}: ${e}`); }
   }
 
-  return { ten, duong, nhan, menu, token, coCai, api, gui, guiFile, bao, taoBao, ngo, nhanTin, hoiTu };
+  return { ten, duong, nhan, menu, token, coCai, api, gui, guiFile, bao, taoBao, ngo, nhanTin, hoiTu, tinhHinh };
 }

@@ -83,7 +83,7 @@ test('bot tự nối webhook một lần rồi thôi', async () => {
   } finally { f.thoi(); }
 });
 
-test('webhook bị Apps Script cũ giành mất: lịch 5 phút soát Telegram, lấy lại và báo admin một lần', async () => {
+test('webhook bị chỗ khác giành: tự lấy lại, KHÔNG nhắn Telegram, ghi lại để xem qua GET /', async () => {
   const that = globalThis.fetch;
   const tg = [];
   let dangTro = '';                              // webhook Telegram đang giữ, theo từng token
@@ -110,10 +110,8 @@ test('webhook bị Apps Script cũ giành mất: lịch 5 phút soát Telegram, 
     const lay = tg.filter((x) => x.method === 'setWebhook');
     assert.deepEqual(lay.map((x) => x.url).sort(), [`${API}tg/ai`, `${API}tg/el`], 'lấy lại cả hai bot');
     assert.ok(lay.every((x) => x.secret_token === 'bimat'));
-    const bao = tg.filter((x) => x.method === 'sendMessage').map((x) => x.text).join('\n');
-    assert.match(bao, /Apps Script cũ/);
-    assert.match(bao, /canhWebhook/);
-    // Giành tiếp ngay sau đó: lấy lại nữa nhưng KHÔNG nhắn lại (tránh spam khi giằng co).
+    assert.equal(tg.filter((x) => x.method === 'sendMessage').length, 0, 'không nhắn cảnh báo nữa');
+    // Giành tiếp ngay sau đó: vẫn lấy lại, vẫn im lặng.
     await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%'").run();
     tg.length = 0;
     const ctx2 = moCtx();
@@ -121,18 +119,14 @@ test('webhook bị Apps Script cũ giành mất: lịch 5 phút soát Telegram, 
     await ctx2.xong();
     assert.equal(tg.filter((x) => x.method === 'setWebhook').length, 2);
     assert.equal(tg.filter((x) => x.method === 'sendMessage').length, 0);
-    // Bị gỡ trống (chỗ khác cầm token gọi deleteWebhook): báo cách đổi token, kèm số lần đã phải lấy lại.
-    dangTro = '';
-    await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%' OR khoa LIKE 'tg_cuop_el'").run();
-    tg.length = 0;
-    const ctx4 = moCtx();
-    await worker.scheduled({}, env, ctx4);
-    await ctx4.xong();
-    const bao2 = tg.filter((x) => x.method === 'sendMessage' && x.tok === 'bottoken-el').map((x) => x.text).join('\n');
-    assert.match(bao2, /vừa bị gỡ/);
-    assert.match(bao2, /Revoke/);
-    assert.match(bao2, /TG_EL_TOKEN/);
-    assert.match(bao2, /2 lần/, 'lần bị giành lúc im lặng vẫn được đếm');
+    // Chẩn đoán qua GET /: đếm số lần, giành về đâu — không lộ token.
+    const ctxG = moCtx();
+    const g = await (await worker.fetch(new Request(API), env, ctxG)).json();
+    await ctxG.xong();
+    assert.equal(g.webhook.el.lay_lai, 2);
+    assert.equal(g.webhook.el.ve, 'script.google.com/macros/s/abc/exec');
+    assert.ok(g.webhook.el.lan_cuoi);
+    assert.doesNotMatch(JSON.stringify(g), /token-ai|token-el|bimat/);
     // Webhook đúng chỗ thì chỉ hỏi, không đặt lại.
     await env.DB.prepare("UPDATE cai_dat SET gia_tri = '0' WHERE khoa LIKE 'tg_kiem_%'").run();
     tg.length = 0;
@@ -382,6 +376,8 @@ test('GET báo phần nào đã cài — bot im vì thiếu TG_SECRET là ca r�
   assert.equal((await xem(env0({ TG_ADMIN: '' }))).bot_ai, false, 'thiếu TG_ADMIN');
   assert.equal((await xem(env0({ BREVO_KEY: '' }))).mail, false);
   // Không được lộ giá trị nào ra ngoài.
+  assert.deepEqual((await xem(env0({ TG_AI_TOKEN: 'cung', TG_EL_TOKEN: 'cung' }))).trung_token, ['TG_AI_TOKEN=TG_EL_TOKEN'], 'hai bot chung token phải báo');
+  assert.equal((await xem(env0())).trung_token, undefined);
   const ctxT = moCtx();
   const than = await (await worker.fetch(new Request(API), env0({ GEMINI_KEYS: 'key-that' }), ctxT)).text();
   await ctxT.xong();
