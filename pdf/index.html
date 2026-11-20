@@ -1925,6 +1925,48 @@ html:not(.dockmin) .dockfab.xfer{right:16px;bottom:calc(var(--dockh,120px) + 24p
 .batchest b{color:var(--accent-ink)}
 .batchres{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 .batchhd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;font-size:13.5px}
+
+/* ── xem toàn bộ & tìm kiếm ── */
+html.rdopen,html.rdopen body{overflow:hidden}
+.rd{position:fixed;inset:0;z-index:45;background:#EDF1EC;display:flex;flex-direction:column}
+:root[data-theme="dark"] .rd{background:#12171A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rd{background:#12171A}}
+.rdbar,.rdside{background:var(--surface)}
+:root[data-theme="dark"] .rdbar,:root[data-theme="dark"] .rdside{background:#1A2126}
+.rd .rdpages{position:relative}
+.rd[hidden]{display:none}
+.rdbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.rdtitle{font-size:13px;color:var(--ink);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rdsearch{display:flex;align-items:center;gap:6px;flex:1 1 320px;min-width:240px;border:1px solid var(--line-strong);border-radius:10px;padding:3px 6px 3px 10px;background:var(--paper)}
+.rdsearch svg{width:15px;height:15px;color:var(--muted);flex:none}
+.rdsearch input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:14px;color:var(--ink);outline:none;padding:5px 0}
+.rdhitn{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--muted);white-space:nowrap}
+.rdzoom{display:inline-flex;gap:3px}
+.rdcount{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.rdkey{display:flex;gap:6px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);font-size:12px;flex-wrap:wrap}
+.rdkey input{font:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line-strong);border-radius:6px;background:var(--paper);color:var(--ink)}
+.rdkey .muted{color:var(--muted)}
+.rdbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px}
+.rdpages{overflow:auto;padding:20px;display:flex;flex-direction:column;align-items:center;gap:18px;background:var(--surface-2)}
+.rdpg{position:relative;background:#fff;box-shadow:0 2px 12px -4px rgba(0,0,0,.3);flex:none}
+.rdpg canvas{display:block;width:100%;height:100%}
+.rdpg.bad{outline:2px solid #d0312d}
+.rdpg-n{position:absolute;left:0;top:-16px;font:600 11px "JetBrains Mono",ui-monospace,monospace;color:var(--muted);white-space:nowrap}
+.rdpg-ocr{position:absolute;right:6px;top:6px;z-index:2;font-size:11.5px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:8px;padding:4px 8px;display:flex;gap:6px;align-items:center}
+.rdpg-ocr .zb{padding:3px 7px;font-size:11.5px}
+.rdhl{position:absolute;background:rgba(255,216,61,.45);outline:1px solid rgba(230,160,0,.6);border-radius:2px;pointer-events:none;mix-blend-mode:multiply}
+.rdhl.ai{background:rgba(116,194,172,.35);outline-color:rgba(46,106,92,.6)}
+.rdhl.cur{background:rgba(255,140,0,.6);outline:2px solid #e07b00}
+.rdside{border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.rdside-h{padding:10px 12px 6px;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.rdhits{overflow:auto;flex:1;padding:0 8px 12px}
+.rdh{padding:8px 10px;border-radius:9px;cursor:pointer;font-size:12.5px;line-height:1.45;color:var(--ink-2);border:1px solid transparent}
+.rdh:hover{background:var(--surface-2)}
+.rdh.on{background:var(--accent-soft);border-color:var(--accent)}
+.rdh .rdh-p{display:block;font-size:11px;font-weight:700;color:var(--accent-ink);font-family:"JetBrains Mono",ui-monospace,monospace}
+.rdh mark{background:rgba(255,216,61,.7);border-radius:2px;padding:0 1px}
+.rdh-empty{padding:14px 10px;font-size:12.5px;color:var(--muted);line-height:1.5}
+@media (max-width:860px){.rdbody{grid-template-columns:1fr}.rdside{display:none}}
 </style>
 </head>
 <body>
@@ -2011,6 +2053,7 @@ html:not(.dockmin) .dockfab.xfer{right:16px;bottom:calc(var(--dockh,120px) + 24p
       <button class="btn small vdrag" id="mBlank" type="button" title="Bấm: chèn trang trắng sau trang đang chọn (hoặc ở cuối). Kéo nút này thả vào giữa hai trang để chèn đúng chỗ.">+ Trang trắng</button>
       <button class="btn small vdrag" id="mCover" type="button" title="Bấm: chèn tờ ngăn sau trang đang chọn (hoặc ở cuối). Kéo nút này thả vào giữa hai trang để chèn đúng chỗ.">+ Tờ ngăn</button>
       <button class="btn small" id="mBulkTgl" type="button" title="Lấy nhanh trang đầu / trang cuối / một khoảng trang của mọi file">Lấy trang &#9662;</button>
+      <button class="btn small" id="mReader" type="button" title="Xem toàn bộ bản gộp dạng cuộn và tìm chữ trong mọi trang (Ctrl+F)">&#128269; Xem & tìm</button>
       <button class="btn small" id="mAuto" type="button" title="Dò chiều chữ và độ nghiêng trên từng trang: xoay lại trang bị ngang / lộn ngược, làm thẳng trang scan bị nghiêng (chỉ trang đang chọn nếu có)">Tự xoay &amp; làm thẳng</button>
       <button class="btn small" id="mDropBlank" type="button" title="Dò và bỏ chọn các trang trắng (mặt sau trắng khi scan 2 mặt) — chỉ trang đang chọn nếu có; Ctrl+Z để lấy lại">Bỏ trang trắng</button>
       <button class="btn small send" id="mSend" type="button" title="Gộp rồi gửi bản gộp sang công cụ khác">⇄ Gửi bản gộp</button>
@@ -2534,6 +2577,7 @@ html:not(.dockmin) .dockfab.xfer{right:16px;bottom:calc(var(--dockh,120px) + 24p
           <button class="zb" id="xLyrBtn" type="button" title="Hiện / ẩn bảng Lớp (F7) — chỉ cần khi muốn ẩn, khoá hay đổi thứ tự lớp">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Lớp<span class="zbn" id="xLyrCnt"></span></button>
           <button class="zb" id="xOptMin" type="button" title="Ẩn / hiện thanh tuỳ chọn phía trên (Ctrl+F1)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M2 6h12"/></svg>Tuỳ chọn</button>
+          <button class="zb" id="xFind" type="button" title="Xem toàn bộ file và tìm chữ (Ctrl+F)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>Tìm</button>
           <button class="zb" id="xFullBtn" type="button" title="Phủ kín màn hình cho dễ nhìn (phím F) — bấm lại hoặc Esc để thoát">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>Toàn màn hình</button>
         </span>
@@ -2754,6 +2798,29 @@ html:not(.dockmin) .dockfab.xfer{right:16px;bottom:calc(var(--dockh,120px) + 24p
   </div>
 </div>
 
+<div class="rd" id="rd" hidden>
+  <div class="rdbar">
+    <button class="zb xhome" id="rdClose" type="button" title="Đóng (Esc)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9.5 3L4.5 8l5 5"/></svg>Đóng</button>
+    <b class="rdtitle" id="rdTitle"></b>
+    <span class="rdsearch"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+      <input type="search" id="rdQ" placeholder="Tìm trong toàn bộ trang (Ctrl+F) — gõ không dấu cũng được" autocomplete="off">
+      <span class="rdhitn" id="rdHitN"></span>
+      <button class="zb" id="rdPrev" type="button" title="Kết quả trước (Shift+Enter)">&#9650;</button>
+      <button class="zb" id="rdNext" type="button" title="Kết quả sau (Enter)">&#9660;</button>
+    </span>
+    <span class="rdzoom"><button class="zb" id="rdZOut" type="button">&minus;</button><button class="zb" id="rdZIn" type="button">+</button></span>
+    <button class="zb" id="rdOcrBtn" type="button" title="Dùng Gemini đọc chữ trên các trang scan chưa có lớp chữ để tìm kiếm được">&#10024; Nhận diện trang scan</button>
+    <span class="rdcount" id="rdCount"></span>
+  </div>
+  <div class="rdkey" id="rdKeyBox" hidden>
+    <input type="password" id="rdKey" placeholder="Khoá API Gemini (AIza…)" autocomplete="off"><input type="text" id="rdModel" placeholder="gemini-2.5-flash">
+    <button class="zb on" id="rdKeySave" type="button">Lưu</button><span class="muted">Khoá chỉ lưu trong trình duyệt của bạn và chỉ gửi thẳng tới Google.</span>
+  </div>
+  <div class="rdbody">
+    <div class="rdpages" id="rdPages"></div>
+    <aside class="rdside"><div class="rdside-h">Kết quả</div><div class="rdhits" id="rdHits"></div></aside>
+  </div>
+</div>
 <div class="dock">
   <div class="dock-in" style="display:block">
     <div class="prog" id="prog"><i id="progBar"></i></div>
@@ -10405,6 +10472,257 @@ async function ucApply(all){
   finally{ UC.busy = false; ucBar(); }
 }
 
+/* ================= XEM TOÀN BỘ & TÌM KIẾM (Ctrl+F) =================
+   Mở danh sách trang (bản gộp theo thứ tự đang xếp, hoặc file đang sửa) dạng cuộn liên tục, trang nào
+   hiện ra mới dựng. Ctrl+F tìm trong chữ của mọi trang (gõ không dấu vẫn khớp), tô vàng chỗ khớp.
+   Trang scan không có lớp chữ: nhận diện bằng Gemini, kết quả cũng tìm được. */
+var RD = { on:false, items:[], docs:{}, zoom:1, q:'', hits:[], cur:-1, io:null, ocrBusy:false, src:'' };
+function rdNorm(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+async function rdDoc(key, file){
+  if(RD.docs[key]) return RD.docs[key];
+  var raw = await readBytes(file);
+  RD.docs[key] = await pdfjsOpen(raw);
+  return RD.docs[key];
+}
+/* mở trình xem: items = [{key, file, n, label}] */
+async function rdOpen(items, title, src){
+  if(!items.length){ say('Chưa có trang nào để xem.', 'bad'); return; }
+  RD.items = items; RD.on = true; RD.src = src || ''; RD.hits = []; RD.cur = -1;
+  $('rd').hidden = false;
+  document.documentElement.classList.add('rdopen');
+  $('rdTitle').textContent = title || '';
+  $('rdQ').value = RD.q || '';
+  $('rdPages').innerHTML = '';
+  $('rdHits').innerHTML = '<div class="rdh-empty">Gõ từ cần tìm vào ô trên (Ctrl+F). Không cần gõ dấu.</div>';
+  $('rdCount').textContent = items.length + ' trang';
+  var W = rdPageWidth();
+  items.forEach(function(it, i){
+    var card = document.createElement('div');
+    card.className = 'rdpg'; card.dataset.i = i;
+    card.style.width = W + 'px'; card.style.height = Math.round(W*1.414) + 'px';
+    card.innerHTML = '<div class="rdpg-n">' + (i + 1) + (it.label ? ' · ' + it.label : '') + '</div><div class="rdpg-ocr" hidden></div>';
+    $('rdPages').appendChild(card);
+    it.el = card; it.rendered = false; it.text = null;
+  });
+  if(RD.io) RD.io.disconnect();
+  RD.io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting) rdRender(+e.target.dataset.i); });
+  }, { root:$('rdPages'), rootMargin:'600px 0px' });
+  items.forEach(function(it){ RD.io.observe(it.el); });
+  setTimeout(function(){ $('rdQ').focus(); $('rdQ').select(); }, 50);
+  if(RD.q) rdSearch();
+}
+function rdClose(){
+  RD.on = false; $('rd').hidden = true;
+  document.documentElement.classList.remove('rdopen');
+  if(RD.io) RD.io.disconnect();
+  RD.items.forEach(function(it){ it.el = null; });
+}
+function rdPageWidth(){
+  var w = $('rdPages').clientWidth || 900;
+  return Math.max(240, Math.min(1600, Math.round((w - 40)*RD.zoom*0.78)));
+}
+function rdZoom(f){
+  RD.zoom = Math.max(0.3, Math.min(3, RD.zoom*f));
+  var W = rdPageWidth();
+  RD.items.forEach(function(it){
+    if(!it.el) return;
+    it.el.style.width = W + 'px';
+    if(it.ratio) it.el.style.height = Math.round(W*it.ratio) + 'px'; else it.el.style.height = Math.round(W*1.414) + 'px';
+    it.rendered = false;
+    var cv = it.el.querySelector('canvas'); if(cv) cv.remove();
+    Array.prototype.forEach.call(it.el.querySelectorAll('.rdhl'), function(n){ n.remove(); });
+  });
+  RD.items.forEach(function(it){ if(it.el){ RD.io.unobserve(it.el); RD.io.observe(it.el); } });
+}
+var rdQueue = Promise.resolve();
+function rdRender(i){
+  var it = RD.items[i];
+  if(!it || it.rendered || !RD.on) return;
+  it.rendered = true;
+  rdQueue = rdQueue.then(async function(){
+    if(!RD.on || !it.el) return;
+    try{
+      var doc = await rdDoc(it.key, it.file), page = await doc.getPage(it.n);
+      var base = page.getViewport({ scale:1 }), W = rdPageWidth();
+      it.ratio = base.height/base.width; it.wpt = base.width; it.hpt = base.height;
+      it.el.style.height = Math.round(W*it.ratio) + 'px';
+      var dpr = Math.min(2, window.devicePixelRatio || 1), vp = page.getViewport({ scale: W/base.width*dpr });
+      var cv = document.createElement('canvas');
+      cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      var ctx = cv.getContext('2d', { alpha:false });
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+      await page.render({ canvasContext:ctx, viewport:vp, background:'#ffffff' }).promise;
+      var old = it.el.querySelector('canvas'); if(old) old.remove();
+      it.el.appendChild(cv);
+      if(!it.text) await rdText(it, page);
+      page.cleanup();
+      rdPaintHits(it);
+    }catch(e){ it.el.classList.add('bad'); }
+  });
+}
+/* lấy chữ của một trang: lớp chữ thật của PDF (có vị trí) */
+async function rdText(it, page){
+  var tc = await page.getTextContent(), vp = page.getViewport({ scale:1 }), items = [];
+  tc.items.forEach(function(t){
+    if(!t.str) return;
+    var tr = t.transform, x = tr[4], y = tr[5], w = t.width || 0, h = t.height || Math.hypot(tr[2], tr[3]) || 8;
+    var p1 = vp.convertToViewportPoint(x, y), p2 = vp.convertToViewportPoint(x + w, y + h);
+    items.push({ str:t.str, x:Math.min(p1[0], p2[0])/vp.width, y:Math.min(p1[1], p2[1])/vp.height, w:Math.abs(p2[0] - p1[0])/vp.width, h:Math.abs(p2[1] - p1[1])/vp.height, eol:!!t.hasEOL });
+  });
+  it.text = items;
+  it.hasText = items.some(function(t){ return t.str.trim().length > 1; });
+  rdIndex(it);
+  if(it.el) it.el.querySelector('.rdpg-ocr').hidden = it.hasText || !!it.ocr;
+  if(it.el && !it.hasText && !it.ocr){ var b = it.el.querySelector('.rdpg-ocr'); b.hidden = false; b.innerHTML = 'Trang scan, chưa có chữ · <button type="button" class="zb" data-ocr="1">Nhận diện bằng AI</button>'; }
+}
+/* chuỗi đã chuẩn hoá + bảng ánh xạ vị trí → mục chữ */
+function rdIndex(it){
+  var all = (it.text || []).concat(it.ocr || []), s = '', map = [];
+  all.forEach(function(t, k){
+    var n = rdNorm(t.str);
+    for(var c = 0; c < n.length; c++) map.push(k);
+    s += n; map.push(k); s += ' ';
+  });
+  it.norm = s; it.map = map; it.all = all;
+}
+/* đảm bảo mọi trang có chỉ mục chữ (không cần dựng ảnh) */
+async function rdIndexAll(){
+  for(var i = 0; i < RD.items.length; i++){
+    var it = RD.items[i];
+    if(it.text) continue;
+    try{ var doc = await rdDoc(it.key, it.file), page = await doc.getPage(it.n); await rdText(it, page); page.cleanup(); }catch(e){ it.text = []; rdIndex(it); }
+    if(i % 5 === 4){ $('rdCount').textContent = 'Đang đọc chữ ' + (i + 1) + '/' + RD.items.length + '…'; await breathe(); }
+  }
+  $('rdCount').textContent = RD.items.length + ' trang';
+}
+var rdT = null;
+function rdSearchSoon(){ clearTimeout(rdT); rdT = setTimeout(rdSearch, 180); }
+async function rdSearch(){
+  RD.q = $('rdQ').value;
+  var q = rdNorm(RD.q).trim();
+  RD.hits = []; RD.cur = -1;
+  RD.items.forEach(function(it){ it.hl = null; rdPaintHits(it); });
+  if(q.length < 1){ $('rdHits').innerHTML = '<div class="rdh-empty">Gõ từ cần tìm vào ô trên (Ctrl+F). Không cần gõ dấu.</div>'; $('rdHitN').textContent = ''; return; }
+  await rdIndexAll();
+  var hits = [];
+  RD.items.forEach(function(it, pi){
+    if(!it.norm) return;
+    var pos = 0, n = 0;
+    while((pos = it.norm.indexOf(q, pos)) >= 0 && n < 200){
+      var a = it.map[pos], b = it.map[Math.min(it.map.length - 1, pos + q.length - 1)];
+      var ids = []; for(var k = a; k <= b; k++) ids.push(k);
+      var sn = it.norm.slice(Math.max(0, pos - 30), pos + q.length + 40).replace(/\s+/g, ' ');
+      hits.push({ pi:pi, ids:ids, snip:sn, qpos:Math.min(30, pos) });
+      pos += q.length; n++;
+    }
+  });
+  RD.hits = hits;
+  $('rdHitN').textContent = hits.length ? ('0/' + hits.length) : 'Không thấy';
+  var box = $('rdHits'); box.innerHTML = '';
+  if(!hits.length){
+    var noText = RD.items.filter(function(it){ return !it.hasText && !it.ocr; }).length;
+    box.innerHTML = '<div class="rdh-empty">Không thấy "' + RD.q + '".' + (noText ? ' Có ' + noText + ' trang scan chưa có chữ — bấm <b>Nhận diện bằng AI</b> để đọc chữ trên các trang đó rồi tìm lại.' : '') + '</div>';
+    return;
+  }
+  hits.forEach(function(h, i){
+    var d = document.createElement('div');
+    d.className = 'rdh'; d.dataset.i = i;
+    var it = RD.items[h.pi];
+    d.innerHTML = '<span class="rdh-p">Tr. ' + (h.pi + 1) + (it.label ? ' · ' + it.label : '') + (it.ocrUsed && h.ids.some(function(k){ return k >= (it.text || []).length; }) ? ' · AI' : '') + '</span><span class="rdh-s"></span>';
+    var sp = d.querySelector('.rdh-s'), pre = h.snip.slice(0, h.qpos), mid = h.snip.slice(h.qpos, h.qpos + q.length), post = h.snip.slice(h.qpos + q.length);
+    sp.appendChild(document.createTextNode('…' + pre)); var m = document.createElement('mark'); m.textContent = mid; sp.appendChild(m); sp.appendChild(document.createTextNode(post + '…'));
+    d.addEventListener('click', function(){ rdGo(i); });
+    box.appendChild(d);
+  });
+  RD.items.forEach(function(it, pi){
+    var ids = {}; hits.forEach(function(h){ if(h.pi === pi) h.ids.forEach(function(k){ ids[k] = 1; }); });
+    it.hl = ids; rdPaintHits(it);
+  });
+  rdGo(0);
+}
+function rdPaintHits(it){
+  if(!it.el) return;
+  Array.prototype.forEach.call(it.el.querySelectorAll('.rdhl'), function(n){ n.remove(); });
+  if(!it.hl || !it.all) return;
+  var W = it.el.clientWidth, H = it.el.clientHeight;
+  Object.keys(it.hl).forEach(function(k){
+    var t = it.all[+k]; if(!t) return;
+    var d = document.createElement('div');
+    d.className = 'rdhl' + (t.ai ? ' ai' : '');
+    d.style.left = (t.x*W - 2) + 'px'; d.style.top = (t.y*H - 2) + 'px';
+    d.style.width = Math.max(6, t.w*W + 4) + 'px'; d.style.height = Math.max(6, t.h*H + 4) + 'px';
+    it.el.appendChild(d);
+  });
+}
+function rdGo(i){
+  if(!RD.hits.length) return;
+  RD.cur = (i + RD.hits.length) % RD.hits.length;
+  var h = RD.hits[RD.cur], it = RD.items[h.pi];
+  $('rdHitN').textContent = (RD.cur + 1) + '/' + RD.hits.length;
+  Array.prototype.forEach.call($('rdHits').children, function(d, k){ d.classList.toggle('on', k === RD.cur); });
+  var row = $('rdHits').children[RD.cur]; if(row && row.scrollIntoView) row.scrollIntoView({ block:'nearest' });
+  if(it.el){
+    var t = it.all && it.all[h.ids[0]], top = it.el.offsetTop + (t ? t.y*it.el.clientHeight : 0) - Math.round($('rdPages').clientHeight*0.3);
+    $('rdPages').scrollTo({ top:top, behavior:'smooth' });
+    Array.prototype.forEach.call(document.querySelectorAll('.rdhl.cur'), function(n){ n.classList.remove('cur'); });
+    setTimeout(function(){
+      var boxes = it.el.querySelectorAll('.rdhl'), keys = Object.keys(it.hl || {});
+      h.ids.forEach(function(k){ var idx = keys.indexOf(String(k)); if(idx >= 0 && boxes[idx]) boxes[idx].classList.add('cur'); });
+    }, 60);
+  }
+}
+/* ---- nhận diện chữ bằng Gemini cho trang scan ---- */
+async function rdOcrPage(it){
+  var doc = await rdDoc(it.key, it.file), page = await doc.getPage(it.n), base = page.getViewport({ scale:1 });
+  var sc = Math.min(1600/Math.max(base.width, base.height), 200/72), vp = page.getViewport({ scale:sc });
+  var cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+  var ctx = cv.getContext('2d', { alpha:false }); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  await page.render({ canvasContext:ctx, viewport:vp, background:'#ffffff' }).promise; page.cleanup();
+  var url = cv.toDataURL('image/jpeg', 0.85); cv.width = cv.height = 1;
+  var prompt = 'Đọc toàn bộ chữ trong ảnh trang tài liệu này (tiếng Việt có dấu, giữ nguyên số và ký hiệu). Trả về JSON là một mảng các dòng, mỗi dòng {"text": "nội dung dòng", "box_2d": [ymin, xmin, ymax, xmax]} với toạ độ theo thang 0-1000 của ảnh. Đọc theo thứ tự từ trên xuống, trái sang phải, kể cả chữ trong bảng. Chỉ trả JSON.';
+  var txt = await gemCall([{ text:prompt }, { inlineData:{ mimeType:'image/jpeg', data:url.split(',')[1] } }], true);
+  var arr; try{ arr = JSON.parse(txt); }catch(e){ var m = txt.match(/\[[\s\S]*\]/); arr = m ? JSON.parse(m[0]) : []; }
+  if(!Array.isArray(arr)) arr = [];
+  it.ocr = arr.filter(function(l){ return l && l.text; }).map(function(l){
+    var b = Array.isArray(l.box_2d) && l.box_2d.length === 4 ? l.box_2d.map(Number) : [0, 0, 1000, 1000];
+    return { str:String(l.text), x:b[1]/1000, y:b[0]/1000, w:Math.max(0.01, (b[3] - b[1])/1000), h:Math.max(0.01, (b[2] - b[0])/1000), ai:true };
+  });
+  it.ocrUsed = true;
+  rdIndex(it);
+  if(it.el){ var bb = it.el.querySelector('.rdpg-ocr'); bb.hidden = false; bb.innerHTML = 'AI đã đọc ' + it.ocr.length + ' dòng'; }
+}
+async function rdOcr(scope, one){
+  if(RD.ocrBusy) return;
+  if(!GEM.key){ $('rdKeyBox').hidden = false; $('rdKey').focus(); say('Nhập khoá API Gemini rồi bấm Lưu để nhận diện chữ.', 'bad'); return; }
+  var list = one ? [one] : RD.items.filter(function(it){ return scope === 'all' ? !it.ocr : (!it.ocr && it.text && !it.hasText); });
+  if(scope !== 'all' && !one){
+    /* trang chưa đọc chữ thì đọc trước để biết có lớp chữ hay không */
+    await rdIndexAll();
+    list = RD.items.filter(function(it){ return !it.ocr && !it.hasText; });
+  }
+  if(!list.length){ say('Không có trang nào cần nhận diện.', 'ok'); return; }
+  RD.ocrBusy = true; $('rdOcrBtn').disabled = true;
+  var ok = 0, bad = 0;
+  for(var i = 0; i < list.length; i++){
+    $('rdCount').textContent = 'AI đang đọc trang ' + (i + 1) + '/' + list.length + '…';
+    try{ await rdOcrPage(list[i]); ok++; }catch(e){ bad++; say('Gemini lỗi ở trang ' + (RD.items.indexOf(list[i]) + 1) + ': ' + (e.message || e), 'bad'); if(/API key|permission|401|403/i.test(String(e.message))) break; }
+  }
+  RD.ocrBusy = false; $('rdOcrBtn').disabled = false;
+  $('rdCount').textContent = RD.items.length + ' trang';
+  say('AI đã đọc ' + ok + ' trang' + (bad ? ', ' + bad + ' trang lỗi' : '') + '. Giờ tìm được cả chữ trên trang scan.', bad ? 'bad' : 'ok');
+  if(RD.q) rdSearch();
+}
+/* danh sách trang cho bản gộp hiện tại */
+function rdMergeItems(){
+  var items = [];
+  M.pages.forEach(function(p){
+    if(!p.on || !p.n || p.s.kind) return;
+    items.push({ key:'m' + p.s.id, file:p.s.file, n:p.n, label:baseName(p.s.file.name).slice(0, 24) + ' tr.' + p.n });
+  });
+  return items;
+}
+
 /* ================= BẢNG LỚP ================= */
 var TNAME = { text:'Chữ', image:'Ảnh', whiteout:'Vùng che', highlight:'Bôi vàng', rect:'Khung', ellipse:'Bầu dục',
               line:'Đường', arrow:'Mũi tên', draw:'Nét vẽ' };
@@ -12275,6 +12593,44 @@ Array.prototype.forEach.call(document.querySelectorAll('#nupSeg button'), functi
 $('nupBorder').addEventListener('change', function(){ mDropCache(); mSaveSoon(); });
 $('mBlank').addEventListener('click', function(){ if(!busy && !VD.moved) mInsertBlank(); });
 $('mBatchGo').addEventListener('click', mBatchRun);
+/* ---- xem toàn bộ & tìm ---- */
+function rdOpenMerge(){ var it = rdMergeItems(); if(!it.length){ say('Chưa có trang nào trong danh sách ghép.', 'bad'); return; } rdOpen(it, 'Bản gộp · ' + it.length + ' trang', 'merge'); }
+function rdOpenEdit(){ if(!X.pdoc) return; var it = []; for(var i = 1; i <= X.pages; i++) it.push({ key:'x' + X.skey, file:X.file, n:i, label:'' }); rdOpen(it, X.file.name, 'text'); }
+$('mReader').addEventListener('click', rdOpenMerge);
+$('xFind').addEventListener('click', rdOpenEdit);
+$('rdClose').addEventListener('click', rdClose);
+$('rdQ').addEventListener('input', rdSearchSoon);
+$('rdQ').addEventListener('keydown', function(e){
+  e.stopPropagation();
+  if(e.key === 'Enter'){ e.preventDefault(); if(RD.hits.length) rdGo(RD.cur + (e.shiftKey ? -1 : 1)); else rdSearch(); }
+  else if(e.key === 'Escape'){ e.preventDefault(); if($('rdQ').value){ $('rdQ').value = ''; rdSearch(); } else rdClose(); }
+});
+$('rdPrev').addEventListener('click', function(){ rdGo(RD.cur - 1); });
+$('rdNext').addEventListener('click', function(){ rdGo(RD.cur + 1); });
+$('rdZIn').addEventListener('click', function(){ rdZoom(1.25); });
+$('rdZOut').addEventListener('click', function(){ rdZoom(0.8); });
+$('rdOcrBtn').addEventListener('click', function(){ rdOcr('scan'); });
+$('rdPages').addEventListener('click', function(e){ var b = e.target.closest('[data-ocr]'); if(!b) return; var card = b.closest('.rdpg'); rdOcr('one', RD.items[+card.dataset.i]); });
+$('rdKeySave').addEventListener('click', function(){ GEM.key = $('rdKey').value.trim(); GEM.model = $('rdModel').value.trim() || GEM.model; try{ localStorage.setItem('pdfGemKey', GEM.key); localStorage.setItem('pdfGemModel', GEM.model); }catch(e){} $('rdKeyBox').hidden = !!GEM.key; if($('xGemKey')) $('xGemKey').value = GEM.key; say(GEM.key ? 'Đã lưu khoá. Bấm "Nhận diện trang scan" lần nữa.' : 'Chưa có khoá.', GEM.key ? 'ok' : 'bad'); });
+['rdKey','rdModel'].forEach(function(id){ $(id).addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); $('rdKeySave').click(); } }); });
+$('rdModel').value = GEM.model;
+document.addEventListener('keydown', function(e){
+  var mod = e.ctrlKey || e.metaKey;
+  if(RD.on){
+    if(mod && (e.key === 'f' || e.key === 'F')){ e.preventDefault(); $('rdQ').focus(); $('rdQ').select(); return; }
+    if(e.key === 'Escape' && document.activeElement !== $('rdQ')){ e.preventDefault(); rdClose(); return; }
+    if(e.key === 'F3'){ e.preventDefault(); rdGo(RD.cur + (e.shiftKey ? -1 : 1)); return; }
+    if(mod && (e.key === '=' || e.key === '+')){ e.preventDefault(); rdZoom(1.25); return; }
+    if(mod && e.key === '-'){ e.preventDefault(); rdZoom(0.8); return; }
+    return;
+  }
+  if(mod && (e.key === 'f' || e.key === 'F')){
+    var tag = (e.target.tagName || '').toLowerCase();
+    if(tag === 'input' || tag === 'textarea') return;
+    if(active === 'merge' && rdMergeItems().length){ e.preventDefault(); rdOpenMerge(); }
+    else if(active === 'text' && X.pdoc){ e.preventDefault(); rdOpenEdit(); }
+  }
+}, true);
 $('mBatchZip').addEventListener('click', mBatchZip);
 $('mBatchEach').addEventListener('click', function(){ dlEach(MB.outs); });
 ['mBatchFiles','mBatchMB'].forEach(function(id){ $(id).addEventListener('input', mBatchEst); });
