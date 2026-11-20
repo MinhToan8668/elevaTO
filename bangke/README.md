@@ -4,6 +4,25 @@ Gửi cho team **một file HTML** (`dist/BangKe_GiaiNgan.html`, tạo bằng `n
 không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI Gemini). `index.html` là bản nguồn để sửa & test.
 
 ## Làm được gì
+- **Quản lý theo từng công ty** (giao diện kính mờ cùng kiểu PDF Studio, có chế độ sáng / tối):
+  - Trang đầu: **Việc hôm nay** (mỗi việc ghi rõ của công ty nào, bấm là tới đúng chỗ) + thẻ từng công ty
+    (dư nợ / hạn mức từ file Excel, việc tồn, số hồ sơ đang làm). Không cộng lẫn số liệu giữa các công ty.
+  - Trang công ty: **Tổng quan · Hồ sơ giải ngân · Theo dõi KUNN · Sổ hóa đơn đã GN · Thông tin & mẫu Word**.
+  - **Hồ sơ giải ngân**: thả toàn bộ file KH gửi (PDF scan, ảnh, Excel bảng kê, Word) → bảng kê đọc bằng bộ đọc
+    bảng kê, các file khác **Gemini đọc** (tách nhiều chứng từ trong một PDF, nhận loại, lấy số / ngày / tiền /
+    bên bán / tài khoản…). **Danh sách kiểm tra tự sinh theo đúng bộ chứng từ** của lần đó: giải ngân trùng / vượt
+    (sổ hóa đơn), bảng kê ghi sai số / ngày / tiền so với chứng từ, MST bên mua, hóa đơn sau ngày GN hoặc > 90 ngày,
+    hóa đơn trước ngày HĐMB, HĐMB hết hạn, tài khoản nhận tiền lệch (thông báo tiền điện ↔ UNC / TK đã dùng),
+    tờ khai ↔ giấy nộp NSNN, CIC (hiệu lực 10 ngày, nợ nhóm 2), vượt hạn mức khả dụng, hạn HĐTD.
+    Mục nào không áp dụng thì không hiện; bỏ qua được kèm lý do.
+  - Xem từng chứng từ: bản scan cạnh số liệu AI đọc, sửa tay → kiểm tra chạy lại.
+  - **Dải mốc** (nhận chứng từ → kiểm tra → xin số KUNN → gửi KH ký → nhận bản ký → GĐ TTKD ký PDGN → đưa lên hệ
+    thống → đã giải ngân), bấm để đánh dấu, chuột phải để bỏ qua mốc. Chứng từ bổ sung sau GN có hạn.
+  - Kết quả: soạn KUNN & PDGN (mẫu Word riêng công ty), ghi vào sổ hóa đơn, bảng kê Excel, **gói file tải lên hệ
+    thống** đã đặt tên theo thứ tự (.zip).
+  - **Dư nợ đọc từ file Excel QUẢN LÝ GIẢI NGÂN** của công ty (sheet KHE_UOC, DANH_MUC, UBG — xem `giaingan/`):
+    gốc còn lại, hạn mức, khả dụng, đáo hạn, thu nợ; thông tin công ty còn trống được lấy từ DANH_MUC. Tool chỉ đọc file.
+  - File KH gửi lưu trên máy (IndexedDB) và thư mục chung (`BangKe_GiaiNgan/files/`), hồ sơ ở `hs_<id>.json`.
 - **Tải bảng kê khách hàng gửi** (.xls/.xlsx/.csv, mỗi khách một kiểu): tự tìm sheet, hàng tiêu đề, cột
   (nhà cung cấp, số/ngày hóa đơn, tiền hóa đơn, tiền vay…), số KUNN & ngày trong dòng “Theo KU nhận nợ số … ngày …”.
   Bảng lạ → **✨ AI nhận dạng cột** (Gemini đọc 45 hàng đầu, chọn cột) hoặc **✨ AI đọc toàn bộ** (bảng lộn xộn).

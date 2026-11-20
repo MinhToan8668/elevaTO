@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const core = /<script id="bk-core">([\s\S]*?)<\/script>/.exec(html)[1];
 const doc = /<script id="bk-doc">([\s\S]*?)<\/script>/.exec(html)[1];
-export const { BK, DOCX } = new Function(core + doc + ';return { BK, DOCX };')();
+const hs = /<script id="bk-hs">([\s\S]*?)<\/script>/.exec(html)[1];
+export const { BK, DOCX, HSC } = new Function(core + doc + hs + ';return { BK, DOCX, HSC };')();
 // JSZip (đọc/ghi .docx) — chạy như trong trình duyệt
 globalThis.self = globalThis;
 export const JSZip = new Function('module', 'exports', 'define', readFileSync(new URL('../vendor/jszip.min.js', import.meta.url), 'utf8') + ';return self.JSZip;')();
