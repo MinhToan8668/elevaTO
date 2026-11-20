@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>window.XLSX || document.write('<script src="vendor/xlsx-js-style.bundle.js"><\/script>');</script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>window.JSZip || document.write('<script src="vendor/jszip.min.js"><\/script>');</script>
 <style>
 :root{
   --navy:#002855;--blue:#005baa;--blue2:#0072ce;--blue-bg:#EAF2FA;
@@ -191,6 +193,37 @@ svg .hit.go{cursor:pointer}svg .hit.go:hover{fill:rgba(0,91,170,.06)}
 .kbody .t td:nth-child(3){min-width:230px}.kbody .t td:nth-child(4){min-width:160px}
 
 
+
+/* ── soạn KUNN & PDGN ── */
+.mbox.full{max-width:none;width:calc(100vw - 24px);height:calc(100vh - 48px);display:flex;flex-direction:column;overflow:hidden}
+.modal:has(.mbox.full){padding:12px;align-items:stretch}
+.hs{flex:1;min-height:0;display:grid;grid-template-columns:400px minmax(0,1fr)}
+.hs-side{overflow:auto;border-right:1px solid var(--line);padding:10px 12px;background:var(--card2)}
+.hs-doc{display:flex;flex-direction:column;min-width:0;min-height:0}.hs-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 12px}
+.hs-legend{font-size:12px;color:var(--ink2);padding:6px 14px;border-bottom:1px solid var(--line2)}.hs-legend .df{cursor:default}.lg-ed{background:#fff6cc;padding:0 4px}
+.hs-scroll{flex:1;overflow:auto;background:#e9e5de;padding:18px;position:relative}
+.dpage{background:#fff;margin:0 auto 24px;box-shadow:0 2px 10px rgba(0,0,0,.18);color:#000;line-height:1.17;min-height:1000px}
+.dpage .dp{outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;border-radius:2px;tab-size:36px}
+.dpage .dp:hover{box-shadow:0 0 0 1px #d5e3f3}.dpage .dp:focus{box-shadow:0 0 0 1px #6aa3dc;background:#f7fbff}
+.dpage .dp.ed{background:#fff6cc}
+.dpage .dn{display:inline-block;min-width:26px;padding-right:6px;text-indent:0}
+.dpage table.dt{border-collapse:collapse;table-layout:fixed;margin:2px 0}.dpage td{padding:1px 5px;word-wrap:break-word}
+.dpage td .dp{margin:0!important}
+.df{color:#d40000;font-weight:inherit;cursor:pointer;border-bottom:1px dashed #e88;white-space:pre-wrap}
+.df:hover{background:#ffe8e8}.df.empty{border-bottom:0}.df.empty::before{content:attr(data-ph);color:#d40000;background:#ffecec;font-style:italic;font-size:.9em;padding:0 3px;border:1px dashed #e88;border-radius:3px}
+.dc{cursor:pointer}.dc:hover{background:#e6f0fb}
+.rowbar{position:absolute;display:none;gap:2px;z-index:5}.rowbar button{background:#fff;border:1px solid var(--line);border-radius:6px;font-size:11px;padding:1px 5px;box-shadow:var(--sh)}.rowbar button:hover{background:var(--blue-bg)}
+.hs-box{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:9px;font-size:12.5px}
+.hs-box.bad{border-color:#f0c4be}.hs-box.warn{border-color:#f0dcb0}.hs-box.ok{border-color:#cfe6d8}
+.hs-tpl{display:flex;gap:8px;align-items:center;margin:4px 0;flex-wrap:wrap}.hs-tpl>span{flex:1}
+.hs-ck{list-style:none;margin:6px 0;max-height:220px;overflow:auto}.hs-ck li{padding:3px 0;cursor:pointer;border-bottom:1px dashed var(--line2)}.hs-ck li.e{color:var(--err)}.hs-ck li.w{color:#8a5a0c}.hs-ck li.o{color:var(--ok)}
+.hg{background:#fff;border:1px solid var(--line);border-radius:11px;padding:6px 10px;margin-bottom:9px}.hg summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:13px;padding:3px 0}
+.hf{display:block;font-size:11.5px;color:var(--ink2);margin:6px 0}.hf>span{display:block;font-weight:600}.hf .inp{padding:5px 8px;font-size:13px;margin-top:2px}
+.hf em{font-style:normal;font-size:10.5px;background:var(--line2);border-radius:5px;padding:0 5px;margin-left:4px;font-weight:600}.hf em.ov{background:var(--warn-bg);color:#8a5a0c}
+.hf.used>span::after{content:' •';color:#d40000}.hf.auto .inp{color:#d40000;background:#fffafa}
+.t.hl td{padding:2px 3px}.t.hl .cell-in{min-width:70px;font-size:12px}
+.fpop{position:fixed;z-index:300;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shm);padding:10px 12px;width:330px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.hs-empty{max-width:640px;margin:40px auto;padding:22px}.hs-empty h3{color:var(--navy);margin-bottom:8px}.hs-empty p{margin-bottom:8px;font-size:13px}.hs-empty .err,.hs-tpl .err{color:var(--err)}
 </style>
 </head>
 <body>
@@ -1217,6 +1250,705 @@ const BK = (() => {
   return { storedProfile, kunnFixPatches, UNITS, detectUnit, applyUnit, profileColumns, AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
 })();
 </script>
+<script id="bk-doc">
+const DOCX = (() => {
+'use strict';
+  // Đọc / ghi file Word (.docx: document.xml) để soạn KUNN & PDGN ngay trong công cụ — thuần logic, chạy cả Node.
+  // Mẫu = file Word có các trường {{ten_truong}}; dòng bảng có {{ds.truong}} được nhân theo danh sách
+  // (ct = chứng từ, tth = bên thụ hưởng); {{ds.truong:gop}} = gộp ô dọc khi các dòng liền nhau cùng nhóm.
+  // Mẫu có thể "học" từ chính KUNN/PDGN cũ đã điền của từng khách hàng (learn) → mỗi KH một mẫu riêng.
+  const fold = BK.fold;
+  const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+  const unesc = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) => (e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : +e.slice(1)) : ENT[e] != null ? ENT[e] : m));
+  const xesc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const TOK = /<(\/?)([A-Za-z_][\w.:-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>|<\?[\s\S]*?\?>|<!--[\s\S]*?-->/g;
+
+  /** Các phần tử con cấp 1 của một đoạn XML. */
+  function kids(xml) {
+    const out = [], re = new RegExp(TOK.source, 'g');
+    let depth = 0, start = -1, tag = '', open = '', m;
+    while ((m = re.exec(xml))) {
+      if (!m[2]) continue;
+      if (m[1]) { depth--; if (depth === 0) out.push({ tag, open, xml: xml.slice(start, re.lastIndex), inner: xml.slice(start + open.length, m.index) }); continue; }
+      if (m[4]) { if (depth === 0) out.push({ tag: m[2], open: m[0], xml: m[0], inner: '' }); continue; }
+      if (depth === 0) { start = m.index; tag = m[2]; open = m[0]; }
+      depth++;
+    }
+    return out;
+  }
+  const child = (inner, tag) => kids(inner).find((k) => k.tag === tag);
+  const attr = (open, name) => { const m = new RegExp('\\s' + name.replace(':', '\\:') + '="([^"]*)"').exec(open || ''); return m ? unesc(m[1]) : null; };
+  function textOf(xml) {
+    return unesc(xml.replace(/<w:tab\/>/g, '\t').replace(/<w:br\/>/g, '\n').replace(/<w:delText[^>]*>[\s\S]*?<\/w:delText>/g, '').replace(/<(?!\/?w:t[ >])[^>]+>/g, '').replace(/<\/?w:t[^>]*>/g, ''));
+  }
+
+  // ─── đọc ─────────────────────────────────────────────────────
+  function parseRun(k) {
+    let rPr = '', text = '', simple = true;
+    for (const c of kids(k.inner)) {
+      if (c.tag === 'w:rPr') rPr = c.xml;
+      else if (c.tag === 'w:t') text += unesc(c.inner);
+      else if (c.tag === 'w:tab') text += '\t';
+      else if (c.tag === 'w:br' || c.tag === 'w:cr') { if (/w:type="page"/.test(c.open)) simple = false; else text += '\n'; }
+      else if (c.tag === 'w:noBreakHyphen') text += '‑';
+      else if (c.tag === 'w:softHyphen' || c.tag === 'w:lastRenderedPageBreak') { /* bỏ */ }
+      else simple = false;
+    }
+    return simple ? { k: 'r', rPr, text } : { k: 'x', xml: k.xml, rPr, text: textOf(k.inner) };
+  }
+  function parseP(el) {
+    const p = { t: 'p', pPr: '', items: [] };
+    for (const k of kids(el.inner)) {
+      if (k.tag === 'w:pPr') p.pPr = k.xml;
+      else if (k.tag === 'w:r') p.items.push(parseRun(k));
+      else if (k.tag === 'w:hyperlink' || k.tag === 'w:smartTag' || k.tag === 'w:ins' || k.tag === 'w:customXml') { for (const r of kids(k.inner)) if (r.tag === 'w:r') p.items.push(parseRun(r)); }
+      else if (k.tag === 'w:proofErr' || k.tag === 'w:del' || k.tag === 'w:permStart' || k.tag === 'w:permEnd') { /* bỏ */ }
+      else if (k.tag === 'w:sdt') {
+        const pr = child(k.inner, 'w:sdtPr');
+        if (pr && /<w14:checkbox>/.test(pr.inner)) p.items.push({ k: 'cb', xml: k.xml, on: /<w14:checked w14:val="(1|true)"/.test(pr.inner) });
+        else {
+          const ct = child(k.inner, 'w:sdtContent');
+          const rs = ct ? kids(ct.inner).filter((r) => r.tag === 'w:r') : [];
+          if (ct && rs.length === kids(ct.inner).length) rs.forEach((r) => p.items.push(parseRun(r)));
+          else p.items.push({ k: 'x', xml: k.xml, text: textOf(k.inner) });
+        }
+      } else p.items.push({ k: 'x', xml: k.xml, text: '' });
+    }
+    mergeSplit(p);
+    return p;
+  }
+  // {{truong}} bị Word cắt thành nhiều đoạn chữ → gộp lại một đoạn
+  function mergeSplit(p) {
+    const out = []; let open = null;
+    const unbalanced = (t) => t.lastIndexOf('{{') > t.lastIndexOf('}}');
+    for (const it of p.items) {
+      if (open && it.k === 'r') { open.text += it.text; if (!unbalanced(open.text)) open = null; continue; }
+      if (open && it.k === 'x' && !it.text && !/<w:(drawing|pict|object)/.test(it.xml)) continue;
+      out.push(it); open = it.k === 'r' && unbalanced(it.text) ? it : null;
+    }
+    p.items = out;
+  }
+  function parseTbl(el) {
+    const t = { t: 'tbl', open: el.open, pre: '', rows: [], list: /bk-list=/.test(el.open || '') ? '1' : '' };
+    for (const k of kids(el.inner)) {
+      if (k.tag === 'w:tblPr' || k.tag === 'w:tblGrid') t.pre += k.xml;
+      else if (k.tag === 'w:tr') {
+        const r = { pre: '', cells: [] };
+        for (const c of kids(k.inner)) {
+          if (c.tag === 'w:trPr' || c.tag === 'w:tblPrEx') r.pre += c.xml;
+          else if (c.tag === 'w:tc') {
+            const cell = { pre: '', blocks: [] };
+            for (const b of kids(c.inner)) { if (b.tag === 'w:tcPr') cell.pre = b.xml; else cell.blocks.push(parseBlock(b)); }
+            r.cells.push(cell);
+          } else if (c.tag === 'w:sdt') { const ct = child(c.inner, 'w:sdtContent'); for (const tc of ct ? kids(ct.inner) : []) if (tc.tag === 'w:tc') r.cells.push(parseTbl({ inner: `<w:tr>${tc.xml}</w:tr>`, open: '<w:tbl>' }).rows[0].cells[0]); }
+        }
+        t.rows.push(r);
+      }
+    }
+    return t;
+  }
+  function parseBlock(k) {
+    if (k.tag === 'w:p') return parseP(k);
+    if (k.tag === 'w:tbl') return parseTbl(k);
+    if (k.tag === 'w:sdt') {             // khối nội dung (content control) bọc đoạn/bảng → bóc ra
+      const ct = child(k.inner, 'w:sdtContent');
+      const bs = ct ? kids(ct.inner) : [];
+      if (bs.length === 1 && (bs[0].tag === 'w:p' || bs[0].tag === 'w:tbl')) return parseBlock(bs[0]);
+    }
+    return { t: 'x', xml: k.xml, text: textOf(k.inner) };
+  }
+  /** document.xml → { head, blocks, sect, tail } */
+  function parse(docXml) {
+    const a = docXml.indexOf('<w:body>'), b = docXml.lastIndexOf('</w:body>');
+    if (a < 0 || b < 0) throw new Error('File Word không đúng định dạng (không thấy nội dung)');
+    const blocks = []; let sect = '';
+    for (const k of kids(docXml.slice(a + 8, b))) { if (k.tag === 'w:sectPr') sect = k.xml; else blocks.push(parseBlock(k)); }
+    return { head: docXml.slice(0, a + 8), blocks, sect, tail: docXml.slice(b) };
+  }
+
+  // ─── ghi ─────────────────────────────────────────────────────
+  const RPR_AFTER_COLOR = ['w:spacing', 'w:w', 'w:kern', 'w:position', 'w:sz', 'w:szCs', 'w:highlight', 'w:u', 'w:effect', 'w:bdr', 'w:shd', 'w:fitText', 'w:vertAlign', 'w:rtl', 'w:cs', 'w:em', 'w:lang', 'w:eastAsianLayout', 'w:specVanish', 'w:oMath'];
+  function redRPr(rPr) {
+    if (!rPr) return '<w:rPr><w:color w:val="FF0000"/></w:rPr>';
+    if (/<w:color\b/.test(rPr)) return rPr.replace(/<w:color\b[^>]*\/>/, '<w:color w:val="FF0000"/>');
+    let at = -1;
+    for (const t of RPR_AFTER_COLOR) { const i = rPr.search(new RegExp('<' + t + '[\\s/>]')); if (i > 0 && (at < 0 || i < at)) at = i; }
+    if (at < 0) at = rPr.lastIndexOf('</w:rPr>');
+    return rPr.slice(0, at) + '<w:color w:val="FF0000"/>' + rPr.slice(at);
+  }
+  function runXml(rPr, text) {
+    let s = '';
+    for (const x of String(text).split(/(\t|\n)/)) s += x === '\t' ? '<w:tab/>' : x === '\n' ? '<w:br/>' : x ? `<w:t xml:space="preserve">${xesc(x)}</w:t>` : '';
+    return s ? `<w:r>${rPr || ''}${s}</w:r>` : '';
+  }
+  const PH = /\{\{\s*([\w.]+)(?::(\w+))?\s*\}\}/g;
+  /** Ghi mô hình → XML. opt.fill(key) trả giá trị (null = giữ nguyên {{key}}); opt.red = tô đỏ chỗ tool điền & đoạn sửa tay. */
+  function serialize(doc, opt = {}) {
+    const fill = opt.fill || null, red = !!opt.red;
+    const item = (it, pRed) => {
+      if (it.k === 'x') return it.xml;
+      if (it.k === 'cb') return setCb(it.xml, it.on);
+      const rPr = pRed ? redRPr(it.rPr) : it.rPr;
+      if (!fill || !it.text.includes('{{')) return runXml(rPr, it.text);
+      let out = '', last = 0, m; PH.lastIndex = 0;
+      while ((m = PH.exec(it.text))) {
+        out += runXml(rPr, it.text.slice(last, m.index));
+        const v = fill(m[1]);
+        out += v == null ? runXml(rPr, m[0]) : runXml(red ? redRPr(it.rPr) : rPr, v);
+        last = PH.lastIndex;
+      }
+      return out + runXml(rPr, it.text.slice(last));
+    };
+    const para = (p) => `<w:p>${p.pPr}${p.items.map((it) => item(it, red && p.ed)).join('')}</w:p>`;
+    const blocks = (bs) => bs.map((b) => (b.t === 'p' ? para(b) : b.t === 'tbl' ? tbl(b) : b.xml)).join('');
+    const tbl = (t) => `${opt.keepMarks && t.list ? '<w:tbl bk-list="1">' : '<w:tbl>'}${t.pre}${t.rows.map((r) => `<w:tr>${r.pre}${r.cells.map((c) => {
+      const inner = blocks(c.blocks);
+      return `<w:tc>${c.pre}${inner}${!c.blocks.length || c.blocks[c.blocks.length - 1].t !== 'p' ? '<w:p/>' : ''}</w:tc>`;
+    }).join('')}</w:tr>`).join('')}</w:tbl>`;
+    return doc.head + blocks(doc.blocks) + doc.sect + doc.tail;
+  }
+  function setCb(xml, on) {
+    return xml.replace(/<w14:checked w14:val="[^"]*"\/>/, `<w14:checked w14:val="${on ? 1 : 0}"/>`).replace(/[☐☒]/, on ? '☒' : '☐');
+  }
+
+  // ─── duyệt / sửa mô hình ─────────────────────────────────────
+  function walk(blocks, fn, ctx = {}) {
+    for (const b of blocks) {
+      if (b.t === 'p') fn(b, ctx);
+      else if (b.t === 'tbl') b.rows.forEach((r, ri) => r.cells.forEach((c, ci) => walk(c.blocks, fn, { tbl: b, row: r, ri, cell: c, ci })));
+    }
+  }
+  const ptext = (p) => p.items.map((i) => (i.k === 'r' ? i.text : '')).join('');
+  const pview = (p) => p.items.map((i) => (i.k === 'r' || i.k === 'x' ? i.text || '' : i.k === 'cb' ? (i.on ? '☒' : '☐') : '')).join('');
+  const ctext = (c) => c.blocks.map((b) => (b.t === 'p' ? pview(b) : '')).join('\n').trim();
+  /** Thay các đoạn [s,e) trên chữ của đoạn văn (vị trí theo ptext) bằng chuỗi mới, giữ định dạng đoạn chữ đầu. */
+  function pReplace(p, spans) {
+    for (const sp of [...spans].sort((a, b) => b.s - a.s)) {
+      let pos = 0, first = true;
+      for (const r of p.items.filter((i) => i.k === 'r')) {
+        const a = pos, b = pos + r.text.length; pos = b;
+        if (b <= sp.s || a >= sp.e) continue;
+        const s0 = Math.max(sp.s, a) - a, e0 = Math.min(sp.e, b) - a;
+        if (first) { r.text = r.text.slice(0, s0) + sp.str + r.text.slice(e0); first = false; } else r.text = r.text.slice(e0);
+      }
+    }
+  }
+  const markRPr = (p) => { const m = /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(p.pPr || ''); return m ? m[0] : ''; };
+  function setCellText(cell, str) {
+    const ps = cell.blocks.filter((b) => b.t === 'p');
+    if (!ps.length) { cell.blocks.push({ t: 'p', pPr: '', items: [{ k: 'r', rPr: '', text: str }] }); return; }
+    const p = ps.find((x) => ptext(x).trim()) || ps[0];
+    const rs = p.items.filter((i) => i.k === 'r');
+    if (rs.length) { rs.forEach((r, i) => { r.text = i ? '' : str; }); } else p.items.push({ k: 'r', rPr: markRPr(p), text: str });
+    cell.blocks = cell.blocks.filter((b) => b === p || b.t !== 'p' || b.items.some((i) => i.k !== 'r'));
+  }
+  const gridSpan = (c) => +(attr((/<w:gridSpan[^>]*>/.exec(c.pre) || [''])[0], 'w:val') || 1);
+  const vMerge = (c) => { const m = /<w:vMerge(?:\s+w:val="(\w+)")?\s*\/>/.exec(c.pre); return m ? m[1] || 'continue' : ''; };
+  function setVMerge(pre, v) {
+    let x = (pre || '<w:tcPr></w:tcPr>').replace(/<w:vMerge\b[^>]*\/>/g, '');
+    if (x === '<w:tcPr/>') x = '<w:tcPr></w:tcPr>';
+    if (!v) return x;
+    const tag = v === 'restart' ? '<w:vMerge w:val="restart"/>' : '<w:vMerge/>';
+    const m = /<w:gridSpan[^>]*\/>|<w:hMerge[^>]*\/>|<w:tcW[^>]*\/>|<w:cnfStyle[^>]*\/>/g; let at = -1, mm;
+    while ((mm = m.exec(x))) at = mm.index + mm[0].length;
+    if (at < 0) at = x.indexOf('>') + 1;
+    return x.slice(0, at) + tag + x.slice(at);
+  }
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  function startCols(row) { let c = 0; return row.cells.map((x) => { const s = c; c += gridSpan(x); return s; }); }
+
+  // ─── trường & danh sách ──────────────────────────────────────
+  function fieldsIn(doc) {
+    const keys = new Set();
+    walk(doc.blocks, (p) => { for (const it of p.items) if (it.k === 'r') { PH.lastIndex = 0; let m; while ((m = PH.exec(it.text))) keys.add(m[1]); } });
+    return [...keys];
+  }
+  const rowList = (r) => { const m = /\{\{\s*([a-z_]+)\.(?!\d)\w+/i.exec(r.cells.map((c) => c.blocks.map((b) => (b.t === 'p' ? ptext(b) : '')).join('')).join('')); return m ? m[1] : ''; };
+  /** Nhân dòng mẫu của bảng danh sách theo dữ liệu: {{ct.so}} → {{ct.0.so}}, {{ct.1.so}}…; ô :gop gộp dọc theo nhóm. */
+  function expand(doc, lists) {
+    const ex = (blocks) => blocks.forEach((b) => {
+      if (b.t !== 'tbl') return;
+      const rows = [];
+      for (const r of b.rows) {
+        const L = rowList(r);
+        r.cells.forEach((c) => ex(c.blocks));
+        if (!L) { rows.push(r); continue; }
+        b.list = L;
+        const items = (lists && lists[L]) || [];
+        const n = Math.max(1, items.length);
+        for (let i = 0; i < n; i++) {
+          const nr = clone(r);
+          nr.cells.forEach((c) => {
+            let gop = false;
+            walk(c.blocks, (p) => p.items.forEach((it) => {
+              if (it.k !== 'r') return;
+              it.text = it.text.replace(new RegExp('\\{\\{\\s*' + L + '\\.(\\w+)(?::(\\w+))?\\s*\\}\\}', 'g'), (m0, f, o) => { if (o === 'gop') gop = true; return `{{${L}.${i}.${f}}}`; });
+            }));
+            if (!gop) return;
+            const g = (k) => (items[k] ? items[k]._g : undefined);
+            const cont = i > 0 && g(i) != null && g(i) === g(i - 1), more = g(i) != null && g(i) === g(i + 1);
+            c.pre = setVMerge(c.pre, cont ? 'continue' : more ? 'restart' : '');
+            if (cont) walk(c.blocks, (p) => p.items.forEach((it) => { if (it.k === 'r') it.text = ''; }));
+          });
+          rows.push(nr);
+        }
+      }
+      b.rows = rows;
+    });
+    ex(doc.blocks);
+    return doc;
+  }
+  const listTables = (doc) => { const out = []; const f = (bs) => bs.forEach((b) => { if (b.t === 'tbl') { if (b.list || b.rows.some(rowList)) out.push(b); b.rows.forEach((r) => r.cells.forEach((c) => f(c.blocks))); } }); f(doc.blocks); return out; };
+
+  // ─── học mẫu từ KUNN / PDGN cũ đã điền ───────────────────────
+  const D = '(\\d{1,2}\\/\\d{1,2}\\/\\d{4})';
+  // nhãn ô bảng (đã bỏ dấu, chữ thường) → trường; vre: chỉ thay phần khớp nhóm trong ô giá trị
+  const LABELS = [
+    [/^(cong ty|ten cong ty|ten khach hang|ben duoc cap tin dung)$/, 'ten_kh'], [/^giay chung nhan dang ky (doanh nghiep|kinh doanh)/, 'gcn'], [/^(dia chi|tru so)/, 'dia_chi'],
+    [/^(dai dien|nguoi dai dien)/, 'dai_dien'], [/^chuc (danh|vu)$/, 'chuc_danh'], [/^(theo )?(giay )?uy quyen/, 'uy_quyen'],
+    [/^ten kh$/, 'ten_kh_ngan'], [/^(cif|so cif|ma cif)$/, 'cif'], [/^ten ttkd$/, 'ttkd'], [/^ma ttkd$/, 'ma_ttkd'], [/^ten qlkh$/, 'qlkh'], [/^ma qlkh$/, 'ma_qlkh'],
+    [/^profit ?center$/, 'profit'], [/^test ?key$/, 'testkey'], [/^(kunn so|so kunn)$/, 'so_kunn'], [/^so hdtd$/, 'so_hdtd'], [/^ngay ky$/, 'ngay_hdtd'],
+    [/^loan sub ?type$/, 'loan_sub'], [/^muc dich cho vay$/, 'muc_dich_pdgn'], [/^ma muc d[iu]ch tt ?41$/, 'ma_tt41'], [/^ma analysis ?1$/, 'ma_an1'], [/^ma infor ?1$/, 'ma_inf1'],
+    [/^so tien$/, 'so_tien'], [/^loai tien$/, 'loai_tien'], [/^ngay giai ngan$/, 'ngay_gn'],
+    [/^thoi han cho vay$/, ['thoi_han_thang', 'ngay_dao_han'], /(\d+)\s*tháng.*?(\d{1,2}\/\d{1,2}\/\d{4})/],
+    [/^so tai khoan ghi/, 'tk_ghi_co'], [/^ten tai khoan$/, 'ten_tk_ghi_co'], [/^lai suat cho vay/, ['lai_suat'], /^\s*([\d.,]+)\s*%/],
+    [/^ngay het han duy tri han muc$/, 'han_hm'],
+  ];
+  // câu trong đoạn văn → trường (nhóm bắt được thay bằng {{trường}})
+  const SENT = [
+    { re: /^Số\s*:\s*([^\s].*?)\s*$/, keys: ['so_kunn'], head: true },
+    { re: new RegExp('^Ngày\\s*:\\s*' + D), keys: ['ngay_kunn'], head: true },
+    { re: new RegExp('Hợp đồng tín dụng số\\s+(\\S+?)\\s+ngày\\s+' + D), keys: ['so_hdtd', 'ngay_hdtd'] },
+    { re: /Bằng số\s*:\s*([\d.,]+)/, keys: ['so_tien'], alt: ['tong_du_no'] },
+    { re: /Bằng chữ\s*:\s*(.+?)\.?\s*$/, keys: ['so_tien_chu'], alt: ['tong_du_no_chu'] },
+    { re: new RegExp('^Ngày giải ngân\\s*:\\s*' + D), keys: ['ngay_gn'] },
+    { re: new RegExp('Thời hạn vay.*?đến ngày\\s+' + D), keys: ['ngay_dao_han'] },
+    { re: /Lãi suất tại thời điểm giải ngân\s*:\s*([\d.,]+)\s*%/, keys: ['lai_suat'] },
+    { re: new RegExp('Ngày trả lãi.*?vào ngày\\s+(\\d{1,2})\\b.*?đầu tiên là ngày\\s+' + D), keys: ['ngay_tra_lai', 'ngay_tra_lai_dau'] },
+    { re: /tỷ giá quy đổi\s*([\d.,]+)/, keys: ['ty_gia'] },
+    { re: new RegExp('CIC\\s+\\S+\\s+ngày\\s+' + D), keys: ['ngay_cic'] },
+    { re: /Áp dụng FTP[^:]*:\s*([\d.,]+)\s*%/, keys: ['ftp'] },
+  ];
+  const LCOL = [
+    [/^stt\b/, 'stt'], [/thu huong|ten don vi|nguoi ban|nha cung cap/, 'ben'], [/so tai khoan|account/, 'tk'], [/ngan hang|bank/, 'nh'],
+    [/^(so )?hop dong|hdmb/, 'hd'], [/so chung tu|so hoa don|so to khai/, 'so'], [/ngay chung tu|ngay hoa don/, 'ngay'],
+    [/tien hop dong|tien hoa don|gia tri/, 'tien_hd'], [/tien thanh toan|tien giai ngan|tien vay/, 'tien_tt'], [/so tien/, 'tien'],
+  ];
+  function guessKind(doc) {
+    const t = fold(doc.blocks.slice(0, 12).map((b) => (b.t === 'p' ? ptext(b) : b.t === 'tbl' ? b.rows.map((r) => r.cells.map(ctext).join(' ')).join(' ') : '')).join(' '));
+    if (/phe duyet kiem de nghi|de nghi thuc hien giai ngan/.test(t)) return 'pdgn';
+    if (/khe uoc nhan no|de nghi giai ngan/.test(t)) return 'kunn';
+    return '';
+  }
+  function learnList(t, values) {
+    const hi = t.rows.findIndex((r) => { const f = r.cells.map((c) => fold(ctext(c))); return f.some((x) => /^stt\b/.test(x)) && f.some((x) => /thu huong|nha cung cap|nguoi ban/.test(x)); });
+    if (hi < 0) return false;
+    const hdr = t.rows[hi], hs = startCols(hdr);
+    const col = {};
+    hdr.cells.forEach((c, i) => { const f = fold(ctext(c)); const r = LCOL.find(([re]) => re.test(f)); if (r && !Object.values(col).includes(r[1])) col[hs[i]] = r[1]; });
+    const keys = Object.values(col);
+    const L = keys.includes('tk') ? 'tth' : 'ct';
+    let end = hi + 1;
+    while (end < t.rows.length && !/^tong/.test(fold(ctext(t.rows[end].cells[0]) || ctext(t.rows[end].cells[1] || { blocks: [] })))) end++;
+    if (end === hi + 1) return false;
+    const items = [];
+    for (let i = hi + 1; i < end; i++) { const r = t.rows[i], ss = startCols(r); const o = {}; r.cells.forEach((c, j) => { const k = col[ss[j]]; if (k) o[k] = ctext(c); }); items.push(o); }
+    values['_' + L] = items;
+    const tpl = t.rows[hi + 1], ts = startCols(tpl);
+    tpl.cells.forEach((c, j) => {
+      c.pre = setVMerge(c.pre, '');
+      let k = col[ts[j]];
+      if (!k) { setCellText(c, ''); return; }
+      if (L === 'tth' && k === 'ben') k = 'ten';
+      const gop = L === 'ct' && (k === 'ben' || k === 'tien_tt');
+      setCellText(c, `{{${L}.${k}${gop ? ':gop' : ''}}}`);
+    });
+    t.rows.splice(hi + 2, end - hi - 2);
+    const tot = t.rows[hi + 2];
+    if (tot) {
+      const ss = startCols(tot);
+      tot.cells.forEach((c, j) => {
+        const k = col[ss[j]] || (j === tot.cells.length - 1 ? keys[keys.length - 1] : '');
+        const v = ctext(c);
+        if (!/^[\d.,\s]+$/.test(v)) return;
+        const f = k === 'tien_hd' ? 'tong_hd' : k === 'tien_tt' || k === 'tien' ? 'tong_tt' : '';
+        if (f) { values[f] = v; setCellText(c, `{{${f}}}`); }
+      });
+    }
+    t.list = L;
+    return true;
+  }
+  function learnCltf(t, values, kind) {
+    const hi = t.rows.findIndex((r) => r.cells.some((c) => /han muc duoc cap/.test(fold(ctext(c)))));
+    if (hi < 0) return false;
+    const KS = ['hm', 'sd', 'tn', 'kd'];
+    for (const r of t.rows.slice(hi + 1)) {
+      const lab = fold(r.cells.slice(0, 2).map(ctext).join(' '));
+      const g = /^tong/.test(lab) ? 'tong' : /cho vay/.test(lab) ? 'vay' : /l\/c|\blc\b/.test(lab) ? 'lc' : '';
+      if (!g || r.cells.length < 5) continue;
+      const last = r.cells.slice(-4);
+      last.forEach((c, i) => { const v = ctext(c); if (v && !/^[\d.,\s-]+$/.test(v)) return; const k = `${KS[i]}_${g}`; values[k] = v; setCellText(c, `{{${k}}}`); });
+    }
+    return true;
+  }
+  /** Học mẫu: thay các giá trị trên file đã điền bằng {{trường}}. Trả { doc, values, kind, found }. */
+  function learn(doc, kind) {
+    kind = kind || guessKind(doc);
+    const values = {}, found = [];
+    const seen = {};
+    const put = (k, v) => { if (values[k] == null) values[k] = v; found.push(k); };
+    // bảng
+    const tbls = []; const f = (bs) => bs.forEach((b) => { if (b.t === 'tbl') { tbls.push(b); b.rows.forEach((r) => r.cells.forEach((c) => f(c.blocks))); } }); f(doc.blocks);
+    for (const t of tbls) {
+      if (learnList(t, values)) continue;
+      learnCltf(t, values, kind);
+      for (const r of t.rows) for (let i = 0; i < r.cells.length - 1; i++) {
+        const lab = fold(ctext(r.cells[i])).replace(/[:\s(*)]+$/, '');
+        const rule = LABELS.find(([re]) => re.test(lab));
+        if (!rule) continue;
+        let j = i + 1;
+        while (j < r.cells.length - 1 && !ctext(r.cells[j])) j++;          // bỏ ô trống giữa nhãn và giá trị
+        const vc = r.cells[j], v = ctext(vc);
+        if (!v || LABELS.some(([re]) => re.test(fold(v)))) continue;
+        const [, key, vre] = rule;
+        if (!vre) { if (seen[key]) continue; seen[key] = 1; put(key, v); setCellText(vc, `{{${key}}}`); i++; continue; }
+        const p = vc.blocks.find((b) => b.t === 'p' && vre.test(ptext(b)));
+        if (!p) continue;
+        const m = new RegExp(vre.source, 'd').exec(ptext(p));
+        key.forEach((k, j) => put(k, m[j + 1]));
+        pReplace(p, key.map((k, j) => ({ s: m.indices[j + 1][0], e: m.indices[j + 1][1], str: `{{${k}}}` })));
+        i++;
+      }
+    }
+    // đoạn văn
+    const used = {}; let np = 0;
+    walk(doc.blocks, (p) => {
+      np++;
+      const tx = ptext(p);
+      if (!tx.trim() || tx.includes('{{')) return;
+      for (const s of SENT) {
+        if (s.head && np > 6) continue;
+        const m = new RegExp(s.re.source, 'd' + (s.re.flags || '')).exec(tx);
+        if (!m) continue;
+        let keys = s.keys;
+        if (s.alt && used[s.keys[0]]) keys = s.alt;
+        if (keys.some((k) => used[k])) continue;
+        keys.forEach((k, j) => { used[k] = 1; put(k, m[j + 1]); });
+        pReplace(p, keys.map((k, j) => ({ s: m.indices[j + 1][0], e: m.indices[j + 1][1], str: `{{${k}}}` })));
+        break;
+      }
+    });
+    // giá trị nhận diện chắc chắn còn sót ở chỗ khác (ngày GN ở chữ ký, tên QLKH…) → cũng thành trường
+    for (const k of ['so_kunn', 'ngay_gn', 'so_hdtd', 'qlkh']) {
+      const v = values[k];
+      if (!v || v.length < 4) continue;
+      walk(doc.blocks, (p) => {
+        const tx = ptext(p); const sp = []; let i = tx.indexOf(v);
+        while (i >= 0) { sp.push({ s: i, e: i + v.length, str: `{{${k}}}` }); i = tx.indexOf(v, i + v.length); }
+        if (sp.length) pReplace(p, sp);
+      });
+    }
+    return { doc, values, kind, found: [...new Set(found)] };
+  }
+
+  // ─── số tiền bằng chữ, ngày, tính toán ───────────────────────
+  const DIG = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+  function read3(n, full) {
+    const h = Math.floor(n / 100), t = Math.floor((n % 100) / 10), u = n % 10, s = [];
+    if (full || h) s.push(DIG[h] + ' trăm');
+    if (t === 0) { if (u && (full || h)) s.push('linh'); } else s.push(t === 1 ? 'mười' : DIG[t] + ' mươi');
+    if (u) s.push(u === 1 && t > 1 ? 'mốt' : u === 5 && t > 0 ? 'lăm' : u === 4 && t > 1 ? 'tư' : DIG[u]);
+    return s.join(' ');
+  }
+  function words(n) {
+    n = Math.floor(Math.abs(n));
+    if (!n) return 'không';
+    const parts = [], ty = Math.floor(n / 1e9), r = n % 1e9;
+    if (ty) parts.push(words(ty) + ' tỷ');
+    let started = !!ty;
+    [[Math.floor(r / 1e6), 'triệu'], [Math.floor((r % 1e6) / 1000), 'nghìn'], [r % 1000, '']].forEach(([v, u]) => { if (!v) return; parts.push(read3(v, started) + (u ? ' ' + u : '')); started = true; });
+    return parts.join(' ');
+  }
+  function bangChu(n, unit = 'đồng') { if (n == null || !Number.isFinite(n)) return ''; const w = words(n); return w[0].toUpperCase() + w.slice(1) + (unit ? ' ' + unit : ''); }
+  const num = (v) => { if (v == null || v === '') return null; const n = BK.parseAmount(String(v).replace(/[^\d.,()-]/g, '')); return Number.isFinite(n) ? n : null; };
+  const fmtN = (n, dec = 0) => (n == null || !Number.isFinite(n) ? '' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: dec }));
+  const isoOf = (v) => BK.toISO(v);
+  const dmy = (iso) => BK.fmtDate(iso);
+  function addMonths(iso, n) {
+    if (!iso || !Number.isFinite(n)) return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    const t = new Date(Date.UTC(y, m - 1 + n, 1));
+    const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+    return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+  }
+  function nextPayDay(iso, day) {
+    if (!iso || !(day >= 1 && day <= 31)) return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    const mk = (yy, mm) => { const last = new Date(Date.UTC(yy, mm, 0)).getUTCDate(); return `${yy}-${String(mm).padStart(2, '0')}-${String(Math.min(day, last)).padStart(2, '0')}`; };
+    return d < day ? mk(y, m) : m === 12 ? mk(y + 1, 1) : mk(y, m + 1);
+  }
+  // ── TestKey & ngày nghỉ: cùng logic tool giải ngân cũ (giaingan/lib/giaingan.js). Bảng key do người dùng nạp, không nằm trong file.
+  const CHU_VI_TRI = 'ABCDEFGHIKMN';
+  function keyTableError(b) {
+    if (!b || typeof b !== 'object') return 'Không phải bảng key';
+    for (const k of ['day', 'mon', 'cur', 'dig']) if (!b[k] || typeof b[k] !== 'object') return `Thiếu bảng "${k}"`;
+    if (Object.keys(b.day).length < 28) return 'Bảng "day" thiếu ngày';
+    if (Object.keys(b.mon).length !== 12) return 'Bảng "mon" phải đủ 12 tháng';
+    return '';
+  }
+  /** TestKey = mã CN + key[ngày] + key[tháng] + key[loại tiền] + Σ key[chữ cái vị trí i + chữ số thứ i] → "CN/TestKey". */
+  function testKey(maCN, isoDate, amount, cur, bang) {
+    const e = keyTableError(bang); if (e) throw new Error('Bảng key: ' + e);
+    if (!isoDate) throw new Error('Thiếu ngày giải ngân');
+    const tron = Math.round(amount);
+    if (!Number.isFinite(tron) || tron < 0) throw new Error('Số tiền không hợp lệ');
+    if (tron >= 1e12) throw new Error('Số tiền vượt 12 chữ số');
+    const [, m, d] = isoDate.split('-').map(Number);
+    const cn = String(maCN == null ? '' : maCN).trim();
+    let t = (Number(cn) || 0) + (Number(bang.day[d]) || 0) + (Number(bang.mon[m]) || 0) + (Number(bang.cur[(cur || 'VND').toUpperCase()]) || 0);
+    const so = String(tron).padStart(12, '0');
+    for (let i = 0; i < 12; i++) t += Number(bang.dig[CHU_VI_TRI[i] + so[i]]) || 0;
+    return `${cn}/${t}`;
+  }
+  const HOL_DEF = `01/01/2026 Tết Dương lịch
+14/02/2026 → 22/02/2026 Tết Nguyên đán Bính Ngọ
+26/04/2026 Giỗ Tổ Hùng Vương (dự kiến)
+30/04/2026 → 01/05/2026 Giải phóng miền Nam, Quốc tế Lao động
+01/09/2026 → 02/09/2026 Quốc khánh (dự kiến ngày liền kề)
+01/01/2027 Tết Dương lịch
+04/02/2027 → 10/02/2027 Tết Nguyên đán Đinh Mùi (dự kiến)
+16/04/2027 Giỗ Tổ Hùng Vương (dự kiến)
+30/04/2027 → 01/05/2027 Giải phóng miền Nam, Quốc tế Lao động
+02/09/2027 → 03/09/2027 Quốc khánh (dự kiến ngày liền kề)
+01/01/2028 Tết Dương lịch
+24/01/2028 → 30/01/2028 Tết Nguyên đán Mậu Thân (dự kiến)
+04/04/2028 Giỗ Tổ Hùng Vương (dự kiến)
+30/04/2028 → 01/05/2028 Giải phóng miền Nam, Quốc tế Lao động
+01/09/2028 → 02/09/2028 Quốc khánh (dự kiến ngày liền kề)`;
+  function parseHolidays(txt) {
+    const m = {};
+    String(txt || '').split(/\n/).forEach((l) => {
+      const r = l.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s*(?:→|->|-)\s*(\d{1,2})\/(\d{1,2})\/(\d{4}))?\s*(.*)$/);
+      if (!r) return;
+      let a = Date.UTC(+r[3], r[2] - 1, +r[1]); const b = r[4] ? Date.UTC(+r[6], r[5] - 1, +r[4]) : a;
+      for (; a <= b; a += 864e5) m[new Date(a).toISOString().slice(0, 10)] = r[7] || 'Ngày nghỉ';
+    });
+    return m;
+  }
+  const THU = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const dow = (iso) => new Date(iso + 'T00:00:00Z').getUTCDay();
+  const offDay = (iso, hol) => (hol && hol[iso]) || (dow(iso) === 0 || dow(iso) === 6 ? THU[dow(iso)] : '');
+  function workDay(iso, step, hol) { let x = iso, n = 0; while (offDay(x, hol) && n++ < 30) x = BK.addDays(x, step); return x; }
+  const shortName = (s) => String(s || '').replace(/C[ỔO] PH[ẦA]N/gi, 'CP').replace(/TRÁCH NHIỆM HỮU HẠN/gi, 'TNHH').replace(/MỘT THÀNH VIÊN/gi, 'MTV');
+
+  // Danh mục trường. s: 'c' = thông tin khách hàng (nhớ cho KH), 'k' = theo từng lần giải ngân. calc = tool tự tính.
+  const F = (k, l, g, s, type = '', calc = false) => ({ k, l, g, s, type, calc });
+  const HS_FIELDS = [
+    F('ten_kh', 'Tên khách hàng (đầy đủ)', 'kh', 'c'), F('ten_kh_ngan', 'Tên KH viết gọn (PDGN)', 'kh', 'c', '', true), F('cif', 'Số CIF', 'kh', 'c'),
+    F('gcn', 'Giấy CN ĐKDN', 'kh', 'c'), F('dia_chi', 'Địa chỉ', 'kh', 'c'), F('dai_dien', 'Người đại diện', 'kh', 'c'), F('chuc_danh', 'Chức danh', 'kh', 'c'),
+    F('uy_quyen', 'Theo ủy quyền', 'kh', 'c'), F('so_hdtd', 'Số HĐTD', 'kh', 'c'), F('ngay_hdtd', 'Ngày HĐTD', 'kh', 'c', 'date'),
+    F('ttkd', 'Tên TTKD', 'kh', 'c'), F('ma_ttkd', 'Mã TTKD', 'kh', 'c'), F('qlkh', 'Tên QLKH', 'kh', 'c'), F('ma_qlkh', 'Mã QLKH', 'kh', 'c'), F('profit', 'Profit center', 'kh', 'c'),
+    F('loan_sub', 'Loan sub type', 'vay', 'c'), F('muc_dich_pdgn', 'Mục đích cho vay (PDGN)', 'vay', 'c'), F('ma_tt41', 'Mã mục đích TT41', 'vay', 'c'), F('ma_an1', 'Mã Analysis 1', 'vay', 'c'), F('ma_inf1', 'Mã Infor 1', 'vay', 'c'),
+    F('loai_tien', 'Loại tiền', 'vay', 'c'), F('so_ngay_vay', 'Số ngày vay', 'vay', 'c', 'int'), F('thoi_han_thang', 'Thời hạn vay (tháng)', 'vay', 'c', 'int'), F('lai_suat', 'Lãi suất (%/năm)', 'vay', 'c'), F('ftp', 'FTP (%/năm)', 'vay', 'c'),
+    F('ngay_tra_lai', 'Ngày trả lãi hàng tháng', 'vay', 'c', 'int'), F('tk_ghi_co', 'Số TK ghi Có', 'vay', 'c'), F('ten_tk_ghi_co', 'Tên TK ghi Có', 'vay', 'c'),
+    F('so_kunn', 'Số KUNN', 'gn', 'k'), F('ngay_gn', 'Ngày giải ngân', 'gn', 'k', 'date'), F('ngay_kunn', 'Ngày KUNN', 'gn', 'k', 'date', true), F('testkey', 'Testkey', 'gn', 'k', '', true),
+    F('so_tien', 'Số tiền giải ngân', 'gn', 'k', 'money', true), F('so_tien_chu', 'Số tiền bằng chữ', 'gn', 'k', '', true),
+    F('du_no_truoc', 'Dư nợ trước lần GN này (đồng)', 'gn', 'k', 'money'), F('tong_du_no', 'Tổng dư nợ sau GN', 'gn', 'k', 'money', true), F('tong_du_no_chu', 'Tổng dư nợ bằng chữ', 'gn', 'k', '', true),
+    F('ngay_dao_han', 'Ngày đáo hạn', 'gn', 'k', 'date', true), F('ngay_tra_lai_dau', 'Ngày trả lãi đầu tiên', 'gn', 'k', 'date', true),
+    F('ngay_cic', 'Ngày tra CIC', 'gn', 'k', 'date'), F('ty_gia', 'Tỷ giá quy đổi', 'gn', 'k'),
+    F('han_hm', 'Ngày hết hạn duy trì hạn mức', 'hm', 'c', 'date'), F('hm_tong', 'Hạn mức (triệu)', 'hm', 'c', 'money'), F('hm_vay', 'Hạn mức cho vay (triệu)', 'hm', 'c', 'money', true), F('hm_lc', 'Hạn mức L/C (triệu)', 'hm', 'c', 'money', true),
+    F('sd_vay', 'Số dư cho vay (triệu)', 'hm', 'k', 'money'), F('sd_lc', 'Số dư L/C (triệu)', 'hm', 'k', 'money'), F('sd_tong', 'Tổng số dư (triệu)', 'hm', 'k', 'money', true),
+    F('tn_vay', 'Thu nợ cho vay (triệu)', 'hm', 'k', 'money'), F('tn_lc', 'Thu nợ L/C (triệu)', 'hm', 'k', 'money'), F('tn_tong', 'Tổng thu nợ (triệu)', 'hm', 'k', 'money', true),
+    F('kd_vay', 'Khả dụng — dòng cho vay', 'hm', 'k', 'money', true), F('kd_lc', 'Khả dụng — dòng L/C', 'hm', 'k', 'money', true), F('kd_tong', 'Số dư khả dụng (triệu)', 'hm', 'k', 'money', true),
+    F('tong_hd', 'Tổng tiền HĐ/chứng từ', 'gn', 'k', 'money', true), F('tong_tt', 'Tổng tiền thanh toán', 'gn', 'k', 'money', true),
+  ];
+  const HS_GROUPS = { kh: 'Khách hàng & hợp đồng tín dụng', vay: 'Khoản vay', gn: 'Lần giải ngân này', hm: 'Hạn mức (CLTF) — triệu đồng' };
+  const HS = Object.fromEntries(HS_FIELDS.map((f) => [f.k, f]));
+  const LIST_COLS = {
+    ct: [['ben', 'Bên thụ hưởng'], ['hd', 'Hợp đồng / diễn giải'], ['so', 'Số chứng từ'], ['ngay', 'Ngày'], ['tien_hd', 'Tiền HĐ/CT'], ['gn', 'Giải ngân']],
+    tth: [['ten', 'Bên thụ hưởng'], ['tk', 'Số tài khoản'], ['nh', 'Ngân hàng'], ['tien', 'Số tiền']],
+  };
+
+  /** Chứng từ (ct) từ các dòng bảng kê của KUNN; gom dòng cùng bên thụ hưởng liền nhau. */
+  function linesToCt(lines) {
+    const order = [], by = new Map();
+    for (const l of lines || []) { const g = BK.supKey(l.ncc) || '?'; if (!by.has(g)) { by.set(g, []); order.push(g); } by.get(g).push(l); }
+    return order.flatMap((g) => by.get(g).map((l) => ({ ben: l.ncc || '', hd: l.so_hdmb || '', so: l.so_hd || '', ngay: l.ngay_hd ? dmy(l.ngay_hd) : '', tien_hd: l.tien_hd != null ? fmtN(l.tien_hd) : '', gn: l.tien_gn != null ? fmtN(l.tien_gn) : '' })));
+  }
+  /** Gắn nhóm, STT, tiền theo nhóm cho ct; dựng tth (giữ TK/ngân hàng đã nhập). */
+  function prepLists(ct, tth, memo = {}) {
+    let g = -1, prev = null;
+    const gsum = [];
+    ct.forEach((x) => { const k = BK.supKey(x.ben) || x.ben; if (k !== prev) { g++; prev = k; gsum[g] = 0; } x._g = g; gsum[g] += num(x.gn) || 0; });
+    ct.forEach((x, i) => { x.stt = String(i + 1); x.tien_tt = fmtN(gsum[x._g]); });
+    const old = new Map((tth || []).map((t) => [BK.supKey(t.ten) || t.ten, t]));
+    const groups = [];
+    ct.forEach((x) => { if (!groups[x._g]) groups[x._g] = x; });
+    const out = groups.length ? groups.map((x, i) => {
+      const k = BK.supKey(x.ben) || x.ben, o = old.get(k) || {}, m = memo[k] || {};
+      return { ten: o.ten || x.ben, tk: o.tk || m.tk || '', nh: o.nh || m.nh || '', tien: fmtN(gsum[i]), stt: String(i + 1) };
+    }) : (tth || []).map((t, i) => ({ ...t, stt: String(i + 1) }));
+    return { ct, tth: out };
+  }
+  /** Giá trị tự tính (không đè các trường người dùng đã sửa tay: ov). */
+  function calc(v, lists, ov = new Set(), opt = {}) {
+    const out = {};
+    const set = (k, x) => { if (!ov.has(k)) out[k] = x == null ? '' : String(x); };
+    const g = (k) => (out[k] != null && !ov.has(k) ? out[k] : v[k]);
+    const ct = (lists && lists.ct) || [];
+    if (ct.length) set('so_tien', fmtN(ct.reduce((a, x) => a + (num(x.gn) || 0), 0)));
+    const st = num(g('so_tien'));
+    set('so_tien_chu', st != null ? bangChu(st) : '');
+    set('tong_tt', st != null ? fmtN(st) : '');
+    if (ct.length) set('tong_hd', fmtN(ct.reduce((a, x) => a + (num(x.tien_hd) || 0), 0)));
+    const dn = num(v.du_no_truoc);
+    set('tong_du_no', dn != null && st != null ? fmtN(dn + st) : '');
+    const td = num(g('tong_du_no'));
+    set('tong_du_no_chu', td != null ? bangChu(td) : '');
+    const gn = isoOf(v.ngay_gn);
+    set('ngay_kunn', gn ? dmy(gn) : '');
+    const th = num(v.thoi_han_thang), snv = num(v.so_ngay_vay);
+    set('ngay_dao_han', gn && snv ? dmy(BK.addDays(gn, snv)) : gn && th ? dmy(addMonths(gn, th)) : '');
+    if (opt.keys && v.ma_ttkd && gn && st != null) { try { set('testkey', testKey(v.ma_ttkd, gn, st, v.loai_tien, opt.keys)); } catch (e) { /* thiếu dữ liệu → để trống */ } }
+    const tl = num(v.ngay_tra_lai);
+    set('ngay_tra_lai_dau', gn && tl ? dmy(nextPayDay(gn, tl)) : '');
+    set('ten_kh_ngan', shortName(v.ten_kh));
+    const hm = num(v.hm_tong);
+    set('hm_vay', hm != null ? fmtN(hm) : ''); set('hm_lc', hm != null ? fmtN(hm) : '');
+    const sv = num(v.sd_vay), sl = num(v.sd_lc), tv = num(v.tn_vay), tlc = num(v.tn_lc);
+    const sd = sv == null && sl == null ? null : (sv || 0) + (sl || 0), tn = tv == null && tlc == null ? null : (tv || 0) + (tlc || 0);
+    set('sd_tong', fmtN(sd)); set('tn_tong', tn == null && sd != null ? '0' : fmtN(tn));
+    const kd = hm != null && sd != null ? hm - sd + (tn || 0) : null;
+    set('kd_tong', fmtN(kd)); set('kd_vay', fmtN(kd)); set('kd_lc', fmtN(kd));
+    return out;
+  }
+  /** Kiểm tra logic hồ sơ trước khi xuất. sev 3 = lỗi, 2 = cần xem. */
+  function checks(v, lists, used = [], opt = {}) {
+    const out = [], add = (sev, msg, key = '') => out.push({ sev, msg, key });
+    const st = num(v.so_tien), ct = (lists && lists.ct) || [], tth = (lists && lists.tth) || [];
+    const gn = isoOf(v.ngay_gn);
+    if (ct.length) { const s = ct.reduce((a, x) => a + (num(x.gn) || 0), 0); if (st != null && Math.abs(s - st) > 0.5) add(3, `Số tiền giải ngân ${fmtN(st)} ≠ tổng bảng chứng từ ${fmtN(s)}`, 'so_tien'); }
+    if (st != null && v.so_tien_chu && fold(v.so_tien_chu).replace(/[^a-z ]/g, '').trim() !== fold(bangChu(st)).replace(/[^a-z ]/g, '').trim()) add(3, `Số tiền bằng chữ không khớp bằng số (đúng: “${bangChu(st)}”)`, 'so_tien_chu');
+    const td = num(v.tong_du_no);
+    if (td != null && v.tong_du_no_chu && fold(v.tong_du_no_chu).replace(/[^a-z ]/g, '').trim() !== fold(bangChu(td)).replace(/[^a-z ]/g, '').trim()) add(3, 'Tổng dư nợ bằng chữ không khớp bằng số', 'tong_du_no_chu');
+    const kd = num(v.kd_tong);
+    if (kd != null && st != null && st > kd * 1e6 + 0.5) add(3, `Số tiền giải ngân ${fmtN(st)} vượt số dư khả dụng ${fmtN(kd)} triệu`, 'kd_tong');
+    const dn = num(v.du_no_truoc), sv = num(v.sd_vay);
+    if (dn != null && sv != null && Math.abs(dn / 1e6 - sv) >= 1) add(2, `Dư nợ trước GN ${fmtN(dn)} đ khác số dư cho vay trên CLTF ${fmtN(sv)} triệu`, 'du_no_truoc');
+    if (gn) {
+      const hd = isoOf(v.ngay_hdtd), han = isoOf(v.han_hm), dh = isoOf(v.ngay_dao_han), cic = isoOf(v.ngay_cic);
+      if (hd && gn < hd) add(3, `Ngày giải ngân ${dmy(gn)} trước ngày ký HĐTD ${dmy(hd)}`, 'ngay_gn');
+      if (han && gn > han) add(3, `Ngày giải ngân sau ngày hết hạn duy trì hạn mức ${dmy(han)}`, 'han_hm');
+      if (dh && dh <= gn) add(3, 'Ngày đáo hạn không sau ngày giải ngân', 'ngay_dao_han');
+      const hol = opt.hol || null;
+      if (dh && offDay(dh, hol)) { const a = workDay(dh, -1, hol), b = workDay(dh, 1, hol); add(2, `Ngày đáo hạn ${dmy(dh)} rơi vào ngày nghỉ (${offDay(dh, hol)}) — ngày làm việc gần nhất: trước ${dmy(a)} (${BK.daysBetween(gn, a)} ngày), sau ${dmy(b)} (${BK.daysBetween(gn, b)} ngày)`, 'ngay_dao_han'); }
+      if (offDay(gn, hol)) add(2, `Ngày giải ngân ${dmy(gn)} là ngày nghỉ (${offDay(gn, hol)})`, 'ngay_gn');
+      const tld = isoOf(v.ngay_tra_lai_dau); if (tld && offDay(tld, hol)) add(2, `Ngày trả lãi đầu tiên ${dmy(tld)} rơi vào ngày nghỉ (${offDay(tld, hol)})`, 'ngay_tra_lai_dau');
+      if (cic) { const d = BK.daysBetween(cic, gn); if (d < 0) add(3, `Ngày tra CIC ${dmy(cic)} sau ngày giải ngân`, 'ngay_cic'); else if (d > 10) add(2, `CIC tra ngày ${dmy(cic)} — đã ${d} ngày (hiệu lực 10 ngày), cần tra lại`, 'ngay_cic'); }
+      const nKunn = isoOf(v.ngay_kunn); if (nKunn && nKunn !== gn) add(2, `Ngày KUNN ${dmy(nKunn)} khác ngày giải ngân ${dmy(gn)}`, 'ngay_kunn');
+      ct.forEach((x, i) => {
+        const d = isoOf(x.ngay); if (!d) return;
+        const n = BK.daysBetween(d, gn);
+        if (n < 0) add(3, `Chứng từ ${x.so || i + 1} (${x.ben}) ngày ${dmy(d)} sau ngày giải ngân`, 'ct');
+        else if (n > 90) add(2, `Chứng từ ${x.so || i + 1} (${x.ben}) đã ${n} ngày (> 90 ngày) — cần bổ sung đối chiếu công nợ`, 'ct');
+      });
+      if (hd) ct.forEach((x, i) => { const d = isoOf(x.ngay); if (d && d < hd && BK.daysBetween(d, hd) > 180) add(2, `Chứng từ ${x.so || i + 1} lập trước HĐTD hơn 6 tháng — xem lại mục đích`, 'ct'); });
+    }
+    ct.forEach((x, i) => { const a = num(x.tien_hd), b = num(x.gn); if (a != null && b != null && b > a + 0.5) add(3, `Chứng từ ${x.so || i + 1}: giải ngân ${fmtN(b)} > giá trị ${fmtN(a)}`, 'ct'); });
+    tth.forEach((t) => { if (!t.tk || !t.nh) add(2, `Bên thụ hưởng “${t.ten}” chưa có ${!t.tk ? 'số tài khoản' : 'ngân hàng'}`, 'tth'); });
+    const ls = num(v.lai_suat), ftp = num(v.ftp);
+    if (ls != null && ftp != null && ls < ftp) add(2, `Lãi suất ${v.lai_suat}% thấp hơn FTP ${v.ftp}% — cần phê duyệt UBG`, 'lai_suat');
+    const DEP = { tong_du_no: ['du_no_truoc'], tong_du_no_chu: ['du_no_truoc'], ngay_dao_han: ['ngay_gn', 'so_ngay_vay'], ngay_tra_lai_dau: ['ngay_gn', 'ngay_tra_lai'], ngay_kunn: ['ngay_gn'],
+      so_tien: ['so_tien'], so_tien_chu: ['so_tien'], hm_vay: ['hm_tong'], hm_lc: ['hm_tong'], sd_tong: ['sd_vay'], tn_tong: ['sd_vay'], kd_tong: ['hm_tong', 'sd_vay'], kd_vay: ['hm_tong', 'sd_vay'], kd_lc: ['hm_tong', 'sd_vay'], ten_kh_ngan: ['ten_kh'], tong_hd: [], tong_tt: [] };
+    const blank = (k) => v[k] == null || String(v[k]).trim() === '';
+    const empty = [...new Set(used.filter((k) => !/\.\d+\./.test(k) && !/^tn_(vay|lc)$/.test(k) && blank(k)).flatMap((k) => (DEP[k] ? DEP[k].filter(blank) : [k])))];
+    if (empty.length) add(2, `Chưa điền: ${empty.map((k) => (HS[k] ? HS[k].l : k)).join(', ')}`, empty[0]);
+    return out.sort((a, b) => b.sev - a.sev);
+  }
+
+  // ─── kiểu dáng để hiển thị giống Word ────────────────────────
+  const onoff = (x, tag) => { const m = new RegExp('<' + tag + '(?:\\s+w:val="([^"]*)")?\\s*/>').exec(x); return m ? !/^(0|false|off|none)$/.test(m[1] || '') : undefined; };
+  function rProps(x) {
+    if (!x) return {};
+    const o = {};
+    for (const [k, t] of [['b', 'w:b'], ['i', 'w:i'], ['strike', 'w:strike'], ['caps', 'w:caps'], ['vanish', 'w:vanish']]) { const v = onoff(x, t); if (v !== undefined) o[k] = v; }
+    let m = /<w:u w:val="([^"]*)"/.exec(x); if (m) o.u = m[1] !== 'none';
+    m = /<w:sz w:val="(\d+)"/.exec(x); if (m) o.sz = +m[1] / 2;
+    m = /<w:color w:val="([0-9A-Fa-f]{6}|auto)"/.exec(x); if (m) o.color = m[1];
+    m = /<w:vertAlign w:val="(\w+)"/.exec(x); if (m) o.va = m[1];
+    m = /<w:rFonts [^>]*w:ascii="([^"]+)"/.exec(x); if (m) o.font = m[1];
+    m = /<w:highlight w:val="(\w+)"/.exec(x); if (m && m[1] !== 'none') o.hl = m[1];
+    m = /<w:rStyle w:val="([^"]+)"/.exec(x); if (m) o.rStyle = m[1];
+    return o;
+  }
+  function pProps(x) {
+    if (!x) return {};
+    const o = {};
+    const body = x.replace(/<w:rPr>[\s\S]*?<\/w:rPr>/, '');
+    let m = /<w:jc w:val="(\w+)"/.exec(body); if (m) o.jc = m[1];
+    m = /<w:ind\b([^>]*)\/>/.exec(body); if (m) { const a = m[1]; const g = (n) => { const r = new RegExp('w:' + n + '="(-?\\d+)"').exec(a); return r ? +r[1] : undefined; }; const l = g('left') ?? g('start'); if (l !== undefined) o.indL = l; const rr = g('right') ?? g('end'); if (rr !== undefined) o.indR = rr; if (g('firstLine') !== undefined) o.first = g('firstLine'); if (g('hanging') !== undefined) o.first = -g('hanging'); }
+    m = /<w:spacing\b([^>]*)\/>/.exec(body); if (m) { const a = m[1]; const g = (n) => { const r = new RegExp('w:' + n + '="([^"]+)"').exec(a); return r ? r[1] : undefined; }; if (g('before') !== undefined) o.before = +g('before'); if (g('after') !== undefined) o.after = +g('after'); if (g('line') !== undefined) { o.line = +g('line'); o.lineRule = g('lineRule') || 'auto'; } }
+    m = /<w:pStyle w:val="([^"]+)"/.exec(body); if (m) o.style = m[1];
+    m = /<w:numId w:val="(\d+)"/.exec(body); if (m) o.numId = m[1];
+    m = /<w:ilvl w:val="(\d+)"/.exec(body); if (m) o.ilvl = +m[1];
+    const r = /<w:rPr>([\s\S]*?)<\/w:rPr>/.exec(x); if (r) o.mark = rProps(r[0]);
+    return o;
+  }
+  function parseStyles(xml) {
+    const st = { def: { r: {}, p: {} }, s: {}, defP: '' };
+    if (!xml) return st;
+    const dd = /<w:docDefaults>([\s\S]*?)<\/w:docDefaults>/.exec(xml);
+    if (dd) { const r = /<w:rPrDefault>([\s\S]*?)<\/w:rPrDefault>/.exec(dd[1]); const p = /<w:pPrDefault>([\s\S]*?)<\/w:pPrDefault>/.exec(dd[1]); if (r) st.def.r = rProps(r[1]); if (p) st.def.p = pProps(p[1]); }
+    const re = /<w:style\b([^>]*)>([\s\S]*?)<\/w:style>/g; let m;
+    while ((m = re.exec(xml))) {
+      const id = attr(m[1], 'w:styleId'), type = attr(m[1], 'w:type');
+      const b = /<w:basedOn w:val="([^"]+)"/.exec(m[2]);
+      const pp = /<w:pPr>[\s\S]*?<\/w:pPr>/.exec(m[2]), rp = /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(m[2].replace(/<w:pPr>[\s\S]*?<\/w:pPr>/, ''));
+      const tb = /<w:tblBorders>([\s\S]*?)<\/w:tblBorders>/.exec(m[2]);
+      st.s[id] = { type, based: b ? b[1] : '', p: pp ? pProps(pp[0]) : {}, r: rp ? rProps(rp[0]) : {}, tb: tb ? tb[1] : '', def: /w:default="1"/.test(m[1]) };
+      if (type === 'paragraph' && /w:default="1"/.test(m[1])) st.defP = id;
+      if (type === 'table' && /w:default="1"/.test(m[1])) st.defT = id;
+    }
+    return st;
+  }
+  function styleChain(st, id, kind) {
+    const out = []; let s = st.s[id], n = 0;
+    while (s && n++ < 10) { out.unshift(s[kind]); s = st.s[s.based]; }
+    return Object.assign({}, ...out);
+  }
+  function parseNumbering(xml) {
+    const nb = { abs: {}, num: {} };
+    if (!xml) return nb;
+    const re = /<w:abstractNum\b[^>]*w:abstractNumId="(\d+)"[^>]*>([\s\S]*?)<\/w:abstractNum>/g; let m;
+    while ((m = re.exec(xml))) {
+      const lv = {}; const lr = /<w:lvl\b[^>]*w:ilvl="(\d+)"[^>]*>([\s\S]*?)<\/w:lvl>/g; let l;
+      while ((l = lr.exec(m[2]))) {
+        const g = (t) => { const r = new RegExp('<w:' + t + ' w:val="([^"]*)"').exec(l[2]); return r ? unesc(r[1]) : ''; };
+        const pp = /<w:pPr>[\s\S]*?<\/w:pPr>/.exec(l[2]); const rp = /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(l[2]);
+        lv[l[1]] = { fmt: g('numFmt') || 'decimal', text: g('lvlText'), start: +(g('start') || 1), p: pp ? pProps(pp[0]) : {}, r: rp ? rProps(rp[0]) : {} };
+      }
+      nb.abs[m[1]] = lv;
+    }
+    const nr = /<w:num\b[^>]*w:numId="(\d+)"[^>]*>([\s\S]*?)<\/w:num>/g;
+    while ((m = nr.exec(xml))) {
+      const a = /<w:abstractNumId w:val="(\d+)"/.exec(m[2]); const ov = {};
+      const or = /<w:lvlOverride w:ilvl="(\d+)">[\s\S]*?<w:startOverride w:val="(\d+)"/g; let o; while ((o = or.exec(m[2]))) ov[o[1]] = +o[2];
+      nb.num[m[1]] = { abs: a ? a[1] : '', start: ov };
+    }
+    return nb;
+  }
+  const ROMAN = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
+  const roman = (n) => { let s = ''; for (const [v, r] of ROMAN) while (n >= v) { s += r; n -= v; } return s; };
+  const letter = (n) => { let s = ''; while (n > 0) { n--; s = String.fromCharCode(97 + (n % 26)) + s; n = Math.floor(n / 26); } return s; };
+  function fmtNum(n, f) { return f === 'lowerLetter' ? letter(n) : f === 'upperLetter' ? letter(n).toUpperCase() : f === 'lowerRoman' ? roman(n) : f === 'upperRoman' ? roman(n).toUpperCase() : f === 'none' ? '' : String(n); }
+  const BUL = { 0xF0B7: '•', 0xF0A7: '▪', 0xF0D8: '➢', 0xF0FC: '✓', 0xF02D: '–', 0xF076: '❖', 0xF06E: '■', 0xF0A8: '□', 0xF071: '❑' };
+  function bullet(t) { if (!t) return '•'; const c = t.codePointAt(0); if (c >= 0xF000 && c <= 0xF0FF) return BUL[c] || '•'; return t === 'o' ? '◦' : t; }
+
+  return { kids, attr, unesc, xesc, parse, serialize, walk, ptext, pview, ctext, pReplace, setCellText, setVMerge, vMerge, gridSpan, clone, fieldsIn, expand, listTables, rowList,
+    learn, guessKind, words, bangChu, num, fmtN, addMonths, nextPayDay, calc, checks, linesToCt, prepLists, HS_FIELDS, HS_GROUPS, HS, LIST_COLS, shortName,
+    testKey, keyTableError, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH };
+})();
+</script>
 <script id="bk-app">
 (() => {
 'use strict';
@@ -1535,6 +2267,20 @@ class FolderSync extends Emitter {
     cids.forEach((cid) => this.pending.set(`nk_${cid}_${DEVICE}`, { type: 'nk', cid }));
     clearTimeout(this.timer); await this.flush();
     return d.customers.length + d.kunn.length;
+  }
+  // ── mẫu Word (KUNN/PDGN) để chung: BangKe_GiaiNgan/mau/*.docx
+  async writeBin(name, buf) {
+    if (this.state !== 'on' || !this.dir) throw new Error('Chưa kết nối thư mục chung');
+    const d = await this.dir.getDirectoryHandle('mau', { create: true });
+    const fh = await d.getFileHandle(name, { create: true });
+    const w = await fh.createWritable(); await w.write(buf); await w.close();
+    return (await fh.getFile()).lastModified;
+  }
+  async readBin(name) {
+    if (this.state !== 'on' || !this.dir) return null;
+    const d = await this.dir.getDirectoryHandle('mau');
+    const f = await (await d.getFileHandle(name)).getFile();
+    return { buf: await f.arrayBuffer(), at: f.lastModified };
   }
   // ── đọc từ thư mục
   async pull() {
@@ -1857,7 +2603,7 @@ function renderMain() {
   const cid = S.cid;
   const tabs = [['kunn', 'Khế ước & hóa đơn', S.kunns.length], ['inv', 'Theo dõi hóa đơn', an.invoices.length], ['goc', 'Hồ sơ gốc', sum.n_pending, sum.n_qua_han ? 'r' : ''], ['alert', 'Cảnh báo', an.alerts.length, nErr ? 'r' : ''], ['log', 'Nhật ký', '']];
   el.innerHTML = `<div class="ph"><div><div class="crumb"><a data-act="home">Tổng quan</a> / Khách hàng</div><h1 id="custName">${esc(c.name)}</h1><div class="sub">${[c.mst && 'MST ' + c.mst, c.bank, c.owner && 'Phụ trách: ' + c.owner, sum.last_gn && 'GN gần nhất ' + dd(sum.last_gn)].filter(Boolean).map(esc).join(' · ')}</div></div>
-    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'oldchk', cid: S.cid })} title="Soát lại các trường đã lưu: đơn vị tiền, loại tiền, đảo cột, thiếu thông tin…">🧪 Kiểm tra dữ liệu đã nạp</button><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
+    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'oldchk', cid: S.cid })} title="Soát lại các trường đã lưu: đơn vị tiền, loại tiền, đảo cột, thiếu thông tin…">🧪 Kiểm tra dữ liệu đã nạp</button><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bHs" title="Soạn KUNN & PDGN từ mẫu Word riêng của KH">📝 Soạn KUNN & PDGN</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
   <div class="tiles">
     ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫', act: A({ act: 'kl', cid }) })}
     ${(() => { const sr = series(S.kunns, 'gn', 'auto'); return tile('Giải ngân 12 tháng gần nhất', shortMoney(sr.total), periodLabel(sr.range), { spark: sparkline(sr.pts.map((x) => x.value)), act: A({ act: 'kl', cid, month: sr.range }) }); })()}
@@ -1870,6 +2616,7 @@ function renderMain() {
   <div class="tabs">${tabs.map(([k, l, n, cls]) => `<button class="tab ${S.tab === k ? 'act' : ''}" data-tab="${k}">${l}${n !== '' ? `<span class="n ${cls || ''}">${n}</span>` : ''}</button>`).join('')}</div>
   <div id="tabBody"></div>`;
   $('#bEditC').onclick = () => editCustomer(c);
+  $('#bHs').onclick = () => openHoSoPick(S.cid);
   $('#bImp2').onclick = () => openImport(S.cid);
   $('#bMaster').onclick = () => appendToMaster([...S.kunns].sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || '')), c.name);
   $$('[data-tab]', el).forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; renderMain(); });
@@ -2144,7 +2891,7 @@ function kunnCard(k, s, an, q) {
       <label style="font-size:12.5px">Hạn bổ sung <input type="date" class="inp" style="width:auto;padding:3px 6px" data-han="${k.id}" value="${esc(k.han_bs || '')}"></label>
       <input class="inp" style="width:220px;padding:4px 8px" placeholder="Ghi chú KUNN…" data-knote="${k.id}" value="${esc(k.ghi_chu || '')}">
       <span style="flex:1"></span><span class="hist">${k.source ? 'Nguồn: ' + esc(k.source) + ' · ' : ''}${k.updatedBy ? 'Sửa: ' + esc(k.updatedBy) + ' ' + new Date(k.updatedAt).toLocaleString('vi-VN') : ''}</span>
-      <button class="btn sm danger" data-delk="${k.id}">Xóa KUNN</button></div>
+      <button class="btn sm pri" data-hs="${k.id}" title="Soạn Đơn đề nghị GN kiêm KUNN và Phê duyệt kiêm đề nghị GN từ mẫu Word của KH">📝 Soạn KUNN & PDGN</button><button class="btn sm danger" data-delk="${k.id}">Xóa KUNN</button></div>
     <div class="tw" style="max-height:60vh"><table class="t"><thead><tr><th><input type="checkbox" data-selall="${k.id}"></th><th>STT</th><th>Nhà cung cấp</th><th>HĐMB/ĐĐH</th><th>Số HĐ</th><th>Ngày HĐ</th><th class="right">Tiền HĐ</th><th class="right">Giải ngân</th><th class="right">Lũy kế GN HĐ</th><th class="right">Còn lại</th><th>Kiểm tra</th><th>Hồ sơ gốc</th><th>Chứng từ thiếu</th><th>Ghi chú</th></tr></thead><tbody>
     ${lines.map((l, i) => { const li = an.lineInfo.get(l.id || `${k.id}#${i}`) || {}; const sev = (BK.CHECK[li.status] || {}).sev || 0;
       return `<tr class="${sev >= 3 ? 'bad' : sev === 2 ? 'warn' : ''}"><td><input type="checkbox" data-sel="${l.id}"></td><td>${esc(l.stt)}</td><td>${esc(l.ncc)}${l.mst_ncc ? `<div class="hist">MST ${esc(l.mst_ncc)}</div>` : ''}</td><td>${esc(l.so_hdmb)}</td>
@@ -2176,6 +2923,7 @@ function bindKunnEvents(body, an) {
       await setGoc(k, ids, t.dataset.v); return;
     }
     if (t.dataset.editl) { const [kid, lid] = t.dataset.editl.split('|'); return editLine(kid, lid); }
+    if (t.dataset.hs) return openHoSo(S.cid, t.dataset.hs).catch((er) => toast(errMsg(er), 'err'));
     if (t.dataset.selall) { $$(`[data-k="${t.dataset.selall}"] [data-sel]`, body).forEach((c) => { c.checked = t.checked; }); return; }
     if (t.dataset.delk) {
       const k = S.kunns.find((x) => x.id === t.dataset.delk);
@@ -3114,6 +3862,569 @@ function analysisOf(cid) {
   const an = BK.analyze(ks); anCache.set(cid, { key, an }); return an;
 }
 /** Tra một hóa đơn trong sổ của mọi khách hàng: đã giải ngân chưa, bao nhiêu, ở KUNN nào. */
+// ═════════════════ SOẠN KUNN & PDGN (mẫu Word riêng từng khách hàng) ═════════════════
+// Mỗi KH nạp 1 file Word KUNN + 1 file PDGN (bản cũ đã điền cũng được): tool tự nhận các ô cần điền ({{trường}}),
+// lưu làm mẫu của KH đó (máy này + thư mục chung). Khi soạn: điền từ thông tin KH + KUNN + bảng kê, tính
+// số tiền bằng chữ / dư nợ / đáo hạn / TestKey / CLTF; chỗ tool điền tô ĐỎ; sửa thẳng trên văn bản rồi xuất Word.
+const HS_KINDS = { kunn: 'KUNN', pdgn: 'PDGN' };
+const TK_LS = 'tk_table', HOL_LS = 'bangke_hol_v1';
+let JSZipP = null;
+function jszip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (!JSZipP) JSZipP = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/jszip.min.js'; s.onload = () => res(window.JSZip); s.onerror = () => rej(new Error('Không nạp được thư viện đọc Word (JSZip)')); document.head.appendChild(s); });
+  return JSZipP;
+}
+const keyTable = () => { try { const b = JSON.parse(lsGet(TK_LS) || 'null'); return DOCX.keyTableError(b) ? null : b; } catch (e) { return null; } };
+const holidays = () => DOCX.parseHolidays(lsGet(HOL_LS) || DOCX.HOL_DEF);
+
+// ── kho mẫu: IndexedDB (meta 'tpl:<loại>:<cid|chung>') + thư mục chung (BangKe_GiaiNgan/mau/<loại>_<cid|chung>.docx)
+const TPL = {
+  key: (kind, cid) => `tpl:${kind}:${cid || 'chung'}`,
+  file: (kind, cid) => `${kind}_${cid || 'chung'}.docx`,
+  async get(kind, cid) {
+    for (const id of cid ? [cid, ''] : ['']) {
+      let r = await S.store.getMeta(this.key(kind, id));
+      if (S.sync && S.sync.state === 'on') {               // máy khác vừa cập nhật mẫu → lấy bản mới
+        const b = await S.sync.readBin(this.file(kind, id)).catch(() => null);
+        if (b && (!r || b.at > r.at)) { r = { buf: b.buf, at: b.at, by: 'thư mục chung', name: this.file(kind, id) }; await S.store.setMeta(this.key(kind, id), r); }
+      }
+      if (r) return { ...r, own: !!id };
+    }
+    return null;
+  },
+  async put(kind, cid, rec) {
+    if (S.sync && S.sync.state === 'on') {
+      try { rec.at = await S.sync.writeBin(this.file(kind, cid), rec.buf); } catch (e) { toast('Chưa ghi được mẫu lên thư mục chung: ' + errMsg(e), 'err'); }
+    }
+    await S.store.setMeta(this.key(kind, cid), rec);
+  },
+};
+
+/** File Word người dùng chọn → mẫu: đã có {{…}} thì dùng luôn, chưa có thì tự nhận các trường từ bản đã điền. */
+async function makeTemplate(buf, kindHint) {
+  const JSZip = await jszip();
+  const zip = await JSZip.loadAsync(buf);
+  const f = zip.file('word/document.xml');
+  if (!f) throw new Error('Không phải file Word .docx (nếu là .doc, mở bằng Word rồi Lưu thành .docx)');
+  const doc = DOCX.parse(await f.async('string'));
+  const kind = DOCX.guessKind(doc) || kindHint;
+  if (DOCX.fieldsIn(doc).length) return { buf, kind, values: {}, found: DOCX.fieldsIn(doc), learned: false };
+  const r = DOCX.learn(doc, kind);
+  if (!r.found.length) throw new Error('Không nhận ra trường nào cần điền trong file này — kiểm tra lại có phải KUNN/PDGN không');
+  zip.file('word/document.xml', DOCX.serialize(r.doc));
+  return { buf: await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' }), kind: r.kind || kindHint, values: r.values, found: r.found, learned: true };
+}
+
+// ── hiển thị document.xml như trang Word (sửa được) ─────────────
+const tw = (n) => (n || 0) / 20;                      // twip → pt
+function bordersOf(xml) {
+  const o = {};
+  if (!xml) return o;
+  const re = /<w:(top|left|bottom|right|start|end|insideH|insideV) w:val="(\w+)"(?:[^>]*?w:sz="(\d+)")?(?:[^>]*?w:color="(\w+)")?[^>]*\/>/g; let m;
+  while ((m = re.exec(xml))) {
+    const side = m[1] === 'start' ? 'left' : m[1] === 'end' ? 'right' : m[1];
+    o[side] = /^(nil|none)$/.test(m[2]) ? 'none' : `${Math.max(1, Math.round((+m[3] || 4) / 6))}px ${m[2] === 'double' ? 'double' : m[2] === 'dotted' ? 'dotted' : m[2] === 'dashed' ? 'dashed' : 'solid'} ${!m[4] || m[4] === 'auto' ? '#000' : '#' + m[4]}`;
+  }
+  return o;
+}
+function runCss(e) {
+  const s = [];
+  if (e.b) s.push('font-weight:700'); if (e.i) s.push('font-style:italic');
+  const dec = [e.u && 'underline', e.strike && 'line-through'].filter(Boolean); if (dec.length) s.push('text-decoration:' + dec.join(' '));
+  if (e.sz) s.push(`font-size:${e.va && e.va !== 'baseline' ? e.sz * 0.65 : e.sz}pt`);
+  if (e.color && e.color !== 'auto' && e.color !== '000000') s.push('color:#' + e.color);
+  if (e.caps) s.push('text-transform:uppercase');
+  if (e.va === 'superscript') s.push('vertical-align:super'); else if (e.va === 'subscript') s.push('vertical-align:sub');
+  if (e.hl) s.push(`background:${{ yellow: '#ff0', green: '#0f0', cyan: '#0ff', lightGray: '#d3d3d3' }[e.hl] || e.hl}`);
+  if (e.font) s.push(`font-family:'${e.font.replace(/'/g, '')}','Times New Roman',serif`);
+  if (e.vanish) s.push('display:none');
+  return s.join(';');
+}
+function makeRenderer(ctx) {
+  const { st, nb } = ctx, store = [], cnt = {};
+  const put = (o) => { store.push(o); return store.length - 1; };
+  const defR = st.def.r || {};
+  const fieldHtml = (key) => { const v = ctx.val(key); return `<span class="df${v ? '' : ' empty'}" contenteditable="false" data-f="${esc(key)}" data-ph="${esc('[' + ctx.label(key) + ']')}" title="${esc(ctx.label(key))} — bấm để sửa">${esc(v)}</span>`; };
+  const textHtml = (t) => { let out = '', last = 0, m; const re = new RegExp(DOCX.PH.source, 'g'); while ((m = re.exec(t))) { out += esc(t.slice(last, m.index)); out += fieldHtml(m[1]); last = re.lastIndex; } return out + esc(t.slice(last)); };
+  function para(p) {
+    const pp = DOCX.pProps(p.pPr);
+    const sid = pp.style || st.defP;
+    const sp = DOCX.styleChain(st, sid, 'p'), sr = DOCX.styleChain(st, sid, 'r');
+    const e = { ...(st.def.p || {}), ...sp };
+    for (const k of Object.keys(pp)) if (k !== 'mark' && k !== 'style') e[k] = pp[k];
+    let label = '';
+    const numId = e.numId, ilvl = e.ilvl || 0;
+    if (numId && numId !== '0' && nb.num[numId]) {
+      const lv = nb.abs[nb.num[numId].abs] || {}, L = lv[ilvl];
+      if (L) {
+        const c = cnt[numId] || (cnt[numId] = []);
+        const start = (i) => (nb.num[numId].start[i] != null ? nb.num[numId].start[i] : (lv[i] || {}).start || 1);
+        c[ilvl] = c[ilvl] == null ? start(ilvl) : c[ilvl] + 1; c.length = ilvl + 1;
+        label = L.fmt === 'bullet' ? DOCX.bullet(L.text) : L.text.replace(/%(\d)/g, (m0, d) => DOCX.fmtNum(c[d - 1] != null ? c[d - 1] : start(d - 1), (lv[d - 1] || {}).fmt));
+        for (const k of ['indL', 'first']) if (pp[k] == null && L.p[k] != null) e[k] = L.p[k];
+      }
+    }
+    const markR = { ...defR, ...sr, ...(pp.mark || {}) };
+    const css = [`text-align:${{ both: 'justify', distribute: 'justify', center: 'center', right: 'right', end: 'right' }[e.jc] || 'left'}`,
+      `margin:${tw(e.before)}pt ${tw(e.indR)}pt ${tw(e.after)}pt ${tw(e.indL)}pt`, e.first ? `text-indent:${tw(e.first)}pt` : '',
+      e.line ? (e.lineRule === 'auto' ? `line-height:${(e.line / 240 * 1.17).toFixed(2)}` : `line-height:${tw(e.line)}pt`) : '', markR.sz ? `font-size:${markR.sz}pt` : ''].filter(Boolean).join(';');
+    let lastR = '';
+    const items = p.items.map((it) => {
+      if (it.k === 'r') {
+        lastR = it.rPr;
+        const rp = DOCX.rProps(it.rPr);
+        const eff = { ...defR, ...sr, ...(rp.rStyle ? DOCX.styleChain(st, rp.rStyle, 'r') : {}), ...rp };
+        return `<span class="dr" data-i="${put({ rPr: it.rPr })}" style="${runCss(eff)}">${textHtml(it.text)}</span>`;
+      }
+      if (it.k === 'cb') return `<span class="dc" contenteditable="false" data-i="${put({ xml: it.xml })}" data-on="${it.on ? 1 : 0}" title="Bấm để tick / bỏ tick">${it.on ? '☒' : '☐'}</span>`;
+      const blip = /r:embed="([^"]+)"/.exec(it.xml);
+      if (blip && ctx.img(blip[1])) {
+        const ex = /<wp:extent cx="(\d+)" cy="(\d+)"/.exec(it.xml);
+        const w = ex ? Math.round(+ex[1] / 9525) : 80, h = ex ? Math.round(+ex[2] / 9525) : 40;
+        return `<span class="dx" contenteditable="false" data-i="${put({ xml: it.xml })}"><img src="${ctx.img(blip[1])}" style="width:${w}px;height:${h}px;${/<wp:anchor/.test(it.xml) ? 'float:right;margin-left:8px' : ''}" alt=""></span>`;
+      }
+      return `<span class="dx" contenteditable="false" data-i="${put({ xml: it.xml })}">${esc(it.text || '')}</span>`;
+    }).join('');
+    const mark = (/<w:rPr>[\s\S]*?<\/w:rPr>/.exec(p.pPr || '') || [])[0] || lastR;
+    return `<div class="dp${p.ed ? ' ed' : ''}" contenteditable="true" spellcheck="false" data-i="${put({ pPr: p.pPr, mark })}" style="${css};${runCss({ ...markR, b: false, i: false, u: false })}">${label ? `<span class="dn" contenteditable="false">${esc(label)}</span>` : ''}${items}</div>`;
+  }
+  function table(t) {
+    const tp = /<w:tblPr>[\s\S]*?<\/w:tblPr>/.exec(t.pre); const tpx = tp ? tp[0] : '';
+    const sid = (/<w:tblStyle w:val="([^"]+)"/.exec(tpx) || [])[1] || st.defT;
+    const sb = bordersOf(sid && st.s[sid] ? st.s[sid].tb : ''), tb = { ...sb, ...bordersOf((/<w:tblBorders>[\s\S]*?<\/w:tblBorders>/.exec(tpx) || [''])[0]) };
+    const cols = [...t.pre.matchAll(/<w:gridCol w:w="(\d+)"/g)].map((m) => +m[1] / 15);
+    const width = cols.reduce((a, b) => a + b, 0);
+    const jc = (/<w:jc w:val="(\w+)"/.exec(tpx) || [])[1];
+    const nR = t.rows.length;
+    const rows = t.rows.map((r, ri) => {
+      let col = 0;
+      const nC = r.cells.length;
+      const cells = r.cells.map((c, ci) => {
+        const span = DOCX.gridSpan(c), vm = DOCX.vMerge(c);
+        const cb = bordersOf((/<w:tcBorders>[\s\S]*?<\/w:tcBorders>/.exec(c.pre) || [''])[0]);
+        const side = (s, edge, inner) => cb[s] || (edge ? tb[s] : tb[inner]) || 'none';
+        const bd = [`border-top:${vm === 'continue' ? 'hidden' : side('top', ri === 0, 'insideH')}`, `border-bottom:${side('bottom', ri === nR - 1, 'insideH')}`, `border-left:${side('left', ci === 0, 'insideV')}`, `border-right:${side('right', ci === nC - 1, 'insideV')}`];
+        const fill = (/<w:shd [^>]*w:fill="([0-9A-Fa-f]{6})"/.exec(c.pre) || [])[1];
+        const va = (/<w:vAlign w:val="(\w+)"/.exec(c.pre) || [])[1];
+        const w = (/<w:tcW w:w="(\d+)" w:type="dxa"/.exec(c.pre) || [])[1];
+        col += span;
+        return `<td data-i="${put({ pre: c.pre })}"${span > 1 ? ` colspan="${span}"` : ''}${vm === 'continue' ? ' class="vm"' : ''} style="${bd.join(';')};${fill ? 'background:#' + fill + ';' : ''}${va ? `vertical-align:${va === 'center' ? 'middle' : va}` : 'vertical-align:top'};${w ? `width:${+w / 15}px` : ''}">${blocks(c.blocks)}</td>`;
+      }).join('');
+      return `<tr data-i="${put({ pre: r.pre })}">${cells}</tr>`;
+    }).join('');
+    return `<div class="dtw"><table class="dt${t.list ? ' lt' : ''}" data-i="${put({ pre: t.pre, list: t.list || '' })}" style="${width ? `width:${width}px;` : 'width:100%;'}${jc === 'center' ? 'margin:0 auto' : ''}"><colgroup>${cols.map((w) => `<col style="width:${w}px">`).join('')}</colgroup><tbody>${rows}</tbody></table></div>`;
+  }
+  const blocks = (bs) => bs.map((b) => (b.t === 'p' ? para(b) : b.t === 'tbl' ? table(b) : `<div class="dxb" contenteditable="false" data-i="${put({ xml: b.xml })}">${esc(b.text || '')}</div>`)).join('');
+  return { store, blocks, table };
+}
+function pageStyle(sect, st) {
+  const g = (re, d) => { const m = re.exec(sect || ''); return m ? +m[1] : d; };
+  const w = g(/<w:pgSz w:w="(\d+)"/, 11906), l = g(/<w:pgMar [^>]*w:left="(\d+)"/, 1134), r = g(/<w:pgMar [^>]*w:right="(\d+)"/, 1134), t = g(/<w:pgMar [^>]*w:top="(\d+)"/, 1134);
+  const d = { ...(st.def.r || {}), ...DOCX.styleChain(st, st.defP, 'r') };
+  return `width:${w / 15}px;padding:${t / 15}px ${r / 15}px 40px ${l / 15}px;font-family:'${(d.font || 'Times New Roman').replace(/'/g, '')}','Times New Roman',serif;font-size:${d.sz || 11}pt`;
+}
+
+// ── DOM → mô hình (để lưu / xuất) ────────────────────────────
+function domText(el) {
+  let s = '';
+  const ns = [...el.childNodes];
+  ns.forEach((c, i) => {
+    if (c.nodeType === 3) s += c.nodeValue;
+    else if (c.nodeType === 1) {
+      if (c.classList.contains('df')) s += `{{${c.dataset.f}}}`;
+      else if (c.tagName === 'BR') { if (i < ns.length - 1) s += '\n'; }
+      else s += domText(c);
+    }
+  });
+  return s;
+}
+function domP(n, store) {
+  const ps = store[n.dataset.i], items = [], ed = n.classList.contains('ed');
+  let cur = null;
+  const push = (rPr, text) => { if (ed) text = text.replace(/\u00a0/g, ' '); if (cur && cur.rPr === rPr) cur.text += text; else { cur = { k: 'r', rPr, text }; items.push(cur); } };
+  const ns = [...n.childNodes];
+  ns.forEach((c, i) => {
+    if (c.nodeType === 3) return push(ps.mark, c.nodeValue);
+    if (c.nodeType !== 1 || c.classList.contains('dn')) return;
+    if (c.classList.contains('dr')) return push(store[c.dataset.i].rPr, domText(c));
+    if (c.classList.contains('dx')) { cur = null; items.push({ k: 'x', xml: store[c.dataset.i].xml, text: '' }); return; }
+    if (c.classList.contains('dc')) { cur = null; items.push({ k: 'cb', xml: store[c.dataset.i].xml, on: c.dataset.on === '1' }); return; }
+    if (c.classList.contains('df')) return push(ps.mark, `{{${c.dataset.f}}}`);
+    if (c.tagName === 'BR') { if (i < ns.length - 1) push(ps.mark, '\n'); return; }
+    push(ps.mark, domText(c));
+  });
+  return { t: 'p', pPr: ps.pPr, items, ed };
+}
+function domBlocks(el, store) {
+  const out = [];
+  for (const n of el.children) {
+    if (n.classList.contains('dp')) out.push(domP(n, store));
+    else if (n.classList.contains('dtw')) {
+      const t = n.querySelector(':scope > table'), ts = store[t.dataset.i];
+      out.push({ t: 'tbl', pre: ts.pre, list: t.classList.contains('lt') ? ts.list || '1' : '', rows: [...t.tBodies[0].rows].map((tr) => ({ pre: store[tr.dataset.i].pre, cells: [...tr.cells].map((td) => ({ pre: td.dataset.vm === 'none' ? DOCX.setVMerge(store[td.dataset.i].pre, '') : store[td.dataset.i].pre, blocks: domBlocks(td, store) })) })) });
+    } else if (n.classList.contains('dxb')) out.push({ t: 'x', xml: store[n.dataset.i].xml });
+  }
+  return out;
+}
+
+// ── trình soạn ───────────────────────────────────────────────
+let HE = null;   // phiên soạn đang mở
+const hsLabel = (k) => { const m = /^(\w+)\.(\d+)\.(\w+)$/.exec(k); if (m) { const c = (DOCX.LIST_COLS[m[1]] || []).find((x) => x[0] === m[3]); return `${c ? c[1] : m[3]} dòng ${+m[2] + 1}`; } return DOCX.HS[k] ? DOCX.HS[k].l : k; };
+function hsVal(k) {
+  const m = /^(\w+)\.(\d+)\.(\w+)$/.exec(k);
+  if (m) { const it = (HE.lists[m[1]] || [])[+m[2]]; return it && it[m[3]] != null ? String(it[m[3]]) : ''; }
+  return HE.v[k] != null ? String(HE.v[k]) : '';
+}
+function hsRecalc() {
+  const keys = keyTable();
+  const pl = DOCX.prepLists(HE.lists.ct, HE.lists.tth, (HE.c.hs || {}).tk || {});
+  HE.lists.ct = pl.ct; HE.lists.tth = pl.tth;
+  Object.assign(HE.v, DOCX.calc(HE.v, HE.lists, HE.ov, { keys }));
+}
+const listSig = () => JSON.stringify([HE.lists.ct.map((x) => x._g), HE.lists.tth.length]);
+
+async function openHoSo(cid, kid) {
+  const c = cust(cid); if (!c) return;
+  const k = kid ? S.store.k.get(kid) : null;
+  const draft = !k ? await S.store.getMeta('draft:' + cid) : null;
+  const saved = (k && k.doc) || draft || {};
+  const v = { loai_tien: 'VND' };
+  for (const f of DOCX.HS_FIELDS) if (f.s === 'c' && c.hs && c.hs[f.k] != null && c.hs[f.k] !== '') v[f.k] = c.hs[f.k];
+  if (!v.ten_kh && c.name) v.ten_kh = c.name.toUpperCase();
+  if (k) { if (k.so_kunn) v.so_kunn = k.so_kunn; if (k.ngay_gn) v.ngay_gn = dd(k.ngay_gn); }
+  else v.ngay_gn = dd(BK.todayISO());
+  Object.assign(v, saved.v || {});
+  HE = { cid, kid, c: structuredClone(c), k, v, ov: new Set(saved.ov || []), lists: saved.lists ? structuredClone(saved.lists) : { ct: DOCX.linesToCt(k ? k.lines : []), tth: [] }, listsEdited: !!saved.lists, saved, kinds: {}, cur: lsGet('bangke_hs_tab') || 'kunn', dirty: false, ai: null };
+  hsRecalc();
+  const m = modal(`<div class="mh"><h2>📝 Soạn KUNN & PDGN — ${esc(c.name)}${k ? ' · KUNN ' + esc(k.so_kunn || '') : ' · hồ sơ mới'}</h2>
+    <span style="flex:1"></span><label class="hist" title="File Word xuất ra giữ màu đỏ ở các chỗ tool điền / bạn sửa — để soát trước khi in"><input type="checkbox" id="hsRed"> Xuất kèm chữ đỏ để soát</label>
+    <button class="btn sm" id="hsSave" title="Lưu số liệu & phần sửa tay (Ctrl+S)">💾 Lưu</button><button class="btn sm pri" id="hsExp">⬇ Xuất Word</button><button class="btn sm" id="hsExpAll">⬇ Xuất cả KUNN + PDGN</button><button class="x" id="hsClose">&times;</button></div>
+    <div class="hs"><aside class="hs-side" id="hsSide"></aside><section class="hs-doc"><div class="hs-tabs" id="hsTabs"></div><div class="hs-legend"><span class="df">đỏ</span> = tool tự điền / tính (bấm để sửa) · <span class="lg-ed">nền vàng</span> = đoạn bạn đã sửa tay · Enter = thêm đoạn · rê chuột vào bảng để thêm/xóa dòng · ☐ bấm để tick</div><div class="hs-scroll" id="hsScroll"></div></section></div>`, 'full hsm');
+  HE.m = m;
+  $('#hsClose', m).onclick = hsClose;
+  $('#hsSave', m).onclick = () => hsSave().catch((e) => toast(errMsg(e), 'err'));
+  $('#hsExp', m).onclick = () => hsExport([HE.cur]).catch((e) => toast(errMsg(e), 'err'));
+  $('#hsExpAll', m).onclick = () => hsExport(Object.keys(HS_KINDS)).catch((e) => toast(errMsg(e), 'err'));
+  m.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); hsSave().catch((er) => toast(errMsg(er), 'err')); } });
+  hsBindDoc($('#hsScroll', m));
+  for (const kind of Object.keys(HS_KINDS)) await hsLoadKind(kind).catch((e) => { HE.kinds[kind] = { err: errMsg(e) }; });
+  hsTabs(); hsSide(); hsShow();
+}
+async function hsClose() {
+  if (HE && HE.dirty && !confirm('Có thay đổi chưa lưu. Đóng không lưu?')) return;
+  if (HE) { Object.values(HE.kinds).forEach((x) => (x.urls || []).forEach((u) => URL.revokeObjectURL(u))); HE.m.remove(); }
+  HE = null;
+}
+async function hsLoadKind(kind) {
+  const t = await TPL.get(kind, HE.cid);
+  if (!t) { HE.kinds[kind] = { none: true }; return; }
+  const JSZip = await jszip();
+  const zip = await JSZip.loadAsync(t.buf);
+  const rd = async (p) => { const f = zip.file(p); return f ? f.async('string') : ''; };
+  const docXml = await rd('word/document.xml');
+  const tpl = DOCX.parse(docXml);
+  const rels = await rd('word/_rels/document.xml.rels');
+  const imgs = {}, urls = [];
+  for (const m of rels.matchAll(/<Relationship [^>]*Id="([^"]+)"[^>]*Target="(media\/[^"]+)"/g)) {
+    const f = zip.file('word/' + m[2]); if (!f) continue;
+    const ext = m[2].split('.').pop().toLowerCase();
+    const u = URL.createObjectURL(new Blob([await f.async('arraybuffer')], { type: ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : /jpe?g/.test(ext) ? 'image/jpeg' : 'image/' + ext }));
+    imgs[m[1]] = u; urls.push(u);
+  }
+  const K = { t, zip, tpl, st: DOCX.parseStyles(await rd('word/styles.xml')), nb: DOCX.parseNumbering(await rd('word/numbering.xml')), imgs, urls, used: DOCX.fieldsIn(tpl), dirty: false };
+  const body = HE.saved.body && HE.saved.body[kind];
+  K.fromSaved = !!(body && HE.saved.tplAt && HE.saved.tplAt[kind] === t.at);
+  if (body && !K.fromSaved) toast(`Mẫu ${HS_KINDS[kind]} đã đổi sau lần lưu trước — phần sửa tay cũ trên ${HS_KINDS[kind]} không dùng được, soạn lại từ mẫu mới`, 'err', 7000);
+  HE.kinds[kind] = K;
+  hsBuild(kind, K.fromSaved ? DOCX.parse(body) : null);
+}
+function hsBuild(kind, model) {
+  const K = HE.kinds[kind];
+  const d = model || DOCX.expand(DOCX.clone(K.tpl), HE.lists);
+  const R = makeRenderer({ st: K.st, nb: K.nb, img: (id) => K.imgs[id], val: hsVal, label: hsLabel });
+  K.html = R.blocks(d.blocks); K.store = R.store; K.base = d; K.sig = listSig(); K.dirty = !!model;
+  if (K.el) { K.el.innerHTML = K.html; }
+}
+function hsTabs() {
+  $('#hsTabs', HE.m).innerHTML = Object.entries(HS_KINDS).map(([k, l]) => { const K = HE.kinds[k] || {}; return `<button class="tab ${HE.cur === k ? 'act' : ''}" data-hk="${k}">${l}${K.none ? ' <span class="n r">chưa có mẫu</span>' : K.t ? `<span class="n">${K.t.own ? 'mẫu riêng KH' : 'mẫu chung'}</span>` : ''}</button>`; }).join('');
+  $$('[data-hk]', HE.m).forEach((b) => { b.onclick = () => { const sc = $('#hsScroll', HE.m); (HE.kinds[HE.cur] || {}).top = sc.scrollTop; HE.cur = b.dataset.hk; lsSet('bangke_hs_tab', HE.cur); hsTabs(); hsShow(); }; });
+}
+function hsShow() {
+  const sc = $('#hsScroll', HE.m), K = HE.kinds[HE.cur] || {};
+  sc.querySelectorAll('.dpage').forEach((p) => { p.style.display = 'none'; });
+  $('.hs-empty', sc) && $('.hs-empty', sc).remove();
+  if (!K.t) {
+    sc.insertAdjacentHTML('beforeend', `<div class="hs-empty card"><h3>Chưa có mẫu ${HS_KINDS[HE.cur]} cho ${esc(HE.c.name)}</h3><p>Chọn file Word ${HS_KINDS[HE.cur]} của khách hàng này — <b>bản lần trước đã điền cũng được</b>: tool tự nhận các ô cần điền (số KUNN, ngày, số tiền, bảng thụ hưởng, chứng từ…), phần còn lại (TSBĐ, điều kiện riêng…) giữ nguyên làm mẫu riêng cho KH.</p>${K.err ? `<p class="err">${esc(K.err)}</p>` : ''}<div class="bar"><button class="btn pri" data-tplload="${HE.cur}">⬆ Nạp file Word ${HS_KINDS[HE.cur]} mẫu của KH</button></div></div>`);
+    return;
+  }
+  if (!K.el) { K.el = document.createElement('div'); K.el.className = 'dpage'; K.el.dataset.kind = HE.cur; K.el.setAttribute('style', pageStyle(K.base.sect, K.st)); K.el.innerHTML = K.html; sc.appendChild(K.el); }
+  K.el.style.display = '';
+  if (K.top != null) { sc.scrollTop = K.top; K.top = null; }
+}
+function hsSide() {
+  const side = $('#hsSide', HE.m);
+  const used = new Set(Object.values(HE.kinds).flatMap((K) => K.used || []).map((k) => k.replace(/^(\w+)\.(\w+)$/, '$1')));
+  const ck = DOCX.checks(HE.v, HE.lists, [...used].filter((k) => DOCX.HS[k] || !/^(ct|tth)$/.test(k)), { hol: holidays() });
+  const f = (x) => {
+    const val = HE.v[x.k] != null ? HE.v[x.k] : '', auto = x.calc && !HE.ov.has(x.k);
+    const big = /chu$|dia_chi|gcn|muc_dich/.test(x.k);
+    return `<label class="hf${used.has(x.k) ? ' used' : ''}${auto ? ' auto' : ''}" data-hf="${x.k}"><span>${esc(x.l)}${x.calc ? (auto ? ' <em>tự tính</em>' : ' <em class="ov">sửa tay <button class="lnk" data-reset="${x.k}">↺ tự tính</button></em>') : ''}</span>${big ? `<textarea class="inp" rows="2" data-v="${x.k}">${esc(val)}</textarea>` : `<input class="inp" data-v="${x.k}" value="${esc(val)}">`}</label>`;
+  };
+  const grp = Object.entries(DOCX.HS_GROUPS).map(([g, l]) => `<details class="hg" ${g !== 'vay' ? 'open' : ''}><summary>${l}</summary>${DOCX.HS_FIELDS.filter((x) => x.g === g).map(f).join('')}</details>`).join('');
+  const extra = [...used].filter((k) => !DOCX.HS[k] && !/^(ct|tth)$/.test(k));
+  const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="tw"><table class="t hl"><thead><tr><th>#</th>${DOCX.LIST_COLS[L].map(([, l]) => `<th>${l}</th>`).join('')}<th></th></tr></thead><tbody>${HE.lists[L].map((it, i) => `<tr><td>${i + 1}</td>${DOCX.LIST_COLS[L].map(([c]) => `<td><input class="cell-in" data-l="${L}|${i}|${c}" value="${esc(it[c] != null ? it[c] : '')}"${L === 'tth' && c === 'tien' ? ' readonly' : ''}></td>`).join('')}<td><button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button></td></tr>`).join('')}</tbody></table></div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
+  const kt = keyTable();
+  side.innerHTML = `<div class="hs-box"><b>Mẫu Word của KH</b>${Object.entries(HS_KINDS).map(([k, l]) => { const K = HE.kinds[k] || {}; return `<div class="hs-tpl"><span>${l}: ${K.t ? `${K.t.own ? 'mẫu riêng KH' : 'mẫu chung'} · ${(K.used || []).length} trường` : '<span class="err">chưa có</span>'}</span><button class="lnk" data-tplload="${k}">⬆ Nạp file Word</button>${K.t ? `<button class="lnk" data-tpldl="${k}" title="Tải mẫu có {{trường}} về để chỉnh trong Word">⬇ Tải mẫu</button>` : ''}</div>`; }).join('')}
+      <div class="hist">File Word lần trước của KH là đủ — tool tự nhận ô cần điền, giữ nguyên phần riêng của KH.</div></div>
+    <div class="hs-box ${ck.some((x) => x.sev >= 3) ? 'bad' : ck.length ? 'warn' : 'ok'}"><b>Kiểm tra hồ sơ</b> <span class="hist">${ck.filter((x) => x.sev >= 3).length} lỗi · ${ck.filter((x) => x.sev === 2).length} cần xem</span>
+      <ul class="hs-ck">${ck.map((x) => `<li class="${x.sev >= 3 ? 'e' : 'w'}" data-go="${esc(x.key)}">${x.sev >= 3 ? '✗' : '⚠'} ${esc(x.msg)}</li>`).join('') || '<li class="o">✓ Không thấy lỗi logic</li>'}</ul>
+      ${HE.ai ? `<div class="aibox warn"><b>AI rà soát</b><ul>${HE.ai.map((x) => `<li class="${x.muc_do === 'loi' ? 'e' : ''}">${esc(x.van_de)}${x.de_xuat ? ` → <i>${esc(x.de_xuat)}</i>` : ''}</li>`).join('') || '<li>Không thấy vấn đề</li>'}</ul></div>` : ''}
+      <button class="btn sm" id="hsAI">🤖 AI rà soát KUNN & PDGN</button></div>
+    <div class="hs-box"><b>TestKey</b> <span class="hist">${kt ? '✓ đã nạp bảng key trên máy này — tool tự tính theo mã TTKD, ngày GN, số tiền' : 'chưa nạp bảng key → gõ tay ô Testkey'}</span> <button class="lnk" id="hsKey">${kt ? 'Đổi' : 'Nạp'} bảng key (.json)</button>${kt ? ' <button class="lnk" id="hsKeyDel">Gỡ</button>' : ''}</div>
+    ${grp}${extra.length ? `<details class="hg" open><summary>Trường khác trong mẫu</summary>${extra.map((k) => f({ k, l: k, s: 'k' })).join('')}</details>` : ''}
+    ${lst('ct', 'Chứng từ giải ngân (bảng kê)')}${lst('tth', 'Bên thụ hưởng')}
+    <details class="hg"><summary>Ngày nghỉ lễ Tết (đáo hạn)</summary><textarea class="inp" id="hsHol" rows="8">${esc(lsGet(HOL_LS) || DOCX.HOL_DEF)}</textarea><div class="hist">Mỗi dòng: dd/mm/yyyy [→ dd/mm/yyyy] tên. Tết âm lịch, Giỗ Tổ là dự kiến.</div></details>`;
+}
+function hsRefresh(skip) {
+  hsRecalc();
+  for (const [kind, K] of Object.entries(HE.kinds)) {
+    if (!K.t) continue;
+    if (K.sig !== listSig()) {
+      if (!K.dirty) { hsBuild(kind); }
+      else if (K.el) {                     // đã sửa tay → chỉ dựng lại các bảng danh sách
+        const fresh = DOCX.listTables(DOCX.expand(DOCX.clone(K.tpl), HE.lists));
+        const R = makeRenderer({ st: K.st, nb: K.nb, img: (id) => K.imgs[id], val: hsVal, label: hsLabel });
+        const olds = $$('table.lt', K.el).map((t) => t.closest('.dtw'));
+        olds.forEach((w, i) => { if (!fresh[i]) return; const off = K.store.length; const html = R.table(fresh[i]); K.store.push(...R.store.splice(0)); w.outerHTML = html.replace(/data-i="(\d+)"/g, (m0, n) => `data-i="${+n + off}"`); });
+        K.sig = listSig();
+      }
+    }
+    if (K.el) $$('.df', K.el).forEach((s) => { if (s === skip) return; const v = hsVal(s.dataset.f); if (s.textContent !== v) s.textContent = v; s.classList.toggle('empty', !v); });
+  }
+  const side = $('#hsSide', HE.m), st = side.scrollTop, fo = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.v || document.activeElement.dataset.l : null;
+  const caret = document.activeElement && document.activeElement.selectionStart;
+  const open = $$('details.hg', side).map((d) => d.open);
+  hsSide();
+  $$('details.hg', side).forEach((d, i) => { if (open[i] != null) d.open = open[i]; });
+  side.scrollTop = st;
+  if (fo) { const el = $(`[data-v="${fo}"],[data-l="${fo}"]`, side); if (el) { el.focus(); try { el.setSelectionRange(caret, caret); } catch (e) { /* */ } } }
+  hsTabs(); hsShow();
+}
+function hsSet(key, val, fromDoc) {
+  const m = /^(\w+)\.(\d+)\.(\w+)$/.exec(key);
+  if (m) { const it = HE.lists[m[1]][+m[2]]; if (it) it[m[3]] = val; HE.listsEdited = true; }
+  else { HE.v[key] = val; if (DOCX.HS[key] && DOCX.HS[key].calc) HE.ov.add(key); }
+  HE.dirty = true;
+  hsRefresh(fromDoc);
+}
+function hsBindDoc(sc) {
+  const m = HE.m;
+  // ── bên trái: ô nhập, danh sách, nút
+  m.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.dataset.v) return hsSet(t.dataset.v, t.value.trim());
+    if (t.dataset.l) { const [L, i, c] = t.dataset.l.split('|'); HE.lists[L][+i][c] = t.value.trim(); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
+    if (t.id === 'hsHol') { lsSet(HOL_LS, t.value); return hsRefresh(); }
+  });
+  m.addEventListener('click', async (e) => {
+    const t = e.target.closest('button,li,.df,.dc') || e.target;
+    if (t.dataset.reset) { e.preventDefault(); HE.ov.delete(t.dataset.reset); HE.dirty = true; return hsRefresh(); }
+    if (t.dataset.ladd) { const L = t.dataset.ladd; HE.lists[L].push(L === 'ct' ? { ben: '', hd: '', so: '', ngay: '', tien_hd: '', gn: '' } : { ten: '', tk: '', nh: '' }); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
+    if (t.dataset.ldel) { const [L, i] = t.dataset.ldel.split('|'); HE.lists[L].splice(+i, 1); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
+    if (t.id === 'hsReCt') { if (!confirm('Lấy lại bảng chứng từ từ các dòng bảng kê của KUNN (bỏ phần đã sửa ở bảng này)?')) return; HE.lists.ct = DOCX.linesToCt(HE.k.lines); HE.listsEdited = false; HE.dirty = true; return hsRefresh(); }
+    if (t.dataset.tplload) return hsPickTemplate(t.dataset.tplload);
+    if (t.dataset.tpldl) { const K = HE.kinds[t.dataset.tpldl]; return saveBlob(new Blob([K.t.buf]), `MAU_${HS_KINDS[t.dataset.tpldl]}_${slug(HE.c.name)}.docx`); }
+    if (t.id === 'hsAI') return hsAI(t);
+    if (t.id === 'hsKey') return hsPickKey();
+    if (t.id === 'hsKeyDel') { if (confirm('Gỡ bảng key TestKey khỏi máy này?')) { lsSet(TK_LS, ''); hsRefresh(); } return; }
+    if (t.dataset.go != null && t.tagName === 'LI') { const el = $(`[data-hf="${t.dataset.go}"]`, m) || (t.dataset.go === 'ct' || t.dataset.go === 'tth' ? $(`[data-ladd="${t.dataset.go}"]`, m) : null); if (el) { const d = el.closest('details'); if (d) d.open = true; el.scrollIntoView({ block: 'center' }); const i = $('input,textarea', el); if (i) i.focus(); } return; }
+    if (t.classList && t.classList.contains('df')) return hsFieldPop(t);
+    if (t.classList && t.classList.contains('dc')) { t.dataset.on = t.dataset.on === '1' ? '0' : '1'; t.textContent = t.dataset.on === '1' ? '☒' : '☐'; hsMarkEd(t.closest('.dp')); return; }
+  });
+  // ── văn bản: sửa tự do
+  sc.addEventListener('input', (e) => { const p = e.target.closest('.dp'); if (p) hsMarkEd(p); });
+  sc.addEventListener('paste', (e) => { if (!e.target.closest('.dp')) return; e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/\r/g, '')); });
+  sc.addEventListener('keydown', (e) => {
+    const p = e.target.closest('.dp'); if (!p) return;
+    const sel = getSelection(); if (!sel.rangeCount) return;
+    const r = sel.getRangeAt(0);
+    const atStart = () => { const x = document.createRange(); x.selectNodeContents(p); x.setEnd(r.startContainer, r.startOffset); return !x.toString().length && r.collapsed; };
+    const atEnd = () => { const x = document.createRange(); x.selectNodeContents(p); x.setStart(r.endContainer, r.endOffset); return !x.toString().length && r.collapsed; };
+    if (e.key === 'Tab') { e.preventDefault(); document.execCommand('insertText', false, '\t'); return; }
+    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); document.execCommand('insertText', false, '\n'); return; }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const x = document.createRange(); x.setStart(r.endContainer, r.endOffset); x.setEnd(p, p.childNodes.length);
+      const frag = x.extractContents();
+      const np = p.cloneNode(false); np.appendChild(frag); np.querySelectorAll('.dn').forEach((n) => n.remove());
+      p.after(np); hsMarkEd(p); hsMarkEd(np);
+      const c = document.createRange(); c.setStart(np, 0); c.collapse(true); np.focus(); sel.removeAllRanges(); sel.addRange(c);
+      return;
+    }
+    if (e.key === 'Backspace' && atStart()) {
+      const prev = p.previousElementSibling;
+      if (!prev || !prev.classList.contains('dp')) return;
+      e.preventDefault();
+      const c = document.createRange(); c.selectNodeContents(prev); c.collapse(false);
+      [...p.childNodes].filter((n) => !(n.classList && n.classList.contains('dn'))).forEach((n) => prev.appendChild(n));
+      p.remove(); hsMarkEd(prev); prev.focus(); sel.removeAllRanges(); sel.addRange(c);
+      return;
+    }
+    if (e.key === 'ArrowDown' && atEnd()) { const all = $$('.dp', sc).filter((x) => x.offsetParent); const n = all[all.indexOf(p) + 1]; if (n) { e.preventDefault(); n.focus(); const c = document.createRange(); c.setStart(n, 0); c.collapse(true); sel.removeAllRanges(); sel.addRange(c); } }
+    if (e.key === 'ArrowUp' && atStart()) { const all = $$('.dp', sc).filter((x) => x.offsetParent); const n = all[all.indexOf(p) - 1]; if (n) { e.preventDefault(); n.focus(); const c = document.createRange(); c.selectNodeContents(n); c.collapse(false); sel.removeAllRanges(); sel.addRange(c); } }
+  });
+  // ── thanh thêm / xóa dòng bảng
+  const bar = document.createElement('div'); bar.className = 'rowbar';
+  bar.innerHTML = '<button data-rb="up" title="Thêm dòng phía trên">＋↑</button><button data-rb="down" title="Thêm dòng phía dưới">＋↓</button><button data-rb="del" title="Xóa dòng này">✕</button>';
+  sc.appendChild(bar);
+  let curRow = null;
+  sc.addEventListener('mouseover', (e) => {
+    const tr = e.target.closest('.dpage tr'); if (!tr || tr === curRow) return;
+    curRow = tr; const a = tr.getBoundingClientRect(), b = sc.getBoundingClientRect();
+    bar.style.display = 'flex'; bar.style.top = (a.top - b.top + sc.scrollTop) + 'px'; bar.style.left = Math.max(0, tr.closest('table').getBoundingClientRect().left - b.left - 74) + 'px';
+  });
+  bar.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rb]'); if (!b || !curRow) return;
+    const tr = curRow, act = b.dataset.rb;
+    if (act === 'del') { if (tr.parentNode.rows.length <= 1) return toast('Bảng phải còn ít nhất 1 dòng'); tr.remove(); bar.style.display = 'none'; curRow = null; }
+    else {
+      const n = tr.cloneNode(true);
+      n.querySelectorAll('.df').forEach((x) => x.remove());
+      n.querySelectorAll('.dr').forEach((x) => { x.textContent = ''; });
+      n.querySelectorAll('td').forEach((td) => { td.dataset.vm = 'none'; td.classList.remove('vm'); td.style.borderTopStyle = ''; });
+      n.querySelectorAll('.dp').forEach((p) => p.classList.add('ed'));
+      act === 'up' ? tr.before(n) : tr.after(n);
+    }
+    const K = HE.kinds[HE.cur]; K.dirty = true; HE.dirty = true;
+  });
+}
+function hsMarkEd(p) { if (!p) return; p.classList.add('ed'); const K = HE.kinds[p.closest('.dpage').dataset.kind]; if (K) K.dirty = true; HE.dirty = true; }
+function hsFieldPop(span) {
+  $$('.fpop').forEach((x) => x.remove());
+  const key = span.dataset.f, v = hsVal(key), calc = DOCX.HS[key] && DOCX.HS[key].calc;
+  const pop = document.createElement('div'); pop.className = 'fpop';
+  pop.innerHTML = `<b>${esc(hsLabel(key))}</b>${calc ? `<span class="hist">${HE.ov.has(key) ? 'đang sửa tay' : 'tool tự tính — sửa ở đây là gõ đè'}</span>` : ''}
+    ${v.length > 60 || /chu$/.test(key) ? `<textarea class="inp" rows="3">${esc(v)}</textarea>` : `<input class="inp" value="${esc(v)}">`}
+    <div class="bar"><button class="btn sm pri" data-ok>Áp dụng mọi chỗ</button>${calc && HE.ov.has(key) ? '<button class="btn sm" data-auto>↺ Tự tính</button>' : ''}<button class="btn sm" data-x>Hủy</button></div>`;
+  HE.m.appendChild(pop);
+  const a = span.getBoundingClientRect();
+  pop.style.top = Math.min(innerHeight - 170, a.bottom + 6) + 'px'; pop.style.left = Math.min(innerWidth - 340, Math.max(8, a.left)) + 'px';
+  const inp = $('input,textarea', pop); inp.focus(); inp.select();
+  const ok = () => { pop.remove(); if (inp.value !== v) hsSet(key, inp.value.trim()); };
+  $('[data-ok]', pop).onclick = ok; $('[data-x]', pop).onclick = () => pop.remove();
+  if ($('[data-auto]', pop)) $('[data-auto]', pop).onclick = () => { pop.remove(); HE.ov.delete(key); HE.dirty = true; hsRefresh(); };
+  inp.onkeydown = (e) => { if (e.key === 'Enter' && (inp.tagName === 'INPUT' || e.ctrlKey)) { e.preventDefault(); ok(); } if (e.key === 'Escape') pop.remove(); };
+}
+function hsPickTemplate(kind) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  inp.onchange = async () => {
+    const file = inp.files[0]; if (!file) return;
+    try {
+      const r = await makeTemplate(await file.arrayBuffer(), kind);
+      if (r.kind && r.kind !== kind && !confirm(`File này giống mẫu ${HS_KINDS[r.kind]} hơn là ${HS_KINDS[kind]}. Vẫn dùng làm mẫu ${HS_KINDS[kind]}?`)) return;
+      const own = confirm(`Dùng làm mẫu ${HS_KINDS[kind]} RIÊNG cho ${HE.c.name}?\n\nOK = mẫu riêng KH này · Cancel = mẫu chung cho mọi KH chưa có mẫu riêng`);
+      await TPL.put(kind, own ? HE.cid : '', { buf: r.buf, at: Date.now(), by: userName(), name: file.name });
+      // thông tin KH đọc được từ bản đã điền → điền vào các ô đang trống
+      let n = 0;
+      for (const [k, val] of Object.entries(r.values || {})) {
+        const f = DOCX.HS[k];
+        if (!f || k.startsWith('_') || (f.calc && !/^(ten_kh_ngan)$/.test(k))) continue;
+        if (f.s === 'c' && (HE.v[k] == null || HE.v[k] === '') && val) { HE.v[k] = val; n++; }
+      }
+      if (r.values && r.values._tth) for (const t of r.values._tth) { const k = BK.supKey(t.ben); if (k && (t.tk || t.nh)) { HE.c.hs = HE.c.hs || {}; HE.c.hs.tk = { ...(HE.c.hs.tk || {}), [k]: { tk: t.tk || '', nh: t.nh || '' } }; } }
+      if (r.values && r.values.sd_vay && !HE.v.sd_vay) { /* số dư theo từng lần GN — không lấy từ bản cũ */ }
+      HE.dirty = true;
+      const K0 = HE.kinds[kind]; if (K0 && K0.el) K0.el.remove();
+      await hsLoadKind(kind);
+      HE.kinds[kind].dirty = false;
+      hsRefresh();
+      toast(`Đã lưu mẫu ${HS_KINDS[kind]} ${own ? 'riêng cho KH' : 'chung'}: ${r.learned ? `tự nhận ${r.found.length} trường` : `${r.found.length} trường {{…}}`}${n ? ` · lấy được ${n} thông tin KH (bấm Lưu để nhớ)` : ''}`, 'ok', 7000);
+    } catch (e) { toast(errMsg(e), 'err', 8000); }
+  };
+  inp.click();
+}
+function hsPickKey() {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = async () => {
+    try { const b = JSON.parse(await inp.files[0].text()); const er = DOCX.keyTableError(b); if (er) throw new Error('Bảng key không đúng cấu trúc: ' + er); lsSet(TK_LS, JSON.stringify(b)); HE.ov.delete('testkey'); hsRefresh(); toast('Đã nạp bảng key TestKey trên máy này (không gửi đi đâu)', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
+  };
+  inp.click();
+}
+function hsModel(kind) {
+  const K = HE.kinds[kind];
+  if (!K || !K.t) return null;
+  if (!K.el) return K.base;
+  return { ...K.base, blocks: domBlocks(K.el, K.store) };
+}
+async function hsSave() {
+  const c0 = cust(HE.cid) || HE.c;
+  const hs = { ...(c0.hs || {}) };
+  for (const f of DOCX.HS_FIELDS) if (f.s === 'c' && !f.calc && HE.v[f.k] != null) hs[f.k] = HE.v[f.k];
+  hs.tk = { ...(c0.hs && c0.hs.tk), ...((HE.c.hs || {}).tk || {}) };
+  for (const t of HE.lists.tth) { const k = BK.supKey(t.ten); if (k && (t.tk || t.nh)) hs.tk[k] = { tk: t.tk, nh: t.nh }; }
+  const body = {}, tplAt = {};
+  for (const kind of Object.keys(HS_KINDS)) {
+    const K = HE.kinds[kind]; if (!K || !K.t) continue;
+    tplAt[kind] = K.t.at;
+    if (K.dirty) body[kind] = DOCX.serialize(hsModel(kind), { keepMarks: true });
+  }
+  const strip = (L) => L.map(({ _g, ...x }) => x);
+  const doc = { v: { ...HE.v }, ov: [...HE.ov], lists: HE.listsEdited ? { ct: strip(HE.lists.ct), tth: strip(HE.lists.tth) } : null, body, tplAt, at: Date.now(), by: userName() };
+  if (!doc.lists) delete doc.lists;
+  await S.store.group(`Lưu hồ sơ KUNN/PDGN ${HE.v.so_kunn || ''}`, async () => {
+    await S.store.putCustomer({ ...c0, hs, ...meta() });
+    if (HE.kid) await S.store.updateKunn(HE.kid, { doc, ...meta() });
+  });
+  if (!HE.kid) await S.store.setMeta('draft:' + HE.cid, doc);
+  HE.c = cust(HE.cid) || HE.c; HE.saved = doc; HE.dirty = false;
+  log(HE.cid, 'soan_hs', `Lưu hồ sơ KUNN/PDGN ${HE.v.so_kunn || '(chưa số)'}`);
+  toast('Đã lưu hồ sơ (thông tin KH được nhớ cho lần sau)', 'ok');
+}
+function saveBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name.replace(/[\\/:*?"<>|]+/g, '_');
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+async function hsExport(kinds) {
+  const ck = DOCX.checks(HE.v, HE.lists, [], { hol: holidays() }).filter((x) => x.sev >= 3);
+  if (ck.length && !confirm(`Hồ sơ còn ${ck.length} lỗi:\n- ${ck.slice(0, 6).map((x) => x.msg).join('\n- ')}\n\nVẫn xuất Word?`)) return;
+  const red = $('#hsRed', HE.m).checked;
+  let n = 0;
+  for (const kind of kinds) {
+    const K = HE.kinds[kind];
+    if (!K || !K.t) { toast(`Chưa có mẫu ${HS_KINDS[kind]} — bỏ qua`, 'err'); continue; }
+    const xml = DOCX.serialize(hsModel(kind), { fill: (k) => hsVal(k), red });
+    K.zip.file('word/document.xml', xml);
+    const blob = await K.zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    saveBlob(blob, `${HS_KINDS[kind]}_${(HE.v.so_kunn || 'moi').replace(/[()]/g, '_')}_${slug(HE.c.name)}.docx`);
+    n++;
+  }
+  if (n) log(HE.cid, 'xuat_hs', `Xuất Word ${kinds.map((k) => HS_KINDS[k]).join(' + ')} ${HE.v.so_kunn || ''}`);
+}
+async function hsAI(btn) {
+  if (!aiKeys().length) return openSettings('ai');
+  const txt = (kind) => { const K = HE.kinds[kind]; return K && K.el ? K.el.innerText.replace(/\n{3,}/g, '\n\n').slice(0, 14000) : '(chưa có)'; };
+  const prompt = `Bạn là chuyên viên kiểm soát hồ sơ giải ngân ngân hàng Việt Nam. Soát 2 văn bản đã điền: Đơn đề nghị giải ngân kiêm khế ước nhận nợ (KUNN) và Phê duyệt kiêm đề nghị giải ngân (PDGN) dưới đây, cùng số liệu nguồn.
+Tìm MỌI chỗ sai / không khớp: số tiền bằng số ≠ bằng chữ; tổng bảng chứng từ ≠ số tiền giải ngân; số KUNN, số HĐTD, ngày, tên khách hàng, mục đích, lãi suất, thời hạn, đáo hạn giữa KUNN và PDGN không khớp nhau; chứng từ sau ngày giải ngân hoặc quá 90 ngày; bên thụ hưởng ở KUNN không khớp bảng chứng từ PDGN; số dư khả dụng không đủ; ngày đáo hạn sai so với thời hạn; còn ô để trống/[…]; lỗi chính tả, câu chữ sót từ hồ sơ lần trước (tên KH khác, ngày cũ…).
+Chỉ nêu vấn đề có căn cứ trong văn bản. Trả JSON: {"issues":[{"muc_do":"loi"|"luu_y","van_de":"…","de_xuat":"…"}]}
+SỐ LIỆU NGUỒN: ${JSON.stringify({ ...HE.v, chung_tu: HE.lists.ct.map(({ _g, ...x }) => x), thu_huong: HE.lists.tth })}
+=== KUNN ===
+${txt('kunn')}
+=== PDGN ===
+${txt('pdgn')}`;
+  btn.disabled = true; btn.textContent = '🤖 AI đang đọc…';
+  try { const r = await aiJson(prompt, { thinking: 'medium', maxTokens: 8192 }); HE.ai = (r && r.issues) || []; hsRefresh(); toast(`AI: ${HE.ai.length} điểm cần xem`, HE.ai.length ? '' : 'ok'); }
+  catch (e) { toast('AI lỗi: ' + errMsg(e), 'err'); btn.disabled = false; btn.textContent = '🤖 AI rà soát KUNN & PDGN'; }
+}
+function openHoSoPick(cid) {
+  const ks = S.store.kunnsOf(cid).sort(sortKunnDesc);
+  const m = modal(`<div class="mh"><h2>Soạn KUNN & PDGN</h2><button class="x" data-close>&times;</button></div><div class="mb">
+    <p class="hist" style="margin-bottom:8px">Chọn KUNN (bảng kê đã nạp) để soạn — bảng chứng từ, bên thụ hưởng, số tiền lấy từ bảng kê. Chưa nạp bảng kê thì chọn “Hồ sơ mới” và nhập tay.</p>
+    <div class="card tw" style="max-height:55vh"><table class="t click"><thead><tr><th>Số KUNN</th><th>Ngày GN</th><th class="right">Số tiền</th><th>Dòng</th><th>Đã soạn</th></tr></thead><tbody>
+    <tr data-pick=""><td colspan="5"><b>＋ Hồ sơ mới (chưa có bảng kê trong tool)</b></td></tr>
+    ${ks.slice(0, 200).map((k) => `<tr data-pick="${k.id}"><td><b>${esc(k.so_kunn)}</b></td><td>${dd(k.ngay_gn)}</td><td class="num">${money(BK.sum(k.lines.map((l) => l.tien_gn)))}</td><td>${k.lines.length}</td><td>${k.doc ? `✓ ${new Date(k.doc.at).toLocaleDateString('vi-VN')}` : ''}</td></tr>`).join('')}</tbody></table></div></div>`);
+  m.addEventListener('click', (e) => { const r = e.target.closest('[data-pick]'); if (r) { m.remove(); openHoSo(cid, r.dataset.pick || null).catch((er) => toast(errMsg(er), 'err')); } });
+}
+
 function openLookup(q0) {
   const m = modal(`<div class="mh"><h2>🔎 Tra hóa đơn đã giải ngân chưa</h2><button class="x" data-close>&times;</button></div><div class="mb">
     <div class="bar"><input class="inp" id="lkQ" value="${esc(q0)}" placeholder="Số hóa đơn, có thể kèm tên NCC (vd: 676 Hòa Bình)" style="flex:1;min-width:280px"><select class="inp" id="lkC" style="width:auto"><option value="">Mọi khách hàng</option>${S.customers.map((c) => `<option value="${c.id}" ${c.id === S.cid ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
@@ -3276,6 +4587,8 @@ document.addEventListener('keydown', (e) => { if (e.altKey && e.key === 'F9') { 
 
 window.BKAPP = { exportDashboard, state: S, buildCustomerWorkbook };
 startStore().catch((e) => { console.error(e); toast('Lỗi khởi động: ' + e.message, 'err', 10000); });
+// cổng cho bài kiểm tra tự động (không dùng trong giao diện)
+window.BKAPP = { S, cust, selectCustomer, makeTemplate, TPL, openHoSo };
 })();
 </script>
 </body>

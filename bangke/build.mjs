@@ -7,6 +7,11 @@ const lib = readFileSync(here('vendor/xlsx-js-style.bundle.js'), 'utf8').replace
 const tags = /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/xlsx-js-style@1\.2\.0\/dist\/xlsx\.bundle\.js"><\/script>\n<script>window\.XLSX \|\| document\.write\([^\n]*\);<\/script>/;
 if (!tags.test(html)) throw new Error('Không thấy thẻ nạp thư viện Excel trong index.html');
 html = html.replace(tags, () => `<script>/* xlsx-js-style 1.2.0 — Apache-2.0 */\n${lib}\n</script>`);
+// thư viện đọc/ghi Word (.docx) cho phần soạn KUNN & PDGN
+const zipLib = readFileSync(here('vendor/jszip.min.js'), 'utf8').replace(/<\/script/gi, '<\\/script');
+const zipTags = /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/jszip@3\.10\.1\/dist\/jszip\.min\.js"><\/script>\n<script>window\.JSZip \|\| document\.write\([^\n]*\);<\/script>/;
+if (!zipTags.test(html)) throw new Error('Không thấy thẻ nạp JSZip trong index.html');
+html = html.replace(zipTags, () => `<script>/* JSZip 3.10.1 — MIT */\n${zipLib}\n</script>`);
 mkdirSync(here('dist/'), { recursive: true });
 writeFileSync(here('dist/BangKe_GiaiNgan.html'), html);
 console.log('dist/BangKe_GiaiNgan.html', (html.length / 1024).toFixed(0) + ' KB');
