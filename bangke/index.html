@@ -392,6 +392,11 @@ a,.lnk{color:var(--blue)}
 :root[data-theme="dark"] .t th{background:rgba(0,0,0,.25)}:root[data-theme="dark"] .ctabs a:hover,:root[data-theme="dark"] .tab:hover{background:rgba(255,255,255,.06)}
 :root[data-theme="dark"] .hs-side{background:rgba(0,0,0,.2)}:root[data-theme="dark"] .dpage{filter:none}
 :root[data-theme="dark"] .chips span{background:rgba(255,255,255,.06)}
+.cbody .trow,.panel .trow{grid-template-columns:22px minmax(0,1fr) 130px}
+.hbar h2{font-size:17px;color:var(--navy);flex:1}.sub3{font-size:14px;color:var(--navy);margin:14px 0 6px}
+.hlist{display:flex;flex-direction:column;gap:6px}.hrow2{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 12px;border-radius:12px;text-decoration:none;color:var(--ink);border:1px solid var(--glass-brd);background:rgba(255,255,255,.35)}
+.hrow2:hover{background:rgba(255,255,255,.7)}.t tr.warn td{background:var(--warn-bg)}.t tr.bad td{background:var(--err-bg)}
+.tile.warn .tv{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -400,9 +405,6 @@ a,.lnk{color:var(--blue)}
   <span class="sync" id="syncPill" title="Thư mục chung của team (đồng bộ nhiều máy)"><i></i><span>Chỉ trên máy này</span></span>
   <div class="sp"></div>
   <form id="qInv" class="hsearch" autocomplete="off"><input id="qInvT" placeholder="🔎 Tra hóa đơn: số HĐ, NCC…" title="Hóa đơn này đã giải ngân chưa? Gõ số hóa đơn (có thể kèm tên NCC) rồi Enter"></form>
-  <button class="hbtn" id="bCheck" title="Kiểm tra một bảng kê mới: hóa đơn nào đã giải ngân, vượt tiền…">🔍 Kiểm tra bảng kê</button>
-  <button class="hbtn" id="bImport" title="Nạp bảng kê (kể cả bảng kê tổng hợp nhiều KUNN đang theo dõi bằng Excel) vào sổ hóa đơn">⬆ Nạp bảng kê</button>
-  <button class="hbtn" id="bExport" title="Xuất Excel sổ hóa đơn">⬇ Xuất Excel</button>
   <button class="hbtn" id="bUndo" title="Hoàn tác (Ctrl+Z)" disabled>↶</button><button class="hbtn" id="bRedo" title="Làm lại (Ctrl+Y)" disabled>↷</button>
   <button class="theme-btn" id="bTheme" title="Sáng / tối" aria-label="Đổi giao diện sáng / tối">☀</button>
   <button class="hbtn" id="bSettings" title="API key Gemini, mã nhóm đồng bộ (Alt+F9)">⚙ Cài đặt</button>
@@ -3110,7 +3112,7 @@ function renderLedgerTab(el, c) {
   const cid = S.cid;
   const tabs = [['kunn', 'Khế ước & hóa đơn', S.kunns.length], ['inv', 'Theo dõi hóa đơn', an.invoices.length], ['goc', 'Hồ sơ gốc', sum.n_pending, sum.n_qua_han ? 'r' : ''], ['alert', 'Cảnh báo', an.alerts.length, nErr ? 'r' : ''], ['log', 'Nhật ký', '']];
   el.innerHTML = `<div class="ph"><div><div class="sub">Bảng kê đã nạp của công ty: soát giải ngân trùng, theo dõi hóa đơn, hồ sơ gốc${sum.last_gn ? ' · GN gần nhất ' + dd(sum.last_gn) : ''}</div></div>
-    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'oldchk', cid: S.cid })} title="Soát lại các trường đã lưu: đơn vị tiền, loại tiền, đảo cột, thiếu thông tin…">🧪 Kiểm tra dữ liệu đã nạp</button><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bHs" title="Soạn KUNN & PDGN từ mẫu Word riêng của KH">📝 Soạn KUNN & PDGN</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
+    <span style="flex:1"></span><button class="btn sm" ${A({ act: 'oldchk', cid: S.cid })} title="Soát lại các trường đã lưu: đơn vị tiền, loại tiền, đảo cột, thiếu thông tin…">🧪 Kiểm tra dữ liệu đã nạp</button><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bHs" title="Soạn KUNN & PDGN từ mẫu Word riêng của KH">📝 Soạn KUNN & PDGN</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bExport" title="Xuất Excel sổ hóa đơn của công ty">⬇ Xuất Excel</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
   <div class="tiles">
     ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫', act: A({ act: 'kl', cid }) })}
     ${(() => { const sr = series(S.kunns, 'gn', 'auto'); return tile('Giải ngân 12 tháng gần nhất', shortMoney(sr.total), periodLabel(sr.range), { spark: sparkline(sr.pts.map((x) => x.value)), act: A({ act: 'kl', cid, month: sr.range }) }); })()}
@@ -3125,6 +3127,7 @@ function renderLedgerTab(el, c) {
   $('#bEditC').onclick = () => editCustomer(c);
   $('#bHs').onclick = () => openHoSoPick(S.cid);
   $('#bImp2').onclick = () => openImport(S.cid);
+  $('#bExport').onclick = () => exportCustomer();
   $('#bMaster').onclick = () => appendToMaster([...S.kunns].sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || '')), c.name);
   $$('[data-tab]', el).forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; renderMain(); });
   const body = $('#tabBody');
@@ -4360,8 +4363,6 @@ async function mergeData(d) {
 }
 
 $('#fileRestore').onchange = (e) => { if (e.target.files[0]) restore(e.target.files[0]); e.target.value = ''; };
-$('#bImport').onclick = () => openImport();
-$('#bCheck').onclick = () => openImport(S.cid || '', true);
 $('#qInv').onsubmit = (e) => { e.preventDefault(); const q = $('#qInvT').value.trim(); if (q) openLookup(q); };
 const anCache = new Map();
 function analysisOf(cid) {
@@ -5008,35 +5009,82 @@ function goTask(t) {
   return go({ cid: t.cid, tab: t.go.tab || 'tong', hs: null, doc: null });
 }
 
-// ── trang đầu: danh sách công ty + việc hôm nay ──
+// ── trang đầu: dashboard tổng quan (KUNN sắp đáo hạn, dư nợ, hồ sơ đang làm) + danh sách công ty ──
+// Việc chi tiết (hồ sơ gốc quá hạn, chứng từ bổ sung…) nằm trong trang từng công ty.
+const THU = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+function dueList(days = 30) {
+  const today = BK.todayISO(), end = BK.addDays(today, days), out = [];
+  for (const c of S.customers) {
+    if (c.ledger) {
+      for (const k of c.ledger.kunns) if (k.con_lai > 0.5 && k.dao_han && k.dao_han <= end) out.push({ c, so: k.so, dh: k.dao_han, tien: k.con_lai, src: 'Excel' });
+    } else {
+      for (const k of S.store.kunnsOf(c.id)) if (k.ngay_dh && k.ngay_dh >= today && k.ngay_dh <= end) out.push({ c, so: k.so_kunn, dh: k.ngay_dh, tien: BK.sum(k.lines.map((l) => l.tien_gn)), src: 'bảng kê' });
+    }
+  }
+  out.forEach((x) => { x.d = BK.daysBetween(today, x.dh); });
+  return out.sort((a, b) => a.dh.localeCompare(b.dh));
+}
 function renderHome(el) {
+  const today = BK.todayISO(), hol = holidays();
   const q = BK.fold(V.q || '');
-  const rows = S.customers.map((c) => ({ c, tasks: companyTasks(c), active: activeHoso(c.id).length }));
-  const all = rows.flatMap((r) => r.tasks);
-  const shown = rows.filter((r) => !q || BK.fold(r.c.name).includes(q) || (r.c.mst || '').includes(q) || BK.fold((r.c.hs || {}).cif).includes(q))
-    .sort((a, b) => (Math.max(0, ...b.tasks.map((t) => t.sev)) - Math.max(0, ...a.tasks.map((t) => t.sev))) || b.active - a.active || a.c.name.localeCompare(b.c.name, 'vi'));
-  const today = new Date();
-  const card = ({ c, tasks, active }) => {
-    const L = c.ledger, top = Math.max(0, ...tasks.map((t) => t.sev));
-    const pct = L && L.hm ? Math.min(100, Math.round((L.du_no / L.hm) * 100)) : null;
-    return `<a class="ccard ${top === 3 ? 'bad' : top === 2 ? 'warn' : ''}" href="${hashOf({ cid: c.id, tab: 'tong' })}" data-cc="${c.id}">
+  const due = dueList(30), overdue = due.filter((x) => x.d < 0), d7 = due.filter((x) => x.d >= 0 && x.d <= 7), d30 = due.filter((x) => x.d >= 0);
+  const withL = S.customers.filter((c) => c.ledger);
+  const duNo = BK.sum(withL.map((c) => c.ledger.du_no));
+  const hos = S.customers.flatMap((c) => activeHoso(c.id).map((hs) => { const cs = hsChecks(hs), n = HSC.counts(cs); return { c, hs, n, st: HSC.stageOf(hs, n.err) }; }))
+    .sort((a, b) => b.n.err - a.n.err || (a.hs.ngay_gn || '9').localeCompare(b.hs.ngay_gn || '9'));
+  const ym = today.slice(0, 7);
+  const gnMonth = BK.sum(S.customers.flatMap((c) => S.store.kunnsOf(c.id).filter((k) => (k.ngay_gn || '').startsWith(ym)).map((k) => BK.sum(k.lines.map((l) => l.tien_gn)))));
+  // lịch đáo hạn 8 tuần tới (tuần bắt đầu thứ Hai)
+  const dow = (new Date(today + 'T00:00:00Z').getUTCDay() + 6) % 7;
+  const wk0 = BK.addDays(today, -dow);
+  const all56 = dueList(56).filter((x) => x.d >= 0);
+  const weeks = [...Array(8)].map((_, i) => { const a = BK.addDays(wk0, i * 7), b = BK.addDays(a, 6); const xs = all56.filter((x) => x.dh >= a && x.dh <= b); return { label: dd(a).slice(0, 5), value: BK.sum(xs.map((x) => x.tien)), tip: `Tuần ${dd(a).slice(0, 5)}–${dd(b).slice(0, 5)}: ${xs.length} KUNN · ${vnd(BK.sum(xs.map((x) => x.tien)))}` }; });
+  const dueRow = (x, i) => {
+    const off = DOCX.offDay(x.dh, hol), wd = THU[new Date(x.dh + 'T00:00:00Z').getUTCDay()];
+    return `<tr data-due="${i}" class="${x.d < 0 ? 'bad' : x.d <= 7 ? 'warn' : ''}"><td><b>${dd(x.dh)}</b><div class="hist">${wd}${off ? ` · <span class="wtxt">! ${esc(off)}</span>` : ''}</div></td><td>${esc(x.c.name)}</td><td><b>${esc(x.so)}</b></td><td class="num">${vnd(x.tien)}</td>
+      <td>${x.d < 0 ? `<span class="pill p-err">✕ Quá hạn ${-x.d} ngày</span>` : x.d === 0 ? '<span class="pill p-warn">Hôm nay</span>' : `<span class="${x.d <= 7 ? 'wtxt' : ''}">còn ${x.d} ngày</span>`}<div class="hist">theo ${x.src}</div></td></tr>`;
+  };
+  const shown = S.customers.filter((c) => !q || BK.fold(c.name).includes(q) || (c.mst || '').includes(q) || BK.fold((c.hs || {}).cif).includes(q));
+  const card = (c) => {
+    const L = c.ledger, pct = L && L.hm ? Math.min(100, Math.round((L.du_no / L.hm) * 100)) : null;
+    const act = activeHoso(c.id), nErr = act.filter((h) => HSC.counts(hsChecks(h)).err).length;
+    const next = due.filter((x) => x.c === c && x.d >= 0)[0], od = due.filter((x) => x.c === c && x.d < 0).length;
+    return `<a class="ccard ${od ? 'bad' : ''}" href="${hashOf({ cid: c.id, tab: 'tong' })}">
       <div><b>${esc(c.name)}</b><small>${esc([(c.hs || {}).cif && 'CIF ' + c.hs.cif, (c.hs || {}).so_hdtd && 'HĐTD ' + c.hs.so_hdtd, c.mst && !(c.hs || {}).cif && 'MST ' + c.mst].filter(Boolean).join(' · ') || 'Chưa có thông tin HĐTD')}</small></div>
       ${L && L.hm ? `<div class="cbar"><div><span>Dư nợ ${trieu(L.du_no)} / ${trieu(L.hm)}</span><b class="${pct >= 90 ? 'err' : ''}">còn ${trieu(L.hm - L.du_no)}</b></div><i><u style="width:${pct}%"></u></i></div>` : `<div class="cbar none">Chưa đọc file Excel quản lý giải ngân</div>`}
-      <ul>${tasks.slice(0, 2).map((t) => `<li class="${SEV[t.sev][1]}">${SEV[t.sev][0]} ${esc(t.text)}</li>`).join('') || '<li class="m">Không có việc tồn</li>'}${tasks.length > 2 ? `<li class="m">+ ${tasks.length - 2} việc khác</li>` : ''}</ul>
-      <footer><span>${active} hồ sơ đang làm</span><span>${L ? L.n_live : S.store.kunnsOf(c.id).length} KUNN ${L ? 'còn dư nợ' : 'trong sổ'}</span>${c.owner && c.owner !== 'Không tên' ? `<span>${esc(c.owner)}</span>` : ''}</footer></a>`;
+      <ul>${od ? `<li class="e">✕ ${od} KUNN quá hạn trả nợ</li>` : ''}<li class="${next && next.d <= 7 ? 'w' : 'm'}">${next ? `Đáo hạn gần nhất ${dd(next.dh)} · KUNN ${esc(next.so)} · ${trieu(next.tien)}` : 'Không có KUNN đáo hạn trong 30 ngày'}</li>
+        <li class="${nErr ? 'e' : 'm'}">${act.length ? `${act.length} hồ sơ giải ngân đang làm${nErr ? ` · ${nErr} có lỗi` : ''}` : 'Không có hồ sơ đang làm'}</li></ul>
+      <footer><span>${L ? L.n_live + ' KUNN còn dư nợ' : S.store.kunnsOf(c.id).length + ' KUNN trong sổ'}</span>${c.owner && c.owner !== 'Không tên' ? `<span>${esc(c.owner)}</span>` : ''}</footer></a>`;
   };
   el.innerHTML = `<div class="home">
-    <section class="card today"><header><h2>Việc hôm nay · ${['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'][today.getDay()]} ${dd(BK.todayISO())}</h2><span class="hist">mỗi việc thuộc một công ty — bấm là vào đúng chỗ</span></header>
-      ${all.length ? `<div class="tlist">${all.slice(0, V.allTasks ? 200 : 8).map((t, i) => `<button class="trow" data-task="${i}"><span class="${SEV[t.sev][1]}">${SEV[t.sev][0]}</span><b>${esc(t.cname)}</b><span>${esc(t.text)}</span><em>${esc(t.when || '')}</em></button>`).join('')}</div>${all.length > 8 && !V.allTasks ? `<button class="lnk" id="tMore">Xem cả ${all.length} việc →</button>` : ''}` : '<div class="empty" style="padding:14px">Không có việc tồn. 🎉</div>'}
-    </section>
-    <div class="hbar"><h1>${S.customers.length} công ty đang quản lý</h1><input class="inp" id="cq" placeholder="Tìm công ty theo tên, MST, CIF…" value="${esc(V.q || '')}"><button class="btn pri" id="bAddCo">＋ Thêm công ty</button></div>
-    ${S.customers.length ? `<div class="cgrid">${shown.map(card).join('')}</div>` : `<div class="card empty"><p style="font-size:16px;margin-bottom:8px">Chưa có công ty nào</p><p>Bấm <b>＋ Thêm công ty</b>, hoặc <b>⬆ Nạp bảng kê</b> trên thanh đầu trang để nạp bảng kê đang theo dõi.</p></div>`}
+    <div class="hbar"><h1>Tổng quan giải ngân</h1><span class="hist">${dd(today)} · ${S.customers.length} công ty</span><span style="flex:1"></span>
+      <button class="btn" id="bCheck" title="Kiểm tra một bảng kê mới: hóa đơn nào đã giải ngân, vượt tiền…">🔍 Kiểm tra bảng kê</button><button class="btn" id="bImport" title="Nạp bảng kê Excel (kể cả bảng kê tổng hợp nhiều KUNN) — tạo công ty từ file">⬆ Nạp bảng kê Excel</button><button class="btn pri" id="bAddCo">＋ Thêm công ty</button></div>
+    <div class="tiles">
+      ${tile('Dư nợ', withL.length ? trieu(duNo) : '—', withL.length ? `${withL.length}/${S.customers.length} công ty đã có file Excel` : 'chưa đọc file Excel nào', { icon: '₫' })}
+      ${tile('Đáo hạn 7 ngày tới', `${d7.length} KUNN`, d7.length ? trieu(BK.sum(d7.map((x) => x.tien))) : 'không có', { tone: d7.length ? 'warn' : 'good', icon: '⏱' })}
+      ${tile('Đáo hạn 30 ngày tới', `${d30.length} KUNN`, d30.length ? trieu(BK.sum(d30.map((x) => x.tien))) : 'không có', { icon: '📅' })}
+      ${tile('Quá hạn trả nợ', `${overdue.length} KUNN`, overdue.length ? trieu(BK.sum(overdue.map((x) => x.tien))) + ' · theo file Excel' : 'không có', { tone: overdue.length ? 'crit' : 'good', icon: overdue.length ? '✕' : '✓' })}
+      ${tile('Hồ sơ đang làm', String(hos.length), hos.length ? `${hos.filter((x) => x.n.err).length} hồ sơ có lỗi` : 'không có', { tone: hos.some((x) => x.n.err) ? 'crit' : '', icon: '📁' })}
+      ${tile(`Giải ngân tháng ${+ym.slice(5)}`, shortMoney(gnMonth), 'theo sổ hóa đơn', { icon: '↗' })}
+    </div>
+    <div class="g2x">
+      <section class="card panel"><header><h3>KUNN sắp đáo hạn · 30 ngày tới</h3><span class="hist">bấm dòng để mở công ty</span></header>
+        ${due.length ? `<div class="tw" style="max-height:420px"><table class="t click"><thead><tr><th>Ngày đáo hạn</th><th>Công ty</th><th>Số KUNN</th><th class="right">Gốc còn lại</th><th>Còn</th></tr></thead><tbody>${due.slice(0, 60).map(dueRow).join('')}</tbody></table></div>`
+          : `<div class="empty">Không có KUNN đáo hạn trong 30 ngày${withL.length < S.customers.length ? ' — đọc file Excel quản lý giải ngân của từng công ty (tab Thông tin & mẫu Word) để có ngày đáo hạn và dư nợ chính xác' : ''}</div>`}</section>
+      <section class="card panel"><header><h3>Lịch đáo hạn 8 tuần tới</h3><span class="hist">gốc còn lại theo tuần</span></header>${all56.length ? colChart(weeks, { h: 200 }) : '<div class="empty">Không có KUNN đáo hạn trong 8 tuần</div>'}
+        ${withL.length ? `<h3 class="sub3">Dư nợ theo công ty</h3>${hBars(withL.sort((a, b) => b.ledger.du_no - a.ledger.du_no).slice(0, 8).map((c) => ({ label: c.name, value: c.ledger.du_no, tip: `${c.name}: dư nợ ${vnd(c.ledger.du_no)}${c.ledger.hm ? ' / hạn mức ' + vnd(c.ledger.hm) : ''}` })), { fmt: (v) => trieu(v) })}` : ''}</section>
+    </div>
+    <section class="card panel"><header><h3>Hồ sơ giải ngân đang làm</h3><span class="hist">${hos.length} hồ sơ</span></header>
+      ${hos.length ? `<div class="hlist">${hos.slice(0, 12).map(({ c, hs, n, st }) => `<a class="hrow2" href="${hashOf({ cid: c.id, hs: hs.id })}"><b>${esc(c.name)}</b><span>Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : '(chưa định ngày)'} · ${vnd(BK.sum((hs.lines || []).map((l) => l.tien_gn)))}${hs.so_kunn ? ' · KUNN ' + esc(hs.so_kunn) : ''}</span><span class="stage ${n.err ? 'e' : ''}">${n.err ? `${n.err} lỗi` : esc(st.l)}</span></a>`).join('')}</div>` : '<div class="empty">Không có hồ sơ đang làm — vào một công ty, thả file KH gửi để tạo hồ sơ.</div>'}</section>
+    <div class="hbar"><h2>Công ty</h2><input class="inp" id="cq" placeholder="Tìm công ty theo tên, MST, CIF…" value="${esc(V.q || '')}"></div>
+    ${S.customers.length ? `<div class="cgrid">${shown.map(card).join('')}</div>` : `<div class="card empty"><p style="font-size:16px;margin-bottom:8px">Chưa có công ty nào</p><p>Bấm <b>＋ Thêm công ty</b>, hoặc <b>⬆ Nạp bảng kê Excel</b> để nạp bảng kê đang theo dõi.</p></div>`}
   </div>`;
-  $$('[data-task]', el).forEach((b) => { b.onclick = () => goTask(all[+b.dataset.task]); });
-  if ($('#tMore', el)) $('#tMore', el).onclick = () => { V.allTasks = true; renderMain(); };
+  $$('[data-due]', el).forEach((tr) => { tr.onclick = () => { const x = due[+tr.dataset.due]; V.kunnSelSo = x.so; V.kunnSel = null; V.kf = 'all'; go({ cid: x.c.id, tab: 'kunn', hs: null, doc: null }); }; });
   const cq = $('#cq', el);
   cq.oninput = () => { V.q = cq.value; clearTimeout(cq._t); cq._t = setTimeout(() => { renderMain(); const n = $('#cq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 200); };
   $('#bAddCo', el).onclick = () => editCustomer();
+  $('#bImport', el).onclick = () => openImport();
+  $('#bCheck', el).onclick = () => openImport('', true);
 }
 
 // ── khung trang công ty ──
@@ -5110,6 +5158,7 @@ function renderCoOverview(body, c) {
       ${tile('Đáo hạn gần nhất', nextDh ? dd(nextDh.dao_han) : '—', nextDh ? `KUNN ${nextDh.so} · ${trieu(nextDh.con_lai)}` : 'không có', { act: A({ ctab: 'kunn' }) })}
       ${tile('Hồ sơ gốc chưa đủ', `${gocPend.length} KUNN`, gocQua.length ? `${gocQua.length} quá hạn` : 'không quá hạn', { tone: gocQua.length ? 'crit' : '', act: A({ ctab: 'kunn' }) })}
     </div>
+    ${(() => { const ts = companyTasks(c); return ts.length ? `<section class="card panel"><header><h3>Việc cần làm của công ty</h3><span class="hist">${ts.length} việc</span></header><div class="tlist">${ts.slice(0, V.allTasks ? 200 : 6).map((t, i) => `<button class="trow" data-task="${i}"><span class="${SEV[t.sev][1]}">${SEV[t.sev][0]}</span><span>${esc(t.text)}</span><em>${esc(t.when || '')}</em></button>`).join('')}</div>${ts.length > 6 && !V.allTasks ? `<button class="lnk" id="tMore">Xem cả ${ts.length} việc →</button>` : ''}</section>` : ''; })()}
     <section class="card panel"><header><h3>Hồ sơ giải ngân đang làm</h3><button class="lnk" data-ctab2="hoso">Xem tất cả hồ sơ →</button></header>
       <div class="hslist">${act.map(hosoRow).join('')}</div>
       ${dropZone('dzNew', `<b>Hồ sơ mới cho ${esc(c.name)}</b> — thả toàn bộ file KH gửi vào đây (PDF, ảnh, Excel bảng kê, Word…)`)}</section>
@@ -5120,6 +5169,9 @@ function renderCoOverview(body, c) {
     </div>`;
   bindDrop($('#dzNew', body), (files) => newHoso(c, files));
   $$('[data-ctab2]', body).forEach((b) => { b.onclick = () => go({ tab: b.dataset.ctab2 }); });
+  const ts = companyTasks(c);
+  $$('[data-task]', body).forEach((b) => { b.onclick = () => goTask(ts[+b.dataset.task]); });
+  if ($('#tMore', body)) $('#tMore', body).onclick = () => { V.allTasks = true; renderMain(); };
 }
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-ctab]'); if (t && t.tagName !== 'A') go({ tab: t.dataset.ctab, hs: null, doc: null }); });
 
@@ -5588,7 +5640,6 @@ function openLookup(q0) {
   $('#lkC', m).onchange = draw;
   draw(); $('#lkQ', m).focus();
 }
-$('#bExport').onclick = () => exportCustomer();
 
 // ═════════════════ CÀI ĐẶT (Alt+F9) ═════════════════
 function openSettings(focus) {
