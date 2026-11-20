@@ -65,7 +65,7 @@ test('tải bảng kê → kiểm tra giải ngân nhầm → hồ sơ gốc →
   const { ctx, page } = await newPage();
   await page.route(/^https?:/, (r) => r.abort());          // file đóng gói phải chạy được khi không có mạng
   await page.goto(DIST);
-  await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
+  await page.locator('.home').waitFor();
 
   // ── bảng kê 1
   await page.click('#bImport');
@@ -133,9 +133,10 @@ test('tải bảng kê → kiểm tra giải ngân nhầm → hồ sơ gốc →
 
   // ── mở lại trang: dữ liệu còn (IndexedDB), tổng quan có số liệu
   await page.reload();
-  await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
-  const dash = page.locator('tr', { hasText: 'SẢN XUẤT THỬ NGHIỆM' });
-  assert.match(await dash.innerText(), /\b2\b[\s\S]*1\.590\.756\.820/);
+  await page.locator('#custName', { hasText: 'SẢN XUẤT THỬ NGHIỆM' }).waitFor();   // địa chỉ trang giữ nguyên công ty đang mở
+  await page.click('a.logo');
+  const dash = page.locator('.ccard', { hasText: 'SẢN XUẤT THỬ NGHIỆM' });
+  assert.match(await dash.innerText(), /2 KUNN trong sổ/);
   await shot(page, '4-dashboard');
   await ctx.close();
 });
@@ -177,9 +178,9 @@ test('thư mục chung: máy này ghi tệp JSON, máy khác ghi vào thì bấm
   // showDirectoryPicker (hộp chọn thư mục thật) → thay bằng thư mục riêng của trình duyệt để test tự động
   await page.addInitScript(() => { window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM', { create: true }); });
   await page.goto(base + 'index.html');
-  await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
+  await page.locator('.home').waitFor();
   // dữ liệu trên máy trước khi kết nối
-  await page.click('#bAddCust');
+  await page.click('#bAddCo');
   await page.fill('#cfName', 'Công ty Delta');
   await page.click('#cfSave');
   await page.locator('#custName', { hasText: 'Công ty Delta' }).waitFor();
@@ -212,7 +213,8 @@ test('thư mục chung: máy này ghi tệp JSON, máy khác ghi vào thì bấm
   await page.click('[data-sy="pull"]');
   await page.locator('#syncBox', { hasText: 'Tram Anh' }).waitFor();
   await page.locator('.modal [data-close]').first().click();
-  await page.locator('#cList', { hasText: 'Công ty Zeta' }).waitFor();
+  await page.locator('#coSw option', { hasText: 'Công ty Zeta' }).waitFor({ state: 'attached' });
+  await page.click('[data-ctab="so"]');
   await page.locator('.kunn', { hasText: 'KUNN KU-TU-MAY-B' }).waitFor();
 
   // sửa ở máy này → tệp KUNN trong thư mục chung được ghi lại
@@ -270,35 +272,26 @@ test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN 
   assert.deepEqual([g[3][1], g[3][2], g[3][4], g[3][6], g[3][8], g[3][11], g[3][14]], ['5500777(9).26', 46100, 900, 'Công ty Sigma', '701', 600, 'Biên bản giao hàng']);
   assert.deepEqual([g[4][1], g[4][5], g[4][8], g[4][9], g[4][11], g[4][14]], ['', 2, '702', 46091, 300, 'chưa nhận']);
 
-  // dashboard tổng quan
-  await page.click('#navAll');
-  await page.locator('.panel h3', { hasText: 'Việc cần làm' }).waitFor();
-  const t = await page.locator('.tiles').innerText();
-  assert.match(t, /Khách hàng theo dõi\s*1/);
-  assert.match(t, /KUNN quá hạn hồ sơ gốc\s*1/);
-  assert.equal(await page.locator(".todo li").count(), 1);
-  assert.match(await page.locator('.legend').first().innerText(), /Quá hạn\s+1\s+50%/);
-  await shot(page, '5-dashboard');
-  // bấm ô "KUNN quá hạn" → danh sách KUNN → bấm dòng → mở đúng KUNN ở bảng chi tiết từng hóa đơn
-  await page.locator('.tile', { hasText: 'KUNN quá hạn hồ sơ gốc' }).click();
-  await page.locator('#dSum', { hasText: '1 KUNN' }).waitFor();
-  assert.match(await page.locator('#dB').innerText(), /Công ty Kappa\s+5500777\(9\)\.26/);
-  await page.locator('#dB tr').first().click();
-  await page.locator('#custName', { hasText: 'Công ty Kappa' }).waitFor();
-  await page.locator('.kunn', { hasText: '5500777(9).26' }).locator('table').waitFor();
-  assert.match(await page.locator('.kunn', { hasText: '5500777(9).26' }).locator('tbody').innerText(), /Công ty Sigma[\s\S]*701[\s\S]*702/);
-  // bấm cột tháng trên biểu đồ → KUNN của tháng đó
-  await page.click('#navAll');
+  // trang đầu: Việc hôm nay ghi rõ việc của công ty nào → bấm vào đúng KUNN ở tab Theo dõi KUNN
+  await page.click('a.logo');
+  const task = page.locator('.trow', { hasText: 'Công ty Kappa' }).filter({ hasText: 'KUNN 5500777(9).26 quá hạn hồ sơ gốc' });
+  await task.waitFor();
+  assert.match(await page.locator('.ccard', { hasText: 'Công ty Kappa' }).innerText(), /quá hạn hồ sơ gốc/);
+  await shot(page, '5-home');
+  await task.click();
+  await page.locator('.ctabs a.act', { hasText: 'Theo dõi KUNN' }).waitFor();
+  assert.match(await page.locator('.kdet').innerText(), /KUNN 5500777\(9\)\.26[\s\S]*Hồ sơ gốc — hạn/);
+  await page.locator('.kdet [data-gk]').first().check();               // tick nhận bản gốc từng chứng từ
+  await page.locator('.kdet [data-gk]:checked').waitFor();
+  // tab Sổ hóa đơn: biểu đồ, ô tổng — bấm để xem chi tiết
+  await page.click('[data-ctab="so"]');
   await page.locator('svg.viz rect.go').first().click();
   await page.locator('#dSum', { hasText: 'KUNN' }).waitFor();
   assert.notEqual(await page.inputValue('#dM'), '');
   await page.locator('.modal [data-close]').first().click();
-  // ô "Còn lại chưa giải ngân" → danh sách hóa đơn GN 1 phần
   await page.locator('.tile', { hasText: 'Còn lại chưa giải ngân' }).click();
   assert.match(await page.locator('#hB').innerText(), /Công ty Sigma\s+701[\s\S]*1\.000[\s\S]*600[\s\S]*400/);
   await page.locator('.modal [data-close]').first().click();
-  // việc cần làm → mở khách hàng
-  await page.locator('.todo li').first().click();
   await page.locator('#custName', { hasText: 'Công ty Kappa' }).waitFor();
   await ctx.close();
 });
@@ -464,7 +457,8 @@ test('kiểm tra dữ liệu đã nạp: phát hiện KUNN ngoại tệ chưa gh
   assert.equal(await page.locator('[data-cdel]').count(), 0);
   await page.click('#bEditC');
   await page.click('#cfDel');                     // hộp xác nhận → OK
-  await page.locator('#cList', { hasText: 'Công ty Omi' }).waitFor({ state: 'detached' });
+  await page.locator('.home').waitFor();
+  assert.equal(await page.locator('.ccard', { hasText: 'Công ty Omi' }).count(), 0);
   await ctx.close();
 });
 
@@ -558,5 +552,76 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   assert.equal(await page.inputValue('[data-v="lai_suat"]'), '9.2');
   assert.match(await page.locator('.dpage[data-kind="kunn"]').innerText(), /0123456789/, 'TK thụ hưởng được nhớ');
   await shot(page, '9-soan-kunn');
+  await ctx.close();
+});
+
+test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → thả chứng từ → AI đọc → kiểm tra tự sinh → xử lý lệch → mốc → sổ hóa đơn → gói tải lên', async () => {
+  const fb = join(dir, 'bang_ke_hs.xlsx');
+  await writeFile(fb, toXlsx({ 'Bang ke': bangKeVay({ ku: '1000001(9).26', ngay: '26/11/2026', rows: [
+    ['CÔNG TY TNHH HÓA DẦU MẪU', 'HĐMB 77/2026', '830', '04/11/2026', 1116900000, 1116900000, 1116900000],
+    ['ĐIỆN LỰC MẪU', '', 'PA0001', '13/11/2026', 303166541, 303166541, 303166541],
+  ] }) }));
+  const fp = join(dir, 'scan.pdf');
+  await writeFile(fp, '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('finlens_ai_settings_v1', JSON.stringify({ keys: [{ key: 'AIzaTEST-KEY-1234567890', on: true }], model: 'gemini-3.6-flash', active: 0 })); window.showOpenFilePicker = undefined; });
+  let sent = null;
+  await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, async (r) => {
+    sent = JSON.parse(r.request().postData());
+    const docs = { docs: [
+      { loai: 'hoa_don', trang: '1', conf: 0.95, f: { so: '830', ngay: '04/11/2026', ben_ban: 'Công ty TNHH Hóa Dầu Mẫu', mst_mua: '0303640880', tien: '1116900000' } },
+      { loai: 'tien_dien', trang: '2', conf: 0.9, f: { so: 'PA0001', ngay: '13/11/2026', ben_ban: 'Điện lực Mẫu', tien: '303166541', tk_nhan: '118000048033', ngan_hang: 'VietinBank' } },
+      { loai: 'unc', trang: '3', conf: 0.9, f: { ngay: '25/11/2026', ben_ban: 'Điện lực Mẫu', tien: '303166541', tk_nhan: '0351000998999', ngan_hang: 'VCB' } },
+      { loai: 'cic', trang: '4', conf: 0.5, f: { ngay: '24/11/2026', nhom_no: '1' } }] };
+    await r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(docs) }] }, finishReason: 'STOP' }] }) });
+  });
+  await page.goto(base + 'index.html');
+  await page.click('#bAddCo');
+  await page.fill('#cfName', 'CTCP An Bình Thử'); await page.fill('#cfMst', '0303640880');
+  await page.click('#cfSave');
+  await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
+  // file Excel quản lý giải ngân (mẫu trong giaingan/) → dư nợ, hạn mức, thông tin công ty
+  await page.click('[data-ctab="info"]');
+  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('#xlPick')]);
+  await fc.setFiles(join(ROOT, '../giaingan/excel/QUAN_LY_GIAI_NGAN_MAU.xlsx'));
+  await page.locator('.xlbox', { hasText: 'KUNN còn dư nợ' }).waitFor();
+  assert.equal(await page.inputValue('[data-pf="ma_ttkd"]'), '123', 'thông tin công ty lấy từ sheet DANH_MUC');
+  // hồ sơ mới: thả bảng kê + bản scan cùng lúc
+  await page.click('[data-ctab="tong"]');
+  await page.setInputFiles('#dzNew input', [fb, fp]);
+  await page.locator('.dline', { hasText: 'Hóa đơn GTGT 830' }).waitFor();
+  assert.equal(sent.contents[0].parts[1].inline_data.mime_type, 'application/pdf', 'PDF gửi kèm cho AI đọc');
+  const mid = page.locator('.hscol.mid');
+  await mid.locator('.ck.s3', { hasText: 'Số tài khoản nhận tiền Điện lực Mẫu không khớp' }).waitFor();
+  assert.match(await mid.innerText(), /118000048033 — VietinBank, UNC \/ lệnh chi ghi 0351000998999/);
+  assert.match(await mid.locator('.okl').first().textContent(), /2\/2 dòng bảng kê khớp số, ngày, tiền với chứng từ/);
+  assert.doesNotMatch(await mid.innerText(), /tờ khai|NSNN/i, 'không có tờ khai thì không soát NSNN');
+  assert.match(await page.locator('.kbar').innerText(), /1\.420\.066\.541 đ[\s\S]*Đáo hạn[\s\S]*137 ngày/);
+  await shot(page, '10-hoso');
+  // xem chứng từ: sửa số AI đọc → kiểm tra chạy lại
+  await page.locator('.dline', { hasText: 'Thông báo tiền điện' }).click();
+  await page.locator('.dview').waitFor();
+  await page.fill('[data-df="tk_nhan"]', '0351000998999');
+  await page.click('#dSave');
+  await page.goBack();
+  await page.locator('.hs3').waitFor();
+  assert.equal(await page.locator('.ck.s3').count(), 0, 'hết lỗi sau khi sửa');
+  // mốc: nhập số KUNN → mốc “Xin số KUNN” tự xong; bấm mốc gửi KH ký
+  await page.fill('#hsKunn', '1000001(9).26'); await page.press('#hsKunn', 'Tab');
+  await page.locator('.ms.done', { hasText: 'Xin số KUNN' }).waitFor();
+  await page.click('[data-ms="gui_ky"]');
+  await page.locator('.ms.done', { hasText: 'Gửi KH ký' }).waitFor();
+  // ghi vào sổ hóa đơn → tab Theo dõi KUNN thấy KUNN mới
+  await page.click('#hsLedger');
+  await page.locator('.obox', { hasText: 'Đã ghi' }).waitFor();
+  const [dz] = await Promise.all([page.waitForEvent('download'), page.click('#hsZip')]);
+  const zz = await JSZip.loadAsync(await readFile(await dz.path()));
+  assert.deepEqual(Object.keys(zz.files).sort(), ['03_BANG_KE.xlsx', '04_UNC_LENH_CHI.pdf']);
+  await page.click('[data-ctab="kunn"]');
+  await page.click('[data-kf="all"]');
+  assert.match(await page.locator('.kwrap').innerText(), /1000001\(9\)\.26/);
+  // trang đầu: thẻ công ty có dư nợ / hạn mức từ file Excel
+  await page.click('a.logo');
+  assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d.]+ tr \/ 120\.000 tr/);
   await ctx.close();
 });
