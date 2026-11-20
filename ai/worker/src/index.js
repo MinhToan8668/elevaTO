@@ -89,7 +89,14 @@ export default {
       }
       // `cai` chỉ nói phần nào ĐÃ cài, không bao giờ lộ giá trị — để lúc cài biết ngay thiếu gì
       // (bot im lặng vì thiếu TG_SECRET là ca rất dễ mất cả buổi đi dò).
-      return json({ ok: true, service: 'elevaTO', ban: PHIEN_BAN, cai: tinhTrang(env) });
+      // `webhook`: bot nào từng bị chỗ khác giành webhook, bao nhiêu lần, lần cuối, giành về đâu — để dò
+      // khi bot lúc được lúc không. Không có token hay mã bí mật nào trong đó.
+      const webhook = {};
+      if (env.DB) {
+        webhook.goc = await docCaiDat(env.DB, 'goc');
+        for (const bot of BOT) webhook[bot.ten] = await bot.tinhHinh(env);
+      }
+      return json({ ok: true, service: 'elevaTO', ban: PHIEN_BAN, cai: tinhTrang(env), webhook });
     }
     if (req.method !== 'POST') return json(loi('bad', 'Không rõ yêu cầu'), 405);
     ctx.waitUntil(nen(env, url));
@@ -121,6 +128,15 @@ function tinhTrang(env) {
     mail: can.BREVO_KEY && can.MAIL_TU,
     tai_thang: can.UPLOAD_TG_TOKEN && can.TAIVE_SECRET,
     thieu: Object.keys(can).filter((k) => !can[k]),
+    // Hai biến cùng một token bot thì hai đường webhook giành nhau mãi (bot lúc được lúc không). Chỉ báo
+    // tên cặp trùng, không lộ token.
+    ...(() => {
+      const t = { TG_AI_TOKEN: env.TG_AI_TOKEN, TG_EL_TOKEN: env.TG_EL_TOKEN, UPLOAD_TG_TOKEN: env.UPLOAD_TG_TOKEN };
+      const k = Object.keys(t).filter((x) => t[x]);
+      const trung = [];
+      for (let i = 0; i < k.length; i++) for (let j = i + 1; j < k.length; j++) if (t[k[i]] === t[k[j]]) trung.push(`${k[i]}=${k[j]}`);
+      return trung.length ? { trung_token: trung } : {};
+    })(),
   };
 }
 
