@@ -251,3 +251,18 @@ test('tiêu đề phụ giữa sheet: hàng chứa số KUNN + tiêu đề riên
   assert.match(a.ghi_chu, /TK 105599426110/);
   assert.equal(r.groups[2].lines[0].loai_tien, '', 'KUNN sau quay về cột của tiêu đề chính');
 });
+
+test('bảng kê theo PO (chưa có hóa đơn): số PO làm số chứng từ, số tiền 11 chữ số không bị nhầm là số tờ khai, bỏ số nháp dưới dòng Tổng', () => {
+  const g = [
+    ['', '', '', 'BẢNG KÊ ĐỀ NGHỊ GIẢI NGÂN VIB'], ['', '', '', '', '', '', 'NGÀY', '27/10/2026'], [],
+    ['STT', 'MÃ NCC', 'TÊN NCC', 'SỐ PO', 'Số tiền', 'Số tiền đề nghị GN ( Lần 2)', 'Ngày PO', 'Ngày Đề nghị', 'mặt hàng'],
+    ['', '8002101', 'Công Ty Cổ Phần Tập Đoàn Mẫu', '4300011572', 83913500000, 28913500000, '07/10/2026', '27/10/2026', 'Thép'],
+    ['TỔNG CỘNG', '', '', '', 83913500000, 28913500000], [], ['', '', '', '', '', 35000000000], ['', '', '', '', '', 20000000000],
+  ];
+  const r = BK.autoParseSheet(g);
+  assert.ok(r.ok);
+  const ls = r.groups.flatMap((x) => x.lines);
+  assert.equal(ls.length, 1);
+  assert.deepEqual([ls[0].so_hd, ls[0].ngay_hd, ls[0].tien_hd, ls[0].tien_gn], ['4300011572', '2026-10-07', 83913500000, 28913500000]);
+  assert.ok(!ls[0].lech);
+});

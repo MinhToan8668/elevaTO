@@ -612,8 +612,14 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   // mốc: nhập số KUNN → mốc “Xin số KUNN” tự xong; bấm mốc gửi KH ký
   await page.fill('#hsKunn', '1000001(9).26'); await page.press('#hsKunn', 'Tab');
   await page.locator('.ms.done', { hasText: 'Xin số KUNN' }).waitFor();
+  // bấm mốc → viền đỏ chỗ cần làm; mốc làm tay chỉ “Đã xong” được khi mốc trước đã xong
+  await page.click('[data-ms="pdgn_ky"]');
+  await page.locator('#oxKunn.focus-red').waitFor();
+  assert.equal(await page.locator('[data-msok="pdgn_ky"]').isDisabled(), true, 'chưa gửi KH ký thì chưa tick được PDGN');
   await page.click('[data-ms="gui_ky"]');
+  await page.click('[data-msok="gui_ky"]');
   await page.locator('.ms.done', { hasText: 'Gửi KH ký' }).waitFor();
+  assert.equal(await page.locator('.ms.done', { hasText: 'Đã giải ngân' }).count(), 0);
   // ghi vào sổ hóa đơn → tab Theo dõi KUNN thấy KUNN mới
   await page.click('#hsLedger');
   await page.locator('.obox', { hasText: 'Đã ghi' }).waitFor();
@@ -623,6 +629,22 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.click('[data-ctab="kunn"]');
   await page.click('[data-kf="all"]');
   assert.match(await page.locator('.kwrap').innerText(), /1000001\(9\)\.26/);
+  // ghi chú KUNN: KH trả 1 phần → dư nợ giảm, có dòng tổng
+  await page.click('[data-kf="live"]');
+  const tot0 = await page.locator('.kwrap tfoot').innerText();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).click();
+  await page.selectOption('#knT', 'tra_1_phan');
+  await page.fill('#knA', '1,000,000,000'); await page.fill('#knX', 'KH trả trước hạn');
+  await page.click('#knAdd');
+  await page.locator('.kn', { hasText: 'KH trả nợ 1 phần' }).waitFor();
+  assert.match(await page.locator('.kdet').innerText(), /dư nợ còn ≈ 4\.480\.500\.000 đ/);
+  assert.notEqual(await page.locator('.kwrap tfoot').innerText(), tot0, 'dòng tổng cập nhật theo ghi chú');
+  // xóa hồ sơ không cần nữa (hoàn tác được)
+  await page.click('[data-ctab="hoso"]');
+  await page.locator('[data-hsdel]').first().click();
+  await page.locator('.hsrow').first().waitFor({ state: 'detached' });
+  await page.click('#bUndo');
+  await page.locator('.hsrow').first().waitFor();
   // trang đầu: thẻ công ty có dư nợ / hạn mức từ file Excel
   await page.click('a.logo');
   assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d.]+ tr \/ 120\.000 tr/);

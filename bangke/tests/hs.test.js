@@ -64,12 +64,23 @@ test('soát giải ngân trùng với sổ hóa đơn, hóa đơn > 90 ngày, CI
   assert.match(msg, /2\|Chưa đọc file Excel quản lý giải ngân/);
 });
 
-test('mốc hồ sơ: tự đánh dấu khi đủ điều kiện, bỏ bớt được, mốc đang làm', () => {
-  const hs = { files: [{ id: 'f' }], docs: [{ id: 'd' }], so_kunn: '', ms: { gui_ky: 'skip' } };
-  const m = HSC.milestones(hs, 0);
-  assert.deepEqual(m.slice(0, 5).map((x) => x.st), ['done', 'auto', 'cur', 'skip', 'todo']);
-  assert.equal(HSC.stageOf({ ...hs, so_kunn: '1(2).26' }, 0).k, 'nhan_ky');
-  assert.equal(HSC.stageOf({ files: [{}], docs: [{}] }, 1).k, 'kiem_tra', 'còn lỗi → đang ở bước kiểm tra');
+test('mốc hồ sơ: tool chỉ tick khi việc đã làm thật; mốc làm tay không tick vượt mốc trước; bỏ qua được', () => {
+  const base = { files: [{ id: 'f' }], docs: [{ id: 'd', loai: 'hoa_don' }], lines: [{}], so_kunn: '' };
+  let m = HSC.milestones(base, 0);
+  assert.deepEqual(m.slice(0, 4).map((x) => x.st), ['done', 'done', 'cur', 'todo']);
+  assert.equal(m.find((x) => x.k === 'gui_ky').can, false, 'chưa có số KUNN → chưa được bấm “đã gửi KH ký”');
+  // tick tay sai thứ tự (dữ liệu cũ) → không tính
+  m = HSC.milestones({ ...base, ms: { gui_ky: '2026-11-20', giai_ngan: '2026-11-20' } }, 0);
+  assert.equal(m.find((x) => x.k === 'giai_ngan').st, 'todo');
+  assert.equal(HSC.stageOf({ ...base, ms: { giai_ngan: '2026-11-20' } }, 0).k, 'so_kunn');
+  // đủ điều kiện: có số KUNN → gửi ký bấm được; bản ký thả vào hồ sơ → tự tick
+  m = HSC.milestones({ ...base, so_kunn: '1(2).26' }, 0);
+  assert.equal(m.find((x) => x.k === 'gui_ky').can, true);
+  m = HSC.milestones({ ...base, so_kunn: '1(2).26', ms: { gui_ky: '2026-11-20' }, docs: [...base.docs, { id: 'k', loai: 'kunn_ky' }] }, 0);
+  assert.deepEqual(m.slice(3, 6).map((x) => x.st), ['done', 'done', 'cur']);
+  // bỏ qua mốc không cần
+  assert.equal(HSC.stageOf({ ...base, so_kunn: '1', ms: { gui_ky: 'skip', nhan_ky: 'skip' } }, 0).k, 'pdgn_ky');
+  assert.equal(HSC.stageOf(base, 1).k, 'kiem_tra', 'còn lỗi → đang ở bước kiểm tra');
 });
 
 test('đọc file Excel QUẢN LÝ GIẢI NGÂN (mẫu trong giaingan/): sổ khế ước, danh mục, gói UBG, dư nợ', () => {
@@ -94,7 +105,7 @@ test('đọc file Excel QUẢN LÝ GIẢI NGÂN (mẫu trong giaingan/): sổ kh
 test('việc hôm nay: mỗi việc gắn một công ty; lỗi hồ sơ, chờ ký lâu, hồ sơ gốc quá hạn, đáo hạn theo sổ Excel', () => {
   const t = HSC.tasks([
     { c: { id: 'a', name: 'An Bình' }, hoso: [{ hs: { id: 'h1', ngay_gn: '2026-11-26', files: [{}], docs: [{}] }, checks: [{ sev: 3, title: 'Số tài khoản không khớp' }] }] },
-    { c: { id: 'b', name: 'Minh Long' }, hoso: [{ hs: { id: 'h2', ngay_gn: '2026-11-21', so_kunn: '7(9).26', files: [{}], docs: [{}], ms: { gui_ky: '2026-11-16', nhan_ky: '2026-11-17' } }, checks: [] }],
+    { c: { id: 'b', name: 'Minh Long' }, hoso: [{ hs: { id: 'h2', ngay_gn: '2026-11-21', so_kunn: '7(9).26', files: [{}], docs: [{}], lines: [{}], ms: { gui_ky: '2026-11-16', nhan_ky: '2026-11-17' } }, checks: [] }],
       ledger: { kunns: [{ so: '7(3).26', dao_han: '2026-12-02', con_lai: 4.2e9 }] } },
     { c: { id: 'c', name: 'Hòa Phát Thử' }, kunns: [{ id: 'k', so_kunn: '3(12).26', ngay_gn: '2026-10-01', lines: [{ goc: 'chua' }] }] },
   ], '2026-11-20');
