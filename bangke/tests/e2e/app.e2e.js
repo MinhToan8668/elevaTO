@@ -273,11 +273,14 @@ test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN 
   assert.deepEqual([g[4][1], g[4][5], g[4][8], g[4][9], g[4][11], g[4][14]], ['', 2, '702', 46091, 300, 'chưa nhận']);
 
   // trang đầu: Việc hôm nay ghi rõ việc của công ty nào → bấm vào đúng KUNN ở tab Theo dõi KUNN
+  // trang đầu là dashboard tổng quan; việc hồ sơ gốc quá hạn nằm trong trang công ty
   await page.click('a.logo');
-  const task = page.locator('.trow', { hasText: 'Công ty Kappa' }).filter({ hasText: 'KUNN 5500777(9).26 quá hạn hồ sơ gốc' });
-  await task.waitFor();
-  assert.match(await page.locator('.ccard', { hasText: 'Công ty Kappa' }).innerText(), /quá hạn hồ sơ gốc/);
+  await page.locator('.tile', { hasText: 'Đáo hạn 30 ngày tới' }).waitFor();
+  assert.equal(await page.locator('.home .trow').count(), 0, 'trang đầu không liệt kê hồ sơ gốc quá hạn');
   await shot(page, '5-home');
+  await page.locator('.ccard', { hasText: 'Công ty Kappa' }).click();
+  const task = page.locator('.trow', { hasText: 'KUNN 5500777(9).26 quá hạn hồ sơ gốc' });
+  await task.waitFor();
   await task.click();
   await page.locator('.ctabs a.act', { hasText: 'Theo dõi KUNN' }).waitFor();
   assert.match(await page.locator('.kdet').innerText(), /KUNN 5500777\(9\)\.26[\s\S]*Hồ sơ gốc — hạn/);
@@ -311,7 +314,7 @@ test('kiểm tra xong nạp luôn: bỏ các dòng lỗi, chỉ nạp dòng hợ
   await page.fill('#iNew', 'Công ty Mu');
   await page.locator('[data-save="all"]').click();                       // ĐẠT → nạp luôn từ khung kết luận
   await page.locator('.kunn', { hasText: 'KUNN KU-A' }).locator('table').waitFor();
-  await page.click('#bCheck');
+  await page.click('[data-act="check"]');
   await page.setInputFiles('#iFile', f2);
   await page.locator('.verdict.err', { hasText: 'KHÔNG ĐẠT — 1/2' }).waitFor();
   assert.match(await page.locator('[data-save="skip"]').innerText(), /Nạp 1 dòng hợp lệ \(700\), bỏ 1 dòng lỗi/);
