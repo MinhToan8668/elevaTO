@@ -15,9 +15,14 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
     hóa đơn trước ngày HĐMB, HĐMB hết hạn, tài khoản nhận tiền lệch (thông báo tiền điện ↔ UNC / TK đã dùng),
     tờ khai ↔ giấy nộp NSNN, CIC (hiệu lực 10 ngày, nợ nhóm 2), vượt hạn mức khả dụng, hạn HĐTD.
     Mục nào không áp dụng thì không hiện; bỏ qua được kèm lý do.
+  - Bảng kê theo **PO / đơn đặt hàng / hợp đồng** (chưa có hóa đơn) cũng đọc được; bảng trình bày lạ thì AI đọc từng dòng.
+  - Hồ sơ không cần nữa: nút 🗑 ở từng dòng / trong hồ sơ (hoàn tác bằng ↶). Việc cần làm của công ty ẩn được (✕).
+  - Theo dõi KUNN: dòng tổng dư nợ; **ghi chú từng KUNN** — KH trả nợ 1 phần (trừ vào dư nợ hiển thị), gia hạn / đổi
+    ngày trả (đáo hạn theo ngày mới), quá hạn đang xử lý, đã tất toán (thôi nhắc), ghi chú tự do.
   - Xem từng chứng từ: bản scan cạnh số liệu AI đọc, sửa tay → kiểm tra chạy lại.
-  - **Dải mốc** (nhận chứng từ → kiểm tra → xin số KUNN → gửi KH ký → nhận bản ký → GĐ TTKD ký PDGN → đưa lên hệ
-    thống → đã giải ngân), bấm để đánh dấu, chuột phải để bỏ qua mốc. Chứng từ bổ sung sau GN có hạn.
+  - **Dải mốc**: bấm một mốc → tool viền đỏ đúng chỗ cần làm và ghi việc phải làm. Mốc tự tick chỉ khi việc đã có thật
+    (có file, hết lỗi + có bảng kê, có số KUNN, có bản KUNN / PDGN đã ký trong hồ sơ); các mốc còn lại bấm “Đã xong”,
+    chỉ bấm được khi mốc trước đã xong; mốc không cần thì “Bỏ qua”. Chứng từ bổ sung sau GN có hạn.
   - Kết quả: soạn KUNN & PDGN (mẫu Word riêng công ty), ghi vào sổ hóa đơn, bảng kê Excel, **gói file tải lên hệ
     thống** đã đặt tên theo thứ tự (.zip).
   - **Sổ theo dõi KUNN tự lập, nhiều sheet** (mỗi công ty một sheet, tiêu đề cột tự đặt): tool gợi ý sheet theo tên
