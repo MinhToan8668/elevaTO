@@ -181,3 +181,32 @@ test('CIC: đọc mẫu báo cáo (S10A / R20) và ngày; tên file trong gói t
   const hs = { files: [{ id: 'a', name: 'cic1.pdf' }, { id: 'b', name: 'cic2.pdf' }, { id: 'c', name: 'x.pdf' }], docs: [{ ...d[0], fileId: 'a' }, { ...d[1], fileId: 'b' }], skipUp: { c: true } };
   assert.deepEqual(HSC.packageNames(hs, hs.files).map((x) => x.name), ['09_CIC_S10A.pdf', '09_CIC_R20.pdf'], 'file đã bỏ khỏi gói không có trong gói');
 });
+
+test('hạn mức theo thời gian (cấp lại / điều chỉnh) và gói lãi suất / UBG: chọn theo ngày GN, soát hiệu lực, hạn mức gói, kỳ hạn', () => {
+  const hist = [
+    { id: 'a', tu_ngay: '2025-07-14', den_ngay: '2026-07-14', so_hdtd: 'HĐTD 1', ngay_hdtd: '2025-07-14', hm_tong: 300e9 },
+    { id: 'b', tu_ngay: '2026-07-14', den_ngay: '2027-07-14', so_hdtd: 'HĐTD 1 - PL 2', ngay_hdtd: '2026-07-14', hm_tong: 350e9 },
+  ];
+  assert.equal(HSC.hmAt(hist, '2026-03-01').id, 'a');
+  assert.equal(HSC.hmAt(hist, '2026-10-27').id, 'b', 'cấp lại → hạn mức mới');
+  assert.equal(HSC.hmAt(hist, '2025-01-01'), null);
+  const goi = HSC.goiMerge([{ ma: 'UBG01', ten: 'Gói A', ngay: '2026-01-01', hieu_luc: '2026-06-30', ls: 7.5, so_ngay: 180, tong: 50e9 }], [{ ma: 'UBG02', ls: 8.2, tu_ngay: '2026-07-01', den_ngay: '2026-12-31', tong: 30e9, so_ngay_max: 120 }, { ma: 'UBG01', den_ngay: '2026-09-30' }]);
+  assert.deepEqual(goi.map((g) => [g.ma, g.src, g.den_ngay]), [['UBG01', 'excel+tay', '2026-09-30'], ['UBG02', 'tay', '2026-12-31']], 'sửa tay ghi đè gói từ file Excel');
+  assert.deepEqual(HSC.goiAt(goi, '2026-10-27').map((g) => g.ma), ['UBG02']);
+  const rows = [{ so: '1(1).26', goi: 'UBG02', goc: 25e9 }, { so: '1(2).26', goi: 'ubg02', goc: 1e9 }];
+  assert.equal(HSC.goiUsed(goi[1], rows), 26e9);
+  const line = { id: 'l', ncc: 'A', so_hd: 'PO 1', ngay_hd: '2026-10-07', tien_hd: 9e9, tien_gn: 5e9 };
+  const ctx = { kh: { hs: {} }, kunns: [], hmHist: hist, goi, goiRows: rows, ledger: { hm: 1, du_no: 100e9, kunns: [] } };
+  let cs = HSC.checks({ lines: [line], docs: [], ngay_gn: '2026-10-27', goi: 'UBG02', so_ngay_vay: '150', bs_none: true }, ctx);
+  const keys = cs.filter((c) => c.sev >= 2).map((c) => c.key);
+  assert.ok(keys.includes('goi_vuot'), 'đã dùng 26 tỷ + 5 tỷ > 30 tỷ');
+  assert.ok(keys.includes('goi_ky_han'), '150 ngày > 120 ngày');
+  assert.ok(cs.some((c) => c.key === 'hm_ok' && /còn/.test(c.title)), 'khả dụng theo hạn mức 350 tỷ của phụ lục');
+  cs = HSC.checks({ lines: [line], docs: [], ngay_gn: '2027-08-01', goi: 'UBG02', bs_none: true }, ctx);
+  assert.ok(cs.some((c) => c.key === 'goi_het' && c.sev === 3));
+  assert.ok(cs.some((c) => c.key === 'hm_het' && /PL 2/.test(c.title)));
+  cs = HSC.checks({ lines: [line], docs: [], ngay_gn: '2026-10-27', bs_none: true }, ctx);
+  assert.ok(cs.some((c) => c.key === 'goi_chon' && c.sev === 1), 'nhắc chọn gói khi có gói hiệu lực');
+  cs = HSC.checks({ lines: [line], docs: [], ngay_gn: '2025-01-01', bs_none: true }, ctx);
+  assert.ok(cs.some((c) => c.key === 'hm_chua_hl'));
+});
