@@ -124,6 +124,10 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   suất, Lịch lãi suất, KUNN chưa có trong file Excel, Đã xóa.
 - **KUNN chưa có trong file Excel** (tab Thông tin): KUNN thêm / ghi trong tool chưa có trong file theo dõi — 📋 sao chép
   hoặc ⬇ tải các dòng theo đúng thứ tự cột của sheet để dán vào file Excel; lần đọc lại tool tự ghép.
+- **Đã giải ngân → theo dõi**: bấm “Đã giải ngân” trong hồ sơ → KUNN vào Theo dõi KUNN đủ số tiền, ngày GN, ngày đáo hạn
+  (ngày GN + số ngày vay), lãi suất, gói; tính vào **dư nợ vay** (= file Excel + KUNN đã giải ngân trong tool, mỗi KUNN
+  một lần). Lưu / xuất KUNN & PDGN thì hồ sơ tự lấy số KUNN, lãi suất, ngày đáo hạn, bảng “Chứng từ bổ sung” từ văn bản.
+  Ngày đáo hạn hiện **thứ trong tuần**; rơi vào thứ 7, CN, ngày lễ thì báo đỏ + nút lùi / dời sang ngày làm việc.
 - **Bảng theo dõi KUNN**: **🗑 Xóa KUNN** (của tool hoặc dòng từ file Excel) → KUNN chuyển sang mục **🗑 Đã xóa** (lưu vết
   ai xóa, lúc nào), không còn tính vào bảng theo dõi, dư nợ, đáo hạn — đọc lại file Excel cũng không hiện lại; **♻ Khôi
   phục** đưa về như cũ, **✕ Xóa hẳn** bỏ luôn. Mỗi KUNN có **lịch sử thay đổi**; ↶ hoàn tác ngay.
