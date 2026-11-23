@@ -803,6 +803,20 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: '1.500.000.000 đ' }).waitFor();
   await page.locator('.kdet [data-kmx]').check();
   await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: 'Đã nhận đủ' }).waitFor();
+  // Excel tổng hợp đầy đủ (6 sheet)
+  const [tx] = await Promise.all([page.waitForEvent('download'), page.click('#kXls')]);
+  assert.match(tx.suggestedFilename(), /^TongHop_.*\.xlsx$/);
+  const wbt = XLSX.read(await readFile(await tx.path()));
+  assert.deepEqual(wbt.SheetNames, ['Theo doi KUNN', 'Han muc', 'Goi lai suat', 'Lich lai suat', 'Chua co trong Excel', 'Da xoa']);
+  const tk1 = XLSX.utils.sheet_to_json(wbt.Sheets['Theo doi KUNN'], { header: 1, defval: '' });
+  assert.ok(tk1.some((r) => r[0] === '1000001(15).26' && r[14] === 'Nhập tay'), 'KUNN nhập tay có trong tổng hợp');
+  // KUNN thêm trong tool chưa có trong file Excel → tải dòng để ghi vào file (không báo lỗi)
+  await page.click('[data-ctab="info"]');
+  assert.match(await page.locator('.tile', { hasText: 'Chưa có trong file Excel' }).innerText(), /\d/);
+  const [xo] = await Promise.all([page.waitForEvent('download'), page.click('#xlDl')]);
+  const xr = XLSX.utils.sheet_to_json(XLSX.read(await readFile(await xo.path())).Sheets['KUNN them'], { header: 1, defval: '' });
+  assert.ok(xr.some((r) => r.includes('1000001(15).26')), 'dòng KUNN nhập tay để dán vào file Excel');
+  await page.click('[data-ctab="kunn"]');
   // báo cáo theo gói + xuất Excel
   await page.click('[data-kf="goi"]');
   await page.locator('.goic', { hasText: 'Gói ưu đãi – UBG 002' }).waitFor();
@@ -923,8 +937,8 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.locator('.chip', { hasText: 'KTLA' }).click();
   await page.fill('#lgHm', '20,000');
   await page.click('#lgSave');
-  await page.locator('.tile', { hasText: 'Dư nợ hiện tại' }).filter({ hasText: '7.534 tr' }).waitFor();
-  assert.match(await page.locator('.tile', { hasText: 'Hạn mức còn khả dụng' }).innerText(), /12\.466 tr/);
+  await page.locator('.tile', { hasText: 'Dư nợ hiện tại' }).filter({ hasText: '7,5 tỷ' }).waitFor();
+  assert.match(await page.locator('.tile', { hasText: 'Hạn mức còn khả dụng' }).innerText(), /12,5 tỷ/);
   // file đã sửa: chèn cột, dời tiêu đề, thêm KUNN → Đọc lại
   await page.click('[data-ctab="info"]');
   const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('#xlRe')]);
