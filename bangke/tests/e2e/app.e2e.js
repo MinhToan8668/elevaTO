@@ -726,7 +726,7 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.kn', { hasText: 'KH trả nợ 1 phần' }).waitFor();
   assert.match(await page.locator('.kdet').innerText(), /dư nợ còn ≈ 4\.480\.500\.000 đ/);
   assert.notEqual(await page.locator('.kwrap tfoot').innerText(), tot0, 'dòng tổng cập nhật theo ghi chú');
-  // xóa KUNN nháp trên bảng theo dõi → mục “Đã xóa / ẩn” → khôi phục; dòng từ file Excel thì ẩn / hiện lại
+  // xóa KUNN (của tool / dòng từ file Excel) → mục “Đã xóa” lưu vết → khôi phục / xóa hẳn
   await page.click('[data-kf="all"]');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).click();
   await page.click('[data-kdel]');
@@ -737,14 +737,26 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.click('[data-krestore]');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).waitFor();
   assert.match(await page.locator('.kdet').innerText(), /Lịch sử thay đổi/);
+  await page.click('[data-kf="live"]');
+  const dn0 = await page.locator('.kwrap tfoot').innerText();
   await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).click();
-  await page.click('[data-khide]');
+  await page.click('[data-kdel]');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).waitFor({ state: 'detached' });
+  assert.notEqual(await page.locator('.kwrap tfoot').innerText(), dn0, 'dư nợ không còn tính KUNN đã xóa');
   await page.click('[data-kf="del"]');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).click();
   await page.click('[data-krestore]');
   await page.click('[data-kf="live"]');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).waitFor();
+  assert.equal(await page.locator('.kwrap tfoot').innerText(), dn0, 'khôi phục → dư nợ như cũ');
+  // xóa hẳn
+  await page.click('[data-kf="all"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).click();
+  await page.click('[data-kdel]');
+  await page.click('[data-kf="del"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).click();
+  await page.click('[data-kpurge]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).waitFor({ state: 'detached' });
   // xóa hồ sơ không cần nữa (hoàn tác được)
   await page.click('[data-ctab="hoso"]');
   await page.locator('[data-hsdel]').first().click();
@@ -763,6 +775,15 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('#pkP', { hasText: 'Đọc được 2 dòng' }).waitFor();
   await page.click('#pkOk');
   await page.locator('.hs3', { hasText: 'CT-02' }).waitFor();
+  // sổ hóa đơn chỉ có KUNN đã nạp bảng kê → nạp nhiều bảng kê cũ cùng lúc
+  const o1 = join(dir, 'cu_1.xlsx'), o2 = join(dir, 'cu_2.xlsx');
+  await writeFile(o1, toXlsx({ 'Bang ke': bangKeVay({ ku: '1000001(1).26', ngay: '01/03/2026', rows: [['CÔNG TY TNHH CŨ 1', 'HĐ 1', '901', '01/02/2026', 500, 500, 500]] }) }));
+  await writeFile(o2, toXlsx({ 'Bang ke': bangKeVay({ ku: '1000001(2).26', ngay: '01/04/2026', rows: [['CÔNG TY TNHH CŨ 2', 'HĐ 2', '902', '01/03/2026', 700, 700, 700]] }) }));
+  await page.click('[data-ctab="so"]');
+  const [fcb] = await Promise.all([page.waitForEvent('filechooser'), page.click('#bBulk')]);
+  await fcb.setFiles([o1, o2]);
+  await page.locator('.modal', { hasText: 'Đã nạp 2 KUNN' }).waitFor();
+  await page.locator('.modal [data-close]').first().click();
   // trang đầu: thẻ công ty có dư nợ / hạn mức từ file Excel
   await page.click('a.logo');
   assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d.]+ tr \/ 120\.000 tr/);
