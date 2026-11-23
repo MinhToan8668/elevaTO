@@ -549,6 +549,17 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   await kunn.locator('.dp', { hasText: /^Đại diện$/ }).click();
   await page.selectOption('#wBd', 'none');
   assert.equal(await t1.locator('td').first().evaluate((x) => getComputedStyle(x).borderTopStyle), 'none');
+  // công cụ ô: gộp phải → tách ô; căn giữa dọc; chia đều cột
+  await kunn.locator('.dp', { hasText: /^Địa chỉ$/ }).click();
+  await page.locator('#wTbl:not([hidden])').waitFor();
+  await page.click('[data-w="merge:right"]');
+  assert.equal(await t1.locator('tr', { hasText: 'Địa chỉ' }).locator('td').count(), 2);
+  await kunn.locator('.dp', { hasText: /^Địa chỉ$/ }).click();
+  await page.click('[data-w="split"]');
+  assert.equal(await t1.locator('tr', { hasText: 'Địa chỉ' }).locator('td').count(), 3);
+  await kunn.locator('.dp', { hasText: /^Địa chỉ$/ }).click();
+  await page.click('[data-w="va:center"]');
+  await page.click('[data-w="dist"]');
   // gõ "1. " đầu đoạn → thụt dòng treo, Enter ra "2. "
   await kunn.locator('.dp', { hasText: 'Đoạn mới gõ tay.' }).click(); await page.keyboard.press('End');
   await page.keyboard.press('Enter'); await page.keyboard.type('1. Mục một');
@@ -596,6 +607,8 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   assert.ok(tk.includes('Lãi suất tại thời điểm giải ngân: 9.2%/năm.'));
   const kt = DOCX.parse(xk).blocks.find((x) => x.t === 'tbl');
   assert.equal((kt.pre.match(/<w:gridCol /g) || []).length, 3, 'lưới cột có cột mới');
+  assert.equal(new Set([...kt.pre.matchAll(/<w:gridCol w:w="(\d+)"/g)].map((m) => m[1])).size, 1, 'chia đều cột');
+  assert.match(xk, /<w:vAlign w:val="center"\/>/);
   assert.ok(kt.rows.every((r) => r.cells.length === 3));
   assert.ok(tk.includes('Cột mới'));
   assert.ok(tk.includes('2. Mục hai'));
@@ -701,10 +714,16 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   // bấm mốc → viền đỏ chỗ cần làm; mốc làm tay chỉ “Đã xong” được khi mốc trước đã xong
   await page.click('[data-ms="pdgn_ky"]');
   await page.locator('#oxKunn.focus-red').waitFor();
-  assert.equal(await page.locator('[data-msok="pdgn_ky"]').isDisabled(), true, 'chưa gửi KH ký thì chưa tick được PDGN');
+  assert.equal(await page.locator('[data-msok="pdgn_ky"]').isDisabled(), false, 'mốc làm tay tick lúc nào cũng được');
   await page.click('[data-ms="gui_ky"]');
   await page.click('[data-msok="gui_ky"]');
-  await page.locator('.ms.done', { hasText: 'Gửi KH ký' }).waitFor();
+  await page.locator('.ms.done', { hasText: 'KH ký KUNN' }).waitFor();
+  // chứng từ bổ sung bản gốc: gợi ý từ chứng từ đã thả, số ngày theo yêu cầu ĐVKD → hạn
+  await page.click('#hsBsSug');
+  await page.locator('#oxBs .bsr2').first().waitFor();
+  assert.match(await page.locator('#oxBs').innerText(), /nhập số ngày/);
+  await page.fill('#oxBs [data-bsf="0|ngay"]', '15'); await page.press('#oxBs [data-bsf="0|ngay"]', 'Tab');
+  await page.locator('#oxBs .bsr2', { hasText: 'hạn 11/12/2026' }).first().waitFor();
   assert.equal(await page.locator('.ms.done', { hasText: 'Đã giải ngân' }).count(), 0);
   // ghi vào sổ hóa đơn → tab Theo dõi KUNN thấy KUNN mới
   await page.click('#hsLedger');
@@ -716,6 +735,7 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.click('[data-ctab="kunn"]');
   await page.click('[data-kf="all"]');
   assert.match(await page.locator('.kwrap').innerText(), /1000001\(9\)\.26/);
+  assert.match(await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).innerText(), /hạn 11\/12\/2026/, 'chứng từ bổ sung hiện ở bảng theo dõi');
   // ghi chú KUNN: KH trả 1 phần → dư nợ giảm, có dòng tổng
   await page.click('[data-kf="live"]');
   const tot0 = await page.locator('.kwrap tfoot').innerText();

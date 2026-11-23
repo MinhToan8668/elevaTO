@@ -210,7 +210,7 @@ svg .hit.go{cursor:pointer}svg .hit.go:hover{fill:rgba(0,91,170,.06)}
 .dpage .dn{display:inline-block;min-width:26px;padding-right:6px;text-indent:0;user-select:none}
 .dpage .dp[data-num]::before{content:attr(data-num);display:inline-block;min-width:var(--nw,18pt);padding-right:4px;box-sizing:border-box;text-indent:0;white-space:pre}
 .dpage table.dt{border-collapse:collapse;table-layout:auto;margin:2px 0}.dpage td{padding:1px 6px;overflow-wrap:break-word}
-.dpage td .dp{margin-left:0!important;margin-right:0!important}
+.dpage td .dp{margin-right:0!important}
 .df{color:#d40000;font-weight:inherit;cursor:pointer;border-bottom:1px dashed #e88;white-space:pre-wrap}
 .df:hover{background:#ffe8e8}.df.empty{border-bottom:0}.df.empty::before{content:attr(data-ph);color:#c0392b;font-style:italic;font-size:.85em;padding:0 2px;border-bottom:1px dashed #e88;white-space:normal}
 .dc{cursor:pointer;user-select:none;font-family:'Segoe UI Symbol','DejaVu Sans',sans-serif}.dc:hover{background:#e6f0fb;border-radius:2px}
@@ -457,7 +457,8 @@ a,.lnk{color:var(--blue)}
 .mtab{margin-bottom:12px}.mtab header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .bulkn{display:flex;gap:12px;align-items:center;margin-bottom:12px}.bulkn>div{flex:1}
 .khist{margin-top:10px;font-size:12.5px}.khist summary{cursor:pointer;font-weight:700}.khist ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:5px}.khist small{display:block;color:var(--ink3)}
-.wrib #wBd{width:118px}
+.wrib #wBd{width:118px}.wrib .wtbl{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;border-top:1px dashed var(--line2);padding-top:5px;margin-top:2px}.wrib .wtbl[hidden]{display:none}.wrib .wtt{font-size:12px;color:var(--blue);padding:2px 8px;border-radius:6px;background:var(--blue-bg)}.wrib .rg>.hist{padding:0 4px;font-size:11px}
+.bsl{display:flex;flex-direction:column;gap:4px;margin:6px 0}.bsr2{display:grid;grid-template-columns:auto minmax(0,1fr) 58px 58px auto auto;gap:4px;align-items:center}.bsr2 small{font-size:11px;color:var(--ink3);white-space:nowrap}.bsr2 small.err{color:var(--err)}.bsn{width:58px}
 .mbox.wide{max-width:1100px}.pkf{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px 10px;margin-top:8px}
 .xlv{background:rgba(255,255,255,.92);border-radius:12px;padding:10px;overflow:auto;height:100%;color:#111}.xlv h4{margin:6px 0}.xlv .t td{white-space:nowrap;font-size:12px}
 </style>
@@ -1891,6 +1892,28 @@ const DOCX = (() => {
     t.list = L;
     return true;
   }
+  /** Bảng "Chứng từ bổ sung": Tên chứng từ | Bản gốc/Sao | Ngày bổ sung dự kiến → dòng {{bs.*}} (nằm trong bảng lớn cũng được). */
+  function learnBs(t, values) {
+    if (t.rows.some(rowList)) return false;
+    const hi = t.rows.findIndex((r) => { const f = r.cells.map((c) => fold(ctext(c))); return f.some((x) => /^ten chung tu/.test(x)) && f.some((x) => /ngay bo sung/.test(x)); });
+    if (hi < 0 || hi + 1 >= t.rows.length) return false;
+    const hdr = t.rows[hi], hs0 = startCols(hdr), col = {};
+    hdr.cells.forEach((c, i) => { const f = fold(ctext(c)); if (/^ten chung tu/.test(f)) col[hs0[i]] = 'ten'; else if (/goc\s*\/?\s*sao|ban goc|ban sao/.test(f)) col[hs0[i]] = 'ban'; else if (/ngay bo sung/.test(f)) col[hs0[i]] = 'han'; });
+    if (!Object.values(col).includes('ten')) return false;
+    const first = Math.min(...Object.keys(col).map(Number));
+    let end = hi + 1;
+    while (end < t.rows.length) { const r = t.rows[end], ss = startCols(r); const lab = r.cells.filter((c, j) => ss[j] < first).map(ctext).join('').trim(); if (lab) break; if (!r.cells.some((c, j) => col[ss[j]])) break; end++; }
+    if (end === hi + 1) return false;
+    const items = [];
+    for (let i = hi + 1; i < end; i++) { const r = t.rows[i], ss = startCols(r); const o = {}; r.cells.forEach((c, j) => { const k = col[ss[j]]; if (k) o[k] = ctext(c); }); if (Object.values(o).some(Boolean)) items.push(o); }
+    values._bs = items;
+    const tpl = t.rows[hi + 1], ts = startCols(tpl);
+    tpl.cells.forEach((c, j) => { const k = col[ts[j]]; if (k) setCellText(c, `{{bs.${k}}}`); });
+    t.rows.splice(hi + 2, end - hi - 2);
+    return true;
+  }
+  /** Áp cho mẫu đã lưu từ trước (chưa có {{bs.*}}). */
+  function learnBsAll(doc) { const v = {}; const f = (bs) => bs.forEach((b) => { if (b.t === 'tbl') { learnBs(b, v); b.rows.forEach((r) => r.cells.forEach((c) => f(c.blocks))); } }); f(doc.blocks); return v; }
   function learnCltf(t, values, kind) {
     const hi = t.rows.findIndex((r) => r.cells.some((c) => /han muc duoc cap/.test(fold(ctext(c)))));
     if (hi < 0) return false;
@@ -1914,6 +1937,7 @@ const DOCX = (() => {
     const tbls = []; const f = (bs) => bs.forEach((b) => { if (b.t === 'tbl') { tbls.push(b); b.rows.forEach((r) => r.cells.forEach((c) => f(c.blocks))); } }); f(doc.blocks);
     for (const t of tbls) {
       if (learnList(t, values)) continue;
+      learnBs(t, values);
       learnCltf(t, values, kind);
       for (const r of t.rows) for (let i = 0; i < r.cells.length - 1; i++) {
         const lab = fold(ctext(r.cells[i])).replace(/[:\s(*)]+$/, '');
@@ -2080,6 +2104,7 @@ const DOCX = (() => {
   const LIST_COLS = {
     ct: [['ben', 'Bên thụ hưởng'], ['hd', 'Hợp đồng / diễn giải'], ['so', 'Số chứng từ'], ['ngay', 'Ngày'], ['tien_hd', 'Tiền HĐ/CT'], ['gn', 'Giải ngân']],
     tth: [['ten', 'Bên thụ hưởng'], ['tk', 'Số tài khoản'], ['nh', 'Ngân hàng'], ['tien', 'Số tiền']],
+    bs: [['ten', 'Tên chứng từ'], ['ban', 'Bản gốc/sao'], ['han', 'Ngày bổ sung dự kiến']],
   };
 
   /** Chứng từ (ct) từ các dòng bảng kê của KUNN; gom dòng cùng bên thụ hưởng liền nhau. */
@@ -2260,7 +2285,7 @@ const DOCX = (() => {
 
   return { kids, attr, unesc, xesc, parse, serialize, walk, ptext, pview, ctext, pReplace, setCellText, setVMerge, vMerge, gridSpan, clone, fieldsIn, expand, listTables, rowList,
     learn, guessKind, words, bangChu, num, fmtN, addMonths, nextPayDay, calc, checks, linesToCt, prepLists, HS_FIELDS, HS_GROUPS, HS, LIST_COLS, shortName,
-    testKey, keyTableError, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, legacyOn };
+    testKey, keyTableError, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, legacyOn, learnBs, learnBsAll };
 })();
 </script>
 <script id="bk-hs">
@@ -2335,9 +2360,8 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     ['nhan', 'Nhận chứng từ', 'auto', 'Thả toàn bộ file KH gửi vào hồ sơ.'],
     ['kiem_tra', 'Kiểm tra', 'auto', 'Có bảng kê và xử lý hết lỗi (✕) trong danh sách kiểm tra — sửa số liệu hoặc bỏ qua kèm lý do.'],
     ['so_kunn', 'Xin số KUNN', 'auto', 'Nhập số KUNN admin cấp vào ô “Số KUNN”.'],
-    ['gui_ky', 'Gửi KH ký KUNN + bảng kê', 'manual', 'Soạn & xuất KUNN, bảng kê rồi gửi KH ký.'],
-    ['nhan_ky', 'Nhận bản ký', 'manual', 'Thả bản scan KUNN + bảng kê KH đã ký vào hồ sơ (tool tự tick khi nhận ra “KUNN đã ký”), hoặc bấm Đã xong.'],
-    ['pdgn_ky', 'GĐ TTKD ký PDGN', 'manual', 'Soạn PDGN, trình GĐ TTKD ký; thả bản ký vào hồ sơ hoặc bấm Đã xong.'],
+    ['gui_ky', 'KH ký KUNN + bảng kê', 'manual', 'Soạn & xuất KUNN, bảng kê, KH ký xong thì tick.'],
+    ['pdgn_ky', 'GĐ TTKD ký PDGN', 'manual', 'Soạn PDGN, GĐ TTKD ký xong thì tick.'],
     ['he_thong', 'Đưa lên hệ thống + UNC', 'manual', 'Tải gói file đã đặt tên, đưa lên hệ thống kèm UNC.'],
     ['giai_ngan', 'Đã giải ngân', 'manual', 'Kiểm tra ngày giải ngân rồi bấm Đã xong — hồ sơ chuyển sang “Đã giải ngân”.'],
   ];
@@ -2348,17 +2372,15 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
       nhan: (hs.files || []).length > 0,
       kiem_tra: (hs.files || []).length > 0 && (hs.lines || []).length > 0 && nErr === 0,
       so_kunn: !!hs.so_kunn,
-      nhan_ky: docs.some((d) => d.loai === 'kunn_ky'),
-      pdgn_ky: docs.some((d) => d.loai === 'pdgn_ky'),
     };
-    let prevOk = true, cur = false;
+    let cur = false;
     for (const [k, l, kind, hint] of MILESTONES) {
       if (ms[k] === 'skip') { out.push({ k, l, kind, hint, st: 'skip', can: false, at: '' }); continue; }
       const manual = kind === 'manual' && ms[k] && ms[k] !== 'skip';
-      const done = prevOk && (ev[k] || manual);
-      const m = { k, l, kind, hint, at: manual ? ms[k] : '', can: prevOk && kind === 'manual' && !done };
+      const done = !!(ev[k] || manual);
+      const m = { k, l, kind, hint, at: manual ? ms[k] : '', can: kind === 'manual' && !done };
       if (done) m.st = 'done';
-      else { m.st = cur ? 'todo' : 'cur'; cur = true; prevOk = false; if (kind === 'manual' && manual) m.stale = true; }
+      else { m.st = cur ? 'todo' : 'cur'; cur = true; }
       out.push(m);
     }
     return out;
@@ -2471,6 +2493,11 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
       if (nhom != null && nhom >= 2) add('cic_nhom', 3, `CIC: KH có nợ nhóm ${nhom}`, '', [cic.id]);
       if ((age == null || age <= 10) && !(nhom >= 2)) add('cic_ok', 0, `CIC ngày ${dmy(cicDate)} còn hiệu lực, không có nợ nhóm 2 trở lên`);
     }
+    // chứng từ bổ sung bản gốc (số ngày theo yêu cầu ĐVKD)
+    const bsl = hs.bo_sung || [];
+    const noDay = bsl.filter((b) => !b.xong && !(parseInt(b.ngay, 10) > 0) && !b.han);
+    if (noDay.length) add('bs_ngay', 2, `Chứng từ bổ sung chưa có số ngày: ${noDay.map((b) => b.ten || '(chưa đặt tên)').join(', ')}`, 'Nhập số ngày bổ sung bản gốc theo yêu cầu của ĐVKD ở hộp “Chứng từ bổ sung bản gốc”.');
+    else if (!bsl.length && !hs.bs_none && (hs.lines || []).length) add('bs_chua', 1, 'Chưa chọn chứng từ phải bổ sung bản gốc', 'Bấm “＋ Từ chứng từ đã thả” ở hộp Chứng từ bổ sung bản gốc, hoặc tick “Không có chứng từ phải bổ sung”.');
     // CLTF (báo cáo hạn mức CL - KERNEL - TF)
     const cl = docs.filter((x) => x.loai === 'cltf').sort((a, b) => (iso(b.f.ngay) || '').localeCompare(iso(a.f.ngay) || ''))[0];
     if (cl) {
@@ -5002,7 +5029,7 @@ function hsRecalc() {
   HE.lists.ct = pl.ct; HE.lists.tth = pl.tth;
   Object.assign(HE.v, DOCX.calc(HE.v, HE.lists, HE.ov, { keys }));
 }
-const listSig = () => JSON.stringify([HE.lists.ct.map((x) => x._g), HE.lists.tth.length]);
+const listSig = () => JSON.stringify([HE.lists.ct.map((x) => x._g), HE.lists.tth.length, (HE.lists.bs || []).length]);
 
 async function openHoSo(cid, kid, hsId) {
   const c = cust(cid); if (!c) return;
@@ -5032,7 +5059,9 @@ async function openHoSo(cid, kid, hsId) {
   }
   Object.assign(v, saved.v || {});
   if (hsx) { if (hsx.so_kunn) v.so_kunn = hsx.so_kunn; if (hsx.ngay_gn) v.ngay_gn = dd(BK.toISO(hsx.ngay_gn)); }
-  HE = { cid, kid, c: structuredClone(c), k, v, ov: new Set(saved.ov || []), lists: saved.lists ? structuredClone(saved.lists) : { ct: DOCX.linesToCt(k ? k.lines : []), tth: [] }, listsEdited: !!saved.lists, saved, kinds: {}, cur: lsGet('bangke_hs_tab') || 'kunn', dirty: false, ai: null };
+  HE = { cid, kid, c: structuredClone(c), k, v, ov: new Set(saved.ov || []), lists: saved.lists ? { bs: [], ...structuredClone(saved.lists) } : { ct: DOCX.linesToCt(k ? k.lines : []), tth: [], bs: [] }, listsEdited: !!saved.lists, saved, kinds: {}, cur: lsGet('bangke_hs_tab') || 'kunn', dirty: false, ai: null };
+  if (hsx && (hsx.bo_sung || []).length) HE.lists.bs = hsx.bo_sung.map((b) => ({ ten: b.ten, ban: b.ban || 'Sao', han: parseInt(b.ngay, 10) > 0 ? `${b.ngay} ngày kể từ ngày giải ngân` : b.han || '' }));
+  else if (hsx && hsx.bs_none) HE.lists.bs = [{ ten: 'Không có', ban: '', han: '' }];
   hsRecalc();
   const m = modal(`<div class="mh"><h2>📝 Soạn KUNN & PDGN — ${esc(c.name)}${k ? ' · KUNN ' + esc(k.so_kunn || '') : ' · hồ sơ mới'}</h2>
     <span style="flex:1"></span><label class="hist" title="File Word xuất ra giữ màu đỏ ở các chỗ tool điền / bạn sửa — để soát trước khi in"><input type="checkbox" id="hsRed"> Xuất kèm chữ đỏ để soát</label>
@@ -5062,6 +5091,7 @@ async function hsLoadKind(kind) {
   const rd = async (p) => { const f = zip.file(p); return f ? f.async('string') : ''; };
   const docXml = await rd('word/document.xml');
   const tpl = DOCX.parse(docXml);
+  DOCX.learnBsAll(tpl);
   const rels = await rd('word/_rels/document.xml.rels');
   const imgs = {}, urls = [];
   for (const m of rels.matchAll(/<Relationship [^>]*Id="([^"]+)"[^>]*Target="(media\/[^"]+)"/g)) {
@@ -5122,7 +5152,7 @@ function hsSide() {
       <button class="btn sm" id="hsAI">🤖 AI rà soát KUNN & PDGN</button></div>
     <div class="hs-box"><b>TestKey</b> <span class="hist">${kt ? '✓ đã nạp bảng key trên máy này — tool tự tính theo mã TTKD, ngày GN, số tiền' : 'chưa nạp bảng key → gõ tay ô Testkey'}</span> <button class="lnk" id="hsKey">${kt ? 'Đổi' : 'Nạp'} bảng key (.json)</button>${kt ? ' <button class="lnk" id="hsKeyDel">Gỡ</button>' : ''}</div>
     ${grp}${extra.length ? `<details class="hg" open><summary>Trường khác trong mẫu</summary>${extra.map((k) => f({ k, l: k, s: 'k' })).join('')}</details>` : ''}
-    ${lst('ct', 'Chứng từ giải ngân (bảng kê)')}${lst('tth', 'Bên thụ hưởng')}
+    ${lst('ct', 'Chứng từ giải ngân (bảng kê)')}${lst('tth', 'Bên thụ hưởng')}${lst('bs', 'Chứng từ bổ sung (PDGN)')}
     <details class="hg"><summary>Ngày nghỉ lễ Tết (đáo hạn)</summary><textarea class="inp" id="hsHol" rows="8">${esc(lsGet(HOL_LS) || DOCX.HOL_DEF)}</textarea><div class="hist">Mỗi dòng: dd/mm/yyyy [→ dd/mm/yyyy] tên. Tết âm lịch, Giỗ Tổ là dự kiến.</div></details>`;
 }
 function hsRefresh(skip) {
@@ -5171,7 +5201,7 @@ function hsBindDoc(sc) {
   m.addEventListener('click', async (e) => {
     const t = e.target.closest('button,li,.df,.dc') || e.target;
     if (t.dataset.reset) { e.preventDefault(); HE.ov.delete(t.dataset.reset); HE.dirty = true; return hsRefresh(); }
-    if (t.dataset.ladd) { const L = t.dataset.ladd; HE.lists[L].push(L === 'ct' ? { ben: '', hd: '', so: '', ngay: '', tien_hd: '', gn: '' } : { ten: '', tk: '', nh: '' }); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
+    if (t.dataset.ladd) { const L = t.dataset.ladd; (HE.lists[L] = HE.lists[L] || []).push(L === 'ct' ? { ben: '', hd: '', so: '', ngay: '', tien_hd: '', gn: '' } : L === 'bs' ? { ten: '', ban: 'Sao', han: '' } : { ten: '', tk: '', nh: '' }); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
     if (t.dataset.ldel) { const [L, i] = t.dataset.ldel.split('|'); HE.lists[L].splice(+i, 1); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
     if (t.id === 'hsReCt') { if (!confirm('Lấy lại bảng chứng từ từ các dòng bảng kê của KUNN (bỏ phần đã sửa ở bảng này)?')) return; HE.lists.ct = DOCX.linesToCt(HE.k.lines); HE.listsEdited = false; HE.dirty = true; return hsRefresh(); }
     if (t.dataset.tplload) return hsPickTemplate(t.dataset.tplload);
@@ -5273,6 +5303,51 @@ function wRowOp(tr, act) {
   }
   K.dirty = true; HE.dirty = true;
   wSnap(K, true);
+}
+/** Công cụ ô bảng: gộp phải / gộp dưới / tách ô / căn dọc / tô nền / chia đều cột / xóa bảng. */
+function wCell(act, arg) {
+  const p = wCurPara(); const td = p && p.closest('td');
+  if (!td) return toast('Đặt con trỏ vào một ô của bảng trước', 'err');
+  const K = HE.kinds[HE.cur], store = K.store, table = td.closest('table');
+  const put = (o) => { store.push(o); return store.length - 1; };
+  const setPre = (cell, set) => { cell.dataset.i = put({ pre: DOCX.patchTcPr(store[cell.dataset.i].pre, set) }); };
+  const span = (c) => c.colSpan || 1;
+  const startOf = (c) => { let x = 0; for (const o of c.parentNode.cells) { if (o === c) return x; x += span(o); } return x; };
+  const cellAt = (tr, g) => { let x = 0; for (const c of tr.cells) { if (g >= x && g < x + span(c)) return { c, x }; x += span(c); } return null; };
+  const moveContent = (from, to) => { const ps = [...from.querySelectorAll(':scope > .dp')].filter((q) => (q.textContent || '').trim() || q.querySelector('.df,.dc,.dx')); ps.forEach((q) => { q.classList.add('ed'); to.appendChild(q); }); };
+  wSnap(K, true);
+  if (act === 'merge' && arg === 'right') {
+    const nx = td.nextElementSibling; if (!nx) return toast('Không có ô bên phải để gộp');
+    moveContent(nx, td); const n = span(td) + span(nx); nx.remove(); td.colSpan = n; setPre(td, { 'w:gridSpan': `<w:gridSpan w:val="${n}"/>` });
+  } else if (act === 'merge' && arg === 'down') {
+    const g = startOf(td); let tr = td.parentNode.nextElementSibling, below = null;
+    while (tr) { const hit = cellAt(tr, g); if (!hit || hit.x !== g || span(hit.c) !== span(td)) return toast('Ô bên dưới không cùng độ rộng — không gộp dọc được', 'err'); if (!hit.c.classList.contains('vm')) { below = hit.c; break; } tr = tr.nextElementSibling; }
+    if (!below) return toast('Không có ô bên dưới để gộp');
+    if (!/w:vMerge/.test(store[td.dataset.i].pre)) setPre(td, { 'w:vMerge': '<w:vMerge w:val="restart"/>' });
+    moveContent(below, td); below.classList.add('vm'); below.style.borderTopStyle = 'hidden'; below.dataset.vm = ''; setPre(below, { 'w:vMerge': '<w:vMerge/>' });
+  } else if (act === 'split') {
+    let done = false;
+    if (span(td) > 1) { const n = span(td); td.colSpan = 1; setPre(td, { 'w:gridSpan': null }); for (let i = 1; i < n; i++) { const c = td.cloneNode(false); c.removeAttribute('colspan'); c.dataset.vm = 'none'; c.dataset.i = put({ pre: DOCX.patchTcPr(store[td.dataset.i].pre, { 'w:gridSpan': null, 'w:vMerge': null }) }); const fp = td.querySelector('.dp'); if (fp) { const q = fp.cloneNode(false); q.innerHTML = ''; q.classList.add('ed'); c.appendChild(q); } td.after(c); } done = true; }
+    if (/w:vMerge w:val="restart"/.test(store[td.dataset.i].pre)) { setPre(td, { 'w:vMerge': null }); const g = startOf(td); let tr = td.parentNode.nextElementSibling; while (tr) { const hit = cellAt(tr, g); if (!hit || !hit.c.classList.contains('vm')) break; hit.c.classList.remove('vm'); hit.c.style.borderTopStyle = ''; setPre(hit.c, { 'w:vMerge': null }); if (!hit.c.querySelector('.dp')) { const q = (td.querySelector('.dp') || document.createElement('div')).cloneNode(false); q.innerHTML = ''; q.classList.add('ed'); hit.c.appendChild(q); } tr = tr.nextElementSibling; } done = true; }
+    if (!done) return toast('Ô này không gộp — không có gì để tách');
+  } else if (act === 'va') {
+    td.style.verticalAlign = arg === 'center' ? 'middle' : arg; setPre(td, { 'w:vAlign': `<w:vAlign w:val="${arg}"/>` });
+  } else if (act === 'shd') {
+    if (arg === 'none') { td.style.background = ''; setPre(td, { 'w:shd': null }); }
+    else { td.style.background = '#' + arg; setPre(td, { 'w:shd': `<w:shd w:val="clear" w:color="auto" w:fill="${arg}"/>` }); }
+  } else if (act === 'dist') {
+    const ts = store[table.dataset.i], cols = [...ts.pre.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => +m[1]);
+    if (!cols.length) return;
+    const w = Math.round(cols.reduce((a, b) => a + b, 0) / cols.length);
+    table.dataset.i = put({ ...ts, pre: ts.pre.replace(/<w:tblGrid>[\s\S]*?<\/w:tblGrid>/, `<w:tblGrid>${cols.map(() => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`) });
+    const cg = table.querySelector(':scope > colgroup'); if (cg) cg.innerHTML = cols.map(() => `<col style="width:${w / 15}px">`).join('');
+    for (const tr of table.tBodies[0].rows) for (const c of tr.cells) { const n = span(c); c.style.width = (w * n) / 15 + 'px'; setPre(c, { 'w:tcW': `<w:tcW w:w="${w * n}" w:type="dxa"/>` }); }
+  } else if (act === 'tbldel') {
+    if (!confirm('Xóa cả bảng này?')) return;
+    const wrap = table.closest('.dtw'); HE.lr = null; (wrap || table).remove();
+  }
+  K.dirty = true; HE.dirty = true;
+  if (act !== 'tbldel') hsMarkEd(p, true); else wSnap(K, true);
 }
 /** Kẻ / bỏ khung: ghi w:tcBorders cho từng ô (Word hiểu đúng, không phụ thuộc kiểu bảng). */
 function wBorders(mode) {
@@ -5400,9 +5475,13 @@ function wRibbon() {
       <select id="wHl" title="Tô sáng chữ">${W_HL.map(([v, l], i) => `<option value="${v}">${i ? '🖍 ' : ''}${l}</option>`).join('').replace('<option value="">Không tô', '<option value="" selected hidden>🖍 Tô sáng</option><option value="none">Không tô')}</select>
       ${B('clear', '<s style="text-decoration-color:#c00">A</s>✕', 'Xóa định dạng đã đổi — trả đoạn về như mẫu')}</div>
     <div class="rg">${B('jc:left', wIco('M2 3h12M2 6.5h8M2 10h12M2 13.5h8'), 'Căn trái')}${B('jc:center', wIco('M2 3h12M4 6.5h8M2 10h12M4 13.5h8'), 'Căn giữa')}${B('jc:right', wIco('M2 3h12M6 6.5h8M2 10h12M6 13.5h8'), 'Căn phải')}${B('jc:both', wIco('M2 3h12M2 6.5h12M2 10h12M2 13.5h12'), 'Căn đều hai bên')}${B('outdent', wIco('M6 3h8M6 6.5h8M6 10h8M2 13.5h12M4 5L2 6.75L4 8.5'), 'Giảm thụt lề')}${B('indent', wIco('M6 3h8M6 6.5h8M6 10h8M2 13.5h12M2 5L4 6.75L2 8.5'), 'Tăng thụt lề')}</div>
-    <div class="rg"><span class="hist" style="padding:0 4px">Bảng</span>${B('row:up', '⬆＋dòng', 'Chèn dòng phía trên (đặt con trỏ trong bảng)')}${B('row:down', '⬇＋dòng', 'Chèn dòng phía dưới')}${B('row:del', '✕dòng', 'Xóa dòng đang đứng')}${B('col:left', '⬅＋cột', 'Chèn cột bên trái')}${B('col:right', '＋➡cột', 'Chèn cột bên phải')}${B('col:del', '✕cột', 'Xóa cột đang đứng')}<select id="wBd" title="Kẻ khung bảng (đặt con trỏ trong bảng)"><option value="">▦ Kẻ khung</option><option value="all">Kẻ tất cả ô của bảng</option><option value="out">Chỉ khung ngoài bảng</option><option value="none">Bỏ hết khung bảng</option><option value="cell">Kẻ khung ô đang đứng</option><option value="row">Kẻ khung cả dòng đang đứng</option><option value="cellnone">Bỏ khung ô đang đứng</option><option value="bottom">Chỉ kẻ dưới ô đang đứng</option></select></div>
     <div class="rg">${B('find', '🔍 Tìm & thay', 'Tìm & thay thế (Ctrl+H)')}</div>
     <div class="rg">${B('zoom:-10', '−', 'Thu nhỏ (Ctrl + lăn chuột)')}<span class="zl" id="wZoom">100%</span>${B('zoom:10', '＋', 'Phóng to')}</div>
+    <div class="wtbl" id="wTbl" hidden><b class="wtt">Công cụ bảng</b>
+      <div class="rg"><span class="hist">Dòng & cột</span>${B('row:up', '⬆＋dòng', 'Chèn dòng phía trên (đặt con trỏ trong bảng)')}${B('row:down', '⬇＋dòng', 'Chèn dòng phía dưới')}${B('row:del', '✕dòng', 'Xóa dòng đang đứng')}${B('col:left', '⬅＋cột', 'Chèn cột bên trái')}${B('col:right', '＋➡cột', 'Chèn cột bên phải')}${B('col:del', '✕cột', 'Xóa cột đang đứng')}</div>
+      <div class="rg"><span class="hist">Ô</span>${B('merge:right', '⇥ Gộp phải', 'Gộp ô này với ô bên phải')}${B('merge:down', '⤓ Gộp dưới', 'Gộp ô này với ô bên dưới')}${B('split', '⫼ Tách ô', 'Tách ô đã gộp')}${B('va:top', '⤒', 'Căn chữ lên trên ô')}${B('va:center', '↕', 'Căn chữ giữa ô (dọc)')}${B('va:bottom', '⤓', 'Căn chữ xuống dưới ô')}${B('dist', '⇹ Chia đều cột', 'Chia đều độ rộng các cột')}<label class="wcol" title="Tô nền ô"><span style="color:#94a3b8">▦</span><input type="color" id="wShd" value="#dbeafe"></label>${B('shd:none', '▢', 'Bỏ tô nền ô')}</div>
+      <div class="rg"><span class="hist">Khung</span><select id="wBd" title="Kẻ khung bảng (đặt con trỏ trong bảng)"><option value="">▦ Kẻ khung</option><option value="all">Kẻ tất cả ô của bảng</option><option value="out">Chỉ khung ngoài bảng</option><option value="none">Bỏ hết khung bảng</option><option value="cell">Kẻ khung ô đang đứng</option><option value="row">Kẻ khung cả dòng đang đứng</option><option value="cellnone">Bỏ khung ô đang đứng</option><option value="bottom">Chỉ kẻ dưới ô đang đứng</option></select>${B('tbl:del', '🗑 Xóa bảng', 'Xóa cả bảng')}</div>
+    </div>
   </div>
   <div class="wfind" id="hsFind" hidden><input class="inp" id="wfQ" placeholder="Tìm chữ…"><input class="inp" id="wfR" placeholder="Thay bằng…"><button type="button" class="btn sm" data-w="fnext">Tìm tiếp</button><button type="button" class="btn sm" data-w="frep">Thay</button><button type="button" class="btn sm" data-w="fall">Thay hết</button><small id="wfN"></small><span style="flex:1"></span><button type="button" class="x" data-w="fclose" aria-label="Đóng">&times;</button></div>`;
 }
@@ -5428,6 +5507,7 @@ function wBind() {
   $('#wfR', m).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); wCmd('frep'); } });
   $('#wFont', m).onchange = (e) => { const f = e.target.value; if (f) wApply((p) => { document.execCommand('fontName', false, f); }); };
   $('#wSize', m).onchange = (e) => { const z = +e.target.value; if (z) wSetSize(z); };
+  $('#wShd', m).onchange = (e) => wCell('shd', e.target.value.slice(1).toUpperCase());
   $('#wBd', m).onchange = (e) => { const v = e.target.value; e.target.value = ''; if (v) wBorders(v); };
   $('#wColor', m).oninput = (e) => { $('#wColBar', m).style.color = e.target.value; };
   $('#wColor', m).onchange = (e) => { const c = e.target.value; wApply(() => document.execCommand('foreColor', false, c)); };
@@ -5511,6 +5591,7 @@ function wCmd(w) {
     p.dataset.indl = nv; p.style.marginLeft = nv / 20 + 'pt';
     return hsMarkEd(p, true);
   }
+  if (/^(merge|va|shd):|^(split|dist|tbl:del)$/.test(w)) { const [a, b] = w.split(':'); return wCell(a === 'tbl' ? 'tbldel' : a, b); }
   if (/^col:/.test(w)) {
     const p = wCurPara(); const td = p && p.closest('td');
     if (!td) return toast('Đặt con trỏ vào một ô của bảng trước', 'err');
@@ -5537,6 +5618,7 @@ function wState() {
   ss.value = z;
   const ta = getComputedStyle(p).textAlign, jc = ta === 'center' ? 'center' : ta === 'right' || ta === 'end' ? 'right' : ta === 'justify' ? 'both' : 'left';
   $$('[data-w^="jc:"]', m).forEach((b) => b.classList.toggle('on', b.dataset.w === 'jc:' + jc));
+  const tb = $('#wTbl', m); if (tb) tb.hidden = !p.closest('td');
 }
 /** Lịch sử hoàn tác / làm lại (theo từng trang KUNN / PDGN). */
 function wSnap(K, now) {
@@ -6387,12 +6469,15 @@ async function excelHtml(blob) {
 const mimeOf = (f) => f.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : /\.png$/i.test(f.name) ? 'image/png' : /\.jpe?g$/i.test(f.name) ? 'image/jpeg' : 'application/octet-stream');
 async function addFiles(hsId, files, opt = {}) {
   const hs0 = hsGet(hsId); if (!hs0) return;
-  const added = [];
+  const added = [], skipped = [];
   for (const f of files) {
+    if ((hs0.files || []).some((x) => x.name === f.name && x.size === f.size) || added.some((x) => x.name === f.name && x.size === f.size)) { skipped.push(f.name); continue; }
     const id = BK.uid(12);
     await S.store.putFile({ id, blob: f, name: f.name, type: mimeOf(f), size: f.size, at: Date.now() });
     added.push({ id, name: f.name, type: mimeOf(f), size: f.size, at: Date.now(), by: userName(), file: f });
   }
+  if (skipped.length) toast(`Bỏ qua ${skipped.length} file đã có trong hồ sơ: ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? '…' : ''}`, 'err', 6000);
+  if (!added.length) return;
   await hsPatch(hsId, (x) => { x.files.push(...added.map(({ file, ...m }) => m)); if (!x.ms.nhan) x.ms.nhan = BK.todayISO(); }, `Thêm ${added.length} file vào hồ sơ`);
   toast(`Đã thêm ${added.length} file — đang đọc…`);
   for (const a of added) {
@@ -6592,16 +6677,19 @@ function renderHoso(el, c) {
         <header><h3>Làm ra từ hồ sơ này</h3></header>
         <div class="obox" id="oxKunn"><div class="oh"><b>KUNN &amp; PDGN</b><span class="${hs.so_kunn ? 'o' : 'w'}">${hs.so_kunn ? 'Có số KUNN' : 'Chờ số KUNN'}</span></div>
           <label class="f">Số KUNN admin cấp<input class="inp" id="hsKunn" value="${esc(hs.so_kunn || '')}" placeholder="${esc(p.prefix_kunn ? p.prefix_kunn + '(…)' + (p.hau_to_kunn || '') : 'vd 1082154(3).26')}"></label>
-          ${(() => { const sg = suggestKunn(c, hs); if (!sg) return ''; const dup = hs.so_kunn && kunnTaken(c, hs).has(kkey(hs.so_kunn));
-            return `${dup ? '<div class="note warn" style="margin:0">! Số KUNN này đã có trong sổ / hồ sơ khác</div>' : ''}<div class="hist" style="margin-top:6px">Số tiếp theo</div><div class="kn-sg"><input class="inp knpre" data-knpre value="${esc(sg.pre)}" size="9" title="Số gốc (theo HĐTD / gói giải ngân) — chỉ đổi khi có gói mới; sửa ở đây tool nhớ cho công ty" aria-label="Số gốc"><b>(</b><button class="btn sm" data-kn="-1" title="Giảm 1">−</button><input class="inp knn" data-knn value="${sg.n}" size="3" inputmode="numeric" title="Số thứ tự KUNN — tự +1 mỗi lần" aria-label="Số trong ngoặc"><button class="btn sm" data-kn="1" title="Tăng 1">+</button><b>)</b><input class="inp knsuf" data-knsuf value="${esc(sg.suf)}" size="4" list="knSufL" title="Đuôi năm, vd .26 — ít đổi; sửa ở đây tool nhớ cho công ty" aria-label="Đuôi"><datalist id="knSufL">${sg.sufs.map((x) => `<option value="${esc(x)}">`).join('')}</datalist></div><button class="btn sm pri knuse" data-knuse="1">Dùng số ${esc(sg.pre)}(${sg.n})${esc(sg.suf)}</button><div class="hist">Chỉ <b>số trong ngoặc</b> đổi mỗi KUNN (tự +1 theo số lớn nhất đã có${sg.last ? ': ' + esc(sg.last) : ''}). Số gốc và đuôi năm chỉ đổi khi có gói giải ngân / HĐTD mới — sửa trực tiếp, tool nhớ cho các lần sau.</div>`; })()}
+          ${(() => { const sg = suggestKunn(c, hs); if (!sg) return ''; const dup = hs.so_kunn && kunnTakenOther(c, hs).has(kkey(hs.so_kunn)), inXl = !dup && kunnInXl(c, hs.so_kunn);
+            return `${dup ? '<div class="note warn" style="margin:0">! Số KUNN này đã dùng cho hồ sơ / KUNN khác</div>' : inXl ? '<div class="note ok" style="margin:0">✓ KUNN này đã có trong file Excel theo dõi</div>' : ''}<div class="hist" style="margin-top:6px">Số tiếp theo</div><div class="kn-sg"><input class="inp knpre" data-knpre value="${esc(sg.pre)}" size="9" title="Số gốc (theo HĐTD / gói giải ngân) — chỉ đổi khi có gói mới; sửa ở đây tool nhớ cho công ty" aria-label="Số gốc"><b>(</b><button class="btn sm" data-kn="-1" title="Giảm 1">−</button><input class="inp knn" data-knn value="${sg.n}" size="3" inputmode="numeric" title="Số thứ tự KUNN — tự +1 mỗi lần" aria-label="Số trong ngoặc"><button class="btn sm" data-kn="1" title="Tăng 1">+</button><b>)</b><input class="inp knsuf" data-knsuf value="${esc(sg.suf)}" size="4" list="knSufL" title="Đuôi năm, vd .26 — ít đổi; sửa ở đây tool nhớ cho công ty" aria-label="Đuôi"><datalist id="knSufL">${sg.sufs.map((x) => `<option value="${esc(x)}">`).join('')}</datalist></div><button class="btn sm pri knuse" data-knuse="1">Dùng số ${esc(sg.pre)}(${sg.n})${esc(sg.suf)}</button><div class="hist">Chỉ <b>số trong ngoặc</b> đổi mỗi KUNN (tự +1 theo số lớn nhất đã có${sg.last ? ': ' + esc(sg.last) : ''}). Số gốc và đuôi năm chỉ đổi khi có gói giải ngân / HĐTD mới — sửa trực tiếp, tool nhớ cho các lần sau.</div>`; })()}
           <button class="btn pri" id="hsSoan">📝 Soạn KUNN &amp; PDGN</button>
           <div class="hist">${kunnRec && kunnRec.doc ? `Đã soạn, lưu ${new Date(kunnRec.doc.at).toLocaleString('vi-VN')}` : 'Mẫu Word riêng của công ty · tự điền từ hồ sơ, thông tin công ty, file Excel'}</div></div>
         <div class="obox"><div class="oh"><b>Sổ hóa đơn</b><span class="${kunnRec ? 'o' : ''}">${kunnRec ? 'Đã ghi' : 'Chưa ghi'}</span></div>
           <div class="hist">${kunnRec ? `KUNN ${esc(kunnRec.so_kunn)} · ${kunnRec.lines.length} dòng — theo dõi hồ sơ gốc ở tab Theo dõi KUNN` : 'Ghi các dòng bảng kê vào sổ để lần sau soát giải ngân trùng và theo dõi hồ sơ gốc.'}</div>
           <button class="btn sm" id="hsLedger" ${hs.lines.length ? '' : 'disabled'}>${kunnRec ? '↻ Cập nhật sổ theo hồ sơ' : 'Ghi vào sổ hóa đơn'}</button><button class="btn sm" id="hsBkX" ${hs.lines.length ? '' : 'disabled'}>⬇ Bảng kê Excel</button></div>
-        <div class="obox"><div class="oh"><b>Chứng từ bổ sung sau GN</b></div>
-          ${(hs.bo_sung || []).map((b, i) => `<label class="bsr"><input type="checkbox" data-bsx="${i}" ${b.xong ? 'checked' : ''}><span>${esc(b.ten)}<small>hạn ${esc(b.han)}</small></span><button class="lnk" data-bsdel="${i}">✕</button></label>`).join('') || '<div class="hist">Không có</div>'}
-          <button class="lnk" id="hsBsAdd">＋ Thêm (vd tờ khai sao — 30 ngày)</button></div>
+        <div class="obox" id="oxBs"><div class="oh"><b>Chứng từ bổ sung bản gốc</b><span class="${(hs.bo_sung || []).some((b) => !b.xong) ? 'w' : 'o'}">${hs.bs_none ? 'Không cần' : (hs.bo_sung || []).length ? `${(hs.bo_sung || []).filter((b) => b.xong).length}/${hs.bo_sung.length} đã bổ sung` : 'Chưa chọn'}</span></div>
+          <div class="hist">Chứng từ nào KH chỉ nộp bản sao và phải bổ sung bản gốc sau — số ngày theo yêu cầu của ĐVKD. Danh sách này điền vào bảng “Chứng từ bổ sung” của PDGN và dùng để theo dõi ở tab Theo dõi KUNN.</div>
+          ${(hs.bo_sung || []).length ? `<div class="bsl">${hs.bo_sung.map((b, i) => `<div class="bsr2"><input type="checkbox" data-bsx="${i}" ${b.xong ? 'checked' : ''} title="Đã nhận bản gốc"><input class="cell-in" data-bsf="${i}|ten" value="${esc(b.ten)}" title="Tên chứng từ"><select class="cell-in" data-bsf="${i}|ban"><option ${b.ban !== 'Gốc' ? 'selected' : ''}>Sao</option><option ${b.ban === 'Gốc' ? 'selected' : ''}>Gốc</option></select><input class="cell-in bsn" data-bsf="${i}|ngay" value="${esc(b.ngay || '')}" placeholder="số ngày" inputmode="numeric" title="Bổ sung trong bao nhiêu ngày kể từ ngày giải ngân"><small class="${b.han ? '' : 'err'}">${b.han ? 'hạn ' + esc(b.han) : 'nhập số ngày'}</small><button class="lnk" data-bsdel="${i}" title="Bỏ">✕</button></div>`).join('')}</div>` : ''}
+          <div class="bar" style="gap:6px;flex-wrap:wrap"><button class="btn sm" id="hsBsSug" title="Thêm các loại chứng từ đã thả vào hồ sơ (hóa đơn, tiền điện, tờ khai…)">＋ Từ chứng từ đã thả</button><button class="btn sm" id="hsBsAdd">＋ Thêm dòng</button>
+            <label class="hist"><input type="checkbox" id="hsBsNone" ${hs.bs_none ? 'checked' : ''}> Không có chứng từ phải bổ sung</label></div>
+          <label class="hist">Số ngày mặc định của công ty <input class="cell-in bsn" id="hsBsDef" value="${esc((c.hs || {}).so_ngay_bs || '')}" placeholder="—" inputmode="numeric"> ngày <span>(để trống = nhập từng lần)</span></label></div>
         <div class="obox" id="oxUp"><div class="oh"><b>Tải lên hệ thống</b><span>${pkg.length} file</span></div>
           <div class="pk">${pkg.map((x) => `<div class="pkr"><input class="cell-in" data-pkn="${x.id}" value="${esc(x.name)}" title="Sửa tên file khi tải về"><button class="lnk" data-fdl="${x.id}" title="Tải file này với tên đã đặt">⬇</button></div>`).join('')}</div>
           <label class="hist"><input type="checkbox" id="hsPkBk" ${hs.pkgBk === false ? '' : 'checked'} ${hs.lines.length ? '' : 'disabled'}> Kèm bảng kê Excel chuẩn (03_BANG_KE…xlsx)</label>
@@ -6611,21 +6699,29 @@ function renderHoso(el, c) {
     </div>`;
   bindCompanyHead(el, c);
   bindDrop($('#dzAdd', el), (files) => addFiles(hs.id, files));
-  const FOCUS = { nhan: '#dzAdd', kiem_tra: '.hscol.mid', so_kunn: '#hsKunn', gui_ky: '#oxKunn', nhan_ky: '#dzAdd', pdgn_ky: '#oxKunn', he_thong: '#oxUp', giai_ngan: '#hsNgay' };
+  const FOCUS = { nhan: '#dzAdd', kiem_tra: '.hscol.mid', so_kunn: '#hsKunn', gui_ky: '#oxKunn', pdgn_ky: '#oxKunn', he_thong: '#oxUp', giai_ngan: '#hsNgay' };
   if (V.msFocus && FOCUS[V.msFocus]) { const f = $(FOCUS[V.msFocus], el); if (f) { f.classList.add('focus-red'); setTimeout(() => f.scrollIntoView({ behavior: 'smooth', block: 'center' }), 30); if (/INPUT/.test(f.tagName)) f.focus(); } }
   const patch = (fn, label) => hsPatch(hs.id, fn, label).catch((e) => toast(errMsg(e), 'err'));
-  $('#hsNgay', el).onchange = (e) => patch((x) => { x.ngay_gn = e.target.value; }, 'Đổi ngày giải ngân');
+  $('#hsNgay', el).onchange = (e) => patch((x) => { x.ngay_gn = e.target.value; const g = BK.toISO(x.ngay_gn); for (const b of x.bo_sung || []) { const n = parseInt(b.ngay, 10); if (g && n > 0) b.han = dd(BK.addDays(g, n)); } }, 'Đổi ngày giải ngân');
   $('#hsSnv', el).onchange = (e) => patch((x) => { x.so_ngay_vay = e.target.value.trim(); }, 'Đổi số ngày vay');
   $('#hsKunn', el).onchange = (e) => patch((x) => { x.so_kunn = e.target.value.trim(); if (x.so_kunn && !x.ms.so_kunn) x.ms.so_kunn = BK.todayISO(); }, 'Nhập số KUNN');
   $('#hsSoan', el).onclick = () => hsOpenEditor(hs.id).catch((e) => toast(errMsg(e), 'err'));
   $('#hsLedger', el).onclick = () => hsToLedger(hs.id).catch((e) => toast(errMsg(e), 'err'));
   $('#hsBkX', el).onclick = () => hsExportBangKe(hs, c);
   $('#hsZip', el).onclick = () => hsZip(hs, c).catch((e) => toast(errMsg(e), 'err'));
-  $('#hsBsAdd', el).onclick = () => {
-    const ten = prompt('Tên chứng từ bổ sung (vd: Tờ khai hải quan (bản sao))', 'Tờ khai hải quan (bản sao)'); if (!ten) return;
-    const han = prompt('Hạn bổ sung (dd/mm/yyyy)', gnIso ? dd(BK.addDays(gnIso, 30)) : ''); if (han == null) return;
-    patch((x) => { x.bo_sung = [...(x.bo_sung || []), { ten, han: han.trim(), xong: false }]; }, 'Thêm chứng từ bổ sung');
-  };
+  const defN = () => String((cust(c.id).hs || {}).so_ngay_bs || '');
+  const hanOf = (x, b) => { const g = BK.toISO(x.ngay_gn); const n = parseInt(b.ngay, 10); return g && n > 0 ? dd(BK.addDays(g, n)) : ''; };
+  $('#hsBsAdd', el).onclick = () => patch((x) => { const b = { ten: '', ban: 'Sao', ngay: defN(), xong: false }; b.han = hanOf(x, b); x.bo_sung = [...(x.bo_sung || []), b]; x.bs_none = false; }, 'Thêm chứng từ bổ sung');
+  $('#hsBsSug', el).onclick = () => patch((x) => {
+    const have = new Set((x.bo_sung || []).map((b) => BK.fold(b.ten)));
+    const skip = ['bang_ke', 'unc', 'cic', 'cltf', 'tra_cuu', 'kunn_ky', 'pdgn_ky', 'khac'];
+    const ls = [...new Set((x.docs || []).filter((d) => !d.del && !skip.includes(d.loai)).map((d) => d.loai))];
+    if (!ls.length) { toast('Chưa có chứng từ nào (hóa đơn, tiền điện, tờ khai…) trong hồ sơ'); return; }
+    for (const l of ls) { const ten = HSC.TYPES[l].l; if (have.has(BK.fold(ten))) continue; const b = { ten, ban: 'Sao', ngay: defN(), xong: false }; b.han = hanOf(x, b); x.bo_sung = [...(x.bo_sung || []), b]; }
+    x.bs_none = false;
+  }, 'Gợi ý chứng từ bổ sung');
+  $('#hsBsNone', el).onchange = (e) => patch((x) => { x.bs_none = e.target.checked; }, e.target.checked ? 'Không có chứng từ phải bổ sung' : 'Có chứng từ phải bổ sung');
+  $('#hsBsDef', el).onchange = async (e) => { const v = e.target.value.replace(/\D/g, ''); const cc = cust(c.id); await S.store.putCustomer({ ...cc, hs: { ...(cc.hs || {}), so_ngay_bs: v }, ...meta() }); toast(v ? `Đã nhớ: mặc định bổ sung trong ${v} ngày cho công ty này` : 'Đã bỏ số ngày mặc định', 'ok'); };
   $('#hsDel2', el).onclick = () => $('#hsDel', el).click();
   $('#hsDel', el).onclick = async () => { if (!confirm('Xóa hồ sơ giải ngân này? (file đính kèm vẫn còn trong thư mục chung; KUNN đã ghi sổ không bị xóa)')) return; await S.store.delHoso(hs.id); go({ cid: c.id, tab: 'hoso', hs: null, doc: null }); };
   el.onclick = async (e) => {
@@ -6635,7 +6731,8 @@ function renderHoso(el, c) {
     const d = t.dataset;
     if (d.ms) { V.msFocus = V.msFocus === d.ms ? null : d.ms; renderMain(); return; }
     if (d.msclose != null) { V.msFocus = null; renderMain(); return; }
-    if (d.msok) return patch((x) => { x.ms[d.msok] = BK.todayISO(); if (d.msok === 'giai_ngan') { x.done = true; if (!x.ngay_gn) x.ngay_gn = BK.todayISO(); } }, 'Đánh dấu xong mốc');
+    if (d.msok) return patch((x) => { x.ms[d.msok] = BK.todayISO(); if (d.msok === 'giai_ngan') { x.done = true; if (!x.ngay_gn) x.ngay_gn = BK.todayISO(); } }, 'Đánh dấu xong mốc')
+      .then(() => { if (d.msok === 'giai_ngan' && hsGet(hs.id).lines.length) return hsToLedger(hs.id, true).then(() => toast(`KUNN ${hs.so_kunn || ''} đã chuyển sang tab Theo dõi KUNN`, 'ok', 6000)); }).catch((er) => toast(errMsg(er), 'err'));
     if (d.msundo) return patch((x) => { delete x.ms[d.msundo]; if (d.msundo === 'giai_ngan') x.done = false; }, 'Bỏ đánh dấu mốc');
     if (d.msskip) return patch((x) => { if (x.ms[d.msskip] === 'skip') delete x.ms[d.msskip]; else x.ms[d.msskip] = 'skip'; }, 'Bỏ qua mốc');
     if (d.ack) { const why = prompt('Lý do bỏ qua (lưu vào hồ sơ):'); if (why) patch((x) => { x.ack = { ...(x.ack || {}), [d.ack]: why }; }, 'Bỏ qua cảnh báo'); return; }
@@ -6654,7 +6751,11 @@ function renderHoso(el, c) {
     }
     if (t.dataset.knn != null) { const sg = suggestKunn(c, hs); const n = parseInt(t.value, 10); if (sg && n > 0) V.knOff = { ...(V.knOff || {}), [hs.id]: ((V.knOff || {})[hs.id] || 0) + n - sg.n }; return renderMain(); }
     if (t.id === 'hsPkBk') return patch((x) => { x.pkgBk = t.checked; });
-    if (t.dataset.bsx != null) patch((x) => { x.bo_sung[+t.dataset.bsx].xong = t.checked; }, 'Đánh dấu đã bổ sung'); };
+    if (t.dataset.bsf) {
+      const [i, f] = t.dataset.bsf.split('|'), v = t.value.trim();
+      return patch((x) => { const b = x.bo_sung[+i]; if (!b) return; b[f] = f === 'ngay' ? v.replace(/\D/g, '') : v; const g = BK.toISO(x.ngay_gn), n = parseInt(b.ngay, 10); b.han = g && n > 0 ? dd(BK.addDays(g, n)) : ''; }, 'Sửa chứng từ bổ sung');
+    }
+    if (t.dataset.bsx != null) patch((x) => { x.bo_sung[+t.dataset.bsx].xong = t.checked; }, 'Đánh dấu đã bổ sung').then(() => { const h = hsGet(hs.id); if (h.kid && h.lines.length) hsToLedger(hs.id, true); }); };
 }
 // xem một chứng từ: bản scan cạnh số liệu AI đọc (sửa được)
 function renderDocView(el, c, hs) {
@@ -6716,8 +6817,10 @@ async function hsToLedger(hsId, quiet) {
   const so = hs.so_kunn || '(chưa số)';
   let k = hs.kid ? S.store.k.get(hs.kid) : null;
   if (k && k.deleted) k = null;
-  const lines = hs.lines.map((l) => ({ ...l, goc: (k && (k.lines.find((x) => x.id === l.id) || {}).goc) || l.goc || 'chua' }));
-  const rec = { ...(k || { id: BK.uid(), customerId: hs.customerId, createdAt: Date.now(), createdBy: userName() }), so_kunn: so, ngay_gn: BK.toISO(hs.ngay_gn) || BK.todayISO(), lines, source: 'Hồ sơ giải ngân', hsId, ...meta() };
+  const bs = hs.bo_sung || [], noBs = hs.bs_none || (bs.length && bs.every((b) => b.xong));
+  const lines = hs.lines.map((l) => ({ ...l, goc: noBs ? 'da_nhan' : (k && (k.lines.find((x) => x.id === l.id) || {}).goc) || l.goc || 'chua' }));
+  const hans = bs.filter((b) => !b.xong).map((b) => BK.toISO(b.han)).filter(Boolean).sort();
+  const rec = { ...(k || { id: BK.uid(), customerId: hs.customerId, createdAt: Date.now(), createdBy: userName() }), so_kunn: so, ngay_gn: BK.toISO(hs.ngay_gn) || BK.todayISO(), lines, han_bs: hans.length ? hans[hans.length - 1] : (k && k.han_bs) || '', source: 'Hồ sơ giải ngân', hsId, ...meta() };
   await S.store.group(`Ghi hồ sơ vào sổ hóa đơn — KUNN ${so}`, async () => {
     await S.store.putKunn(rec);
     if (!hs.kid) await hsPatch(hsId, (x) => { x.kid = rec.id; });
@@ -6742,6 +6845,11 @@ function bkWorkbook(hs, c) {
 }
 // ── số KUNN: gợi ý số tiếp theo theo file Excel / sổ hóa đơn / các hồ sơ khác ──
 const KUNN_NO = /^(.*?)\(\s*(\d+)\s*\)\s*(\.\s*\d+)?\s*$/;
+function kunnInXl(c, so) { return !!(so && c.ledger && c.ledger.kunns.some((k) => kkey(k.so) === kkey(so))); }
+function kunnTakenOther(c, hs) {
+  const xs = [...S.store.kunnsOf(c.id).filter((k) => !hs || k.id !== hs.kid).map((k) => k.so_kunn), ...S.store.hosoOf(c.id).filter((h) => !hs || h.id !== hs.id).map((h) => h.so_kunn)];
+  return new Set(xs.filter(Boolean).map(kkey));
+}
 function kunnTaken(c, hs) {
   const xs = [...(c.ledger ? c.ledger.kunns.map((k) => k.so) : []), ...S.store.kunnsOf(c.id).filter((k) => !hs || k.id !== hs.kid).map((k) => k.so_kunn), ...S.store.hosoOf(c.id).filter((h) => !hs || h.id !== hs.id).map((h) => h.so_kunn)];
   return new Set(xs.filter(Boolean).map(kkey));
