@@ -216,3 +216,39 @@ test('hạn mức theo thời gian (cấp lại / điều chỉnh) và gói lãi
   // số ngày vay của sheet UBG là mặc định, không phải kỳ hạn tối đa
   assert.equal(goi[0].so_ngay_md, 180); assert.equal(goi[0].so_ngay_max, null);
 });
+
+test('lãi suất thả nổi, nhắc hạn mức / gói sắp hết hiệu lực hoặc gần hết hạn mức gói', () => {
+  const adj = [{ tu_ngay: '2026-12-01', ls: 8.6 }, { tu_ngay: '2026-11-01', ls: 8.4 }];
+  assert.equal(HSC.lsAt(8.2, adj, '2026-10-15'), 8.2);
+  assert.equal(HSC.lsAt(8.2, adj, '2026-11-20'), 8.4);
+  assert.equal(HSC.lsAt(8.2, adj, '2027-01-01'), 8.6);
+  assert.equal(HSC.lsApply(8.35, 'add', 0.25), 8.6);
+  assert.equal(HSC.lsApply(8.35, 'add', -0.5), 7.85);
+  assert.equal(HSC.lsApply(null, 'add', 0.25), null);
+  assert.equal(HSC.lsApply(8.35, 'set', 9), 9);
+  const c = { id: 'c', name: 'A', hmHist: [{ id: 'h', tu_ngay: '2026-01-01', den_ngay: '2026-12-10', so_hdtd: 'HĐTD 9', hm_tong: 1e11 }, { id: 'h2', tu_ngay: '2026-12-05', den_ngay: '2027-12-05', so_hdtd: 'PL 1', hm_tong: 2e11 }],
+    goiLs: [{ ma: 'G1', tu_ngay: '2026-01-01', den_ngay: '2026-11-28', tong: 10e9 }, { ma: 'G2', tu_ngay: '2026-01-01', den_ngay: '2027-06-01', tong: 10e9 }, { ma: 'G3', tu_ngay: '2026-01-01', den_ngay: '2026-11-25', an: true }] };
+  const a = HSC.creditAlerts(c, [{ so: '1', goi: 'G2', goc: 9.5e9 }], '2026-11-23');
+  const s = a.map((x) => `${x.sev}|${x.text}`).join('\n');
+  assert.match(s, /2\|Hạn mức \(HĐTD 9\) hết hạn duy trì 10\/12\/2026/);
+  assert.match(s, /1\|Hạn mức mới PL 1 hiệu lực từ 05\/12\/2026/);
+  assert.match(s, /2\|Gói G1 hết hiệu lực 28\/11\/2026/);
+  assert.match(s, /2\|Gói G2 sắp hết hạn mức gói/);
+  assert.doesNotMatch(s, /G3/, 'gói đã ẩn không nhắc');
+});
+
+test('tra soát hóa đơn ↔ HĐMB (bên mua / bán, giá trị, hàng hóa) và mục đích vay; kết quả AI đưa vào kiểm tra', () => {
+  const kh = { name: 'Công ty CP Kim Tín Long An', hs: { muc_dich_pdgn: 'Bổ sung vốn lưu động mua thép, phôi thép phục vụ sản xuất' } };
+  const L = (id, so, tien, so_hdmb) => ({ id, ncc: 'Công ty CP Tập Đoàn Kim Tín', so_hdmb, so_hd: so, ngay_hd: '2026-10-07', tien_hd: tien, tien_gn: tien });
+  const hd = (id, so, mat_hang, tien) => ({ id, loai: 'hoa_don', ok: true, f: { so, ngay: '07/10/2026', ben_ban: 'Công ty CP Tập Đoàn Kim Tín', ben_mua: 'Công ty CP Kim Tín Long An', mat_hang, tien: String(tien) } });
+  const c = { id: 'c1', loai: 'hdmb', ok: true, f: { so: '4300011572', ngay: '01/10/2026', ben_ban: 'Công ty CP Tập Đoàn Kim Tín', ben_mua: 'Công ty TNHH Khác', mat_hang: 'Thép cuộn cán nóng', tien: '80000000000', hieu_luc_den: '31/12/2026' } };
+  const cs = HSC.checks({ lines: [L('l1', '101', 50e9), L('l2', '102', 40e9)], docs: [hd('d1', '101', 'Thép cuộn cán nóng SAE1006', 50e9), hd('d2', '102', 'Xe ô tô con 5 chỗ', 40e9), c], ngay_gn: '2026-10-27', bs_none: true,
+    aiMd: { at: 1, issues: [{ muc_do: 'loi', van_de: 'Hóa đơn 102 mua ô tô không đúng mục đích', chi_tiet: 'Mục đích là mua thép', so_chung_tu: '102' }], sig: 'x' } }, { kh, kunns: [] });
+  const k = (p) => cs.filter((x) => x.key.startsWith(p));
+  assert.equal(k('hdmb_mua_')[0].sev, 3, 'bên mua HĐMB không phải KH');
+  assert.equal(k('hdmb_vuot_')[0].sev, 3, '90 tỷ > 80 tỷ — dòng không ghi số HĐMB được ghép theo bên bán');
+  assert.deepEqual(k('hdmb_hang_').map((x) => x.refs[0]), ['d2'], 'ô tô ≠ thép cuộn');
+  assert.deepEqual(k('md_').map((x) => x.refs[0]), ['d2'], 'ô tô không có trong mục đích vay');
+  const ai = cs.find((x) => x.key === 'aimd_0');
+  assert.equal(ai.sev, 3); assert.match(ai.title, /^AI: Hóa đơn 102/); assert.match(ai.detail, /chứng từ đã đổi/);
+});
