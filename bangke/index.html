@@ -454,6 +454,7 @@ a,.lnk{color:var(--blue)}
 .cpi:hover,.cpi.on{background:var(--blue-bg);border-color:var(--blue2)}.cpi small{color:var(--ink3);font-size:12px}
 .hbtn.copick{font-weight:700}
 .nowrap{white-space:nowrap}
+.mtab{margin-bottom:12px}.mtab header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .bulkn{display:flex;gap:12px;align-items:center;margin-bottom:12px}.bulkn>div{flex:1}
 .khist{margin-top:10px;font-size:12.5px}.khist summary{cursor:pointer;font-weight:700}.khist ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:5px}.khist small{display:block;color:var(--ink3)}
 .wrib #wBd{width:118px}
@@ -3391,8 +3392,26 @@ document.addEventListener('change', (e) => {
   S.chart[t.dataset.chart] = t.value; try { localStorage.setItem(CH_LS, JSON.stringify(S.chart)); } catch (er) { /* bỏ qua */ }
   renderMain();
 });
+/** KUNN chỉ có trong file Excel theo dõi (chưa nạp bảng kê chi tiết) → dạng KUNN để cộng vào thống kê giải ngân. */
+function xlKunns(c) {
+  if (!c || !c.ledger) return [];
+  const have = new Set(S.store.kunnsOf(c.id).map((k) => kkey(k.so_kunn)));
+  return c.ledger.kunns.filter((x) => x.ngay_gn && x.goc > 0 && !have.has(kkey(x.so))).map((x) => ({ id: 'xl:' + c.id + ':' + x.so, customerId: c.id, so_kunn: x.so, ngay_gn: x.ngay_gn, lines: [{ tien_gn: x.goc, ngay_hd: x.ngay_gn }], _xl: true }));
+}
+/** Bảng tổng hợp giải ngân theo tháng (sổ hóa đơn + file Excel). */
+function monthTable(kunns, n = 12) {
+  const by = new Map();
+  for (const k of kunns) { const ym = (k.ngay_gn || '').slice(0, 7); if (!ym) continue; const o = by.get(ym) || { n: 0, nx: 0, v: 0 }; o.n++; if (k._xl) o.nx++; o.v += BK.sum((k.lines || []).map((l) => l.tien_gn)); by.set(ym, o); }
+  const yms = [...by.keys()].sort().reverse().slice(0, n);
+  if (!yms.length) return '';
+  const tot = yms.reduce((a, ym) => { const o = by.get(ym); return { n: a.n + o.n, v: a.v + o.v }; }, { n: 0, v: 0 });
+  return `<section class="card panel mtab"><header><h3>Tổng hợp giải ngân theo tháng</h3><span class="hist">${yms.length} tháng gần nhất · gồm KUNN có bảng kê chi tiết và KUNN trong file Excel theo dõi</span></header>
+    <div class="tw"><table class="t"><thead><tr><th>Tháng</th><th class="right">Số KUNN</th><th class="right">Tổng giải ngân</th><th>Nguồn</th></tr></thead><tbody>
+    ${yms.map((ym) => { const o = by.get(ym); return `<tr><td><b>T${+ym.slice(5)}/${ym.slice(0, 4)}</b></td><td class="num">${o.n}</td><td class="num">${money(o.v)}</td><td class="hist">${o.n - o.nx ? `${o.n - o.nx} có bảng kê` : ''}${o.n - o.nx && o.nx ? ' · ' : ''}${o.nx ? `${o.nx} từ file Excel` : ''}</td></tr>`; }).join('')}
+    </tbody><tfoot><tr><td><b>Tổng</b></td><td class="num"><b>${tot.n}</b></td><td class="num"><b>${money(tot.v)}</b></td><td></td></tr></tfoot></table></div></section>`;
+}
 function chartsRow(pf, cid) {
-  const kunns = cid ? S.kunns : S.customers.flatMap((c) => S.store.kunnsOf(c.id));
+  const kunns = cid ? S.kunns.concat(xlKunns(cust(cid))) : S.customers.flatMap((c) => S.store.kunnsOf(c.id).concat(xlKunns(c)));
   const sr = series(kunns);
   S._years = sr.years;
   if (/^\d{4}$/.test(S.chart.per) && !sr.years.includes(S.chart.per)) S.chart.per = 'auto';
@@ -3437,10 +3456,10 @@ async function bulkImport(cid, files) {
     } catch (e) { bad.push(`${f.name}: ${errMsg(e)}`); }
   }
   if (docs.length) { await S.store.group(`Nạp ${docs.length} KUNN cũ (${files.length} file)`, () => S.store.putKunns(docs)); log(cid, 'nap_hang_loat', `Nạp hàng loạt ${docs.length} KUNN từ ${files.length} file`); }
-  modal(`<div class="mh"><h2>Nạp bảng kê cũ</h2><button class="x" data-close aria-label="Đóng">&times;</button></div><div class="mb">
-    <p><b>Đã nạp ${docs.length} KUNN</b> (${BK.sum(docs.map((k) => k.lines.length))} hóa đơn)${dup.length ? ` · bỏ qua ${dup.length} KUNN đã có trong sổ` : ''}.</p>
+  modal(`<div class="mh"><h2>Thêm file bảng kê cũ</h2><button class="x" data-close aria-label="Đóng">&times;</button></div><div class="mb">
+    <p><b>Đã thêm ${docs.length} KUNN</b> (${BK.sum(docs.map((k) => k.lines.length))} hóa đơn)${dup.length ? ` · bỏ qua ${dup.length} KUNN đã có trong sổ` : ''}.</p>
     ${docs.length ? `<div class="hist">${docs.map((k) => esc(k.so_kunn)).join(', ')}</div>` : ''}
-    ${bad.length ? `<div class="note warn" style="margin-top:10px"><b>Chưa nạp được:</b><ul>${bad.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>File trình bày lạ: nạp riêng từng file bằng “⬆ Nạp bảng kê mới cho KH này” để chọn cột.</div>` : ''}
+    ${bad.length ? `<div class="note warn" style="margin-top:10px"><b>Chưa đọc được:</b><ul>${bad.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>File trình bày lạ: mở riêng từng file bằng nút “⬆ Nạp bảng kê mới cho KH này” để chọn cột.</div>` : ''}
     <div class="bar"><button class="btn pri" data-close>Xong</button></div></div>`, 'sm');
 }
 function renderLedgerTab(el, c) {
@@ -3448,20 +3467,20 @@ function renderLedgerTab(el, c) {
   const sum = BK.customerSummary(S.kunns, { hanNgay: hanNgay() });
   const pf = portfolio(S.kunns);
   const nErr = an.alerts.filter((a) => a.sev >= 3).length;
-  const cid = S.cid;
+  const cid = S.cid, xk = xlKunns(c);
   const tabs = [['kunn', 'Khế ước & hóa đơn', S.kunns.length], ['inv', 'Theo dõi hóa đơn', an.invoices.length], ['goc', 'Hồ sơ gốc', sum.n_pending, sum.n_qua_han ? 'r' : ''], ['alert', 'Cảnh báo', an.alerts.length, nErr ? 'r' : ''], ['log', 'Nhật ký', '']];
   el.innerHTML = `<div class="ph"><div><div class="sub">Bảng kê đã nạp của công ty: soát giải ngân trùng, theo dõi hóa đơn, hồ sơ gốc${sum.last_gn ? ' · GN gần nhất ' + dd(sum.last_gn) : ''}</div></div>
     <span style="flex:1"></span><button class="btn sm" ${A({ act: 'oldchk', cid: S.cid })} title="Soát lại các trường đã lưu: đơn vị tiền, loại tiền, đảo cột, thiếu thông tin…">🧪 Kiểm tra dữ liệu đã nạp</button><button class="btn sm" ${A({ act: 'audit', cid: S.cid })}>🤖 Rà soát bảng kê</button><button class="btn sm" ${A({ act: 'check', cid: S.cid })}>🔍 Kiểm tra bảng kê</button><button class="btn sm" id="bHs" title="Soạn KUNN & PDGN từ mẫu Word riêng của KH">📝 Soạn KUNN & PDGN</button><button class="btn sm" id="bEditC">Sửa thông tin</button><button class="btn sm" id="bExport" title="Xuất Excel sổ hóa đơn của công ty">⬇ Xuất Excel</button><button class="btn sm" id="bMaster" title="Thêm các KUNN chưa có vào file bảng kê tổng hợp Excel bạn đang theo dõi">⬇ Ghi vào file bảng kê có sẵn</button><button class="btn pri" id="bImp2">⬆ Nạp bảng kê mới cho KH này</button></div>
   <div class="tiles">
-    ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn), `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫', act: A({ act: 'kl', cid }) })}
-    ${(() => { const sr = series(S.kunns, 'gn', 'auto'); return tile('Giải ngân 12 tháng gần nhất', shortMoney(sr.total), periodLabel(sr.range), { spark: sparkline(sr.pts.map((x) => x.value)), act: A({ act: 'kl', cid, month: sr.range }) }); })()}
+    ${tile('Tổng đã giải ngân', shortMoney(sum.tong_gn + BK.sum(xk.map((k) => k.lines[0].tien_gn))), xk.length ? `${sum.n_kunn + xk.length} KUNN · ${sum.n_kunn} có bảng kê, ${xk.length} từ file Excel` : `${sum.n_kunn} KUNN · ${sum.n_lines} dòng`, { icon: '₫', act: A({ act: 'kl', cid }) })}
+    ${(() => { const sr = series(S.kunns.concat(xk), 'gn', 'auto'); return tile('Giải ngân 12 tháng gần nhất', shortMoney(sr.total), periodLabel(sr.range), { spark: sparkline(sr.pts.map((x) => x.value)), act: A({ act: 'kl', cid, month: sr.range }) }); })()}
     ${tile('Còn lại chưa giải ngân', shortMoney(sum.con_lai), `${sum.n_mot_phan} hóa đơn GN 1 phần`, { icon: '◐', act: A({ act: 'il', st: 'mot_phan', cid }) })}
     ${tile('Hóa đơn vượt / trùng', String(sum.n_vuot), sum.n_vuot ? 'cần xử lý' : 'không có', { tone: sum.n_vuot ? 'crit' : 'good', icon: sum.n_vuot ? '⚠' : '✓', act: A({ act: 'il', st: 'loi', cid }) })}
     ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '', act: A({ act: 'kl', goc: 'pending', cid }) })}
     ${tile('KUNN quá hạn hồ sơ gốc', String(sum.n_qua_han), sum.n_qua_han ? `lâu nhất ${sum.max_qua_han} ngày` : 'không có', { tone: sum.n_qua_han ? 'crit' : 'good', icon: sum.n_qua_han ? '⏱' : '✓', act: A({ act: 'kl', goc: 'qua', cid }) })}
   </div>
-  ${c.ledger && c.ledger.kunns.length > S.kunns.length ? `<div class="note warn bulkn"><div><b>File Excel theo dõi có ${c.ledger.kunns.length} KUNN, sổ hóa đơn mới có ${S.kunns.length} KUNN có bảng kê chi tiết.</b><br>Sổ hóa đơn cần từng hóa đơn của mỗi KUNN để soát giải ngân trùng, nên chỉ có KUNN nào đã nạp bảng kê. File Excel theo dõi chỉ có số tiền của mỗi KUNN, không có danh sách hóa đơn. Nạp các bảng kê cũ (chọn nhiều file một lần, hoặc file bảng kê tổng hợp nhiều KUNN) để có đủ dữ liệu.</div><button class="btn sm pri" id="bBulk">⬆ Nạp nhiều bảng kê cũ cùng lúc</button></div>` : ''}
-  ${S.kunns.length ? chartsRow(pf, cid) : `<div class="card empty" style="margin-bottom:12px">Khách hàng chưa có KUNN nào. Bấm <b>⬆ Nạp bảng kê mới cho KH này</b> để nạp bảng kê khách hàng gửi.</div>`}
+  ${c.ledger && c.ledger.kunns.length > S.kunns.length ? `<div class="note warn bulkn"><div><b>${S.kunns.length}/${c.ledger.kunns.length} KUNN đã có danh sách hóa đơn.</b> Số tiền giải ngân các tháng ở dưới đã tính đủ ${c.ledger.kunns.length} KUNN theo file Excel theo dõi.<br>Muốn tool kiểm tra hóa đơn trùng / vượt cho các KUNN cũ: chọn các file bảng kê cũ (file Excel liệt kê hóa đơn của từng KUNN mà KH đã gửi) — chọn nhiều file một lần được.</div><button class="btn sm pri" id="bBulk">⬆ Thêm file bảng kê cũ</button></div>` : ''}
+  ${S.kunns.length || xk.length ? chartsRow(pf, cid) + monthTable(S.kunns.concat(xk)) : `<div class="card empty" style="margin-bottom:12px">Khách hàng chưa có KUNN nào. Bấm <b>⬆ Nạp bảng kê mới cho KH này</b> để nạp bảng kê khách hàng gửi.</div>`}
   <div class="tabs">${tabs.map(([k, l, n, cls]) => `<button class="tab ${S.tab === k ? 'act' : ''}" data-tab="${k}">${l}${n !== '' ? `<span class="n ${cls || ''}">${n}</span>` : ''}</button>`).join('')}</div>
   <div id="tabBody"></div>`;
   $('#bEditC').onclick = () => editCustomer(c);
@@ -6102,7 +6121,7 @@ function renderCoKunn(body, c) {
     if (!r) return '<div class="empty">Chọn một KUNN</div>';
     if (r.del) return `<div><b class="big">KUNN ${esc(r.so)}</b><div class="hist">${r.goc != null ? vnd(r.goc) : ''}${r.ngay_gn ? ' · giải ngân ' + dd(r.ngay_gn) : ''}</div></div>
       <div class="note warn">Đã xóa${r.d.by ? ' bởi ' + esc(r.d.by) : ''}${r.d.at ? ' lúc ' + new Date(r.d.at).toLocaleString('vi-VN') : ''}. Không còn trong bảng theo dõi, dư nợ, hạn mức, đáo hạn${r.x ? ' (đọc lại file Excel cũng không hiện lại)' : ''}. ${r.k && r.k.lines ? `${r.k.lines.length} dòng bảng kê được giữ lại để khôi phục.` : ''}</div>
-      <div class="bar"><button class="btn pri" data-krestore="${esc(r.dk)}">♻ Khôi phục (put back)</button><button class="btn danger" data-kpurge="${esc(r.dk)}">✕ Xóa hẳn</button></div>${histHtml(r.so)}`;
+      <div class="bar"><button class="btn pri" data-krestore="${esc(r.dk)}">♻ Khôi phục</button><button class="btn danger" data-kpurge="${esc(r.dk)}">✕ Xóa hẳn</button></div>${histHtml(r.so)}`;
     const k = r.k, s = r.s;
     const ms = [[r.ngay_gn, `Giải ngân ${dd(r.ngay_gn)}`, 'done', r.hs ? 'Hồ sơ giải ngân đã lưu' : '']];
     if (s) ms.push([s.han, `Hồ sơ gốc — hạn ${dd(s.han)}`, s.done ? 'done' : s.quaHan ? 'bad' : 'warn', `Đã nhận ${s.nDa}/${s.n} chứng từ`]);

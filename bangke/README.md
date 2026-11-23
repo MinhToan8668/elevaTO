@@ -82,8 +82,9 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Bảng theo dõi KUNN**: **🗑 Xóa KUNN** (của tool hoặc dòng từ file Excel) → KUNN chuyển sang mục **🗑 Đã xóa** (lưu vết
   ai xóa, lúc nào), không còn tính vào bảng theo dõi, dư nợ, đáo hạn — đọc lại file Excel cũng không hiện lại; **♻ Khôi
   phục** đưa về như cũ, **✕ Xóa hẳn** bỏ luôn. Mỗi KUNN có **lịch sử thay đổi**; ↶ hoàn tác ngay.
-- **Sổ hóa đơn**: chỉ gồm KUNN đã nạp bảng kê chi tiết (từng hóa đơn). Khi file Excel theo dõi có nhiều KUNN hơn, bấm
-  **⬆ Nạp nhiều bảng kê cũ cùng lúc** (chọn nhiều file / file tổng hợp nhiều KUNN, bỏ qua KUNN đã có).
+- **Sổ hóa đơn**: biểu đồ + bảng **tổng hợp giải ngân theo tháng** tính đủ mọi KUNN (có danh sách hóa đơn hoặc chỉ có trong
+  file Excel theo dõi). Kiểm tra hóa đơn trùng / vượt cần danh sách hóa đơn của KUNN. Khi file Excel theo dõi có nhiều KUNN hơn, bấm
+  **⬆ Thêm file bảng kê cũ** (chọn nhiều file / file tổng hợp nhiều KUNN, bỏ qua KUNN đã có).
 
 ## Cài đặt (nút ⚙ hoặc Alt+F9)
 - **API key Gemini**: nạp trong Cài đặt, lưu trên trình duyệt máy đó. Không ghi key vào file.

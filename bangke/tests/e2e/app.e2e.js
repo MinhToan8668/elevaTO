@@ -780,9 +780,11 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await writeFile(o1, toXlsx({ 'Bang ke': bangKeVay({ ku: '1000001(1).26', ngay: '01/03/2026', rows: [['CÔNG TY TNHH CŨ 1', 'HĐ 1', '901', '01/02/2026', 500, 500, 500]] }) }));
   await writeFile(o2, toXlsx({ 'Bang ke': bangKeVay({ ku: '1000001(2).26', ngay: '01/04/2026', rows: [['CÔNG TY TNHH CŨ 2', 'HĐ 2', '902', '01/03/2026', 700, 700, 700]] }) }));
   await page.click('[data-ctab="so"]');
+  assert.match(await page.locator('.mtab').innerText(), /Tổng hợp giải ngân theo tháng[\s\S]*từ file Excel/, 'dashboard sổ hóa đơn gồm cả KUNN trong file Excel');
+  assert.match(await page.locator('.tile', { hasText: 'Tổng đã giải ngân' }).innerText(), /từ file Excel/);
   const [fcb] = await Promise.all([page.waitForEvent('filechooser'), page.click('#bBulk')]);
   await fcb.setFiles([o1, o2]);
-  await page.locator('.modal', { hasText: 'Đã nạp 2 KUNN' }).waitFor();
+  await page.locator('.modal', { hasText: 'Đã thêm 2 KUNN' }).waitFor();
   await page.locator('.modal [data-close]').first().click();
   // trang đầu: thẻ công ty có dư nợ / hạn mức từ file Excel
   await page.click('a.logo');
