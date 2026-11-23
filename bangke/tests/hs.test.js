@@ -209,4 +209,10 @@ test('hạn mức theo thời gian (cấp lại / điều chỉnh) và gói lãi
   assert.ok(cs.some((c) => c.key === 'goi_chon' && c.sev === 1), 'nhắc chọn gói khi có gói hiệu lực');
   cs = HSC.checks({ lines: [line], docs: [], ngay_gn: '2025-01-01', bs_none: true }, ctx);
   assert.ok(cs.some((c) => c.key === 'hm_chua_hl'));
+  // không đếm chính hồ sơ đang xét (đã ghi sổ “(chưa số)” / số KUNN lệch đuôi năm)
+  const rows2 = [{ so: '(chưa số)', goi: 'UBG02', goc: 5e9, hsId: 'h1', kid: 'k1' }, { so: '9(5).26', goi: 'UBG02', goc: 2e9 }, { so: '9(6).26', goi: 'UBG02', goc: 1e9 }];
+  assert.equal(HSC.goiUsed(goi[1], rows2, { hsId: 'h1', kid: 'k1', so: '' }), 3e9);
+  assert.equal(HSC.goiUsed(goi[1], rows2, { so: '9(5).27' }), 6e9, 'bỏ KUNN cùng số trong ngoặc');
+  // số ngày vay của sheet UBG là mặc định, không phải kỳ hạn tối đa
+  assert.equal(goi[0].so_ngay_md, 180); assert.equal(goi[0].so_ngay_max, null);
 });
