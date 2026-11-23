@@ -252,3 +252,21 @@ test('tra soát hóa đơn ↔ HĐMB (bên mua / bán, giá trị, hàng hóa) v
   const ai = cs.find((x) => x.key === 'aimd_0');
   assert.equal(ai.sev, 3); assert.match(ai.title, /^AI: Hóa đơn 102/); assert.match(ai.detail, /chứng từ đã đổi/);
 });
+
+test('KUNN nhập tay: hồ sơ gốc theo danh sách bổ sung; HĐMB: nhiều hợp đồng cùng bên bán, KUNN trước chỉ tính mỗi hóa đơn 1 lần, số HĐMB ngắn không khớp nhầm', () => {
+  const m = BK.kunnSummary({ manual: true, so_tien: 5e9, ngay_gn: '2026-08-01', lines: [], bs: [] }, { today: '2026-11-23', hanNgay: 30 });
+  assert.deepEqual([m.done, m.quaHan, m.tong_gn], [true, 0, 5e9], 'không có chứng từ bổ sung → không báo quá hạn');
+  const m2 = BK.kunnSummary({ manual: true, so_tien: 1, lines: [], bs: [{ ten: 'HĐ', han: '10/11/2026' }] }, { today: '2026-11-23' });
+  assert.deepEqual([m2.done, m2.quaHan], [false, 13]);
+  const kh = { name: 'Công ty A' };
+  const L = (id, so, ngay, tien) => ({ id, ncc: 'Công ty B', so_hd: so, ngay_hd: ngay, tien_hd: tien, tien_gn: tien });
+  const H = (id, so, ngay, hl, tien) => ({ id, loai: 'hdmb', f: { so, ngay, hieu_luc_den: hl, ben_ban: 'Công ty B', ben_mua: 'Công ty A', tien: String(tien) } });
+  const inv = (id, so) => ({ id, loai: 'hoa_don', f: { so, ngay: '', ben_ban: 'Công ty B', ben_mua: 'Công ty A' } });
+  const cs = HSC.checks({ lines: [L('l1', '1', '2026-03-01', 0.8e9), L('l2', '2', '2026-09-01', 1.5e9)], docs: [H('c1', '01/2026', '01/01/2026', '30/06/2026', 1e9), H('c2', '02/2026', '01/07/2026', '31/12/2026', 2e9), inv('d1', '1'), inv('d2', '2')], ngay_gn: '2026-09-10', bs_none: true }, { kh, kunns: [] });
+  assert.ok(!cs.some((x) => /^hdmb_vuot_/.test(x.key)), 'mỗi hóa đơn về đúng hợp đồng theo ngày');
+  assert.ok(!cs.some((x) => /^hdhh_l2/.test(x.key)), 'hóa đơn 2 thuộc HĐMB 02 còn hiệu lực');
+  // KUNN trước giải ngân 1 hóa đơn làm 2 lần → chỉ tính 1 lần; số HĐMB "01" không khớp "15/2025"
+  const prevK = [{ id: 'k1', so_kunn: '9(1)', lines: [{ ncc: 'Công ty B', so_hd: '7', so_hdmb: 'HĐMB 01', ngay_hd: '2026-01-10', tien_hd: 600e6, tien_gn: 300e6 }] }, { id: 'k2', so_kunn: '9(2)', lines: [{ ncc: 'Công ty B', so_hd: '7', so_hdmb: 'HĐMB 01', ngay_hd: '2026-01-10', tien_hd: 600e6, tien_gn: 300e6 }, { ncc: 'Công ty B', so_hd: '8', so_hdmb: '15/2025', ngay_hd: '2026-01-10', tien_hd: 900e6, tien_gn: 900e6 }] }];
+  const cs2 = HSC.checks({ lines: [{ ...L('l3', '9', '2026-02-01', 100e6), so_hdmb: 'HĐMB 01' }], docs: [{ id: 'c3', loai: 'hdmb', f: { so: '01', ngay: '01/01/2026', ben_ban: 'Công ty B', ben_mua: 'Công ty A', tien: '1000000000' } }], ngay_gn: '2026-02-05', bs_none: true }, { kh, kunns: prevK });
+  assert.ok(!cs2.some((x) => /^hdmb_vuot_/.test(x.key)), '600tr + 100tr ≤ 1 tỷ');
+});
