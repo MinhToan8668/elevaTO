@@ -79,8 +79,11 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   ngay trong trang chứng từ; nhận **Báo cáo CLTF (CL - KERNEL - TF)**: so hạn mức khả dụng với số tiền giải ngân, cảnh
   báo CLTF cũ. **Số KUNN**: chỉ số trong ngoặc tự +1 mỗi lần; số gốc và đuôi năm (đổi khi có gói giải ngân / HĐTD
   mới) sửa trực tiếp, tool nhớ cho công ty. Xóa file chứng từ khỏi hồ sơ ngay trong trang xem chứng từ.
-- **Bảng theo dõi KUNN**: xóa KUNN của tool (vd bản nháp) / ẩn dòng từ file Excel; mục **🗑 Đã xóa / ẩn** để khôi phục
-  bất cứ lúc nào (bản xóa giữ nguyên các dòng bảng kê), kèm **lịch sử thay đổi** của từng KUNN; ↶ hoàn tác ngay.
+- **Bảng theo dõi KUNN**: **🗑 Xóa KUNN** (của tool hoặc dòng từ file Excel) → KUNN chuyển sang mục **🗑 Đã xóa** (lưu vết
+  ai xóa, lúc nào), không còn tính vào bảng theo dõi, dư nợ, đáo hạn — đọc lại file Excel cũng không hiện lại; **♻ Khôi
+  phục** đưa về như cũ, **✕ Xóa hẳn** bỏ luôn. Mỗi KUNN có **lịch sử thay đổi**; ↶ hoàn tác ngay.
+- **Sổ hóa đơn**: chỉ gồm KUNN đã nạp bảng kê chi tiết (từng hóa đơn). Khi file Excel theo dõi có nhiều KUNN hơn, bấm
+  **⬆ Nạp nhiều bảng kê cũ cùng lúc** (chọn nhiều file / file tổng hợp nhiều KUNN, bỏ qua KUNN đã có).
 
 ## Cài đặt (nút ⚙ hoặc Alt+F9)
 - **API key Gemini**: nạp trong Cài đặt, lưu trên trình duyệt máy đó. Không ghi key vào file.

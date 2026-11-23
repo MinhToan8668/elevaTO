@@ -454,6 +454,7 @@ a,.lnk{color:var(--blue)}
 .cpi:hover,.cpi.on{background:var(--blue-bg);border-color:var(--blue2)}.cpi small{color:var(--ink3);font-size:12px}
 .hbtn.copick{font-weight:700}
 .nowrap{white-space:nowrap}
+.bulkn{display:flex;gap:12px;align-items:center;margin-bottom:12px}.bulkn>div{flex:1}
 .khist{margin-top:10px;font-size:12.5px}.khist summary{cursor:pointer;font-weight:700}.khist ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:5px}.khist small{display:block;color:var(--ink3)}
 .wrib #wBd{width:118px}
 .mbox.wide{max-width:1100px}.pkf{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px 10px;margin-top:8px}
@@ -3412,6 +3413,36 @@ function renderMain() {
   renderCompany(el, c);
 }
 // Tab “Sổ hóa đơn” của một công ty: bảng kê đã nạp — giữ nguyên chức năng của bản trước.
+/** Nạp hàng loạt bảng kê cũ: mỗi file / sheet tự nhận KUNN + hóa đơn; bỏ qua KUNN đã có trong sổ. */
+async function bulkImport(cid, files) {
+  if (!files.length) return;
+  const have = new Set(S.store.kunnsOf(cid).map((k) => BK.normKunn(k.so_kunn)));
+  const docs = [], bad = [], dup = [];
+  toast(`Đang đọc ${files.length} file…`);
+  for (const f of files) {
+    try {
+      const grids = await readWorkbook(f); let got = 0;
+      for (const [n, g] of Object.entries(grids)) {
+        const r = BK.autoParseSheet(g); if (!r.ok) continue;
+        for (const gr of r.groups) {
+          if (!gr.lines.length) continue;
+          if (!gr.so_kunn) { bad.push(`${f.name} · ${n}: có ${gr.lines.length} dòng nhưng không thấy số KUNN`); continue; }
+          const key = BK.normKunn(gr.so_kunn);
+          if (have.has(key)) { dup.push(gr.so_kunn); continue; }
+          have.add(key); got++;
+          docs.push({ id: BK.uid(), customerId: cid, so_kunn: String(gr.so_kunn), ngay_gn: gr.ngay_gn || '', ngay_dh: gr.ngay_dh || '', so_tien: gr.so_tien ?? null, han_bs: '', ghi_chu: '', source: f.name, hdr: gr.hdr || '', lines: gr.lines.map((l) => BK.cleanLine(l)), createdAt: Date.now(), createdBy: userName(), ...meta() });
+        }
+      }
+      if (!got && !bad.some((b) => b.startsWith(f.name))) bad.push(`${f.name}: không nhận ra bảng kê (hoặc mọi KUNN đã có)`);
+    } catch (e) { bad.push(`${f.name}: ${errMsg(e)}`); }
+  }
+  if (docs.length) { await S.store.group(`Nạp ${docs.length} KUNN cũ (${files.length} file)`, () => S.store.putKunns(docs)); log(cid, 'nap_hang_loat', `Nạp hàng loạt ${docs.length} KUNN từ ${files.length} file`); }
+  modal(`<div class="mh"><h2>Nạp bảng kê cũ</h2><button class="x" data-close aria-label="Đóng">&times;</button></div><div class="mb">
+    <p><b>Đã nạp ${docs.length} KUNN</b> (${BK.sum(docs.map((k) => k.lines.length))} hóa đơn)${dup.length ? ` · bỏ qua ${dup.length} KUNN đã có trong sổ` : ''}.</p>
+    ${docs.length ? `<div class="hist">${docs.map((k) => esc(k.so_kunn)).join(', ')}</div>` : ''}
+    ${bad.length ? `<div class="note warn" style="margin-top:10px"><b>Chưa nạp được:</b><ul>${bad.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>File trình bày lạ: nạp riêng từng file bằng “⬆ Nạp bảng kê mới cho KH này” để chọn cột.</div>` : ''}
+    <div class="bar"><button class="btn pri" data-close>Xong</button></div></div>`, 'sm');
+}
 function renderLedgerTab(el, c) {
   const an = S.an || BK.analyze([]);
   const sum = BK.customerSummary(S.kunns, { hanNgay: hanNgay() });
@@ -3429,12 +3460,14 @@ function renderLedgerTab(el, c) {
     ${tile('Hồ sơ gốc đã nhận đủ', pf.pctDone + '%', `${pf.goc.done}/${pf.n} KUNN`, { meter: pf.pctDone, tone: pf.pctDone === 100 ? 'good' : '', act: A({ act: 'kl', goc: 'pending', cid }) })}
     ${tile('KUNN quá hạn hồ sơ gốc', String(sum.n_qua_han), sum.n_qua_han ? `lâu nhất ${sum.max_qua_han} ngày` : 'không có', { tone: sum.n_qua_han ? 'crit' : 'good', icon: sum.n_qua_han ? '⏱' : '✓', act: A({ act: 'kl', goc: 'qua', cid }) })}
   </div>
+  ${c.ledger && c.ledger.kunns.length > S.kunns.length ? `<div class="note warn bulkn"><div><b>File Excel theo dõi có ${c.ledger.kunns.length} KUNN, sổ hóa đơn mới có ${S.kunns.length} KUNN có bảng kê chi tiết.</b><br>Sổ hóa đơn cần từng hóa đơn của mỗi KUNN để soát giải ngân trùng, nên chỉ có KUNN nào đã nạp bảng kê. File Excel theo dõi chỉ có số tiền của mỗi KUNN, không có danh sách hóa đơn. Nạp các bảng kê cũ (chọn nhiều file một lần, hoặc file bảng kê tổng hợp nhiều KUNN) để có đủ dữ liệu.</div><button class="btn sm pri" id="bBulk">⬆ Nạp nhiều bảng kê cũ cùng lúc</button></div>` : ''}
   ${S.kunns.length ? chartsRow(pf, cid) : `<div class="card empty" style="margin-bottom:12px">Khách hàng chưa có KUNN nào. Bấm <b>⬆ Nạp bảng kê mới cho KH này</b> để nạp bảng kê khách hàng gửi.</div>`}
   <div class="tabs">${tabs.map(([k, l, n, cls]) => `<button class="tab ${S.tab === k ? 'act' : ''}" data-tab="${k}">${l}${n !== '' ? `<span class="n ${cls || ''}">${n}</span>` : ''}</button>`).join('')}</div>
   <div id="tabBody"></div>`;
   $('#bEditC').onclick = () => editCustomer(c);
   $('#bHs').onclick = () => openHoSoPick(S.cid);
   $('#bImp2').onclick = () => openImport(S.cid);
+  if ($('#bBulk')) $('#bBulk').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.accept = '.xlsx,.xls,.xlsm,.csv'; i.onchange = () => bulkImport(S.cid, [...i.files]); i.click(); };
   $('#bExport').onclick = () => exportCustomer();
   $('#bMaster').onclick = () => appendToMaster([...S.kunns].sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || '')), c.name);
   $$('[data-tab]', el).forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; renderMain(); });
@@ -3503,7 +3536,7 @@ document.addEventListener('click', (e) => {
   if (d.act === 'il') return openInvList({ cid: d.cid || '', st: d.st || 'mot_phan' });
 });
 function openKunn(cid, kid) {
-  const k = kid ? S.store.k.get(kid) : null;
+  const k = kid && live(S.store.k.get(kid)) ? S.store.k.get(kid) : null;
   S.tab = 'kunn'; S.q = k ? k.so_kunn : ''; S.fGoc = 'all'; S.fFlag = false;
   S.pend = kid ? { kid, q: S.q } : null;
   go({ cid, tab: 'so', hs: null, doc: null });
@@ -4954,7 +4987,7 @@ const listSig = () => JSON.stringify([HE.lists.ct.map((x) => x._g), HE.lists.tth
 
 async function openHoSo(cid, kid, hsId) {
   const c = cust(cid); if (!c) return;
-  const k = kid ? S.store.k.get(kid) : null;
+  const k = kid && live(S.store.k.get(kid)) ? S.store.k.get(kid) : null;
   const draft = !k ? await S.store.getMeta('draft:' + cid) : null;
   const saved = (k && k.doc) || draft || {};
   const v = { loai_tien: 'VND' };
@@ -5977,12 +6010,61 @@ function applyNotes(c, x) {
   return { ns, paid, due: gh ? BK.toISO(gh.ngay) || x.dao_han : x.dao_han, closed, con: closed ? 0 : Math.max(0, (x.con_lai || 0) - paid) };
 }
 const kkey = (s) => String(s || '').split(')')[0].replace(/\s/g, '').toLowerCase();
+// ── xóa / khôi phục / xóa hẳn KUNN trên bảng theo dõi ──
+// Dòng từ file Excel: chuyển vào c.kunnDel (giữ nguyên dòng) và bỏ khỏi c.ledger → không còn tính dư nợ, đáo hạn…;
+// đọc lại file Excel vẫn bỏ qua. KUNN của tool: đánh dấu deleted (giữ các dòng bảng kê).
+function ledgerDrop(L, kks) {
+  if (!L) return { L, rows: {} };
+  const rows = {}, keep = [];
+  for (const x of L.kunns) { const kk = kkey(x.so); if (kks.has(kk)) rows[kk] = x; else keep.push(x); }
+  const gone = Object.values(rows), liv = (x) => (x.con_lai || 0) > 0.5;
+  return { L: { ...L, kunns: keep, du_no: (L.du_no || 0) - BK.sum(gone.filter(liv).map((x) => x.con_lai)), n_live: (L.n_live || 0) - gone.filter(liv).length }, rows };
+}
+function ledgerAdd(L, x) {
+  if (!L || !x || L.kunns.some((y) => kkey(y.so) === kkey(x.so))) return L;
+  const liv = (x.con_lai || 0) > 0.5;
+  return { ...L, kunns: [...L.kunns, x], du_no: (L.du_no || 0) + (liv ? x.con_lai : 0), n_live: (L.n_live || 0) + (liv ? 1 : 0) };
+}
+async function kunnDelete(c, r) {
+  const kk = kkey(r.so);
+  await S.store.group(`Xóa KUNN ${r.so}`, async () => {
+    const c0 = cust(c.id), { L, rows } = ledgerDrop(c0.ledger, new Set([kk]));
+    await S.store.putCustomer({ ...c0, ...(c0.ledger ? { ledger: L } : {}), kunnDel: { ...(c0.kunnDel || {}), [kk]: { so: r.so, at: Date.now(), by: userName(), row: rows[kk] || null, kid: r.k ? r.k.id : null } }, ...meta() });
+    if (r.k) await S.store.delKunn(r.k.id);
+  });
+  log(c.id, 'xoa_kunn', `Xóa KUNN ${r.so}${r.goc ? ` (${vnd(r.goc)})` : ''}`);
+}
+async function kunnRestore(c, r) {
+  await S.store.group(`Khôi phục KUNN ${r.so}`, async () => {
+    const c0 = cust(c.id), kd = { ...(c0.kunnDel || {}) }; const d = kd[r.dk];
+    delete kd[r.dk];
+    await S.store.putCustomer({ ...c0, ...(c0.ledger && d && d.row ? { ledger: ledgerAdd(c0.ledger, d.row) } : {}), kunnDel: kd, ...meta() });
+    if (r.k && r.k.deleted) await S.store.restoreKunn(r.k.id);
+  });
+  log(c.id, 'khoi_phuc_kunn', `Khôi phục KUNN ${r.so}`);
+}
+async function kunnPurge(c, r) {
+  await S.store.group(`Xóa hẳn KUNN ${r.so}`, async () => {
+    const c0 = cust(c.id), kd = { ...(c0.kunnDel || {}) };
+    if (kd[r.dk]) kd[r.dk] = { so: r.so, at: Date.now(), by: userName(), purged: true };
+    await S.store.putCustomer({ ...c0, kunnDel: kd, ...meta() });
+    if (r.k) await S.store.putKunns([{ id: r.k.id, customerId: c.id, so_kunn: r.k.so_kunn, deleted: true, purged: true, updatedAt: Date.now(), updatedBy: userName() }]);
+  });
+  log(c.id, 'xoa_han_kunn', `Xóa hẳn KUNN ${r.so}`);
+}
+/** Bản trước dùng “ẩn” (kunnHide) → chuyển thành “đã xóa”. */
+async function migrateHide(c) {
+  const c0 = cust(c.id), h = c0.kunnHide || {}, { L, rows } = ledgerDrop(c0.ledger, new Set(Object.keys(h)));
+  const kd = { ...(c0.kunnDel || {}) };
+  for (const [kk, x] of Object.entries(h)) kd[kk] = { so: x.so || kk, at: x.at, by: x.by, row: rows[kk] || null, kid: null };
+  await S.store.putCustomer({ ...c0, ...(c0.ledger ? { ledger: L } : {}), kunnDel: kd, kunnHide: {}, ...meta() });
+}
 function kunnRowsOf(c) {
   const L = c.ledger, tool = S.store.kunnsOf(c.id), hos = S.store.hosoOf(c.id), today = BK.todayISO();
   const byKey = new Map(tool.map((k) => [kkey(k.so_kunn), k]));
   const rows = [];
   const seen = new Set();
-  const hid = c.kunnHide || {};
+  const hid = c.kunnDel || {};
   for (const x of L ? L.kunns : []) {
     const k = byKey.get(kkey(x.so)); if (k) seen.add(k.id);
     if (hid[kkey(x.so)]) continue;
@@ -6003,9 +6085,12 @@ function kunnRowsOf(c) {
 function renderCoKunn(body, c) {
   const rows = kunnRowsOf(c);
   const F = [['live', 'Đang vay', (r) => r.live], ['dh', 'Đáo hạn 30 ngày', (r) => r.live && r.dLeft != null && r.dLeft <= 30], ['goc', 'Thiếu hồ sơ gốc', (r) => r.s && !r.s.done], ['bs', 'Chờ chứng từ bổ sung', (r) => r.bs.length], ['tt', 'Đã tất toán', (r) => !r.live], ['all', 'Tất cả', () => true]];
-  const gone = [...S.store.k.values()].filter((k) => k.customerId === c.id && k.deleted && k.lines).map((k) => ({ so: k.so_kunn, ngay_gn: k.ngay_gn, goc: BK.sum(k.lines.map((l) => l.tien_gn)), k, del: true, bs: [], ns: [] }))
-    .concat(Object.entries(c.kunnHide || {}).map(([kk, h]) => { const x = c.ledger && c.ledger.kunns.find((y) => kkey(y.so) === kk); return { so: x ? x.so : h.so || kk, ngay_gn: x ? x.ngay_gn : '', goc: x ? x.goc : null, x, hid: kk, hidAt: h.at, hidBy: h.by, del: true, bs: [], ns: [] }; }));
-  F.push(['del', '🗑 Đã xóa / ẩn', () => false]);
+  if (c.kunnHide && Object.keys(c.kunnHide).length) { migrateHide(c); return; }
+  const kd = c.kunnDel || {};
+  const gone = Object.entries(kd).filter(([, d]) => !d.purged).map(([kk, d]) => { const k = d.kid ? S.store.k.get(d.kid) : null; const x = d.row; return { so: d.so, ngay_gn: x ? x.ngay_gn : k ? k.ngay_gn : '', goc: x ? x.goc : k && k.lines ? BK.sum(k.lines.map((l) => l.tien_gn)) : null, k, x, dk: kk, d, del: true, bs: [], ns: [] }; })
+    .concat([...S.store.k.values()].filter((k) => k.customerId === c.id && k.deleted && k.lines && !k.purged && !Object.values(kd).some((d) => d.kid === k.id)).map((k) => ({ so: k.so_kunn, ngay_gn: k.ngay_gn, goc: BK.sum(k.lines.map((l) => l.tien_gn)), k, dk: 'k:' + k.id, d: { at: k.deletedAt, by: k.deletedBy, kid: k.id }, del: true, bs: [], ns: [] })))
+    .sort((a, b) => (b.d.at || 0) - (a.d.at || 0));
+  F.push(['del', '🗑 Đã xóa', () => false]);
   const f = F.find((x) => x[0] === (V.kf || 'live')) || F[0];
   const q = BK.fold(V.kq || '');
   const list = (f[0] === 'del' ? gone : rows.filter(f[2])).filter((r) => !q || BK.fold(r.so).includes(q) || (r.k && r.k.lines.some((l) => BK.fold(`${l.so_hd} ${l.ncc}`).includes(q))));
@@ -6016,8 +6101,8 @@ function renderCoKunn(body, c) {
   const det = (r) => {
     if (!r) return '<div class="empty">Chọn một KUNN</div>';
     if (r.del) return `<div><b class="big">KUNN ${esc(r.so)}</b><div class="hist">${r.goc != null ? vnd(r.goc) : ''}${r.ngay_gn ? ' · giải ngân ' + dd(r.ngay_gn) : ''}</div></div>
-      <div class="note warn">${r.hid ? `Đã ẩn khỏi bảng theo dõi${r.hidBy ? ' bởi ' + esc(r.hidBy) : ''}${r.hidAt ? ' lúc ' + new Date(r.hidAt).toLocaleString('vi-VN') : ''} (dòng vẫn còn trong file Excel)` : `Đã xóa${r.k.deletedBy ? ' bởi ' + esc(r.k.deletedBy) : ''}${r.k.deletedAt ? ' lúc ' + new Date(r.k.deletedAt).toLocaleString('vi-VN') : ''} — ${r.k.lines.length} dòng bảng kê vẫn được giữ để khôi phục`}</div>
-      <div class="bar"><button class="btn pri" data-krestore="${r.hid ? 'h:' + esc(r.hid) : r.k.id}">♻ Khôi phục KUNN này</button></div>${histHtml(r.so)}`;
+      <div class="note warn">Đã xóa${r.d.by ? ' bởi ' + esc(r.d.by) : ''}${r.d.at ? ' lúc ' + new Date(r.d.at).toLocaleString('vi-VN') : ''}. Không còn trong bảng theo dõi, dư nợ, hạn mức, đáo hạn${r.x ? ' (đọc lại file Excel cũng không hiện lại)' : ''}. ${r.k && r.k.lines ? `${r.k.lines.length} dòng bảng kê được giữ lại để khôi phục.` : ''}</div>
+      <div class="bar"><button class="btn pri" data-krestore="${esc(r.dk)}">♻ Khôi phục (put back)</button><button class="btn danger" data-kpurge="${esc(r.dk)}">✕ Xóa hẳn</button></div>${histHtml(r.so)}`;
     const k = r.k, s = r.s;
     const ms = [[r.ngay_gn, `Giải ngân ${dd(r.ngay_gn)}`, 'done', r.hs ? 'Hồ sơ giải ngân đã lưu' : '']];
     if (s) ms.push([s.han, `Hồ sơ gốc — hạn ${dd(s.han)}`, s.done ? 'done' : s.quaHan ? 'bad' : 'warn', `Đã nhận ${s.nDa}/${s.n} chứng từ`]);
@@ -6031,7 +6116,7 @@ function renderCoKunn(body, c) {
         <div class="knf"><select class="inp" id="knT">${Object.entries(NOTE_T).map(([k, [i, l]]) => `<option value="${k}">${i} ${l}</option>`).join('')}</select><input class="inp" id="knA" placeholder="Số tiền trả (nếu có)"><input class="inp" id="knD" placeholder="Ngày (dd/mm/yyyy)"><input class="inp" id="knX" placeholder="Nội dung…"><button class="btn sm pri" id="knAdd">＋ Ghi</button></div>
         ${r.paid ? `<div class="hist">Đã ghi trả thêm ${vnd(r.paid)} sau lần đọc file Excel → dư nợ còn ≈ ${vnd(r.con_lai)}</div>` : ''}${r.dhGoc ? `<div class="hist">Đáo hạn gốc ${dd(r.dhGoc)} → theo ghi chú gia hạn ${dd(r.dao_han)}</div>` : ''}${r.closed ? '<div class="hist">Đã ghi tất toán — không còn nhắc đáo hạn</div>' : ''}</div>
       <div class="bar">${r.hs ? `<a class="btn sm" href="${hashOf({ cid: c.id, hs: r.hs.id })}">Mở hồ sơ giải ngân</a>` : ''}${k ? `<button class="btn sm" data-gall="${k.id}">✓ Đã nhận đủ hồ sơ gốc</button><button class="btn sm" data-kso="${k.id}">Xem trong sổ hóa đơn</button>` : ''}
-        ${k ? `<button class="btn sm danger" data-kdel="${k.id}" title="Xóa KUNN khỏi sổ của tool (vd bản nháp) — khôi phục được ở mục Đã xóa / ẩn">🗑 Xóa KUNN</button>` : `<button class="btn sm danger" data-khide="${esc(kkey(r.so))}" title="Ẩn dòng này khỏi bảng theo dõi (file Excel không bị sửa) — hiện lại được ở mục Đã xóa / ẩn">🙈 Ẩn khỏi bảng</button>`}</div>
+        <button class="btn sm danger" data-kdel="1" title="Xóa KUNN khỏi bảng theo dõi — lưu ở mục “Đã xóa”, khôi phục được">🗑 Xóa KUNN</button></div>
       ${histHtml(r.so)}`;
   };
   body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l} · ${k === 'del' ? gone.length : rows.filter(fn).length}</button>`).join('')}<span style="flex:1"></span>
@@ -6059,25 +6144,20 @@ function renderCoKunn(body, c) {
   };
   body.onclick = async (e) => {
     const t = e.target.closest('button'); if (!t) return;
-    if (t.dataset.kdel) {
-      const k = S.store.k.get(t.dataset.kdel); if (!k) return;
-      if (!confirm(`Xóa KUNN ${k.so_kunn} (${k.lines.length} dòng bảng kê)? Khôi phục được ở mục “Đã xóa / ẩn” hoặc bấm ↶.`)) return;
-      S.store.labelNext(`Xóa KUNN ${k.so_kunn}`);
-      await S.store.delKunn(k.id); log(c.id, 'xoa_kunn', `Xóa KUNN ${k.so_kunn} (${k.lines.length} dòng, ${vnd(BK.sum(k.lines.map((l) => l.tien_gn)))})`);
-      V.kunnSel = null; toast(`Đã xóa KUNN ${k.so_kunn} — bấm ↶ hoặc vào “Đã xóa / ẩn” để khôi phục`, 'ok', 7000); return;
-    }
-    if (t.dataset.khide) {
-      const kk = t.dataset.khide, c0 = cust(c.id), so = sel ? sel.so : kk;
-      if (!confirm(`Ẩn KUNN ${so} khỏi bảng theo dõi? (file Excel không bị sửa)`)) return;
-      S.store.labelNext(`Ẩn KUNN ${so}`);
-      await S.store.putCustomer({ ...c0, kunnHide: { ...(c0.kunnHide || {}), [kk]: { at: Date.now(), by: userName(), so } }, ...meta() });
-      log(c.id, 'an_kunn', `Ẩn KUNN ${so} khỏi bảng theo dõi`); toast(`Đã ẩn KUNN ${so}`, 'ok'); return;
+    if (t.dataset.kdel && sel) {
+      if (!confirm(`Xóa KUNN ${sel.so}? KUNN chuyển sang mục “Đã xóa” (lưu vết, khôi phục được), không còn tính vào bảng theo dõi / dư nợ.`)) return;
+      await kunnDelete(c, sel); V.kunnSel = null; V.kunnSelSo = null;
+      toast(`Đã xóa KUNN ${sel.so} — khôi phục ở mục “🗑 Đã xóa” hoặc bấm ↶`, 'ok', 7000); return;
     }
     if (t.dataset.krestore) {
-      const v = t.dataset.krestore;
-      if (v.startsWith('h:')) { const kk = v.slice(2), c0 = cust(c.id), h = { ...(c0.kunnHide || {}) }; const so = (h[kk] || {}).so || kk; delete h[kk]; await S.store.putCustomer({ ...c0, kunnHide: h, ...meta() }); log(c.id, 'hien_kunn', `Hiện lại KUNN ${so}`); toast(`Đã hiện lại KUNN ${so}`, 'ok'); }
-      else { const k = S.store.k.get(v); S.store.labelNext(`Khôi phục KUNN ${k.so_kunn}`); await S.store.restoreKunn(v); log(c.id, 'khoi_phuc_kunn', `Khôi phục KUNN ${k.so_kunn}`); toast(`Đã khôi phục KUNN ${k.so_kunn}`, 'ok'); V.kf = 'all'; }
-      return renderMain();
+      const r = gone.find((x) => x.dk === t.dataset.krestore); if (!r) return;
+      await kunnRestore(c, r); V.kf = 'all'; V.kunnSel = r.k ? r.k.id : null; V.kunnSelSo = r.so;
+      toast(`Đã khôi phục KUNN ${r.so}`, 'ok'); return renderMain();
+    }
+    if (t.dataset.kpurge) {
+      const r = gone.find((x) => x.dk === t.dataset.kpurge); if (!r) return;
+      if (!confirm(`Xóa hẳn KUNN ${r.so}? Không khôi phục được nữa${r.x ? ' (đọc lại file Excel cũng không hiện lại)' : ''}.`)) return;
+      await kunnPurge(c, r); toast(`Đã xóa hẳn KUNN ${r.so}`, 'ok'); return;
     }
     if (t.dataset.kndel) { if (confirm('Xóa ghi chú này?')) await saveNotes((xs) => xs.filter((n) => n.id !== t.dataset.kndel), 'Xóa ghi chú KUNN'); return; }
     if (t.dataset.gall) { const k = S.store.k.get(t.dataset.gall); await setGoc(k, k.lines.map((l) => l.id), 'da_nhan'); }
@@ -6193,7 +6273,9 @@ async function saveLedger(c, L, cfg, fname) {
   let nf = 0;
   for (const [k, v] of Object.entries(L.profile || {})) if (v && (hs[k] == null || hs[k] === '')) { hs[k] = v; nf++; }
   if (L.hm && !hs.hm_tong) hs.hm_tong = Math.round(L.hm / 1e6).toLocaleString('en-US');
-  await S.store.putCustomer({ ...c0, ledger: L, ...(cfg ? { ledgerCfg: cfg } : {}), hs, ...meta() });
+  const kd = { ...(c0.kunnDel || {}) };
+  if (Object.keys(kd).length) { const r = ledgerDrop(L, new Set(Object.keys(kd))); L = r.L; for (const [kk, x] of Object.entries(r.rows)) if (!kd[kk].purged) kd[kk] = { ...kd[kk], row: x }; }
+  await S.store.putCustomer({ ...c0, ledger: L, kunnDel: kd, ...(cfg ? { ledgerCfg: cfg } : {}), hs, ...meta() });
   toast(`Đã đọc ${fname}${L.sheet ? ' · sheet ' + L.sheet : ''}: ${L.n_live} KUNN còn dư nợ, dư nợ ${trieu(L.du_no)}${nf ? ` · điền ${nf} thông tin công ty từ DANH_MUC` : ''}`, 'ok', 7000);
 }
 function openLedgerDialog(c, grids, fname, cfg0) {
@@ -6454,7 +6536,7 @@ function renderHoso(el, c) {
   const ackBtn = (x) => x.sev >= 2 ? `<button class="lnk" data-ack="${esc(x.key)}">Bỏ qua — ghi lý do</button>` : x.sev === 1 ? `<button class="lnk" data-unack="${esc(x.key)}">↺ Bỏ “bỏ qua”</button>` : '';
   const refLinks = (x) => x.refs.map((r) => hs.docs.find((d) => d.id === r)).filter(Boolean).map((d) => `<a class="lnk" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}">Xem ${esc(HSC.TYPES[d.loai].l.toLowerCase())} ${esc(d.f.so || '')}</a>`).join(' ');
   const pkg = HSC.packageNames(hs, hs.files);
-  const kunnRec = hs.kid ? S.store.k.get(hs.kid) : null;
+  const kunnRec = hs.kid && live(S.store.k.get(hs.kid)) ? S.store.k.get(hs.kid) : null;
   el.innerHTML = `${companyHead(c, 'hoso')}
     <div class="hstop"><div class="crumb"><a href="${hashOf({ cid: c.id, tab: 'hoso' })}">Hồ sơ giải ngân</a> › <b>Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : '(chưa định ngày)'}</b>${hs.done ? ' <span class="pill p-ok">Đã giải ngân</span>' : ''}</div>
       <ol class="msl">${ms.map((m) => `<li><button class="ms ${m.st}${V.msFocus === m.k ? ' sel' : ''}" data-ms="${m.k}" title="${esc(m.hint)}">${m.st === 'done' ? '✓ ' : m.st === 'cur' ? '● ' : m.st === 'skip' ? '⤼ ' : ''}${esc(m.l)}${m.at ? ` <small>${dd(m.at).slice(0, 5)}</small>` : ''}${m.k === 'kiem_tra' && n.err ? ` <small>còn ${n.err} lỗi</small>` : ''}</button></li>`).join('')}</ol>
