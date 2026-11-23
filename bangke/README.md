@@ -86,6 +86,8 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Chứng từ bổ sung bản gốc**: chọn chứng từ KH chỉ nộp bản sao (gợi ý từ chứng từ đã thả: hóa đơn, tiền điện, tờ
   khai…), Gốc/Sao, **số ngày theo yêu cầu ĐVKD** (đặt mặc định riêng từng công ty, không cố định 30 ngày) → hạn bổ
   sung. Danh sách tự điền vào bảng “Chứng từ bổ sung” của PDGN và dùng làm hạn hồ sơ gốc ở tab Theo dõi KUNN.
+- **Bỏ file**: ✕ ở từng chứng từ (bỏ file khỏi hồ sơ, hoàn tác được) và ✕ ở gói tải lên (chỉ bỏ khỏi gói, ↺ đưa lại).
+  **CIC**: AI đọc mẫu báo cáo (S10A, R20…) và ngày tra cứu; tên file trong gói theo mẫu (09_CIC_S10A.pdf, 09_CIC_R20.pdf).
 - **Diễn giải chứng từ giải ngân (PDGN)**: đoạn sau dòng “Chứng từ giải ngân:” thành trường riêng — tool viết sẵn từ
   bảng chứng từ (NCC, hợp đồng, PO / hóa đơn, ngày), **🤖 AI viết lại** theo văn phong mẫu, bạn sửa tiếp (sửa rồi thì giữ).
 - **Đồng bộ hồ sơ ↔ theo dõi**: hồ sơ đã chuyển sang theo dõi, sửa gì (số KUNN, ngày, dòng bảng kê, chứng từ bổ sung) thì

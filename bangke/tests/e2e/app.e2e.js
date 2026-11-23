@@ -730,6 +730,13 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   // ghi vào sổ hóa đơn → tab Theo dõi KUNN thấy KUNN mới
   await page.click('#hsLedger');
   await page.locator('.obox', { hasText: 'Đã ghi' }).waitFor();
+  // bỏ 1 file khỏi gói rồi đưa lại
+  const nPk = await page.locator('#oxUp .pkr').count();
+  await page.locator('#oxUp [data-pkx]').first().click();
+  await page.locator('#oxUp .pksk [data-pkback]').waitFor();
+  assert.equal(await page.locator('#oxUp .pkr').count(), nPk - 1);
+  await page.locator('#oxUp [data-pkback]').first().click();
+  await page.locator('#oxUp .pksk').waitFor({ state: 'detached' });
   const [dz] = await Promise.all([page.waitForEvent('download'), page.click('#hsZip')]);
   const zz = await JSZip.loadAsync(await readFile(await dz.path()));
   assert.deepEqual(Object.keys(zz.files).sort(), ['03_BANG_KE.xlsx', '03_BANG_KE_CHUAN_1000001_9_.26.xlsx', '04_UNC_LENH_CHI.pdf']);

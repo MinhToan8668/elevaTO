@@ -454,6 +454,7 @@ a,.lnk{color:var(--blue)}
 .cpi:hover,.cpi.on{background:var(--blue-bg);border-color:var(--blue2)}.cpi small{color:var(--ink3);font-size:12px}
 .hbtn.copick{font-weight:700}
 .nowrap{white-space:nowrap}
+.dline2 .eye.fx{opacity:.35}.dline2 .eye.fx:hover{opacity:1;background:#fde2e2;color:#b91c1c}.pkx{color:var(--ink3)}.pkx:hover{color:var(--err)}.pksk{margin:4px 0;display:flex;flex-wrap:wrap;gap:4px}
 .mtab{margin-bottom:12px}.mtab header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .bulkn{display:flex;gap:12px;align-items:center;margin-bottom:12px}.bulkn>div{flex:1}
 .khist{margin-top:10px;font-size:12.5px}.khist summary{cursor:pointer;font-weight:700}.khist ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:5px}.khist small{display:block;color:var(--ink3)}
@@ -2351,7 +2352,7 @@ const HSC = (() => {
     to_khai: { l: 'Tờ khai hải quan', g: 'Hải quan & thuế', ord: 7, fields: [F('so', 'Số tờ khai'), F('ngay', 'Ngày đăng ký', 'date'), F('ben_mua', 'Người nhập khẩu'), F('mst_mua', 'MST'), F('tien', 'Tổng thuế phải nộp', 'money'), F('hai_quan', 'Chi cục hải quan')] },
     nsnn: { l: 'Giấy nộp tiền NSNN', g: 'Hải quan & thuế', ord: 8, fields: [F('so', 'Số chứng từ'), F('ngay', 'Ngày', 'date'), F('to_khai', 'Số tờ khai (cách nhau dấu phẩy)'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK KBNN'), F('ngan_hang', 'KBNN / ngân hàng')] },
     unc: { l: 'UNC / lệnh chi', g: 'Thanh toán', ord: 4, fields: [F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên nhận'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận'), F('ngan_hang', 'Ngân hàng nhận')] },
-    cic: { l: 'CIC', g: 'Thẩm định', ord: 9, fields: [F('ngay', 'Ngày tra cứu', 'date'), F('nhom_no', 'Nhóm nợ cao nhất'), F('ben_mua', 'Tên khách hàng')] },
+    cic: { l: 'CIC', g: 'Thẩm định', ord: 9, fields: [F('mau', 'Mẫu báo cáo (S10A, R20…)'), F('ngay', 'Ngày tra cứu', 'date'), F('nhom_no', 'Nhóm nợ cao nhất'), F('ben_mua', 'Tên khách hàng')] },
     invoice: { l: 'Invoice / hợp đồng ngoại', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Người bán'), F('tien', 'Số tiền', 'money'), F('loai_tien', 'Loại tiền')] },
     cltf: { l: 'Báo cáo CLTF (CL - KERNEL - TF)', g: 'Thẩm định', ord: 9, fields: [F('ngay', 'Đến ngày', 'date'), F('ben_mua', 'Khách hàng / CIF'), F('hm', 'Hạn mức cho vay (LOAN)', 'money'), F('du_no', 'Dư nợ vay hiện tại', 'money'), F('kha_dung', 'Hạn mức còn khả dụng', 'money')] },
     tra_cuu: { l: 'Kết quả tra cứu hóa đơn', g: 'Thẩm định', ord: 9, fields: [F('so', 'Các số hóa đơn đã tra')] },
@@ -2367,6 +2368,7 @@ const HSC = (() => {
     return `Bạn là chuyên viên hồ sơ giải ngân ngân hàng Việt Nam. File "${fileName}" do khách hàng ${khName ? `"${khName}" ` : ''}gửi. Một file có thể chứa NHIỀU chứng từ (vd PDF 36 trang gồm nhiều tờ khai): tách từng chứng từ riêng.
 Các loại chứng từ và trường cần đọc:
 ${types}
+CIC: mau = mã mẫu báo cáo in trên báo cáo (vd "S10A", "R20", "S11A", "R21" — thường ở góc trên / tiêu đề), ngay = ngày tra cứu / ngày in báo cáo, nhom_no = nhóm nợ cao nhất.
 Báo cáo "CL - KERNEL - TF" (CLTF) của ngân hàng là loại cltf: hm = AMOUNT của dòng LOAN / LO-LIMITLOAN, du_no = dư nợ vay đang có, kha_dung = phần còn được dùng.
 Quy tắc: ngày ghi dd/mm/yyyy; số tiền ghi số nguyên không dấu phân cách (vd 1116900000); chép đúng số hiệu như trên giấy; trường không thấy thì để "". Tờ khai: "tien" là tổng thuế phải nộp. conf = độ chắc chắn 0..1 về loại chứng từ.
 Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830","ngay":"04/11/2026",...}}]}${text ? `\n\nNỘI DUNG FILE:\n${text.slice(0, 60000)}` : ''}`;
@@ -2654,7 +2656,7 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
   function packageNames(hs, files, order) {
     const ord = order || Object.fromEntries(Object.entries(TYPES).map(([k, t]) => [k, t.ord]));
     const byFile = new Map();
-    for (const d of hs.docs || []) if (!d.del) { const o = ord[d.loai] || 10; if (!byFile.has(d.fileId) || byFile.get(d.fileId).o > o) byFile.set(d.fileId, { o, loai: d.loai, so: d.f.so }); }
+    for (const d of hs.docs || []) if (!d.del) { const o = ord[d.loai] || 10; if (!byFile.has(d.fileId) || byFile.get(d.fileId).o > o) byFile.set(d.fileId, { o, loai: d.loai, so: d.f.so || d.f.mau }); }
     const used = {};
     const own = hs.pkgNames || {};
     return files.filter((f) => !(hs.skipUp || {})[f.id]).map((f) => {
@@ -6722,9 +6724,9 @@ function renderHoso(el, c) {
   const fileName = (id) => (hs.files.find((f) => f.id === id) || {}).name || '';
   const docLine = (d) => {
     const t = HSC.TYPES[d.loai], bad = cs.some((x) => x.sev >= 2 && x.refs.includes(d.id));
-    const main = d.loai === 'bang_ke' ? `${fileName(d.fileId)}` : `${t.l}${d.f.so ? ' ' + d.f.so : ''}`;
+    const main = d.loai === 'bang_ke' ? `${fileName(d.fileId)}` : `${t.l}${d.f.so ? ' ' + d.f.so : d.f.mau ? ' ' + d.f.mau : ''}`;
     const sub = d.loai === 'bang_ke' ? `${hs.lines.length} dòng · ${vnd(total)}` : [d.f.ben_ban, d.f.ngay, d.f.tien && vnd(+d.f.tien)].filter(Boolean).join(' · ');
-    return `<div class="dline2"><a class="dline ${bad ? 'bad' : ''} ${d.conf < 0.6 && d.loai !== 'bang_ke' ? 'unsure' : ''}" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}"><i></i><span>${esc(main)}<small>${esc(sub)}${d.manual ? ' · nhập tay' : ''}${d.conf < 0.6 && d.loai !== 'bang_ke' ? ' · AI chưa chắc — bấm để xem' : ''}</small></span></a>${d.fileId ? `<button class="eye" data-fprev="${d.fileId}" title="Xem nhanh file">👁</button>` : ''}</div>`;
+    return `<div class="dline2"><a class="dline ${bad ? 'bad' : ''} ${d.conf < 0.6 && d.loai !== 'bang_ke' ? 'unsure' : ''}" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}"><i></i><span>${esc(main)}<small>${esc(sub)}${d.manual ? ' · nhập tay' : ''}${d.conf < 0.6 && d.loai !== 'bang_ke' ? ' · AI chưa chắc — bấm để xem' : ''}</small></span></a>${d.fileId ? `<button class="eye" data-fprev="${d.fileId}" title="Xem nhanh file">👁</button><button class="eye fx" data-fdel="${d.fileId}" title="Bỏ file này khỏi hồ sơ (hoàn tác được)">✕</button>` : ''}</div>`;
   };
   const FXF = { cic: 'cic', nsnn: 'nsnn', hdmb: 'hdmb', bk: 'bang_ke' };
   const fixHtml = (x) => {
@@ -6795,7 +6797,8 @@ function renderHoso(el, c) {
             <label class="hist"><input type="checkbox" id="hsBsNone" ${hs.bs_none ? 'checked' : ''}> Không có chứng từ phải bổ sung</label></div>
           <label class="hist">Số ngày mặc định của công ty <input class="cell-in bsn" id="hsBsDef" value="${esc((c.hs || {}).so_ngay_bs || '')}" placeholder="—" inputmode="numeric"> ngày <span>(để trống = nhập từng lần)</span></label></div>
         <div class="obox" id="oxUp"><div class="oh"><b>Tải lên hệ thống</b><span>${pkg.length} file</span></div>
-          <div class="pk">${pkg.map((x) => `<div class="pkr"><input class="cell-in" data-pkn="${x.id}" value="${esc(x.name)}" title="Sửa tên file khi tải về"><button class="lnk" data-fdl="${x.id}" title="Tải file này với tên đã đặt">⬇</button></div>`).join('')}</div>
+          <div class="pk">${pkg.map((x) => `<div class="pkr"><input class="cell-in" data-pkn="${x.id}" value="${esc(x.name)}" title="Sửa tên file khi tải về"><button class="lnk" data-fdl="${x.id}" title="Tải file này với tên đã đặt">⬇</button><button class="lnk pkx" data-pkx="${x.id}" title="Bỏ file này khỏi gói tải lên">✕</button></div>`).join('')}</div>
+          ${(() => { const sk = hs.files.filter((f) => (hs.skipUp || {})[f.id]); return sk.length ? `<div class="hist pksk">Đã bỏ khỏi gói: ${sk.map((f) => `<button class="lnk" data-pkback="${f.id}" title="Đưa lại vào gói">↺ ${esc(f.name)}</button>`).join(' ')}</div>` : ''; })()}
           <label class="hist"><input type="checkbox" id="hsPkBk" ${hs.pkgBk === false ? '' : 'checked'} ${hs.lines.length ? '' : 'disabled'}> Kèm bảng kê Excel chuẩn (03_BANG_KE…xlsx)</label>
           <button class="btn sm pri" id="hsZip" ${pkg.length || hs.lines.length ? '' : 'disabled'}>⬇ Tải gói file đã đặt tên (.zip)</button><div class="hist">Tên gói: ${esc(zipName(hs, c))}</div></div>
         <div class="bar" style="margin-top:6px"><button class="btn sm danger" id="hsDel">Xóa hồ sơ</button></div>
@@ -6829,7 +6832,7 @@ function renderHoso(el, c) {
   $('#hsDel2', el).onclick = () => $('#hsDel', el).click();
   $('#hsDel', el).onclick = async () => { if (!confirm('Xóa hồ sơ giải ngân này? (file đính kèm vẫn còn trong thư mục chung; KUNN đã ghi sổ không bị xóa)')) return; await S.store.delHoso(hs.id); go({ cid: c.id, tab: 'hoso', hs: null, doc: null }); };
   el.onclick = async (e) => {
-    const fx = e.target.closest('[data-fx],[data-fxfile],[data-fxline],[data-fxadd],[data-fxtk],[data-ldel2],[data-fprev],[data-fdl],[data-kn],[data-knuse]');
+    const fx = e.target.closest('[data-fx],[data-fxfile],[data-fxline],[data-fxadd],[data-fxtk],[data-ldel2],[data-fprev],[data-fdl],[data-kn],[data-knuse],[data-pkx],[data-pkback]');
     if (fx) return hsFixAction(fx, hs, c, el);
     const t = e.target.closest('[data-ms],[data-msok],[data-msundo],[data-msskip],[data-msclose],[data-ack],[data-unack],[data-aread],[data-fopen],[data-fdel],[data-bsdel]'); if (!t) return;
     const d = t.dataset;
@@ -7006,6 +7009,8 @@ async function hsFixAction(t, hs, c, el) {
     return toast(`Đã dùng TK ${doc.f.tk_nhan} cho ${doc.f.ben_ban} — nhớ sửa lệnh chi / UNC`, 'ok', 6000);
   }
   if (d.fprev) return previewFiles(hs, d.fprev);
+  if (d.pkx) return hsPatch(hs.id, (x) => { x.skipUp = { ...(x.skipUp || {}), [d.pkx]: true }; }, 'Bỏ file khỏi gói tải lên');
+  if (d.pkback) return hsPatch(hs.id, (x) => { x.skipUp = { ...(x.skipUp || {}) }; delete x.skipUp[d.pkback]; }, 'Đưa file lại vào gói tải lên');
   if (d.fdl) { const r = await S.store.getFile(d.fdl); if (!r) return toast('File không có trên máy này', 'err'); const nm = (HSC.packageNames(hs, hs.files).find((x) => x.id === d.fdl) || {}).name || (hs.files.find((f) => f.id === d.fdl) || {}).name; return saveBlob(r.blob, nm); }
   if (d.kn) { V.knOff = { ...(V.knOff || {}), [hs.id]: ((V.knOff || {})[hs.id] || 0) + +d.kn }; return renderMain(); }
   if (d.knuse) {
