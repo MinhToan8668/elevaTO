@@ -67,12 +67,12 @@ test('soát giải ngân trùng với sổ hóa đơn, hóa đơn > 90 ngày, CI
 test('mốc hồ sơ: mốc tự động chỉ tick khi việc đã làm thật; mốc làm tay tick lúc nào cũng được; bỏ qua được; chứng từ bổ sung', () => {
   const base = { files: [{ id: 'f' }], docs: [{ id: 'd', loai: 'hoa_don' }], lines: [{}], so_kunn: '' };
   let m = HSC.milestones(base, 0);
-  assert.deepEqual(m.slice(0, 4).map((x) => x.st), ['done', 'done', 'cur', 'todo']);
-  assert.ok(!m.some((x) => x.k === 'nhan_ky'), 'không còn mốc nhận bản ký');
-  assert.equal(m.find((x) => x.k === 'gui_ky').can, true, 'tick tay được ngay');
-  m = HSC.milestones({ ...base, ms: { gui_ky: '2026-11-20' } }, 0);
-  assert.equal(m.find((x) => x.k === 'gui_ky').st, 'done');
-  assert.equal(HSC.stageOf({ ...base, so_kunn: '1', ms: { gui_ky: '2026-11-20', pdgn_ky: 'skip' } }, 0).k, 'he_thong');
+  assert.deepEqual(m.map((x) => x.k), ['nhan', 'kiem_tra', 'so_kunn', 'soan', 'giai_ngan'], 'chỉ các bước tool làm / theo dõi được');
+  assert.deepEqual(m.map((x) => x.st), ['done', 'done', 'cur', 'todo', 'todo']);
+  assert.equal(m.find((x) => x.k === 'giai_ngan').can, true, 'bấm Đã giải ngân lúc nào cũng được');
+  m = HSC.milestones({ ...base, so_kunn: '1(2).26', ms: { soan: '2026-11-20' } }, 0);
+  assert.deepEqual(m.map((x) => x.st), ['done', 'done', 'done', 'done', 'cur']);
+  assert.equal(HSC.stageOf({ ...base, so_kunn: '1', ms: { soan: '2026-11-20', giai_ngan: '2026-11-21' } }, 0).k, 'xong');
   assert.equal(HSC.stageOf(base, 1).k, 'kiem_tra', 'còn lỗi → đang ở bước kiểm tra');
   // chứng từ bổ sung: thiếu số ngày → cần xem; chưa chọn → nhắc nhẹ
   const ctx = { kh: {}, kunns: [] };
@@ -104,7 +104,7 @@ test('đọc file Excel QUẢN LÝ GIẢI NGÂN (mẫu trong giaingan/): sổ kh
   assert.throws(() => HSC.readLedger({ Sheet1: [['a']] }), /KHE_UOC/);
 });
 
-test('việc hôm nay: mỗi việc gắn một công ty; lỗi hồ sơ, chờ ký lâu, hồ sơ gốc quá hạn, đáo hạn theo sổ Excel', () => {
+test('việc hôm nay: mỗi việc gắn một công ty; lỗi hồ sơ, hồ sơ dừng lâu, hồ sơ gốc quá hạn, đáo hạn theo sổ Excel', () => {
   const t = HSC.tasks([
     { c: { id: 'a', name: 'An Bình' }, hoso: [{ hs: { id: 'h1', ngay_gn: '2026-11-26', files: [{}], docs: [{}] }, checks: [{ sev: 3, title: 'Số tài khoản không khớp' }] }] },
     { c: { id: 'b', name: 'Minh Long' }, hoso: [{ hs: { id: 'h2', ngay_gn: '2026-11-21', so_kunn: '7(9).26', files: [{}], docs: [{}], lines: [{}], ms: { gui_ky: '2026-11-16', nhan_ky: '2026-11-17' } }, checks: [] }],
@@ -113,7 +113,7 @@ test('việc hôm nay: mỗi việc gắn một công ty; lỗi hồ sơ, chờ 
   ], '2026-11-20');
   const s = t.map((x) => `${x.sev}|${x.cname}|${x.text}`).join('\n');
   assert.match(s, /3\|An Bình\|Hồ sơ GN 26\/11: Số tài khoản không khớp/);
-  assert.match(s, /2\|Minh Long\|Hồ sơ GN 21\/11: GĐ TTKD ký PDGN — chờ 3 ngày/);
+  assert.match(s, /2\|Minh Long\|Hồ sơ GN 21\/11: Soạn KUNN & PDGN — chờ 3 ngày/);
   assert.match(s, /3\|Hòa Phát Thử\|KUNN 3\(12\)\.26 quá hạn hồ sơ gốc 20 ngày/);
   assert.match(s, /1\|Minh Long\|KUNN 7\(3\)\.26 đáo hạn 02\/12\/2026/);
   assert.equal(t[0].sev, 3);
