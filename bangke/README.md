@@ -101,6 +101,19 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   hạn mức gói), ẩn gói không dùng. Hồ sơ chọn gói ở ô **Gói lãi suất** → lãi suất tự điền KUNN / PDGN, KUNN ghi gói;
   tool soát gói còn hiệu lực ngày GN, còn hạn mức gói (đã dùng theo file Excel + sổ), số ngày vay ≤ kỳ hạn tối đa; nhắc
   chọn gói khi có gói đang hiệu lực.
+- **Lãi suất thả nổi**: mỗi KUNN có lịch điều chỉnh lãi suất (từ ngày, LS mới, ghi chú) ở khung chi tiết; **± Điều chỉnh
+  lãi suất** hàng loạt cho KUNN đang vay (tất cả / theo gói / không theo gói, cộng trừ điểm % hoặc đặt bằng, xem trước,
+  bỏ chọn từng KUNN). Bảng theo dõi hiện LS cũ → mới.
+- **📦 Theo gói** (tab Theo dõi KUNN): mỗi gói lãi suất / UBG — đã giải ngân, dư nợ hiện tại, hạn mức gói, còn lại, danh
+  sách KUNN; KUNN không theo gói tách riêng; **⬇ Xuất Excel** (sheet tổng hợp + chi tiết KUNN).
+- **Nhắc hạn mức & gói** (trang đầu + việc cần làm của công ty): hạn mức sắp / đã hết hạn duy trì (≤ 60 ngày), hạn mức
+  mới sắp hiệu lực, gói sắp hết hiệu lực (≤ 30 ngày), gói đã dùng ≥ 90% hạn mức gói.
+- **＋ Thêm KUNN** (tab Theo dõi KUNN): KUNN chưa làm qua hồ sơ trên tool — nhập số KUNN, ngày GN, số tiền, số ngày vay
+  (tự tính đáo hạn), gốc còn lại, gói / lãi suất, bên thụ hưởng, chứng từ bổ sung bản gốc + hạn; sửa lại được.
+- **Tra soát mục đích & HĐMB**: tool tự soát HĐMB bên mua là KH, bên bán trùng NCC bảng kê (dòng không ghi số HĐMB được
+  ghép theo bên bán), tổng hóa đơn (kể cả KUNN trước) không vượt giá trị HĐMB, hàng hóa trên hóa đơn khớp HĐMB và mục
+  đích vay; **🤖 AI tra soát mục đích & HĐMB** đánh giá sâu (đúng mục đích, điều khoản thanh toán, ngày, tài khoản nhận,
+  dấu hiệu bất thường) — kết quả vào danh sách kiểm tra, báo khi chứng từ đổi sau lần soát.
 - **Bổ sung bản gốc** (một cột chung ở Theo dõi KUNN, lọc “Chờ bổ sung bản gốc”): KUNN có hồ sơ → theo danh sách chứng từ
   bổ sung của hồ sơ (tick đã nhận, **sửa hạn** ngay ở bảng theo dõi); KUNN nạp từ bảng kê cũ → theo từng hóa đơn, hạn
   nhận bản gốc sửa được.
