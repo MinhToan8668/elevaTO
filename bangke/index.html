@@ -2533,7 +2533,7 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     const bsl = hs.bo_sung || [];
     const noDay = bsl.filter((b) => !b.xong && !(parseInt(b.ngay, 10) > 0) && !b.han);
     if (noDay.length) add('bs_ngay', 2, `Chứng từ bổ sung chưa có số ngày: ${noDay.map((b) => b.ten || '(chưa đặt tên)').join(', ')}`, 'Nhập số ngày bổ sung bản gốc theo yêu cầu của ĐVKD ở hộp “Chứng từ bổ sung bản gốc”.');
-    else if (!bsl.length && !hs.bs_none && (hs.lines || []).length) add('bs_chua', 1, 'Chưa chọn chứng từ phải bổ sung bản gốc', 'Bấm “＋ Từ chứng từ đã thả” ở hộp Chứng từ bổ sung bản gốc, hoặc tick “Không có chứng từ phải bổ sung”.');
+    else if (!bsl.length && !hs.bs_none && (hs.lines || []).length) add('bs_chua', 1, 'Chưa chọn chứng từ phải bổ sung bản gốc', 'Chứng từ nào KH chỉ nộp bản sao, phải bổ sung bản gốc sau? Tool điền vào bảng “Chứng từ bổ sung” của PDGN và theo dõi hạn.');
     // CLTF (báo cáo hạn mức CL - KERNEL - TF)
     const cl = docs.filter((x) => x.loai === 'cltf').sort((a, b) => (iso(b.f.ngay) || '').localeCompare(iso(a.f.ngay) || ''))[0];
     if (cl) {
@@ -6735,6 +6735,8 @@ function renderHoso(el, c) {
     const file = (loai, label) => `<button class="btn sm" data-fxfile="${loai}">📎 ${label}</button>`;
     if (/^hm_/.test(k)) return `<span class="fx"><input class="inp" data-fxhm placeholder="Hạn mức (triệu)" value="${esc(p.hm_tong || '')}"><button class="btn sm pri" data-fx="hm">Lưu hạn mức</button>${!c.ledger ? `<button class="btn sm" data-xlpick="${c.id}">📂 Chọn file Excel dư nợ</button>` : ''}</span>`;
     if (/^cic_/.test(k)) return `<span class="fx">${file('cic', 'Thả file CIC')}<input class="inp" type="date" data-fxcic title="hoặc nhập ngày tra CIC"><select class="inp" data-fxnhom><option value="1">Nhóm 1</option><option value="2">Nhóm 2</option><option value="3">Nhóm 3+</option></select><button class="btn sm" data-fx="cic">Lưu CIC nhập tay</button></span>`;
+    if (k === 'bs_chua') return `<span class="fx"><button class="btn sm pri" data-fx="bssug">＋ Chọn từ chứng từ đã thả</button><button class="btn sm" data-fx="bsnone">Không có chứng từ phải bổ sung</button></span>`;
+    if (k === 'bs_ngay') return `<span class="fx"><button class="btn sm pri" data-fx="bsgo">Nhập số ngày bổ sung</button></span>`;
     if (/^nsnn/.test(k)) return `<span class="fx">${file('nsnn', 'Bổ sung giấy nộp NSNN')}</span>`;
     if (/^hdmb_/.test(k)) return `<span class="fx">${file('hdmb', 'Bổ sung HĐMB / PO')}${line ? `<button class="btn sm" data-fxline="${line}">✎ Sửa dòng bảng kê</button>` : ''}</span>`;
     if (k === 'bk_none') return `<span class="fx">${file('bang_ke', 'Thả file bảng kê Excel')}<button class="btn sm" data-fxadd="1">＋ Nhập dòng tay</button></span>`;
@@ -6743,7 +6745,7 @@ function renderHoso(el, c) {
     if (line) return `<span class="fx"><button class="btn sm" data-fxline="${line}">✎ Sửa dòng bảng kê</button></span>`;
     return '';
   };
-  const ackBtn = (x) => x.sev >= 2 ? `<button class="lnk" data-ack="${esc(x.key)}">Bỏ qua — ghi lý do</button>` : x.sev === 1 ? `<button class="lnk" data-unack="${esc(x.key)}">↺ Bỏ “bỏ qua”</button>` : '';
+  const ackBtn = (x) => x.sev >= 2 ? `<button class="lnk" data-ack="${esc(x.key)}">Bỏ qua — ghi lý do</button>` : x.sev === 1 && (hs.ack || {})[x.key] ? `<button class="lnk" data-unack="${esc(x.key)}">↺ Hiện lại cảnh báo này</button>` : '';
   const refLinks = (x) => x.refs.map((r) => hs.docs.find((d) => d.id === r)).filter(Boolean).map((d) => `<a class="lnk" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}">Xem ${esc(HSC.TYPES[d.loai].l.toLowerCase())} ${esc(d.f.so || '')}</a>`).join(' ');
   const pkg = HSC.packageNames(hs, hs.files);
   const kunnRec = hs.kid && live(S.store.k.get(hs.kid)) ? S.store.k.get(hs.kid) : null;
@@ -6843,7 +6845,7 @@ function renderHoso(el, c) {
     if (d.msundo) return patch((x) => { delete x.ms[d.msundo]; if (d.msundo === 'giai_ngan') x.done = false; }, 'Bỏ đánh dấu mốc');
     if (d.msskip) return patch((x) => { if (x.ms[d.msskip] === 'skip') delete x.ms[d.msskip]; else x.ms[d.msskip] = 'skip'; }, 'Bỏ qua mốc');
     if (d.ack) { const why = prompt('Lý do bỏ qua (lưu vào hồ sơ):'); if (why) patch((x) => { x.ack = { ...(x.ack || {}), [d.ack]: why }; }, 'Bỏ qua cảnh báo'); return; }
-    if (d.unack) return patch((x) => { delete x.ack[d.unack]; }, 'Bỏ “bỏ qua”');
+    if (d.unack) return patch((x) => { delete x.ack[d.unack]; }, 'Hiện lại cảnh báo');
     if (d.aread) return aiReadFile(hs.id, d.aread).catch((er) => toast(errMsg(er), 'err', 8000));
     if (d.fopen) { const r = await S.store.getFile(d.fopen); if (!r) return toast('Không có file trên máy này', 'err'); window.open(URL.createObjectURL(r.blob), '_blank'); return; }
     if (d.fdel) { if (!confirm('Bỏ file này khỏi hồ sơ?')) return; return patch((x) => { x.files = x.files.filter((f) => f.id !== d.fdel); x.docs = x.docs.filter((q) => q.fileId !== d.fdel); }, 'Bỏ file khỏi hồ sơ'); }
@@ -6980,6 +6982,9 @@ const zipName = (hs, c) => `HoSoGN_${slug((c.hs || {}).ten_kh_ngan || c.name).to
 async function hsFixAction(t, hs, c, el) {
   const d = t.dataset;
   const patch = (fn, label) => hsPatch(hs.id, fn, label).catch((e) => toast(errMsg(e), 'err'));
+  if (d.fx === 'bssug') { const b = $('#hsBsSug'); if (b) b.click(); return; }
+  if (d.fx === 'bsnone') return hsPatch(hs.id, (x) => { x.bs_none = true; }, 'Không có chứng từ phải bổ sung');
+  if (d.fx === 'bsgo') { const o = $('#oxBs'); if (o) { o.scrollIntoView({ behavior: 'smooth', block: 'center' }); o.classList.add('focus-red'); setTimeout(() => o.classList.remove('focus-red'), 4000); const i = $('#oxBs [data-bsf$="|ngay"]'); if (i) i.focus(); } return; }
   if (d.fx === 'hm') {
     const v = DOCX.num($('[data-fxhm]', t.closest('.fx')).value); if (!v) return toast('Nhập hạn mức (triệu đồng)', 'err');
     const c0 = cust(c.id); S.store.labelNext('Nhập hạn mức');
