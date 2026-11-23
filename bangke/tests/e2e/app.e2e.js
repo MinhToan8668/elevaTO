@@ -866,6 +866,18 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.fill('#cxHm [data-hmf$="|hm_tong"]', '150,000'); await page.press('#cxHm [data-hmf$="|hm_tong"]', 'Tab');
   await page.locator('#cxHm .pill', { hasText: 'đang áp dụng' }).waitFor();
   await page.waitForFunction(() => (window.BKAPP.cust(window.BKAPP.S.cid).hmHist || [])[0]?.hm_tong === 150000e6);
+  // hạn mức con: lấy sẵn các HMTD từ file Excel; thêm L/C bằng USD (tỷ giá quy đổi)
+  assert.equal(await page.locator('#cxHm .hml tbody tr').count(), 2, 'HMTD 1, HMTD 2 từ file Excel');
+  await page.click('#cxHm [data-hmladd]');
+  await page.locator('#cxHm .hml tbody tr').nth(2).waitFor();
+  const lr = page.locator('#cxHm .hml tbody tr').nth(2);
+  await lr.locator('[data-hml$="|tien_te"]').selectOption('USD');
+  await page.locator('#cxHm .hml tbody tr').nth(2).locator('[data-hml$="|ty_gia"]').waitFor();
+  await page.locator('#cxHm .hml tbody tr').nth(2).locator('[data-hml$="|han_muc"]').fill('5,000,000'); await page.keyboard.press('Tab');
+  await page.waitForFunction(() => window.BKAPP.cust(window.BKAPP.S.cid).hmHist[0].lines[2].han_muc === 5e6);
+  await page.locator('#cxHm .hml tbody tr').nth(2).locator('[data-hml$="|ty_gia"]').fill('25,000'); await page.keyboard.press('Tab');
+  await page.locator('#cxHm .hml tbody tr').nth(2).filter({ hasText: '125 tỷ' }).waitFor();
+  assert.equal(await page.evaluate(() => window.BKAPP.cust(window.BKAPP.S.cid).hmHist[0].hm_lc), 125e9, 'L/C quy đổi VND');
   const den20 = new Date(Date.now() + 20 * 864e5).toISOString().slice(0, 10);
   await page.fill('#cxHm [data-hmf$="|den_ngay"]', den20); await page.press('#cxHm [data-hmf$="|den_ngay"]', 'Tab');
   await page.waitForFunction((d) => window.BKAPP.cust(window.BKAPP.S.cid).hmHist[0].den_ngay === d, den20);

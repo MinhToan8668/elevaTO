@@ -456,6 +456,9 @@ tr.cur td{background:var(--blue-bg)}tr.dim td{opacity:.6}
 .cpi:hover,.cpi.on{background:var(--blue-bg);border-color:var(--blue2)}.cpi small{color:var(--ink3);font-size:12px}
 .hbtn.copick{font-weight:700}
 .nowrap{white-space:nowrap}
+.hmv{border:1px solid var(--line2);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.4)}.hmv.cur{border-color:var(--blue2);box-shadow:0 0 0 2px var(--blue-bg)}
+.hmh{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.hmh>div:first-child{flex:1;min-width:200px}.hmt{display:flex;flex-direction:column;min-width:180px}.hmt span{font-size:11.5px;color:var(--ink3)}.hmt b{font-size:18px;color:var(--navy)}.hmt small{font-size:11.5px;color:var(--ink2)}
+.hme{margin-top:10px;display:flex;flex-direction:column;gap:8px}.grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}.hml td{vertical-align:middle}.hml .err{color:var(--err)}
 .chip.pri{background:linear-gradient(180deg,#4ADE80,#16A34A);color:#fff;border-color:transparent;font-weight:700}
 .lsbox{display:flex;flex-direction:column;gap:4px}.lsl{list-style:none;padding:0;margin:2px 0;display:flex;flex-direction:column;gap:3px;font-size:12.5px}.lsl li{display:flex;gap:6px;align-items:center}.lsl li span{flex:1}.lsl li.fut span{color:var(--ink3)}.lsl small{color:var(--ink3)}
 .lsf{display:grid;grid-template-columns:130px 90px minmax(0,1fr) auto;gap:4px}.lsf .inp{padding:4px 6px;font-size:12px;min-width:0}
@@ -5216,7 +5219,7 @@ async function openHoSo(cid, kid, hsId) {
     if (cic) v.ngay_cic = cic.f.ngay;
   }
   const auto = {};
-  { const hv = hmVer(c, BK.toISO((hsx && hsx.ngay_gn) || v.ngay_gn) || BK.todayISO()); if (hv) { if (hv.hm_tong) auto.hm_tong = Math.round(hv.hm_tong / 1e6).toLocaleString('en-US'); if (hv.den_ngay) auto.han_hm = dd(hv.den_ngay); if (hv.so_hdtd) auto.so_hdtd = hv.so_hdtd; if (hv.ngay_hdtd) auto.ngay_hdtd = dd(hv.ngay_hdtd); } }
+  { const hv = hmVer(c, BK.toISO((hsx && hsx.ngay_gn) || v.ngay_gn) || BK.todayISO()); if (hv) { if (hv.hm_tong) auto.hm_tong = Math.round(hv.hm_tong / 1e6).toLocaleString('en-US'); if (hv.hm_vay) auto.hm_vay = Math.round(hv.hm_vay / 1e6).toLocaleString('en-US'); if (hv.hm_lc) auto.hm_lc = Math.round(hv.hm_lc / 1e6).toLocaleString('en-US'); if (hv.den_ngay) auto.han_hm = dd(hv.den_ngay); if (hv.so_hdtd) auto.so_hdtd = hv.so_hdtd; if (hv.ngay_hdtd) auto.ngay_hdtd = dd(hv.ngay_hdtd); } }
   if (hsx && hsx.ls) auto.lai_suat = String(hsx.ls);
   Object.assign(v, auto);
   Object.assign(v, saved.v || {});
@@ -5226,6 +5229,7 @@ async function openHoSo(cid, kid, hsId) {
   HE = { auto, cid, kid, hsId: hsId || null, c: structuredClone(c), k, v, ov: new Set(saved.ov || []), lists: saved.lists ? { bs: [], ...structuredClone(saved.lists) } : { ct: DOCX.linesToCt(k ? k.lines : []), tth: [], bs: [] }, listsEdited: !!saved.lists, saved, kinds: {}, cur: lsGet('bangke_hs_tab') || 'kunn', dirty: false, ai: null };
   if (hsx && (hsx.bo_sung || []).length) HE.lists.bs = hsx.bo_sung.map((b) => ({ ten: b.ten, ban: b.ban || 'Sao', han: parseInt(b.ngay, 10) > 0 ? `${b.ngay} ngày kể từ ngày giải ngân` : b.han || '' }));
   else if (hsx && hsx.bs_none) HE.lists.bs = [{ ten: 'Không có', ban: '', han: '' }];
+  for (const f of ['hm_vay', 'hm_lc']) if (auto[f] && v[f] === auto[f]) HE.ov.add(f);   // hạn mức con → không để công thức chung ghi đè
   hsRecalc();
   const m = modal(`<div class="mh"><h2>📝 Soạn KUNN & PDGN — ${esc(c.name)}${k ? ' · KUNN ' + esc(k.so_kunn || '') : ' · hồ sơ mới'}</h2>
     <span style="flex:1"></span><label class="hist" title="File Word xuất ra giữ màu đỏ ở các chỗ tool điền / bạn sửa — để soát trước khi in"><input type="checkbox" id="hsRed"> Xuất kèm chữ đỏ để soát</label>
@@ -6660,18 +6664,66 @@ function renderCoKunn(body, c) {
 
 // ── tab Thông tin & mẫu Word ──
 // ── hạn mức tín dụng theo thời gian & gói lãi suất / UBG (tab Thông tin) ──
+const HM_LOAI = [['vay_vnd', 'Cho vay VND'], ['vay_nt', 'Cho vay ngoại tệ'], ['lc', 'L/C (mở thư tín dụng)'], ['bao_lanh', 'Bảo lãnh'], ['chiet_khau', 'Chiết khấu / bao thanh toán'], ['the', 'Thẻ tín dụng'], ['khac', 'Khác']];
+const hmLineVnd = (x) => (x.han_muc == null ? 0 : x.tien_te && x.tien_te !== 'VND' ? (x.ty_gia ? x.han_muc * x.ty_gia : 0) : x.han_muc);
+/** Đọc số tiền VND có đơn vị: "300 tỷ", "500 tr", "1,2 tỷ", "300.000.000.000"; không ghi đơn vị: ≥ 10 triệu là đồng, nhỏ hơn là triệu. */
+function parseVnd(v) {
+  const t = BK.fold(String(v || '')).replace(/\s+/g, ' ').trim(); if (!t) return null;
+  const m = /^([\d.,]+)\s*(nghin ty|ngan ty|ty|trieu|tr|nghin|ngan|k|d|dong|vnd)?\.?$/.exec(t); if (!m) return DOCX.num(v);
+  const unit = m[2] || '';
+  let n = unit && /ty|trieu|tr/.test(unit) ? parseFloat(m[1].replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')) : DOCX.num(m[1]);
+  if (n == null || !Number.isFinite(n)) return null;
+  if (/nghin ty|ngan ty/.test(unit)) return n * 1e12; if (unit === 'ty') return n * 1e9; if (/trieu|tr/.test(unit)) return n * 1e6; if (/nghin|ngan|k/.test(unit)) return n * 1e3;
+  if (unit) return n;
+  return n >= 1e7 ? n : n * 1e6;
+}
+/** Tính lại tổng / cho vay / L/C của một mục hạn mức theo các hạn mức con. */
+function hmRecalc(h) {
+  const ls = h.lines || [];
+  if (ls.length) { h.hm_vay = BK.sum(ls.filter((x) => /^vay/.test(x.loai)).map(hmLineVnd)) || null; h.hm_lc = BK.sum(ls.filter((x) => x.loai === 'lc').map(hmLineVnd)) || null; }
+  if (!h.tong_tay) { const sum = BK.sum(ls.map(hmLineVnd)); if (sum) h.hm_tong = sum; }
+}
 const tr2 = (n) => (n == null || n === '' ? '' : Math.round(n / 1e6).toLocaleString('en-US'));
 function creditHtml(c) {
   const today = BK.todayISO(), hist = (c.hmHist || []).filter((h) => !h.del).slice().sort((a, b) => (b.tu_ngay || '').localeCompare(a.tu_ngay || ''));
   const cur = hmVer(c, today), p = c.hs || {};
   const inp = (h, f, type = 'text', w = '') => `<input class="cell-in" ${type === 'date' ? 'type="date"' : ''} data-hmf="${h.id}|${f}" value="${esc(type === 'money' ? tr2(h[f]) : h[f] || '')}"${w ? ` style="width:${w}"` : ''}${type === 'money' ? ' inputmode="numeric" placeholder="triệu"' : ''}>`;
   const gl = goiOf(c), rows = goiRowsOf(c);
-  return `<section class="card panel" id="cxHm"><header><h3>Hạn mức tín dụng theo thời gian</h3><span class="hist">HĐTD / phụ lục cấp lại, điều chỉnh — tool lấy đúng hạn mức theo ngày giải ngân</span></header>
-    ${hist.length ? `<div class="tw"><table class="t"><thead><tr><th>Hiệu lực từ</th><th>Hết hạn duy trì</th><th>Số HĐTD / phụ lục</th><th>Ngày ký</th><th class="right">Hạn mức (tr)</th><th class="right">Cho vay (tr)</th><th class="right">L/C (tr)</th><th>Ghi chú</th><th></th></tr></thead><tbody>
-      ${hist.map((h) => `<tr class="${h === cur ? 'cur' : ''}"><td>${inp(h, 'tu_ngay', 'date')}${h === cur ? '<div class="pill p-ok">đang áp dụng</div>' : h.tu_ngay > today ? '<div class="pill p-warn">sắp hiệu lực</div>' : ''}</td><td>${inp(h, 'den_ngay', 'date')}</td><td>${inp(h, 'so_hdtd', 'text', '120px')}</td><td>${inp(h, 'ngay_hdtd', 'date')}</td><td>${inp(h, 'hm_tong', 'money', '90px')}</td><td>${inp(h, 'hm_vay', 'money', '80px')}</td><td>${inp(h, 'hm_lc', 'money', '80px')}</td><td>${inp(h, 'ghi_chu', 'text', '120px')}</td><td><button class="lnk" data-hmdel="${h.id}" title="Xóa dòng hạn mức">✕</button></td></tr>`).join('')}
-    </tbody></table></div>` : `<div class="hist">Chưa có. ${p.hm_tong || p.so_hdtd ? 'Bấm “＋ Thêm” — tool lấy sẵn hạn mức / HĐTD đang có trong thông tin công ty.' : 'Thêm hạn mức theo HĐTD để tool tính khả dụng, kiểm tra hạn duy trì theo đúng ngày giải ngân.'}</div>`}
+  const L = c.ledger, hmCodes = L && L.hmList ? L.hmList : [];
+  const vnd2 = (n) => (n == null || n === '' ? '' : shortMoney(n));
+  const verRow = (h) => {
+    const ls = h.lines || [], open = V.hmOpen === h.id || (!h.hm_tong && !ls.length);
+    const vay = BK.sum(ls.filter((x) => /^vay/.test(x.loai)).map(hmLineVnd)), lc = BK.sum(ls.filter((x) => x.loai === 'lc').map(hmLineVnd)), kh = BK.sum(ls.filter((x) => !/^vay/.test(x.loai) && x.loai !== 'lc').map(hmLineVnd));
+    return `<div class="hmv ${h === cur ? 'cur' : ''}">
+      <div class="hmh"><div><b>${h.so_hdtd ? esc(h.so_hdtd) : 'HĐTD / phụ lục (chưa ghi số)'}</b> ${h === cur ? '<span class="pill p-ok">đang áp dụng</span>' : h.tu_ngay > today ? '<span class="pill p-warn">sắp hiệu lực</span>' : '<span class="pill">đã thay bằng dòng mới hơn</span>'}
+        <div class="hist">Hiệu lực ${h.tu_ngay ? dd(h.tu_ngay) : '?'} → hết hạn duy trì ${h.den_ngay ? dd(h.den_ngay) : '?'}</div></div>
+        <div class="hmt"><span>Tổng hạn mức</span><b>${h.hm_tong ? shortMoney(h.hm_tong) : '—'}</b><small>${ls.length ? `${ls.length} hạn mức con${vay ? ` · cho vay ${shortMoney(vay)}` : ''}${lc ? ` · L/C ${shortMoney(lc)}` : ''}${kh ? ` · khác ${shortMoney(kh)}` : ''}` : 'chưa chia hạn mức con'}</small></div>
+        <button class="btn sm" data-hmopen="${h.id}">${open ? '▴ Thu gọn' : '✎ Sửa / chia hạn mức con'}</button><button class="lnk" data-hmdel="${h.id}" title="Xóa dòng hạn mức">✕</button></div>
+      ${open ? `<div class="hme"><div class="grid4">
+          <label class="f">Số HĐTD / phụ lục<input class="inp" data-hmf="${h.id}|so_hdtd" value="${esc(h.so_hdtd || '')}"></label>
+          <label class="f">Ngày ký<input type="date" class="inp" data-hmf="${h.id}|ngay_hdtd" value="${esc(h.ngay_hdtd || '')}"></label>
+          <label class="f">Hiệu lực từ<input type="date" class="inp" data-hmf="${h.id}|tu_ngay" value="${esc(h.tu_ngay || '')}"></label>
+          <label class="f">Hết hạn duy trì<input type="date" class="inp" data-hmf="${h.id}|den_ngay" value="${esc(h.den_ngay || '')}"></label>
+          <label class="f">Tổng hạn mức (VND)<input class="inp" data-hmf="${h.id}|hm_tong" value="${esc(h.tong_tay ? vnd2(h.hm_tong) : '')}" placeholder="${h.hm_tong && !h.tong_tay ? 'tự cộng: ' + esc(shortMoney(h.hm_tong)) : 'vd 300 tỷ'}"><small class="hist">gõ kèm đơn vị: 300 tỷ · 500 tr · 300.000.000.000 — để trống = cộng các hạn mức con</small></label>
+          <label class="f" style="grid-column:span 3">Ghi chú<input class="inp" data-hmf="${h.id}|ghi_chu" value="${esc(h.ghi_chu || '')}"></label></div>
+        <div class="tw"><table class="t hml"><thead><tr><th>Loại hạn mức</th><th>Tên / ghi chú</th><th>Tiền tệ</th><th class="right">Hạn mức</th><th class="right">Tỷ giá</th><th class="right">Quy đổi VND</th><th>Dòng trong file Excel</th><th class="right">Dư nợ</th><th class="right">Còn khả dụng</th><th></th></tr></thead><tbody>
+          ${ls.map((x) => { const v = hmLineVnd(x), hc = x.ma ? hmCodes.find((y) => y.ma === x.ma) : null; const dn = hc ? hc.du_no : null;
+            return `<tr><td><select class="cell-in" data-hml="${h.id}|${x.id}|loai">${HM_LOAI.map(([k, l]) => `<option value="${k}" ${x.loai === k ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
+              <td><input class="cell-in" data-hml="${h.id}|${x.id}|ten" value="${esc(x.ten || '')}" style="width:130px"></td>
+              <td><select class="cell-in" data-hml="${h.id}|${x.id}|tien_te">${['VND', 'USD', 'EUR', 'JPY', 'CNY'].map((t) => `<option ${x.tien_te === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+              <td class="num"><input class="cell-in" data-hml="${h.id}|${x.id}|han_muc" value="${esc(x.han_muc == null ? '' : x.tien_te === 'VND' ? shortMoney(x.han_muc) : x.han_muc.toLocaleString('en-US'))}" placeholder="${x.tien_te === 'VND' ? 'vd 200 tỷ' : 'vd 5,000,000'}" style="width:110px"></td>
+              <td class="num">${x.tien_te === 'VND' ? '—' : `<input class="cell-in" data-hml="${h.id}|${x.id}|ty_gia" value="${esc(x.ty_gia ? x.ty_gia.toLocaleString('en-US') : '')}" placeholder="vd 25,500" style="width:70px">`}</td>
+              <td class="num">${v ? shortMoney(v) : '—'}</td>
+              <td>${hmCodes.length ? `<select class="cell-in" data-hml="${h.id}|${x.id}|ma"><option value="">—</option>${hmCodes.map((y) => `<option ${x.ma === y.ma ? 'selected' : ''}>${esc(y.ma)}</option>`).join('')}</select>` : '<span class="hist">—</span>'}</td>
+              <td class="num">${dn != null ? shortMoney(dn) : '—'}</td><td class="num ${dn != null && v - dn < 0 ? 'err' : ''}">${dn != null && v ? shortMoney(v - dn) : '—'}</td>
+              <td><button class="lnk" data-hmldel="${h.id}|${x.id}" title="Bỏ hạn mức con">✕</button></td></tr>`; }).join('') || '<tr><td colspan="10" class="hist">Chưa chia — bấm “＋ Thêm hạn mức con” (cho vay VND, cho vay ngoại tệ, L/C, bảo lãnh…)</td></tr>'}
+        </tbody></table></div><button class="btn sm" data-hmladd="${h.id}">＋ Thêm hạn mức con</button></div>` : ''}
+    </div>`;
+  };
+  return `<section class="card panel" id="cxHm"><header><h3>Hạn mức tín dụng</h3><span class="hist">mỗi lần cấp mới / cấp lại / điều chỉnh (HĐTD, phụ lục) là một mục — tool lấy đúng mục theo ngày giải ngân</span></header>
+    ${hist.length ? hist.map(verRow).join('') : `<div class="hist">Chưa có. ${p.hm_tong || p.so_hdtd ? 'Bấm “＋ Thêm” — tool lấy sẵn hạn mức / HĐTD đang có trong thông tin công ty.' : 'Thêm hạn mức theo HĐTD để tool tính khả dụng, kiểm tra hạn duy trì theo đúng ngày giải ngân.'}</div>`}
     <div class="bar"><button class="btn sm" id="hmAdd">＋ Thêm hạn mức (cấp mới / cấp lại / điều chỉnh)</button></div>
-    <div class="hist">Khi hạn mức thay đổi: thêm dòng mới với ngày hiệu lực — các hồ sơ cũ vẫn tính theo hạn mức cũ, hồ sơ từ ngày đó dùng hạn mức mới. Dòng đang áp dụng tự điền vào PDGN (hạn mức, số / ngày HĐTD, hạn duy trì).</div></section>
+    <div class="hist">Một HĐTD thường có nhiều hạn mức con: cho vay VND, cho vay ngoại tệ (USD…), L/C, bảo lãnh… — chia ở “✎ Sửa / chia hạn mức con”. Hạn mức thay đổi thì thêm mục mới với ngày hiệu lực: hồ sơ cũ vẫn tính theo mục cũ. Mục đang áp dụng tự điền vào PDGN (hạn mức, cho vay, L/C, số / ngày HĐTD, hạn duy trì).</div></section>
   <section class="card panel" id="cxGoi"><header><h3>Gói lãi suất / UBG</h3><span class="hist">${c.ledger && c.ledger.ubg.length ? `${c.ledger.ubg.length} gói từ sheet UBG của file Excel · ` : ''}thêm tay gói mới được</span></header>
     ${gl.length ? `<div class="tw"><table class="t"><thead><tr><th>Mã gói</th><th>Tên / nội dung</th><th class="right">LS %/năm</th><th>Từ ngày</th><th>Đến ngày</th><th class="right">Số ngày vay (mặc định / tối đa)</th><th class="right">Hạn mức gói (tr)</th><th class="right">Đã dùng</th><th>Trạng thái</th><th></th></tr></thead><tbody>
       ${gl.map((g) => { const used = HSC.goiUsed(g, rows), act = HSC.goiActive(g, today), ed = g.src !== 'excel'; const gi = (f, type = 'text', w = '') => ed ? `<input class="cell-in" ${type === 'date' ? 'type="date"' : ''} data-gof="${esc(g.ma)}|${f}" value="${esc(type === 'money' ? tr2(g[f]) : g[f] ?? '')}"${w ? ` style="width:${w}"` : ''}>` : esc(type === 'date' ? dd(g[f]) : type === 'money' ? tr2(g[f]) : g[f] ?? '');
@@ -6682,22 +6734,29 @@ function creditHtml(c) {
 }
 function bindCredit(body, c) {
   const save = async (fn, label) => { const c0 = cust(c.id); const x = { hmHist: structuredClone(c0.hmHist || []), goiLs: structuredClone(c0.goiLs || []) }; fn(x); const cur = HSC.hmAt(x.hmHist, BK.todayISO()); const hs = { ...(c0.hs || {}) };
-    if (cur) { if (cur.hm_tong) hs.hm_tong = Math.round(cur.hm_tong / 1e6).toLocaleString('en-US'); if (cur.den_ngay) hs.han_hm = dd(cur.den_ngay); if (cur.so_hdtd) hs.so_hdtd = cur.so_hdtd; if (cur.ngay_hdtd) hs.ngay_hdtd = dd(cur.ngay_hdtd); }
+    if (cur) { if (cur.hm_tong) hs.hm_tong = Math.round(cur.hm_tong / 1e6).toLocaleString('en-US'); if (cur.hm_vay) hs.hm_vay = Math.round(cur.hm_vay / 1e6).toLocaleString('en-US'); if (cur.hm_lc) hs.hm_lc = Math.round(cur.hm_lc / 1e6).toLocaleString('en-US'); if (cur.den_ngay) hs.han_hm = dd(cur.den_ngay); if (cur.so_hdtd) hs.so_hdtd = cur.so_hdtd; if (cur.ngay_hdtd) hs.ngay_hdtd = dd(cur.ngay_hdtd); }
     S.store.labelNext(label); await S.store.putCustomer({ ...c0, hmHist: x.hmHist, goiLs: x.goiLs, hs, ...meta() }); log(c.id, 'tin_dung', label); };
-  const money = (v) => { const n = DOCX.num(v); return n == null ? null : n * 1e6; };
+  const money = (v) => parseVnd(v);
   $('#hmAdd', body).onclick = () => save((x) => {
     const live2 = x.hmHist.filter((h) => !h.del), last = HSC.hmAt(live2, '9999-12-31'), p = cust(c.id).hs || {};
-    x.hmHist.push(last ? { ...last, id: BK.uid(8), tu_ngay: BK.todayISO(), ghi_chu: '' } : { id: BK.uid(8), tu_ngay: BK.toISO(p.ngay_hdtd) || '', den_ngay: BK.toISO(p.han_hm) || '', so_hdtd: p.so_hdtd || '', ngay_hdtd: BK.toISO(p.ngay_hdtd) || '', hm_tong: hmLedger(c) || null, hm_vay: null, hm_lc: null, ghi_chu: '' });
+    const L0 = cust(c.id).ledger;
+    const nid = BK.uid(8); V.hmOpen = nid;
+    if (!last && L0 && L0.hmList && L0.hmList.length) { const h0 = { id: nid, tu_ngay: BK.toISO(p.ngay_hdtd) || '', den_ngay: BK.toISO(p.han_hm) || '', so_hdtd: p.so_hdtd || '', ngay_hdtd: BK.toISO(p.ngay_hdtd) || '', lines: L0.hmList.map((y) => ({ id: BK.uid(6), loai: 'vay_vnd', ten: y.ten || y.ma, tien_te: 'VND', han_muc: y.han_muc, ty_gia: null, ma: y.ma })), ghi_chu: '' }; hmRecalc(h0); x.hmHist.push(h0); return; }
+    x.hmHist.push(last ? { ...structuredClone(last), id: nid, tu_ngay: BK.todayISO(), ghi_chu: '' } : { id: BK.uid(8), tu_ngay: BK.toISO(p.ngay_hdtd) || '', den_ngay: BK.toISO(p.han_hm) || '', so_hdtd: p.so_hdtd || '', ngay_hdtd: BK.toISO(p.ngay_hdtd) || '', hm_tong: hmLedger(c) || null, hm_vay: null, hm_lc: null, ghi_chu: '' });
   }, 'Thêm hạn mức tín dụng');
   $('#goAdd', body).onclick = () => { const ma = prompt('Mã gói lãi suất / UBG (vd UBG-2026-05)'); if (!ma || !ma.trim()) return; if (goiOf(cust(c.id)).some((g) => BK.fold(g.ma) === BK.fold(ma.trim()))) return toast('Mã gói đã có', 'err'); save((x) => { x.goiLs.push({ ma: ma.trim(), ten: '', ls: null, tu_ngay: BK.todayISO(), den_ngay: '', so_ngay_max: null, tong: null }); }, `Thêm gói lãi suất ${ma.trim()}`); };
   body.addEventListener('change', (e) => {
     const t = e.target;
-    if (t.dataset.hmf) { const [id, f] = t.dataset.hmf.split('|'); const v = t.value.trim(); return save((x) => { const h = x.hmHist.find((y) => y.id === id); if (h) h[f] = /^hm_/.test(f) ? money(v) : v; }, 'Sửa hạn mức tín dụng'); }
+    if (t.dataset.hmf) { const [id, f] = t.dataset.hmf.split('|'); const v = t.value.trim(); return save((x) => { const h = x.hmHist.find((y) => y.id === id); if (!h) return; if (f === 'hm_tong') { h.tong_tay = !!v; h.hm_tong = v ? money(v) : null; hmRecalc(h); } else h[f] = /^hm_/.test(f) ? money(v) : v; }, 'Sửa hạn mức tín dụng'); }
+    if (t.dataset.hml) { const [id, lid, f] = t.dataset.hml.split('|'); const v = t.value.trim(); return save((x) => { const h = x.hmHist.find((y) => y.id === id); const ln = h && (h.lines || []).find((y) => y.id === lid); if (!ln) return; if (f === 'han_muc') ln.han_muc = ln.tien_te && ln.tien_te !== 'VND' ? DOCX.num(v) : money(v); else if (f === 'ty_gia') ln.ty_gia = DOCX.num(v); else { ln[f] = v; if (f === 'tien_te' && v !== 'VND' && ln.loai === 'vay_vnd') ln.loai = 'vay_nt'; if (f === 'loai' && v === 'vay_nt' && ln.tien_te === 'VND') ln.tien_te = 'USD'; } hmRecalc(h); }, 'Sửa hạn mức con'); }
     if (t.dataset.gof) { const [ma, f] = t.dataset.gof.split('|'); const v = t.value.trim(); return save((x) => { let g = x.goiLs.find((y) => y.ma === ma); if (!g) { g = { ma }; x.goiLs.push(g); } const dec = (q) => { const n = parseFloat(String(q).replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
       if (v === '' && f !== 'ten') delete g[f]; else g[f] = f === 'tong' ? money(v) : f === 'ls' ? dec(v) : f === 'so_ngay_max' ? (parseInt(v, 10) || null) : v; }, `Sửa gói ${ma}`); }
   });
   body.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-hmdel],[data-godel],[data-goan],[data-goed]'); if (!t) return;
+    const t = e.target.closest('[data-hmdel],[data-godel],[data-goan],[data-goed],[data-hmopen],[data-hmladd],[data-hmldel]'); if (!t) return;
+    if (t.dataset.hmopen) { V.hmOpen = V.hmOpen === t.dataset.hmopen ? '' : t.dataset.hmopen; return renderMain(); }
+    if (t.dataset.hmladd) { V.hmOpen = t.dataset.hmladd; return save((x) => { const h = x.hmHist.find((y) => y.id === t.dataset.hmladd); if (h) { h.lines = [...(h.lines || []), { id: BK.uid(6), loai: (h.lines || []).length ? 'lc' : 'vay_vnd', ten: '', tien_te: 'VND', han_muc: null, ty_gia: null, ma: '' }]; } }, 'Thêm hạn mức con'); }
+    if (t.dataset.hmldel) { const [id, lid] = t.dataset.hmldel.split('|'); return save((x) => { const h = x.hmHist.find((y) => y.id === id); if (h) { h.lines = (h.lines || []).filter((y) => y.id !== lid); hmRecalc(h); } }, 'Bỏ hạn mức con'); }
     if (t.dataset.hmdel) { if (confirm('Xóa dòng hạn mức này? (hoàn tác được)')) save((x) => { x.hmHist = x.hmHist.filter((h) => h.id !== t.dataset.hmdel); }, 'Xóa dòng hạn mức'); return; }
     if (t.dataset.godel) { if (confirm(`Xóa gói ${t.dataset.godel}?`)) save((x) => { x.goiLs = x.goiLs.filter((g) => g.ma !== t.dataset.godel); }, `Xóa gói ${t.dataset.godel}`); return; }
     if (t.dataset.goan) { const ma = t.dataset.goan; return save((x) => { let g = x.goiLs.find((y) => y.ma === ma); if (!g) { g = { ma }; x.goiLs.push(g); } g.an = !g.an; }, `Ẩn / hiện gói ${ma}`); }
@@ -6714,7 +6773,7 @@ function renderCoInfo(body, c) {
     <section class="card panel"><header><h3>Dư nợ — đọc từ file Excel quản lý giải ngân</h3>${L ? `<span class="pill p-ok">✓ Đọc lúc ${new Date(L.at).toLocaleString('vi-VN')}</span>` : ''}</header>
       <div class="xlbox"><div><b>${L ? esc(L.file || 'file Excel') : 'Chưa chọn file'}</b><div class="hist">${L ? `Sheet ${esc(L.sheet || 'KHE_UOC')} · ${L.kunns.length} dòng · ${L.n_live} KUNN còn dư nợ${L.ubg.length ? ` · ${L.ubg.length} gói UBG` : ''}` : 'File Excel bạn đang theo dõi KUNN — file mẫu QUẢN LÝ GIẢI NGÂN hoặc file tự lập nhiều sheet (mỗi công ty một sheet): tool gợi ý sheet & cột, bạn xác nhận một lần. Tool chỉ ĐỌC file.'}</div></div>
         ${L ? '<button class="btn sm" id="xlRe">↻ Đọc lại file</button>' : ''}${L && cust(c.id).ledgerCfg ? '<button class="btn sm" id="xlCfg">Đổi sheet / cột</button>' : ''}<button class="btn sm ${L ? '' : 'pri'}" id="xlPick">${L ? 'Chọn file khác' : '📂 Chọn file Excel'}</button></div>
-      ${L ? `<div class="tiles t4">${tile('Gốc còn lại', trieu(L.du_no), `${L.n_live} KUNN`)}${tile('Hạn mức', trieu(hmLedger(c)), hmVer(c) ? `theo ${esc(hmVer(c).so_hdtd || 'hạn mức đang áp dụng')}` : L.hmList.map((h) => `${h.ma}: ${trieu(h.han_muc)}`).join(' · '))}${tile('Còn khả dụng', hmLedger(c) ? trieu(hmLedger(c) - L.du_no) : '—', '')}${(() => { const n = S.store.kunnsOf(c.id).filter((k) => !L.kunns.some((x) => kkey(x.so) === kkey(k.so_kunn)) && (k.ngay_gn || '') >= BK.addDays(BK.todayISO(), -60)); return tile('Lệch với tool', String(n.length), n.length ? 'KUNN có trong tool, chưa có trong sổ Excel' : 'khớp', { tone: n.length ? 'warn' : 'good' }); })()}</div>` : ''}
+      ${L ? `<div class="tiles t4">${tile('Gốc còn lại', shortMoney(L.du_no), `${L.n_live} KUNN`)}${tile('Hạn mức', shortMoney(hmLedger(c)), hmVer(c) ? `theo ${esc(hmVer(c).so_hdtd || 'hạn mức đang áp dụng')}${(hmVer(c).lines || []).length ? ` · ${hmVer(c).lines.length} hạn mức con` : ''}` : L.hmList.map((h) => `${h.ma}: ${shortMoney(h.han_muc)}`).join(' · '))}${(() => { const hm = hmLedger(c), kd = hm ? hm - L.du_no : null; return tile('Còn khả dụng', kd != null ? shortMoney(kd) : '—', kd != null && kd < 0 ? (hm * 50 < L.du_no ? '! Hạn mức nhỏ hơn dư nợ rất nhiều — có thể nhập sai đơn vị (vd gõ “300 tỷ”)' : '! Dư nợ vượt hạn mức') : '', { tone: kd != null && kd < 0 ? 'crit' : '' }); })()}${(() => { const n = S.store.kunnsOf(c.id).filter((k) => !L.kunns.some((x) => kkey(x.so) === kkey(k.so_kunn)) && (k.ngay_gn || '') >= BK.addDays(BK.todayISO(), -60)); return tile('Lệch với tool', String(n.length), n.length ? 'KUNN có trong tool, chưa có trong sổ Excel' : 'khớp', { tone: n.length ? 'warn' : 'good' }); })()}</div>` : ''}
     </section>
     ${creditHtml(c)}
     <section class="card panel"><header><h3>Thông tin dùng cho mọi hồ sơ</h3><span class="hist">nhập 1 lần · tự điền KUNN, PDGN${L ? ' · có thể lấy từ sheet DANH_MUC' : ''}</span></header>
