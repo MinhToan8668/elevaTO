@@ -283,7 +283,7 @@ test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN 
   await task.waitFor();
   await task.click();
   await page.locator('.ctabs a.act', { hasText: 'Theo dõi KUNN' }).waitFor();
-  assert.match(await page.locator('.kdet').innerText(), /KUNN 5500777\(9\)\.26[\s\S]*Hồ sơ gốc — hạn/);
+  assert.match(await page.locator('.kdet').innerText(), /KUNN 5500777\(9\)\.26[\s\S]*Bổ sung bản gốc — hạn/);
   await page.locator('.kdet [data-gk]').first().check();               // tick nhận bản gốc từng chứng từ
   await page.locator('.kdet [data-gk]:checked').waitFor();
   // tab Sổ hóa đơn: biểu đồ, ô tổng — bấm để xem chi tiết
@@ -750,6 +750,10 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   assert.equal(await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).count(), 1, 'không lặp KUNN');
   await page.waitForFunction(() => window.BKAPP.S.store.kunnsOf(window.BKAPP.S.cid).filter((x) => x.so_kunn === '1000001(9).26').length === 1);
   assert.match(await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).innerText(), /hạn 11\/12\/2026/, 'chứng từ bổ sung hiện ở bảng theo dõi');
+  // đổi hạn nhận bản gốc ngay ở bảng theo dõi
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).click();
+  await page.fill('.kdet [data-kbh]', '2026-12-20');
+  await page.locator('.kwrap tbody tr', { hasText: 'hạn 20/12/2026' }).waitFor();
   // ghi chú KUNN: KH trả 1 phần → dư nợ giảm, có dòng tổng
   await page.click('[data-kf="live"]');
   const tot0 = await page.locator('.kwrap tfoot').innerText();

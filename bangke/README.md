@@ -93,6 +93,9 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Đồng bộ hồ sơ ↔ theo dõi**: hồ sơ đã chuyển sang theo dõi, sửa gì (số KUNN, ngày, dòng bảng kê, chứng từ bổ sung) thì
   cập nhật đúng KUNN đó — không sinh KUNN lặp (bản lặp cũ tự dọn). Biểu đồ giải ngân ở Tổng quan công ty cũng tính cả KUNN
   trong file Excel. KUNN hồ sơ ghi lệch đuôi năm so với file Excel (cùng số trong ngoặc, cùng ngày) được ghép vào một dòng.
+- **Bổ sung bản gốc** (một cột chung ở Theo dõi KUNN, lọc “Chờ bổ sung bản gốc”): KUNN có hồ sơ → theo danh sách chứng từ
+  bổ sung của hồ sơ (tick đã nhận, **sửa hạn** ngay ở bảng theo dõi); KUNN nạp từ bảng kê cũ → theo từng hóa đơn, hạn
+  nhận bản gốc sửa được.
 - **Bảng theo dõi KUNN**: **🗑 Xóa KUNN** (của tool hoặc dòng từ file Excel) → KUNN chuyển sang mục **🗑 Đã xóa** (lưu vết
   ai xóa, lúc nào), không còn tính vào bảng theo dõi, dư nợ, đáo hạn — đọc lại file Excel cũng không hiện lại; **♻ Khôi
   phục** đưa về như cũ, **✕ Xóa hẳn** bỏ luôn. Mỗi KUNN có **lịch sử thay đổi**; ↶ hoàn tác ngay.
