@@ -119,6 +119,11 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Bổ sung bản gốc** (một cột chung ở Theo dõi KUNN, lọc “Chờ bổ sung bản gốc”): KUNN có hồ sơ → theo danh sách chứng từ
   bổ sung của hồ sơ (tick đã nhận, **sửa hạn** ngay ở bảng theo dõi); KUNN nạp từ bảng kê cũ → theo từng hóa đơn, hạn
   nhận bản gốc sửa được.
+- **⬇ Excel tổng hợp** (tab Theo dõi KUNN): 6 sheet — Theo dõi KUNN (đủ cột: ngày, đáo hạn, gốc, đã thu, còn lại, LS ban
+  đầu / hiện tại, gói, bên thụ hưởng, bổ sung bản gốc, trạng thái, nguồn, ghi chú), Hạn mức (cả hạn mức con), Gói lãi
+  suất, Lịch lãi suất, KUNN chưa có trong file Excel, Đã xóa.
+- **KUNN chưa có trong file Excel** (tab Thông tin): KUNN thêm / ghi trong tool chưa có trong file theo dõi — 📋 sao chép
+  hoặc ⬇ tải các dòng theo đúng thứ tự cột của sheet để dán vào file Excel; lần đọc lại tool tự ghép.
 - **Bảng theo dõi KUNN**: **🗑 Xóa KUNN** (của tool hoặc dòng từ file Excel) → KUNN chuyển sang mục **🗑 Đã xóa** (lưu vết
   ai xóa, lúc nào), không còn tính vào bảng theo dõi, dư nợ, đáo hạn — đọc lại file Excel cũng không hiện lại; **♻ Khôi
   phục** đưa về như cũ, **✕ Xóa hẳn** bỏ luôn. Mỗi KUNN có **lịch sử thay đổi**; ↶ hoàn tác ngay.

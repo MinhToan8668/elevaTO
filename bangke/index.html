@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bảng kê Giải ngân — Theo dõi hóa đơn & hồ sơ gốc</title>
+<title>Hồ sơ Giải ngân</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%234ADE80'/%3E%3Cstop offset='1' stop-color='%2316A34A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='4' y='4' width='56' height='56' rx='14' fill='url(%23g)'/%3E%3Cpath d='M22 16h14l8 8v22a3 3 0 0 1-3 3H22a3 3 0 0 1-3-3V19a3 3 0 0 1 3-3z' fill='%23fff'/%3E%3Cpath d='M36 16v8h8' fill='%23bbf7d0'/%3E%3Cpath d='M25 33l5 5 9-10' stroke='%2316A34A' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>try{const t=localStorage.getItem('bangke_theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -102,12 +103,12 @@ label.f{display:block;font-size:12px;color:var(--ink2);font-weight:600}label.f .
 .muted{color:var(--ink3)}.right{text-align:right}
 /* dashboard */
 .crumb{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}.crumb a{cursor:pointer;color:var(--blue)}
-.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}.tile{text-align:left}.tile .ts{font-size:12px;color:var(--ink3)}
 @media(max-width:1350px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:640px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tile{padding:14px 16px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
 .tile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue)}
 .tile.crit::before{background:#d03b3b}.tile.good::before{background:#0ca30c}
-.tl{font-size:12px;color:var(--ink2);font-weight:600;display:flex;gap:6px;align-items:center}
+.tlb{font-size:12px;color:var(--ink2);font-weight:600;display:flex;gap:6px;align-items:center;justify-content:space-between;text-align:left}
 .ic{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-size:12px}
 .tile.crit .ic{background:var(--err-bg);color:var(--err)}.tile.good .ic{background:var(--ok-bg);color:var(--ok)}
 .tv{font-size:22px;white-space:nowrap;font-weight:700;color:var(--navy);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
@@ -456,6 +457,7 @@ tr.cur td{background:var(--blue-bg)}tr.dim td{opacity:.6}
 .cpi:hover,.cpi.on{background:var(--blue-bg);border-color:var(--blue2)}.cpi small{color:var(--ink3);font-size:12px}
 .hbtn.copick{font-weight:700}
 .nowrap{white-space:nowrap}
+.xlout{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}.xlout>div{flex:1;min-width:260px}
 .hmv{border:1px solid var(--line2);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.4)}.hmv.cur{border-color:var(--blue2);box-shadow:0 0 0 2px var(--blue-bg)}
 .hmh{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.hmh>div:first-child{flex:1;min-width:200px}.hmt{display:flex;flex-direction:column;min-width:180px}.hmt span{font-size:11.5px;color:var(--ink3)}.hmt b{font-size:18px;color:var(--navy)}.hmt small{font-size:11.5px;color:var(--ink2)}
 .hme{margin-top:10px;display:flex;flex-direction:column;gap:8px}.grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}.hml td{vertical-align:middle}.hml .err{color:var(--err)}
@@ -3522,7 +3524,7 @@ const agingBars = (a, cid) => hBars(AGE.map((l, i) => ({ label: l, value: a[i], 
 const panel = (title, sub, body, extra = '', cls = '') => `<section class="card panel ${cls}"><header><div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>${extra}</header><div class="pbody">${body}</div></section>`;
 const more = (label, act) => `<button class="lnk" ${act}>${label} →</button>`;
 function tile(label, value, sub = '', { tone = '', icon = '', spark = '', meter = null, act = '' } = {}) {
-  return `<div class="card tile ${tone} ${act ? 'go' : ''}" ${act}><div class="tl">${icon ? `<span class="ic">${icon}</span>` : ''}${label}</div><div class="tv">${value}</div>
+  return `<div class="card tile ${tone} ${act ? 'go' : ''}" ${act}><div class="tlb"><span>${label}</span>${icon ? `<span class="ic">${icon}</span>` : ''}</div><div class="tv">${value}</div>
     ${meter != null ? `<div class="meter"><i style="width:${meter}%"></i></div>` : ''}<div class="ts"><span>${sub}</span>${spark}</div>${act ? '<span class="tgo">Xem chi tiết →</span>' : ''}</div>`;
 }
 // Kỳ xem biểu đồ: 'auto' = 12 tháng tính tới tháng có giải ngân gần nhất; 'all' = toàn bộ (theo quý nếu dài); 'YYYY' = một năm.
@@ -3640,7 +3642,7 @@ async function bulkImport(cid, files) {
           const key = BK.normKunn(gr.so_kunn);
           if (have.has(key)) { dup.push(gr.so_kunn); continue; }
           have.add(key); got++;
-          docs.push({ id: BK.uid(), customerId: cid, so_kunn: String(gr.so_kunn), ngay_gn: gr.ngay_gn || '', ngay_dh: gr.ngay_dh || '', so_tien: gr.so_tien ?? null, han_bs: '', ghi_chu: '', source: f.name, hdr: gr.hdr || '', lines: gr.lines.map((l) => BK.cleanLine(l)), createdAt: Date.now(), createdBy: userName(), ...meta() });
+          docs.push({ id: BK.uid(), customerId: cid, so_kunn: String(gr.so_kunn), ngay_gn: gr.ngay_gn || '', ngay_dh: gr.ngay_dh || '', so_tien: gr.so_tien ?? null, han_bs: '', ghi_chu: '', source: f.name, hdr: gr.hdr || '', lines: gr.lines.map((l) => ({ ...BK.cleanLine(l), goc: 'da_nhan' })), old: true, createdAt: Date.now(), createdBy: userName(), ...meta() });
         }
       }
       if (!got && !bad.some((b) => b.startsWith(f.name))) bad.push(`${f.name}: không nhận ra bảng kê (hoặc mọi KUNN đã có)`);
@@ -6270,9 +6272,9 @@ function renderCoOverview(body, c) {
   const year = today.slice(0, 4);
   const gnYear = BK.sum(ks.filter((k) => (k.ngay_gn || '').startsWith(year)).map((k) => (k.manual ? k.so_tien || 0 : BK.sum(k.lines.map((l) => l.tien_gn)))));
   const nextDh = L ? L.kunns.filter((k) => k.con_lai > 0.5 && k.dao_han && k.dao_han >= today).sort((a, b) => a.dao_han.localeCompare(b.dao_han))[0] : null;
-  const sums = ks.map((k) => ({ k, s: BK.kunnSummary(k, { hanNgay: hanNgay(), today }) }));
+  const sums = S.kunns.map((k) => ({ k, s: BK.kunnSummary(k, { hanNgay: hanNgay(), today }) }));
   const gocPend = sums.filter((x) => !x.s.done);
-  const gocQua = gocPend.filter((x) => x.s.quaHan);
+  const krows = kunnRowsOf(c), bsPend = krows.filter((r) => r.live && r.need && !r.need.done), bsQua = bsPend.filter((r) => r.need.qua);
   const kd = L && hmLedger(c) ? hmLedger(c) - L.du_no : null;
   const up = [];
   if (L) L.kunns.filter((k) => k.con_lai > 0.5 && k.dao_han && BK.daysBetween(today, k.dao_han) <= 45 && k.dao_han >= today).forEach((k) => up.push([k.dao_han, `Đáo hạn KUNN ${k.so} · ${trieu(k.con_lai)}`]));
@@ -6282,11 +6284,11 @@ function renderCoOverview(body, c) {
   up.sort((a, b) => a[0].localeCompare(b[0]));
   const act = activeHoso(c.id);
   body.innerHTML = `<div class="tiles">
-      ${tile('Dư nợ hiện tại', L ? trieu(L.du_no) : '—', L ? `${L.n_live} KUNN · theo file Excel` : 'bấm để chọn file Excel', { icon: '₫', act: L ? A({ ctab: 'kunn' }) : A({ xlpick: c.id }) })}
-      ${tile('Hạn mức còn khả dụng', kd != null ? trieu(kd) : '—', kd != null ? `${Math.round((kd / hmLedger(c)) * 100)}% hạn mức` : L ? 'nhập hạn mức ở tab Thông tin' : 'cần file Excel', { tone: kd != null && kd / hmLedger(c) < 0.1 ? 'crit' : '', act: L ? A({ ctab: 'info' }) : A({ xlpick: c.id }) })}
-      ${tile(`Giải ngân năm ${year}`, shortMoney(gnYear), `${ks.filter((k) => (k.ngay_gn || '').startsWith(year)).length} KUNN trong sổ hóa đơn`, { icon: '↗', act: A({ ctab: 'so' }) })}
-      ${tile('Đáo hạn gần nhất', nextDh ? dd(nextDh.dao_han) : '—', nextDh ? `KUNN ${nextDh.so} · ${trieu(nextDh.con_lai)}` : 'không có', { act: A({ ctab: 'kunn' }) })}
-      ${tile('Hồ sơ gốc chưa đủ', `${gocPend.length} KUNN`, gocQua.length ? `${gocQua.length} quá hạn` : 'không quá hạn', { tone: gocQua.length ? 'crit' : '', act: A({ ctab: 'kunn' }) })}
+      ${tile('Dư nợ hiện tại', L ? shortMoney(L.du_no) : '—', L ? `${L.n_live} KUNN · theo file Excel` : 'bấm để chọn file Excel', { act: L ? A({ ctab: 'kunn' }) : A({ xlpick: c.id }) })}
+      ${tile('Hạn mức còn khả dụng', kd != null ? shortMoney(kd) : '—', kd != null ? `${Math.round((kd / hmLedger(c)) * 100)}% của ${shortMoney(hmLedger(c))}` : L ? 'nhập hạn mức ở tab Thông tin' : 'cần file Excel', { tone: kd != null && kd / hmLedger(c) < 0.1 ? 'crit' : '', act: L ? A({ ctab: 'info' }) : A({ xlpick: c.id }) })}
+      ${tile(`Giải ngân năm ${year}`, shortMoney(gnYear), `${ks.filter((k) => (k.ngay_gn || '').startsWith(year)).length} KUNN`, { act: A({ ctab: 'so' }) })}
+      ${tile('Đáo hạn gần nhất', nextDh ? dd(nextDh.dao_han) : '—', nextDh ? `KUNN ${nextDh.so} · ${shortMoney(nextDh.con_lai)}` : 'không có', { act: A({ ctab: 'kunn' }) })}
+      ${tile('Chờ bổ sung bản gốc', `${bsPend.length} KUNN`, bsQua.length ? `${bsQua.length} quá hạn` : bsPend.length ? 'chưa quá hạn' : 'không có', { tone: bsQua.length ? 'crit' : '', act: A({ ctab: 'kunn', kf: 'bs' }) })}
     </div>
     ${(() => { const ts = companyTasks(c); return ts.length ? `<section class="card panel"><header><h3>Việc cần làm của công ty</h3><span class="hist">${ts.length} việc</span></header><div class="tlist">${ts.slice(0, V.allTasks ? 200 : 6).map((t, i) => `<div class="trow2"><button class="trow" data-task="${i}"><span class="${SEV[t.sev][1]}">${SEV[t.sev][0]}</span><span>${esc(t.text)}</span><em>${esc(t.when || '')}</em></button><button class="rowdel" data-tdis="${i}" title="Ẩn việc này (đã xử lý / không cần)" aria-label="Ẩn việc">✕</button></div>`).join('')}</div>${ts.length > 6 && !V.allTasks ? `<button class="lnk" id="tMore">Xem cả ${ts.length} việc →</button>` : ''}</section>` : ''; })()}
     <section class="card panel"><header><h3>Hồ sơ giải ngân đang làm</h3><button class="lnk" data-ctab2="hoso">Xem tất cả hồ sơ →</button></header>
@@ -6312,7 +6314,7 @@ document.addEventListener('click', async (e) => {
   const r = e.target.closest('[data-href]'); if (r && !e.target.closest('button,input,select,a')) location.hash = r.dataset.href;
 });
 document.addEventListener('click', (e) => { const x = e.target.closest('[data-xlpick]'); if (x) { const c = cust(x.dataset.xlpick); if (c) pickLedger(c, true); } });
-document.addEventListener('click', (e) => { const t = e.target.closest('[data-ctab]'); if (t && t.tagName !== 'A') go({ tab: t.dataset.ctab, hs: null, doc: null }); });
+document.addEventListener('click', (e) => { const t = e.target.closest('[data-ctab]'); if (t && t.tagName !== 'A') { if (t.dataset.kf) V.kf = t.dataset.kf; go({ tab: t.dataset.ctab, hs: null, doc: null }); } });
 
 // ── tab Hồ sơ giải ngân ──
 function renderCoHoso(body, c) {
@@ -6599,8 +6601,9 @@ function renderCoKunn(body, c) {
     if ($('#goiX', body)) $('#goiX', body).onclick = () => exportGoiReport(c, rows);
     $$('[data-gkr]', body).forEach((tr) => { tr.onclick = () => { V.kf = 'all'; V.kunnSel = null; V.kunnSelSo = tr.dataset.gkr; renderMain(); }; });
     return; }
-  body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l}${k === 'goi' ? '' : ` · ${k === 'del' ? gone.length : rows.filter(fn).length}`}</button>`).join('')}<button class="chip pri" id="kAdd" title="KUNN chưa làm qua hồ sơ trên tool — nhập tay để theo dõi">＋ Thêm KUNN</button><button class="chip" id="lsBulk" title="Lãi suất thả nổi: điều chỉnh lãi suất các KUNN đang vay từ một ngày">± Điều chỉnh lãi suất</button><span style="flex:1"></span>
+  body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l}${k === 'goi' ? '' : ` · ${k === 'del' ? gone.length : rows.filter(fn).length}`}</button>`).join('')}<button class="chip" id="kXls" title="Xuất toàn bộ: KUNN, hạn mức, gói lãi suất, lịch lãi suất, KUNN chưa có trong file Excel, đã xóa">⬇ Excel tổng hợp</button><button class="chip pri" id="kAdd" title="KUNN chưa làm qua hồ sơ trên tool — nhập tay để theo dõi">＋ Thêm KUNN</button><button class="chip" id="lsBulk" title="Lãi suất thả nổi: điều chỉnh lãi suất các KUNN đang vay từ một ngày">± Điều chỉnh lãi suất</button><span style="flex:1"></span>
       <input class="inp" id="kq2" placeholder="Số KUNN, số hóa đơn…" value="${esc(V.kq || '')}" style="width:220px"></div>
+    ${f[0] === 'bs' && list.some((r) => r.k && r.need && r.need.src === 'goc') ? `<div class="note">KUNN theo từng hóa đơn (nạp từ bảng kê) — nếu đã nhận đủ bản gốc từ trước: <button class="btn sm" id="kGocAll">✓ Đánh dấu đã nhận đủ cho các KUNN đang lọc</button></div>` : ''}
     ${!c.ledger ? '<div class="note warn">Chưa đọc file Excel quản lý giải ngân của công ty — dư nợ, đáo hạn, thu nợ lấy từ file đó. <button class="lnk" data-ctab2="info">Chọn file →</button></div>' : ''}
     <div class="kwrap"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Gốc còn lại</th><th>Bổ sung bản gốc</th></tr></thead><tbody>
       ${list.map((r, i) => `<tr data-kr="${i}" class="${r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${String(r.ls0 ?? '?').replace('.', ',')}%</s> → <b>${String(r.ls).replace('.', ',')}%</b>` : `${String(r.ls).replace('.', ',')}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
@@ -6637,6 +6640,14 @@ function renderCoKunn(body, c) {
   };
   $('#lsBulk', body).onclick = () => openLsBulk(c, rows);
   $('#kAdd', body).onclick = () => openKunnForm(c, null);
+  $('#kXls', body).onclick = () => exportTongHop(c);
+  if ($('#kGocAll', body)) $('#kGocAll', body).onclick = async () => {
+    const ks = list.filter((r) => r.k && r.need && r.need.src === 'goc' && !r.need.done).map((r) => r.k);
+    if (!ks.length || !confirm(`Đánh dấu đã nhận đủ bản gốc cho ${ks.length} KUNN đang lọc (KUNN cũ nạp từ bảng kê)?`)) return;
+    S.store.labelNext(`Đã nhận đủ bản gốc ${ks.length} KUNN`);
+    await S.store.putKunns(ks.map((k) => ({ ...k, lines: k.lines.map((l) => ({ ...l, goc: 'da_nhan' })), ...meta() })));
+    log(c.id, 'goc', `Đánh dấu đã nhận đủ bản gốc ${ks.length} KUNN`); toast(`Đã đánh dấu ${ks.length} KUNN — bấm ↶ để hoàn tác`, 'ok');
+  };
   body.onclick = async (e) => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.kedit) return openKunnForm(c, S.store.k.get(t.dataset.kedit));
@@ -6778,6 +6789,67 @@ function bindCredit(body, c) {
     if (t.dataset.goed) { const ma = t.dataset.goed, src = goiOf(cust(c.id)).find((g) => g.ma === ma); return save((x) => { if (src && !x.goiLs.some((y) => y.ma === ma)) x.goiLs.push({ ma }); }, `Sửa tay gói ${ma}`); }
   });
 }
+/** KUNN đã thêm / ghi trong tool nhưng file Excel theo dõi chưa có. */
+/** Xuất Excel tổng hợp của công ty: theo dõi KUNN, hạn mức, gói, lịch lãi suất, KUNN chưa có trong file Excel, đã xóa. */
+function exportTongHop(c) {
+  c = cust(c.id) || c;
+  const today = BK.todayISO(), rows = kunnRowsOf(c), wb = XLSX.utils.book_new();
+  const sheet = (aoa, w, name) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = w.map((x) => ({ wch: x })); XLSX.utils.book_append_sheet(wb, ws, name); };
+  const st = (r) => { const n = r.need; if (!n) return ''; if (n.none) return 'Không cần'; if (n.done) return 'Đã nhận đủ'; return (n.qua ? `Quá hạn ${n.qua} ngày` : 'Đang chờ') + (n.src === 'goc' ? ` (${n.nDa}/${n.n} hóa đơn)` : ` (${n.pend.map((b) => b.ten).join(', ')})`); };
+  const src = (r) => (r.x ? (r.k ? 'File Excel + tool' : 'File Excel') : r.k && r.k.manual ? 'Nhập tay' : r.k && r.k.hsId ? 'Hồ sơ giải ngân' : 'Bảng kê');
+  const head = [`TỔNG HỢP THEO DÕI KUNN — ${c.name}`], info = [`Ngày lập: ${dd(today)} · ${userName()}`];
+  sheet([head, info, [], ['Số KUNN', 'Ngày giải ngân', 'Ngày đáo hạn', 'Còn (ngày)', 'Số tiền giải ngân', 'Đã thu', 'Gốc còn lại', 'LS ban đầu %', 'LS hiện tại %', 'Gói / UBG', 'Bên thụ hưởng', 'Bổ sung bản gốc', 'Hạn bổ sung', 'Trạng thái', 'Nguồn', 'Ghi chú quản lý'],
+    ...rows.map((r) => [r.so, r.ngay_gn ? dd(r.ngay_gn) : '', r.dao_han ? dd(r.dao_han) : '', r.live && r.dLeft != null ? r.dLeft : '', r.goc || 0, r.da_thu || 0, r.con_lai ?? '', r.ls0 ?? '', r.ls ?? '', r.goi || '', r.ben || '', st(r), r.need && r.need.han ? dd(r.need.han) : '', r.closed ? 'Đã tất toán' : r.live ? 'Đang vay' : 'Đã tất toán', src(r), (r.ns || []).map((n) => `${NOTE_T[n.type][1]}${n.amount ? ' ' + Math.round(n.amount).toLocaleString('vi-VN') : ''}${n.ngay ? ' ' + n.ngay : ''}${n.text ? ': ' + n.text : ''}`).join(' | ')]),
+    [], ['TỔNG', '', '', '', BK.sum(rows.map((r) => r.goc || 0)), BK.sum(rows.map((r) => r.da_thu || 0)), BK.sum(rows.filter((r) => r.live).map((r) => r.con_lai || 0))]],
+    [18, 12, 12, 8, 17, 15, 17, 9, 9, 22, 30, 30, 12, 12, 16, 50], 'Theo doi KUNN');
+  const hist = (c.hmHist || []).filter((h) => !h.del).sort((a, b) => (a.tu_ngay || '').localeCompare(b.tu_ngay || ''));
+  const cur = hmVer(c, today);
+  const hmRows = [['Số HĐTD / phụ lục', 'Ngày ký', 'Hiệu lực từ', 'Hết hạn duy trì', 'Đang áp dụng', 'Loại hạn mức', 'Tên / ghi chú', 'Tiền tệ', 'Hạn mức', 'Tỷ giá', 'Quy đổi VND']];
+  for (const h of hist) {
+    hmRows.push([h.so_hdtd || '', h.ngay_hdtd ? dd(h.ngay_hdtd) : '', h.tu_ngay ? dd(h.tu_ngay) : '', h.den_ngay ? dd(h.den_ngay) : '', h === cur ? 'Có' : '', 'TỔNG', h.ghi_chu || '', 'VND', h.hm_tong || '', '', h.hm_tong || '']);
+    for (const x of h.lines || []) hmRows.push(['', '', '', '', '', (HM_LOAI.find((y) => y[0] === x.loai) || [, x.loai])[1], x.ten || '', x.tien_te || 'VND', x.han_muc ?? '', x.ty_gia || '', hmLineVnd(x) || '']);
+  }
+  if (c.ledger) hmRows.push([], [`Dư nợ hiện tại (file Excel): ${Math.round(c.ledger.du_no).toLocaleString('vi-VN')} đ`], [`Hạn mức còn khả dụng: ${hmLedger(c) ? Math.round(hmLedger(c) - c.ledger.du_no).toLocaleString('vi-VN') + ' đ' : '—'}`]);
+  sheet(hmRows, [20, 11, 11, 13, 10, 24, 26, 8, 18, 10, 18], 'Han muc');
+  const gs = goiGroups(c, rows);
+  sheet([['Mã gói', 'Tên gói', 'LS %/năm', 'Từ ngày', 'Đến ngày', 'Hạn mức gói', 'Đã giải ngân', 'Còn lại', 'Số KUNN', 'Dư nợ hiện tại', 'Trạng thái'],
+    ...gs.map((x) => [x.g.ma, x.g.ten || '', x.g.ls ?? '', x.g.tu_ngay ? dd(x.g.tu_ngay) : '', x.g.den_ngay ? dd(x.g.den_ngay) : '', x.g.tong || '', x.gn, x.con ?? '', x.n, x.dn, x.none ? '' : x.act ? 'Đang hiệu lực' : 'Hết hiệu lực'])], [24, 30, 9, 11, 11, 16, 16, 16, 8, 16, 14], 'Goi lai suat');
+  const la = [['Số KUNN', 'Áp dụng từ', 'Lãi suất %/năm', 'Ghi chú', 'Người ghi', 'Điều chỉnh hàng loạt']];
+  for (const [kk, xs] of Object.entries(c.lsAdj || {})) { const so = (rows.find((r) => kkey(r.so) === kk) || {}).so || kk; for (const a of xs.slice().sort((p, q) => p.tu_ngay.localeCompare(q.tu_ngay))) la.push([so, dd(a.tu_ngay), a.ls, a.note || '', a.by || '', a.batch ? 'Có' : '']); }
+  sheet(la, [18, 12, 12, 30, 16, 12], 'Lich lai suat');
+  const xo = xlOutRows(c);
+  sheet([xo.head, ...xo.rows], xo.head.map(() => 16), 'Chua co trong Excel');
+  const del = Object.entries(c.kunnDel || {}).filter(([, d]) => !d.purged).map(([, d]) => [d.so, d.at ? new Date(d.at).toLocaleString('vi-VN') : '', d.by || '', d.row ? d.row.goc || '' : '']);
+  sheet([['Số KUNN', 'Xóa lúc', 'Người xóa', 'Số tiền'], ...del], [18, 20, 16, 16], 'Da xoa');
+  download(wb, `TongHop_${slug((c.hs || {}).ten_kh_ngan || c.name)}_${today.split('-').reverse().join('')}.xlsx`);
+  toast('Đã xuất Excel tổng hợp (6 sheet)', 'ok');
+}
+function kunnsNotInXl(c) {
+  const L = c.ledger; if (!L) return [];
+  const have = new Set(L.kunns.map((x) => kkey(x.so))), del = c.kunnDel || {};
+  return S.store.kunnsOf(c.id).filter((k) => k.so_kunn && !/chưa số/i.test(k.so_kunn) && !have.has(kkey(k.so_kunn)) && !del[kkey(k.so_kunn)]).sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || ''));
+}
+/** Dòng để dán vào file Excel theo dõi: đúng thứ tự cột của sheet đã chọn (hoặc thứ tự mặc định). */
+function xlOutRows(c) {
+  const cfg = cust(c.id).ledgerCfg, ks = kunnsNotInXl(c);
+  const val = (k) => {
+    const hs = k.hsId ? S.store.h.get(k.hsId) : null, snv = parseInt((hs && hs.so_ngay_vay) || k.so_ngay || (c.hs || {}).so_ngay_vay, 10) || null;
+    const goc = k.manual ? k.so_tien || 0 : BK.sum((k.lines || []).map((l) => l.tien_gn));
+    const dh = k.ngay_dh || (k.ngay_gn && snv ? BK.addDays(k.ngay_gn, snv) : '');
+    const ben = k.ben || [...new Set((k.lines || []).map((l) => l.ncc).filter(Boolean))].join(', ');
+    const ct = [...new Set((k.lines || []).map((l) => l.so_hd).filter(Boolean))].join(', ');
+    return { so: k.so_kunn, ngay_gn: k.ngay_gn ? dd(k.ngay_gn) : '', dao_han: dh ? dd(dh) : '', so_ngay: snv || '', ls: k.ls ?? '', goi: k.goi || '', goc, da_thu: 0, con_lai: k.manual ? k.con_lai ?? goc : goc, ngay_thu: '', ben, ct, note: k.ghi_chu || '', hm: '' };
+  };
+  const NAMES = Object.fromEntries(HSC.LFIELDS);
+  if (cfg && cfg.cols && Object.keys(cfg.cols).length) {
+    const n = Math.max(...Object.values(cfg.cols).filter((x) => x != null)) + 1;
+    const head = Array(n).fill(''); for (const [f, i] of Object.entries(cfg.cols)) if (i != null) head[i] = NAMES[f] || f;
+    return { head, rows: ks.map((k) => { const v = val(k), r = Array(n).fill(''); for (const [f, i] of Object.entries(cfg.cols)) if (i != null && v[f] != null) r[i] = v[f]; return r; }) };
+  }
+  const F = ['so', 'ngay_gn', 'dao_han', 'so_ngay', 'ls', 'goi', 'goc', 'da_thu', 'con_lai', 'ben', 'ct', 'note'];
+  const LBL = { so: 'Số KUNN', ngay_gn: 'Ngày GN', dao_han: 'Ngày đáo hạn', so_ngay: 'Số ngày vay', ls: 'Lãi suất', goi: 'Gói / UBG', goc: 'Số tiền giải ngân', da_thu: 'Đã thu', con_lai: 'Gốc còn lại', ben: 'Bên thụ hưởng', ct: 'Chứng từ', note: 'Ghi chú' };
+  return { head: F.map((f) => LBL[f]), rows: ks.map((k) => { const v = val(k); return F.map((f) => v[f]); }) };
+}
 function renderCoInfo(body, c) {
   const p = c.hs || {}, L = c.ledger;
   const lockHm = (c.hmHist || []).some((h) => !h.del) && ['hm_tong', 'han_hm', 'so_hdtd', 'ngay_hdtd'];
@@ -6788,7 +6860,8 @@ function renderCoInfo(body, c) {
     <section class="card panel"><header><h3>Dư nợ — đọc từ file Excel quản lý giải ngân</h3>${L ? `<span class="pill p-ok">✓ Đọc lúc ${new Date(L.at).toLocaleString('vi-VN')}</span>` : ''}</header>
       <div class="xlbox"><div><b>${L ? esc(L.file || 'file Excel') : 'Chưa chọn file'}</b><div class="hist">${L ? `Sheet ${esc(L.sheet || 'KHE_UOC')} · ${L.kunns.length} dòng · ${L.n_live} KUNN còn dư nợ${L.ubg.length ? ` · ${L.ubg.length} gói UBG` : ''}` : 'File Excel bạn đang theo dõi KUNN — file mẫu QUẢN LÝ GIẢI NGÂN hoặc file tự lập nhiều sheet (mỗi công ty một sheet): tool gợi ý sheet & cột, bạn xác nhận một lần. Tool chỉ ĐỌC file.'}</div></div>
         ${L ? '<button class="btn sm" id="xlRe">↻ Đọc lại file</button>' : ''}${L && cust(c.id).ledgerCfg ? '<button class="btn sm" id="xlCfg">Đổi sheet / cột</button>' : ''}<button class="btn sm ${L ? '' : 'pri'}" id="xlPick">${L ? 'Chọn file khác' : '📂 Chọn file Excel'}</button></div>
-      ${L ? `<div class="tiles t4">${tile('Gốc còn lại', shortMoney(L.du_no), `${L.n_live} KUNN`)}${tile('Hạn mức', shortMoney(hmLedger(c)), hmVer(c) ? `theo ${esc(hmVer(c).so_hdtd || 'hạn mức đang áp dụng')}${(hmVer(c).lines || []).length ? ` · ${hmVer(c).lines.length} hạn mức con` : ''}` : L.hmList.map((h) => `${h.ma}: ${shortMoney(h.han_muc)}`).join(' · '))}${(() => { const hm = hmLedger(c), kd = hm ? hm - L.du_no : null; return tile('Còn khả dụng', kd != null ? shortMoney(kd) : '—', kd != null && kd < 0 ? (hm * 50 < L.du_no ? '! Hạn mức nhỏ hơn dư nợ rất nhiều — có thể nhập sai đơn vị (vd gõ “300 tỷ”)' : '! Dư nợ vượt hạn mức') : '', { tone: kd != null && kd < 0 ? 'crit' : '' }); })()}${(() => { const n = S.store.kunnsOf(c.id).filter((k) => !L.kunns.some((x) => kkey(x.so) === kkey(k.so_kunn)) && (k.ngay_gn || '') >= BK.addDays(BK.todayISO(), -60)); return tile('Lệch với tool', String(n.length), n.length ? 'KUNN có trong tool, chưa có trong sổ Excel' : 'khớp', { tone: n.length ? 'warn' : 'good' }); })()}</div>` : ''}
+      ${L ? `<div class="tiles t4">${tile('Gốc còn lại', shortMoney(L.du_no), `${L.n_live} KUNN`)}${tile('Hạn mức', shortMoney(hmLedger(c)), hmVer(c) ? `theo ${esc(hmVer(c).so_hdtd || 'hạn mức đang áp dụng')}${(hmVer(c).lines || []).length ? ` · ${hmVer(c).lines.length} hạn mức con` : ''}` : L.hmList.map((h) => `${h.ma}: ${shortMoney(h.han_muc)}`).join(' · '))}${(() => { const hm = hmLedger(c), kd = hm ? hm - L.du_no : null; return tile('Còn khả dụng', kd != null ? shortMoney(kd) : '—', kd != null && kd < 0 ? (hm * 50 < L.du_no ? '! Hạn mức nhỏ hơn dư nợ rất nhiều — có thể nhập sai đơn vị (vd gõ “300 tỷ”)' : '! Dư nợ vượt hạn mức') : '', { tone: kd != null && kd < 0 ? 'crit' : '' }); })()}${(() => { const n = kunnsNotInXl(c); return tile('Chưa có trong file Excel', String(n.length), n.length ? 'KUNN thêm trong tool — sao chép / tải để ghi vào file' : 'file Excel đã đủ KUNN', { tone: n.length ? '' : 'good' }); })()}</div>
+      ${(() => { const n = kunnsNotInXl(c); return n.length ? `<div class="note xlout"><div><b>${n.length} KUNN thêm trong tool chưa có trong file Excel:</b> ${n.slice(0, 8).map((k) => esc(k.so_kunn)).join(', ')}${n.length > 8 ? '…' : ''}<div class="hist">Dòng xuất ra theo đúng thứ tự cột của sheet ${esc((cust(c.id).ledgerCfg || {}).sheet || 'KHE_UOC')} — dán vào cuối bảng trong file Excel, lần đọc lại sau tool tự ghép.</div></div><button class="btn sm pri" id="xlCopy">📋 Sao chép để dán vào Excel</button><button class="btn sm" id="xlDl">⬇ Tải file Excel</button></div>` : ''; })()}` : ''}
     </section>
     ${creditHtml(c)}
     <section class="card panel"><header><h3>Thông tin dùng cho mọi hồ sơ</h3><span class="hist">nhập 1 lần · tự điền KUNN, PDGN${L ? ' · có thể lấy từ sheet DANH_MUC' : ''}</span></header>
@@ -6805,6 +6878,8 @@ function renderCoInfo(body, c) {
     </aside></div>`;
   bindCredit(body, c);
   $('#xlPick', body).onclick = () => pickLedger(c, true);
+  if ($('#xlCopy', body)) $('#xlCopy', body).onclick = async () => { const { rows } = xlOutRows(c); const tsv = rows.map((r) => r.map((v) => String(v ?? '').replace(/[\t\n]/g, ' ')).join('\t')).join('\n'); try { await navigator.clipboard.writeText(tsv); toast(`Đã sao chép ${rows.length} dòng — mở file Excel, chọn ô đầu dòng trống cuối bảng rồi dán (Ctrl+V)`, 'ok', 8000); } catch (e) { toast('Trình duyệt chặn sao chép — dùng nút Tải file Excel', 'err'); } };
+  if ($('#xlDl', body)) $('#xlDl', body).onclick = () => { const { head, rows } = xlOutRows(c); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([head, ...rows]); XLSX.utils.book_append_sheet(wb, ws, 'KUNN them'); download(wb, `KUNN_chua_co_trong_Excel_${slug((c.hs || {}).ten_kh_ngan || c.name)}_${BK.todayISO().split('-').reverse().join('')}.xlsx`); };
   if ($('#xlRe', body)) $('#xlRe', body).onclick = () => pickLedger(c, false);
   if ($('#xlCfg', body)) $('#xlCfg', body).onclick = async () => { const h = await S.store.getMeta('ledgerHandle:' + c.id); let f = null; try { if (h) f = await h.getFile(); } catch (e) { /* hỏi lại */ } if (!f) return pickLedger(c, true); openLedgerDialog(c, await readWorkbook(f), f.name, cust(c.id).ledgerCfg); };
   $('#bEditC', body).onclick = () => editCustomer(cust(c.id));
