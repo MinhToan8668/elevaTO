@@ -2395,10 +2395,8 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     ['nhan', 'Nhận chứng từ', 'auto', 'Thả toàn bộ file KH gửi vào hồ sơ.'],
     ['kiem_tra', 'Kiểm tra', 'auto', 'Có bảng kê và xử lý hết lỗi (✕) trong danh sách kiểm tra — sửa số liệu hoặc bỏ qua kèm lý do.'],
     ['so_kunn', 'Xin số KUNN', 'auto', 'Nhập số KUNN admin cấp vào ô “Số KUNN”.'],
-    ['gui_ky', 'KH ký KUNN + bảng kê', 'manual', 'Soạn & xuất KUNN, bảng kê, KH ký xong thì tick.'],
-    ['pdgn_ky', 'GĐ TTKD ký PDGN', 'manual', 'Soạn PDGN, GĐ TTKD ký xong thì tick.'],
-    ['he_thong', 'Đưa lên hệ thống + UNC', 'manual', 'Tải gói file đã đặt tên, đưa lên hệ thống kèm UNC.'],
-    ['giai_ngan', 'Đã giải ngân', 'manual', 'Kiểm tra ngày giải ngân rồi bấm Đã xong — hồ sơ chuyển sang “Đã giải ngân”.'],
+    ['soan', 'Soạn KUNN & PDGN', 'auto', 'Bấm “📝 Soạn KUNN & PDGN”, lưu hoặc xuất Word là xong bước này.'],
+    ['giai_ngan', 'Đã giải ngân', 'manual', 'Giải ngân xong thì bấm “Đã giải ngân” — KUNN chuyển sang tab Theo dõi KUNN để theo dõi đáo hạn và chứng từ bổ sung.'],
   ];
   /** Trạng thái các mốc: done / skip / cur (việc đang tới) / todo. can = được bấm “Đã xong” (mốc trước đều xong). */
   function milestones(hs, nErr) {
@@ -2407,6 +2405,7 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
       nhan: (hs.files || []).length > 0,
       kiem_tra: (hs.files || []).length > 0 && (hs.lines || []).length > 0 && nErr === 0,
       so_kunn: !!hs.so_kunn,
+      soan: !!(hs.ms && hs.ms.soan && hs.ms.soan !== 'skip'),
     };
     let cur = false;
     for (const [k, l, kind, hint] of MILESTONES) {
@@ -5808,7 +5807,9 @@ function hsModel(kind) {
   if (!K.el) return K.base;
   return { ...K.base, blocks: domBlocks(K.el, K.store) };
 }
+const hsMarkSoan = () => { if (HE && HE.hsId) { const h = hsGet(HE.hsId); if (h && !(h.ms || {}).soan) hsPatch(HE.hsId, (x) => { x.ms = { ...(x.ms || {}), soan: BK.todayISO() }; }, 'Đã soạn KUNN & PDGN').catch(() => {}); } };
 async function hsSave() {
+  hsMarkSoan();
   const c0 = cust(HE.cid) || HE.c;
   const hs = { ...(c0.hs || {}) };
   for (const f of DOCX.HS_FIELDS) if (f.s === 'c' && !f.calc && HE.v[f.k] != null) hs[f.k] = HE.v[f.k];
@@ -5837,6 +5838,7 @@ function saveBlob(blob, name) {
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 async function hsExport(kinds) {
+  hsMarkSoan();
   const ck = DOCX.checks(HE.v, HE.lists, [], { hol: holidays() }).filter((x) => x.sev >= 3);
   if (ck.length && !confirm(`Hồ sơ còn ${ck.length} lỗi:\n- ${ck.slice(0, 6).map((x) => x.msg).join('\n- ')}\n\nVẫn xuất Word?`)) return;
   const red = $('#hsRed', HE.m).checked;
@@ -6749,7 +6751,7 @@ function renderHoso(el, c) {
       <button class="btn sm danger" id="hsDel2" title="Xóa hồ sơ này (không cần nữa)">🗑 Xóa hồ sơ</button></div>
     ${(() => { const m = ms.find((x) => x.k === V.msFocus); if (!m) return ''; const prev = ms.slice(0, ms.indexOf(m)).find((x) => x.st !== 'done' && x.st !== 'skip');
       return `<div class="msfocus"><div><b>${esc(m.l)}</b> — ${esc(m.hint)}${m.st === 'done' ? ' <span class="o">✓ Đã xong' + (m.at ? ' ' + dd(m.at) : '') + '</span>' : ''}${m.kind === 'auto' && m.st !== 'done' && m.st !== 'skip' ? ' <span class="hist">(tool tự tick khi làm xong)</span>' : ''}${prev && m.st !== 'done' && m.st !== 'skip' ? `<div class="hist">Làm xong mốc trước: <b>${esc(prev.l)}</b></div>` : ''}</div>
-        <span style="flex:1"></span>${m.kind === 'manual' && m.st !== 'done' && m.st !== 'skip' ? `<button class="btn sm pri" data-msok="${m.k}" ${m.can ? '' : 'disabled'}>✓ Đã xong việc này</button>` : ''}${m.kind === 'manual' && m.st === 'done' && m.at ? `<button class="btn sm" data-msundo="${m.k}">↺ Bỏ đánh dấu</button>` : ''}
+        <span style="flex:1"></span>${m.kind === 'manual' && m.st !== 'done' && m.st !== 'skip' ? `<button class="btn sm pri" data-msok="${m.k}" ${m.can ? '' : 'disabled'}>✓ ${m.k === 'giai_ngan' ? 'Đã giải ngân' : 'Đã xong việc này'}</button>` : ''}${m.kind === 'manual' && m.st === 'done' && m.at ? `<button class="btn sm" data-msundo="${m.k}">↺ Bỏ đánh dấu</button>` : ''}
         ${m.st === 'skip' ? `<button class="btn sm" data-msskip="${m.k}">↺ Làm lại mốc này</button>` : m.st !== 'done' ? `<button class="btn sm" data-msskip="${m.k}">Bỏ qua mốc (không cần)</button>` : ''}<button class="x" data-msclose title="Đóng">&times;</button></div>`; })()}
     <section class="kbar">
       <div><span>Số tiền giải ngân</span><b>${vnd(total)}</b><small>${hs.lines.length ? `tổng ${hs.lines.length} dòng bảng kê` : 'chưa có bảng kê'}</small></div>
@@ -6801,7 +6803,7 @@ function renderHoso(el, c) {
     </div>`;
   bindCompanyHead(el, c);
   bindDrop($('#dzAdd', el), (files) => addFiles(hs.id, files));
-  const FOCUS = { nhan: '#dzAdd', kiem_tra: '.hscol.mid', so_kunn: '#hsKunn', gui_ky: '#oxKunn', pdgn_ky: '#oxKunn', he_thong: '#oxUp', giai_ngan: '#hsNgay' };
+  const FOCUS = { nhan: '#dzAdd', kiem_tra: '.hscol.mid', so_kunn: '#hsKunn', soan: '#oxKunn', giai_ngan: '#hsNgay' };
   if (V.msFocus && FOCUS[V.msFocus] && V.msRed !== V.msFocus + hs.id) { V.msRed = V.msFocus + hs.id; const f = $(FOCUS[V.msFocus], el); if (f) { f.classList.add('focus-red'); setTimeout(() => f.scrollIntoView({ behavior: 'smooth', block: 'center' }), 30); setTimeout(() => f.classList.remove('focus-red'), 5000); if (/INPUT/.test(f.tagName)) f.focus(); } }
   const patch = (fn, label) => hsPatch(hs.id, fn, label).catch((e) => toast(errMsg(e), 'err'));
   $('#hsNgay', el).onchange = (e) => patch((x) => { x.ngay_gn = e.target.value; const g = BK.toISO(x.ngay_gn); for (const b of x.bo_sung || []) { const n = parseInt(b.ngay, 10); if (g && n > 0) b.han = dd(BK.addDays(g, n)); } }, 'Đổi ngày giải ngân');

@@ -716,13 +716,10 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('[data-knuse]', { hasText: '1000001(9).26' }).click();
   assert.equal(await page.inputValue('#hsKunn'), '1000001(9).26');
   await page.locator('.ms.done', { hasText: 'Xin số KUNN' }).waitFor();
-  // bấm mốc → viền đỏ chỗ cần làm; mốc làm tay chỉ “Đã xong” được khi mốc trước đã xong
-  await page.click('[data-ms="pdgn_ky"]');
+  // mốc chỉ còn các bước tool làm / theo dõi được; bấm mốc → viền đỏ chỗ cần làm
+  assert.deepEqual(await page.locator('[data-ms]').evaluateAll((xs) => xs.map((x) => x.dataset.ms)), ['nhan', 'kiem_tra', 'so_kunn', 'soan', 'giai_ngan']);
+  await page.click('[data-ms="soan"]');
   await page.locator('#oxKunn.focus-red').waitFor();
-  assert.equal(await page.locator('[data-msok="pdgn_ky"]').isDisabled(), false, 'mốc làm tay tick lúc nào cũng được');
-  await page.click('[data-ms="gui_ky"]');
-  await page.click('[data-msok="gui_ky"]');
-  await page.locator('.ms.done', { hasText: 'KH ký KUNN' }).waitFor();
   // chứng từ bổ sung bản gốc: gợi ý từ chứng từ đã thả, số ngày theo yêu cầu ĐVKD → hạn
   await page.click('#hsBsSug');
   await page.locator('#oxBs .bsr2').first().waitFor();

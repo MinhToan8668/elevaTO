@@ -80,9 +80,9 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   ngay trong trang chứng từ; nhận **Báo cáo CLTF (CL - KERNEL - TF)**: so hạn mức khả dụng với số tiền giải ngân, cảnh
   báo CLTF cũ. **Số KUNN**: chỉ số trong ngoặc tự +1 mỗi lần; số gốc và đuôi năm (đổi khi có gói giải ngân / HĐTD
   mới) sửa trực tiếp, tool nhớ cho công ty. Xóa file chứng từ khỏi hồ sơ ngay trong trang xem chứng từ.
-- **Mốc hồ sơ**: Nhận chứng từ, Kiểm tra, Xin số KUNN tự tick khi đã làm; KH ký KUNN + bảng kê, GĐ TTKD ký PDGN, Đưa lên
-  hệ thống, Đã giải ngân — tick tay lúc nào cũng được (không cần thả bản ký). Tick **Đã giải ngân** → KUNN tự chuyển
-  sang tab Theo dõi KUNN.
+- **Mốc hồ sơ** (chỉ các bước tool làm / theo dõi được): Nhận chứng từ → Kiểm tra → Có số KUNN → Soạn KUNN & PDGN (tự
+  xong khi lưu / xuất Word) → **Đã giải ngân** (bấm 1 lần → KUNN chuyển sang tab Theo dõi KUNN để theo dõi đáo hạn và
+  chứng từ bổ sung).
 - **Chứng từ bổ sung bản gốc**: chọn chứng từ KH chỉ nộp bản sao (gợi ý từ chứng từ đã thả: hóa đơn, tiền điện, tờ
   khai…), Gốc/Sao, **số ngày theo yêu cầu ĐVKD** (đặt mặc định riêng từng công ty, không cố định 30 ngày) → hạn bổ
   sung. Danh sách tự điền vào bảng “Chứng từ bổ sung” của PDGN và dùng làm hạn hồ sơ gốc ở tab Theo dõi KUNN.
