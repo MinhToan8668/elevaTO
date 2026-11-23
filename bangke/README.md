@@ -93,10 +93,12 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Đồng bộ hồ sơ ↔ theo dõi**: hồ sơ đã chuyển sang theo dõi, sửa gì (số KUNN, ngày, dòng bảng kê, chứng từ bổ sung) thì
   cập nhật đúng KUNN đó — không sinh KUNN lặp (bản lặp cũ tự dọn). Biểu đồ giải ngân ở Tổng quan công ty cũng tính cả KUNN
   trong file Excel. KUNN hồ sơ ghi lệch đuôi năm so với file Excel (cùng số trong ngoặc, cùng ngày) được ghép vào một dòng.
-- **Hạn mức tín dụng theo thời gian** (tab Thông tin): mỗi lần cấp mới / cấp lại / điều chỉnh (HĐTD, phụ lục) là một
-  dòng có ngày hiệu lực, hạn duy trì, số / ngày HĐTD, hạn mức tổng / cho vay / L/C. Tool lấy đúng dòng theo **ngày giải
-  ngân** để tính khả dụng, điền PDGN, soát: GN trước khi hạn mức hiệu lực, GN sau hạn duy trì, hạn mức sắp hết (≤ 30
-  ngày). Hồ sơ cũ vẫn tính theo hạn mức cũ.
+- **Hạn mức tín dụng** (tab Thông tin): mỗi lần cấp mới / cấp lại / điều chỉnh (HĐTD, phụ lục) là một mục — ngày hiệu
+  lực, hạn duy trì, số / ngày HĐTD, tổng hạn mức và các **hạn mức con** (cho vay VND, cho vay ngoại tệ, L/C, bảo lãnh,
+  chiết khấu…; tiền tệ + tỷ giá quy đổi; ghép với dòng HMTD của file Excel để thấy dư nợ / khả dụng từng hạn mức). Nhập
+  số tiền kèm đơn vị: “300 tỷ”, “500 tr”, “2 tỷ 500 triệu”, “300.000.000.000 đ”. Tool lấy đúng mục theo **ngày giải
+  ngân**: khả dụng, PDGN (hạn mức, cho vay, L/C, khả dụng từng dòng), soát GN trước hiệu lực / sau hạn duy trì / hạn mức
+  sắp hết. Cảnh báo khi hạn mức nhỏ hơn dư nợ (thường do nhập sai đơn vị) và hạn mức ngoại tệ chưa có tỷ giá.
 - **Gói lãi suất / UBG**: đọc từ sheet UBG của file Excel + thêm / sửa tay (ngày hiệu lực, lãi suất, kỳ hạn tối đa,
   hạn mức gói), ẩn gói không dùng. Hồ sơ chọn gói ở ô **Gói lãi suất** → lãi suất tự điền KUNN / PDGN, KUNN ghi gói;
   tool soát gói còn hiệu lực ngày GN, còn hạn mức gói (đã dùng theo file Excel + sổ), số ngày vay ≤ kỳ hạn tối đa; nhắc
