@@ -49,6 +49,8 @@ export async function docx(body) {
   return z.generateAsync({ type: 'nodebuffer' });
 }
 const CB = (on) => `<w:sdt><w:sdtPr><w:id w:val="1"/><w14:checkbox><w14:checked w14:val="${on ? 1 : 0}"/></w14:checkbox></w:sdtPr><w:sdtContent><w:r><w:t>${on ? '☒' : '☐'}</w:t></w:r></w:sdtContent></w:sdt>`;
+// ô tick kiểu cũ (Legacy form: FORMCHECKBOX)
+export const LCB = (on, label) => `<w:p><w:r><w:fldChar w:fldCharType="begin"><w:ffData><w:name w:val="Check1"/><w:enabled/><w:calcOnExit w:val="0"/><w:checkBox><w:sizeAuto/><w:default w:val="${on ? 1 : 0}"/></w:checkBox></w:ffData></w:fldChar></w:r><w:r><w:instrText xml:space="preserve"> FORMCHECKBOX </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t xml:space="preserve"> ${label}</w:t></w:r></w:p>`;
 // KUNN đã điền của "lần trước" (số liệu giả)
 export const KUNN_BODY = [
   P('Số:', [' '], '5500777(', '2).26'), P('Ngày: 05/10/2026'),
@@ -74,4 +76,5 @@ export const PDGN_BODY = [
     TR('2', TC('', '<w:vMerge/>'), 'HĐ 1', '11', '02/10/2026', '400,000,000', TC('', '<w:vMerge/>')),
     TR(TC('TỔNG CỘNG', '<w:gridSpan w:val="5"/>'), '1,000,000,000', '1,000,000,000')),
   P('Giám đốc TTKD đồng ý ngày 05/10/2026'),
+  TBL(TR(`<w:tc>${LCB(true, 'Đồng ý')}</w:tc>`, `<w:tc>${LCB(false, 'Không đồng ý')}</w:tc>`)),
 ].join('');
