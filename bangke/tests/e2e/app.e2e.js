@@ -647,7 +647,9 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.addInitScript(() => { localStorage.setItem('finlens_ai_settings_v1', JSON.stringify({ keys: [{ key: 'AIzaTEST-KEY-1234567890', on: true }], model: 'gemini-3.6-flash', active: 0 })); window.showOpenFilePicker = undefined; });
   let sent = null;
   await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, async (r) => {
-    sent = JSON.parse(r.request().postData());
+    const body = r.request().postData() || '';
+    if (/Tra soát bộ chứng từ giải ngân/.test(body)) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ tom_tat: 'Hóa đơn 830 mua hạt nhựa đúng mục đích.', issues: [{ muc_do: 'dat', van_de: 'Hóa đơn 830 đúng mục đích vay', chi_tiet: '', so_chung_tu: '830' }, { muc_do: 'can_xem', van_de: 'Chưa có HĐMB để đối chiếu điều khoản thanh toán', chi_tiet: 'Bổ sung HĐMB', so_chung_tu: '' }] }) }] }, finishReason: 'STOP' }] }) });
+    sent = JSON.parse(body);
     const docs = { docs: [
       { loai: 'hoa_don', trang: '1', conf: 0.95, f: { so: '830', ngay: '04/11/2026', ben_ban: 'Công ty TNHH Hóa Dầu Mẫu', mst_mua: '0303640880', tien: '1116900000' } },
       { loai: 'tien_dien', trang: '2', conf: 0.9, f: { so: 'PA0001', ngay: '13/11/2026', ben_ban: 'Điện lực Mẫu', tien: '303166541', tk_nhan: '118000048033', ngan_hang: 'VietinBank' } },
@@ -721,6 +723,9 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.selectOption('#hsGoi', 'Gói ưu đãi – UBG 002');
   await page.locator('.hs3', { hasText: 'Gói ưu đãi – UBG 002 8.2%: còn' }).waitFor({ state: 'attached' });
   assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '8.2');
+  // 🤖 AI tra soát mục đích vay & phù hợp HĐMB → kết quả vào danh sách kiểm tra
+  await page.click('#hsAiMd');
+  await page.locator('.ck', { hasText: 'AI: Chưa có HĐMB để đối chiếu điều khoản thanh toán' }).waitFor();
   // mốc chỉ còn các bước tool làm / theo dõi được; bấm mốc → viền đỏ chỗ cần làm
   assert.deepEqual(await page.locator('[data-ms]').evaluateAll((xs) => xs.map((x) => x.dataset.ms)), ['nhan', 'kiem_tra', 'so_kunn', 'soan', 'giai_ngan']);
   await page.click('[data-ms="soan"]');
@@ -769,6 +774,42 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.kn', { hasText: 'KH trả nợ 1 phần' }).waitFor();
   assert.match(await page.locator('.kdet').innerText(), /dư nợ còn ≈ 4\.480\.500\.000 đ/);
   assert.notEqual(await page.locator('.kwrap tfoot').innerText(), tot0, 'dòng tổng cập nhật theo ghi chú');
+  // lãi suất thả nổi: điều chỉnh 1 KUNN, rồi hàng loạt (+0.25 điểm %) — bảng hiện LS cũ → mới
+  await page.click('[data-kf="live"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).click();
+  await page.fill('#lsD', '2026-11-01'); await page.fill('#lsV', '8.6'); await page.fill('#lsN', 'điều chỉnh định kỳ');
+  await page.click('#lsAdd');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).locator('b', { hasText: '8,6%' }).waitFor();
+  await page.click('#lsBulk');
+  await page.fill('#lbD', '2026-11-15'); await page.selectOption('#lbM', 'add'); await page.fill('#lbV', '0.25');
+  await page.locator('#lbP tr', { hasText: '1000001(4).26' }).locator('td', { hasText: '8.85%' }).waitFor();
+  await page.click('#lbOk');
+  await page.locator('.toast div', { hasText: 'Điều chỉnh lãi suất' }).first().waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).locator('b', { hasText: '8,85%' }).waitFor();
+  // quên làm hồ sơ trên tool → thêm KUNN nhập tay vào theo dõi (số ngày vay → tự tính đáo hạn), sửa lại được
+  await page.click('#kAdd');
+  await page.fill('#kfSo', '1000001(15).26'); await page.fill('#kfNg', '2026-11-10'); await page.fill('#kfTien', '2,500,000,000');
+  await page.fill('#kfSnv', '90');
+  assert.equal(await page.inputValue('#kfDh'), '2027-02-08');
+  await page.selectOption('#kfGoi', 'Gói ưu đãi – UBG 002');
+  assert.equal(await page.inputValue('#kfLs'), '8.2');
+  await page.fill('#kfBs', 'Hóa đơn GTGT'); await page.fill('#kfBsH', '2026-12-10');
+  await page.click('#kfOk');
+  const mr = page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' });
+  await mr.waitFor();
+  assert.match(await mr.innerText(), /10\/11\/2026[\s\S]*08\/02\/2027[\s\S]*2\.500\.000\.000 đ[\s\S]*Chờ 1 bản gốc/);
+  await page.click('[data-kedit]');
+  await page.fill('#kfCon', '1,500,000,000'); await page.click('#kfOk');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: '1.500.000.000 đ' }).waitFor();
+  await page.locator('.kdet [data-kmx]').check();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: 'Đã nhận đủ' }).waitFor();
+  // báo cáo theo gói + xuất Excel
+  await page.click('[data-kf="goi"]');
+  await page.locator('.goic', { hasText: 'Gói ưu đãi – UBG 002' }).waitFor();
+  const [rx] = await Promise.all([page.waitForEvent('download'), page.click('#goiX')]);
+  assert.match(rx.suggestedFilename(), /^BaoCao_GoiLaiSuat_.*\.xlsx$/);
+  const wbx = XLSX.read(await readFile(await rx.path()));
+  assert.deepEqual(wbx.SheetNames, ['Tong hop', 'Chi tiet KUNN']);
   // xóa KUNN (của tool / dòng từ file Excel) → mục “Đã xóa” lưu vết → khôi phục / xóa hẳn
   await page.click('[data-kf="all"]');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).click();
@@ -825,6 +866,9 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.fill('#cxHm [data-hmf$="|hm_tong"]', '150,000'); await page.press('#cxHm [data-hmf$="|hm_tong"]', 'Tab');
   await page.locator('#cxHm .pill', { hasText: 'đang áp dụng' }).waitFor();
   await page.waitForFunction(() => (window.BKAPP.cust(window.BKAPP.S.cid).hmHist || [])[0]?.hm_tong === 150000e6);
+  const den20 = new Date(Date.now() + 20 * 864e5).toISOString().slice(0, 10);
+  await page.fill('#cxHm [data-hmf$="|den_ngay"]', den20); await page.press('#cxHm [data-hmf$="|den_ngay"]', 'Tab');
+  await page.waitForFunction((d) => window.BKAPP.cust(window.BKAPP.S.cid).hmHist[0].den_ngay === d, den20);
   assert.equal(await page.evaluate(() => { const c = window.BKAPP.cust(window.BKAPP.S.cid); return [c.hmHist.length, c.hmHist[0].hm_tong, c.hs.hm_tong]; }).then((x) => JSON.stringify(x)), JSON.stringify([1, 150000e6, '150,000']));
   assert.match(await page.locator('#cxGoi').innerText(), /Gói ưu đãi – UBG 002[\s\S]*file Excel/);
   // sổ hóa đơn chỉ có KUNN đã nạp bảng kê → nạp nhiều bảng kê cũ cùng lúc
@@ -840,6 +884,8 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.modal [data-close]').first().click();
   // trang đầu: thẻ công ty có dư nợ / hạn mức từ file Excel
   await page.click('a.logo');
+  // trang đầu: nhắc gói lãi suất sắp hết hiệu lực / gần hết hạn mức gói
+  await page.locator('.cra', { hasText: 'An Bình Thử' }).filter({ hasText: 'hết hạn duy trì' }).first().waitFor();
   assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d.]+ tr \/ 150\.000 tr/);
   await ctx.close();
 });
