@@ -909,6 +909,28 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.modal', { hasText: 'Đã thêm 2 KUNN' }).waitFor();
   await page.locator('.modal [data-close]').first().click();
   // trang đầu: thẻ công ty có dư nợ / hạn mức từ file Excel
+  // đáo hạn rơi vào thứ Bảy → gợi ý ngày làm việc; bấm Đã giải ngân → KUNN vào theo dõi có đáo hạn, dư nợ
+  await page.click('[data-ctab="hoso"]');
+  await page.locator('.hsrow').first().click();
+  // soạn KUNN & PDGN → lưu: hồ sơ lấy lãi suất / số ngày vay theo văn bản
+  await page.click('#hsSoan');
+  await page.locator('[data-v="lai_suat"]').waitFor({ state: 'attached' });
+  await page.evaluate(() => document.querySelectorAll('details.hg').forEach((d) => { d.open = true; }));
+  await page.fill('[data-v="lai_suat"]', '9.1'); await page.press('[data-v="lai_suat"]', 'Tab');
+  await page.click('#hsSave');
+  await page.locator('.toast div', { hasText: 'Hồ sơ cập nhật theo KUNN / PDGN' }).waitFor();
+  await page.click('#hsClose');
+  assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '9.1');
+  await page.fill('#hsSnv', '9'); await page.press('#hsSnv', 'Tab');
+  await page.locator('.kbar', { hasText: 'Thứ 7' }).waitFor();
+  await page.locator('.dhfix [data-snv="11"]').click();
+  await page.locator('.kbar', { hasText: '07/12/2026' }).waitFor();
+  await page.click('[data-ms="giai_ngan"]'); await page.click('[data-msok="giai_ngan"]');
+  await page.locator('.toast div', { hasText: 'đã chuyển sang tab Theo dõi KUNN' }).waitFor();
+  await page.click('[data-ctab="kunn"]'); await page.click('[data-kf="live"]');
+  const gr = page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' });
+  assert.match(await gr.innerText(), /07\/12\/2026[\s\S]*Thứ 2[\s\S]*200\.000\.000 đ/, 'đáo hạn + thứ + dư nợ vay');
+  assert.match(await page.locator('.kwrap thead').innerText(), /Dư nợ vay \(gốc\)/);
   await page.click('a.logo');
   // trang đầu: nhắc gói lãi suất sắp hết hiệu lực / gần hết hạn mức gói
   await page.locator('.cra', { hasText: 'An Bình Thử' }).filter({ hasText: 'hết hạn duy trì' }).first().waitFor();
@@ -928,7 +950,7 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.goto(base + 'index.html');
   await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty TNHH Kim Tín Long An'); await page.click('#cfSave');
   await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
-  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ hiện tại' }).click()]);   // bấm ô dư nợ là chọn file
+  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).click()]);   // bấm ô dư nợ là chọn file
   await fc.setFiles(f1);
   await page.locator('.chip.on', { hasText: 'KTLA' }).waitFor();                 // tự gợi ý đúng sheet của công ty
   assert.match(await page.locator('#lgPrev').innerText(), /2 KUNN · 1 còn dư nợ · dư nợ 7\.533\.742\.585 đ/);
@@ -937,7 +959,7 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.locator('.chip', { hasText: 'KTLA' }).click();
   await page.fill('#lgHm', '20,000');
   await page.click('#lgSave');
-  await page.locator('.tile', { hasText: 'Dư nợ hiện tại' }).filter({ hasText: '7,5 tỷ' }).waitFor();
+  await page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).filter({ hasText: '7,5 tỷ' }).waitFor();
   assert.match(await page.locator('.tile', { hasText: 'Hạn mức còn khả dụng' }).innerText(), /12,5 tỷ/);
   // file đã sửa: chèn cột, dời tiêu đề, thêm KUNN → Đọc lại
   await page.click('[data-ctab="info"]');
