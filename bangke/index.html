@@ -454,6 +454,7 @@ a,.lnk{color:var(--blue)}
 .cpi:hover,.cpi.on{background:var(--blue-bg);border-color:var(--blue2)}.cpi small{color:var(--ink3);font-size:12px}
 .hbtn.copick{font-weight:700}
 .nowrap{white-space:nowrap}
+.bsk{display:flex;gap:6px;align-items:center;justify-content:space-between}.bsk .inp{width:auto;padding:3px 6px;font-size:12px}
 .dline2 .eye.fx{opacity:.35}.dline2 .eye.fx:hover{opacity:1;background:#fde2e2;color:#b91c1c}.pkx{color:var(--ink3)}.pkx:hover{color:var(--err)}.pksk{margin:4px 0;display:flex;flex-wrap:wrap;gap:4px}
 .mtab{margin-bottom:12px}.mtab header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .bulkn{display:flex;gap:12px;align-items:center;margin-bottom:12px}.bulkn>div{flex:1}
@@ -6275,6 +6276,11 @@ function kunnRowsOf(c) {
     r.hs = hos.find((h) => (r.k && h.kid === r.k.id) || (h.so_kunn && kkey(h.so_kunn) === kkey(r.so)));
     r.s = r.k ? BK.kunnSummary(r.k, { hanNgay: hanNgay(), today }) : null;
     r.bs = r.hs ? (r.hs.bo_sung || []).filter((b) => !b.xong) : [];
+    // bổ sung bản gốc: theo danh sách của hồ sơ (số ngày ĐVKD yêu cầu); KUNN không có hồ sơ thì theo từng hóa đơn
+    const bsAll = r.hs ? r.hs.bo_sung || [] : [];
+    if (r.hs && (bsAll.length || r.hs.bs_none)) { const pend = bsAll.filter((b) => !b.xong); const hs2 = pend.map((b) => BK.toISO(b.han)).filter(Boolean).sort(); r.need = { src: 'hs', items: bsAll, pend, done: !pend.length, none: !bsAll.length, han: hs2[0] || '' }; }
+    else if (r.s) r.need = { src: 'goc', done: r.s.done, han: r.s.han, nDa: r.s.nDa, n: r.s.n };
+    if (r.need && !r.need.done && r.need.han) r.need.qua = Math.max(0, BK.daysBetween(r.need.han, today));
     if (r.x) { const a = applyNotes(c, r.x); r.ns = a.ns; r.paid = a.paid; r.closed = a.closed; r.con_lai = a.con; if (a.due !== r.dao_han) { r.dhGoc = r.dao_han; r.dao_han = a.due; } }
     else r.ns = notesOf(c, r.so);
     r.live = r.con_lai == null ? !r.x : r.con_lai > 0.5;
@@ -6286,7 +6292,7 @@ function renderCoKunn(body, c) {
   if (!renderCoKunn.cleaned) renderCoKunn.cleaned = new Set();
   if (!renderCoKunn.cleaned.has(c.id)) { renderCoKunn.cleaned.add(c.id); cleanDupKunns(c.id).catch(() => {}); }
   const rows = kunnRowsOf(c);
-  const F = [['live', 'Đang vay', (r) => r.live], ['dh', 'Đáo hạn 30 ngày', (r) => r.live && r.dLeft != null && r.dLeft <= 30], ['goc', 'Thiếu hồ sơ gốc', (r) => r.s && !r.s.done], ['bs', 'Chờ chứng từ bổ sung', (r) => r.bs.length], ['tt', 'Đã tất toán', (r) => !r.live], ['all', 'Tất cả', () => true]];
+  const F = [['live', 'Đang vay', (r) => r.live], ['dh', 'Đáo hạn 30 ngày', (r) => r.live && r.dLeft != null && r.dLeft <= 30], ['bs', 'Chờ bổ sung bản gốc', (r) => r.need && !r.need.done], ['tt', 'Đã tất toán', (r) => !r.live], ['all', 'Tất cả', () => true]];
   if (c.kunnHide && Object.keys(c.kunnHide).length) { migrateHide(c); return; }
   const kd = c.kunnDel || {};
   const gone = Object.entries(kd).filter(([, d]) => !d.purged).map(([kk, d]) => { const k = d.kid ? S.store.k.get(d.kid) : null; const x = d.row; return { so: d.so, ngay_gn: x ? x.ngay_gn : k ? k.ngay_gn : '', goc: x ? x.goc : k && k.lines ? BK.sum(k.lines.map((l) => l.tien_gn)) : null, k, x, dk: kk, d, del: true, bs: [], ns: [] }; })
@@ -6297,6 +6303,8 @@ function renderCoKunn(body, c) {
   const q = BK.fold(V.kq || '');
   const list = (f[0] === 'del' ? gone : rows.filter(f[2])).filter((r) => !q || BK.fold(r.so).includes(q) || (r.k && r.k.lines.some((l) => BK.fold(`${l.so_hd} ${l.ncc}`).includes(q))));
   const sel = list.find((r) => r.k && r.k.id === V.kunnSel) || list.find((r) => r.so === V.kunnSelSo) || list[0];
+  const needPill = (r) => { const n = r.need; if (!n) return '<span class="m">—</span>'; if (n.src === 'goc') return gocPill(r); if (n.none) return '<span class="m">Không cần</span>'; if (n.done) return '<span class="pill p-ok">✓ Đã nhận đủ</span>';
+    return `<span class="pill ${n.qua ? 'p-err' : 'p-warn'}">${n.qua ? `✕ Quá hạn ${n.qua} ngày` : `! Chờ ${n.pend.length} bản gốc`}</span><div class="hist">${n.pend.map((b) => esc(b.ten)).join(', ')}${n.han ? ` · hạn ${dd(n.han)}` : ''}</div>`; };
   const gocPill = (r) => !r.s ? '<span class="m">—</span>' : r.s.done ? '<span class="pill p-ok">✓ Đủ</span>' : r.s.quaHan ? `<span class="pill p-err">✕ Quá hạn ${r.s.quaHan} ngày</span>` : `<span class="pill p-warn">! Thiếu ${r.s.n - r.s.nDa}/${r.s.n}</span><div class="hist">hạn ${dd(r.s.han)}</div>`;
   const hist = (so) => (S.store.log || []).filter((x) => x.customerId === c.id && so && x.text && x.text.includes(so)).slice(0, 12);
   const histHtml = (so) => { const h = hist(so); return h.length ? `<details class="khist"><summary>Lịch sử thay đổi (${h.length})</summary><ul>${h.map((x) => `<li>${esc(x.text)}<small>${esc(x.by || '')} · ${new Date(x.at).toLocaleString('vi-VN')}</small></li>`).join('')}</ul></details>` : ''; };
@@ -6307,12 +6315,13 @@ function renderCoKunn(body, c) {
       <div class="bar"><button class="btn pri" data-krestore="${esc(r.dk)}">♻ Khôi phục</button><button class="btn danger" data-kpurge="${esc(r.dk)}">✕ Xóa hẳn</button></div>${histHtml(r.so)}`;
     const k = r.k, s = r.s;
     const ms = [[r.ngay_gn, `Giải ngân ${dd(r.ngay_gn)}`, 'done', r.hs ? 'Hồ sơ giải ngân đã lưu' : '']];
-    if (s) ms.push([s.han, `Hồ sơ gốc — hạn ${dd(s.han)}`, s.done ? 'done' : s.quaHan ? 'bad' : 'warn', `Đã nhận ${s.nDa}/${s.n} chứng từ`]);
-    for (const b of r.bs) ms.push([BK.toISO(b.han), `Bổ sung ${b.ten} — hạn ${b.han}`, 'todo', '']);
+    const nd = r.need;
+    if (nd && !nd.none) ms.push([nd.han, nd.done ? 'Đã nhận đủ bản gốc' : `Bổ sung bản gốc — hạn ${dd(nd.han) || '?'}`, nd.done ? 'done' : nd.qua ? 'bad' : 'warn', nd.done ? '' : nd.src === 'hs' ? nd.pend.map((b) => b.ten).join(', ') : `Đã nhận ${nd.nDa}/${nd.n} chứng từ`]);
     if (r.dao_han) ms.push([r.dao_han, `Đáo hạn ${dd(r.dao_han)}`, r.live ? (r.dLeft != null && r.dLeft < 0 ? 'bad' : 'todo') : 'done', r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : 'đã tất toán']);
     return `<div><b class="big">KUNN ${esc(r.so)}</b><div class="hist">${vnd(r.goc)}${r.ls ? ` · ${String(r.ls).replace('.', ',')}%` : ''}${r.goi ? ' · ' + esc(r.goi) : ''}</div></div>
       <ol class="tl">${ms.map(([, t, st, sub]) => `<li class="${st}"><i></i><span>${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></li>`).join('')}</ol>
-      ${k ? `<div class="gocl"><b>Hồ sơ gốc từng chứng từ</b>${k.lines.map((l) => `<label><input type="checkbox" data-gk="${k.id}|${l.id}" ${l.goc === 'da_nhan' ? 'checked' : ''}> ${esc(l.ncc)} · HĐ ${esc(l.so_hd)}${l.thieu ? ` <em>— ${esc(l.thieu)}</em>` : ''}</label>`).join('')}</div>` : '<div class="hist">KUNN này chưa có trong sổ hóa đơn của tool (chỉ có trong file Excel).</div>'}
+      ${nd && nd.src === 'hs' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.none ? '<div class="hist">Không có chứng từ phải bổ sung</div>' : nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kbx="${r.hs.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}${b.ban ? ` <em>(${esc(b.ban)})</em>` : ''}</label><input type="date" class="inp" data-kbh="${r.hs.id}|${i}" value="${esc(BK.toISO(b.han) || '')}" title="Hạn nhận bản gốc — sửa được"></div>`).join('')}<a class="lnk" href="${hashOf({ cid: c.id, hs: r.hs.id })}">Sửa danh sách trong hồ sơ →</a></div>`
+        : k ? `<div class="gocl"><b>Bản gốc từng chứng từ</b><label class="bsk">Hạn nhận bản gốc <input type="date" class="inp" data-khan="${k.id}" value="${esc(s ? s.han : '')}" title="Sửa hạn nhận bản gốc"></label>${k.lines.map((l) => `<label><input type="checkbox" data-gk="${k.id}|${l.id}" ${l.goc === 'da_nhan' ? 'checked' : ''}> ${esc(l.ncc)} · HĐ ${esc(l.so_hd)}${l.thieu ? ` <em>— ${esc(l.thieu)}</em>` : ''}</label>`).join('')}</div>` : '<div class="hist">KUNN này chưa có trong sổ hóa đơn của tool (chỉ có trong file Excel).</div>'}
       <div class="hist">${r.x ? `Thu nợ (theo file Excel): ${r.da_thu ? vnd(r.da_thu) + (r.x.ngay_thu ? ' ngày ' + dd(r.x.ngay_thu) : '') : 'chưa thu'} · gốc còn lại ${vnd(r.con_lai)}` : r.chuaSo ? '! Chưa có dòng trong sổ KHE_UOC của file Excel' : ''}</div>
       <div class="knotes"><b>Ghi chú quản lý</b>${(r.ns || []).slice().reverse().map((n) => `<div class="kn"><span>${NOTE_T[n.type][0]}</span><div><b>${esc(NOTE_T[n.type][1])}</b>${n.amount ? ` · ${vnd(n.amount)}` : ''}${n.ngay ? ` · ${esc(n.ngay)}` : ''}${n.text ? `<p>${esc(n.text)}</p>` : ''}<small>${esc(n.by || '')} · ${new Date(n.at).toLocaleString('vi-VN')}</small></div><button class="lnk" data-kndel="${esc(n.id)}" title="Xóa ghi chú">✕</button></div>`).join('') || '<div class="hist">Chưa có — ghi lại KH trả 1 phần, gia hạn, quá hạn đang xử lý…</div>'}
         <div class="knf"><select class="inp" id="knT">${Object.entries(NOTE_T).map(([k, [i, l]]) => `<option value="${k}">${i} ${l}</option>`).join('')}</select><input class="inp" id="knA" placeholder="Số tiền trả (nếu có)"><input class="inp" id="knD" placeholder="Ngày (dd/mm/yyyy)"><input class="inp" id="knX" placeholder="Nội dung…"><button class="btn sm pri" id="knAdd">＋ Ghi</button></div>
@@ -6324,18 +6333,23 @@ function renderCoKunn(body, c) {
   body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l} · ${k === 'del' ? gone.length : rows.filter(fn).length}</button>`).join('')}<span style="flex:1"></span>
       <input class="inp" id="kq2" placeholder="Số KUNN, số hóa đơn…" value="${esc(V.kq || '')}" style="width:220px"></div>
     ${!c.ledger ? '<div class="note warn">Chưa đọc file Excel quản lý giải ngân của công ty — dư nợ, đáo hạn, thu nợ lấy từ file đó. <button class="lnk" data-ctab2="info">Chọn file →</button></div>' : ''}
-    <div class="kwrap"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Gốc còn lại</th><th>Hồ sơ gốc</th><th>Chứng từ bổ sung</th></tr></thead><tbody>
+    <div class="kwrap"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Gốc còn lại</th><th>Bổ sung bản gốc</th></tr></thead><tbody>
       ${list.map((r, i) => `<tr data-kr="${i}" class="${r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls ? `<div class="hist">${String(r.ls).replace('.', ',')}%${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
         <td>${r.dao_han ? `<b class="${r.live && r.dLeft != null && r.dLeft <= 15 ? 'wtxt' : ''}">${dd(r.dao_han)}</b><div class="hist">${r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : 'đã tất toán'}</div>` : '—'}</td>
-        <td class="num">${r.con_lai != null ? vnd(r.con_lai) : '<span class="m">—</span>'}${r.da_thu ? `<div class="hist">đã thu ${trieu(r.da_thu)}</div>` : ''}</td><td>${gocPill(r)}</td>
-        <td>${r.bs.length ? r.bs.map((b) => `<div class="hist">${esc(b.ten)} — hạn ${esc(b.han)}</div>`).join('') : '<span class="m">—</span>'}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Không có KUNN</td></tr>'}
-      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td colspan="2" class="hist">${c.ledger && c.ledger.hm ? `hạn mức ${trieu(c.ledger.hm)} · khả dụng ${trieu(c.ledger.hm - BK.sum(list.filter((r) => r.live).map((r) => r.con_lai || 0)))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet">${det(sel)}</aside></div>`;
+        <td class="num">${r.con_lai != null ? vnd(r.con_lai) : '<span class="m">—</span>'}${r.da_thu ? `<div class="hist">đã thu ${trieu(r.da_thu)}</div>` : ''}</td><td>${needPill(r)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Không có KUNN</td></tr>'}
+      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${c.ledger && c.ledger.hm ? `hạn mức ${trieu(c.ledger.hm)} · khả dụng ${trieu(c.ledger.hm - BK.sum(list.filter((r) => r.live).map((r) => r.con_lai || 0)))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet">${det(sel)}</aside></div>`;
   $$('[data-kf]', body).forEach((b) => { b.onclick = () => { V.kf = b.dataset.kf; renderMain(); }; });
   $$('[data-kr]', body).forEach((tr) => { tr.onclick = () => { const r = list[+tr.dataset.kr]; V.kunnSel = r.k ? r.k.id : null; V.kunnSelSo = r.so; renderMain(); }; });
   $$('[data-ctab2]', body).forEach((b) => { b.onclick = () => go({ tab: b.dataset.ctab2 }); });
   const kq = $('#kq2', body);
   kq.oninput = () => { V.kq = kq.value; clearTimeout(kq._t); kq._t = setTimeout(() => { renderMain(); const n = $('#kq2'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
-  body.onchange = async (e) => { const t = e.target; if (t.dataset.gk) { const [kid, lid] = t.dataset.gk.split('|'); await setGoc(S.store.k.get(kid), [lid], t.checked ? 'da_nhan' : 'chua'); } };
+  body.onchange = async (e) => { const t = e.target;
+    if (t.dataset.khan) { const v = t.value; await S.store.updateKunn(t.dataset.khan, { han_bs: v }); log(c.id, 'han_goc', `Đổi hạn nhận bản gốc KUNN ${(S.store.k.get(t.dataset.khan) || {}).so_kunn || ''} → ${dd(v)}`); return; }
+    if (t.dataset.kbx || t.dataset.kbh) {
+      const [hid, i] = (t.dataset.kbx || t.dataset.kbh).split('|');
+      return hsPatch(hid, (x) => { const b = (x.bo_sung || [])[+i]; if (!b) return; if (t.dataset.kbx) b.xong = t.checked; else { b.han = dd(t.value); const g = BK.toISO(x.ngay_gn); if (g && t.value) b.ngay = String(BK.daysBetween(g, t.value)); } }, t.dataset.kbx ? 'Đánh dấu đã nhận bản gốc' : 'Đổi hạn bổ sung bản gốc');
+    }
+    if (t.dataset.gk) { const [kid, lid] = t.dataset.gk.split('|'); await setGoc(S.store.k.get(kid), [lid], t.checked ? 'da_nhan' : 'chua'); } };
   const saveNotes = async (fn, label) => { const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; const k = kkey(sel.so); all[k] = fn([...(all[k] || [])]); if (!all[k].length) delete all[k]; S.store.labelNext(label); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() }); };
   if ($('#knAdd', body)) $('#knAdd', body).onclick = async () => {
     const type = $('#knT', body).value, amount = DOCX.num($('#knA', body).value), ngay = $('#knD', body).value.trim(), text = $('#knX', body).value.trim();
