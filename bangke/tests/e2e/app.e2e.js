@@ -545,6 +545,17 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   await t1.locator('tr', { hasText: 'TRẦN VĂN MẪU' }).locator('td').nth(1).locator('.dp').click();
   await page.click('[data-w="col:del"]');
   assert.equal(await t1.locator('tr').first().locator('td').count(), 3);
+  // kẻ khung: bỏ hết khung bảng
+  await kunn.locator('.dp', { hasText: /^Đại diện$/ }).click();
+  await page.selectOption('#wBd', 'none');
+  assert.equal(await t1.locator('td').first().evaluate((x) => getComputedStyle(x).borderTopStyle), 'none');
+  // gõ "1. " đầu đoạn → thụt dòng treo, Enter ra "2. "
+  await kunn.locator('.dp', { hasText: 'Đoạn mới gõ tay.' }).click(); await page.keyboard.press('End');
+  await page.keyboard.press('Enter'); await page.keyboard.type('1. Mục một');
+  const li = kunn.locator('.dp', { hasText: '1. Mục một' });
+  assert.ok(parseFloat(await li.evaluate((x) => getComputedStyle(x).textIndent)) < 0, 'thụt dòng treo');
+  await page.keyboard.press('Enter'); await page.keyboard.type('Mục hai');
+  await kunn.locator('.dp', { hasText: '2. Mục hai' }).waitFor();
   // PDGN
   await page.click('[data-hk="pdgn"]');
   const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('.hs-empty [data-tplload]')]);
@@ -587,6 +598,9 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   assert.equal((kt.pre.match(/<w:gridCol /g) || []).length, 3, 'lưới cột có cột mới');
   assert.ok(kt.rows.every((r) => r.cells.length === 3));
   assert.ok(tk.includes('Cột mới'));
+  assert.ok(tk.includes('2. Mục hai'));
+  assert.match(xk, /<w:ind w:left="\d+"[^>]*w:hanging="\d+"\/>(?:(?!<\/w:pPr>)[\s\S])*<\/w:pPr>(?:(?!<w:p>)[\s\S])*1\. Mục một/, 'thụt dòng treo ghi vào Word');
+  assert.match(xk, /<w:tcBorders><w:top w:val="nil"\/>/, 'bỏ khung ghi vào Word');
   assert.ok(tk.includes('Bằng chữ: Năm tỷ đồng.'));
   assert.match(xk, /<w:color w:val="FF0000"\/>/, 'bản soát giữ chữ đỏ');
   // lưu → đóng → mở lại: phần sửa tay và số liệu còn nguyên
@@ -712,6 +726,25 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.kn', { hasText: 'KH trả nợ 1 phần' }).waitFor();
   assert.match(await page.locator('.kdet').innerText(), /dư nợ còn ≈ 4\.480\.500\.000 đ/);
   assert.notEqual(await page.locator('.kwrap tfoot').innerText(), tot0, 'dòng tổng cập nhật theo ghi chú');
+  // xóa KUNN nháp trên bảng theo dõi → mục “Đã xóa / ẩn” → khôi phục; dòng từ file Excel thì ẩn / hiện lại
+  await page.click('[data-kf="all"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).click();
+  await page.click('[data-kdel]');
+  await page.locator('.toast div', { hasText: 'Đã xóa KUNN 1000001(9).26' }).waitFor();
+  assert.doesNotMatch(await page.locator('.kwrap tbody').innerText(), /1000001\(9\)\.26/);
+  await page.click('[data-kf="del"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).click();
+  await page.click('[data-krestore]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).waitFor();
+  assert.match(await page.locator('.kdet').innerText(), /Lịch sử thay đổi/);
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).click();
+  await page.click('[data-khide]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).waitFor({ state: 'detached' });
+  await page.click('[data-kf="del"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).click();
+  await page.click('[data-krestore]');
+  await page.click('[data-kf="live"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).waitFor();
   // xóa hồ sơ không cần nữa (hoàn tác được)
   await page.click('[data-ctab="hoso"]');
   await page.locator('[data-hsdel]').first().click();

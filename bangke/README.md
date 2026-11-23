@@ -66,7 +66,9 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
     Enter thêm đoạn, thêm/xóa dòng bảng (thanh nhỏ hiện ở lề trái trang khi rê chuột vào dòng), tick ô ☐ (cả ô tick
     kiểu cũ FORMCHECKBOX). **Thanh công cụ kiểu Word**: phông, cỡ chữ, đậm / nghiêng / gạch chân / gạch ngang, chỉ số
     trên/dưới, màu chữ, tô sáng, trả định dạng về như mẫu, căn trái/giữa/phải/đều, thụt lề, chèn/xóa dòng bảng,
-    chèn/xóa cột bảng, tìm & thay (Ctrl+H), hoàn tác / làm lại (Ctrl+Z / Ctrl+Y), phóng to thu nhỏ (Ctrl + lăn chuột) — định dạng đổi
+    chèn/xóa cột bảng, kẻ / bỏ khung bảng (cả bảng, khung ngoài, từng ô, cả dòng), gõ "1. " / "a) " / "- " đầu đoạn tự
+    thụt dòng treo và Enter tự ra số / gạch tiếp (Enter ở mục trống = kết thúc danh sách), số thứ tự của Word không xóa
+    nhầm được và tự đánh lại khi thêm đoạn, bảng giữ đúng độ rộng cột của file gốc, tìm & thay (Ctrl+H), hoàn tác / làm lại (Ctrl+Z / Ctrl+Y), phóng to thu nhỏ (Ctrl + lăn chuột) — định dạng đổi
     được ghi vào file Word xuất ra. Kiểm tra: số tiền ≠ tổng chứng từ, bằng chữ sai, vượt khả dụng,
     chứng từ sau ngày GN / quá 90 ngày (đối chiếu công nợ), CIC quá 10 ngày, GN trước HĐTD / sau hạn HM, thiếu TK thụ
     hưởng, LS < FTP, ô còn trống; **🤖 AI rà soát** đối chiếu chéo KUNN ↔ PDGN.
@@ -76,7 +78,9 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   Excel trình bày lạ → hộp **chọn cột tay** (sheet, hàng tiêu đề, cột nào là gì, xem trước số dòng); xem trước file Excel
   ngay trong trang chứng từ; nhận **Báo cáo CLTF (CL - KERNEL - TF)**: so hạn mức khả dụng với số tiền giải ngân, cảnh
   báo CLTF cũ. **Số KUNN**: chỉ số trong ngoặc tự +1 mỗi lần; số gốc và đuôi năm (đổi khi có gói giải ngân / HĐTD
-  mới) sửa trực tiếp, tool nhớ cho công ty.
+  mới) sửa trực tiếp, tool nhớ cho công ty. Xóa file chứng từ khỏi hồ sơ ngay trong trang xem chứng từ.
+- **Bảng theo dõi KUNN**: xóa KUNN của tool (vd bản nháp) / ẩn dòng từ file Excel; mục **🗑 Đã xóa / ẩn** để khôi phục
+  bất cứ lúc nào (bản xóa giữ nguyên các dòng bảng kê), kèm **lịch sử thay đổi** của từng KUNN; ↶ hoàn tác ngay.
 
 ## Cài đặt (nút ⚙ hoặc Alt+F9)
 - **API key Gemini**: nạp trong Cài đặt, lưu trên trình duyệt máy đó. Không ghi key vào file.
