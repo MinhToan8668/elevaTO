@@ -721,7 +721,7 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.click('[data-ms="soan"]');
   await page.locator('#oxKunn.focus-red').waitFor();
   // chứng từ bổ sung bản gốc: gợi ý từ chứng từ đã thả, số ngày theo yêu cầu ĐVKD → hạn
-  await page.click('#hsBsSug');
+  await page.locator('.ck', { hasText: 'Chưa chọn chứng từ phải bổ sung bản gốc' }).locator('[data-fx="bssug"]').click();
   await page.locator('#oxBs .bsr2').first().waitFor();
   assert.match(await page.locator('#oxBs').innerText(), /nhập số ngày/);
   await page.fill('#oxBs [data-bsf="0|ngay"]', '15'); await page.press('#oxBs [data-bsf="0|ngay"]', 'Tab');
