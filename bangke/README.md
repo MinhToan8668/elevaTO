@@ -63,7 +63,11 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
     đáo hạn (số ngày vay hoặc số tháng, cảnh báo rơi vào lễ Tết), ngày trả lãi đầu, CLTF khả dụng, **TestKey**
     (cùng công thức tool `giaingan/`, bảng key nạp riêng trên từng máy — không nằm trong file).
   - Giao diện giống bản Word: **chữ đỏ = tool điền** (bấm để sửa, áp dụng mọi chỗ), sửa tự do từng đoạn (nền vàng),
-    Enter thêm đoạn, thêm/xóa dòng bảng, tick ô ☐. Kiểm tra: số tiền ≠ tổng chứng từ, bằng chữ sai, vượt khả dụng,
+    Enter thêm đoạn, thêm/xóa dòng bảng (thanh nhỏ hiện ở lề trái trang khi rê chuột vào dòng), tick ô ☐ (cả ô tick
+    kiểu cũ FORMCHECKBOX). **Thanh công cụ kiểu Word**: phông, cỡ chữ, đậm / nghiêng / gạch chân / gạch ngang, chỉ số
+    trên/dưới, màu chữ, tô sáng, trả định dạng về như mẫu, căn trái/giữa/phải/đều, thụt lề, chèn/xóa dòng bảng,
+    tìm & thay (Ctrl+H), hoàn tác / làm lại (Ctrl+Z / Ctrl+Y), phóng to thu nhỏ (Ctrl + lăn chuột) — định dạng đổi
+    được ghi vào file Word xuất ra. Kiểm tra: số tiền ≠ tổng chứng từ, bằng chữ sai, vượt khả dụng,
     chứng từ sau ngày GN / quá 90 ngày (đối chiếu công nợ), CIC quá 10 ngày, GN trước HĐTD / sau hạn HM, thiếu TK thụ
     hưởng, LS < FTP, ô còn trống; **🤖 AI rà soát** đối chiếu chéo KUNN ↔ PDGN.
   - **Xuất Word** (tùy chọn giữ chữ đỏ để soát), **Lưu** (nhớ thông tin KH cho lần sau, phần sửa tay theo KUNN).

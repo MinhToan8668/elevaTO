@@ -511,6 +511,24 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   await p.click(); await page.keyboard.press('End'); await page.keyboard.type(' Bổ sung thêm.');
   await page.keyboard.press('Enter'); await page.keyboard.type('Đoạn mới gõ tay.');
   await kunn.locator('.dp.ed', { hasText: 'Đoạn mới gõ tay.' }).waitFor();
+  // thanh công cụ kiểu Word: bôi đen → đậm, cỡ 14, căn giữa; hoàn tác / làm lại; tìm & thay
+  const np = kunn.locator('.dp', { hasText: 'Đoạn mới gõ tay.' });
+  await np.click(); await page.keyboard.press('Home'); await page.keyboard.press('Shift+End');
+  await page.click('[data-w="bold"]');
+  assert.equal(await np.evaluate((el) => getComputedStyle(el.querySelector('span[style*="bold"]') || el).fontWeight), '700');
+  await page.selectOption('#wSize', '14');
+  await page.click('[data-w="jc:center"]');
+  assert.equal(await np.evaluate((el) => getComputedStyle(el).textAlign), 'center');
+  await page.keyboard.press('Control+z');
+  assert.notEqual(await kunn.locator('.dp', { hasText: 'Đoạn mới gõ tay.' }).evaluate((el) => getComputedStyle(el).textAlign), 'center', 'hoàn tác bỏ căn giữa');
+  await page.click('[data-w="redo"]');
+  assert.equal(await kunn.locator('.dp', { hasText: 'Đoạn mới gõ tay.' }).evaluate((el) => getComputedStyle(el).textAlign), 'center', 'làm lại');
+  await page.click('[data-w="find"]');
+  await page.fill('#wfQ', 'Bổ sung thêm'); await page.fill('#wfR', 'Bổ sung thêm nữa');
+  await page.click('[data-w="fall"]');
+  await kunn.locator('.dp', { hasText: 'Bổ sung thêm nữa.' }).waitFor();
+  await page.click('[data-w="fclose"]');
+  assert.match(await page.locator('#hsStat').innerText(), /đoạn đã sửa/);
   // thêm 1 dòng vào bảng thông tin KH bằng thanh dòng
   await kunn.locator('table:not(.lt) tr', { hasText: 'Đại diện' }).hover();
   await page.click('.rowbar [data-rb="down"]');
@@ -527,11 +545,19 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   assert.match(await pdgn.innerText(), /đồng ý ngày 19\/11\/2026/);
   await pdgn.locator('.dc').first().click();
   assert.equal(await pdgn.locator('.dc').first().innerText(), '☐');
+  // ô tick kiểu cũ (FORMCHECKBOX) hiện đúng, không lộ mã trường; bảng không bị bẻ chữ từng ký tự
+  assert.doesNotMatch(await pdgn.innerText(), /FORMCHECKBOX/);
+  const lcb = pdgn.locator('.dp', { hasText: 'Không đồng ý' }).locator('.dc');
+  assert.equal(await lcb.innerText(), '☐');
+  await lcb.click(); assert.equal(await lcb.innerText(), '☒');
+  const cif = await pdgn.locator('.df[data-f="cif"]').boundingBox();
+  assert.ok(cif.height < 30, 'ô CIF không bị co cột');
   // xuất Word PDGN rồi KUNN, đọc lại file
   const [d1] = await Promise.all([page.waitForEvent('download'), page.click('#hsExp')]);
   const zp = await JSZip.loadAsync(await readFile(await d1.path()));
   const xp = await zp.file('word/document.xml').async('string');
   assert.match(xp, /w14:checked w14:val="0"/);
+  assert.match(xp, /<w:default w:val="0"\/><w:checked w:val="1"\/>/, 'ô tick kiểu cũ được tick');
   assert.match(xp, /<w:vMerge w:val="restart"\/>/);
   assert.doesNotMatch(xp, /\{\{/, 'không còn trường chưa thay');
   await page.click('[data-hk="kunn"]');
@@ -540,7 +566,10 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   assert.match(d2.suggestedFilename(), /^KUNN_5500777_3_\.26/);
   const xk = await (await JSZip.loadAsync(await readFile(await d2.path()))).file('word/document.xml').async('string');
   const tk = []; DOCX.walk(DOCX.parse(xk).blocks, (q) => tk.push(DOCX.ptext(q)));
-  assert.ok(tk.includes('Tài sản bảo đảm riêng của khách hàng An Bình. Bổ sung thêm.') && tk.includes('Đoạn mới gõ tay.'));
+  assert.ok(tk.includes('Tài sản bảo đảm riêng của khách hàng An Bình. Bổ sung thêm nữa.') && tk.includes('Đoạn mới gõ tay.'));
+  const pm = /<w:p>(<w:pPr>[\s\S]*?<\/w:pPr>)?((?:(?!<w:p>)[\s\S])*?)Đoạn mới gõ tay\./.exec(xk);
+  assert.match(pm[1] || '', /<w:jc w:val="center"\/>/, 'căn giữa ghi vào Word');
+  assert.match(pm[2], /<w:b\/>[\s\S]*<w:sz w:val="28"\/>/, 'đậm + cỡ 14 ghi vào Word');
   assert.ok(tk.includes('Lãi suất tại thời điểm giải ngân: 9.2%/năm.'));
   assert.ok(tk.includes('Bằng chữ: Năm tỷ đồng.'));
   assert.match(xk, /<w:color w:val="FF0000"\/>/, 'bản soát giữ chữ đỏ');

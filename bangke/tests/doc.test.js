@@ -1,7 +1,7 @@
 // Soạn KUNN & PDGN: học mẫu từ file Word đã điền, nhân bảng theo danh sách, tính toán, kiểm tra, ghi lại Word.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DOCX, JSZip, docx, docXml, P, KUNN_BODY, PDGN_BODY } from './load.js';
+import { DOCX, JSZip, docx, docXml, P, KUNN_BODY, PDGN_BODY, LCB } from './load.js';
 
 const learnOf = (body) => DOCX.learn(DOCX.parse(docXml(body)));
 const texts = (doc) => { const out = []; DOCX.walk(doc.blocks, (p) => out.push(DOCX.ptext(p))); return out; };
@@ -75,6 +75,26 @@ test('học mẫu PDGN: ô nhãn → giá trị, CLTF, CIC, bảng chứng từ 
   assert.deepEqual(tb.rows.slice(1, 4).map((row) => DOCX.ctext(row.cells[3])), ['1', '2', '7']);
   // ô tick (checkbox) giữ được và đổi được
   assert.match(DOCX.setCb(`<w14:checked w14:val="1"/><w:t>☒</w:t>`, false), /w14:val="0"\/><w:t>☐/);
+});
+
+test('ô tick kiểu cũ FORMCHECKBOX: không lộ mã trường, tick/bỏ tick ghi đúng; đổi định dạng chữ / đoạn đúng thứ tự Word', () => {
+  const d = DOCX.parse(docXml(LCB(true, 'Đồng ý') + LCB(false, 'Không đồng ý')));
+  const [a, b] = d.blocks;
+  assert.equal(a.items[0].k, 'cb'); assert.equal(a.items[0].on, true); assert.equal(b.items[0].on, false);
+  assert.equal(DOCX.pview(a).trim(), '☒ Đồng ý');
+  assert.doesNotMatch(DOCX.pview(b), /FORMCHECKBOX/);
+  const off = DOCX.setCb(a.items[0].xml, false);
+  assert.match(off, /<w:default w:val="1"\/><w:checked w:val="0"\/>/);
+  assert.equal(DOCX.legacyOn(off), false);
+  assert.equal(DOCX.legacyOn(DOCX.setCb(b.items[0].xml, true)), true);
+  const xml = DOCX.serialize({ ...d, blocks: [{ ...a, items: [{ ...a.items[0], on: false }, ...a.items.slice(1)] }] });
+  assert.match(xml, /FORMCHECKBOX[\s\S]*fldCharType="end"/, 'giữ nguyên trường Word');
+  assert.equal(DOCX.parse(xml).blocks[0].items[0].on, false);
+  assert.equal(DOCX.patchRPr('<w:rPr><w:sz w:val="24"/><w:rFonts w:ascii="X"/></w:rPr>', { b: true, color: 'FF0000' }), '<w:rPr><w:rFonts w:ascii="X"/><w:b/><w:bCs/><w:color w:val="FF0000"/><w:sz w:val="24"/></w:rPr>');
+  assert.equal(DOCX.patchRPr('', { i: true, bg: 'FFFF00' }), '<w:rPr><w:i/><w:iCs/><w:highlight w:val="yellow"/></w:rPr>');
+  assert.equal(DOCX.patchRPr('<w:rPr><w:highlight w:val="yellow"/></w:rPr>', { bg: 'ABCDEF', sz: 13 }), '<w:rPr><w:sz w:val="26"/><w:szCs w:val="26"/><w:shd w:val="clear" w:color="auto" w:fill="ABCDEF"/></w:rPr>');
+  assert.equal(DOCX.patchPPr('<w:pPr><w:spacing w:after="0"/><w:ind w:firstLine="720"/><w:rPr><w:b/></w:rPr></w:pPr>', { jc: 'center', indL: 720 }), '<w:pPr><w:spacing w:after="0"/><w:ind w:left="720" w:firstLine="720"/><w:jc w:val="center"/><w:rPr><w:b/></w:rPr></w:pPr>');
+  assert.equal(DOCX.patchPPr('', { jc: 'right' }), '<w:pPr><w:jc w:val="right"/></w:pPr>');
 });
 
 test('số tiền bằng chữ (giống hàm DocSoTien của tool cũ), ngày đáo hạn, ngày trả lãi, TestKey', () => {
