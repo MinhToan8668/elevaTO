@@ -160,3 +160,15 @@ test('sổ theo dõi KUNN tự lập (file nhiều sheet): gợi ý đúng sheet
   const L2 = HSC.readLedgerSheet(edited, cf);
   assert.equal(L2.n_live, 3, 'thấy cả KUNN mới thêm');
 });
+
+test('báo cáo CLTF (CL - KERNEL - TF): nhận loại, so hạn mức khả dụng với số tiền giải ngân, cảnh báo CLTF cũ', () => {
+  const d = HSC.normDocs({ docs: [{ loai: 'khac', conf: 0.9, f: { mo_ta: 'Báo cáo CL - KERNEL - TF của khách hàng' } }] }, 'f1');
+  assert.equal(d[0].loai, 'cltf');
+  const doc = { id: 'c1', fileId: 'f1', loai: 'cltf', f: { ngay: '20/10/2026', hm: '350000000000', du_no: '330000000000' }, ok: true };
+  const line = { id: 'l1', ncc: 'A', so_hd: 'PO 1', ngay_hd: '2026-10-07', tien_hd: 3e10, tien_gn: 28913500000 };
+  const cs = HSC.checks({ lines: [line], docs: [doc], ngay_gn: '2026-10-27' }, { kh: {}, kunns: [] });
+  assert.ok(cs.some((c) => c.key === 'cltf_vuot' && c.sev === 3), 'vượt khả dụng 20 tỷ');
+  assert.ok(cs.some((c) => c.key === 'cltf_old' && c.sev === 2), 'CLTF cũ 7 ngày');
+  const ok = HSC.checks({ lines: [line], docs: [{ ...doc, f: { ...doc.f, ngay: '27/10/2026', du_no: '100000000000' } }], ngay_gn: '2026-10-27' }, { kh: {}, kunns: [] });
+  assert.ok(ok.some((c) => c.key === 'cltf_ok'));
+});
