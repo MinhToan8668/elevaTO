@@ -5206,7 +5206,7 @@ const listSig = () => JSON.stringify([HE.lists.ct.map((x) => x._g), HE.lists.tth
 async function openHoSo(cid, kid, hsId) {
   const c = cust(cid); if (!c) return;
   const k = kid && live(S.store.k.get(kid)) ? S.store.k.get(kid) : null;
-  const draft = !k ? await S.store.getMeta('draft:' + cid) : null;
+  const draft = !k ? await S.store.getMeta(hsId ? 'draft:hs:' + hsId : 'draft:' + cid) : null;
   const saved = (k && k.doc) || draft || {};
   const v = { loai_tien: 'VND' };
   for (const f of DOCX.HS_FIELDS) if (f.s === 'c' && c.hs && c.hs[f.k] != null && c.hs[f.k] !== '') v[f.k] = c.hs[f.k];
@@ -5216,8 +5216,8 @@ async function openHoSo(cid, kid, hsId) {
   if (/chưa số/i.test(v.so_kunn || '')) v.so_kunn = '';
   // số liệu lấy từ file Excel quản lý giải ngân của công ty (dư nợ, hạn mức) và từ hồ sơ (CIC, số ngày vay)
   const L = c.ledger, hsx = hsId ? S.store.h.get(hsId) : null;
-  if (L || S.store.kunnsOf(c.id).length) {
-    const dn = duNoOf(c, (hsx && hsx.so_kunn) || v.so_kunn);
+  if (duNoKnown(c, (hsx && hsx.so_kunn) || v.so_kunn, hsx)) {
+    const dn = duNoOf(c, (hsx && hsx.so_kunn) || v.so_kunn, hsx);
     v.du_no_truoc = Math.round(dn).toLocaleString('en-US');
     v.sd_vay = Math.round(dn / 1e6).toLocaleString('en-US');
     if (L && L.hm) v.hm_tong = Math.round(L.hm / 1e6).toLocaleString('en-US');
@@ -5236,7 +5236,7 @@ async function openHoSo(cid, kid, hsId) {
   Object.assign(v, saved.v || {});
   // giá trị tự lấy (hạn mức theo ngày GN, lãi suất gói) đã đổi kể từ lần lưu → dùng giá trị mới, trừ khi bạn đã sửa tay
   for (const [f, x] of Object.entries(auto)) if (!saved.v || saved.v[f] == null || saved.v[f] === '' || (saved.auto && saved.v[f] === saved.auto[f])) v[f] = x;
-  if (hsx) { if (hsx.so_kunn) v.so_kunn = hsx.so_kunn; if (hsx.ngay_gn) v.ngay_gn = dd(BK.toISO(hsx.ngay_gn)); }
+  if (hsx) { if (hsx.so_kunn) v.so_kunn = hsx.so_kunn; if (hsx.ngay_gn) v.ngay_gn = dd(BK.toISO(hsx.ngay_gn)); if (hsx.so_ngay_vay) v.so_ngay_vay = hsx.so_ngay_vay; if (hsx.ls) v.lai_suat = String(hsx.ls); }
   HE = { auto, cid, kid, hsId: hsId || null, c: structuredClone(c), k, v, ov: new Set(saved.ov || []), lists: saved.lists ? { bs: [], ...structuredClone(saved.lists) } : { ct: DOCX.linesToCt(k ? k.lines : []), tth: [], bs: [] }, listsEdited: !!saved.lists, saved, kinds: {}, cur: lsGet('bangke_hs_tab') || 'kunn', dirty: false, ai: null };
   if (hsx && (hsx.bo_sung || []).length) HE.lists.bs = hsx.bo_sung.map((b) => ({ ten: b.ten, ban: b.ban || 'Sao', han: parseInt(b.ngay, 10) > 0 ? `${b.ngay} ngày kể từ ngày giải ngân` : b.han || '' }));
   else if (hsx && hsx.bs_none) HE.lists.bs = [{ ten: 'Không có', ban: '', han: '' }];
@@ -5957,7 +5957,7 @@ function hsFromDoc() {
   if (!HE || !HE.hsId) return;
   const h = hsGet(HE.hsId); if (!h) return;
   const v = HE.v, gn = BK.toISO(v.ngay_gn) || BK.toISO(h.ngay_gn), ch = {};
-  if (v.so_kunn && !/chưa số/i.test(v.so_kunn) && v.so_kunn !== h.so_kunn) ch.so_kunn = v.so_kunn;
+  if (v.so_kunn && !/chưa số/i.test(v.so_kunn) && v.so_kunn !== h.so_kunn && !kunnTakenOther(cust(h.customerId) || HE.c, h).has(kkey(v.so_kunn))) ch.so_kunn = v.so_kunn;
   const ls = DOCX.num(v.lai_suat); if (ls != null && ls > 0 && ls < 50 && String(ls) !== String(h.ls || '')) ch.ls = String(ls);
   const dh = BK.toISO(v.ngay_dao_han);
   let snv = parseInt(v.so_ngay_vay, 10) || null;
@@ -5993,7 +5993,7 @@ async function hsSave() {
     await S.store.putCustomer({ ...c0, hs, ...meta() });
     if (HE.kid) await S.store.updateKunn(HE.kid, { doc, ...meta() });
   });
-  if (!HE.kid) await S.store.setMeta('draft:' + HE.cid, doc);
+  if (!HE.kid) await S.store.setMeta(HE.hsId ? 'draft:hs:' + HE.hsId : 'draft:' + HE.cid, doc);
   HE.c = cust(HE.cid) || HE.c; HE.saved = doc; HE.dirty = false;
   log(HE.cid, 'soan_hs', `Lưu hồ sơ KUNN/PDGN ${HE.v.so_kunn || '(chưa số)'}`);
   toast('Đã lưu hồ sơ (thông tin KH được nhớ cho lần sau)', 'ok');
@@ -6099,7 +6099,7 @@ function hsChecks(hs) {
   const c = hsCache.get(hs.id);
   if (c && c.key === key) return c.cs;
   const kh = cust(hs.customerId) || {};
-  const cs = HSC.checks(hs, { kh, kunns: S.store.kunnsOf(hs.customerId), ledger: kh.ledger, tth: (hs.tth || []), today: BK.todayISO(), hmHist: kh.hmHist, goi: goiOf(kh), goiRows: goiRowsOf(kh), duNo: duNoOf(kh, hs.so_kunn) });
+  const cs = HSC.checks(hs, { kh, kunns: S.store.kunnsOf(hs.customerId), ledger: kh.ledger, tth: (hs.tth || []), today: BK.todayISO(), hmHist: kh.hmHist, goi: goiOf(kh), goiRows: goiRowsOf(kh), duNo: duNoKnown(kh, hs.so_kunn, hs) ? duNoOf(kh, hs.so_kunn, hs) : undefined });
   hsCache.set(hs.id, { key, cs });
   return cs;
 }
@@ -6157,13 +6157,10 @@ function manualDue(c, k, end, out) {
 function dueList(days = 30) {
   const today = BK.todayISO(), end = BK.addDays(today, days), out = [];
   for (const c of S.customers) {
-    if (c.ledger) {
-      for (const k of c.ledger.kunns) { if (!(k.con_lai > 0.5)) continue; const a = applyNotes(c, k); if (a.closed || !a.con || !a.due || a.due > end) continue; out.push({ c, so: k.so, dh: a.due, tien: a.con, src: 'Excel', ns: a.ns }); }
-      // KUNN nhập tay chưa có trong file Excel
-      const have = new Set(c.ledger.kunns.map((x) => kkey(x.so)));
-      for (const k of S.store.kunnsOf(c.id)) if (k.manual && !have.has(kkey(k.so_kunn))) manualDue(c, k, end, out);
-    } else {
-      for (const k of S.store.kunnsOf(c.id)) { if (k.manual) { manualDue(c, k, end, out); continue; } if (k.ngay_dh && k.ngay_dh >= today && k.ngay_dh <= end) out.push({ c, so: k.so_kunn, dh: k.ngay_dh, tien: BK.sum(k.lines.map((l) => l.tien_gn)), src: 'bảng kê' }); }
+    for (const r of kunnRowsOf(c)) {
+      if (!r.live || r.closed || !r.dao_han || r.dao_han > end) continue;
+      const tien = r.con_lai != null ? r.con_lai : r.goc; if (!(tien > 0.5)) continue;
+      out.push({ c, so: r.so, dh: r.dao_han, tien, src: r.x ? 'Excel' : r.k && r.k.manual ? 'nhập tay' : 'tool', ns: r.ns });
     }
   }
   out.forEach((x) => { x.d = BK.daysBetween(today, x.dh); });
@@ -6295,7 +6292,7 @@ function renderCoOverview(body, c) {
   const L = c.ledger, ks = S.kunns.concat(xlKunns(c)), today = BK.todayISO();
   const year = today.slice(0, 4);
   const gnYear = BK.sum(ks.filter((k) => (k.ngay_gn || '').startsWith(year)).map((k) => (k.manual ? k.so_tien || 0 : BK.sum(k.lines.map((l) => l.tien_gn)))));
-  const nextDh = L ? L.kunns.filter((k) => k.con_lai > 0.5 && k.dao_han && k.dao_han >= today).sort((a, b) => a.dao_han.localeCompare(b.dao_han))[0] : null;
+  const nextDh = kunnRowsOf(c).filter((r) => r.live && r.dao_han && r.dao_han >= today && (r.con_lai ?? r.goc) > 0.5).map((r) => ({ so: r.so, dao_han: r.dao_han, con_lai: r.con_lai ?? r.goc })).sort((a, b) => a.dao_han.localeCompare(b.dao_han))[0] || null;
   const sums = S.kunns.map((k) => ({ k, s: BK.kunnSummary(k, { hanNgay: hanNgay(), today }) }));
   const gocPend = sums.filter((x) => !x.s.done);
   const krows = kunnRowsOf(c), bsPend = krows.filter((r) => r.live && r.need && !r.need.done), bsQua = bsPend.filter((r) => r.need.qua);
@@ -6413,7 +6410,7 @@ async function migrateHide(c) {
 }
 function dedupeTool(ks) {
   const by = new Map();
-  for (const k of ks) { const kk = kkey(k.so_kunn); const o = by.get(kk); if (!o || (k.updatedAt || 0) > (o.updatedAt || 0)) by.set(kk, k); }
+  for (const k of ks) { const kk = !k.so_kunn || /chưa số/i.test(k.so_kunn) ? 'id:' + k.id : kkey(k.so_kunn); const o = by.get(kk); if (!o || (k.updatedAt || 0) > (o.updatedAt || 0)) by.set(kk, k); }
   return [...by.values()];
 }
 /** Dọn KUNN lặp do ghi sổ nhiều lần từ cùng hồ sơ (giữ bản mới nhất, bỏ bản lặp giống hệt). */
@@ -6486,7 +6483,7 @@ function openKunnForm(c, k0) {
   const sync = (from) => { const g = $('#kfNg', m).value, n = parseInt($('#kfSnv', m).value, 10), d = $('#kfDh', m).value; if (from === 'dh' && g && d) $('#kfSnv', m).value = String(BK.daysBetween(g, d)); else if (g && n > 0) $('#kfDh', m).value = BK.addDays(g, n); $('#kfThu', m).innerHTML = thuHtml($('#kfDh', m).value); };
   $('#kfSnv', m).oninput = () => sync('snv'); $('#kfNg', m).onchange = () => sync('snv'); $('#kfDh', m).onchange = () => sync('dh');
   $('#kfGoi', m).onchange = (e) => { const g = gl.find((y) => y.ma === e.target.value); if (g && g.ls != null) $('#kfLs', m).value = g.ls; const nd = g && (g.so_ngay_md || g.so_ngay_max); if (nd && !$('#kfSnv', m).value) { $('#kfSnv', m).value = nd; sync('snv'); } };
-  if (!x.ngay_dh) sync('snv');
+  if (!x.ngay_dh) sync('snv'); else $('#kfThu', m).innerHTML = thuHtml(x.ngay_dh);
   $('#kfOk', m).onclick = async () => {
     const so = $('#kfSo', m).value.trim(), ng = $('#kfNg', m).value, tien = DOCX.num($('#kfTien', m).value);
     if (!so || !ng || !tien) return toast('Nhập số KUNN, ngày giải ngân và số tiền', 'err');
@@ -6541,11 +6538,14 @@ function openLsBulk(c, rows) {
 const thuOf = (iso) => (iso ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][new Date(iso + 'T00:00:00Z').getUTCDay()] : '');
 /** "Thứ 2" hoặc "! Chủ nhật / Tết…" nếu rơi vào ngày nghỉ. */
 const thuHtml = (iso) => { if (!iso) return ''; const off = DOCX.offDay(iso, holidays()); return off ? `<span class="err">! ${esc(off)}</span>` : thuOf(iso); };
-function duNoOf(c, exceptSo) {
+function duNoOf(c, exceptSo, hs) {
   if (!c) return 0;
   const ex = exceptSo && !/chưa số/i.test(exceptSo) ? kkey(exceptSo) : '';
-  return BK.sum(kunnRowsOf(c).filter((r) => r.live && !(ex && kkey(r.so) === ex)).map((r) => r.con_lai || 0));
+  return BK.sum(kunnRowsOf(c).filter((r) => r.live && !(ex && kkey(r.so) === ex) && !isOwn(r, hs)).map((r) => r.con_lai || 0));
 }
+const isOwn = (r, hs) => !!(hs && r.k && ((hs.id && r.k.hsId === hs.id) || (hs.kid && r.k.id === hs.kid)));
+/** Có số liệu dư nợ đáng tin (file Excel, hoặc ít nhất một KUNN khác trong tool đang có dư nợ) — không thì để trống, không ghi 0. */
+const duNoKnown = (c, exceptSo, hs) => { if (!c) return false; if (c.ledger) return true; const ex = exceptSo && !/chưa số/i.test(exceptSo) ? kkey(exceptSo) : ''; return kunnRowsOf(c).some((r) => r.live && r.con_lai != null && !(ex && kkey(r.so) === ex) && !isOwn(r, hs)); };
 function kunnRowsOf(c) {
   const L = c.ledger, tool = dedupeTool(S.store.kunnsOf(c.id)), hos = S.store.hosoOf(c.id), today = BK.todayISO();
   const byKey = new Map(tool.map((k) => [kkey(k.so_kunn), k]));
@@ -7070,7 +7070,7 @@ async function newHoso(c, files) {
   if (files && files.length) await addFiles(hs.id, files);
 }
 const hsGet = (id) => S.store.h.get(id);
-const hsSig = (x) => JSON.stringify([!!x.done, x.so_ngay_vay || '', x.goi || '', x.ls || '', x.so_kunn || '(chưa số)', BK.toISO(x.ngay_gn), (x.lines || []).map((l) => [l.id, l.ncc, l.so_hd, l.ngay_hd, l.tien_hd, l.tien_gn]), (x.bo_sung || []).map((b) => [b.han, b.xong]), !!x.bs_none]);
+const hsSig = (x) => { const p = (cust(x.customerId) || {}).hs || {}; return JSON.stringify([!!x.done, x.so_ngay_vay || p.so_ngay_vay || '', x.goi || '', x.ls || p.lai_suat || '', x.so_kunn || '(chưa số)', BK.toISO(x.ngay_gn), (x.lines || []).map((l) => [l.id, l.ncc, l.so_hd, l.ngay_hd, l.tien_hd, l.tien_gn]), (x.bo_sung || []).map((b) => [b.han, b.xong]), !!x.bs_none]); };
 async function hsPatch(id, fn, label) {
   const cur = hsGet(id); if (!cur || cur.deleted) return null;
   const x = structuredClone(cur); fn(x); Object.assign(x, meta());
@@ -7257,7 +7257,7 @@ function renderHoso(el, c) {
   const cs = hsChecks(hs), n = HSC.counts(cs), ms = HSC.milestones(hs, n.err);
   const total = BK.sum(hs.lines.map((l) => l.tien_gn));
   const L = c.ledger, p = c.hs || {};
-  const dnt = L || S.store.kunnsOf(c.id).length ? duNoOf(c, hs.so_kunn) : null;
+  const dnt = duNoKnown(c, hs.so_kunn, hs) ? duNoOf(c, hs.so_kunn, hs) : null;
   const gnIso = BK.toISO(hs.ngay_gn);
   const snv = +(hs.so_ngay_vay || p.so_ngay_vay) || null;
   const dh = gnIso && snv ? BK.addDays(gnIso, snv) : '';
@@ -7482,7 +7482,7 @@ async function hsToLedger(hsId, quiet) {
   const p0 = (cust(hs.customerId) || {}).hs || {}, gn0 = BK.toISO(hs.ngay_gn) || BK.todayISO(), snv0 = parseInt(hs.so_ngay_vay || p0.so_ngay_vay, 10) || null;
   const tong = BK.sum(hs.lines.map((l) => l.tien_gn)), gn1 = !!hs.done;
   const rec = { ...(k || { id: BK.uid(), customerId: hs.customerId, createdAt: Date.now(), createdBy: userName() }), so_kunn: so, ngay_gn: gn0, lines,
-    so_tien: tong, so_ngay: snv0, ngay_dh: snv0 ? BK.addDays(gn0, snv0) : (k && k.ngay_dh) || '', giai_ngan: gn1, con_lai: gn1 ? (k && k.giai_ngan && k.con_lai != null ? k.con_lai : null) : null, conAt: gn1 && !(k && k.giai_ngan) ? Date.now() : (k && k.conAt) || 0, han_bs: hans.length ? hans[hans.length - 1] : (k && k.han_bs) || '', goi: hs.goi || '', ls: hs.ls ? +hs.ls : (DOCX.num(p0.lai_suat) ?? null), source: 'Hồ sơ giải ngân', hsId, _sig: hsSig(hs), ...meta() };
+    so_tien: tong, so_ngay: snv0, ngay_dh: snv0 ? BK.addDays(gn0, snv0) : (k && k.ngay_dh) || '', giai_ngan: gn1, con_lai: gn1 ? (k && k.giai_ngan && k.con_lai != null ? k.con_lai : null) : null, conAt: (k && k.conAt) || 0, han_bs: hans.length ? hans[hans.length - 1] : (k && k.han_bs) || '', goi: hs.goi || '', ls: hs.ls ? +hs.ls : (DOCX.num(p0.lai_suat) ?? null), source: 'Hồ sơ giải ngân', hsId, _sig: hsSig(hs), ...meta() };
   await S.store.group(`Ghi hồ sơ vào sổ hóa đơn — KUNN ${so}`, async () => {
     await S.store.putKunn(rec);
     if (hs.kid !== rec.id) await hsPatch(hsId, (x) => { x.kid = rec.id; });
