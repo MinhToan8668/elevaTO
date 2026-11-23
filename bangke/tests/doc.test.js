@@ -181,3 +181,15 @@ test('PDGN: bảng "Chứng từ bổ sung" (nằm trong bảng lớn) thành da
   assert.equal(DOCX.ctext(back.rows[3].cells[3]), '45 ngày kể từ ngày giải ngân');
   assert.equal(DOCX.ctext(back.rows[4].cells[0]), 'Điều kiện khác');
 });
+
+test('PDGN: đoạn "Chứng từ giải ngân" thành trường dien_giai_ct, tool viết sẵn từ bảng chứng từ', () => {
+  const d = DOCX.parse(docXml(P('Chứng từ giải ngân:') + P('Giải ngân Mặt hàng thép: NCC Công ty Cổ phần Tập Đoàn Kim Tín, đơn đặt hàng PO 4300011572 ngày ký 07/10/2026') + P('→ phù hợp với quy định của VIB và pháp luật.') + P('Cam kết của QLKH:')));
+  const v = DOCX.learnDienGiai(d);
+  assert.match(v, /^Giải ngân Mặt hàng thép[\s\S]*pháp luật\.$/);
+  assert.equal(DOCX.ptext(d.blocks[1]), '{{dien_giai_ct}}');
+  assert.equal(DOCX.ptext(d.blocks[2]), '', 'dòng “→ phù hợp…” gộp vào trường');
+  assert.equal(DOCX.learnDienGiai(d), '', 'chạy lại không đổi');
+  const out = DOCX.calc({}, { ct: [{ ben: 'Công ty A', hd: '', so: 'PO 4300011572', ngay: '07/10/2026', gn: '1,000' }, { ben: 'Công ty B', so: '123', ngay: '01/10/2026', gn: '500' }], tth: [] });
+  assert.equal(out.dien_giai_ct, 'Giải ngân thanh toán cho NCC Công ty A, đơn đặt hàng PO 4300011572 ngày 07/10/2026; NCC Công ty B, hóa đơn số 123 ngày 01/10/2026 → phù hợp với quy định của VIB và pháp luật.');
+  assert.equal(DOCX.calc({}, { ct: [{ ben: 'A', gn: '1' }], tth: [] }, new Set(['dien_giai_ct'])).dien_giai_ct, undefined, 'đã sửa tay thì giữ');
+});

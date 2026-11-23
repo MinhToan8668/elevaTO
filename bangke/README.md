@@ -86,6 +86,11 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Chứng từ bổ sung bản gốc**: chọn chứng từ KH chỉ nộp bản sao (gợi ý từ chứng từ đã thả: hóa đơn, tiền điện, tờ
   khai…), Gốc/Sao, **số ngày theo yêu cầu ĐVKD** (đặt mặc định riêng từng công ty, không cố định 30 ngày) → hạn bổ
   sung. Danh sách tự điền vào bảng “Chứng từ bổ sung” của PDGN và dùng làm hạn hồ sơ gốc ở tab Theo dõi KUNN.
+- **Diễn giải chứng từ giải ngân (PDGN)**: đoạn sau dòng “Chứng từ giải ngân:” thành trường riêng — tool viết sẵn từ
+  bảng chứng từ (NCC, hợp đồng, PO / hóa đơn, ngày), **🤖 AI viết lại** theo văn phong mẫu, bạn sửa tiếp (sửa rồi thì giữ).
+- **Đồng bộ hồ sơ ↔ theo dõi**: hồ sơ đã chuyển sang theo dõi, sửa gì (số KUNN, ngày, dòng bảng kê, chứng từ bổ sung) thì
+  cập nhật đúng KUNN đó — không sinh KUNN lặp (bản lặp cũ tự dọn). Biểu đồ giải ngân ở Tổng quan công ty cũng tính cả KUNN
+  trong file Excel. KUNN hồ sơ ghi lệch đuôi năm so với file Excel (cùng số trong ngoặc, cùng ngày) được ghép vào một dòng.
 - **Bảng theo dõi KUNN**: **🗑 Xóa KUNN** (của tool hoặc dòng từ file Excel) → KUNN chuyển sang mục **🗑 Đã xóa** (lưu vết
   ai xóa, lúc nào), không còn tính vào bảng theo dõi, dư nợ, đáo hạn — đọc lại file Excel cũng không hiện lại; **♻ Khôi
   phục** đưa về như cũ, **✕ Xóa hẳn** bỏ luôn. Mỗi KUNN có **lịch sử thay đổi**; ↶ hoàn tác ngay.

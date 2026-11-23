@@ -737,9 +737,14 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   const zz = await JSZip.loadAsync(await readFile(await dz.path()));
   assert.deepEqual(Object.keys(zz.files).sort(), ['03_BANG_KE.xlsx', '03_BANG_KE_CHUAN_1000001_9_.26.xlsx', '04_UNC_LENH_CHI.pdf']);
   assert.match(dz.suggestedFilename(), /^HoSoGN_.*_KUNN_1000001_9_?\.26_26112026\.zip$/);
+  // ghi sổ lại / sửa hồ sơ → cập nhật đúng KUNN đó, không sinh bản lặp (bản lặp cũ được dọn)
+  await page.click('#hsLedger');
+  await page.evaluate(async () => { const { S } = window.BKAPP; const k = S.store.kunnsOf(S.cid).find((x) => x.so_kunn === '1000001(9).26'); await S.store.putKunn({ ...structuredClone(k), id: 'dup1', updatedAt: 1 }); });
   await page.click('[data-ctab="kunn"]');
   await page.click('[data-kf="all"]');
   assert.match(await page.locator('.kwrap').innerText(), /1000001\(9\)\.26/);
+  assert.equal(await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).count(), 1, 'không lặp KUNN');
+  await page.waitForFunction(() => window.BKAPP.S.store.kunnsOf(window.BKAPP.S.cid).filter((x) => x.so_kunn === '1000001(9).26').length === 1);
   assert.match(await page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' }).innerText(), /hạn 11\/12\/2026/, 'chứng từ bổ sung hiện ở bảng theo dõi');
   // ghi chú KUNN: KH trả 1 phần → dư nợ giảm, có dòng tổng
   await page.click('[data-kf="live"]');
