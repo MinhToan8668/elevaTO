@@ -270,3 +270,13 @@ test('KUNN nhập tay: hồ sơ gốc theo danh sách bổ sung; HĐMB: nhiều 
   const cs2 = HSC.checks({ lines: [{ ...L('l3', '9', '2026-02-01', 100e6), so_hdmb: 'HĐMB 01' }], docs: [{ id: 'c3', loai: 'hdmb', f: { so: '01', ngay: '01/01/2026', ben_ban: 'Công ty B', ben_mua: 'Công ty A', tien: '1000000000' } }], ngay_gn: '2026-02-05', bs_none: true }, { kh, kunns: prevK });
   assert.ok(!cs2.some((x) => /^hdmb_vuot_/.test(x.key)), '600tr + 100tr ≤ 1 tỷ');
 });
+
+test('nhập hạn mức kèm đơn vị: tỷ / tỉ / triệu / trđ / ghép “2 tỷ 500 triệu”, có chữ “đồng”; không hiểu thì báo', async () => {
+  const { DOCX } = await import('./load.js');
+  const src = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const i = src.indexOf('function parseVnd'), j = src.indexOf('const vndExact', i);
+  const parseVnd = new Function('BK', 'DOCX', src.slice(i, j) + '; return parseVnd;')(BK, DOCX);
+  const cases = { '300 tỷ': 300e9, '300 tỷ đồng': 300e9, '30 tỉ': 30e9, '500 trđ': 500e6, '500 triệu VNĐ': 500e6, '2 tỷ 500 triệu': 2.5e9, '1,2 tỷ': 1.2e9, '22,5 tỷ': 22.5e9, '47.350.000.000 đ': 47.35e9, '300.000.000.000': 300e9, '150,000': 150e9, '300': 300e6 };
+  for (const [k, v] of Object.entries(cases)) assert.equal(parseVnd(k), v, k);
+  assert.equal(parseVnd('abc'), null); assert.equal(parseVnd('5 tỷ x'), null);
+});
