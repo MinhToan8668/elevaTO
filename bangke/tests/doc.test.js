@@ -95,6 +95,8 @@ test('ô tick kiểu cũ FORMCHECKBOX: không lộ mã trường, tick/bỏ tick
   assert.equal(DOCX.patchRPr('<w:rPr><w:highlight w:val="yellow"/></w:rPr>', { bg: 'ABCDEF', sz: 13 }), '<w:rPr><w:sz w:val="26"/><w:szCs w:val="26"/><w:shd w:val="clear" w:color="auto" w:fill="ABCDEF"/></w:rPr>');
   assert.equal(DOCX.patchPPr('<w:pPr><w:spacing w:after="0"/><w:ind w:firstLine="720"/><w:rPr><w:b/></w:rPr></w:pPr>', { jc: 'center', indL: 720 }), '<w:pPr><w:spacing w:after="0"/><w:ind w:left="720" w:firstLine="720"/><w:jc w:val="center"/><w:rPr><w:b/></w:rPr></w:pPr>');
   assert.equal(DOCX.patchPPr('', { jc: 'right' }), '<w:pPr><w:jc w:val="right"/></w:pPr>');
+  assert.equal(DOCX.patchTblPre('<w:tblPr><w:tblStyle w:val="T"/><w:tblLook w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="100"/></w:tblGrid>', { 'w:tblW': '<w:tblW w:w="5000" w:type="pct"/>', 'w:tblLayout': '<w:tblLayout w:type="fixed"/>' }, [2000, 3000]),
+    '<w:tblPr><w:tblStyle w:val="T"/><w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="fixed"/><w:tblLook w:val="04A0"/></w:tblPr><w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="3000"/></w:tblGrid>');
 });
 
 test('số tiền bằng chữ (giống hàm DocSoTien của tool cũ), ngày đáo hạn, ngày trả lãi, TestKey', () => {
