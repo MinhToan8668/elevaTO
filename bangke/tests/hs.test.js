@@ -174,3 +174,10 @@ test('báo cáo CLTF (CL - KERNEL - TF): nhận loại, so hạn mức khả d�
   const ok = HSC.checks({ lines: [line], docs: [{ ...doc, f: { ...doc.f, ngay: '27/10/2026', du_no: '100000000000' } }], ngay_gn: '2026-10-27' }, { kh: {}, kunns: [] });
   assert.ok(ok.some((c) => c.key === 'cltf_ok'));
 });
+
+test('CIC: đọc mẫu báo cáo (S10A / R20) và ngày; tên file trong gói theo mẫu', () => {
+  const d = HSC.normDocs({ docs: [{ loai: 'cic', conf: 0.95, f: { mau: 'S10A', ngay: '27/10/2026', nhom_no: '1' } }, { loai: 'cic', conf: 0.95, f: { mau: 'R20', ngay: '2026-10-27' } }] }, 'f1');
+  assert.deepEqual(d.map((x) => [x.f.mau, x.f.ngay]), [['S10A', '27/10/2026'], ['R20', '27/10/2026']]);
+  const hs = { files: [{ id: 'a', name: 'cic1.pdf' }, { id: 'b', name: 'cic2.pdf' }, { id: 'c', name: 'x.pdf' }], docs: [{ ...d[0], fileId: 'a' }, { ...d[1], fileId: 'b' }], skipUp: { c: true } };
+  assert.deepEqual(HSC.packageNames(hs, hs.files).map((x) => x.name), ['09_CIC_S10A.pdf', '09_CIC_R20.pdf'], 'file đã bỏ khỏi gói không có trong gói');
+});
