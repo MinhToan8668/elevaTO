@@ -66,11 +66,17 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
     Enter thêm đoạn, thêm/xóa dòng bảng (thanh nhỏ hiện ở lề trái trang khi rê chuột vào dòng), tick ô ☐ (cả ô tick
     kiểu cũ FORMCHECKBOX). **Thanh công cụ kiểu Word**: phông, cỡ chữ, đậm / nghiêng / gạch chân / gạch ngang, chỉ số
     trên/dưới, màu chữ, tô sáng, trả định dạng về như mẫu, căn trái/giữa/phải/đều, thụt lề, chèn/xóa dòng bảng,
-    tìm & thay (Ctrl+H), hoàn tác / làm lại (Ctrl+Z / Ctrl+Y), phóng to thu nhỏ (Ctrl + lăn chuột) — định dạng đổi
+    chèn/xóa cột bảng, tìm & thay (Ctrl+H), hoàn tác / làm lại (Ctrl+Z / Ctrl+Y), phóng to thu nhỏ (Ctrl + lăn chuột) — định dạng đổi
     được ghi vào file Word xuất ra. Kiểm tra: số tiền ≠ tổng chứng từ, bằng chữ sai, vượt khả dụng,
     chứng từ sau ngày GN / quá 90 ngày (đối chiếu công nợ), CIC quá 10 ngày, GN trước HĐTD / sau hạn HM, thiếu TK thụ
     hưởng, LS < FTP, ô còn trống; **🤖 AI rà soát** đối chiếu chéo KUNN ↔ PDGN.
   - **Xuất Word** (tùy chọn giữ chữ đỏ để soát), **Lưu** (nhớ thông tin KH cho lần sau, phần sửa tay theo KUNN).
+
+- **Hồ sơ giải ngân — bổ sung**: bảng kê theo PO (`Tên NCC | Số PO | Ngày | Số tiền PO | Số tiền GN`) đọc tự động; file
+  Excel trình bày lạ → hộp **chọn cột tay** (sheet, hàng tiêu đề, cột nào là gì, xem trước số dòng); xem trước file Excel
+  ngay trong trang chứng từ; nhận **Báo cáo CLTF (CL - KERNEL - TF)**: so hạn mức khả dụng với số tiền giải ngân, cảnh
+  báo CLTF cũ. **Số KUNN**: chỉ số trong ngoặc tự +1 mỗi lần; số gốc và đuôi năm (đổi khi có gói giải ngân / HĐTD
+  mới) sửa trực tiếp, tool nhớ cho công ty.
 
 ## Cài đặt (nút ⚙ hoặc Alt+F9)
 - **API key Gemini**: nạp trong Cài đặt, lưu trên trình duyệt máy đó. Không ghi key vào file.

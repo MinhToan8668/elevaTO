@@ -533,6 +533,18 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   await kunn.locator('table:not(.lt) tr', { hasText: 'Đại diện' }).hover();
   await page.click('.rowbar [data-rb="down"]');
   assert.equal(await kunn.locator('table:not(.lt)').first().locator('tr').count(), 5);
+  // thêm cột bên phải ô đang đứng, gõ vào ô mới; thêm rồi xóa 1 cột nữa
+  await kunn.locator('.dp', { hasText: /^Đại diện$/ }).click();
+  await page.click('[data-w="col:right"]');
+  const t1 = kunn.locator('table:not(.lt)').first();
+  assert.equal(await t1.locator('tr').first().locator('td').count(), 3);
+  await t1.locator('tr', { hasText: 'TRẦN VĂN MẪU' }).locator('td').nth(1).locator('.dp').click();
+  await page.keyboard.type('Cột mới');
+  await page.click('[data-w="col:left"]');
+  assert.equal(await t1.locator('tr').first().locator('td').count(), 4);
+  await t1.locator('tr', { hasText: 'TRẦN VĂN MẪU' }).locator('td').nth(1).locator('.dp').click();
+  await page.click('[data-w="col:del"]');
+  assert.equal(await t1.locator('tr').first().locator('td').count(), 3);
   // PDGN
   await page.click('[data-hk="pdgn"]');
   const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('.hs-empty [data-tplload]')]);
@@ -571,6 +583,10 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   assert.match(pm[1] || '', /<w:jc w:val="center"\/>/, 'căn giữa ghi vào Word');
   assert.match(pm[2], /<w:b\/>[\s\S]*<w:sz w:val="28"\/>/, 'đậm + cỡ 14 ghi vào Word');
   assert.ok(tk.includes('Lãi suất tại thời điểm giải ngân: 9.2%/năm.'));
+  const kt = DOCX.parse(xk).blocks.find((x) => x.t === 'tbl');
+  assert.equal((kt.pre.match(/<w:gridCol /g) || []).length, 3, 'lưới cột có cột mới');
+  assert.ok(kt.rows.every((r) => r.cells.length === 3));
+  assert.ok(tk.includes('Cột mới'));
   assert.ok(tk.includes('Bằng chữ: Năm tỷ đồng.'));
   assert.match(xk, /<w:color w:val="FF0000"\/>/, 'bản soát giữ chữ đỏ');
   // lưu → đóng → mở lại: phần sửa tay và số liệu còn nguyên
@@ -657,7 +673,16 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.goBack();
   await page.locator('.hs3').waitFor();
   // mốc: nhập số KUNN → mốc “Xin số KUNN” tự xong; bấm mốc gửi KH ký
-  await page.fill('#hsKunn', '1000001(9).26'); await page.press('#hsKunn', 'Tab');
+  // số KUNN: chỉ số trong ngoặc tự tăng; số gốc / đuôi năm sửa được và nhớ cho công ty
+  await page.fill('[data-knpre]', '2000002'); await page.press('[data-knpre]', 'Tab');
+  await page.locator('.toast div', { hasText: 'Đã nhớ số gốc KUNN “2000002”' }).waitFor();
+  assert.equal(await page.inputValue('[data-knn]'), '1', 'số gốc mới → số trong ngoặc bắt đầu lại');
+  await page.fill('[data-knpre]', '1000001'); await page.press('[data-knpre]', 'Tab');
+  await page.locator('.toast div', { hasText: 'Đã nhớ số gốc KUNN “1000001”' }).waitFor();
+  await page.fill('[data-knn]', '9'); await page.press('[data-knn]', 'Tab');
+  await page.fill('[data-knsuf]', '.26'); await page.press('[data-knsuf]', 'Tab');
+  await page.locator('[data-knuse]', { hasText: '1000001(9).26' }).click();
+  assert.equal(await page.inputValue('#hsKunn'), '1000001(9).26');
   await page.locator('.ms.done', { hasText: 'Xin số KUNN' }).waitFor();
   // bấm mốc → viền đỏ chỗ cần làm; mốc làm tay chỉ “Đã xong” được khi mốc trước đã xong
   await page.click('[data-ms="pdgn_ky"]');
@@ -693,6 +718,18 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.hsrow').first().waitFor({ state: 'detached' });
   await page.click('#bUndo');
   await page.locator('.hsrow').first().waitFor();
+  // file Excel trình bày lạ: tool không tự nhận → hộp chọn cột tay; xem trước Excel ngay trong trang chứng từ
+  const fw = join(dir, 'bang_ke_la.xlsx');
+  await writeFile(fw, toXlsx({ 'Data': [['Đơn vị nhận', 'Mã CT', 'Khoản chi'], ['Công ty Lạ', 'CT-01', 150000000], ['Công ty Lạ', 'CT-02', 50000000]] }));
+  await page.locator('.hsrow').first().click();
+  await page.setInputFiles('#dzAdd input', fw);
+  await page.locator('.modal h2', { hasText: 'Chọn cột bảng kê' }).waitFor();
+  await page.selectOption('[data-pk="ncc"]', '0');
+  await page.selectOption('[data-pk="so_hd"]', '1');
+  await page.selectOption('[data-pk="tien_gn"]', '2');
+  await page.locator('#pkP', { hasText: 'Đọc được 2 dòng' }).waitFor();
+  await page.click('#pkOk');
+  await page.locator('.hs3', { hasText: 'CT-02' }).waitFor();
   // trang đầu: thẻ công ty có dư nợ / hạn mức từ file Excel
   await page.click('a.logo');
   assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d.]+ tr \/ 120\.000 tr/);
