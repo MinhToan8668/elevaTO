@@ -66,7 +66,8 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
     Enter thêm đoạn, thêm/xóa dòng bảng (thanh nhỏ hiện ở lề trái trang khi rê chuột vào dòng), tick ô ☐ (cả ô tick
     kiểu cũ FORMCHECKBOX). **Thanh công cụ kiểu Word**: phông, cỡ chữ, đậm / nghiêng / gạch chân / gạch ngang, chỉ số
     trên/dưới, màu chữ, tô sáng, trả định dạng về như mẫu, căn trái/giữa/phải/đều, thụt lề, chèn/xóa dòng bảng,
-    chèn/xóa cột bảng, kẻ / bỏ khung bảng (cả bảng, khung ngoài, từng ô, cả dòng), gõ "1. " / "a) " / "- " đầu đoạn tự
+    hàng **Công cụ bảng** (hiện khi con trỏ trong bảng): chèn/xóa dòng, cột, gộp ô phải / dưới, tách ô, căn chữ trên /
+    giữa / dưới ô, chia đều cột, tô nền ô, xóa bảng, kẻ / bỏ khung bảng (cả bảng, khung ngoài, từng ô, cả dòng), gõ "1. " / "a) " / "- " đầu đoạn tự
     thụt dòng treo và Enter tự ra số / gạch tiếp (Enter ở mục trống = kết thúc danh sách), số thứ tự của Word không xóa
     nhầm được và tự đánh lại khi thêm đoạn, bảng giữ đúng độ rộng cột của file gốc, tìm & thay (Ctrl+H), hoàn tác / làm lại (Ctrl+Z / Ctrl+Y), phóng to thu nhỏ (Ctrl + lăn chuột) — định dạng đổi
     được ghi vào file Word xuất ra. Kiểm tra: số tiền ≠ tổng chứng từ, bằng chữ sai, vượt khả dụng,
@@ -79,6 +80,12 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   ngay trong trang chứng từ; nhận **Báo cáo CLTF (CL - KERNEL - TF)**: so hạn mức khả dụng với số tiền giải ngân, cảnh
   báo CLTF cũ. **Số KUNN**: chỉ số trong ngoặc tự +1 mỗi lần; số gốc và đuôi năm (đổi khi có gói giải ngân / HĐTD
   mới) sửa trực tiếp, tool nhớ cho công ty. Xóa file chứng từ khỏi hồ sơ ngay trong trang xem chứng từ.
+- **Mốc hồ sơ**: Nhận chứng từ, Kiểm tra, Xin số KUNN tự tick khi đã làm; KH ký KUNN + bảng kê, GĐ TTKD ký PDGN, Đưa lên
+  hệ thống, Đã giải ngân — tick tay lúc nào cũng được (không cần thả bản ký). Tick **Đã giải ngân** → KUNN tự chuyển
+  sang tab Theo dõi KUNN.
+- **Chứng từ bổ sung bản gốc**: chọn chứng từ KH chỉ nộp bản sao (gợi ý từ chứng từ đã thả: hóa đơn, tiền điện, tờ
+  khai…), Gốc/Sao, **số ngày theo yêu cầu ĐVKD** (đặt mặc định riêng từng công ty, không cố định 30 ngày) → hạn bổ
+  sung. Danh sách tự điền vào bảng “Chứng từ bổ sung” của PDGN và dùng làm hạn hồ sơ gốc ở tab Theo dõi KUNN.
 - **Bảng theo dõi KUNN**: **🗑 Xóa KUNN** (của tool hoặc dòng từ file Excel) → KUNN chuyển sang mục **🗑 Đã xóa** (lưu vết
   ai xóa, lúc nào), không còn tính vào bảng theo dõi, dư nợ, đáo hạn — đọc lại file Excel cũng không hiện lại; **♻ Khôi
   phục** đưa về như cũ, **✕ Xóa hẳn** bỏ luôn. Mỗi KUNN có **lịch sử thay đổi**; ↶ hoàn tác ngay.

@@ -1,7 +1,7 @@
 // Soạn KUNN & PDGN: học mẫu từ file Word đã điền, nhân bảng theo danh sách, tính toán, kiểm tra, ghi lại Word.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DOCX, JSZip, docx, docXml, P, KUNN_BODY, PDGN_BODY, LCB } from './load.js';
+import { DOCX, JSZip, docx, docXml, P, TBL, TR, TC, KUNN_BODY, PDGN_BODY, LCB } from './load.js';
 
 const learnOf = (body) => DOCX.learn(DOCX.parse(docXml(body)));
 const texts = (doc) => { const out = []; DOCX.walk(doc.blocks, (p) => out.push(DOCX.ptext(p))); return out; };
@@ -157,4 +157,25 @@ test('file .docx: học mẫu rồi xuất lại vẫn mở được (XML hợp 
   assert.ok(t.some((x) => x.includes('5500777(3).26')));
   assert.ok(t.includes('999') && t.includes('NH Z'), 'bên thụ hưởng mới thay danh sách cũ');
   assert.ok(!t.includes('Công ty Cũ B'), 'không còn bên thụ hưởng của lần trước');
+});
+
+test('PDGN: bảng "Chứng từ bổ sung" (nằm trong bảng lớn) thành danh sách {{bs.*}}, điền theo số ngày ĐVKD yêu cầu', () => {
+  const body = TBL(TR('Điều kiện', 'Theo phê duyệt', '', ''),
+    TR(TC('Chứng từ bổ sung', '<w:vMerge w:val="restart"/>'), 'Tên chứng từ: hóa đơn', 'Bản Gốc/Sao', 'Ngày bổ sung dự kiến:'),
+    TR(TC('', '<w:vMerge/>'), 'Hóa đơn GTGT', 'Sao', '30 ngày kể từ ngày giải ngân'),
+    TR(TC('', '<w:vMerge/>'), 'Tờ khai', 'Sao', '30 ngày kể từ ngày giải ngân'),
+    TR('Điều kiện khác', 'ĐVKD đã kiểm tra', '', ''));
+  const d = DOCX.parse(docXml(body));
+  const v = DOCX.learnBsAll(d);
+  assert.deepEqual(v._bs.map((x) => x.ten), ['Hóa đơn GTGT', 'Tờ khai']);
+  const t = d.blocks[0];
+  assert.equal(t.rows.length, 4, 'còn 1 dòng mẫu');
+  assert.equal(DOCX.ctext(t.rows[2].cells[1]), '{{bs.ten}}');
+  const e = DOCX.expand(DOCX.clone(d), { bs: [{ ten: 'Thông báo tiền điện', ban: 'Sao', han: '15 ngày kể từ ngày giải ngân' }, { ten: 'Hóa đơn GTGT', ban: 'Sao', han: '45 ngày kể từ ngày giải ngân' }] });
+  const xml = DOCX.serialize(e, { fill: (k) => { const m = /^bs\.(\d)\.(\w+)$/.exec(k); return m ? [{ ten: 'Thông báo tiền điện', ban: 'Sao', han: '15 ngày kể từ ngày giải ngân' }, { ten: 'Hóa đơn GTGT', ban: 'Sao', han: '45 ngày kể từ ngày giải ngân' }][+m[1]][m[2]] : ''; } });
+  const back = DOCX.parse(xml).blocks[0];
+  assert.equal(back.rows.length, 5);
+  assert.equal(DOCX.ctext(back.rows[2].cells[1]), 'Thông báo tiền điện');
+  assert.equal(DOCX.ctext(back.rows[3].cells[3]), '45 ngày kể từ ngày giải ngân');
+  assert.equal(DOCX.ctext(back.rows[4].cells[0]), 'Điều kiện khác');
 });
