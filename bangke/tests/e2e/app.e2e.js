@@ -560,6 +560,10 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   await kunn.locator('.dp', { hasText: /^Địa chỉ$/ }).click();
   await page.click('[data-w="va:center"]');
   await page.click('[data-w="dist"]');
+  // AutoFit: bảng thụ hưởng vừa khổ trang
+  await kunn.locator('table.lt td').first().locator('.dp').first().click();
+  await page.selectOption('#wFit', 'window');
+  assert.equal(await kunn.locator('table.lt').evaluate((x) => x.style.width), '100%');
   // gõ "1. " đầu đoạn → thụt dòng treo, Enter ra "2. "
   await kunn.locator('.dp', { hasText: 'Đoạn mới gõ tay.' }).click(); await page.keyboard.press('End');
   await page.keyboard.press('Enter'); await page.keyboard.type('1. Mục một');
@@ -609,6 +613,7 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   assert.equal((kt.pre.match(/<w:gridCol /g) || []).length, 3, 'lưới cột có cột mới');
   assert.equal(new Set([...kt.pre.matchAll(/<w:gridCol w:w="(\d+)"/g)].map((m) => m[1])).size, 1, 'chia đều cột');
   assert.match(xk, /<w:vAlign w:val="center"\/>/);
+  assert.match(xk, /<w:tblW w:w="5000" w:type="pct"\/>/, 'AutoFit vừa khổ trang ghi vào Word');
   assert.ok(kt.rows.every((r) => r.cells.length === 3));
   assert.ok(tk.includes('Cột mới'));
   assert.ok(tk.includes('2. Mục hai'));

@@ -67,7 +67,7 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
     kiểu cũ FORMCHECKBOX). **Thanh công cụ kiểu Word**: phông, cỡ chữ, đậm / nghiêng / gạch chân / gạch ngang, chỉ số
     trên/dưới, màu chữ, tô sáng, trả định dạng về như mẫu, căn trái/giữa/phải/đều, thụt lề, chèn/xóa dòng bảng,
     hàng **Công cụ bảng** (hiện khi con trỏ trong bảng): chèn/xóa dòng, cột, gộp ô phải / dưới, tách ô, căn chữ trên /
-    giữa / dưới ô, chia đều cột, tô nền ô, xóa bảng, kẻ / bỏ khung bảng (cả bảng, khung ngoài, từng ô, cả dòng), gõ "1. " / "a) " / "- " đầu đoạn tự
+    giữa / dưới ô, chia đều cột, **tự khớp (AutoFit)**: vừa nội dung / vừa khổ trang / cố định độ rộng cột, tô nền ô, xóa bảng, kẻ / bỏ khung bảng (cả bảng, khung ngoài, từng ô, cả dòng), gõ "1. " / "a) " / "- " đầu đoạn tự
     thụt dòng treo và Enter tự ra số / gạch tiếp (Enter ở mục trống = kết thúc danh sách), số thứ tự của Word không xóa
     nhầm được và tự đánh lại khi thêm đoạn, bảng giữ đúng độ rộng cột của file gốc, tìm & thay (Ctrl+H), hoàn tác / làm lại (Ctrl+Z / Ctrl+Y), phóng to thu nhỏ (Ctrl + lăn chuột) — định dạng đổi
     được ghi vào file Word xuất ra. Kiểm tra: số tiền ≠ tổng chứng từ, bằng chữ sai, vượt khả dụng,

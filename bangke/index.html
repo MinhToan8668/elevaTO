@@ -457,7 +457,7 @@ a,.lnk{color:var(--blue)}
 .mtab{margin-bottom:12px}.mtab header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .bulkn{display:flex;gap:12px;align-items:center;margin-bottom:12px}.bulkn>div{flex:1}
 .khist{margin-top:10px;font-size:12.5px}.khist summary{cursor:pointer;font-weight:700}.khist ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:5px}.khist small{display:block;color:var(--ink3)}
-.wrib #wBd{width:118px}.wrib .wtbl{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;border-top:1px dashed var(--line2);padding-top:5px;margin-top:2px}.wrib .wtbl[hidden]{display:none}.wrib .wtt{font-size:12px;color:var(--blue);padding:2px 8px;border-radius:6px;background:var(--blue-bg)}.wrib .rg>.hist{padding:0 4px;font-size:11px}
+.wrib #wBd{width:118px}.wrib #wFit{width:150px}.wrib .wtbl{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;border-top:1px dashed var(--line2);padding-top:5px;margin-top:2px}.wrib .wtbl[hidden]{display:none}.wrib .wtt{font-size:12px;color:var(--blue);padding:2px 8px;border-radius:6px;background:var(--blue-bg)}.wrib .rg>.hist{padding:0 4px;font-size:11px}
 .bsl{display:flex;flex-direction:column;gap:4px;margin:6px 0}.bsr2{display:grid;grid-template-columns:auto minmax(0,1fr) 58px 58px auto auto;gap:4px;align-items:center}.bsr2 small{font-size:11px;color:var(--ink3);white-space:nowrap}.bsr2 small.err{color:var(--err)}.bsn{width:58px}
 .mbox.wide{max-width:1100px}.pkf{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px 10px;margin-top:8px}
 .xlv{background:rgba(255,255,255,.92);border-radius:12px;padding:10px;overflow:auto;height:100%;color:#111}.xlv h4{margin:6px 0}.xlv .t td{white-space:nowrap;font-size:12px}
@@ -1701,6 +1701,15 @@ const DOCX = (() => {
   }
   const TCPR_ORDER = ['w:cnfStyle', 'w:tcW', 'w:gridSpan', 'w:hMerge', 'w:vMerge', 'w:tcBorders', 'w:shd', 'w:noWrap', 'w:tcMar', 'w:textDirection', 'w:tcFitText', 'w:vAlign', 'w:hideMark', 'w:headers', 'w:cellIns', 'w:cellDel', 'w:cellMerge', 'w:tcPrChange'];
   const patchTcPr = (pre, set) => patchPr(pre, 'w:tcPr', TCPR_ORDER, set);
+  const TBLPR_ORDER = ['w:tblStyle', 'w:tblpPr', 'w:tblOverlap', 'w:bidiVisual', 'w:tblStyleRowBandSize', 'w:tblStyleColBandSize', 'w:tblW', 'w:jc', 'w:tblCellSpacing', 'w:tblInd', 'w:tblBorders', 'w:shd', 'w:tblLayout', 'w:tblCellMar', 'w:tblLook', 'w:tblCaption', 'w:tblDescription', 'w:tblPrChange'];
+  /** pre của bảng = <w:tblPr>…</w:tblPr><w:tblGrid>…</w:tblGrid>: đổi tblPr và (tuỳ chọn) lưới cột. */
+  function patchTblPre(pre, set, cols) {
+    const m = /<w:tblPr>[\s\S]*?<\/w:tblPr>|<w:tblPr\/>/.exec(pre || '');
+    const tp = patchPr(m ? m[0] : '', 'w:tblPr', TBLPR_ORDER, set);
+    let out = m ? pre.replace(m[0], tp) : tp + (pre || '');
+    if (cols) { const g = `<w:tblGrid>${cols.map((w) => `<w:gridCol w:w="${Math.max(1, Math.round(w))}"/>`).join('')}</w:tblGrid>`; out = /<w:tblGrid>[\s\S]*?<\/w:tblGrid>|<w:tblGrid\/>/.test(out) ? out.replace(/<w:tblGrid>[\s\S]*?<\/w:tblGrid>|<w:tblGrid\/>/, g) : out + g; }
+    return out;
+  }
   /** Đổi căn lề (jc: left|center|right|both) / thụt lề trái (indL, twip) của đoạn. */
   function patchPPr(pPr, ch) {
     const set = {};
@@ -2285,7 +2294,7 @@ const DOCX = (() => {
 
   return { kids, attr, unesc, xesc, parse, serialize, walk, ptext, pview, ctext, pReplace, setCellText, setVMerge, vMerge, gridSpan, clone, fieldsIn, expand, listTables, rowList,
     learn, guessKind, words, bangChu, num, fmtN, addMonths, nextPayDay, calc, checks, linesToCt, prepLists, HS_FIELDS, HS_GROUPS, HS, LIST_COLS, shortName,
-    testKey, keyTableError, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, legacyOn, learnBs, learnBsAll };
+    testKey, keyTableError, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, patchTblPre, legacyOn, learnBs, learnBsAll };
 })();
 </script>
 <script id="bk-hs">
@@ -5342,6 +5351,24 @@ function wCell(act, arg) {
     table.dataset.i = put({ ...ts, pre: ts.pre.replace(/<w:tblGrid>[\s\S]*?<\/w:tblGrid>/, `<w:tblGrid>${cols.map(() => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`) });
     const cg = table.querySelector(':scope > colgroup'); if (cg) cg.innerHTML = cols.map(() => `<col style="width:${w / 15}px">`).join('');
     for (const tr of table.tBodies[0].rows) for (const c of tr.cells) { const n = span(c); c.style.width = (w * n) / 15 + 'px'; setPre(c, { 'w:tcW': `<w:tcW w:w="${w * n}" w:type="dxa"/>` }); }
+  } else if (act === 'fit') {
+    const ts = store[table.dataset.i], z = (HE.zoom || 100) / 100, rows = [...table.tBodies[0].rows];
+    const nCol = Math.max(...rows.map((tr) => [...tr.cells].reduce((a, c) => a + span(c), 0)));
+    const cg = table.querySelector(':scope > colgroup');
+    const measure = () => { const w = Array(nCol).fill(0); for (const tr of rows) { let x = 0; for (const c of tr.cells) { if (span(c) === 1) w[x] = Math.max(w[x], c.getBoundingClientRect().width / z); x += span(c); } } const known = w.filter(Boolean); const avg = known.length ? known.reduce((a, b) => a + b, 0) / known.length : 100; return w.map((v) => (v || avg) * 15); };
+    if (arg === 'contents' || arg === 'window') {
+      table.style.tableLayout = 'auto'; table.style.width = arg === 'window' ? '100%' : 'auto'; if (cg) cg.innerHTML = '';
+      for (const tr of rows) for (const c of tr.cells) { c.style.width = ''; setPre(c, { 'w:tcW': '<w:tcW w:w="0" w:type="auto"/>' }); }
+      const cols = measure();
+      table.dataset.i = put({ ...ts, pre: DOCX.patchTblPre(ts.pre, { 'w:tblW': arg === 'window' ? '<w:tblW w:w="5000" w:type="pct"/>' : '<w:tblW w:w="0" w:type="auto"/>', 'w:tblLayout': '<w:tblLayout w:type="autofit"/>' }, cols) });
+      if (cg) cg.innerHTML = '';
+    } else {
+      const cols = measure(), tot = cols.reduce((a, b) => a + b, 0);
+      table.style.tableLayout = 'fixed'; table.style.width = tot / 15 + 'px';
+      if (cg) cg.innerHTML = cols.map((w) => `<col style="width:${w / 15}px">`).join('');
+      for (const tr of rows) { let x = 0; for (const c of tr.cells) { const w = cols.slice(x, x + span(c)).reduce((a, b) => a + b, 0); c.style.width = w / 15 + 'px'; setPre(c, { 'w:tcW': `<w:tcW w:w="${Math.round(w)}" w:type="dxa"/>` }); x += span(c); } }
+      table.dataset.i = put({ ...ts, pre: DOCX.patchTblPre(ts.pre, { 'w:tblW': `<w:tblW w:w="${Math.round(tot)}" w:type="dxa"/>`, 'w:tblLayout': '<w:tblLayout w:type="fixed"/>' }, cols) });
+    }
   } else if (act === 'tbldel') {
     if (!confirm('Xóa cả bảng này?')) return;
     const wrap = table.closest('.dtw'); HE.lr = null; (wrap || table).remove();
@@ -5479,7 +5506,7 @@ function wRibbon() {
     <div class="rg">${B('zoom:-10', '−', 'Thu nhỏ (Ctrl + lăn chuột)')}<span class="zl" id="wZoom">100%</span>${B('zoom:10', '＋', 'Phóng to')}</div>
     <div class="wtbl" id="wTbl" hidden><b class="wtt">Công cụ bảng</b>
       <div class="rg"><span class="hist">Dòng & cột</span>${B('row:up', '⬆＋dòng', 'Chèn dòng phía trên (đặt con trỏ trong bảng)')}${B('row:down', '⬇＋dòng', 'Chèn dòng phía dưới')}${B('row:del', '✕dòng', 'Xóa dòng đang đứng')}${B('col:left', '⬅＋cột', 'Chèn cột bên trái')}${B('col:right', '＋➡cột', 'Chèn cột bên phải')}${B('col:del', '✕cột', 'Xóa cột đang đứng')}</div>
-      <div class="rg"><span class="hist">Ô</span>${B('merge:right', '⇥ Gộp phải', 'Gộp ô này với ô bên phải')}${B('merge:down', '⤓ Gộp dưới', 'Gộp ô này với ô bên dưới')}${B('split', '⫼ Tách ô', 'Tách ô đã gộp')}${B('va:top', '⤒', 'Căn chữ lên trên ô')}${B('va:center', '↕', 'Căn chữ giữa ô (dọc)')}${B('va:bottom', '⤓', 'Căn chữ xuống dưới ô')}${B('dist', '⇹ Chia đều cột', 'Chia đều độ rộng các cột')}<label class="wcol" title="Tô nền ô"><span style="color:#94a3b8">▦</span><input type="color" id="wShd" value="#dbeafe"></label>${B('shd:none', '▢', 'Bỏ tô nền ô')}</div>
+      <div class="rg"><span class="hist">Ô</span>${B('merge:right', '⇥ Gộp phải', 'Gộp ô này với ô bên phải')}${B('merge:down', '⤓ Gộp dưới', 'Gộp ô này với ô bên dưới')}${B('split', '⫼ Tách ô', 'Tách ô đã gộp')}${B('va:top', '⤒', 'Căn chữ lên trên ô')}${B('va:center', '↕', 'Căn chữ giữa ô (dọc)')}${B('va:bottom', '⤓', 'Căn chữ xuống dưới ô')}${B('dist', '⇹ Chia đều cột', 'Chia đều độ rộng các cột')}<select id="wFit" title="AutoFit — tự khớp độ rộng bảng"><option value="">⇔ Tự khớp (AutoFit)</option><option value="contents">Vừa nội dung (AutoFit Contents)</option><option value="window">Vừa khổ trang (AutoFit Window)</option><option value="fixed">Cố định độ rộng cột (Fixed Column Width)</option></select><label class="wcol" title="Tô nền ô"><span style="color:#94a3b8">▦</span><input type="color" id="wShd" value="#dbeafe"></label>${B('shd:none', '▢', 'Bỏ tô nền ô')}</div>
       <div class="rg"><span class="hist">Khung</span><select id="wBd" title="Kẻ khung bảng (đặt con trỏ trong bảng)"><option value="">▦ Kẻ khung</option><option value="all">Kẻ tất cả ô của bảng</option><option value="out">Chỉ khung ngoài bảng</option><option value="none">Bỏ hết khung bảng</option><option value="cell">Kẻ khung ô đang đứng</option><option value="row">Kẻ khung cả dòng đang đứng</option><option value="cellnone">Bỏ khung ô đang đứng</option><option value="bottom">Chỉ kẻ dưới ô đang đứng</option></select>${B('tbl:del', '🗑 Xóa bảng', 'Xóa cả bảng')}</div>
     </div>
   </div>
@@ -5507,6 +5534,7 @@ function wBind() {
   $('#wfR', m).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); wCmd('frep'); } });
   $('#wFont', m).onchange = (e) => { const f = e.target.value; if (f) wApply((p) => { document.execCommand('fontName', false, f); }); };
   $('#wSize', m).onchange = (e) => { const z = +e.target.value; if (z) wSetSize(z); };
+  $('#wFit', m).onchange = (e) => { const v = e.target.value; e.target.value = ''; if (v) wCell('fit', v); };
   $('#wShd', m).onchange = (e) => wCell('shd', e.target.value.slice(1).toUpperCase());
   $('#wBd', m).onchange = (e) => { const v = e.target.value; e.target.value = ''; if (v) wBorders(v); };
   $('#wColor', m).oninput = (e) => { $('#wColBar', m).style.color = e.target.value; };
