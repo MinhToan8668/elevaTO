@@ -283,3 +283,10 @@ test('bảng kê PO kiểu "Tên NCC | Số PO | Ngày | Số tiền PO | Số t
   assert.deepEqual([ls[0].ncc, ls[0].so_hd, ls[0].ngay_hd, ls[0].tien_hd, ls[0].tien_gn], ['Công Ty Cổ Phần Tập Đoàn Mẫu', 'PO 4300011572', '2026-10-07', 83913500000, 28913500000]);
   assert.ok(!r.title.so_kunn, 'không lấy chữ "số" làm số KUNN');
 });
+
+test('soát toàn diện: đơn vị triệu áp cho cả dòng ghi "VND"; loại tiền VND chuẩn hóa về trống', () => {
+  const groups = [{ so_kunn: 'K1', so_tien: 1250, lines: [{ so_hd: '1', tien_hd: 1250, tien_gn: 1250, loai_tien: 'VND' }, { so_hd: '2', tien_hd: 10, tien_gn: 10, loai_tien: '' }] }];
+  BK.applyUnit(groups, 'trieu');
+  assert.equal(groups[0].so_tien, 1.25e9);
+  assert.deepEqual(groups[0].lines.map((l) => [l.tien_gn, l.loai_tien]), [[1.25e9, ''], [1e7, '']]);
+});

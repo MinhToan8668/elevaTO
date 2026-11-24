@@ -193,3 +193,22 @@ test('PDGN: đoạn "Chứng từ giải ngân" thành trường dien_giai_ct, t
   assert.equal(out.dien_giai_ct, 'Giải ngân thanh toán cho NCC Công ty A, đơn đặt hàng PO 4300011572 ngày 07/10/2026; NCC Công ty B, hóa đơn số 123 ngày 01/10/2026 → phù hợp với quy định của VIB và pháp luật.');
   assert.equal(DOCX.calc({}, { ct: [{ ben: 'A', gn: '1' }], tth: [] }, new Set(['dien_giai_ct'])).dien_giai_ct, undefined, 'đã sửa tay thì giữ');
 });
+
+test('soát toàn diện: bằng chữ viết khác hợp lệ (tư / ngàn / lẻ / chẵn) không báo; cột Số tiền có dữ liệu; bên thụ hưởng thêm tay giữ lại; nghỉ bù', () => {
+  const lists = DOCX.prepLists(DOCX.linesToCt([{ id: 'a', ncc: 'CTY A', so_hd: '1', ngay_hd: '2026-11-01', tien_hd: 2354000000, tien_gn: 2354000000 }]), [{ ten: 'Kho bạc Nhà nước', tk: '7111', nh: 'KBNN' }]);
+  assert.equal(lists.ct[0].tien, lists.ct[0].gn, '{{ct.tien}} = số tiền giải ngân của dòng');
+  assert.deepEqual(lists.tth.map((t) => t.ten), ['CTY A', 'Kho bạc Nhà nước'], 'dòng bên thụ hưởng thêm tay không bị xóa');
+  const v = DOCX.calc({ ngay_gn: '26/11/2026', so_ngay_vay: '90' }, lists, new Set());
+  const ok = DOCX.checks({ ...v, so_tien_chu: 'Hai tỷ ba trăm năm mươi bốn triệu đồng chẵn' }, lists).filter((x) => /bằng chữ/.test(x.msg));
+  assert.equal(ok.length, 0);
+  assert.ok(DOCX.checks({ ...v, so_tien_chu: 'Hai tỷ ba trăm triệu đồng' }, lists).some((x) => /bằng chữ không khớp/.test(x.msg)));
+  const hol = DOCX.parseHolidays('26/04/2026 Giỗ Tổ\n30/04/2026 → 01/05/2026 Lễ');
+  assert.equal(hol['2026-04-27'], 'nghỉ bù Giỗ Tổ', 'lễ rơi Chủ nhật → nghỉ bù thứ Hai');
+  assert.equal(hol['2026-05-02'], undefined, 'dải ngày không tự thêm nghỉ bù');
+  // dấu đoạn đã sửa tay giữ qua lưu / mở lại
+  const d = DOCX.parse('<w:document><w:body><w:p><w:r><w:t>x</w:t></w:r></w:p></w:body></w:document>');
+  d.blocks[0].ed = true;
+  const xml = DOCX.serialize(d, { keepMarks: true });
+  assert.ok(DOCX.parse(xml).blocks[0].ed, 'bk-ed đọc lại được');
+  assert.ok(!/bk-ed/.test(DOCX.serialize(d, {})), 'file xuất thật không có dấu');
+});
