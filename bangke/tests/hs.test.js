@@ -280,3 +280,53 @@ test('nhập hạn mức kèm đơn vị: tỷ / tỉ / triệu / trđ / ghép �
   for (const [k, v] of Object.entries(cases)) assert.equal(parseVnd(k), v, k);
   assert.equal(parseVnd('abc'), null); assert.equal(parseVnd('5 tỷ x'), null);
 });
+
+test('soát toàn diện: nhắc bổ sung hạn dd/mm/yyyy (kể cả hồ sơ đã GN), khóa ẩn ổn định, đáo hạn theo bảng theo dõi, KUNN chưa GN không nhắc hồ sơ gốc', () => {
+  const row = { c: { id: 'a', name: 'An Bình' }, hoso: [{ hs: { id: 'h1', ngay_gn: '2026-11-20', so_kunn: '5(1).26', done: true, files: [{}], docs: [{}], lines: [{}], bo_sung: [{ ten: 'Hóa đơn GTGT', ngay: '10', han: '30/11/2026', xong: false }, { ten: 'Tờ khai', han: '15/11/2026', xong: false }, { ten: 'Đã xong', han: '01/11/2026', xong: true }] }, checks: [] }],
+    kunns: [{ id: 'k1', hsId: 'h1', so_kunn: '5(1).26', ngay_gn: '2026-11-20', lines: [{ goc: 'chua' }] }, { id: 'k2', hsId: 'hX', so_kunn: '(chưa số)', ngay_gn: '2026-09-01', lines: [{ goc: 'chua' }] }],
+    ledger: { kunns: [{ so: '5(0).26', dao_han: '2026-11-10', con_lai: 1e9 }] },
+    due: [{ so: '5(0).26', dao_han: '2026-12-20', con_lai: 1e9 }, { so: '9(9).26', dao_han: '2026-11-25', con_lai: 2e9 }] };
+  const t = HSC.tasks([row], '2026-11-28');
+  const s = t.map((x) => `${x.sev}|${x.key}|${x.text}|${x.when}`).join('\n');
+  assert.match(s, /2\|bs:h1:Hóa đơn GTGT\|Bổ sung Hóa đơn GTGT — KUNN 5\(1\)\.26\|hạn 30\/11\/2026/, 'hạn dd/mm/yyyy vẫn nhắc, hồ sơ đã GN vẫn nhắc');
+  assert.match(s, /3\|bs:h1:Tờ khai\|Bổ sung Tờ khai — KUNN 5\(1\)\.26\|quá hạn 13 ngày/);
+  assert.doesNotMatch(s, /Đã xong/);
+  assert.doesNotMatch(s, /quá hạn hồ sơ gốc/, 'KUNN có danh sách bổ sung riêng / chưa giải ngân không nhắc theo từng hóa đơn');
+  assert.doesNotMatch(s, /5\(0\)\.26 quá hạn trả nợ/, 'đáo hạn theo danh sách due (đã gia hạn), không theo sổ Excel thô');
+  assert.match(s, /3\|qh:9\(9\|KUNN 9\(9\)\.26 quá hạn trả nợ 3 ngày\|quá hạn/);
+  const t2 = HSC.tasks([row], '2026-11-29');
+  assert.deepEqual(t.map((x) => x.key).sort(), t2.map((x) => x.key).sort(), 'khóa không đổi theo ngày → ẩn một lần là xong');
+});
+
+test('soát toàn diện: hồ sơ đã GN không báo vượt hạn mức theo dư nợ hôm nay; CIC ghi chữ / thiếu ngày; MST mất 0 đầu, chi nhánh; giải ngân một phần HĐMB; số KUNN trùng; dòng thiếu NCC', () => {
+  const base = { lines: [L('l1', 'Công ty A', '11', '2026-11-01', null, 7e8, 'HĐ 01'), L('l2', '', '12', '2026-11-02', 50, 50)], ngay_gn: '2026-11-26' };
+  const ctx = { kh: KH, kunns: [{ id: 'k0', so_kunn: '1(1).26', ngay_gn: '2026-09-01', lines: [L('o1', 'Công ty A', '11', '2026-08-01', 100, 100)] }], ledger: { kunns: [], du_no: 9.5e9, hm: 1e10 }, duNo: 9.5e9 };
+  const done = HSC.checks({ ...base, done: true, so_kunn: '2(2).26' }, ctx), cur = HSC.checks({ ...base, so_kunn: '1(1).26' }, ctx);
+  assert.ok(!done.some((x) => x.key === 'hm_vuot'), 'đã giải ngân: không tính lại vượt hạn mức');
+  assert.ok(cur.some((x) => x.key === 'hm_vuot'));
+  assert.ok(cur.some((x) => x.key === 'kunn_trung' && x.sev === 3), 'số KUNN đã dùng cho KUNN khác');
+  assert.ok(cur.some((x) => /^(dup|ngh)_l1$/.test(x.key) && x.sev >= 2), 'không coi số KUNN trùng là thay thế → vẫn soát trùng hóa đơn 11');
+  assert.ok(cur.some((x) => x.key === 'chk_l2' && x.sev === 2), 'dòng thiếu NCC: chưa soát được');
+  assert.ok(!cur.some((x) => x.key === 'dup_ok'));
+  // CIC: "Nhóm 2" đọc ra nhóm 2; thiếu ngày → không kết luận đạt
+  const c1 = HSC.checks({ lines: [], docs: [D('c', 'cic', { ngay: '20/11/2026', nhom_no: 'Nhóm 2 (nợ cần chú ý)' })], ngay_gn: '2026-11-26' }, { kh: KH });
+  assert.ok(c1.some((x) => x.key === 'cic_nhom' && x.sev === 3) && !c1.some((x) => x.key === 'cic_ok'));
+  const c2 = HSC.checks({ lines: [], docs: [D('c', 'cic', { ngay: '', nhom_no: '1' })], ngay_gn: '2026-11-26' }, { kh: KH });
+  assert.ok(c2.some((x) => x.key === 'cic_doc') && !c2.some((x) => x.key === 'cic_ok'));
+  // MST bên mua: số mất 0 đầu không báo sai; chi nhánh chỉ nhắc
+  const m1 = HSC.checks({ lines: [L('l1', 'Công ty A', '11', '2026-11-01', 100, 100)], docs: [D('h', 'hoa_don', { so: '11', ngay: '01/11/2026', tien: '100', mst_mua: 303640880 })], ngay_gn: '2026-11-26' }, { kh: KH });
+  assert.ok(!m1.some((x) => x.key === 'mua_h'));
+  const m2 = HSC.checks({ lines: [L('l1', 'Công ty A', '11', '2026-11-01', 100, 100)], docs: [D('h', 'hoa_don', { so: '11', ngay: '01/11/2026', tien: '100', mst_mua: '0303640880-001' })], ngay_gn: '2026-11-26' }, { kh: KH });
+  assert.ok(m2.some((x) => x.key === 'mua_cn_h' && x.sev === 2) && !m2.some((x) => x.key === 'mua_h'));
+  // giải ngân một phần theo HĐMB / hóa đơn: bảng kê không có cột tiền hóa đơn → không báo lệch; vượt giá trị thì báo
+  const p1 = HSC.checks({ lines: [L('l1', 'Công ty A', '830', '2026-11-01', null, 7e8)], docs: [D('h', 'hoa_don', { so: '830', ngay: '01/11/2026', tien: '1000000000' })], ngay_gn: '2026-11-26' }, { kh: KH });
+  assert.ok(!p1.some((x) => x.key === 'ln_l1'), 'giải ngân 700tr trên hóa đơn 1 tỷ là hợp lệ');
+  const p2 = HSC.checks({ lines: [L('l1', 'Công ty A', '830', '2026-11-01', null, 1.2e9)], docs: [D('h', 'hoa_don', { so: '830', ngay: '01/11/2026', tien: '1000000000' })], ngay_gn: '2026-11-26' }, { kh: KH });
+  assert.match(p2.find((x) => x.key === 'ln_l1').detail, /giải ngân 1\.200\.000\.000 > giá trị Hóa đơn GTGT 1\.000\.000\.000/);
+  // ghép chứng từ: số chính xác ưu tiên trước số chứa đuôi
+  const f1 = HSC.checks({ lines: [L('l1', 'Công ty A', '234567', '2026-11-01', 5e6, 5e6)], docs: [D('a', 'hoa_don', { so: '1234567', ngay: '01/11/2026', tien: '9000000' }), D('b', 'hoa_don', { so: '234567', ngay: '01/11/2026', tien: '5000000' })], ngay_gn: '2026-11-26' }, { kh: KH });
+  assert.ok(!f1.some((x) => x.key === 'ln_l1'));
+  // CLTF in thứ Sáu cho GN thứ Hai: không báo cũ
+  const cl = HSC.checks({ lines: [L('l1', 'A', '1', '2026-11-20', 10, 10)], docs: [D('c', 'cltf', { ngay: '20/11/2026', kha_dung: '100' })], ngay_gn: '2026-11-23' }, { kh: KH, hol: {} });
+  assert.ok(!cl.some((x) => x.key === 'cltf_old'));
+});

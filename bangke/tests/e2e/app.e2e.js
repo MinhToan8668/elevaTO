@@ -191,7 +191,7 @@ test('thư mục chung: máy này ghi tệp JSON, máy khác ghi vào thì bấm
   await page.locator('#syncBox', { hasText: 'Đang kết nối: O_CHUNG_TEAM' }).waitFor();
   const files = async () => page.evaluate(async () => {
     const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM')).getDirectoryHandle('BangKe_GiaiNgan');
-    const out = {}; for await (const [n, h] of d.entries()) out[n] = JSON.parse(await (await h.getFile()).text()); return out;
+    const out = {}; for await (const [n, h] of d.entries()) if (h.kind === 'file' && n.endsWith('.json')) out[n] = JSON.parse(await (await h.getFile()).text()); return out;
   });
   await page.waitForFunction(async () => {
     const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('O_CHUNG_TEAM')).getDirectoryHandle('BangKe_GiaiNgan');
@@ -601,7 +601,7 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   await page.click('[data-hk="kunn"]');
   await page.check('#hsRed');
   const [d2] = await Promise.all([page.waitForEvent('download'), page.click('#hsExp')]);
-  assert.match(d2.suggestedFilename(), /^KUNN_5500777_3_\.26/);
+  assert.match(d2.suggestedFilename(), /^KUNN_5500777_3\.26_/);
   const xk = await (await JSZip.loadAsync(await readFile(await d2.path()))).file('word/document.xml').async('string');
   const tk = []; DOCX.walk(DOCX.parse(xk).blocks, (q) => tk.push(DOCX.ptext(q)));
   assert.ok(tk.includes('Tài sản bảo đảm riêng của khách hàng An Bình. Bổ sung thêm nữa.') && tk.includes('Đoạn mới gõ tay.'));
@@ -749,7 +749,7 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('#oxUp .pksk').waitFor({ state: 'detached' });
   const [dz] = await Promise.all([page.waitForEvent('download'), page.click('#hsZip')]);
   const zz = await JSZip.loadAsync(await readFile(await dz.path()));
-  assert.deepEqual(Object.keys(zz.files).sort(), ['03_BANG_KE.xlsx', '03_BANG_KE_CHUAN_1000001_9_.26.xlsx', '04_UNC_LENH_CHI.pdf']);
+  assert.deepEqual(Object.keys(zz.files).sort(), ['03_BANG_KE.xlsx', '03_BANG_KE_CHUAN_1000001_9.26.xlsx', '04_UNC_LENH_CHI.pdf']);
   assert.match(dz.suggestedFilename(), /^HoSoGN_.*_KUNN_1000001_9_?\.26_26112026\.zip$/);
   // ghi sổ lại / sửa hồ sơ → cập nhật đúng KUNN đó, không sinh bản lặp (bản lặp cũ được dọn)
   await page.click('#hsLedger');

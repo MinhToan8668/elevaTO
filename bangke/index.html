@@ -438,7 +438,7 @@ tr.cur td{background:var(--blue-bg)}tr.dim td{opacity:.6}
 .cd.past{opacity:.45}.cd.today{outline:2px solid var(--blue2)}.cd.off{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.05) 0 4px,transparent 4px 8px)}
 .cd[data-cal]{cursor:pointer}.cd[data-cal]:hover{transform:scale(1.06)}.cd i{position:absolute;right:4px;bottom:3px;font-style:normal;font-size:10.5px;font-weight:800}
 .bignum{margin-top:12px;font-size:13.5px;color:var(--ink2)}.bignum b{font-size:18px;color:var(--navy)}
-.home>*{animation:fadeup .45s ease-out both}.home>*:nth-child(2){animation-delay:.05s}.home>*:nth-child(3){animation-delay:.1s}.home>*:nth-child(4){animation-delay:.15s}.home>*:nth-child(5){animation-delay:.2s}
+.home>*{animation:fadeup .45s ease-out both}.home.still>*{animation:none}.home>*:nth-child(2){animation-delay:.05s}.home>*:nth-child(3){animation-delay:.1s}.home>*:nth-child(4){animation-delay:.15s}.home>*:nth-child(5){animation-delay:.2s}
 @keyframes fadeup{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){.home>*,.rarc{animation:none}}
 .tile::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(127,209,185,.35),transparent 70%);pointer-events:none}
@@ -450,6 +450,7 @@ tr.cur td{background:var(--blue-bg)}tr.dim td{opacity:.6}
 .kn-sg{display:flex;gap:3px;align-items:center;flex-wrap:nowrap;margin:4px 0}.kn-sg b{font-size:15px}.kn-sg .inp{padding:5px 6px;min-width:0}.kn-sg .btn{padding:4px 8px;flex:none}.kn-sg .knpre{flex:1 1 80px;font-weight:700}.kn-sg .knn{width:42px;flex:none;text-align:center;font-weight:700}.kn-sg .knsuf{width:50px;flex:none;font-weight:700}.knuse{width:100%;margin-bottom:4px}.kn-sg b{font-size:14px}.kn-sg .inp{width:auto;padding:4px 6px}
 .pkr{display:flex;gap:4px;align-items:center}.pkr .cell-in{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;min-width:0}
 .rowbtns{display:flex;gap:2px;justify-self:end}.hsrow{grid-template-columns:minmax(170px,1fr) minmax(180px,1.4fr) minmax(200px,1.6fr) 150px 66px}
+@media(max-width:900px){.hsrow{grid-template-columns:minmax(0,1fr) auto;row-gap:6px}.hsrow .chips,.hsrow .iss{grid-column:1/-1}.hsrow .rowbtns{grid-column:2;grid-row:1}.hsrow .stage{grid-column:1;grid-row:2;justify-self:start}}
 .pvb{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;flex:1;min-height:0;overflow:hidden}.pvm{display:flex;min-height:0}.pvm iframe{flex:1;border:0;border-radius:12px;background:#fff;min-height:74vh}
 .pvi{flex:1;overflow:auto;text-align:center}.pvi img{max-width:100%;background:#fff;border-radius:8px}.pvx{flex:1;overflow:auto}.pvt{flex:1;overflow:auto;white-space:pre-wrap;font-size:12.5px;background:rgba(255,255,255,.6);padding:12px;border-radius:12px}
 .pvs{display:flex;flex-direction:column;gap:6px;overflow:auto}
@@ -495,7 +496,7 @@ tr.cur td{background:var(--blue-bg)}tr.dim td{opacity:.6}
   <main class="main" id="main"></main>
 </div>
 <div class="toast" id="toast"></div>
-<input type="file" id="fileRestore" accept=".json,application/json" hidden>
+<input type="file" id="fileRestore" accept=".zip,.json,application/zip,application/json" hidden>
 <script id="bk-core">
 const BK = (() => {
 'use strict';
@@ -954,7 +955,7 @@ const BK = (() => {
         ngay_hd,
         tien_hd,
         tien_gn,
-        loai_tien: cellText(get(row, 'loai_tien')).trim().toUpperCase() || bcur,
+        loai_tien: cellText(get(row, 'loai_tien')).trim().toUpperCase().replace(/^VN.*/, '') || bcur,
         goc: (map.ho_so != null && map.ho_so >= 0) ? hs.goc : 'chua',
         thieu: hs.thieu || '',
         ghi_chu: [cellText(get(row, 'ghi_chu')).trim(), hs.note || '', tkTxt && tkTxt !== so_hd ? `TK ${tkTxt}` : ''].filter(Boolean).join(' · '),
@@ -1304,7 +1305,7 @@ const BK = (() => {
       g.lines.push({
         stt: String(r.stt ?? ''), ncc: String(r.ncc || '').trim(), mst_ncc: String(r.mst_ncc || '').trim(), so_hdmb: String(r.so_hdmb || '').trim(),
         ky_hieu: String(r.ky_hieu || '').trim(), so_hd: String(r.so_hd ?? '').trim(), ngay_hd: toISO(r.ngay_hd), tien_hd, tien_gn,
-        loai_tien: String(r.loai_tien || '').toUpperCase(), goc: r.ho_so ? hs.goc : 'chua', thieu: hs.thieu || '', ghi_chu: [r.ghi_chu, hs.note].filter(Boolean).join(' · '),
+        loai_tien: String(r.loai_tien || '').toUpperCase().replace(/^VN.*/, ''), goc: r.ho_so ? hs.goc : 'chua', thieu: hs.thieu || '', ghi_chu: [r.ghi_chu, hs.note].filter(Boolean).join(' · '),
         row: r.row || '',
       });
     }
@@ -1353,6 +1354,7 @@ const BK = (() => {
       if (u.scale !== 1 && g.so_tien != null) g.so_tien *= u.scale;
       for (const l of g.lines) {
         const cr = curRows.find((x) => l.row >= x.from && l.row <= x.to);
+        if (/^VN/i.test(l.loai_tien || '')) l.loai_tien = '';   // "VND" = trống (quy ước: để trống là đồng)
         const cur = (cr && cr.currency && !/^VN/i.test(cr.currency) ? cr.currency.toUpperCase() : '') || l.loai_tien || u.cur;
         if (!l.loai_tien && cur) l.loai_tien = cur;
         if (u.scale !== 1 && !l.loai_tien) { if (l.tien_hd != null) l.tien_hd = Math.round(l.tien_hd * u.scale); if (l.tien_gn != null) l.tien_gn = Math.round(l.tien_gn * u.scale); }
@@ -1571,6 +1573,7 @@ const DOCX = (() => {
   }
   function parseP(el) {
     const p = { t: 'p', pPr: '', items: [] };
+    if (/bk-ed=/.test(el.open || '')) p.ed = true;
     const ks = kids(el.inner);
     for (let j = 0; j < ks.length; j++) {
       const k = ks[j];
@@ -1680,7 +1683,7 @@ const DOCX = (() => {
       }
       return out + runXml(rPr, it.text.slice(last));
     };
-    const para = (p) => `<w:p>${p.pPr}${p.items.map((it) => item(it, red && p.ed)).join('')}</w:p>`;
+    const para = (p) => `${opt.keepMarks && p.ed ? '<w:p bk-ed="1">' : '<w:p>'}${p.pPr}${p.items.map((it) => item(it, red && p.ed)).join('')}</w:p>`;
     const blocks = (bs) => bs.map((b) => (b.t === 'p' ? para(b) : b.t === 'tbl' ? tbl(b) : b.xml)).join('');
     const tbl = (t) => `${opt.keepMarks && t.list ? '<w:tbl bk-list="1">' : '<w:tbl>'}${t.pre}${t.rows.map((r) => `<w:tr>${r.pre}${r.cells.map((c) => {
       const inner = blocks(c.blocks);
@@ -1893,7 +1896,10 @@ const DOCX = (() => {
     const keys = Object.values(col);
     const L = keys.includes('tk') ? 'tth' : 'ct';
     let end = hi + 1;
-    while (end < t.rows.length && !/^tong/.test(fold(ctext(t.rows[end].cells[0]) || ctext(t.rows[end].cells[1] || { blocks: [] })))) end++;
+    const first = Math.min(...Object.keys(col).map(Number)), sttC = Object.keys(col).find((c) => col[c] === 'stt');
+    const isTot = (r) => /^(tong|cong)\b/.test(fold(ctext(r.cells[0]) || ctext(r.cells[1] || { blocks: [] })));
+    const isData = (r) => { const ss = startCols(r); let any = false; for (let j = 0; j < r.cells.length; j++) { const k = col[ss[j]], tx = ctext(r.cells[j]).trim(); if (!k && tx && ss[j] < first) return false; if (k && tx) any = true; if (k === 'stt' && tx && !/^\d+[.)]?$/.test(tx)) return false; } return any || sttC == null; };
+    while (end < t.rows.length && !isTot(t.rows[end]) && (end === hi + 1 || isData(t.rows[end]))) end++;
     if (end === hi + 1) return false;
     const items = [];
     for (let i = hi + 1; i < end; i++) { const r = t.rows[i], ss = startCols(r); const o = {}; r.cells.forEach((c, j) => { const k = col[ss[j]]; if (k) o[k] = ctext(c); }); items.push(o); }
@@ -1916,7 +1922,7 @@ const DOCX = (() => {
         const v = ctext(c);
         if (!/^[\d.,\s]+$/.test(v)) return;
         const f = k === 'tien_hd' ? 'tong_hd' : k === 'tien_tt' || k === 'tien' ? 'tong_tt' : '';
-        if (f) { values[f] = v; setCellText(c, `{{${f}}}`); }
+        if (f && isTot(tot)) { values[f] = v; setCellText(c, `{{${f}}}`); }
       });
     }
     t.list = L;
@@ -2115,6 +2121,7 @@ const DOCX = (() => {
       if (!r) return;
       let a = Date.UTC(+r[3], r[2] - 1, +r[1]); const b = r[4] ? Date.UTC(+r[6], r[5] - 1, +r[4]) : a;
       for (; a <= b; a += 864e5) m[new Date(a).toISOString().slice(0, 10)] = r[7] || 'Ngày nghỉ';
+      if (!r[4]) { const d0 = new Date(Date.UTC(+r[3], r[2] - 1, +r[1])), wd = d0.getUTCDay(); if (wd === 0 || wd === 6) { let x = d0.getTime() + 864e5; while (new Date(x).getUTCDay() === 0 || new Date(x).getUTCDay() === 6 || m[new Date(x).toISOString().slice(0, 10)]) x += 864e5; m[new Date(x).toISOString().slice(0, 10)] = 'nghỉ bù ' + (r[7] || 'ngày lễ'); } }   // lễ rơi vào T7/CN → nghỉ bù ngày làm việc kế tiếp
     });
     return m;
   }
@@ -2165,14 +2172,18 @@ const DOCX = (() => {
     let g = -1, prev = null;
     const gsum = [];
     ct.forEach((x) => { const k = BK.supKey(x.ben) || x.ben; if (k !== prev) { g++; prev = k; gsum[g] = 0; } x._g = g; gsum[g] += num(x.gn) || 0; });
-    ct.forEach((x, i) => { x.stt = String(i + 1); x.tien_tt = fmtN(gsum[x._g]); });
+    ct.forEach((x, i) => { x.stt = String(i + 1); x.tien_tt = fmtN(gsum[x._g]); x.tien = x.gn; });
     const old = new Map((tth || []).map((t) => [BK.supKey(t.ten) || t.ten, t]));
+    const oldG = new Map((tth || []).filter((t) => t._g != null).map((t) => [t._g, t]));
     const groups = [];
     ct.forEach((x) => { if (!groups[x._g]) groups[x._g] = x; });
+    const usedOld = new Set();
     const out = groups.length ? groups.map((x, i) => {
-      const k = BK.supKey(x.ben) || x.ben, o = old.get(k) || {}, m = memo[k] || {};
-      return { ten: o.ten || x.ben, tk: o.tk || m.tk || '', nh: o.nh || m.nh || '', tien: fmtN(gsum[i]), stt: String(i + 1) };
+      const k = BK.supKey(x.ben) || x.ben, o = old.get(k) || oldG.get(i) || {}, m = memo[k] || {};
+      if (o) usedOld.add(o);
+      return { ten: o.ten || x.ben, tk: o.tk || m.tk || '', nh: o.nh || m.nh || '', tien: fmtN(gsum[i]), stt: String(i + 1), _g: i };
     }) : (tth || []).map((t, i) => ({ ...t, stt: String(i + 1) }));
+    if (groups.length) for (const t of tth || []) if (!usedOld.has(t) && t._g == null && (t.ten || '').trim()) out.push({ ...t, stt: String(out.length + 1) });   // bên nhận thêm tay (thuế, kho bạc…)
     return { ct, tth: out };
   }
   /** Giá trị tự tính (không đè các trường người dùng đã sửa tay: ov). */
@@ -2225,7 +2236,8 @@ const DOCX = (() => {
     const st = num(v.so_tien), ct = (lists && lists.ct) || [], tth = (lists && lists.tth) || [];
     const gn = isoOf(v.ngay_gn);
     if (ct.length) { const s = ct.reduce((a, x) => a + (num(x.gn) || 0), 0); if (st != null && Math.abs(s - st) > 0.5) add(3, `Số tiền giải ngân ${fmtN(st)} ≠ tổng bảng chứng từ ${fmtN(s)}`, 'so_tien'); }
-    if (st != null && v.so_tien_chu && fold(v.so_tien_chu).replace(/[^a-z ]/g, '').trim() !== fold(bangChu(st)).replace(/[^a-z ]/g, '').trim()) add(3, `Số tiền bằng chữ không khớp bằng số (đúng: “${bangChu(st)}”)`, 'so_tien_chu');
+    const normChu = (x) => fold(x).replace(/[^a-z ]/g, ' ').replace(/\btu\b/g, 'bon').replace(/\bngan\b/g, 'nghin').replace(/\ble\b/g, 'linh').replace(/\blam\b/g, 'nam').replace(/\bmot\b/g, 'mot').replace(/\bchan\b/g, '').replace(/\s+/g, ' ').trim();
+    if (st != null && v.so_tien_chu && normChu(v.so_tien_chu) !== normChu(bangChu(st))) add(3, `Số tiền bằng chữ không khớp bằng số (đúng: “${bangChu(st)}”)`, 'so_tien_chu');
     const td = num(v.tong_du_no);
     if (td != null && v.tong_du_no_chu && fold(v.tong_du_no_chu).replace(/[^a-z ]/g, '').trim() !== fold(bangChu(td)).replace(/[^a-z ]/g, '').trim()) add(3, 'Tổng dư nợ bằng chữ không khớp bằng số', 'tong_du_no_chu');
     const kd = num(v.kd_tong);
@@ -2449,7 +2461,9 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
 
   // ── kiểm tra tự sinh theo bộ chứng từ ──
   const sameName = (a, b) => { const x = BK.supKey(a), y = BK.supKey(b); return !!x && !!y && (x === y || x.includes(y) || y.includes(x)); };
-  const findDoc = (docs, types, so) => { const n = normNo(so), d = digits(so); return docs.find((x) => types.includes(x.loai) && x.f.so && (normNo(x.f.so) === n || (d.length >= 6 && digits(x.f.so).includes(d)))); };
+  const findDoc = (docs, types, so) => { const n = normNo(so), d = digits(so); const xs = docs.filter((x) => types.includes(x.loai) && x.f.so); return xs.find((x) => normNo(x.f.so) === n) || (d.length >= 6 ? xs.find((x) => digits(x.f.so) === d) || xs.find((x) => digits(x.f.so).includes(d)) : undefined); };
+  /** MST so khớp: AI hay trả số mất 0 đầu; chi nhánh có đuôi -001 → so 10 số đầu. */
+  const mst10 = (v) => { let x = digits(v); if (x.length === 9) x = '0' + x; return x.slice(0, 10); };
   /**
    * @param hs   { lines, docs, ngay_gn, so_tien, so_kunn, ack }
    * @param ctx  { kh: {name, mst, hs:{...}}, kunns: KUNN đã có (để soát trùng), ledger: sổ Excel, today, hol }
@@ -2469,13 +2483,18 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
       if (so != null && Math.abs(so - total) > 0.5) add('bk_sum', 3, 'Số tiền đề nghị khác tổng bảng kê', `Đề nghị ${fmtN(so)} đ, bảng kê cộng được ${fmtN(total)} đ.`);
       // giải ngân trùng / vượt so với sổ hóa đơn
       const others = (ctx.kunns || []).filter((k) => k.id !== hs.kid);
-      const chk = BK.checkNew(others, [{ so_kunn: hs.so_kunn || 'mới', ngay_gn: gn, lines }]);
+      const chk = BK.checkNew(others, [{ so_kunn: 'mới', ngay_gn: gn, lines }]);
+      const nk = BK.normKunn(hs.so_kunn || '');
+      if (nk && others.some((k) => BK.normKunn(k.so_kunn || '') === nk)) add('kunn_trung', 3, `Số KUNN ${hs.so_kunn} đã dùng cho KUNN khác trong sổ hóa đơn`, 'Kiểm tra lại số admin cấp (thường sai số trong ngoặc) — ghi sổ sẽ không đè KUNN kia.');
       const cl = chk.groups[0].lines.map((x, i) => ({ line: lines[i], status: x.check.status, note: (x.check.history || []).map((u) => `đã GN ở KUNN ${u.so_kunn} ngày ${dmy(u.ngay_gn)}: ${fmtN(u.tien_gn)} đ`).join('; ') }));
       const bad = cl.filter((x) => ['da_du', 'vuot', 'trung_file'].includes(x.status));
       const warn = cl.filter((x) => x.status === 'nghi_trung');
       bad.forEach((x) => add('dup_' + (x.line.id || x.line.so_hd), 3, `${BK.CHECK[x.status].label}: HĐ ${x.line.so_hd} · ${x.line.ncc}`, x.note || '', [x.line.id]));
       warn.forEach((x) => add('ngh_' + (x.line.id || x.line.so_hd), 2, `Nghi trùng: HĐ ${x.line.so_hd} · ${x.line.ncc}`, x.note || '', [x.line.id]));
-      if (!bad.length) add('dup_ok', 0, 'Không hóa đơn nào đã giải ngân đủ trước đó');
+      const unchk = cl.filter((x) => ['thieu_tt', 'lech_cot'].includes(x.status));
+      unchk.forEach((x) => add('chk_' + (x.line.id || x.line.so_hd), 2, `Chưa soát được trùng: HĐ ${x.line.so_hd || '?'} · ${x.line.ncc || '(thiếu NCC)'}`, x.status === 'lech_cot' ? `Dòng đọc lệch cột: ${x.line.lech || ''}` : 'Thiếu nhà cung cấp hoặc số hóa đơn — sửa dòng để tool đối chiếu với sổ hóa đơn.', [x.line.id]));
+      for (const pk of ctx.pendingKunns || []) { if (pk.id === hs.kid || pk.hsId === hs.id) continue; const keys = new Set((pk.lines || []).map((l) => BK.strongKey(l)).filter(Boolean)); for (const l of lines) { const key = BK.strongKey(l); if (key && keys.has(key)) add('pend_' + l.id, 2, `HĐ ${l.so_hd} · ${l.ncc} đang nằm trong hồ sơ GN khác chưa giải ngân (KUNN ${pk.so_kunn || '(chưa số)'})`, 'Nếu hồ sơ kia đã hủy: xóa hồ sơ đó để không soát nhầm.', [l.id]); } }
+      if (!bad.length && !unchk.length) add('dup_ok', 0, 'Không hóa đơn nào đã giải ngân đủ trước đó');
       const tiep = cl.filter((x) => x.status === 'tiep');
       if (tiep.length) add('tiep', 0, `${tiep.length} hóa đơn giải ngân tiếp phần còn lại`);
     }
@@ -2488,9 +2507,9 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
         const errs = [];
         const dn = iso(d.f.ngay), ln = iso(l.ngay_hd);
         if (dn && ln && dn !== ln) errs.push(`ngày: bảng kê ${dmy(ln)}, chứng từ ${dmy(dn)}`);
-        const dt = num(d.f.tien), lt = l.tien_hd != null ? l.tien_hd : l.tien_gn;
-        if (dt != null && lt != null && d.loai !== 'to_khai' && Math.abs(dt - lt) > 1) errs.push(`tiền: bảng kê ${fmtN(lt)}, chứng từ ${fmtN(dt)}`);
-        if (d.loai === 'to_khai' && dt != null && l.tien_gn != null && l.tien_gn > dt + 1) errs.push(`giải ngân ${fmtN(l.tien_gn)} > thuế phải nộp ${fmtN(dt)}`);
+        const dt = num(d.f.tien), cmpInv = l.tien_hd != null && !['hdmb', 'po', 'to_khai'].includes(d.loai);
+        if (cmpInv && dt != null && Math.abs(dt - l.tien_hd) > 1) errs.push(`tiền: bảng kê ${fmtN(l.tien_hd)}, chứng từ ${fmtN(dt)}`);
+        else if (!cmpInv && dt != null && l.tien_gn != null && l.tien_gn > dt + 1) errs.push(`giải ngân ${fmtN(l.tien_gn)} > ${d.loai === 'to_khai' ? 'thuế phải nộp' : 'giá trị ' + TYPES[d.loai].l} ${fmtN(dt)}`);
         if (d.f.ben_ban && l.ncc && d.loai !== 'to_khai' && d.loai !== 'nsnn' && !sameName(d.f.ben_ban, l.ncc)) errs.push(`bên bán “${d.f.ben_ban}” khác bảng kê “${l.ncc}”`);
         if (errs.length) add('ln_' + l.id, 3, `Bảng kê ghi khác ${TYPES[d.loai].l} ${d.f.so}`, errs.join('; '), [l.id, d.id]);
         else nOk++;
@@ -2500,7 +2519,8 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     // hóa đơn: bên mua, tuổi hóa đơn, HĐMB
     for (const d of docs.filter((x) => x.loai === 'hoa_don' || x.loai === 'invoice')) {
       const dn = iso(d.f.ngay);
-      if (d.f.mst_mua && kh.mst && digits(d.f.mst_mua) !== digits(kh.mst)) add('mua_' + d.id, 3, `Hóa đơn ${d.f.so}: MST bên mua ${d.f.mst_mua} không phải của KH`, `MST KH: ${kh.mst}`, [d.id]);
+      if (d.f.mst_mua && kh.mst && mst10(d.f.mst_mua) !== mst10(kh.mst)) add('mua_' + d.id, 3, `Hóa đơn ${d.f.so}: MST bên mua ${d.f.mst_mua} không phải của KH`, `MST KH: ${kh.mst}`, [d.id]);
+      else if (d.f.mst_mua && kh.mst && digits(d.f.mst_mua).length > 10) add('mua_cn_' + d.id, 2, `Hóa đơn ${d.f.so}: xuất cho chi nhánh (MST ${d.f.mst_mua}) của KH`, '', [d.id]);
       else if (d.f.ben_mua && kh.name && !sameName(d.f.ben_mua, kh.name) && !(prof.ten_kh && sameName(d.f.ben_mua, prof.ten_kh))) add('mua_' + d.id, 2, `Hóa đơn ${d.f.so}: bên mua “${d.f.ben_mua}” khác tên KH`, '', [d.id]);
       if (dn) {
         const age = BK.daysBetween(dn, gn);
@@ -2584,9 +2604,10 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     else {
       const age = cicDate ? BK.daysBetween(cicDate, gn) : null;
       if (age != null && age > 10) add('cic_old', 2, `CIC tra ngày ${dmy(cicDate)} — đã ${age} ngày (hiệu lực 10 ngày)`, '', [cic.id]);
-      const nhom = num(cic.f.nhom_no);
+      const nm = /[1-5]/.exec(String(cic.f.nhom_no == null ? '' : cic.f.nhom_no)), nhom = nm ? +nm[0] : null;
       if (nhom != null && nhom >= 2) add('cic_nhom', 3, `CIC: KH có nợ nhóm ${nhom}`, '', [cic.id]);
-      if ((age == null || age <= 10) && !(nhom >= 2)) add('cic_ok', 0, `CIC ngày ${dmy(cicDate)} còn hiệu lực, không có nợ nhóm 2 trở lên`);
+      if (!cicDate || nhom == null) add('cic_doc', 2, `CIC: chưa đọc được ${[!cicDate && 'ngày tra', nhom == null && 'nhóm nợ'].filter(Boolean).join(' và ')} — mở chứng từ để nhập`, '', [cic.id]);
+      else if (age <= 10 && nhom < 2) add('cic_ok', 0, `CIC ngày ${dmy(cicDate)} còn hiệu lực, không có nợ nhóm 2 trở lên`);
     }
     // đủ thông tin để theo dõi sau giải ngân: số KUNN, số ngày vay (→ đáo hạn), lãi suất
     if (lines.length) {
@@ -2602,10 +2623,11 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     const cl = docs.filter((x) => x.loai === 'cltf').sort((a, b) => (iso(b.f.ngay) || '').localeCompare(iso(a.f.ngay) || ''))[0];
     if (cl) {
       const cd = iso(cl.f.ngay), age = cd ? BK.daysBetween(cd, gn) : null;
-      if (age != null && age > 1) add('cltf_old', 2, `CLTF đến ngày ${dmy(cd)} — cũ ${age} ngày so với ngày giải ngân`, 'Nên in CLTF đúng ngày giải ngân (hoặc ngày làm việc liền trước).', [cl.id]);
+      const prevWd = gn && typeof DOCX !== 'undefined' ? DOCX.workDay(BK.addDays(gn, -1), -1, ctx.hol || {}) : BK.addDays(gn, -1);
+      if (age != null && age > 1 && cd < prevWd) add('cltf_old', 2, `CLTF đến ngày ${dmy(cd)} — cũ ${age} ngày so với ngày giải ngân`, 'Nên in CLTF đúng ngày giải ngân (hoặc ngày làm việc liền trước).', [cl.id]);
       const kd = num(cl.f.kha_dung) != null ? num(cl.f.kha_dung) : num(cl.f.hm) != null && num(cl.f.du_no) != null ? num(cl.f.hm) - num(cl.f.du_no) : null;
       const tgn = BK.sum((hs.lines || []).map((l) => l.tien_gn));
-      if (kd != null && tgn > kd) add('cltf_vuot', 3, `Số tiền giải ngân ${fmtN(tgn)} vượt hạn mức khả dụng trên CLTF (${fmtN(kd)})`, '', [cl.id]);
+      if (kd != null && tgn > kd && !hs.done) add('cltf_vuot', 3, `Số tiền giải ngân ${fmtN(tgn)} vượt hạn mức khả dụng trên CLTF (${fmtN(kd)})`, '', [cl.id]);
       else if (kd != null) add('cltf_ok', 0, `CLTF ngày ${dmy(cd) || '?'}: khả dụng ${fmtN(kd)} — đủ cho khoản giải ngân`);
     }
     // hạn mức (sổ Excel) & hạn HĐTD
@@ -2614,7 +2636,8 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     const hmL = (hv && hv.hm_tong) || (L && L.hm) || (num(prof.hm_tong) ? num(prof.hm_tong) * 1e6 : null);
     if (L && hmL) {
       const dnx = ctx.duNo != null ? ctx.duNo : L.du_no, kd = hmL - dnx;
-      if (total > kd + 0.5) add('hm_vuot', 3, `Vượt hạn mức khả dụng: còn ${fmtN(kd)} đ, đề nghị ${fmtN(total)} đ`, `Dư nợ ${fmtN(dnx)} (file Excel ${L.file || 'sổ khế ước'} + KUNN trong tool) / hạn mức ${fmtN(hmL)}.`);
+      if (hs.done) { /* đã giải ngân: khả dụng lúc đó đã kiểm tra */ }
+      else if (total > kd + 0.5) add('hm_vuot', 3, `Vượt hạn mức khả dụng: còn ${fmtN(kd)} đ, đề nghị ${fmtN(total)} đ`, `Dư nợ ${fmtN(dnx)} (file Excel ${L.file || 'sổ khế ước'} + KUNN trong tool) / hạn mức ${fmtN(hmL)}.`);
       else if (total) add('hm_ok', 0, `Khả dụng hạn mức đủ — còn ${fmtN(kd - total)} đ sau lần này`);
     } else if (L && lines.length) add('hm_none', 2, 'Chưa có hạn mức để tính khả dụng', 'Nhập hạn mức (triệu) ở tab Thông tin & mẫu Word.');
     else if (lines.length) add('hm_none', 2, 'Chưa đọc file Excel quản lý giải ngân của công ty', 'Vào tab Thông tin & mẫu Word → chọn file để tool lấy dư nợ, hạn mức.');
@@ -2628,7 +2651,7 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
       if (hs.goi && !pk) add('goi_khong', 2, `Không thấy gói lãi suất “${hs.goi}” trong danh sách gói`, 'Chọn lại gói ở ô Gói lãi suất của hồ sơ.');
       else if (pk) {
         if (!goiActive({ ...pk, an: false }, gn)) add('goi_het', 3, `Gói ${pk.ma} không hiệu lực vào ngày GN ${dmy(gn)}${pk.den_ngay ? ` (hiệu lực đến ${dmy(pk.den_ngay)})` : ''}`, 'Chọn gói khác hoặc lãi suất thông thường.');
-        if (pk.tong) { const used = goiUsed(pk, ctx.goiRows || [], { hsId: hs.id, kid: hs.kid, so: hs.so_kunn }); if (used + total > pk.tong + 0.5) add('goi_vuot', 3, `Vượt hạn mức gói ${pk.ma}: đã dùng ${fmtN(used)} / ${fmtN(pk.tong)}, lần này ${fmtN(total)}`); else add('goi_ok', 0, `Gói ${pk.ma}${pk.ls != null ? ` ${pk.ls}%` : ''}: còn ${fmtN(pk.tong - used - total)} đ sau lần này`); }
+        if (pk.tong && !hs.done) { const used = goiUsed(pk, ctx.goiRows || [], { hsId: hs.id, kid: hs.kid, so: hs.so_kunn }); if (used + total > pk.tong + 0.5) add('goi_vuot', 3, `Vượt hạn mức gói ${pk.ma}: đã dùng ${fmtN(used)} / ${fmtN(pk.tong)}, lần này ${fmtN(total)}`); else add('goi_ok', 0, `Gói ${pk.ma}${pk.ls != null ? ` ${pk.ls}%` : ''}: còn ${fmtN(pk.tong - used - total)} đ sau lần này`); }
         const snv = num(hs.so_ngay_vay || prof.so_ngay_vay);
         if (pk.so_ngay_max && snv && snv > pk.so_ngay_max) add('goi_ky_han', 2, `Số ngày vay ${snv} vượt kỳ hạn tối đa của gói ${pk.ma} (${pk.so_ngay_max} ngày)`);
       } else if (goiAt(goiL, gn).length) add('goi_chon', 1, `Có ${goiAt(goiL, gn).length} gói lãi suất đang hiệu lực — chưa chọn gói cho hồ sơ`, 'Chọn ở ô Gói lãi suất (trên cùng hồ sơ) nếu khoản này áp dụng gói / UBG.');
@@ -2682,7 +2705,7 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
   const lsApply = (cur, mode, val) => (mode === 'add' ? (cur == null ? null : +(+cur + +val).toFixed(4)) : +(+val).toFixed(4));
   // ── nhắc hạn mức / gói lãi suất sắp hết hiệu lực, gói gần hết hạn mức ──
   function creditAlerts(c, rows, today) {
-    const out = [], push = (sev, text, when) => out.push({ sev, cid: c.id, cname: c.name, text, when, go: { tab: 'info' } });
+    const out = [], push = (sev, text, when) => out.push({ key: 'cr:' + fold(text).replace(/\d+/g, '#'), sev, cid: c.id, cname: c.name, text, when, go: { tab: 'info' } });
     const hist = (c.hmHist || []).filter((h) => !h.del), cur = hmAt(hist, today);
     const den = cur ? cur.den_ngay : iso((c.hs || {}).han_hm);
     if (den) { const d = BK.daysBetween(today, den); if (d < 0) push(3, `Hạn mức ${cur && cur.so_hdtd ? `(${cur.so_hdtd}) ` : ''}đã hết hạn duy trì ${dmy(den)}`, `quá ${-d} ngày`); else if (d <= 60) push(d <= 30 ? 2 : 1, `Hạn mức ${cur && cur.so_hdtd ? `(${cur.so_hdtd}) ` : ''}hết hạn duy trì ${dmy(den)} — chuẩn bị cấp lại / gia hạn`, `còn ${d} ngày`); }
@@ -2756,33 +2779,44 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
   /** input: [{c, hoso:[{hs, checks}], kunns, ledger, hanNgay}] → [{sev, cid, cname, text, when, go}] */
   function tasks(rows, today = BK.todayISO()) {
     const out = [];
-    for (const { c, hoso = [], kunns = [], ledger, hanNgay = 30 } of rows) {
+    for (const { c, hoso = [], kunns = [], ledger, hanNgay = 30, due } of rows) {
+      const doneHs = new Set(hoso.filter((x) => x.hs.done).map((x) => x.hs.id));
+      const hsBs = new Set(hoso.filter((x) => (x.hs.bo_sung || []).length || x.hs.bs_none).map((x) => x.hs.id));
+      const pending = (k) => !!(k.hsId && !k.giai_ngan && !k.manual && !k.old && !doneHs.has(k.hsId));
+      const T = (key, sev, text, when, go) => out.push({ key, sev, cid: c.id, cname: c.name, text, when, go });
       for (const { hs, checks: cs } of hoso) {
+        // chứng từ bổ sung bản gốc: nhắc cả khi hồ sơ đã giải ngân (hạn lưu dạng dd/mm/yyyy → đổi ISO trước khi so)
+        for (const b of hs.bo_sung || []) {
+          const han = iso(b.han); if (b.xong || !han) continue;
+          const d = BK.daysBetween(today, han);
+          if (d <= 7) T(`bs:${hs.id}:${b.ten}`, d < 0 ? 3 : 2, `Bổ sung ${b.ten} — KUNN ${hs.so_kunn || ''}`, d < 0 ? `quá hạn ${-d} ngày` : `hạn ${dmy(han)}`, { hs: hs.id });
+        }
         if (hs.done) continue;
         const n = counts(cs || []);
         const label = `Hồ sơ GN ${hs.ngay_gn ? dmy(hs.ngay_gn).slice(0, 5) : 'mới'}`;
-        if (n.err) out.push({ sev: 3, cid: c.id, cname: c.name, text: `${label}: ${(cs.find((x) => x.sev === 3) || {}).title}${n.err > 1 ? ` (+${n.err - 1} lỗi)` : ''}`, when: hs.ngay_gn ? `GN ${dmy(hs.ngay_gn)}` : '', go: { hs: hs.id } });
+        if (n.err) T(`err:${hs.id}`, 3, `${label}: ${(cs.find((x) => x.sev === 3) || {}).title}${n.err > 1 ? ` (+${n.err - 1} lỗi)` : ''}`, hs.ngay_gn ? `GN ${dmy(hs.ngay_gn)}` : '', { hs: hs.id });
         const st = stageOf(hs, n.err);
         const ms = hs.ms || {};
         const prev = Object.values(ms).filter((x) => x && x !== 'skip').sort().pop();
         if (!n.err && st.k !== 'xong') {
           const wait = prev ? BK.daysBetween(prev, today) : null;
-          out.push({ sev: wait >= 2 ? 2 : 1, cid: c.id, cname: c.name, text: `${label}: ${st.l}${wait >= 2 ? ` — chờ ${wait} ngày` : ''}`, when: hs.ngay_gn ? `GN ${dmy(hs.ngay_gn)}` : '', go: { hs: hs.id } });
+          T(`stage:${hs.id}:${st.k}`, wait >= 2 ? 2 : 1, `${label}: ${st.l}${wait >= 2 ? ` — chờ ${wait} ngày` : ''}`, hs.ngay_gn ? `GN ${dmy(hs.ngay_gn)}` : '', { hs: hs.id });
         }
-        for (const b of hs.bo_sung || []) if (!b.xong && b.han && BK.daysBetween(today, b.han) <= 7) out.push({ sev: BK.daysBetween(today, b.han) < 0 ? 3 : 2, cid: c.id, cname: c.name, text: `Bổ sung ${b.ten} — KUNN ${hs.so_kunn || ''}`, when: `hạn ${dmy(b.han)}`, go: { hs: hs.id } });
       }
       for (const k of kunns) {
+        if (pending(k) || (k.hsId && hsBs.has(k.hsId))) continue;   // chưa giải ngân / hồ sơ đã có danh sách bổ sung riêng (nhắc ở trên)
         const s = BK.kunnSummary(k, { hanNgay, today });
-        if (s.quaHan) out.push({ sev: 3, cid: c.id, cname: c.name, text: `KUNN ${k.so_kunn} quá hạn hồ sơ gốc ${s.quaHan} ngày`, when: 'quá hạn', go: { kunn: k.id } });
-        else if (!s.done && s.han && BK.daysBetween(today, s.han) <= 5) out.push({ sev: 2, cid: c.id, cname: c.name, text: `KUNN ${k.so_kunn} sắp hết hạn hồ sơ gốc`, when: `hạn ${dmy(s.han)}`, go: { kunn: k.id } });
+        if (s.quaHan) T(`goc:${k.id}`, 3, `KUNN ${k.so_kunn} quá hạn hồ sơ gốc ${s.quaHan} ngày`, 'quá hạn', { kunn: k.id });
+        else if (!s.done && s.han && BK.daysBetween(today, s.han) <= 5) T(`goc:${k.id}`, 2, `KUNN ${k.so_kunn} sắp hết hạn hồ sơ gốc`, `hạn ${dmy(s.han)}`, { kunn: k.id });
       }
       { const have = new Set((ledger ? ledger.kunns : []).map((x) => soKey(x.so))); const tk = new Map(kunns.map((k) => [soKey(k.so_kunn), k])); const rows = (ledger ? ledger.kunns.map((x) => ({ so: x.so, goi: x.goi || (tk.get(soKey(x.so)) || {}).goi || '', goc: x.goc })) : []).concat(kunns.filter((k) => !have.has(soKey(k.so_kunn))).map((k) => ({ so: k.so_kunn, goi: k.goi, goc: k.manual ? k.so_tien || 0 : BK.sum((k.lines || []).map((l) => l.tien_gn)) })));
         out.push(...creditAlerts({ ...c, ledger }, rows, today)); }
-      if (ledger) for (const k of ledger.kunns) {
+      // đáo hạn: theo danh sách `due` (bảng theo dõi đã áp ghi chú, gồm KUNN chỉ có trong tool) — không có thì theo sổ Excel thô
+      for (const k of due || (ledger ? ledger.kunns.map((x) => ({ ...x, x: true })) : [])) {
         if (!(k.con_lai > 0.5) || !k.dao_han) continue;
         const d = BK.daysBetween(today, k.dao_han);
-        if (d >= 0 && d <= 15) out.push({ sev: d <= 5 ? 2 : 1, cid: c.id, cname: c.name, text: `KUNN ${k.so} đáo hạn ${dmy(k.dao_han)} — ${fmtN(k.con_lai)} đ`, when: `còn ${d} ngày`, go: { tab: 'kunn' } });
-        else if (d < 0) out.push({ sev: 3, cid: c.id, cname: c.name, text: `KUNN ${k.so} quá hạn trả nợ ${-d} ngày (theo sổ Excel)`, when: 'quá hạn', go: { tab: 'kunn' } });
+        if (d >= 0 && d <= 15) T(`dh:${soKey(k.so)}`, d <= 5 ? 2 : 1, `KUNN ${k.so} đáo hạn ${dmy(k.dao_han)} — ${fmtN(k.con_lai)} đ`, `còn ${d} ngày`, { tab: 'kunn', so: k.so });
+        else if (d < 0) T(`qh:${soKey(k.so)}`, 3, `KUNN ${k.so} quá hạn trả nợ ${-d} ngày${k.x ? ' (theo sổ Excel)' : ''}`, 'quá hạn', { tab: 'kunn', so: k.so });
       }
     }
     return out.sort((a, b) => b.sev - a.sev);
@@ -2949,7 +2983,13 @@ const LS = { user: 'bangke_user_v1', han: 'bangke_han_ngay_v1' };
 const lsGet = (k, d = '') => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* bị chặn */ } };
 const userName = () => lsGet(LS.user) || 'Không tên';
-const hanNgay = () => Number(lsGet(LS.han, '30')) || 30;
+const hanNgay = () => Number((S.cfg && S.cfg.han) || lsGet(LS.han, '30')) || 30;
+/** Cấu hình dùng chung cả team (lịch nghỉ, hạn hồ sơ gốc): lưu meta 'cfg' + thư mục chung cfg_team.json. */
+async function setTeamCfg(patch) {
+  S.cfg = { ...(S.cfg || {}), ...patch, at: Date.now(), by: userName() };
+  if (S.store) await S.store.setMeta('cfg', S.cfg);
+  if (S.sync && S.sync.state === 'on') S.sync.queue('cfg', [{ id: 'team', ...S.cfg }]);
+}
 
 function toast(msg, type = '', ms = 4200) {
   const d = document.createElement('div');
@@ -3138,7 +3178,26 @@ class LocalStore extends Emitter {
   async putFile(rec) {
     if (this.db) await new Promise((res, rej) => { const t = this.db.transaction('files', 'readwrite'); t.objectStore('files').put(rec); t.oncomplete = res; t.onerror = () => rej(t.error); });
     else (this._mem || (this._mem = new Map())).set(rec.id, rec);
-    if (this.sync && this.sync.state === 'on') this.sync.writeBin(rec.id, rec.blob, 'files').catch(() => {});
+    if (this.sync && this.sync.state === 'on') this.sync.writeBin(rec.id, rec.blob, 'files').catch(() => this.filePending(rec.id, true));
+    else this.filePending(rec.id, true);
+  }
+  /** Danh sách file chưa đẩy lên thư mục chung (meta 'filesPending'). */
+  async filePending(id, on) { const xs = new Set((await this.getMeta('filesPending')) || []); if (on) xs.add(id); else xs.delete(id); await this.setMeta('filesPending', xs.size ? [...xs] : null); }
+  async listFiles() {
+    if (!this.db) return [...(this._mem || new Map()).values()];
+    return new Promise((res) => { const q = this.db.transaction('files').objectStore('files').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); });
+  }
+  async listMeta(prefix) {
+    if (!this.db) return [];
+    return new Promise((res) => { const q = this.db.transaction('meta').objectStore('meta').getAll(); q.onsuccess = () => res((q.result || []).filter((x) => x && typeof x.id === 'string' && x.id.startsWith(prefix))); q.onerror = () => res([]); });
+  }
+  async getFileLocal(id) { return this.db ? new Promise((res) => { const q = this.db.transaction('files').objectStore('files').get(id); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }) : (this._mem || new Map()).get(id) || null; }
+  /** Đẩy các file còn chờ lên thư mục chung (gọi khi kết nối lại / mỗi vòng quét). */
+  async flushFiles() {
+    if (!this.sync || this.sync.state !== 'on') return 0;
+    const ids = (await this.getMeta('filesPending')) || []; let n = 0;
+    for (const id of ids) { const r = await this.getFileLocal(id); if (!r) { await this.filePending(id, false); continue; } try { await this.sync.writeBin(id, r.blob, 'files'); await this.filePending(id, false); n++; } catch (e) { /* lần sau */ } }
+    return n;
   }
   async getFile(id) {
     let r = this.db ? await new Promise((res) => { const q = this.db.transaction('files').objectStore('files').get(id); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }) : (this._mem || new Map()).get(id) || null;
@@ -3157,13 +3216,15 @@ class LocalStore extends Emitter {
   async delCustomer(id) {
     const at = Date.now(), by = userName();
     const ks = [...this.k.values()].filter((k) => k.customerId === id && live(k)).map((k) => ({ id: k.id, customerId: id, so_kunn: k.so_kunn, deleted: true, updatedAt: at, updatedBy: by }));
-    ks.forEach((k) => this.k.set(k.id, k));
+    const hs = [...this.h.values()].filter((x) => x.customerId === id && live(x)).map((x) => ({ id: x.id, customerId: id, deleted: true, updatedAt: at, updatedBy: by }));
     const c = { id, name: (this.c.get(id) || {}).name || '', deleted: true, updatedAt: at, updatedBy: by };
-    await this.group(`Xóa khách hàng ${c.name}`, async () => { ks.forEach((k) => this._rec('ku', this.k.get(k.id), k)); this._rec('kh', this.c.get(id), c); });
-    this.c.set(id, c);
-    await this._w('kunn', ks); await this._w('customers', [c]);
-    this._out('ku', ks); this._out('kh', [c]);
-    this.emit('c'); this.emit('k');
+    // ghi bản gốc vào lịch sử hoàn tác TRƯỚC khi ghi đè (hoàn tác trả lại đủ KUNN, hồ sơ)
+    await this.group(`Xóa khách hàng ${c.name}`, async () => { ks.forEach((k) => this._rec('ku', this.k.get(k.id), k)); hs.forEach((x) => this._rec('hs', this.h.get(x.id), x)); this._rec('kh', this.c.get(id), c); });
+    ks.forEach((k) => this.k.set(k.id, k)); hs.forEach((x) => this.h.set(x.id, x)); this.c.set(id, c);
+    await this._w('kunn', ks); await this._w('hoso', hs); await this._w('customers', [c]);
+    for (const x of hs) await this.setMeta('draft:hs:' + x.id, null); await this.setMeta('draft:' + id, null);
+    this._out('ku', ks); this._out('hs', hs); this._out('kh', [c]);
+    this.emit('c'); this.emit('k'); this.emit('h');
   }
   async putKunns(ks) {
     const xs = ks.map((k) => structuredClone(k));
@@ -3194,9 +3255,23 @@ class LocalStore extends Emitter {
   /** Nhận bản ghi từ thư mục chung: chỉ lấy nếu mới hơn bản đang có. Trả về true nếu có thay đổi. */
   async applyRemote(type, recs) {
     const map = type === 'kh' ? this.c : type === 'hs' ? this.h : this.k, store = type === 'kh' ? 'customers' : type === 'hs' ? 'hoso' : 'kunn';
-    const take = recs.filter((r) => r && r.id && (!map.has(r.id) || (r.updatedAt || 0) > (map.get(r.id).updatedAt || 0)));
+    const take = [], back = [];
+    for (const r of recs) {
+      if (!r || !r.id) continue;
+      const l = map.get(r.id);
+      if (!l) { take.push(r); continue; }
+      const rNew = (r.updatedAt || 0) > (l.updatedAt || 0);
+      if (type === 'kh' && live(l) && live(r)) {              // bản ghi công ty: gộp các danh sách con, không để bản sau đè bản trước
+        const m = mergeCustomer(rNew ? r : l, rNew ? l : r);
+        if (JSON.stringify(m) !== JSON.stringify(l)) take.push(m);
+        if (JSON.stringify(m) !== JSON.stringify(r)) back.push(m);
+        continue;
+      }
+      if (rNew) take.push(r);
+    }
     take.forEach((r) => map.set(r.id, r));
     await this._w(store, take);
+    if (back.length) this._out(type, back);
     return take.length;
   }
   async dump(withDeleted) {
@@ -3205,6 +3280,22 @@ class LocalStore extends Emitter {
   }
 }
 
+/** Gộp hai bản của cùng một công ty: lấy bản mới (a) làm gốc, cộng thêm phần bản kia (b) có mà a thiếu trong các danh sách con. */
+function mergeCustomer(a, b) {
+  const m = structuredClone(a);
+  const byId = (xs, ys, key) => { const have = new Set((xs || []).map(key)); return [...(xs || []), ...(ys || []).filter((y) => !have.has(key(y)))]; };
+  const keyed = (A, B, f) => { const o = { ...(B || {}) }; for (const [k, v] of Object.entries(A || {})) o[k] = k in o ? f(v, o[k]) : v; return o; };
+  m.kunnNotes = keyed(a.kunnNotes, b.kunnNotes, (x, y) => byId(x, y, (n) => n.id || n.at));
+  m.lsAdj = keyed(a.lsAdj, b.lsAdj, (x, y) => byId(x, y, (n) => n.id || n.tu_ngay + ':' + n.ls));
+  m.hmHist = byId(a.hmHist, b.hmHist, (h) => h.id);
+  m.goiLs = byId(a.goiLs, b.goiLs, (g) => BK.fold(g.ma));
+  m.kunnDel = keyed(a.kunnDel, b.kunnDel, (x, y) => ((x.at || 0) >= (y.at || 0) ? x : y));
+  m.dismiss = { ...(b.dismiss || {}), ...(a.dismiss || {}) };
+  if (a.hs || b.hs) m.hs = { ...(a.hs || {}), tk: { ...((b.hs || {}).tk || {}), ...((a.hs || {}).tk || {}) } };
+  for (const k of ['kunnNotes', 'lsAdj', 'kunnDel', 'dismiss']) if (!Object.keys(m[k] || {}).length) delete m[k];
+  for (const k of ['hmHist', 'goiLs']) if (!(m[k] || []).length) delete m[k];
+  return m;
+}
 const DEVICE = (() => { let d = lsGet('bangke_device_v1'); if (!d) { d = BK.uid(8); lsSet('bangke_device_v1', d); } return d; })();
 const SYNC_DIR = 'BangKe_GiaiNgan';
 class FolderSync extends Emitter {
@@ -3240,9 +3331,9 @@ class FolderSync extends Emitter {
     try {
       this.dir = await this.root.getDirectoryHandle(SYNC_DIR, { create: true });
       this._set('on');
-      (async () => { await this.pull(); await this.flush(); })().catch((e) => this._set('error', e.message));
+      (async () => { await this.pull(); await this.flush(); await this.store.flushFiles(); })().catch((e) => this._set('error', e.message));
       clearInterval(this.poll);
-      this.poll = setInterval(() => { if (document.visibilityState === 'visible') this.pull().catch(() => {}); }, 30000);
+      this.poll = setInterval(() => { if (document.visibilityState === 'visible') this.pull().then(() => this.store.flushFiles()).catch(() => {}); }, 30000);
     } catch (e) { console.error(e); this._set('error', e.message); }
   }
   get name() { return this.root ? this.root.name : ''; }
@@ -3280,6 +3371,9 @@ class FolderSync extends Emitter {
     const cids = new Set(d.log.filter((x) => x.dev === DEVICE).map((x) => x.customerId));
     cids.forEach((cid) => this.pending.set(`nk_${cid}_${DEVICE}`, { type: 'nk', cid }));
     clearTimeout(this.timer); await this.flush();
+    // file đính kèm chưa có trên thư mục chung
+    try { const fd = await this.dir.getDirectoryHandle('files', { create: true }); const have = new Set(); for await (const [nm] of fd.entries()) have.add(nm);
+      for (const r of await this.store.listFiles()) if (!have.has(r.id)) await this.writeBin(r.id, r.blob, 'files').catch(() => {}); } catch (e) { /* bỏ qua */ }
     return d.customers.length + d.kunn.length;
   }
   // ── mẫu Word (KUNN/PDGN) để chung: BangKe_GiaiNgan/mau/*.docx
@@ -3306,7 +3400,7 @@ class FolderSync extends Emitter {
     try {
       const kh = [], ku = [], hs = [];
       for await (const [name, h] of this.dir.entries()) {
-        if (h.kind !== 'file' || !/^(kh|ku|nk|hs)_.+\.json$/.test(name)) continue;
+        if (h.kind !== 'file' || !/^(kh|ku|nk|hs|cfg)_.+\.json$/.test(name)) continue;
         n++;
         if (n % 25 === 0) this._busy(`Đang đọc thư mục chung… ${n} tệp`);
         const f = await h.getFile();
@@ -3321,11 +3415,12 @@ class FolderSync extends Emitter {
         if (env.type === 'kh') kh.push(env.data);
         else if (env.type === 'ku') ku.push(env.data);
         else if (env.type === 'hs') hs.push(env.data);
+        else if (env.type === 'cfg' && env.data && (!S.cfg || (env.data.at || 0) > (S.cfg.at || 0))) { S.cfg = env.data; await this.store.setMeta('cfg', env.data); changed++; }
         else if (env.type === 'nk' && env.dev !== DEVICE) for (const x of env.data || []) { const before = this.store.log.length; await this.store.addLog(x, true); if (this.store.log.length > before) nLog++; }
       }
       const a = await this.store.applyRemote('kh', kh), b = await this.store.applyRemote('ku', ku), c = await this.store.applyRemote('hs', hs);
-      changed = a + b + c;
-      if (a) this.store.emit('c');
+      changed += a + b + c;
+      if (a || changed > a + b + c) this.store.emit('c');
       if (b) this.store.emit('k');
       if (c) this.store.emit('h');
       this.busy = ''; this.people = people; this.nFiles = n; this.last = Date.now(); this.emit('state');
@@ -3355,6 +3450,7 @@ function renderSyncPill() {
 async function startStore() {
   const st = new LocalStore(); await st.init();
   S.store = st;
+  S.cfg = (await st.getMeta('cfg')) || null;
   S.sync = st.sync = new FolderSync(st);
   st.on('hist', renderHist); renderHist();
   S.sync.on('state', () => { renderSyncPill(); if ($('#syncBox')) renderSyncBox(document); });
@@ -3392,7 +3488,7 @@ function summaryOf(cid) {
   const key = ks.length + ':' + Math.max(0, ...ks.map((k) => k.updatedAt || 0)) + ':' + hanNgay() + ':' + BK.todayISO();
   const c = sumCache.get(cid);
   if (c && c.key === key) return c.s;
-  const s = ks.length ? BK.customerSummary(ks, { hanNgay: hanNgay() }) : null;
+  const s = ks.length ? BK.customerSummary(ks.filter(isGn), { hanNgay: hanNgay() }) : null;
   sumCache.set(cid, { key, s });
   return s;
 }
@@ -3414,7 +3510,11 @@ function editCustomer(c) {
   $('#cfSave', m).onclick = async () => {
     const name = $('#cfName', m).value.trim();
     if (!name) return toast('Nhập tên khách hàng', 'err');
-    const o = { ...(c || { id: BK.uid(), createdAt: Date.now(), createdBy: userName() }), name, mst: $('#cfMst', m).value.trim(), bank: $('#cfBank', m).value.trim(), owner: $('#cfOwner', m).value.trim(), note: $('#cfNote', m).value.trim(), ...meta() };
+    const mst = $('#cfMst', m).value.trim(), dg = (x) => String(x || '').replace(/\D/g, '');
+    const dup = S.customers.find((x) => (!c || x.id !== c.id) && ((dg(mst) && dg(x.mst) === dg(mst)) || BK.fold(x.name) === BK.fold(name)));
+    if (dup && !c) { if (confirm(`Đã có công ty “${dup.name}”${dup.mst ? ' (MST ' + dup.mst + ')' : ''}. Mở công ty đó thay vì tạo mới?`)) { m.remove(); return selectCustomer(dup.id); } }
+    else if (dup && dg(mst) && dg(dup.mst) === dg(mst)) return toast(`MST ${mst} đang là của công ty “${dup.name}”`, 'err');
+    const o = { ...(c || { id: BK.uid(), createdAt: Date.now(), createdBy: userName() }), name, mst, bank: $('#cfBank', m).value.trim(), owner: $('#cfOwner', m).value.trim(), note: $('#cfNote', m).value.trim(), ...meta() };
     try { await S.store.putCustomer(o); m.remove(); if (!c) selectCustomer(o.id); log(o.id, c ? 'sua_kh' : 'them_kh', `${c ? 'Sửa' : 'Thêm'} khách hàng ${name}`); } catch (e) { toast(errMsg(e), 'err'); }
   };
   if (c) $('#cfDel', m).onclick = async () => {
@@ -3507,7 +3607,7 @@ const GOC_CLS = { done: ['Đã nhận đủ', 'p-ok'], thieu: ['Nhận thiếu',
 function portfolio(kunns) {
   const today = BK.todayISO(), ms = months12(today), byM = Object.fromEntries(ms.map((k) => [k, { v: 0, n: 0 }]));
   const goc = { done: 0, thieu: 0, chua: 0, qua: 0 }, aging = [0, 0, 0, 0], overdue = [];
-  for (const k of kunns) {
+  for (const k of kunns.filter(isGn)) {
     const s = BK.kunnSummary(k, { hanNgay: hanNgay(), today });
     const mk = (k.ngay_gn || '').slice(0, 7);
     if (byM[mk]) { byM[mk].v += s.tong_gn; byM[mk].n++; }
@@ -3556,7 +3656,7 @@ function periodLabel(key) {
 }
 function entriesOf(kunns, dim) {
   const out = [];
-  for (const k of kunns) {
+  for (const k of kunns.filter(isGn)) {
     if (dim === 'hd') for (const l of k.lines || []) out.push({ d: l.ngay_hd || k.ngay_gn || '', v: l.tien_gn || 0, k: k.id });
     else out.push({ d: k.ngay_gn || '', v: k.manual ? k.so_tien || 0 : BK.sum((k.lines || []).map((l) => l.tien_gn)), k: k.id });
   }
@@ -3621,14 +3721,40 @@ function chartsRow(pf, cid) {
   </div>`;
 }
 
+/** Khóa nhận diện một ô nhập giữa hai lần vẽ: id hoặc data-* đầu tiên. */
+function uiKey(n) {
+  if (!n || !n.dataset) return '';
+  if (n.id) return '#' + CSS.escape(n.id);
+  const k = Object.keys(n.dataset)[0];
+  return k ? `[data-${k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())}="${String(n.dataset[k]).replace(/"/g, '\\"')}"]` : '';
+}
+function uiSnapshot(el) {
+  const act = document.activeElement, inEl = act && el.contains(act) && /^(INPUT|TEXTAREA|SELECT)$/.test(act.tagName);
+  const dirty = [...el.querySelectorAll('input,textarea')].filter((n) => uiKey(n) && !uiCommitted.has(n) && !/^(checkbox|radio|date|file|hidden)$/.test(n.type) && n.value !== n.defaultValue).map((n) => [uiKey(n), n.value]);
+  uiCommitted.clear();
+  return { hash: location.hash, dirty, fk: inEl ? uiKey(act) : '', sel: inEl && 'selectionStart' in act ? act.selectionStart : null, scroll: $('#hsScroll') ? null : window.scrollY };
+}
+function uiRestore(el, k) {
+  if (!k || k.hash !== location.hash) return;
+  for (const [key, v] of k.dirty) { const n = el.querySelector(key); if (n && /^(INPUT|TEXTAREA)$/.test(n.tagName) && n.value !== v) n.value = v; }
+  if (k.fk) { const n = el.querySelector(k.fk); if (n) { try { n.focus({ preventScroll: true }); if (k.sel != null && 'setSelectionRange' in n && /^(text|search|tel|url|password|)$/.test(n.type || '')) n.setSelectionRange(k.sel, k.sel); } catch (e) { /* select / number */ } } }
+  el.querySelectorAll('input[type=date]:not([min])').forEach((n) => { n.min = '1990-01-01'; n.max = '2099-12-31'; });
+}
+const uiCommitted = new Set();   // ô vừa bắn change (đã lưu) → không chép lại giá trị cũ sau khi vẽ
+document.addEventListener('change', (e) => { if (e.target && e.target.tagName) uiCommitted.add(e.target); }, true);
+// năm gõ dở trong ô ngày (0002-11-24) → không cho handler chạy; Chrome chỉ báo hợp lệ khi đủ 4 số trong khoảng min/max
+document.addEventListener('change', (e) => { const t = e.target; if (t && t.type === 'date' && t.value && t.min && !t.validity.valid) e.stopImmediatePropagation(); }, true);
 function renderMain() {
   const el = $('#main');
   tip.style.display = 'none';
   if (!S.store) return;
-  if (!S.cid) return renderHome(el);
-  const c = cust(S.cid); if (!c) { el.innerHTML = ''; return; }
-  if (V.hs) return renderHoso(el, c);
-  renderCompany(el, c);
+  const keep = uiSnapshot(el);
+  try {
+    if (!S.cid) return renderHome(el);
+    const c = cust(S.cid); if (!c) { el.innerHTML = ''; return; }
+    if (V.hs) return renderHoso(el, c);
+    renderCompany(el, c);
+  } finally { uiRestore(el, keep); }
 }
 // Tab “Sổ hóa đơn” của một công ty: bảng kê đã nạp — giữ nguyên chức năng của bản trước.
 /** Nạp hàng loạt bảng kê cũ: mỗi file / sheet tự nhận KUNN + hóa đơn; bỏ qua KUNN đã có trong sổ. */
@@ -3855,10 +3981,13 @@ async function appendToMasterFile(file, groups, label) {
   if (map.so_kunn == null) throw new Error(`sheet “${name}” không có cột Số KUNN — đây không phải bảng kê tổng hợp nhiều KUNN`);
   const hdr = h.twoRow ? h.row + 1 : h.row;
   const have = new Set();
-  let last = hdr;
+  let last = hdr, totalRow = -1;
+  const isTot = (row) => row.slice(0, 4).some((v) => /^(tong|cong)\b/.test(BK.fold(String(v ?? ''))));
   for (let r = hdr + 1; r < g.length; r++) {
     const row = g[r] || [];
-    if (['so_kunn', 'so_hd', 'ncc', 'tien_gn', 'tien_hd'].some((f) => map[f] != null && String(row[map[f]] ?? '').trim() !== '')) last = r;
+    if (isTot(row)) { if (totalRow < 0) totalRow = r; continue; }
+    const hasTxt = ['so_kunn', 'so_hd', 'ncc'].some((f) => map[f] != null && String(row[map[f]] ?? '').trim() !== '');
+    if (hasTxt) { last = r; totalRow = -1; }
     const k = BK.normKunn(row[map.so_kunn]); if (k) have.add(k);
   }
   const add = groups.filter((x) => !have.has(BK.normKunn(x.so_kunn)));
@@ -3875,6 +4004,15 @@ async function appendToMasterFile(file, groups, label) {
   $('#mGo', m).onclick = () => {
     const ws = wb.Sheets[name];
     const rng = XLSX.utils.decode_range(ws['!ref']);
+    if (totalRow > last) {                                 // dời khối từ dòng TỔNG xuống dưới để chèn dòng mới vào giữa
+      const delta = (last + 1 + nLines) - totalRow;
+      if (delta > 0) {
+        for (let r = rng.e.r; r >= totalRow; r--) for (let c = rng.s.c; c <= rng.e.c; c++) { const a = XLSX.utils.encode_cell({ r, c }), b = XLSX.utils.encode_cell({ r: r + delta, c }); if (ws[a]) { ws[b] = ws[a]; if (ws[b].f) ws[b].f = ws[b].f.replace(/([A-Z]+)(\d+)/g, (m0, col, rw) => (+rw >= totalRow + 1 ? col + (+rw + delta) : m0)); delete ws[a]; } else delete ws[b]; }
+        rng.e.r += delta;
+        if (ws['!merges']) ws['!merges'].forEach((mg) => { if (mg.s.r >= totalRow) { mg.s.r += delta; mg.e.r += delta; } });
+        if (ws['!rows']) for (let r = rng.e.r; r >= totalRow; r--) ws['!rows'][r + delta] = ws['!rows'][r];
+      }
+    }
     const styleOf = (c) => { const cell = ws[XLSX.utils.encode_cell({ r: last, c })]; return cell && cell.s ? JSON.parse(JSON.stringify(cell.s)) : undefined; };
     const put = (r, f, v, kind) => {
       const c = map[f]; if (c == null || v == null || v === '') return;
@@ -4321,8 +4459,8 @@ function openOldCheck(cid) {
 }
 async function deleteCustomer(c) {
   if (!c) return;
-  const n = S.store.kunnsOf(c.id).length;
-  if (!confirm(`Xóa khách hàng "${c.name}" khỏi danh sách theo dõi?\nSẽ xóa luôn ${n} KUNN, toàn bộ hóa đơn, trạng thái hồ sơ gốc và nhật ký. Không hoàn tác được.\n(Nên bấm “Sao lưu” trước nếu cần giữ lại.)`)) return;
+  const n = S.store.kunnsOf(c.id).length, nh = S.store.hosoOf(c.id).length;
+  if (!confirm(`Xóa khách hàng "${c.name}" khỏi danh sách theo dõi?\nSẽ xóa luôn ${n} KUNN, ${nh} hồ sơ giải ngân, toàn bộ hóa đơn và trạng thái hồ sơ gốc.\nHoàn tác được bằng nút ↶ ngay sau đó (nhật ký giữ lại).`)) return;
   try { await S.store.delCustomer(c.id); if (S.cid === c.id) selectCustomer(null); toast(`Đã xóa ${c.name}`, 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
 }
 
@@ -4786,7 +4924,6 @@ async function saveImport(opt = {}) {
         han_bs: old ? old.han_bs || '' : '', ghi_chu: old ? old.ghi_chu || '' : '', source: IMP.file, hdr: g.hdr || '', lines, createdAt: old ? old.createdAt : Date.now(), createdBy: old ? old.createdBy : userName(), ...meta() };
       docs.push(k); n++; nl += lines.length;
     }
-    await S.store.putKunns(docs);
     if (!docs.length) { btns.forEach((b) => { b.disabled = false; }); btn.textContent = '⬆ Nạp vào sổ theo dõi'; return toast('Không còn dòng hợp lệ nào để nạp', 'err'); }
     await S.store.group(`Nạp ${IMP.file} (${docs.length} KUNN)`, () => S.store.putKunns(docs));
     log(cid, 'tai_bang_ke', `Nạp ${IMP.file}: ${n} KUNN, ${nl} dòng${nBo ? ` — bỏ ${nBo} dòng lỗi (đã GN / vượt / trùng)` : ch.errors ? ` (gồm ${ch.errors} dòng cảnh báo)` : ''}`);
@@ -4895,18 +5032,32 @@ function exportCheck() {
 // ═════════════════ SAO LƯU / NẠP ═════════════════
 async function backup() {
   const d = await S.store.dump();
-  const blob = new Blob([JSON.stringify({ app: 'bangke-gn', ver: 1, at: Date.now(), by: userName(), ...d })], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `BangKe_SaoLuu_${BK.todayISO()}.json`; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  toast(`Đã sao lưu ${d.customers.length} khách hàng, ${d.kunn.length} KUNN`, 'ok');
+  const files = await S.store.listFiles(), tpls = await S.store.listMeta('tpl:');
+  const JSZip = await jszip(), z = new JSZip();
+  const meta = { app: 'bangke-gn', ver: 2, at: Date.now(), by: userName(), ...d, cfg: S.cfg || null, files: files.map(({ blob, ...m }) => m), tpls: tpls.map((t) => ({ key: t.id, at: t.v.at, by: t.v.by, name: t.v.name })) };
+  z.file('data.json', JSON.stringify(meta));
+  for (const f of files) z.file('files/' + f.id, f.blob);
+  for (const t of tpls) if (t.v && t.v.buf) z.file('mau/' + t.id.replace(/[^\w.-]+/g, '_') + '.docx', t.v.buf);
+  saveBlob(await z.generateAsync({ type: 'blob', compression: 'DEFLATE' }), `BangKe_SaoLuu_${BK.todayISO()}.zip`);
+  toast(`Đã sao lưu ${d.customers.length} khách hàng, ${d.kunn.length} KUNN, ${(d.hoso || []).length} hồ sơ, ${files.length} file đính kèm, ${tpls.length} mẫu Word`, 'ok', 7000);
 }
 async function restore(file) {
   try {
-    const d = JSON.parse(await file.text());
+    let d, z = null;
+    if (/\.zip$/i.test(file.name)) { const JSZip = await jszip(); z = await JSZip.loadAsync(file); const f = z.file('data.json'); if (!f) throw new Error('Gói sao lưu thiếu data.json'); d = JSON.parse(await f.async('string')); }
+    else d = JSON.parse(await file.text());
     if (d.app !== 'bangke-gn') throw new Error('Không phải file sao lưu của công cụ này');
-    if (!confirm(`Nạp ${d.customers.length} khách hàng, ${d.kunn.length} KUNN từ file sao lưu (${new Date(d.at).toLocaleString('vi-VN')}, ${d.by})?\nKUNN trùng mã sẽ lấy bản sửa sau cùng.`)) return;
+    const nf = (d.files || []).length;
+    if (!confirm(`Nạp ${d.customers.length} khách hàng, ${d.kunn.length} KUNN, ${(d.hoso || []).length} hồ sơ${z ? `, ${nf} file đính kèm, ${(d.tpls || []).length} mẫu Word` : ' (file .json cũ: KHÔNG gồm file đính kèm và mẫu Word)'} từ bản sao lưu (${new Date(d.at).toLocaleString('vi-VN')}, ${d.by})?\nBản ghi trùng lấy bản sửa sau cùng.`)) return;
     await mergeData(d);
-    toast('Đã nạp dữ liệu sao lưu', 'ok');
+    let nFile = 0, nTpl = 0;
+    if (z) {
+      for (const m of d.files || []) { const f = z.file('files/' + m.id); if (!f || await S.store.getFileLocal(m.id)) continue; await S.store.putFile({ ...m, blob: new Blob([await f.async('arraybuffer')], { type: m.type || '' }) }); nFile++; }
+      for (const t of d.tpls || []) { const f = z.file('mau/' + t.key.replace(/[^\w.-]+/g, '_') + '.docx'); if (!f) continue; const cur = await S.store.getMeta(t.key); if (cur && (cur.at || 0) >= (t.at || 0)) continue; await S.store.setMeta(t.key, { buf: await f.async('arraybuffer'), at: t.at || Date.now(), by: t.by || d.by, name: t.name || '' }); nTpl++; }
+      if (d.cfg && (!S.cfg || (d.cfg.at || 0) > (S.cfg.at || 0))) { S.cfg = d.cfg; await S.store.setMeta('cfg', d.cfg); }
+    }
+    toast(`Đã nạp dữ liệu sao lưu${z ? ` · ${nFile} file đính kèm, ${nTpl} mẫu Word mới` : ''}`, 'ok', 7000);
+    renderMain();
   } catch (e) { toast('Không nạp được: ' + e.message, 'err', 8000); }
 }
 async function mergeData(d) {
@@ -4945,7 +5096,7 @@ function jszip() {
   return JSZipP;
 }
 const keyTable = () => { try { const b = JSON.parse(lsGet(TK_LS) || 'null'); return DOCX.keyTableError(b) ? null : b; } catch (e) { return null; } };
-const holidays = () => DOCX.parseHolidays(lsGet(HOL_LS) || DOCX.HOL_DEF);
+const holidays = () => DOCX.parseHolidays((S.cfg && S.cfg.hol) || lsGet(HOL_LS) || DOCX.HOL_DEF);
 
 // ── kho mẫu: IndexedDB (meta 'tpl:<loại>:<cid|chung>') + thư mục chung (BangKe_GiaiNgan/mau/<loại>_<cid|chung>.docx)
 const TPL = {
@@ -5206,8 +5357,16 @@ const listSig = () => JSON.stringify([HE.lists.ct.map((x) => x._g), HE.lists.tth
 async function openHoSo(cid, kid, hsId) {
   const c = cust(cid); if (!c) return;
   const k = kid && live(S.store.k.get(kid)) ? S.store.k.get(kid) : null;
-  const draft = !k ? await S.store.getMeta(hsId ? 'draft:hs:' + hsId : 'draft:' + cid) : null;
+  if (!hsId && k && k.hsId && live(S.store.h.get(k.hsId))) hsId = k.hsId;
+  const draft = !k || !k.doc ? await S.store.getMeta(hsId ? 'draft:hs:' + hsId : 'draft:' + cid) : null;
   const saved = (k && k.doc) || draft || {};
+  if (k && !k.doc && draft && saved.lists) { saved.lists = saved.lists.bs && saved.lists.bs.length ? { bs: saved.lists.bs } : null; if (!saved.lists) delete saved.lists; }   // đã có bảng kê thật → bỏ bảng chứng từ gõ tay
+  let ctNote = '';
+  if (k && saved.lists && saved.lists.ct) {                // bảng kê KUNN đã đổi sau lần lưu → lấy lại bảng chứng từ, giữ TK thụ hưởng
+    const fresh = JSON.stringify(DOCX.linesToCt(k.lines).map((x) => [x.ben, x.so, x.ngay, x.tien_hd, x.gn]));
+    const old = saved.ctSrc != null ? saved.ctSrc : JSON.stringify((saved.lists.ct || []).map((x) => [x.ben, x.so, x.ngay, x.tien_hd, x.gn]));
+    if (old !== fresh) { saved.lists = { ...saved.lists, ct: DOCX.linesToCt(k.lines) }; ctNote = 'Bảng kê KUNN đã đổi sau lần lưu — bảng chứng từ đã lấy lại từ bảng kê (TK thụ hưởng giữ nguyên); kiểm tra lại số tiền'; }
+  }
   const v = { loai_tien: 'VND' };
   for (const f of DOCX.HS_FIELDS) if (f.s === 'c' && c.hs && c.hs[f.k] != null && c.hs[f.k] !== '') v[f.k] = c.hs[f.k];
   if (!v.ten_kh && c.name) v.ten_kh = c.name.toUpperCase();
@@ -5216,11 +5375,12 @@ async function openHoSo(cid, kid, hsId) {
   if (/chưa số/i.test(v.so_kunn || '')) v.so_kunn = '';
   // số liệu lấy từ file Excel quản lý giải ngân của công ty (dư nợ, hạn mức) và từ hồ sơ (CIC, số ngày vay)
   const L = c.ledger, hsx = hsId ? S.store.h.get(hsId) : null;
+  const auto = {};
   if (duNoKnown(c, (hsx && hsx.so_kunn) || v.so_kunn, hsx)) {
     const dn = duNoOf(c, (hsx && hsx.so_kunn) || v.so_kunn, hsx);
-    v.du_no_truoc = Math.round(dn).toLocaleString('en-US');
-    v.sd_vay = Math.round(dn / 1e6).toLocaleString('en-US');
-    if (L && L.hm) v.hm_tong = Math.round(L.hm / 1e6).toLocaleString('en-US');
+    auto.du_no_truoc = Math.round(dn).toLocaleString('en-US');
+    auto.sd_vay = Math.round(dn / 1e6).toLocaleString('en-US');
+    if (L && L.hm) auto.hm_tong = Math.round(L.hm / 1e6).toLocaleString('en-US');
   }
   if (hsx) {
     if (hsx.so_kunn) v.so_kunn = hsx.so_kunn;
@@ -5229,17 +5389,17 @@ async function openHoSo(cid, kid, hsId) {
     const cic = (hsx.docs || []).filter((d) => d.loai === 'cic' && d.f.ngay).sort((a, b) => (BK.toISO(b.f.ngay) || '').localeCompare(BK.toISO(a.f.ngay) || ''))[0];
     if (cic) v.ngay_cic = cic.f.ngay;
   }
-  const auto = {};
   { const hv = hmVer(c, BK.toISO((hsx && hsx.ngay_gn) || v.ngay_gn) || BK.todayISO()); if (hv) { if (hv.hm_tong) auto.hm_tong = Math.round(hv.hm_tong / 1e6).toLocaleString('en-US'); if ((hv.lines || []).length) for (const f of ['hm_vay', 'hm_lc']) auto[f] = Math.round((hv[f] || 0) / 1e6).toLocaleString('en-US'); if (hv.den_ngay) auto.han_hm = dd(hv.den_ngay); if (hv.so_hdtd) auto.so_hdtd = hv.so_hdtd; if (hv.ngay_hdtd) auto.ngay_hdtd = dd(hv.ngay_hdtd); } }
   if (hsx && hsx.ls) auto.lai_suat = String(hsx.ls);
   Object.assign(v, auto);
   Object.assign(v, saved.v || {});
   // giá trị tự lấy (hạn mức theo ngày GN, lãi suất gói) đã đổi kể từ lần lưu → dùng giá trị mới, trừ khi bạn đã sửa tay
-  for (const [f, x] of Object.entries(auto)) if (!saved.v || saved.v[f] == null || saved.v[f] === '' || (saved.auto && saved.v[f] === saved.auto[f])) v[f] = x;
+  for (const [f, x] of Object.entries(auto)) if (!saved.v || saved.v[f] == null || saved.v[f] === '' || (saved.auto && (saved.v[f] === saved.auto[f] || !(f in saved.auto)))) v[f] = x;
   if (hsx) { if (hsx.so_kunn) v.so_kunn = hsx.so_kunn; if (hsx.ngay_gn) v.ngay_gn = dd(BK.toISO(hsx.ngay_gn)); if (hsx.so_ngay_vay) v.so_ngay_vay = hsx.so_ngay_vay; if (hsx.ls) v.lai_suat = String(hsx.ls); }
   HE = { auto, cid, kid, hsId: hsId || null, c: structuredClone(c), k, v, ov: new Set(saved.ov || []), lists: saved.lists ? { bs: [], ...structuredClone(saved.lists) } : { ct: DOCX.linesToCt(k ? k.lines : []), tth: [], bs: [] }, listsEdited: !!saved.lists, saved, kinds: {}, cur: lsGet('bangke_hs_tab') || 'kunn', dirty: false, ai: null };
-  if (hsx && (hsx.bo_sung || []).length) HE.lists.bs = hsx.bo_sung.map((b) => ({ ten: b.ten, ban: b.ban || 'Sao', han: parseInt(b.ngay, 10) > 0 ? `${b.ngay} ngày kể từ ngày giải ngân` : b.han || '' }));
-  else if (hsx && hsx.bs_none) HE.lists.bs = [{ ten: 'Không có', ban: '', han: '' }];
+  if (!HE.lists.bs.length && hsx && (hsx.bo_sung || []).length) HE.lists.bs = hsx.bo_sung.map((b) => ({ ten: b.ten, ban: b.ban || 'Sao', han: parseInt(b.ngay, 10) > 0 ? `${b.ngay} ngày kể từ ngày giải ngân` : b.han || '' }));
+  else if (!HE.lists.bs.length && hsx && hsx.bs_none) HE.lists.bs = [{ ten: 'Không có', ban: '', han: '' }];
+  if (ctNote) toast(ctNote, 'warn', 8000);
   for (const f of ['hm_vay', 'hm_lc']) if (auto[f] && v[f] === auto[f]) HE.ov.add(f);   // hạn mức con → không để công thức chung ghi đè
   hsRecalc();
   const m = modal(`<div class="mh"><h2>📝 Soạn KUNN & PDGN — ${esc(c.name)}${k ? ' · KUNN ' + esc(k.so_kunn || '') : ' · hồ sơ mới'}</h2>
@@ -5291,7 +5451,28 @@ function hsBuild(kind, model) {
   const d = model || DOCX.expand(DOCX.clone(K.tpl), HE.lists);
   const R = makeRenderer({ st: K.st, nb: K.nb, img: (id) => K.imgs[id], val: hsVal, label: hsLabel });
   K.html = R.blocks(d.blocks); K.store = R.store; K.base = d; K.sig = listSig(); K.dirty = !!model;
-  if (K.el) { K.el.innerHTML = K.html; K.hist = [K.html]; K.hi = 0; }
+  const sc = HE.m && $('#hsScroll', HE.m);
+  if (!K.el && sc) { K.el = document.createElement('div'); K.el.className = 'dpage'; K.el.dataset.kind = kind; K.el.style.display = 'none'; sc.appendChild(K.el); }
+  if (K.el) { K.el.setAttribute('style', pageStyle(K.base.sect, K.st)); K.el.style.display = kind === HE.cur ? '' : 'none'; K.el.innerHTML = K.html; K.hist = [K.html]; K.hsig = [K.sig]; K.hi = 0; }
+}
+/** Dựng lại các bảng danh sách (chứng từ / bên thụ hưởng / bổ sung) trong trang đã sửa tay theo HE.lists — ghép theo tên bảng. */
+function hsRebuildLists(K) {
+  const fresh = DOCX.listTables(DOCX.expand(DOCX.clone(K.tpl), HE.lists));
+  const R = makeRenderer({ st: K.st, nb: K.nb, img: (id) => K.imgs[id], val: hsVal, label: hsLabel });
+  const olds = $$('table.lt', K.el).map((t) => t.closest('.dtw'));
+  const used = new Set(); let manual = [];
+  olds.forEach((w, i) => {
+    const t = $('table.lt', w), name = ((K.store[t.dataset.i] || {}).list || '').replace(/^1$/, '');
+    let f = name ? fresh.find((x, j) => !used.has(j) && (x.list || '') === name) : null;
+    if (!f && !name) f = fresh[i] && !used.has(i) ? fresh[i] : null;
+    if (!f) return;
+    used.add(fresh.indexOf(f));
+    if (w.querySelector('.dp.ed, [data-vm], tr:not([data-i])')) manual.push(name || 'danh sách');
+    const off = K.store.length; const html = R.table(f); K.store.push(...R.store.splice(0));
+    w.outerHTML = html.replace(/data-i="(\d+)"/g, (m0, n) => `data-i="${+n + off}"`);
+  });
+  K.sig = listSig();
+  if (manual.length) toast(`Bảng ${[...new Set(manual)].join(', ')} được dựng lại theo danh sách bên trái — phần sửa tay trong bảng đã bỏ (Ctrl+Z để lấy lại)`, 'warn', 7000);
 }
 function hsTabs() {
   $('#hsTabs', HE.m).innerHTML = Object.entries(HS_KINDS).map(([k, l]) => { const K = HE.kinds[k] || {}; return `<button class="tab ${HE.cur === k ? 'act' : ''}" data-hk="${k}">${l}${K.none ? ' <span class="n r">chưa có mẫu</span>' : K.t ? `<span class="n">${K.t.own ? 'mẫu riêng KH' : 'mẫu chung'}</span>` : ''}</button>`; }).join('');
@@ -5306,6 +5487,7 @@ function hsShow() {
     return;
   }
   if (!K.el) { K.el = document.createElement('div'); K.el.className = 'dpage'; K.el.dataset.kind = HE.cur; K.el.setAttribute('style', pageStyle(K.base.sect, K.st)); K.el.innerHTML = K.html; sc.appendChild(K.el); K.hist = [K.el.innerHTML]; K.hi = 0; }
+  if (!K.el.isConnected) sc.appendChild(K.el);
   K.el.style.display = '';
   wStat();
   if (K.top != null) { sc.scrollTop = K.top; K.top = null; }
@@ -5341,12 +5523,8 @@ function hsRefresh(skip) {
     if (K.sig !== listSig()) {
       if (!K.dirty) { hsBuild(kind); }
       else if (K.el) {                     // đã sửa tay → chỉ dựng lại các bảng danh sách
-        const fresh = DOCX.listTables(DOCX.expand(DOCX.clone(K.tpl), HE.lists));
-        const R = makeRenderer({ st: K.st, nb: K.nb, img: (id) => K.imgs[id], val: hsVal, label: hsLabel });
-        const olds = $$('table.lt', K.el).map((t) => t.closest('.dtw'));
         wSnap(K, true);
-        olds.forEach((w, i) => { if (!fresh[i]) return; const off = K.store.length; const html = R.table(fresh[i]); K.store.push(...R.store.splice(0)); w.outerHTML = html.replace(/data-i="(\d+)"/g, (m0, n) => `data-i="${+n + off}"`); });
-        K.sig = listSig();
+        hsRebuildLists(K);
         wSnap(K, true);
       }
     }
@@ -5375,7 +5553,7 @@ function hsBindDoc(sc) {
     const t = e.target;
     if (t.dataset.v) return hsSet(t.dataset.v, t.value.trim());
     if (t.dataset.l) { const [L, i, c] = t.dataset.l.split('|'); HE.lists[L][+i][c] = t.value.trim(); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
-    if (t.id === 'hsHol') { lsSet(HOL_LS, t.value); return hsRefresh(); }
+    if (t.id === 'hsHol') { lsSet(HOL_LS, t.value); setTeamCfg({ hol: t.value }).catch(() => {}); return hsRefresh(); }
   });
   m.addEventListener('click', async (e) => {
     const t = e.target.closest('button,li,.df,.dc') || e.target;
@@ -5413,6 +5591,7 @@ function hsBindDoc(sc) {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (p.dataset.al && wListEmpty(p)) { wSnap(HE.kinds[HE.cur], true); wListOff(p, true); hsMarkEd(p, true); return; }
+      if (!r.collapsed && p.contains(r.startContainer) && p.contains(r.endContainer)) { wSnap(HE.kinds[HE.cur], true); r.deleteContents(); r.collapse(true); }
       const x = document.createRange(); x.setStart(r.endContainer, r.endOffset); x.setEnd(p, p.childNodes.length);
       const frag = x.extractContents();
       wSnap(HE.kinds[HE.cur], true);
@@ -5770,9 +5949,9 @@ function wCmd(w) {
     const unwrap = (el) => { for (const c of [...el.children]) { if (c.matches('.dr,.df,.dx,.dc,.dn,br')) { if (c.classList.contains('dr')) { unwrap(c); c.setAttribute('style', runCss(store[c.dataset.i].eff || {})); } continue; } unwrap(c); c.replaceWith(...c.childNodes); } };
     unwrap(p);
     const ps = store[p.dataset.i];
-    delete p.dataset.jc; delete p.dataset.indl;
+    delete p.dataset.jc; delete p.dataset.indl; delete p.dataset.al; delete p.dataset.hang;
     const tmp = document.createElement('div'); tmp.innerHTML = makeRenderer({ st: K.st, nb: { num: {}, abs: {} }, img: () => '', val: () => '', label: () => '' }).blocks([{ t: 'p', pPr: ps.pPr, items: [] }]);
-    const st0 = tmp.firstElementChild.style; p.style.textAlign = st0.textAlign; p.style.marginLeft = st0.marginLeft;
+    const st0 = tmp.firstElementChild.style; p.style.textAlign = st0.textAlign; p.style.marginLeft = st0.marginLeft; p.style.textIndent = st0.textIndent;
     hsMarkEd(p, true); return wState();
   }
   if (/^jc:/.test(w)) {
@@ -5823,7 +6002,7 @@ function wState() {
 function wSnap(K, now) {
   if (!K || !K.el || !K.hist) return;
   clearTimeout(K.ht);
-  const f = () => { const h = K.el.innerHTML; if (K.hist[K.hi] === h) return; K.hist.length = K.hi + 1; K.hist.push(h); if (K.hist.length > 120) K.hist.shift(); K.hi = K.hist.length - 1; wStat(); };
+  const f = () => { const h = K.el.innerHTML; if (K.hist[K.hi] === h) return; K.hist.length = K.hi + 1; K.hist.push(h); K.hsig = (K.hsig || []).slice(0, K.hi + 1); K.hsig.push(listSig()); if (K.hist.length > 120) { K.hist.shift(); K.hsig.shift(); } K.hi = K.hist.length - 1; wStat(); };
   if (now) f(); else K.ht = setTimeout(f, 450);
 }
 function wUndo(dir) {
@@ -5832,6 +6011,7 @@ function wUndo(dir) {
   const ni = K.hi + dir;
   if (ni < 0 || ni >= K.hist.length) return toast(dir < 0 ? 'Không còn bước nào để hoàn tác' : 'Không còn bước nào để làm lại');
   K.hi = ni; K.el.innerHTML = K.hist[ni];
+  if (K.hsig && K.hsig[ni] != null && K.hsig[ni] !== listSig()) { try { hsRebuildLists(K); K.hsig[ni] = listSig(); } catch (e) { /* giữ nguyên */ } }
   hsSyncFields(K.el); K.hist[ni] = K.el.innerHTML;
   K.dirty = true; HE.dirty = true; HE.lr = null; wStat();
 }
@@ -5898,16 +6078,18 @@ function wReplace(all) {
 function hsFieldPop(span) {
   $$('.fpop').forEach((x) => x.remove());
   const key = span.dataset.f, v = hsVal(key), calc = DOCX.HS[key] && DOCX.HS[key].calc;
+  const lm = /^(ct|tth)\.(\d+)\.(\w+)$/.exec(key);
+  const derived = !!(lm && ((lm[1] === 'ct' && /^(stt|tien_tt)$/.test(lm[3])) || (lm[1] === 'tth' && (lm[3] === 'stt' || (lm[3] === 'tien' && HE.lists.ct.length)))));
   const pop = document.createElement('div'); pop.className = 'fpop';
-  pop.innerHTML = `<b>${esc(hsLabel(key))}</b>${calc ? `<span class="hist">${HE.ov.has(key) ? 'đang sửa tay' : 'tool tự tính — sửa ở đây là gõ đè'}</span>` : ''}
-    ${v.length > 60 || /chu$/.test(key) ? `<textarea class="inp" rows="3">${esc(v)}</textarea>` : `<input class="inp" value="${esc(v)}">`}
-    <div class="bar"><button class="btn sm pri" data-ok>Áp dụng mọi chỗ</button>${calc && HE.ov.has(key) ? '<button class="btn sm" data-auto>↺ Tự tính</button>' : ''}<button class="btn sm" data-x>Hủy</button></div>`;
+  pop.innerHTML = `<b>${esc(hsLabel(key))}</b>${calc ? `<span class="hist">${HE.ov.has(key) ? 'đang sửa tay' : 'tool tự tính — sửa ở đây là gõ đè'}</span>` : derived ? '<span class="hist">tự tính từ bảng chứng từ — sửa cột Giải ngân / tên bên thụ hưởng ở bảng bên trái</span>' : ''}
+    ${v.length > 60 || /chu$/.test(key) ? `<textarea class="inp" rows="3" ${derived ? 'readonly' : ''}>${esc(v)}</textarea>` : `<input class="inp" value="${esc(v)}" ${derived ? 'readonly' : ''}>`}
+    <div class="bar">${derived ? '' : '<button class="btn sm pri" data-ok>Áp dụng mọi chỗ</button>'}${calc && HE.ov.has(key) ? '<button class="btn sm" data-auto>↺ Tự tính</button>' : ''}<button class="btn sm" data-x>${derived ? 'Đóng' : 'Hủy'}</button></div>`;
   HE.m.appendChild(pop);
   const a = span.getBoundingClientRect();
   pop.style.top = Math.min(innerHeight - 170, a.bottom + 6) + 'px'; pop.style.left = Math.min(innerWidth - 340, Math.max(8, a.left)) + 'px';
   const inp = $('input,textarea', pop); inp.focus(); inp.select();
-  const ok = () => { pop.remove(); if (inp.value !== v) hsSet(key, inp.value.trim()); };
-  $('[data-ok]', pop).onclick = ok; $('[data-x]', pop).onclick = () => pop.remove();
+  const ok = () => { pop.remove(); if (!derived && inp.value !== v) hsSet(key, inp.value.trim()); };
+  if ($('[data-ok]', pop)) $('[data-ok]', pop).onclick = ok; $('[data-x]', pop).onclick = () => pop.remove();
   if ($('[data-auto]', pop)) $('[data-auto]', pop).onclick = () => { pop.remove(); HE.ov.delete(key); HE.dirty = true; hsRefresh(); };
   inp.onkeydown = (e) => { if (e.key === 'Enter' && (inp.tagName === 'INPUT' || e.ctrlKey)) { e.preventDefault(); ok(); } if (e.key === 'Escape') pop.remove(); };
 }
@@ -5957,6 +6139,7 @@ function hsFromDoc() {
   if (!HE || !HE.hsId) return;
   const h = hsGet(HE.hsId); if (!h) return;
   const v = HE.v, gn = BK.toISO(v.ngay_gn) || BK.toISO(h.ngay_gn), ch = {};
+  if (gn && !h.done && gn !== BK.toISO(h.ngay_gn)) { ch.ngay_gn = gn; if ((h.bo_sung || []).length) ch.bo_sung = h.bo_sung.map((b) => { const n = parseInt(b.ngay, 10); return n > 0 ? { ...b, han: dd(BK.addDays(gn, n)) } : b; }); }
   if (v.so_kunn && !/chưa số/i.test(v.so_kunn) && v.so_kunn !== h.so_kunn && !kunnTakenOther(cust(h.customerId) || HE.c, h).has(kkey(v.so_kunn))) ch.so_kunn = v.so_kunn;
   const ls = DOCX.num(v.lai_suat); if (ls != null && ls > 0 && ls < 50 && String(ls) !== String(h.ls || '')) ch.ls = String(ls);
   const dh = BK.toISO(v.ngay_dao_han);
@@ -5965,10 +6148,12 @@ function hsFromDoc() {
   if (snv && String(snv) !== String(h.so_ngay_vay || '')) ch.so_ngay_vay = String(snv);
   const bl = (HE.lists.bs || []).filter((b) => b && b.ten && !/^không( có)?$/i.test(b.ten.trim()));
   const none = (HE.lists.bs || []).some((b) => b && /^không( có)?$/i.test((b.ten || '').trim()));
-  if (bl.length && !(h.bo_sung || []).length) ch.bo_sung = bl.map((b) => { const m = /(\d+)\s*ngày/.exec(b.han || ''), d = BK.toISO(b.han); const n = m ? m[1] : d && gn ? String(BK.daysBetween(gn, d)) : ''; return { ten: b.ten.trim(), ban: b.ban || 'Sao', ngay: n, han: gn && n ? dd(BK.addDays(gn, +n)) : d ? dd(d) : '', xong: false }; });
+  const have = new Set((ch.bo_sung || h.bo_sung || []).map((b) => BK.fold(b.ten)));
+  const add = bl.filter((b) => !have.has(BK.fold(b.ten))).map((b) => { const m = /(\d+)\s*ngày/.exec(b.han || ''), d = BK.toISO(b.han); const n = m ? m[1] : d && gn ? String(BK.daysBetween(gn, d)) : ''; return { ten: b.ten.trim(), ban: b.ban || 'Sao', ngay: n, han: gn && n ? dd(BK.addDays(gn, +n)) : d ? dd(d) : '', xong: false }; });
+  if (add.length) { ch.bo_sung = [...(ch.bo_sung || h.bo_sung || []), ...add]; if (h.bs_none) ch.bs_none = false; }
   else if (none && !(h.bo_sung || []).length && !h.bs_none) ch.bs_none = true;
   if (!Object.keys(ch).length) return;
-  hsPatch(HE.hsId, (x) => Object.assign(x, ch), 'Cập nhật hồ sơ theo KUNN / PDGN đã soạn').then(() => toast(`Hồ sơ cập nhật theo KUNN / PDGN: ${[ch.so_kunn && 'số KUNN', ch.ls && 'lãi suất', ch.so_ngay_vay && 'số ngày vay / đáo hạn', ch.bo_sung && 'chứng từ bổ sung', ch.bs_none && 'không có chứng từ bổ sung'].filter(Boolean).join(', ')}`, 'ok', 6000)).catch(() => {});
+  hsPatch(HE.hsId, (x) => Object.assign(x, ch), 'Cập nhật hồ sơ theo KUNN / PDGN đã soạn').then(() => toast(`Hồ sơ cập nhật theo KUNN / PDGN: ${[ch.ngay_gn && 'ngày giải ngân', ch.so_kunn && 'số KUNN', ch.ls && 'lãi suất', ch.so_ngay_vay && 'số ngày vay / đáo hạn', ch.bo_sung && 'chứng từ bổ sung', ch.bs_none && 'không có chứng từ bổ sung'].filter(Boolean).join(', ')}`, 'ok', 6000)).catch(() => {});
 }
 const hsMarkSoan = () => { if (HE && HE.hsId) { const h = hsGet(HE.hsId); if (h && !(h.ms || {}).soan) hsPatch(HE.hsId, (x) => { x.ms = { ...(x.ms || {}), soan: BK.todayISO() }; }, 'Đã soạn KUNN & PDGN').catch(() => {}); } };
 async function hsSave() {
@@ -5987,13 +6172,14 @@ async function hsSave() {
     if (K.dirty) body[kind] = DOCX.serialize(hsModel(kind), { keepMarks: true });
   }
   const strip = (L) => L.map(({ _g, ...x }) => x);
-  const doc = { v: { ...HE.v }, auto: HE.auto || {}, ov: [...HE.ov], lists: HE.listsEdited ? { ct: strip(HE.lists.ct), tth: strip(HE.lists.tth) } : null, body, tplAt, at: Date.now(), by: userName() };
+  const doc = { v: { ...HE.v }, auto: HE.auto || {}, ov: [...HE.ov], lists: HE.listsEdited ? { ct: strip(HE.lists.ct), tth: strip(HE.lists.tth), bs: strip(HE.lists.bs || []) } : null, body, tplAt, at: Date.now(), by: userName() };
+  if (HE.k) doc.ctSrc = JSON.stringify(DOCX.linesToCt(HE.k.lines).map((x) => [x.ben, x.so, x.ngay, x.tien_hd, x.gn]));
   if (!doc.lists) delete doc.lists;
   await S.store.group(`Lưu hồ sơ KUNN/PDGN ${HE.v.so_kunn || ''}`, async () => {
     await S.store.putCustomer({ ...c0, hs, ...meta() });
     if (HE.kid) await S.store.updateKunn(HE.kid, { doc, ...meta() });
   });
-  if (!HE.kid) await S.store.setMeta(HE.hsId ? 'draft:hs:' + HE.hsId : 'draft:' + HE.cid, doc);
+  await S.store.setMeta(HE.hsId ? 'draft:hs:' + HE.hsId : 'draft:' + HE.cid, HE.kid ? null : doc);
   HE.c = cust(HE.cid) || HE.c; HE.saved = doc; HE.dirty = false;
   log(HE.cid, 'soan_hs', `Lưu hồ sơ KUNN/PDGN ${HE.v.so_kunn || '(chưa số)'}`);
   toast('Đã lưu hồ sơ (thông tin KH được nhớ cho lần sau)', 'ok');
@@ -6002,8 +6188,9 @@ function saveBlob(blob, name) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name.replace(/[\\/:*?"<>|]+/g, '_');
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
+const kunnSlug = (so, dflt) => String(so || '').replace(/[()]/g, '_').replace(/[^\w.]+/g, '').replace(/_+/g, '_').replace(/^_+|_+$/g, '').replace(/_\./g, '.') || dflt;
 async function hsExport(kinds) {
-  hsMarkSoan(); hsFromDoc();
+  hsFromDoc();
   const ck = DOCX.checks(HE.v, HE.lists, [], { hol: holidays() }).filter((x) => x.sev >= 3);
   if (ck.length && !confirm(`Hồ sơ còn ${ck.length} lỗi:\n- ${ck.slice(0, 6).map((x) => x.msg).join('\n- ')}\n\nVẫn xuất Word?`)) return;
   const red = $('#hsRed', HE.m).checked;
@@ -6014,9 +6201,10 @@ async function hsExport(kinds) {
     const xml = DOCX.serialize(hsModel(kind), { fill: (k) => hsVal(k), red });
     K.zip.file('word/document.xml', xml);
     const blob = await K.zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    saveBlob(blob, `${HS_KINDS[kind]}_${(HE.v.so_kunn || 'moi').replace(/[()]/g, '_')}_${slug(HE.c.name)}.docx`);
+    saveBlob(blob, `${HS_KINDS[kind]}_${kunnSlug(HE.v.so_kunn, 'moi')}_${slug(HE.c.name)}.docx`);
     n++;
   }
+  if (n) hsMarkSoan();
   if (n) log(HE.cid, 'xuat_hs', `Xuất Word ${kinds.map((k) => HS_KINDS[k]).join(' + ')} ${HE.v.so_kunn || ''}`);
 }
 /** AI viết câu diễn giải chứng từ giải ngân theo bảng chứng từ + chứng từ AI đã đọc (bạn sửa tiếp). */
@@ -6099,15 +6287,18 @@ function hsChecks(hs) {
   const c = hsCache.get(hs.id);
   if (c && c.key === key) return c.cs;
   const kh = cust(hs.customerId) || {};
-  const cs = HSC.checks(hs, { kh, kunns: S.store.kunnsOf(hs.customerId), ledger: kh.ledger, tth: (hs.tth || []), today: BK.todayISO(), hmHist: kh.hmHist, goi: goiOf(kh), goiRows: goiRowsOf(kh), duNo: duNoKnown(kh, hs.so_kunn, hs) ? duNoOf(kh, hs.so_kunn, hs) : undefined });
+  const allK = S.store.kunnsOf(hs.customerId), pend = allK.filter((k) => kunnPending(k) && k.hsId !== hs.id);
+  const cs = HSC.checks(hs, { kh, kunns: allK.filter((k) => !pend.includes(k)), pendingKunns: pend, ledger: kh.ledger, tth: (hs.tth || []), today: BK.todayISO(), hol: holidays(), hmHist: kh.hmHist, goi: goiOf(kh), goiRows: goiRowsOf(kh), duNo: duNoKnown(kh, hs.so_kunn, hs) ? duNoOf(kh, hs.so_kunn, hs) : undefined });
   hsCache.set(hs.id, { key, cs });
   return cs;
 }
-const hsDone = (h) => !!h.done && HSC.stageOf(h, HSC.counts(hsChecks(h)).err).k === 'xong';
+const hsDone = (h) => !!h.done;
 const activeHoso = (cid) => S.store.hosoOf(cid).filter((h) => !hsDone(h)).sort((a, b) => (a.ngay_gn || '9').localeCompare(b.ngay_gn || '9'));
+const taskKey = (t) => t.key || t.text;
 function companyTasks(c) {
   const dis = c.dismiss || {};
-  return HSC.tasks([{ c, hoso: S.store.hosoOf(c.id).map((hs) => ({ hs, checks: hsChecks(hs) })), kunns: S.store.kunnsOf(c.id), ledger: c.ledger, hanNgay: hanNgay() }]).filter((t) => !dis[t.text]);
+  const due = kunnRowsOf(c).filter((r) => r.live && !r.closed && r.dao_han).map((r) => ({ so: r.so, con_lai: r.con_lai ?? r.goc, dao_han: r.dao_han, x: !!r.x && !r.k }));
+  return HSC.tasks([{ c, hoso: S.store.hosoOf(c.id).map((hs) => ({ hs, checks: hsChecks(hs) })), kunns: S.store.kunnsOf(c.id), ledger: c.ledger, hanNgay: hanNgay(), due }]).filter((t) => !dis[taskKey(t)] && !dis[t.text]);
 }
 const hmVer = (c, date) => HSC.hmAt((c || {}).hmHist, date || BK.todayISO());
 const hmLedger = (c, date) => { const v = hmVer(c, date); return (v && v.hm_tong) || (c.ledger && c.ledger.hm) || (DOCX.num((c.hs || {}).hm_tong) ? DOCX.num(c.hs.hm_tong) * 1e6 : null); };
@@ -6119,7 +6310,7 @@ const vnd = (n) => (n == null || !Number.isFinite(n) ? '—' : Math.round(n).toL
 const SEV = { 3: ['✕', 'e'], 2: ['!', 'w'], 1: ['→', 'i'], 0: ['✓', 'o'] };
 function goTask(t) {
   if (t.go.hs) return go({ cid: t.cid, hs: t.go.hs, doc: null });
-  if (t.go.kunn) { V.kunnSel = t.go.kunn; return go({ cid: t.cid, tab: 'kunn', hs: null, doc: null }); }
+  if (t.go.kunn || t.go.so) { V.kunnSel = t.go.kunn || null; V.kunnSelSo = t.go.so || null; V.kf = 'all'; V.kq = ''; return go({ cid: t.cid, tab: 'kunn', hs: null, doc: null }); }
   return go({ cid: t.cid, tab: t.go.tab || 'tong', hs: null, doc: null });
 }
 
@@ -6170,12 +6361,14 @@ function renderHome(el) {
   const today = BK.todayISO(), hol = holidays();
   const q = BK.fold(V.q || '');
   const due = dueList(30), overdue = due.filter((x) => x.d < 0), d7 = due.filter((x) => x.d >= 0 && x.d <= 7), d30 = due.filter((x) => x.d >= 0);
-  const withL = S.customers.filter((c) => c.ledger);
-  const duNo = BK.sum(withL.map((c) => c.ledger.du_no));
+  const dnMap = new Map(S.customers.map((c) => [c.id, duNoOf(c)]));
+  const dnOf = (c) => dnMap.get(c.id) || 0;
+  const withL = S.customers.filter((c) => c.ledger || duNoKnown(c));
+  const duNo = BK.sum(withL.map(dnOf));
   const hos = S.customers.flatMap((c) => activeHoso(c.id).map((hs) => { const cs = hsChecks(hs), n = HSC.counts(cs); return { c, hs, n, st: HSC.stageOf(hs, n.err) }; }))
     .sort((a, b) => b.n.err - a.n.err || (a.hs.ngay_gn || '9').localeCompare(b.hs.ngay_gn || '9'));
   const ym = today.slice(0, 7);
-  const gnMonth = BK.sum(S.customers.flatMap((c) => S.store.kunnsOf(c.id).filter((k) => (k.ngay_gn || '').startsWith(ym)).map((k) => BK.sum(k.lines.map((l) => l.tien_gn)))));
+  const gnMonth = BK.sum(S.customers.flatMap((c) => S.store.kunnsOf(c.id).filter(isGn).concat(xlKunns(c)).filter((k) => (k.ngay_gn || '').startsWith(ym)).map(gocOf)));
   // lịch đáo hạn 8 tuần tới (tuần bắt đầu thứ Hai)
   const dow = (new Date(today + 'T00:00:00Z').getUTCDay() + 6) % 7;
   const wk0 = BK.addDays(today, -dow);
@@ -6188,32 +6381,32 @@ function renderHome(el) {
   };
   const shown = S.customers.filter((c) => !q || BK.fold(c.name).includes(q) || (c.mst || '').includes(q) || BK.fold((c.hs || {}).cif).includes(q));
   const card = (c) => {
-    const L = c.ledger, pct = L && hmLedger(c) ? Math.min(100, Math.round((L.du_no / hmLedger(c)) * 100)) : null;
+    const L = c.ledger || duNoKnown(c), dn = dnOf(c), pct = L && hmLedger(c) ? Math.min(100, Math.round((dn / hmLedger(c)) * 100)) : null;
     const act = activeHoso(c.id), nErr = act.filter((h) => HSC.counts(hsChecks(h)).err).length;
     const next = due.filter((x) => x.c === c && x.d >= 0)[0], od = due.filter((x) => x.c === c && x.d < 0).length;
     return `<a class="ccard ${od ? 'bad' : ''}" href="${hashOf({ cid: c.id, tab: 'tong' })}">
       <div><b>${esc(c.name)}</b><small>${esc([(c.hs || {}).cif && 'CIF ' + c.hs.cif, (c.hs || {}).so_hdtd && 'HĐTD ' + c.hs.so_hdtd, c.mst && !(c.hs || {}).cif && 'MST ' + c.mst].filter(Boolean).join(' · ') || 'Chưa có thông tin HĐTD')}</small></div>
-      ${L && hmLedger(c) ? `<div class="cbar"><div><span>Dư nợ ${trieu(L.du_no)} / ${trieu(hmLedger(c))}</span><b class="${pct >= 90 ? 'err' : ''}">còn ${trieu(hmLedger(c) - L.du_no)}</b></div><i><u style="width:${pct}%"></u></i></div>` : L ? `<div class="cbar"><div><span>Dư nợ ${trieu(L.du_no)}</span><b class="m">chưa nhập hạn mức</b></div></div>` : `<div class="cbar none">Chưa đọc file Excel quản lý giải ngân</div>`}
+      ${L && hmLedger(c) ? `<div class="cbar"><div><span>Dư nợ ${trieu(dn)} / ${trieu(hmLedger(c))}</span><b class="${pct >= 90 ? 'err' : ''}">còn ${trieu(hmLedger(c) - dn)}</b></div><i><u style="width:${pct}%"></u></i></div>` : L ? `<div class="cbar"><div><span>Dư nợ ${trieu(dn)}</span><b class="m">chưa nhập hạn mức</b></div></div>` : `<div class="cbar none">Chưa đọc file Excel quản lý giải ngân</div>`}
       <ul>${od ? `<li class="e">✕ ${od} KUNN quá hạn trả nợ</li>` : ''}<li class="${next && next.d <= 7 ? 'w' : 'm'}">${next ? `Đáo hạn gần nhất ${dd(next.dh)} · KUNN ${esc(next.so)} · ${trieu(next.tien)}` : 'Không có KUNN đáo hạn trong 30 ngày'}</li>
         <li class="${nErr ? 'e' : 'm'}">${act.length ? `${act.length} hồ sơ giải ngân đang làm${nErr ? ` · ${nErr} có lỗi` : ''}` : 'Không có hồ sơ đang làm'}</li></ul>
-      <footer><span>${L ? L.n_live + ' KUNN còn dư nợ' : S.store.kunnsOf(c.id).length + ' KUNN trong sổ'}</span>${c.owner && c.owner !== 'Không tên' ? `<span>${esc(c.owner)}</span>` : ''}</footer></a>`;
+      <footer><span>${L ? kunnRowsOf(c).filter((r) => r.live).length + ' KUNN còn dư nợ' : S.store.kunnsOf(c.id).length + ' KUNN trong sổ'}</span>${c.owner && c.owner !== 'Không tên' ? `<span>${esc(c.owner)}</span>` : ''}</footer></a>`;
   };
-  el.innerHTML = `<div class="home">
+  el.innerHTML = `<div class="home${renderHome.shown ? ' still' : ''}">
     <div class="hbar"><h1>Tổng quan giải ngân</h1><span class="hist">${dd(today)} · ${S.customers.length} công ty</span><span style="flex:1"></span>
       <button class="btn" id="bCheck" title="Kiểm tra một bảng kê mới: hóa đơn nào đã giải ngân, vượt tiền…">🔍 Kiểm tra bảng kê</button><button class="btn" id="bImport" title="Nạp bảng kê Excel (kể cả bảng kê tổng hợp nhiều KUNN) — tạo công ty từ file">⬆ Nạp bảng kê Excel</button><button class="btn pri" id="bAddCo">＋ Thêm công ty</button></div>
     <div class="tiles">
-      ${tile('Dư nợ', withL.length ? trieu(duNo) : '—', withL.length ? `${withL.length}/${S.customers.length} công ty đã có file Excel` : 'chưa đọc file Excel nào', { icon: '₫' })}
+      ${tile('Dư nợ', withL.length ? trieu(duNo) : '—', withL.length ? `${withL.length}/${S.customers.length} công ty có số liệu · file Excel + KUNN trong tool` : 'chưa đọc file Excel nào', { icon: '₫' })}
       ${tile('Đáo hạn 7 ngày tới', `${d7.length} KUNN`, d7.length ? trieu(BK.sum(d7.map((x) => x.tien))) : 'không có', { tone: d7.length ? 'warn' : 'good', icon: '⏱' })}
       ${tile('Đáo hạn 30 ngày tới', `${d30.length} KUNN`, d30.length ? trieu(BK.sum(d30.map((x) => x.tien))) : 'không có', { icon: '📅' })}
       ${tile('Quá hạn trả nợ', `${overdue.length} KUNN`, overdue.length ? trieu(BK.sum(overdue.map((x) => x.tien))) + ' · theo file Excel' : 'không có', { tone: overdue.length ? 'crit' : 'good', icon: overdue.length ? '✕' : '✓' })}
       ${tile('Hồ sơ đang làm', String(hos.length), hos.length ? `${hos.filter((x) => x.n.err).length} hồ sơ có lỗi` : 'không có', { tone: hos.some((x) => x.n.err) ? 'crit' : '', icon: '📁' })}
-      ${tile(`Giải ngân tháng ${+ym.slice(5)}`, shortMoney(gnMonth), 'theo sổ hóa đơn', { icon: '↗' })}
+      ${tile(`Giải ngân tháng ${+ym.slice(5)}`, shortMoney(gnMonth), 'sổ hóa đơn + nhập tay + file Excel', { icon: '↗' })}
     </div>
     <div class="g3x">
       <section class="card panel"><header><h3>Hạn mức đã dùng</h3><span class="hist">dư nợ / hạn mức từng công ty</span></header>
-        ${withL.length ? `<div class="rings">${withL.slice().sort((a, b) => b.ledger.du_no / (hmLedger(b) || 1e18) - a.ledger.du_no / (hmLedger(a) || 1e18)).slice(0, 8).map((c) => { const hm = hmLedger(c); return ring(hm ? (c.ledger.du_no / hm) * 100 : 0, c.name, hm ? `còn ${trieu(hm - c.ledger.du_no)}` : 'chưa có hạn mức', `${c.name}: dư nợ ${vnd(c.ledger.du_no)}${hm ? ' / hạn mức ' + vnd(hm) : ''}`, A({ cgo: c.id })); }).join('')}</div>` : '<div class="empty">Đọc file Excel quản lý giải ngân của từng công ty để thấy hạn mức đã dùng</div>'}</section>
+        ${withL.length ? `<div class="rings">${withL.slice().sort((a, b) => dnOf(b) / (hmLedger(b) || 1e18) - dnOf(a) / (hmLedger(a) || 1e18)).slice(0, 8).map((c) => { const hm = hmLedger(c); return ring(hm ? (dnOf(c) / hm) * 100 : 0, c.name, hm ? `còn ${trieu(hm - dnOf(c))}` : 'chưa có hạn mức', `${c.name}: dư nợ ${vnd(dnOf(c))}${hm ? ' / hạn mức ' + vnd(hm) : ''}`, A({ cgo: c.id })); }).join('')}</div>` : '<div class="empty">Đọc file Excel quản lý giải ngân của từng công ty để thấy hạn mức đã dùng</div>'}</section>
       <section class="card panel"><header><h3>Lịch đáo hạn 6 tuần</h3></header>${dueCalendar(dueList(42).filter((x) => x.d >= -7))}</section>
-      <section class="card panel"><header><h3>KUNN còn dư nợ theo mức độ gấp</h3></header>${(() => { const live = S.customers.flatMap((c) => (c.ledger ? c.ledger.kunns.filter((k) => k.con_lai > 0.5).map((k) => ({ c, k, a: applyNotes(c, k) })).filter((x) => !x.a.closed && x.a.con > 0.5) : [])); const d = (x) => (x.a.due ? BK.daysBetween(today, x.a.due) : 999);
+      <section class="card panel"><header><h3>KUNN còn dư nợ theo mức độ gấp</h3></header>${(() => { const live = S.customers.flatMap((c) => kunnRowsOf(c).filter((r) => r.live && !r.closed && (r.con_lai ?? r.goc) > 0.5).map((r) => ({ c, a: { con: r.con_lai ?? r.goc, due: r.dao_han } }))); const d = (x) => (x.a.due ? BK.daysBetween(today, x.a.due) : 999);
         return live.length ? segBar([{ label: 'Quá hạn', value: live.filter((x) => d(x) < 0).length, color: '#A83A2C' }, { label: '≤ 7 ngày', value: live.filter((x) => d(x) >= 0 && d(x) <= 7).length, color: '#C8962A' }, { label: '8–30 ngày', value: live.filter((x) => d(x) > 7 && d(x) <= 30).length, color: '#A3E635' }, { label: 'Trên 30 ngày', value: live.filter((x) => d(x) > 30).length, color: '#16A34A' }], ' KUNN') + `<div class="bignum"><b>${live.length}</b> KUNN còn dư nợ · <b>${trieu(BK.sum(live.map((x) => x.a.con)))}</b></div>` : '<div class="empty">Chưa có dữ liệu dư nợ</div>'; })()}</section>
     </div>
     <div class="g2x">
@@ -6221,18 +6414,22 @@ function renderHome(el) {
         ${due.length ? `<div class="tw" style="max-height:420px"><table class="t click"><thead><tr><th>Ngày đáo hạn</th><th>Công ty</th><th>Số KUNN</th><th class="right">Gốc còn lại</th><th>Còn</th></tr></thead><tbody>${due.slice(0, 60).map(dueRow).join('')}</tbody><tfoot><tr><td colspan="3"><b>Tổng · ${due.length} KUNN</b></td><td class="num"><b>${vnd(BK.sum(due.map((x) => x.tien)))}</b></td><td></td></tr></tfoot></table></div>`
           : `<div class="empty">Không có KUNN đáo hạn trong 30 ngày${withL.length < S.customers.length ? ' — đọc file Excel quản lý giải ngân của từng công ty (tab Thông tin & mẫu Word) để có ngày đáo hạn và dư nợ chính xác' : ''}</div>`}</section>
       <section class="card panel"><header><h3>Lịch đáo hạn 8 tuần tới</h3><span class="hist">gốc còn lại theo tuần</span></header>${all56.length ? colChart(weeks, { h: 200 }) : '<div class="empty">Không có KUNN đáo hạn trong 8 tuần</div>'}
-        ${withL.length ? `<h3 class="sub3">Dư nợ theo công ty</h3>${hBars(withL.sort((a, b) => b.ledger.du_no - a.ledger.du_no).slice(0, 8).map((c) => ({ label: c.name, value: c.ledger.du_no, tip: `${c.name}: dư nợ ${vnd(c.ledger.du_no)}${c.ledger.hm ? ' / hạn mức ' + vnd(c.ledger.hm) : ''}` })), { fmt: (v) => trieu(v) })}` : ''}</section>
+        ${withL.length ? `<h3 class="sub3">Dư nợ theo công ty</h3>${hBars(withL.slice().sort((a, b) => dnOf(b) - dnOf(a)).slice(0, 8).map((c) => ({ label: c.name, value: dnOf(c), tip: `${c.name}: dư nợ ${vnd(dnOf(c))}${hmLedger(c) ? ' / hạn mức ' + vnd(hmLedger(c)) : ''}` })), { fmt: (v) => trieu(v) })}` : ''}</section>
     </div>
-    ${(() => { const today = BK.todayISO(); const al = S.customers.flatMap((c) => { const rows = goiRowsOf(c); const dis = c.dismiss || {}; return HSC.creditAlerts(c, rows, today).filter((t) => !dis[t.text]); }).sort((a, b) => b.sev - a.sev);
+    ${(() => { const today = BK.todayISO(); const al = S.customers.flatMap((c) => { const rows = goiRowsOf(c); const dis = c.dismiss || {}; return HSC.creditAlerts(c, rows, today).filter((t) => !dis[taskKey(t)] && !dis[t.text]); }).sort((a, b) => b.sev - a.sev);
       return al.length ? `<section class="card panel"><header><h3>Hạn mức & gói lãi suất cần chú ý</h3><span class="hist">${al.length} việc · bấm để mở tab Thông tin của công ty</span></header><div class="crl">${al.map((t) => `<a class="cra s${t.sev}" href="${hashOf({ cid: t.cid, tab: 'info' })}"><b>${esc(t.cname)}</b><span>${esc(t.text)}</span><small>${esc(t.when)}</small></a>`).join('')}</div></section>` : ''; })()}
     <section class="card panel"><header><h3>Hồ sơ giải ngân đang làm</h3><span class="hist">${hos.length} hồ sơ</span></header>
       ${hos.length ? `<div class="hlist">${hos.slice(0, 12).map(({ c, hs, n, st }) => `<a class="hrow2" href="${hashOf({ cid: c.id, hs: hs.id })}"><b>${esc(c.name)}</b><span>Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : '(chưa định ngày)'} · ${vnd(BK.sum((hs.lines || []).map((l) => l.tien_gn)))}${hs.so_kunn ? ' · KUNN ' + esc(hs.so_kunn) : ''}</span><span class="stage ${n.err ? 'e' : ''}">${n.err ? `${n.err} lỗi` : esc(st.l)}</span></a>`).join('')}</div>` : '<div class="empty">Không có hồ sơ đang làm — vào một công ty, thả file KH gửi để tạo hồ sơ.</div>'}</section>
     <div class="hbar"><h2>Công ty</h2><input class="inp" id="cq" placeholder="Tìm công ty theo tên, MST, CIF…" value="${esc(V.q || '')}"></div>
     ${S.customers.length ? `<div class="cgrid">${shown.map(card).join('')}</div>` : `<div class="card empty"><p style="font-size:16px;margin-bottom:8px">Chưa có công ty nào</p><p>Bấm <b>＋ Thêm công ty</b>, hoặc <b>⬆ Nạp bảng kê Excel</b> để nạp bảng kê đang theo dõi.</p></div>`}
   </div>`;
-  $$('[data-cal]', el).forEach((d) => { d.onclick = () => { const x = dueList(60).find((y) => y.dh === d.dataset.cal); if (x) { V.kunnSelSo = x.so; V.kunnSel = null; V.kf = 'all'; go({ cid: x.c.id, tab: 'kunn', hs: null, doc: null }); } }; });
+  renderHome.shown = true;
+  const goDue = (x) => { V.kunnSelSo = x.so; V.kunnSel = null; V.kf = 'all'; V.kq = ''; go({ cid: x.c.id, tab: 'kunn', hs: null, doc: null }); };
+  $$('[data-cal]', el).forEach((d) => { d.onclick = () => { const xs = dueList(60).filter((y) => y.dh === d.dataset.cal); if (xs.length === 1) goDue(xs[0]);
+    else if (xs.length) { const m = modal(`<div class="mh"><h2>${dd(d.dataset.cal)} · ${xs.length} KUNN đáo hạn</h2><button class="x" data-close aria-label="Đóng">&times;</button></div><div class="mb"><table class="t click"><thead><tr><th>Công ty</th><th>Số KUNN</th><th class="right">Dư nợ</th></tr></thead><tbody>${xs.map((x, i) => `<tr data-i="${i}"><td>${esc(x.c.name)}</td><td><b>${esc(x.so)}</b></td><td class="num">${vnd(x.tien)}</td></tr>`).join('')}</tbody></table></div>`);
+      $$('[data-i]', m).forEach((tr) => { tr.onclick = () => { m.remove(); goDue(xs[+tr.dataset.i]); }; }); } }; });
   $$('[data-cgo]', el).forEach((d) => { d.onclick = () => go({ cid: d.dataset.cgo, tab: 'tong', hs: null, doc: null }); });
-  $$('[data-due]', el).forEach((tr) => { tr.onclick = () => { const x = due[+tr.dataset.due]; V.kunnSelSo = x.so; V.kunnSel = null; V.kf = 'all'; go({ cid: x.c.id, tab: 'kunn', hs: null, doc: null }); }; });
+  $$('[data-due]', el).forEach((tr) => { tr.onclick = () => goDue(due[+tr.dataset.due]); });
   const cq = $('#cq', el);
   cq.oninput = () => { V.q = cq.value; clearTimeout(cq._t); cq._t = setTimeout(() => { renderMain(); const n = $('#cq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 200); };
   $('#bAddCo', el).onclick = () => editCustomer();
@@ -6256,6 +6453,7 @@ function bindCompanyHead(el, c) {
   $('#bNewHs', el).onclick = () => newHoso(c);
 }
 function renderCompany(el, c) {
+  renderHome.shown = false;
   const tab = V.tab || 'tong';
   el.innerHTML = companyHead(c, tab) + '<div id="cbody"></div>';
   bindCompanyHead(el, c);
@@ -6291,14 +6489,15 @@ function bindDrop(zone, onFiles) {
 function renderCoOverview(body, c) {
   const L = c.ledger, ks = S.kunns.concat(xlKunns(c)), today = BK.todayISO();
   const year = today.slice(0, 4);
-  const gnYear = BK.sum(ks.filter((k) => (k.ngay_gn || '').startsWith(year)).map((k) => (k.manual ? k.so_tien || 0 : BK.sum(k.lines.map((l) => l.tien_gn)))));
+  const ksGn = ks.filter(isGn);
+  const gnYear = BK.sum(ksGn.filter((k) => (k.ngay_gn || '').startsWith(year)).map(gocOf));
   const nextDh = kunnRowsOf(c).filter((r) => r.live && r.dao_han && r.dao_han >= today && (r.con_lai ?? r.goc) > 0.5).map((r) => ({ so: r.so, dao_han: r.dao_han, con_lai: r.con_lai ?? r.goc })).sort((a, b) => a.dao_han.localeCompare(b.dao_han))[0] || null;
-  const sums = S.kunns.map((k) => ({ k, s: BK.kunnSummary(k, { hanNgay: hanNgay(), today }) }));
-  const gocPend = sums.filter((x) => !x.s.done);
+  const sums = S.kunns.filter(isGn).map((k) => ({ k, s: BK.kunnSummary(k, { hanNgay: hanNgay(), today }) }));
+  const gocPend = sums.filter((x) => !x.s.done && !(x.k.hsId && hsGet(x.k.hsId) && ((hsGet(x.k.hsId).bo_sung || []).length || hsGet(x.k.hsId).bs_none)));
   const krows = kunnRowsOf(c), bsPend = krows.filter((r) => r.live && r.need && !r.need.done), bsQua = bsPend.filter((r) => r.need.qua);
   const dnAll = duNoOf(c), kd = hmLedger(c) ? hmLedger(c) - dnAll : null;
   const up = [];
-  if (L) L.kunns.filter((k) => k.con_lai > 0.5 && k.dao_han && BK.daysBetween(today, k.dao_han) <= 45 && k.dao_han >= today).forEach((k) => up.push([k.dao_han, `Đáo hạn KUNN ${k.so} · ${trieu(k.con_lai)}`]));
+  krows.filter((r) => r.live && !r.closed && r.dao_han && r.dao_han >= today && BK.daysBetween(today, r.dao_han) <= 45).forEach((r) => up.push([r.dao_han, `Đáo hạn KUNN ${r.so} · ${trieu(r.con_lai ?? r.goc)}`]));
   gocPend.filter((x) => x.s.han).forEach((x) => up.push([x.s.han, `Hạn hồ sơ gốc KUNN ${x.k.so_kunn}${x.s.quaHan ? ` — quá ${x.s.quaHan} ngày` : ''}`]));
   for (const hs of S.store.hosoOf(c.id)) for (const b of hs.bo_sung || []) if (!b.xong && b.han) up.push([BK.toISO(b.han), `Bổ sung ${b.ten} · KUNN ${hs.so_kunn || ''}`]);
   const han = BK.toISO((c.hs || {}).han_hm); if (han) up.push([han, 'Hết hạn duy trì hạn mức']);
@@ -6307,7 +6506,7 @@ function renderCoOverview(body, c) {
   body.innerHTML = `<div class="tiles">
       ${tile('Dư nợ vay hiện tại', L || dnAll ? shortMoney(dnAll) : '—', L || dnAll ? `${kunnRowsOf(c).filter((r) => r.live).length} KUNN đang vay${L ? ' · file Excel + tool' : ''}` : 'bấm để chọn file Excel', { act: L ? A({ ctab: 'kunn' }) : A({ xlpick: c.id }) })}
       ${tile('Hạn mức còn khả dụng', kd != null ? shortMoney(kd) : '—', kd != null ? `${Math.round((kd / hmLedger(c)) * 100)}% của ${shortMoney(hmLedger(c))}` : L ? 'nhập hạn mức ở tab Thông tin' : 'cần file Excel', { tone: kd != null && kd / hmLedger(c) < 0.1 ? 'crit' : '', act: L ? A({ ctab: 'info' }) : A({ xlpick: c.id }) })}
-      ${tile(`Giải ngân năm ${year}`, shortMoney(gnYear), `${ks.filter((k) => (k.ngay_gn || '').startsWith(year)).length} KUNN`, { act: A({ ctab: 'so' }) })}
+      ${tile(`Giải ngân năm ${year}`, shortMoney(gnYear), `${ksGn.filter((k) => (k.ngay_gn || '').startsWith(year)).length} KUNN${ks.length > ksGn.length ? ` · ${ks.length - ksGn.length} chờ GN` : ''}`, { act: A({ ctab: 'so' }) })}
       ${tile('Đáo hạn gần nhất', nextDh ? dd(nextDh.dao_han) : '—', nextDh ? `KUNN ${nextDh.so} · ${shortMoney(nextDh.con_lai)}` : 'không có', { act: A({ ctab: 'kunn' }) })}
       ${tile('Chờ bổ sung bản gốc', `${bsPend.length} KUNN`, bsQua.length ? `${bsQua.length} quá hạn` : bsPend.length ? 'chưa quá hạn' : 'không có', { tone: bsQua.length ? 'crit' : '', act: A({ ctab: 'kunn', kf: 'bs' }) })}
     </div>
@@ -6316,7 +6515,7 @@ function renderCoOverview(body, c) {
       <div class="hslist">${act.map(hosoRow).join('')}</div>
       ${dropZone('dzNew', `<b>Hồ sơ mới cho ${esc(c.name)}</b> — thả toàn bộ file KH gửi vào đây (PDF, ảnh, Excel bảng kê, Word…)`)}</section>
     <div class="g2x">
-      <section class="card panel"><header><h3>Giải ngân theo tháng — ${esc(c.name)}</h3><span class="hist">gồm KUNN trong sổ hóa đơn và file Excel theo dõi</span></header>${ks.length ? colChart(series(ks, 'gn', 'auto').pts, { act: (p) => A({ act: 'kl', cid: c.id, month: p.key }) }) : '<div class="empty">Chưa có KUNN trong sổ hóa đơn</div>'}</section>
+      <section class="card panel"><header><h3>Giải ngân theo tháng — ${esc(c.name)}</h3><span class="hist">gồm KUNN trong sổ hóa đơn và file Excel theo dõi</span></header>${ksGn.length ? colChart(series(ksGn, 'gn', 'auto').pts, { act: (p) => A({ act: 'kl', cid: c.id, month: p.key }) }) : '<div class="empty">Chưa có KUNN trong sổ hóa đơn</div>'}</section>
       <section class="card panel"><header><h3>Sắp tới của công ty</h3></header>
         <div class="uplist">${up.slice(0, 8).map(([d, t]) => `<div><b>${dd(d)}</b><span>${esc(t)}</span></div>`).join('') || '<div class="empty">Không có mốc nào sắp tới</div>'}</div></section>
     </div>`;
@@ -6324,14 +6523,14 @@ function renderCoOverview(body, c) {
   $$('[data-ctab2]', body).forEach((b) => { b.onclick = () => go({ tab: b.dataset.ctab2 }); });
   const ts = companyTasks(c);
   $$('[data-task]', body).forEach((b) => { b.onclick = () => goTask(ts[+b.dataset.task]); });
-  $$('[data-tdis]', body).forEach((b) => { b.onclick = async () => { const t = ts[+b.dataset.tdis], c0 = cust(c.id); S.store.labelNext('Ẩn việc cần làm'); await S.store.putCustomer({ ...c0, dismiss: { ...(c0.dismiss || {}), [t.text]: BK.todayISO() }, ...meta() }); toast('Đã ẩn việc này (hoàn tác bằng ↶)'); }; });
+  $$('[data-tdis]', body).forEach((b) => { b.onclick = async () => { const t = ts[+b.dataset.tdis], c0 = cust(c.id); S.store.labelNext('Ẩn việc cần làm'); await S.store.putCustomer({ ...c0, dismiss: { ...(c0.dismiss || {}), [taskKey(t)]: BK.todayISO() }, ...meta() }); toast('Đã ẩn việc này (hoàn tác bằng ↶)'); }; });
   if ($('#tMore', body)) $('#tMore', body).onclick = () => { V.allTasks = true; renderMain(); };
 }
 document.addEventListener('click', async (e) => {
   const pv = e.target.closest('[data-hsprev]');
   if (pv) { e.stopPropagation(); const h = hsGet(pv.dataset.hsprev); if (h && h.files.length) previewFiles(h, h.files[0].id); return; }
   const del = e.target.closest('[data-hsdel]');
-  if (del) { e.stopPropagation(); const h = hsGet(del.dataset.hsdel); if (h && confirm(`Xóa hồ sơ giải ngân${h.ngay_gn ? ' ' + dd(h.ngay_gn) : ''} (${(h.files || []).length} file)? Có thể hoàn tác bằng nút ↶.`)) { await S.store.delHoso(h.id); toast('Đã xóa hồ sơ', 'ok'); } return; }
+  if (del) { e.stopPropagation(); const h = hsGet(del.dataset.hsdel); if (h && confirm(`Xóa hồ sơ giải ngân${h.ngay_gn ? ' ' + dd(h.ngay_gn) : ''} (${(h.files || []).length} file)?${hsDelNote(h)} Có thể hoàn tác bằng nút ↶.`)) { await hsDelete(h); toast('Đã xóa hồ sơ', 'ok'); } return; }
   const r = e.target.closest('[data-href]'); if (r && !e.target.closest('button,input,select,a')) location.hash = r.dataset.href;
 });
 document.addEventListener('click', (e) => { const x = e.target.closest('[data-xlpick]'); if (x) { const c = cust(x.dataset.xlpick); if (c) pickLedger(c, true); } });
@@ -6353,9 +6552,11 @@ const notesOf = (c, so) => ((c.kunnNotes || {})[kkey(so)] || []);
 /** Áp ghi chú lên một KUNN của sổ Excel: trả 1 phần (sau lần đọc file), gia hạn, đã tất toán. */
 function applyNotes(c, x, at0) {
   const ns = notesOf(c, x.so), at = at0 != null ? at0 : c.ledger ? c.ledger.at : 0;
-  const paid = BK.sum(ns.filter((n) => n.type === 'tra_1_phan' && (n.at || 0) > at).map((n) => n.amount || 0));
+  // ghi chú còn tác dụng khi: ghi sau lần đọc file / sửa gốc còn lại, HOẶC dòng Excel chưa đổi so với lúc ghi (file chưa cập nhật khoản trả)
+  const act = (n) => (n.at || 0) > at || (n.row && at0 == null && x.con_lai === n.row.con_lai && (x.da_thu ?? null) === n.row.da_thu && (x.ngay_thu || '') === (n.row.ngay_thu || ''));
+  const paid = BK.sum(ns.filter((n) => n.type === 'tra_1_phan' && act(n)).map((n) => n.amount || 0));
   const gh = ns.filter((n) => n.type === 'gia_han' && n.ngay).sort((a, b) => b.at - a.at)[0];
-  const closed = ns.some((n) => n.type === 'tat_toan' && (n.at || 0) > at);
+  const closed = ns.some((n) => n.type === 'tat_toan' && act(n));
   return { ns, paid, due: gh ? BK.toISO(gh.ngay) || x.dao_han : x.dao_han, closed, con: closed ? 0 : Math.max(0, (x.con_lai || 0) - paid) };
 }
 const kkey = (s) => String(s || '').split(')')[0].replace(/\s/g, '').toLowerCase();
@@ -6408,9 +6609,14 @@ async function migrateHide(c) {
   for (const [kk, x] of Object.entries(h)) kd[kk] = { so: x.so || kk, at: x.at, by: x.by, row: rows[kk] || null, kid: null };
   await S.store.putCustomer({ ...c0, ...(c0.ledger ? { ledger: L } : {}), kunnDel: kd, kunnHide: {}, ...meta() });
 }
+/** KUNN sinh từ hồ sơ khi mở soạn thảo nhưng hồ sơ chưa bấm “Đã giải ngân” → chưa phải khoản vay. */
+const gocOf = (k) => (k.manual ? k.so_tien || 0 : BK.sum((k.lines || []).map((l) => l.tien_gn)));
+const kunnPending = (k) => !!(k && k.hsId && !k.giai_ngan && !k.manual && !k.old && !((hsGet(k.hsId) || {}).done));
+const isGn = (k) => !kunnPending(k);
 function dedupeTool(ks) {
   const by = new Map();
-  for (const k of ks) { const kk = !k.so_kunn || /chưa số/i.test(k.so_kunn) ? 'id:' + k.id : kkey(k.so_kunn); const o = by.get(kk); if (!o || (k.updatedAt || 0) > (o.updatedAt || 0)) by.set(kk, k); }
+  const rank = (k) => (k.manual ? 0 : 1);
+  for (const k of ks) { const kk = !k.so_kunn || /chưa số/i.test(k.so_kunn) ? 'id:' + k.id : kkey(k.so_kunn); const o = by.get(kk); if (!o || rank(k) > rank(o) || (rank(k) === rank(o) && (k.updatedAt || 0) > (o.updatedAt || 0))) by.set(kk, k); }
   return [...by.values()];
 }
 /** Dọn KUNN lặp do ghi sổ nhiều lần từ cùng hồ sơ (giữ bản mới nhất, bỏ bản lặp giống hệt). */
@@ -6432,10 +6638,10 @@ async function cleanDupKunns(cid) {
 function goiGroups(c, rows) {
   const today = BK.todayISO(), gl = goiOf(c), by = new Map(gl.map((g) => [BK.fold(g.ma), { g, ks: [] }])), none = { g: null, ks: [] };
   for (const r of rows) { const b = r.goi ? by.get(BK.fold(r.goi)) : null; if (b) b.ks.push(r); else if (r.goi) { const g = { ma: r.goi, ten: '(không có trong danh sách gói)', src: '?' }; const nb = { g, ks: [r] }; by.set(BK.fold(r.goi), nb); } else none.ks.push(r); }
-  const out = [...by.values()].map((b) => { const ks = b.ks.sort((x, y) => (y.ngay_gn || '').localeCompare(x.ngay_gn || '')); const gn = BK.sum(ks.map((r) => r.goc || 0)), live = ks.filter((r) => r.live), dn = BK.sum(live.map((r) => r.con_lai || 0));
-    return { ...b, n: ks.length, nLive: live.length, gn, dn, con: b.g.tong ? b.g.tong - gn : null, act: b.g.src === '?' ? false : HSC.goiActive(b.g, today) }; });
+  const out = [...by.values()].map((b) => { const ks = b.ks.sort((x, y) => (y.ngay_gn || '').localeCompare(x.ngay_gn || '')); const done = ks.filter((r) => !r.chuaGn), cho = ks.filter((r) => r.chuaGn); const gn = BK.sum(done.map((r) => r.goc || 0)), choGn = BK.sum(cho.map((r) => r.goc || 0)), live = ks.filter((r) => r.live), dn = BK.sum(live.map((r) => r.con_lai || 0));
+    return { ...b, n: done.length, nCho: cho.length, choGn, nLive: live.length, gn, dn, con: b.g.tong ? b.g.tong - gn : null, act: b.g.src === '?' ? false : HSC.goiActive(b.g, today) }; });
   out.sort((a, b) => (b.act - a.act) || (b.gn - a.gn));
-  if (none.ks.length) out.push({ ...none, g: { ma: 'Không theo gói', ten: 'Lãi suất thông thường', src: '' }, n: none.ks.length, nLive: none.ks.filter((r) => r.live).length, gn: BK.sum(none.ks.map((r) => r.goc || 0)), dn: BK.sum(none.ks.filter((r) => r.live).map((r) => r.con_lai || 0)), con: null, act: true, none: true });
+  if (none.ks.length) out.push({ ...none, g: { ma: 'Không theo gói', ten: 'Lãi suất thông thường', src: '' }, n: none.ks.filter((r) => !r.chuaGn).length, nCho: none.ks.filter((r) => r.chuaGn).length, choGn: BK.sum(none.ks.filter((r) => r.chuaGn).map((r) => r.goc || 0)), nLive: none.ks.filter((r) => r.live).length, gn: BK.sum(none.ks.filter((r) => !r.chuaGn).map((r) => r.goc || 0)), dn: BK.sum(none.ks.filter((r) => r.live).map((r) => r.con_lai || 0)), con: null, act: true, none: true });
   return out;
 }
 function goiReportHtml(c, rows) {
@@ -6444,7 +6650,7 @@ function goiReportHtml(c, rows) {
   return `<div class="bar" style="justify-content:space-between"><span class="hist">${gs.filter((x) => !x.none).length} gói · KUNN theo cột Gói của file Excel và gói đã chọn trong hồ sơ</span><button class="btn sm" id="goiX">⬇ Xuất Excel báo cáo theo gói</button></div>
     <div class="goig">${gs.map((x) => { const pct = x.g.tong ? Math.min(100, Math.round((x.gn / x.g.tong) * 100)) : null;
       return `<section class="card goic ${x.act ? '' : 'dim'}"><header><div><b>${esc(x.g.ma)}</b>${x.g.ls != null ? ` <span class="pill">${String(x.g.ls).replace('.', ',')}%</span>` : ''}${x.none ? '' : x.act ? ' <span class="pill p-ok">đang hiệu lực</span>' : ' <span class="pill">hết hiệu lực</span>'}<div class="hist">${esc(x.g.ten || '')}${x.g.tu_ngay || x.g.den_ngay ? ` · ${x.g.tu_ngay ? dd(x.g.tu_ngay) : '…'} → ${x.g.den_ngay ? dd(x.g.den_ngay) : '…'}` : ''}</div></div></header>
-        <div class="tiles t4">${tile('Đã giải ngân', trieu(x.gn), `${x.n} KUNN`)}${tile('Dư nợ hiện tại', trieu(x.dn), `${x.nLive} KUNN đang vay`)}${tile('Hạn mức gói', x.g.tong ? trieu(x.g.tong) : '—', x.g.tong ? `đã dùng ${pct}%` : 'không giới hạn')}${tile('Còn lại', x.con != null ? trieu(x.con) : '—', '', { tone: x.con != null && x.con < 0 ? 'crit' : '' })}</div>
+        <div class="tiles t4">${tile('Đã giải ngân', trieu(x.gn), `${x.n} KUNN${x.nCho ? ` · chờ GN ${trieu(x.choGn)}` : ''}`)}${tile('Dư nợ hiện tại', trieu(x.dn), `${x.nLive} KUNN đang vay`)}${tile('Hạn mức gói', x.g.tong ? trieu(x.g.tong) : '—', x.g.tong ? `đã dùng ${pct}%` : 'không giới hạn')}${tile('Còn lại', x.con != null ? trieu(x.con) : '—', '', { tone: x.con != null && x.con < 0 ? 'crit' : '' })}</div>
         ${pct != null ? `<div class="gbar"><i style="width:${pct}%" class="${pct >= 90 ? 'hot' : ''}"></i></div>` : ''}
         ${x.ks.length ? `<details ${x.ks.length <= 6 ? 'open' : ''}><summary>${x.ks.length} KUNN</summary><div class="tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th class="right">Gốc</th><th class="right">Còn lại</th><th>Đáo hạn</th><th class="right">LS</th></tr></thead><tbody>${x.ks.map((r) => `<tr data-gkr="${esc(r.so)}"><td><b>${esc(r.so)}</b></td><td>${dd(r.ngay_gn)}</td><td class="num">${vnd(r.goc)}</td><td class="num">${r.con_lai != null ? vnd(r.con_lai) : '—'}</td><td>${r.dao_han ? dd(r.dao_han) : '—'}</td><td class="num">${r.ls != null ? String(r.ls).replace('.', ',') + '%' : '—'}</td></tr>`).join('')}</tbody></table></div></details>` : '<div class="hist">Chưa có KUNN dùng gói này</div>'}</section>`; }).join('')}</div>`;
 }
@@ -6487,12 +6693,15 @@ function openKunnForm(c, k0) {
   $('#kfOk', m).onclick = async () => {
     const so = $('#kfSo', m).value.trim(), ng = $('#kfNg', m).value, tien = DOCX.num($('#kfTien', m).value);
     if (!so || !ng || !tien) return toast('Nhập số KUNN, ngày giải ngân và số tiền', 'err');
-    const dup = (!k0 || kkey(k0.so_kunn) !== kkey(so)) && (S.store.kunnsOf(c.id).some((k) => kkey(k.so_kunn) === kkey(so)) || (c.ledger && c.ledger.kunns.some((y) => kkey(y.so) === kkey(so))));
-    if (dup && !confirm(`KUNN ${so} đã có trong bảng theo dõi. Vẫn thêm?`)) return;
+    const ex = (!k0 || kkey(k0.so_kunn) !== kkey(so)) ? S.store.kunnsOf(c.id).find((k) => kkey(k.so_kunn) === kkey(so)) : null;
+    if (ex && ex.manual) { m.remove(); toast(`KUNN ${so} đã có (nhập tay) — mở để sửa`, 'warn'); return openKunnForm(c, ex); }
+    if (ex) { m.remove(); V.kf = 'all'; V.kunnSel = ex.id; V.kunnSelSo = ex.so_kunn; V.kq = ''; renderMain(); return toast(`KUNN ${so} đã có trong theo dõi (từ ${ex.hsId ? 'hồ sơ giải ngân' : 'sổ hóa đơn'}) — đã chọn dòng đó`, 'warn', 6000); }
+    const dupXl = (!k0 || kkey(k0.so_kunn) !== kkey(so)) && c.ledger && c.ledger.kunns.some((y) => kkey(y.so) === kkey(so));
+    if (dupXl && !confirm(`KUNN ${so} đã có trong file Excel theo dõi. Thêm bản nhập tay để bổ sung lãi suất / gói / chứng từ bổ sung?`)) return;
     const con = DOCX.num($('#kfCon', m).value), names = $('#kfBs', m).value.split(',').map((y) => y.trim()).filter(Boolean), han = $('#kfBsH', m).value;
     const old = x.bs || [];
     const rec = { ...(k0 || { id: BK.uid(), customerId: c.id, lines: [], createdAt: Date.now(), createdBy: userName() }), manual: true, source: 'Nhập tay', so_kunn: so, ngay_gn: ng, so_tien: tien, so_ngay: parseInt($('#kfSnv', m).value, 10) || null, ngay_dh: $('#kfDh', m).value || '',
-      con_lai: con, conAt: Date.now(), ls: dec($('#kfLs', m).value), goi: $('#kfGoi', m).value, ben: $('#kfBen', m).value.trim(), ghi_chu: $('#kfNote', m).value.trim(),
+      con_lai: con, conAt: k0 && Math.abs((con ?? k0.so_tien ?? 0) - (k0.con_lai ?? k0.so_tien ?? 0)) < 0.5 ? k0.conAt || 0 : Date.now(), ls: dec($('#kfLs', m).value), goi: $('#kfGoi', m).value, ben: $('#kfBen', m).value.trim(), ghi_chu: $('#kfNote', m).value.trim(),
       bs: names.map((ten) => ({ ten, han: han ? dd(han) : '', xong: !!(old.find((b) => b.ten === ten) || {}).xong })), han_bs: han || '', ...meta() };
     S.store.labelNext(`${k0 ? 'Sửa' : 'Thêm'} KUNN ${so} (nhập tay)`);
     await S.store.putKunn(rec); log(c.id, 'kunn_tay', `${k0 ? 'Sửa' : 'Thêm'} KUNN ${so} nhập tay — ${vnd(tien)}, GN ${dd(ng)}`);
@@ -6589,7 +6798,8 @@ function renderCoKunn(body, c) {
   if (!renderCoKunn.cleaned) renderCoKunn.cleaned = new Set();
   if (!renderCoKunn.cleaned.has(c.id)) { renderCoKunn.cleaned.add(c.id); cleanDupKunns(c.id).catch(() => {}); }
   const rows = kunnRowsOf(c);
-  const F = [['live', 'Đang vay', (r) => r.live], ['dh', 'Đáo hạn 30 ngày', (r) => r.live && r.dLeft != null && r.dLeft <= 30], ['bs', 'Chờ bổ sung bản gốc', (r) => r.need && !r.need.done], ['tt', 'Đã tất toán', (r) => !r.live], ['all', 'Tất cả', () => true]];
+  const F = [['live', 'Đang vay', (r) => r.live], ['dh', 'Đáo hạn 30 ngày', (r) => r.live && r.dLeft != null && r.dLeft <= 30], ['bs', 'Chờ bổ sung bản gốc', (r) => r.need && !r.need.done], ['tt', 'Đã tất toán', (r) => !r.live && !r.chuaGn], ['all', 'Tất cả', () => true]];
+  if (rows.some((r) => r.chuaGn)) F.splice(4, 0, ['cgn', 'Chưa giải ngân', (r) => r.chuaGn]);
   if (c.kunnHide && Object.keys(c.kunnHide).length) { migrateHide(c); return; }
   const kd = c.kunnDel || {};
   const gone = Object.entries(kd).filter(([, d]) => !d.purged).map(([kk, d]) => { const k = d.kid ? S.store.k.get(d.kid) : null; const x = d.row; return { so: d.so, ngay_gn: x ? x.ngay_gn : k ? k.ngay_gn : '', goc: x ? x.goc : k && k.manual ? k.so_tien || 0 : k && k.lines ? BK.sum(k.lines.map((l) => l.tien_gn)) : null, k, x, dk: kk, d, del: true, bs: [], ns: [] }; })
@@ -6612,10 +6822,10 @@ function renderCoKunn(body, c) {
       <div class="note warn">Đã xóa${r.d.by ? ' bởi ' + esc(r.d.by) : ''}${r.d.at ? ' lúc ' + new Date(r.d.at).toLocaleString('vi-VN') : ''}. Không còn trong bảng theo dõi, dư nợ, hạn mức, đáo hạn${r.x ? ' (đọc lại file Excel cũng không hiện lại)' : ''}. ${r.k && r.k.lines ? `${r.k.lines.length} dòng bảng kê được giữ lại để khôi phục.` : ''}</div>
       <div class="bar"><button class="btn pri" data-krestore="${esc(r.dk)}">♻ Khôi phục</button><button class="btn danger" data-kpurge="${esc(r.dk)}">✕ Xóa hẳn</button></div>${histHtml(r.so)}`;
     const k = r.k, s = r.s;
-    const ms = [[r.ngay_gn, `Giải ngân ${dd(r.ngay_gn)}`, 'done', r.hs ? 'Hồ sơ giải ngân đã lưu' : '']];
+    const ms = [[r.ngay_gn, `Giải ngân ${dd(r.ngay_gn)}`, r.chuaGn ? 'todo' : 'done', r.chuaGn ? 'dự kiến — hồ sơ chưa bấm “Đã giải ngân”' : r.hs ? 'Hồ sơ giải ngân đã lưu' : '']];
     const nd = r.need;
     if (nd && !nd.none) ms.push([nd.han, nd.done ? 'Đã nhận đủ bản gốc' : `Bổ sung bản gốc — hạn ${dd(nd.han) || '?'}`, nd.done ? 'done' : nd.qua ? 'bad' : 'warn', nd.done ? '' : nd.src === 'goc' ? `Đã nhận ${nd.nDa}/${nd.n} chứng từ` : nd.pend.map((b) => b.ten).join(', ')]);
-    if (r.dao_han) ms.push([r.dao_han, `Đáo hạn ${dd(r.dao_han)} (${thuOf(r.dao_han)}${DOCX.offDay(r.dao_han, holidays()) ? ' — ngày nghỉ' : ''})`, r.live ? (r.dLeft != null && r.dLeft < 0 ? 'bad' : 'todo') : 'done', r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : 'đã tất toán']);
+    if (r.dao_han) ms.push([r.dao_han, `Đáo hạn ${dd(r.dao_han)} (${thuOf(r.dao_han)}${DOCX.offDay(r.dao_han, holidays()) ? ' — ngày nghỉ' : ''})`, r.chuaGn ? 'todo' : r.live ? (r.dLeft != null && r.dLeft < 0 ? 'bad' : 'todo') : 'done', r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : 'đã tất toán']);
     return `<div><b class="big">KUNN ${esc(r.so)}</b><div class="hist">${vnd(r.goc)}${r.ls ? ` · ${String(r.ls).replace('.', ',')}%` : ''}${r.goi ? ' · ' + esc(r.goi) : ''}</div></div>
       <ol class="tl">${ms.map(([, t, st, sub]) => `<li class="${st}"><i></i><span>${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></li>`).join('')}</ol>
       ${nd && nd.src === 'man' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kmx="${k.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}</label><span class="hist">hạn ${esc(b.han || '?')}</span></div>`).join('')}</div>` : ''}
@@ -6645,7 +6855,7 @@ function renderCoKunn(body, c) {
       ${list.map((r, i) => `<tr data-kr="${i}" class="${r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${String(r.ls0 ?? '?').replace('.', ',')}%</s> → <b>${String(r.ls).replace('.', ',')}%</b>` : `${String(r.ls).replace('.', ',')}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
         <td>${r.dao_han ? `<b class="${r.live && r.dLeft != null && r.dLeft <= 15 ? 'wtxt' : ''}">${dd(r.dao_han)}</b><div class="hist">${thuHtml(r.dao_han)} · ${r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : 'đã tất toán'}</div>` : r.chuaGn ? '<span class="hist">chưa giải ngân</span>' : '—'}</td>
         <td class="num">${r.con_lai != null ? vnd(r.con_lai) : r.chuaGn ? '<span class="hist">hồ sơ chưa bấm Đã giải ngân</span>' : '<span class="m">—</span>'}${r.da_thu ? `<div class="hist">đã thu ${trieu(r.da_thu)}</div>` : ''}</td><td>${needPill(r)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Không có KUNN</td></tr>'}
-      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${c.ledger && hmLedger(c) ? `hạn mức ${trieu(hmLedger(c))} · khả dụng ${trieu(hmLedger(c) - BK.sum(list.filter((r) => r.live).map((r) => r.con_lai || 0)))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet">${det(sel)}</aside></div>`;
+      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${hmLedger(c) ? `toàn công ty: hạn mức ${trieu(hmLedger(c))} · khả dụng ${trieu(hmLedger(c) - duNoOf(c))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet">${det(sel)}</aside></div>`;
   $$('[data-kf]', body).forEach((b) => { b.onclick = () => { V.kf = b.dataset.kf; renderMain(); }; });
   $$('[data-kr]', body).forEach((tr) => { tr.onclick = () => { const r = list[+tr.dataset.kr]; V.kunnSel = r.k ? r.k.id : null; V.kunnSelSo = r.so; renderMain(); }; });
   $$('[data-ctab2]', body).forEach((b) => { b.onclick = () => go({ tab: b.dataset.ctab2 }); });
@@ -6659,15 +6869,16 @@ function renderCoKunn(body, c) {
       return hsPatch(hid, (x) => { const b = (x.bo_sung || [])[+i]; if (!b) return; if (t.dataset.kbx) b.xong = t.checked; else { b.han = dd(t.value); const g = BK.toISO(x.ngay_gn); if (g && t.value) b.ngay = String(BK.daysBetween(g, t.value)); } }, t.dataset.kbx ? 'Đánh dấu đã nhận bản gốc' : 'Đổi hạn bổ sung bản gốc');
     }
     if (t.dataset.gk) { const [kid, lid] = t.dataset.gk.split('|'); await setGoc(S.store.k.get(kid), [lid], t.checked ? 'da_nhan' : 'chua'); } };
-  const saveNotes = async (fn, label) => { const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; const k = kkey(sel.so); all[k] = fn([...(all[k] || [])]); if (!all[k].length) delete all[k]; S.store.labelNext(label); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() }); };
+  const saveNotes = async (fn, label) => { if (/chưa số/i.test(sel.so)) return toast('KUNN chưa có số — điền số KUNN trong hồ sơ trước khi ghi chú', 'err'); const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; const k = kkey(sel.so); all[k] = fn([...(all[k] || [])]); if (!all[k].length) delete all[k]; S.store.labelNext(label); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() }); };
   if ($('#knAdd', body)) $('#knAdd', body).onclick = async () => {
     const type = $('#knT', body).value, amount = DOCX.num($('#knA', body).value), ngay = $('#knD', body).value.trim(), text = $('#knX', body).value.trim();
     if (type === 'tra_1_phan' && !amount) return toast('Nhập số tiền KH đã trả', 'err');
     if (type === 'gia_han' && !BK.toISO(ngay)) return toast('Nhập ngày trả mới (dd/mm/yyyy)', 'err');
     if (type === 'ghi_chu' && !text) return toast('Nhập nội dung ghi chú', 'err');
-    await saveNotes((xs) => [...xs, { id: BK.uid(8), type, amount: amount || null, ngay: ngay ? dd(BK.toISO(ngay)) || ngay : '', text, at: Date.now(), by: userName() }], `Ghi chú KUNN ${sel.so}`);
+    const row = sel.x ? { con_lai: sel.x.con_lai ?? null, da_thu: sel.x.da_thu ?? null, ngay_thu: sel.x.ngay_thu || '' } : null;
+    await saveNotes((xs) => [...xs, { id: BK.uid(8), type, amount: amount || null, ngay: ngay ? dd(BK.toISO(ngay)) || ngay : '', text, at: Date.now(), by: userName(), row }], `Ghi chú KUNN ${sel.so}`);
   };
-  const saveLs = async (fn, label) => { const c0 = cust(c.id), all = structuredClone(c0.lsAdj || {}); fn(all); for (const k of Object.keys(all)) if (!all[k].length) delete all[k]; S.store.labelNext(label); await S.store.putCustomer({ ...c0, lsAdj: all, ...meta() }); log(c.id, 'lai_suat', label); };
+  const saveLs = async (fn, label) => { if (/chưa số/i.test(sel.so)) return toast('KUNN chưa có số — điền số KUNN trong hồ sơ trước', 'err'); const c0 = cust(c.id), all = structuredClone(c0.lsAdj || {}); fn(all); for (const k of Object.keys(all)) if (!all[k].length) delete all[k]; S.store.labelNext(label); await S.store.putCustomer({ ...c0, lsAdj: all, ...meta() }); log(c.id, 'lai_suat', label); };
   const dec = (q) => { const n = parseFloat(String(q || '').replace(/\s/g, '').replace(',', '.').replace('%', '')); return Number.isFinite(n) ? n : null; };
   if ($('#lsAdd', body)) $('#lsAdd', body).onclick = () => {
     const d = $('#lsD', body).value, v = dec($('#lsV', body).value), note = $('#lsN', body).value.trim();
@@ -6835,8 +7046,8 @@ function exportTongHop(c) {
   const src = (r) => (r.x ? (r.k ? 'File Excel + tool' : 'File Excel') : r.k && r.k.manual ? 'Nhập tay' : r.k && r.k.hsId ? 'Hồ sơ giải ngân' : 'Bảng kê');
   const head = [`TỔNG HỢP THEO DÕI KUNN — ${c.name}`], info = [`Ngày lập: ${dd(today)} · ${userName()}`];
   sheet([head, info, [], ['Số KUNN', 'Ngày giải ngân', 'Ngày đáo hạn', 'Còn (ngày)', 'Số tiền giải ngân', 'Đã thu', 'Dư nợ vay (gốc)', 'LS ban đầu %', 'LS hiện tại %', 'Gói / UBG', 'Bên thụ hưởng', 'Bổ sung bản gốc', 'Hạn bổ sung', 'Trạng thái', 'Nguồn', 'Ghi chú quản lý'],
-    ...rows.map((r) => [r.so, r.ngay_gn ? dd(r.ngay_gn) : '', r.dao_han ? dd(r.dao_han) : '', r.live && r.dLeft != null ? r.dLeft : '', r.goc || 0, r.da_thu || 0, r.con_lai ?? '', r.ls0 ?? '', r.ls ?? '', r.goi || '', r.ben || '', st(r), r.need && r.need.han ? dd(r.need.han) : '', r.closed ? 'Đã tất toán' : r.live ? 'Đang vay' : 'Đã tất toán', src(r), (r.ns || []).map((n) => `${NOTE_T[n.type][1]}${n.amount ? ' ' + Math.round(n.amount).toLocaleString('vi-VN') : ''}${n.ngay ? ' ' + n.ngay : ''}${n.text ? ': ' + n.text : ''}`).join(' | ')]),
-    [], ['TỔNG', '', '', '', BK.sum(rows.map((r) => r.goc || 0)), BK.sum(rows.map((r) => r.da_thu || 0)), BK.sum(rows.filter((r) => r.live).map((r) => r.con_lai || 0))]],
+    ...rows.map((r) => [r.so, r.ngay_gn ? dd(r.ngay_gn) : '', r.dao_han ? dd(r.dao_han) : '', r.live && r.dLeft != null ? r.dLeft : '', r.goc || 0, r.da_thu || 0, r.chuaGn ? '' : r.con_lai ?? '', r.ls0 ?? '', r.ls ?? '', r.goi || '', r.ben || '', st(r), r.need && r.need.han ? dd(r.need.han) : '', r.chuaGn ? 'Chưa giải ngân' : r.closed ? 'Đã tất toán' : r.live ? 'Đang vay' : 'Đã tất toán', src(r), (r.ns || []).map((n) => `${NOTE_T[n.type][1]}${n.amount ? ' ' + Math.round(n.amount).toLocaleString('vi-VN') : ''}${n.ngay ? ' ' + n.ngay : ''}${n.text ? ': ' + n.text : ''}`).join(' | ')]),
+    [], ['TỔNG', '', '', '', BK.sum(rows.filter((r) => !r.chuaGn).map((r) => r.goc || 0)), BK.sum(rows.map((r) => r.da_thu || 0)), BK.sum(rows.filter((r) => r.live).map((r) => r.con_lai || 0))]],
     [18, 12, 12, 8, 17, 15, 17, 9, 9, 22, 30, 30, 12, 12, 16, 50], 'Theo doi KUNN');
   const hist = (c.hmHist || []).filter((h) => !h.del).sort((a, b) => (a.tu_ngay || '').localeCompare(b.tu_ngay || ''));
   const cur = hmVer(c, today);
@@ -6845,7 +7056,7 @@ function exportTongHop(c) {
     hmRows.push([h.so_hdtd || '', h.ngay_hdtd ? dd(h.ngay_hdtd) : '', h.tu_ngay ? dd(h.tu_ngay) : '', h.den_ngay ? dd(h.den_ngay) : '', h === cur ? 'Có' : '', 'TỔNG', h.ghi_chu || '', 'VND', h.hm_tong || '', '', h.hm_tong || '']);
     for (const x of h.lines || []) hmRows.push(['', '', '', '', '', (HM_LOAI.find((y) => y[0] === x.loai) || [, x.loai])[1], x.ten || '', x.tien_te || 'VND', x.han_muc ?? '', x.ty_gia || '', hmLineVnd(x) || '']);
   }
-  if (c.ledger) hmRows.push([], [`Dư nợ hiện tại (file Excel): ${Math.round(c.ledger.du_no).toLocaleString('vi-VN')} đ`], [`Hạn mức còn khả dụng: ${hmLedger(c) ? Math.round(hmLedger(c) - c.ledger.du_no).toLocaleString('vi-VN') + ' đ' : '—'}`]);
+  if (c.ledger || duNoKnown(c)) hmRows.push([], [`Dư nợ hiện tại (file Excel + KUNN trong tool): ${Math.round(duNoOf(c)).toLocaleString('vi-VN')} đ`], [`Hạn mức còn khả dụng: ${hmLedger(c) ? Math.round(hmLedger(c) - duNoOf(c)).toLocaleString('vi-VN') + ' đ' : '—'}`]);
   sheet(hmRows, [20, 11, 11, 13, 10, 24, 26, 8, 18, 10, 18], 'Han muc');
   const gs = goiGroups(c, rows);
   sheet([['Mã gói', 'Tên gói', 'LS %/năm', 'Từ ngày', 'Đến ngày', 'Hạn mức gói', 'Đã giải ngân', 'Còn lại', 'Số KUNN', 'Dư nợ hiện tại', 'Trạng thái'],
@@ -6863,7 +7074,7 @@ function exportTongHop(c) {
 function kunnsNotInXl(c) {
   const L = c.ledger; if (!L) return [];
   const have = new Set(L.kunns.map((x) => kkey(x.so))), del = c.kunnDel || {};
-  return S.store.kunnsOf(c.id).filter((k) => k.so_kunn && !/chưa số/i.test(k.so_kunn) && !have.has(kkey(k.so_kunn)) && !del[kkey(k.so_kunn)]).sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || ''));
+  return S.store.kunnsOf(c.id).filter((k) => k.so_kunn && !/chưa số/i.test(k.so_kunn) && isGn(k) && !have.has(kkey(k.so_kunn)) && !del[kkey(k.so_kunn)]).sort((a, b) => (a.ngay_gn || '').localeCompare(b.ngay_gn || ''));
 }
 /** Dòng để dán vào file Excel theo dõi: đúng thứ tự cột của sheet đã chọn (hoặc thứ tự mặc định). */
 function xlOutRows(c) {
@@ -7070,17 +7281,28 @@ async function newHoso(c, files) {
   if (files && files.length) await addFiles(hs.id, files);
 }
 const hsGet = (id) => S.store.h.get(id);
+/** Xóa hồ sơ: KUNN sinh từ hồ sơ mà chưa giải ngân thì xóa cùng (một bước hoàn tác); KUNN đã giải ngân giữ lại. */
+const hsDelNote = (h) => { const k = h.kid ? S.store.k.get(h.kid) : null; return k && live(k) && k.hsId === h.id ? (kunnPending(k) ? ` KUNN ${k.so_kunn} chưa giải ngân sẽ bị xóa cùng.` : ` KUNN ${k.so_kunn} đã giải ngân vẫn giữ trong bảng theo dõi.`) : ''; };
+async function hsDelete(h) {
+  const k = h.kid ? S.store.k.get(h.kid) : null;
+  await S.store.group('Xóa hồ sơ giải ngân', async () => { if (k && live(k) && k.hsId === h.id && kunnPending(k)) await S.store.delKunn(k.id); await S.store.delHoso(h.id); });
+  await S.store.setMeta('draft:hs:' + h.id, null).catch(() => {});
+}
 const hsSig = (x) => { const p = (cust(x.customerId) || {}).hs || {}; return JSON.stringify([!!x.done, x.so_ngay_vay || p.so_ngay_vay || '', x.goi || '', x.ls || p.lai_suat || '', x.so_kunn || '(chưa số)', BK.toISO(x.ngay_gn), (x.lines || []).map((l) => [l.id, l.ncc, l.so_hd, l.ngay_hd, l.tien_hd, l.tien_gn]), (x.bo_sung || []).map((b) => [b.han, b.xong]), !!x.bs_none]); };
 async function hsPatch(id, fn, label) {
   const cur = hsGet(id); if (!cur || cur.deleted) return null;
-  const x = structuredClone(cur); fn(x); Object.assign(x, meta());
-  if (label) x.trail = [...(x.trail || []), { at: Date.now(), by: userName(), what: label }].slice(-300);
-  await S.store.putHoso(x, label);
-  if (x.kid && live(S.store.k.get(x.kid)) && (x.lines || []).length && !hsPatch.busy) {
-    if (S.store.k.get(x.kid)._sig !== hsSig(x)) { hsPatch.busy = true; try { await hsToLedger(id, true); } catch (e) { /* */ } finally { hsPatch.busy = false; } }
-  }
-  return x;
+  return S.store.group(label || 'Sửa hồ sơ giải ngân', async () => {
+    const x = structuredClone(cur); fn(x); Object.assign(x, meta());
+    if (label) x.trail = [...(x.trail || []), { at: Date.now(), by: userName(), what: label }].slice(-300);
+    await S.store.putHoso(x, label);
+    if (x.kid && live(S.store.k.get(x.kid)) && (x.lines || []).length && !hsPatch.busy.has(id) && S.store.k.get(x.kid)._sig !== hsSig(x)) {
+      hsPatch.busy.add(id);
+      try { await hsToLedger(id, true); } catch (e) { if (hsPatch.warned !== id + errMsg(e)) { hsPatch.warned = id + errMsg(e); toast('Chưa cập nhật được KUNN theo hồ sơ: ' + errMsg(e), 'err', 8000); } } finally { hsPatch.busy.delete(id); }
+    }
+    return x;
+  });
 }
+hsPatch.busy = new Set();
 const isExcel = (f) => /\.(xlsx?|xlsm|csv)$/i.test(f.name);
 /** Xem nhanh file Excel: các sheet có dữ liệu, bỏ hàng / cột trống. */
 async function excelHtml(blob) {
@@ -7107,15 +7329,17 @@ async function addFiles(hsId, files, opt = {}) {
   if (!added.length) return;
   await hsPatch(hsId, (x) => { x.files.push(...added.map(({ file, ...m }) => m)); if (!x.ms.nhan) x.ms.nhan = BK.todayISO(); }, `Thêm ${added.length} file vào hồ sơ`);
   toast(`Đã thêm ${added.length} file — đang đọc…`);
+  const forced = [];
   for (const a of added) {
     if (isExcel(a.file) && (!opt.loai || opt.loai === 'bang_ke')) { await readBangKeFile(hsId, a).catch((e) => toast(`${a.name}: ${errMsg(e)}`, 'err', 7000)); continue; }
     if (aiKeys().length) await aiReadFile(hsId, a.id).catch((e) => toast(`AI đọc ${a.name}: ${errMsg(e)}`, 'err', 8000));
     if (opt.loai) await hsPatch(hsId, (x) => {           // bổ sung đúng loại chứng từ đang thiếu
       const ds = x.docs.filter((d) => d.fileId === a.id);
       if (!ds.length) x.docs.push({ id: a.id + '_0', fileId: a.id, loai: opt.loai, f: {}, conf: 1, ok: false });
-      else if (!ds.some((d) => d.loai === opt.loai)) { const d = ds.find((q) => q.loai === 'khac') || ds[0]; d.loai = opt.loai; d.conf = 1; }
+      else if (!ds.some((d) => d.loai === opt.loai)) { const d = ds.find((q) => q.loai === 'khac' || q.conf < 0.6); if (d) { d.loai = opt.loai; d.conf = 1; } else { x.docs.push({ id: a.id + '_' + ds.length, fileId: a.id, loai: opt.loai, f: {}, conf: 0, ok: false, manual: true }); forced.push(a.name); } }
     }, `Bổ sung ${HSC.TYPES[opt.loai].l}: ${a.name}`);
   }
+  if (forced.length) toast(`AI không thấy ${HSC.TYPES[opt.loai].l} trong ${forced.join(', ')} — đã thêm mục trống, mở để nhập tay hoặc kiểm tra lại file`, 'err', 8000);
   if (opt.loai && !aiKeys().length) { const d = (hsGet(hsId).docs || []).find((q) => q.fileId === added[0].id); if (d) go({ hs: hsId, doc: d.id }); }
   if (!aiKeys().length && added.some((a) => !isExcel(a.file))) toast('Chưa có API key Gemini — file PDF/ảnh chưa được AI đọc. Nạp key trong Cài đặt rồi bấm “AI đọc”.', 'err', 8000);
 }
@@ -7160,40 +7384,51 @@ async function readBangKeFile(hsId, meta0, opt = {}) {
   const rec = await S.store.getFile(meta0.id);
   const grids = await readWorkbook(rec.blob);
   const order = Object.keys(grids);
-  let res = null, sheet = '';
-  for (const n of order) { const r = BK.autoParseSheet(grids[n]); if (r.ok && r.groups.some((g) => g.lines.length)) { res = r; sheet = n; break; } }
+  let res = null, sheet = '', sheetKey = '';
+  for (const n of order) { const r = BK.autoParseSheet(grids[n]); if (r.ok && r.groups.some((g) => g.lines.length)) { res = r; sheet = sheetKey = n; break; } }
   if (!res && !opt.pick && aiKeys().length) {            // bảng trình bày lạ → Gemini đọc từng dòng
     const n = order.find((x) => grids[x].some((r) => r.some((v) => String(v).trim()))) || order[0];
     toast(`Bảng kê ${meta0.name} trình bày lạ — đang nhờ AI đọc…`);
     try {
       const r = await aiJson(promptRows(n, BK.gridToPrompt(grids[n], 300, 80)), { maxTokens: 60000 });
       const gs = BK.aiRowsToGroups(r.rows || []);
-      if (gs.some((g) => g.lines.length)) { res = { ok: true, groups: gs }; sheet = n + ' (AI đọc)'; }
+      if (gs.some((g) => g.lines.length)) { res = { ok: true, groups: gs }; sheet = n + ' (AI đọc)'; sheetKey = n; }
     } catch (e) { toast('AI không đọc được: ' + errMsg(e), 'err'); }
   }
   if (!res || opt.pick) {                                // tool không tự nhận ra → bạn chọn sheet / hàng tiêu đề / cột
     const pk = await bkPickCols(grids, meta0.name);
-    if (pk) { res = pk; sheet = pk.sheet + ' (chọn cột tay)'; }
+    if (pk) { res = pk; sheet = pk.sheet + ' (chọn cột tay)'; sheetKey = pk.sheet; }
   }
   if (!res) {
     await hsPatch(hsId, (x) => { if (!x.docs.some((d) => d.fileId === meta0.id)) x.docs.push({ id: meta0.id + '_0', fileId: meta0.id, loai: 'khac', f: { mo_ta: 'File Excel — không nhận ra bảng kê' }, conf: 0.3 }); });
-    throw new Error(`Không nhận ra bảng kê trong ${meta0.name}${aiKeys().length ? '' : ' — nạp API key Gemini để AI đọc bảng trình bày lạ'}, hoặc dùng Sổ hóa đơn → Nạp bảng kê để chọn cột`);
+    throw new Error(`Không nhận ra bảng kê trong ${meta0.name}${aiKeys().length ? '' : ' — nạp API key Gemini để AI đọc bảng trình bày lạ'}; mở chứng từ này trong hồ sơ, đổi loại thành “Bảng kê” để chọn cột bằng tay`);
   }
   const groups = res.groups.filter((g) => g.lines.length);
+  // đơn vị tiền trong file (ĐVT: triệu đồng / nghìn / USD…) → quy về đồng như luồng Nạp bảng kê
+  { const hr = res.dataHeader != null ? res.dataHeader : res.header && res.header.row >= 0 ? res.header.row : 0;
+    const du = grids[sheetKey] ? BK.detectUnit(grids[sheetKey], Math.max(0, hr), (res.header && res.header.map) || {}) : { unit: 'dong', src: '' };
+    if (du.unit !== 'dong' && !confirm(`File ${meta0.name} ghi số tiền theo ${(BK.UNITS[du.unit] || {}).label || du.unit} (${du.src}). Quy đổi về đồng / gắn loại tiền trước khi lưu?\n(Hủy = giữ số như trong file)`)) du.unit = 'dong';
+    BK.applyUnit(groups, du.unit); }
   const g = groups[groups.length - 1];
-  const lines = groups.length === 1 ? g.lines : g.lines;
+  const lines = g.lines;
+  const cur0 = hsGet(hsId);
+  const replace = !cur0.lines.length || confirm(`Hồ sơ đã có ${cur0.lines.length} dòng bảng kê. Thay bằng ${lines.length} dòng trong ${meta0.name}?\n(Hủy = giữ bảng kê cũ, file này chỉ lưu kèm)`);
+  if (!replace) {
+    await hsPatch(hsId, (x) => { x.docs = x.docs.filter((d) => d.fileId !== meta0.id); x.docs.push({ id: meta0.id + '_0', fileId: meta0.id, loai: 'khac', f: { mo_ta: `File bảng kê ${lines.length} dòng — không dùng, giữ bảng kê cũ` }, conf: 1, ok: true }); }, 'Thêm file bảng kê (giữ bảng kê cũ)');
+    toast(`Giữ ${cur0.lines.length} dòng hiện có — ${meta0.name} vẫn nằm trong hồ sơ`, 'warn', 6000);
+    return;
+  }
+  const taken = kunnTakenOther(cust(cur0.customerId) || {}, cur0);
   await hsPatch(hsId, (x) => {
-    const replace = !x.lines.length || confirm(`Hồ sơ đã có ${x.lines.length} dòng bảng kê. Thay bằng ${lines.length} dòng trong ${meta0.name}?`);
-    x.docs = x.docs.filter((d) => d.fileId !== meta0.id);
+    x.docs = x.docs.filter((d) => d.fileId !== meta0.id && d.loai !== 'bang_ke');
     x.docs.push({ id: meta0.id + '_0', fileId: meta0.id, loai: 'bang_ke', f: { sheet, dong: String(lines.length), tong: String(BK.sum(lines.map((l) => l.tien_gn))) }, conf: 1, ok: true });
-    if (!replace) return;
     x.lines = lines.map((l) => ({ ...BK.cleanLine(l), id: BK.uid(10), goc: 'chua' }));
     if (!x.ngay_gn && g.ngay_gn) x.ngay_gn = g.ngay_gn;
     if (!x.ngay_gn) {                                    // "NGÀY 27/10/2026" ở đầu bảng kê
-      const top = (grids[sheet] || []).slice(0, 10);
+      const top = (grids[sheetKey] || []).slice(0, 10);
       for (const row of top) for (let i = 0; i < row.length && !x.ngay_gn; i++) if (/^ngay\b/.test(BK.fold(row[i])) ) { const d = BK.toISO(row[i + 1]) || BK.toISO(String(row[i]).replace(/^\D+/, '')); if (d) x.ngay_gn = d; }
     }
-    if (!x.so_kunn && g.so_kunn) x.so_kunn = g.so_kunn;
+    if (!x.so_kunn && g.so_kunn) { if (taken.has(kkey(g.so_kunn))) toast(`File ghi số KUNN ${g.so_kunn} đang thuộc hồ sơ / KUNN khác (KH dùng lại file cũ?) — chưa điền số KUNN`, 'warn', 8000); else x.so_kunn = g.so_kunn; }
     if (groups.length > 1) toast(`File có ${groups.length} KUNN — lấy khối cuối (${g.so_kunn || '?'}) làm bảng kê của hồ sơ`, '', 7000);
   }, 'Đọc bảng kê vào hồ sơ');
 }
@@ -7279,7 +7514,7 @@ function renderHoso(el, c) {
     if (x.sev < 1) return '';
     const k = x.key, line = x.refs.find((r) => hs.lines.some((l) => l.id === r));
     const file = (loai, label) => `<button class="btn sm" data-fxfile="${loai}">📎 ${label}</button>`;
-    if (/^hm_/.test(k)) return `<span class="fx"><input class="inp" data-fxhm placeholder="Hạn mức (triệu)" value="${esc(p.hm_tong || '')}"><button class="btn sm pri" data-fx="hm">Lưu hạn mức</button>${!c.ledger ? `<button class="btn sm" data-xlpick="${c.id}">📂 Chọn file Excel dư nợ</button>` : ''}</span>`;
+    if (/^hm_/.test(k)) { const hasHm = (c.hmHist || []).some((h) => !h.del) || (c.ledger && c.ledger.hm); return `<span class="fx">${k === 'hm_none' && !hasHm ? `<input class="inp" data-fxhm placeholder="Hạn mức (triệu)" value="${esc(p.hm_tong || '')}"><button class="btn sm pri" data-fx="hm">Lưu hạn mức</button>` : `<a class="btn sm" href="${hashOf({ cid: c.id, tab: 'info' })}">Sửa ở Hạn mức tín dụng (tab Thông tin) →</a>`}${!c.ledger ? `<button class="btn sm" data-xlpick="${c.id}">📂 Chọn file Excel dư nợ</button>` : ''}</span>`; }
     if (/^cic_/.test(k)) return `<span class="fx">${file('cic', 'Thả file CIC')}<input class="inp" type="date" data-fxcic title="hoặc nhập ngày tra CIC"><select class="inp" data-fxnhom><option value="1">Nhóm 1</option><option value="2">Nhóm 2</option><option value="3">Nhóm 3+</option></select><button class="btn sm" data-fx="cic">Lưu CIC nhập tay</button></span>`;
     if (k === 'bs_chua') return `<span class="fx"><button class="btn sm pri" data-fx="bssug">＋ Chọn từ chứng từ đã thả</button><button class="btn sm" data-fx="bsnone">Không có chứng từ phải bổ sung</button></span>`;
     if (k === 'bs_ngay') return `<span class="fx"><button class="btn sm pri" data-fx="bsgo">Nhập số ngày bổ sung</button></span>`;
@@ -7295,6 +7530,7 @@ function renderHoso(el, c) {
   const refLinks = (x) => x.refs.map((r) => hs.docs.find((d) => d.id === r)).filter(Boolean).map((d) => `<a class="lnk" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}">Xem ${esc(HSC.TYPES[d.loai].l.toLowerCase())} ${esc(d.f.so || '')}</a>`).join(' ');
   const pkg = HSC.packageNames(hs, hs.files);
   const kunnRec = hs.kid && live(S.store.k.get(hs.kid)) ? S.store.k.get(hs.kid) : null;
+  const kunnDup = !!(hs.so_kunn && kunnTakenOther(c, hs).has(kkey(hs.so_kunn)));
   el.innerHTML = `${companyHead(c, 'hoso')}
     <div class="hstop"><div class="crumb"><a href="${hashOf({ cid: c.id, tab: 'hoso' })}">Hồ sơ giải ngân</a> › <b>Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : '(chưa định ngày)'}</b>${hs.done ? ' <span class="pill p-ok">Đã giải ngân</span>' : ''}</div>
       <ol class="msl">${ms.map((m) => `<li><button class="ms ${m.st}${V.msFocus === m.k ? ' sel' : ''}" data-ms="${m.k}" title="${esc(m.hint)}">${m.st === 'done' ? '✓ ' : m.st === 'cur' ? '● ' : m.st === 'skip' ? '⤼ ' : ''}${esc(m.l)}${m.at ? ` <small>${dd(m.at).slice(0, 5)}</small>` : ''}${m.k === 'kiem_tra' && n.err ? ` <small>còn ${n.err} lỗi</small>` : ''}</button></li>`).join('')}</ol>
@@ -7333,11 +7569,11 @@ function renderHoso(el, c) {
           <label class="f">Số KUNN admin cấp<input class="inp" id="hsKunn" value="${esc(hs.so_kunn || '')}" placeholder="${esc(p.prefix_kunn ? p.prefix_kunn + '(…)' + (p.hau_to_kunn || '') : 'vd 1082154(3).26')}"></label>
           ${(() => { const sg = suggestKunn(c, hs); if (!sg) return ''; const dup = hs.so_kunn && kunnTakenOther(c, hs).has(kkey(hs.so_kunn)), inXl = !dup && kunnInXl(c, hs.so_kunn);
             return `${dup ? '<div class="note warn" style="margin:0">! Số KUNN này đã dùng cho hồ sơ / KUNN khác</div>' : inXl ? '<div class="note ok" style="margin:0">✓ KUNN này đã có trong file Excel theo dõi</div>' : ''}<div class="hist" style="margin-top:6px">Số tiếp theo</div><div class="kn-sg"><input class="inp knpre" data-knpre value="${esc(sg.pre)}" size="9" title="Số gốc (theo HĐTD / gói giải ngân) — chỉ đổi khi có gói mới; sửa ở đây tool nhớ cho công ty" aria-label="Số gốc"><b>(</b><button class="btn sm" data-kn="-1" title="Giảm 1">−</button><input class="inp knn" data-knn value="${sg.n}" size="3" inputmode="numeric" title="Số thứ tự KUNN — tự +1 mỗi lần" aria-label="Số trong ngoặc"><button class="btn sm" data-kn="1" title="Tăng 1">+</button><b>)</b><input class="inp knsuf" data-knsuf value="${esc(sg.suf)}" size="4" list="knSufL" title="Đuôi năm, vd .26 — ít đổi; sửa ở đây tool nhớ cho công ty" aria-label="Đuôi"><datalist id="knSufL">${sg.sufs.map((x) => `<option value="${esc(x)}">`).join('')}</datalist></div><button class="btn sm pri knuse" data-knuse="1">Dùng số ${esc(sg.pre)}(${sg.n})${esc(sg.suf)}</button><div class="hist">Chỉ <b>số trong ngoặc</b> đổi mỗi KUNN (tự +1 theo số lớn nhất đã có${sg.last ? ': ' + esc(sg.last) : ''}). Số gốc và đuôi năm chỉ đổi khi có gói giải ngân / HĐTD mới — sửa trực tiếp, tool nhớ cho các lần sau.</div>`; })()}
-          <button class="btn pri" id="hsSoan">📝 Soạn KUNN &amp; PDGN</button>
+          <button class="btn pri" id="hsSoan" ${kunnDup ? 'disabled title="Số KUNN đang thuộc hồ sơ / KUNN khác — đổi số trước"' : ''}>📝 Soạn KUNN &amp; PDGN</button>
           <div class="hist">${kunnRec && kunnRec.doc ? `Đã soạn, lưu ${new Date(kunnRec.doc.at).toLocaleString('vi-VN')}` : 'Mẫu Word riêng của công ty · tự điền từ hồ sơ, thông tin công ty, file Excel'}</div></div>
         <div class="obox"><div class="oh"><b>Sổ hóa đơn</b><span class="${kunnRec ? 'o' : ''}">${kunnRec ? 'Đã ghi' : 'Chưa ghi'}</span></div>
           <div class="hist">${kunnRec ? `KUNN ${esc(kunnRec.so_kunn)} · ${kunnRec.lines.length} dòng — theo dõi hồ sơ gốc ở tab Theo dõi KUNN` : 'Ghi các dòng bảng kê vào sổ để lần sau soát giải ngân trùng và theo dõi hồ sơ gốc.'}</div>
-          <button class="btn sm" id="hsLedger" ${hs.lines.length ? '' : 'disabled'}>${kunnRec ? '↻ Cập nhật sổ theo hồ sơ' : 'Ghi vào sổ hóa đơn'}</button><button class="btn sm" id="hsBkX" ${hs.lines.length ? '' : 'disabled'}>⬇ Bảng kê Excel</button></div>
+          <button class="btn sm" id="hsLedger" ${hs.lines.length && !kunnDup ? '' : 'disabled'} ${kunnDup ? 'title="Số KUNN đang thuộc hồ sơ / KUNN khác — đổi số trước"' : ''}>${kunnRec ? '↻ Cập nhật sổ theo hồ sơ' : 'Ghi vào sổ hóa đơn'}</button><button class="btn sm" id="hsBkX" ${hs.lines.length ? '' : 'disabled'}>⬇ Bảng kê Excel</button></div>
         <div class="obox" id="oxBs"><div class="oh"><b>Chứng từ bổ sung bản gốc</b><span class="${(hs.bo_sung || []).some((b) => !b.xong) ? 'w' : 'o'}">${hs.bs_none ? 'Không cần' : (hs.bo_sung || []).length ? `${(hs.bo_sung || []).filter((b) => b.xong).length}/${hs.bo_sung.length} đã bổ sung` : 'Chưa chọn'}</span></div>
           <div class="hist">Chứng từ nào KH chỉ nộp bản sao và phải bổ sung bản gốc sau — số ngày theo yêu cầu của ĐVKD. Danh sách này điền vào bảng “Chứng từ bổ sung” của PDGN và dùng để theo dõi ở tab Theo dõi KUNN.</div>
           ${(hs.bo_sung || []).length ? `<div class="bsl">${hs.bo_sung.map((b, i) => `<div class="bsr2"><input type="checkbox" data-bsx="${i}" ${b.xong ? 'checked' : ''} title="Đã nhận bản gốc"><input class="cell-in" data-bsf="${i}|ten" value="${esc(b.ten)}" title="Tên chứng từ"><select class="cell-in" data-bsf="${i}|ban"><option ${b.ban !== 'Gốc' ? 'selected' : ''}>Sao</option><option ${b.ban === 'Gốc' ? 'selected' : ''}>Gốc</option></select><input class="cell-in bsn" data-bsf="${i}|ngay" value="${esc(b.ngay || '')}" placeholder="số ngày" inputmode="numeric" title="Bổ sung trong bao nhiêu ngày kể từ ngày giải ngân"><small class="${b.han ? '' : 'err'}">${b.han ? 'hạn ' + esc(b.han) : 'nhập số ngày'}</small><button class="lnk" data-bsdel="${i}" title="Bỏ">✕</button></div>`).join('')}</div>` : ''}
@@ -7380,7 +7616,7 @@ function renderHoso(el, c) {
   $('#hsBsNone', el).onchange = (e) => patch((x) => { x.bs_none = e.target.checked; }, e.target.checked ? 'Không có chứng từ phải bổ sung' : 'Có chứng từ phải bổ sung');
   $('#hsBsDef', el).onchange = async (e) => { const v = e.target.value.replace(/\D/g, ''); const cc = cust(c.id); await S.store.putCustomer({ ...cc, hs: { ...(cc.hs || {}), so_ngay_bs: v }, ...meta() }); toast(v ? `Đã nhớ: mặc định bổ sung trong ${v} ngày cho công ty này` : 'Đã bỏ số ngày mặc định', 'ok'); };
   $('#hsDel2', el).onclick = () => $('#hsDel', el).click();
-  $('#hsDel', el).onclick = async () => { if (!confirm('Xóa hồ sơ giải ngân này? (file đính kèm vẫn còn trong thư mục chung; KUNN đã ghi sổ không bị xóa)')) return; await S.store.delHoso(hs.id); go({ cid: c.id, tab: 'hoso', hs: null, doc: null }); };
+  $('#hsDel', el).onclick = async () => { if (!confirm(`Xóa hồ sơ giải ngân này?${hsDelNote(hs)} Có thể hoàn tác bằng ↶.`)) return; await hsDelete(hs); go({ cid: c.id, tab: 'hoso', hs: null, doc: null }); };
   el.onclick = async (e) => {
     const fx = e.target.closest('[data-fx],[data-fxfile],[data-fxline],[data-fxadd],[data-fxtk],[data-ldel2],[data-fprev],[data-fdl],[data-kn],[data-knuse],[data-pkx],[data-pkback],[data-snv]');
     if (fx) return hsFixAction(fx, hs, c, el);
@@ -7396,7 +7632,8 @@ function renderHoso(el, c) {
     if (d.unack) return patch((x) => { delete x.ack[d.unack]; }, 'Hiện lại cảnh báo');
     if (d.aread) return aiReadFile(hs.id, d.aread).catch((er) => toast(errMsg(er), 'err', 8000));
     if (d.fopen) { const r = await S.store.getFile(d.fopen); if (!r) return toast('Không có file trên máy này', 'err'); window.open(URL.createObjectURL(r.blob), '_blank'); return; }
-    if (d.fdel) { if (!confirm('Bỏ file này khỏi hồ sơ?')) return; return patch((x) => { x.files = x.files.filter((f) => f.id !== d.fdel); x.docs = x.docs.filter((q) => q.fileId !== d.fdel); }, 'Bỏ file khỏi hồ sơ'); }
+    if (d.fdel) { if (!confirm('Bỏ file này khỏi hồ sơ?')) return; const wasBk = hs.docs.some((q) => q.fileId === d.fdel && q.loai === 'bang_ke'); const dropLines = wasBk && hs.lines.length && confirm(`Xóa luôn ${hs.lines.length} dòng bảng kê đã đọc từ file này?`);
+      return patch((x) => { x.files = x.files.filter((f) => f.id !== d.fdel); x.docs = x.docs.filter((q) => q.fileId !== d.fdel); if (dropLines) x.lines = []; }, 'Bỏ file khỏi hồ sơ').then(async () => { if (dropLines && hs.kid && live(S.store.k.get(hs.kid))) { const k = S.store.k.get(hs.kid); if (kunnPending(k)) await S.store.delKunn(k.id); else await S.store.updateKunn(k.id, { lines: [], so_tien: 0, _sig: hsSig(hsGet(hs.id)), ...meta() }); } }); }
     if (d.bsdel) return patch((x) => { x.bo_sung.splice(+d.bsdel, 1); }, 'Xóa chứng từ bổ sung');
   };
   el.onchange = (e) => { const t = e.target;
@@ -7412,7 +7649,7 @@ function renderHoso(el, c) {
       const [i, f] = t.dataset.bsf.split('|'), v = t.value.trim();
       return patch((x) => { const b = x.bo_sung[+i]; if (!b) return; b[f] = f === 'ngay' ? v.replace(/\D/g, '') : v; const g = BK.toISO(x.ngay_gn), n = parseInt(b.ngay, 10); b.han = g && n > 0 ? dd(BK.addDays(g, n)) : ''; }, 'Sửa chứng từ bổ sung');
     }
-    if (t.dataset.bsx != null) patch((x) => { x.bo_sung[+t.dataset.bsx].xong = t.checked; }, 'Đánh dấu đã bổ sung').then(() => { const h = hsGet(hs.id); if (h.kid && h.lines.length) hsToLedger(hs.id, true); }); };
+    if (t.dataset.bsx != null) patch((x) => { x.bo_sung[+t.dataset.bsx].xong = t.checked; }, t.checked ? 'Đã nhận bản gốc' : 'Bỏ đánh dấu đã nhận bản gốc'); };
 }
 // xem một chứng từ: bản scan cạnh số liệu AI đọc (sửa được)
 function renderDocView(el, c, hs) {
@@ -7423,6 +7660,8 @@ function renderDocView(el, c, hs) {
   const t = HSC.TYPES[d.loai];
   const docs = hs.docs.filter((x) => !x.del), i = docs.indexOf(d);
   const nav = (j) => docs[j] ? hashOf({ cid: c.id, hs: hs.id, doc: docs[j].id }) : '';
+  const prevScan = $('#scan', el), keepScan = prevScan && prevScan.dataset.doc === d.id && prevScan.dataset.ready ? prevScan : null;
+  if (prevScan && !keepScan && prevScan.dataset.url) URL.revokeObjectURL(prevScan.dataset.url);
   el.innerHTML = `${companyHead(c, 'hoso')}
     <div class="hstop"><div class="crumb"><a href="${hashOf({ cid: c.id, tab: 'hoso' })}">Hồ sơ giải ngân</a> › <a href="${hashOf({ cid: c.id, hs: hs.id })}">Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : ''}</a> › <b>${esc(t.l)} ${esc(d.f.so || '')}</b></div>
       <span style="flex:1"></span>${nav(i - 1) ? `<a class="btn sm" href="${nav(i - 1)}">‹ Chứng từ trước</a>` : ''}${nav(i + 1) ? `<a class="btn sm" href="${nav(i + 1)}">Chứng từ sau ›</a>` : ''}</div>
@@ -7453,13 +7692,15 @@ function renderDocView(el, c, hs) {
   };
   if ($('#dDel', el)) $('#dDel', el).onclick = () => { patch((x) => { x.docs = x.docs.filter((y) => y.id !== d.id); }, 'Bỏ chứng từ'); go({ doc: null, hs: hs.id }); };
   $('#dUp', el).onchange = (e) => patch((x) => { x.skipUp = { ...(x.skipUp || {}) }; if (e.target.checked) delete x.skipUp[d.fileId]; else x.skipUp[d.fileId] = true; }, 'Chọn file tải lên');
+  if (keepScan) { $('#scan', el).replaceWith(keepScan); return; }
   (async () => {
     const box = $('#scan', el);
+    if (box) box.dataset.doc = d.id;
     if (box && !d.fileId) { box.innerHTML = '<div class="empty">Chứng từ nhập tay — không có file đính kèm. Thả file vào hồ sơ để lưu bản scan.</div>'; return; }
     const r = await S.store.getFile(d.fileId);
-    if (!box) return;
+    if (!box || !box.isConnected) return;
     if (!r) { box.innerHTML = '<div class="empty">File không có trên máy này (chưa đồng bộ từ thư mục chung)</div>'; return; }
-    const url = URL.createObjectURL(r.blob);
+    const url = URL.createObjectURL(r.blob); box.dataset.url = url; box.dataset.ready = '1';
     const ty = fm.type || r.type || '';
     const page = d.trang ? '#page=' + String(d.trang).split(/[-,]/)[0] : '';
     if (fm.name && isExcel(fm)) { box.innerHTML = `<div class="pvx xlv">${await excelHtml(r.blob)}</div>`; return; }
@@ -7473,19 +7714,22 @@ async function hsToLedger(hsId, quiet) {
   if (!hs.lines.length) throw new Error('Hồ sơ chưa có bảng kê');
   const so = hs.so_kunn || '(chưa số)';
   let k = hs.kid ? S.store.k.get(hs.kid) : null;
-  if (k && k.deleted) k = null;
+  if (k && k.deleted) { if (!k.purged && k.hsId === hs.id) throw new Error(`KUNN ${k.so_kunn} của hồ sơ này đã bị xóa khỏi bảng theo dõi — khôi phục ở Theo dõi KUNN › 🗑 Đã xóa, hoặc xóa hẳn rồi ghi sổ lại`); k = null; }
+  if (k && k.hsId && k.hsId !== hs.id && live(hsGet(k.hsId))) k = null;
   if (!k && hs.so_kunn) k = S.store.kunnsOf(hs.customerId).find((x) => kkey(x.so_kunn) === kkey(hs.so_kunn)) || null;
+  if (k && k.hsId && k.hsId !== hs.id && live(hsGet(k.hsId))) throw new Error(`Số KUNN ${hs.so_kunn} đang thuộc hồ sơ giải ngân khác — đổi số KUNN trước khi ghi sổ / soạn thảo`);
   if (!k) k = S.store.kunnsOf(hs.customerId).find((x) => x.hsId === hs.id) || null;
   const bs = hs.bo_sung || [], noBs = hs.bs_none || (bs.length && bs.every((b) => b.xong));
-  const lines = hs.lines.map((l) => ({ ...l, goc: noBs ? 'da_nhan' : (k && (k.lines.find((x) => x.id === l.id) || {}).goc) || l.goc || 'chua' }));
+  // dòng: số liệu theo hồ sơ; trạng thái bản gốc / chứng từ thiếu / ngày nhận đã ghi ở Sổ hóa đơn giữ lại
+  const lines = hs.lines.map((l) => { const o = (k && k.lines.find((x) => x.id === l.id)) || {}; return { ...l, goc: noBs ? 'da_nhan' : o.goc || l.goc || 'chua', thieu: noBs ? '' : o.thieu || l.thieu || '', ngay_nhan: o.ngay_nhan || l.ngay_nhan || '', ack: (o.ack && o.ack.length ? o.ack : l.ack) || [], ghi_chu: l.ghi_chu || o.ghi_chu || '' }; });
   const hans = bs.filter((b) => !b.xong).map((b) => BK.toISO(b.han)).filter(Boolean).sort();
   const p0 = (cust(hs.customerId) || {}).hs || {}, gn0 = BK.toISO(hs.ngay_gn) || BK.todayISO(), snv0 = parseInt(hs.so_ngay_vay || p0.so_ngay_vay, 10) || null;
   const tong = BK.sum(hs.lines.map((l) => l.tien_gn)), gn1 = !!hs.done;
   const rec = { ...(k || { id: BK.uid(), customerId: hs.customerId, createdAt: Date.now(), createdBy: userName() }), so_kunn: so, ngay_gn: gn0, lines,
-    so_tien: tong, so_ngay: snv0, ngay_dh: snv0 ? BK.addDays(gn0, snv0) : (k && k.ngay_dh) || '', giai_ngan: gn1, con_lai: gn1 ? (k && k.giai_ngan && k.con_lai != null ? k.con_lai : null) : null, conAt: (k && k.conAt) || 0, han_bs: hans.length ? hans[hans.length - 1] : (k && k.han_bs) || '', goi: hs.goi || '', ls: hs.ls ? +hs.ls : (DOCX.num(p0.lai_suat) ?? null), source: 'Hồ sơ giải ngân', hsId, _sig: hsSig(hs), ...meta() };
+    so_tien: tong, so_ngay: snv0, ngay_dh: snv0 ? BK.addDays(gn0, snv0) : (k && k.ngay_dh) || '', giai_ngan: gn1, con_lai: gn1 ? (k && k.giai_ngan && k.con_lai != null ? k.con_lai : null) : null, conAt: (k && k.conAt) || 0, han_bs: hans.length ? hans[0] : (k && k.han_bs) || '', goi: hs.goi || '', ls: hs.ls ? +hs.ls : (DOCX.num(p0.lai_suat) ?? null), source: 'Hồ sơ giải ngân', hsId, _sig: hsSig(hs), ...meta() };
   await S.store.group(`Ghi hồ sơ vào sổ hóa đơn — KUNN ${so}`, async () => {
     await S.store.putKunn(rec);
-    if (hs.kid !== rec.id) await hsPatch(hsId, (x) => { x.kid = rec.id; });
+    if (hs.kid !== rec.id) { hsPatch.busy.add(hsId); try { await hsPatch(hsId, (x) => { x.kid = rec.id; }); } finally { hsPatch.busy.delete(hsId); } }
   });
   if (!quiet) toast(`Đã ${k ? 'cập nhật' : 'ghi'} KUNN ${so} (${lines.length} dòng) vào sổ hóa đơn`, 'ok');
   return rec;
@@ -7493,11 +7737,11 @@ async function hsToLedger(hsId, quiet) {
 async function hsOpenEditor(hsId) {
   const hs = hsGet(hsId);
   if (!hs.lines.length && !confirm('Hồ sơ chưa có bảng kê — vẫn mở soạn thảo (nhập chứng từ tay)?')) return;
-  let kid = hs.kid;
-  if (hs.lines.length) kid = (await hsToLedger(hsId, true)).id;
+  let kid = hs.kid && live(S.store.k.get(hs.kid)) ? hs.kid : null;
+  if (hs.lines.length) { try { kid = (await hsToLedger(hsId, true)).id; } catch (e) { toast(errMsg(e), 'err', 8000); } }
   await openHoSo(hs.customerId, kid || null, hsId);
 }
-function hsExportBangKe(hs, c) { download(bkWorkbook(hs, c), `BangKe_${slug((c.hs || {}).ten_kh_ngan || c.name)}_${(hs.so_kunn || 'chua_so').replace(/[()]/g, '_')}_${(BK.toISO(hs.ngay_gn) || BK.todayISO()).split('-').reverse().join('')}.xlsx`); }
+function hsExportBangKe(hs, c) { download(bkWorkbook(hs, c), `BangKe_${slug((c.hs || {}).ten_kh_ngan || c.name)}_${kunnSlug(hs.so_kunn, 'chua_so')}_${(BK.toISO(hs.ngay_gn) || BK.todayISO()).split('-').reverse().join('')}.xlsx`); }
 function bkWorkbook(hs, c) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, sheet(`BẢNG KÊ CHỨNG TỪ GIẢI NGÂN — ${c.name}`, `KUNN ${hs.so_kunn || '…'} · ngày ${dd(BK.toISO(hs.ngay_gn)) || '…'} · ${stamp()}`, ['STT', 'NHÀ CUNG CẤP', 'SỐ HĐMB/ĐĐH', 'SỐ HÓA ĐƠN', 'NGÀY HÓA ĐƠN', 'SỐ TIỀN HÓA ĐƠN', 'SỐ TIỀN GIẢI NGÂN'],
@@ -7508,16 +7752,18 @@ function bkWorkbook(hs, c) {
 // ── số KUNN: gợi ý số tiếp theo theo file Excel / sổ hóa đơn / các hồ sơ khác ──
 const KUNN_NO = /^(.*?)\(\s*(\d+)\s*\)\s*(\.\s*\d+)?\s*$/;
 function kunnInXl(c, so) { return !!(so && c.ledger && c.ledger.kunns.some((k) => kkey(k.so) === kkey(so))); }
+/** Số KUNN đã xóa khỏi bảng theo dõi (chưa xóa hẳn) — vẫn coi là đã dùng; KUNN của chính hồ sơ đang xem thì không tính. */
+const kunnDelSo = (c, hs) => [...Object.values(c.kunnDel || {}).filter((d) => !d.purged && !(hs && d.kid && d.kid === hs.kid)).map((d) => d.so), ...[...S.store.k.values()].filter((k) => k.customerId === c.id && k.deleted && !k.purged && !(hs && (k.id === hs.kid || k.hsId === hs.id))).map((k) => k.so_kunn)].filter((x) => x && !/chưa số/i.test(x));
 function kunnTakenOther(c, hs) {
-  const xs = [...S.store.kunnsOf(c.id).filter((k) => !hs || k.id !== hs.kid).map((k) => k.so_kunn), ...S.store.hosoOf(c.id).filter((h) => !hs || h.id !== hs.id).map((h) => h.so_kunn)];
+  const xs = [...S.store.kunnsOf(c.id).filter((k) => !hs || k.id !== hs.kid).map((k) => k.so_kunn), ...S.store.hosoOf(c.id).filter((h) => !hs || h.id !== hs.id).map((h) => h.so_kunn), ...kunnDelSo(c, hs)];
   return new Set(xs.filter(Boolean).map(kkey));
 }
 function kunnTaken(c, hs) {
-  const xs = [...(c.ledger ? c.ledger.kunns.map((k) => k.so) : []), ...S.store.kunnsOf(c.id).filter((k) => !hs || k.id !== hs.kid).map((k) => k.so_kunn), ...S.store.hosoOf(c.id).filter((h) => !hs || h.id !== hs.id).map((h) => h.so_kunn)];
+  const xs = [...(c.ledger ? c.ledger.kunns.map((k) => k.so) : []), ...S.store.kunnsOf(c.id).filter((k) => !hs || k.id !== hs.kid).map((k) => k.so_kunn), ...S.store.hosoOf(c.id).filter((h) => !hs || h.id !== hs.id).map((h) => h.so_kunn), ...kunnDelSo(c, hs)];
   return new Set(xs.filter(Boolean).map(kkey));
 }
 function suggestKunn(c, hs) {
-  const all = [...(c.ledger ? c.ledger.kunns.map((k) => ({ so: k.so, d: k.ngay_gn })) : []), ...S.store.kunnsOf(c.id).filter((k) => k.id !== hs.kid).map((k) => ({ so: k.so_kunn, d: k.ngay_gn })), ...S.store.hosoOf(c.id).filter((h) => h.id !== hs.id).map((h) => ({ so: h.so_kunn, d: BK.toISO(h.ngay_gn) }))]
+  const all = [...(c.ledger ? c.ledger.kunns.map((k) => ({ so: k.so, d: k.ngay_gn })) : []), ...S.store.kunnsOf(c.id).filter((k) => k.id !== hs.kid).map((k) => ({ so: k.so_kunn, d: k.ngay_gn })), ...S.store.hosoOf(c.id).filter((h) => h.id !== hs.id).map((h) => ({ so: h.so_kunn, d: BK.toISO(h.ngay_gn) })), ...kunnDelSo(c, hs).map((so) => ({ so, d: '' }))]
     .map((x) => { const m = KUNN_NO.exec(String(x.so || '').trim()); return m ? { pre: m[1].trim(), n: +m[2], suf: (m[3] || '').replace(/\s/g, ''), so: x.so, d: x.d || '' } : null; }).filter(Boolean);
   const p = c.hs || {};
   const pre = (V.knPre && V.knPre[hs.id]) || p.prefix_kunn || (all.length ? all.slice().sort((a, b) => (b.d || '').localeCompare(a.d || '') || b.n - a.n)[0].pre : '');
@@ -7527,7 +7773,7 @@ function suggestKunn(c, hs) {
   const off = (V.knOff && V.knOff[hs.id]) || 0;
   return { pre, n: (top ? top.n : 0) + 1 + off, suf: V.knSuf != null ? V.knSuf : p.hau_to_kunn || (top && top.suf) || sufs[0] || '', sufs: sufs.length ? sufs : [''], last: top ? top.so : '' };
 }
-const zipName = (hs, c) => `HoSoGN_${slug((c.hs || {}).ten_kh_ngan || c.name).toUpperCase()}_${hs.so_kunn ? 'KUNN_' + hs.so_kunn.replace(/[()]/g, '_').replace(/_+/g, '_').replace(/_\./, '.').replace(/[^\w.]+/g, '') : 'chua_so'}_${(BK.toISO(hs.ngay_gn) || BK.todayISO()).split('-').reverse().join('')}.zip`;
+const zipName = (hs, c) => `HoSoGN_${slug((c.hs || {}).ten_kh_ngan || c.name).toUpperCase()}_${hs.so_kunn ? 'KUNN_' + kunnSlug(hs.so_kunn, 'chua_so') : 'chua_so'}_${(BK.toISO(hs.ngay_gn) || BK.todayISO()).split('-').reverse().join('')}.zip`;
 
 // ── bổ sung / sửa ngay từ mục kiểm tra ──
 async function hsFixAction(t, hs, c, el) {
@@ -7539,7 +7785,7 @@ async function hsFixAction(t, hs, c, el) {
   if (d.fx === 'hm') {
     const v = DOCX.num($('[data-fxhm]', t.closest('.fx')).value); if (!v) return toast('Nhập hạn mức (triệu đồng)', 'err');
     const c0 = cust(c.id); S.store.labelNext('Nhập hạn mức');
-    await S.store.putCustomer({ ...c0, hs: { ...(c0.hs || {}), hm_tong: v.toLocaleString('en-US') }, ...(c0.ledger && !c0.ledger.hm ? { ledger: { ...c0.ledger, hm: v * 1e6, hmList: [{ ma: 'Hạn mức', han_muc: v * 1e6, du_no: c0.ledger.du_no }] } } : {}), ...meta() });
+    await S.store.putCustomer({ ...c0, hs: { ...(c0.hs || {}), hm_tong: v.toLocaleString('en-US') }, ...(c0.ledger ? { ledger: { ...c0.ledger, hm: v * 1e6, hmList: [{ ma: 'Hạn mức', han_muc: v * 1e6, du_no: c0.ledger.du_no }] } } : {}), ...meta() });
     return toast('Đã lưu hạn mức — kiểm tra chạy lại', 'ok');
   }
   if (d.fx === 'cic') {
@@ -7579,17 +7825,18 @@ async function hsFixAction(t, hs, c, el) {
 }
 function editHsLine(hsId, lineId) {
   const hs = hsGet(hsId), l0 = lineId ? hs.lines.find((q) => q.id === lineId) : null;
-  const l = l0 || { ncc: '', so_hdmb: '', so_hd: '', ngay_hd: '', tien_hd: null, tien_gn: null };
-  const F = [['ncc', 'Nhà cung cấp'], ['so_hdmb', 'HĐMB / PO'], ['so_hd', 'Số hóa đơn / PO'], ['ngay_hd', 'Ngày chứng từ', 'date'], ['tien_hd', 'Tiền hóa đơn / chứng từ', 'money'], ['tien_gn', 'Số tiền giải ngân', 'money'], ['ghi_chu', 'Ghi chú']];
+  const l = l0 || { ncc: '', so_hdmb: '', so_hd: '', ngay_hd: '', tien_hd: null, tien_gn: null, loai_tien: '' };
+  const F = [['ncc', 'Nhà cung cấp'], ['so_hdmb', 'HĐMB / PO'], ['so_hd', 'Số hóa đơn / PO'], ['ngay_hd', 'Ngày chứng từ', 'date'], ['tien_hd', 'Tiền hóa đơn / chứng từ', 'money'], ['tien_gn', 'Số tiền giải ngân', 'money'], ['loai_tien', 'Loại tiền (trống = VND)'], ['ghi_chu', 'Ghi chú']];
+  const shown = (k, ty) => (ty === 'money' ? BK.fmtMoney(l[k], l.loai_tien) : l[k] || '');
   const m = modal(`<div class="mh"><h2>${l0 ? 'Sửa dòng bảng kê' : 'Thêm dòng bảng kê'}</h2><button class="x" data-close>&times;</button></div>
-    <div class="mb"><div class="grid2">${F.map(([k, lb, ty]) => `<label class="f">${lb}<input class="inp" data-lf="${k}" ${ty === 'date' ? 'type="date"' : ''} value="${esc(ty === 'money' ? (l[k] != null ? Math.round(l[k]).toLocaleString('vi-VN') : '') : l[k] || '')}"></label>`).join('')}</div>
+    <div class="mb"><div class="grid2">${F.map(([k, lb, ty]) => `<label class="f">${lb}<input class="inp" data-lf="${k}" ${ty === 'date' ? 'type="date"' : ''} value="${esc(shown(k, ty))}"></label>`).join('')}</div>
     <div class="hist" style="margin-top:8px">Thay đổi được ghi vào lịch sử hồ sơ · sửa nhầm thì bấm ↶ để hoàn tác.</div></div>
     <div class="mf"><button class="btn" data-close>Hủy</button><button class="btn pri" id="lfSave">Lưu</button></div>`, 'sm');
   $('#lfSave', m).onclick = async () => {
     const v = {};
-    $$('[data-lf]', m).forEach((i) => { const k = i.dataset.lf; v[k] = /^tien/.test(k) ? DOCX.num(i.value) : i.value.trim(); });
+    $$('[data-lf]', m).forEach((i) => { const k = i.dataset.lf; if (/^tien/.test(k)) { if (i.value === shown(k, 'money')) { if (!l0) v[k] = null; return; } v[k] = i.value.trim() ? BK.parseAmount(i.value) : null; } else v[k] = k === 'loai_tien' ? i.value.trim().toUpperCase().replace(/^VN.*/, '') : i.value.trim(); });
     if (!v.so_hd && !v.ncc) return toast('Nhập ít nhất nhà cung cấp hoặc số chứng từ', 'err');
-    const diff = l0 ? F.filter(([k]) => String(l0[k] ?? '') !== String(v[k] ?? '')).map(([k, lb, ty]) => `${lb}: ${ty === 'money' ? money(l0[k]) : ty === 'date' ? dd(l0[k]) : l0[k] || '—'} → ${ty === 'money' ? money(v[k]) : ty === 'date' ? dd(v[k]) : v[k] || '—'}`) : [];
+    const diff = l0 ? F.filter(([k]) => k in v && String(l0[k] ?? '') !== String(v[k] ?? '')).map(([k, lb, ty]) => `${lb}: ${ty === 'money' ? money(l0[k], l0.loai_tien) : ty === 'date' ? dd(l0[k]) : l0[k] || '—'} → ${ty === 'money' ? money(v[k], v.loai_tien ?? l0.loai_tien) : ty === 'date' ? dd(v[k]) : v[k] || '—'}`) : [];
     if (l0 && !diff.length) { m.remove(); return; }
     await hsPatch(hsId, (x) => {
       if (l0) { const q = x.lines.find((y) => y.id === lineId); Object.assign(q, v); } else x.lines.push({ ...v, id: BK.uid(10), goc: 'chua' });
@@ -7622,8 +7869,9 @@ async function previewFiles(hs, fileId) {
   $('#pvP', m).onclick = () => { i = (i - 1 + files.length) % files.length; show(); };
   $('#pvN', m).onclick = () => { i = (i + 1) % files.length; show(); };
   $('#pvD', m).onclick = async () => { const f = files[i], r = await S.store.getFile(f.id); if (r) saveBlob(r.blob, (HSC.packageNames(hs, hs.files).find((x) => x.id === f.id) || {}).name || f.name); };
-  m.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') $('#pvN', m).click(); if (e.key === 'ArrowLeft') $('#pvP', m).click(); });
-  new MutationObserver((_, o) => { if (!m.isConnected) { urls.forEach((u) => URL.revokeObjectURL(u)); o.disconnect(); } }).observe(document.body, { childList: true });
+  const onKey = (e) => { if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return; if (e.key === 'ArrowRight') $('#pvN', m).click(); else if (e.key === 'ArrowLeft') $('#pvP', m).click(); else if (e.key === 'Escape') m.remove(); };
+  document.addEventListener('keydown', onKey); m.tabIndex = -1; m.focus();
+  new MutationObserver((_, o) => { if (!m.isConnected) { urls.forEach((u) => URL.revokeObjectURL(u)); document.removeEventListener('keydown', onKey); o.disconnect(); } }).observe(document.body, { childList: true });
   show();
 }
 // ── chọn công ty nhanh (thanh đầu trang) ──
@@ -7647,11 +7895,13 @@ async function hsZip(hs, c) {
   const z = new JSZip();
   const names = HSC.packageNames(hs, hs.files);
   let n = 0;
-  for (const x of names) { const r = await S.store.getFile(x.id); if (r) { z.file(x.name, await r.blob.arrayBuffer()); n++; } }
-  if (hs.lines.length && hs.pkgBk !== false) { z.file(`03_BANG_KE_CHUAN_${(hs.so_kunn || 'chua_so').replace(/[()]/g, '_')}.xlsx`, XLSX.write(bkWorkbook(hs, c), { type: 'array', bookType: 'xlsx', compression: true })); n++; }
+  const missing = [];
+  for (const x of names) { const r = await S.store.getFile(x.id); if (r) { z.file(x.name, await r.blob.arrayBuffer()); n++; } else missing.push(x.name); }
+  if (hs.lines.length && hs.pkgBk !== false) { z.file(`03_BANG_KE_CHUAN_${kunnSlug(hs.so_kunn, 'chua_so')}.xlsx`, XLSX.write(bkWorkbook(hs, c), { type: 'array', bookType: 'xlsx', compression: true })); n++; }
   if (!n) throw new Error('Không có file nào trên máy này');
   saveBlob(await z.generateAsync({ type: 'blob', compression: 'DEFLATE' }), zipName(hs, c));
-  toast('Đã tải gói file — đưa lên hệ thống xong thì bấm mốc “Đưa lên hệ thống + UNC” → Đã xong', 'ok', 6000);
+  if (missing.length) toast(`Gói thiếu ${missing.length}/${names.length} file đính kèm không có trên máy này (${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '…' : ''}) — kết nối thư mục chung để lấy`, 'err', 9000);
+  else toast('Đã tải gói file — đưa lên hệ thống và giải ngân xong thì bấm “✓ Đã giải ngân” ở mốc cuối của hồ sơ', 'ok', 6000);
 }
 
 function openLookup(q0) {
@@ -7704,10 +7954,12 @@ function openSettings(focus) {
     <label class="f" style="max-width:340px">Tên của bạn (ghi vào từng tệp & nhật ký)<input class="inp" id="skUser" value="${esc(lsGet(LS.user))}" placeholder="vd: Thu Hà"></label>
     <div id="syncBox" style="margin-top:10px"></div>
     <div class="sec">3. Sao lưu dữ liệu</div>
-    <div class="hist" style="margin-bottom:6px">Xuất toàn bộ dữ liệu ra 1 file .json (để chuyển máy / gửi người chưa vào thư mục chung) hoặc nạp file sao lưu — gộp theo bản sửa sau cùng.</div>
+    <div class="hist" style="margin-bottom:6px">Xuất toàn bộ ra 1 gói .zip (dữ liệu, file đính kèm, mẫu Word, lịch nghỉ — để chuyển máy / gửi người chưa vào thư mục chung) hoặc nạp gói sao lưu (.zip, hoặc .json cũ) — gộp theo bản sửa sau cùng.</div>
     <div class="bar"><button class="btn" id="skBackup">⬇ Sao lưu ra file</button><button class="btn" id="skRestore">⬆ Nạp file sao lưu</button></div>
     <div class="sec">4. Hồ sơ gốc</div>
     <label class="f" style="max-width:320px">Hạn nộp hồ sơ gốc mặc định (số ngày sau giải ngân)<input class="inp" id="skHan" type="number" min="1" value="${hanNgay()}"></label>
+    <label class="f">Ngày nghỉ lễ, Tết (tính đáo hạn — dùng chung cả team qua thư mục chung)<textarea class="inp" id="skHol" rows="6">${esc((S.cfg && S.cfg.hol) || lsGet(HOL_LS) || DOCX.HOL_DEF)}</textarea></label>
+    <div class="hist">Mỗi dòng: dd/mm/yyyy [→ dd/mm/yyyy] tên. Lễ rơi vào T7/CN tool tự thêm ngày nghỉ bù. Tết âm lịch, Giỗ Tổ các năm sau là dự kiến — cập nhật theo thông báo chính thức.${S.cfg && S.cfg.by ? ` Lần sửa cuối: ${esc(S.cfg.by)}.` : ''}</div>
     <div id="skMsg" class="hist" style="margin-top:8px"></div></div>
     <div class="mf"><button class="btn" data-close>Đóng</button><button class="btn pri" id="skSave">Lưu cài đặt</button></div>`, 'sm');
   const collect = () => {
@@ -7742,7 +7994,9 @@ function openSettings(focus) {
   $('#skSave', m).onclick = async () => {
     collect(); aiSave(o);
     lsSet(LS.user, $('#skUser', m).value.trim());
-    lsSet(LS.han, String(Math.max(1, +$('#skHan', m).value || 30)));
+    const hanV = String(Math.max(1, +$('#skHan', m).value || 30)); lsSet(LS.han, hanV);
+    const holV = $('#skHol', m).value; lsSet(HOL_LS, holV);
+    await setTeamCfg({ han: +hanV, hol: holV }).catch(() => {});
     m.remove();
     toast('Đã lưu cài đặt', 'ok');
     renderMain();
@@ -7787,7 +8041,8 @@ async function syncAction(a, btn) {
 }
 $('#bSettings').onclick = () => openSettings();
 $('#bCoPick').onclick = () => openCompanyPicker();
-document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openCompanyPicker(); } });
+document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { if (document.querySelector('.modal')) return; e.preventDefault(); openCompanyPicker(); } });
+document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.matches && e.target.matches('.hsrow[data-href]')) { e.preventDefault(); location.hash = e.target.dataset.href; } });
 function themeIcon() { const d = document.documentElement.dataset.theme === 'dark'; $('#bTheme').textContent = d ? '☾' : '☀'; }
 $('#bTheme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark'; lsSet('bangke_theme', r.dataset.theme); themeIcon(); };
 themeIcon();
@@ -7803,7 +8058,9 @@ async function doUndo(redo) {
   const e = redo ? await st.redo() : await st.undo();
   if (!e) return toast(redo ? 'Không có gì để làm lại' : 'Không có gì để hoàn tác');
   toast(`${redo ? '↷ Đã làm lại' : '↶ Đã hoàn tác'}: ${e.label}`, 'ok');
-  if (S.cid) log(S.cid, redo ? 'lam_lai' : 'hoan_tac', `${redo ? 'Làm lại' : 'Hoàn tác'}: ${e.label}`);
+  const cids = new Set((e.items || []).map((it) => { const r = it.after || it.before || {}; return it.type === 'kh' ? r.id : r.customerId; }).filter(Boolean));
+  if (!cids.size && S.cid) cids.add(S.cid);
+  for (const cid of cids) log(cid, redo ? 'lam_lai' : 'hoan_tac', `${redo ? 'Làm lại' : 'Hoàn tác'}: ${e.label}`);
 }
 $('#bUndo').onclick = () => doUndo(false);
 $('#bRedo').onclick = () => doUndo(true);

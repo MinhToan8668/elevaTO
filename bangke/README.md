@@ -144,7 +144,45 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   có giờ sửa mới hơn. Xóa = ghi đánh dấu `deleted` để máy khác xóa theo. Mỗi lần mở file, trình duyệt có thể hỏi lại
   quyền → bấm “Kết nối lại” trên thanh trên cùng.
   Lưu ý: hai người cùng sửa **một KUNN** trong cùng ~30 giây thì bản lưu sau cùng thắng.
-- **Sao lưu / Nạp sao lưu**: file `.json` toàn bộ dữ liệu (gộp theo bản sửa sau cùng).
+  Bản ghi **công ty** (ghi chú KUNN, lịch lãi suất, hạn mức, gói, KUNN đã xóa, việc đã ẩn) được **gộp** khi hai máy
+  cùng sửa — không còn bản sau đè bản trước. File đính kèm thêm lúc chưa kết nối được giữ lại và đẩy lên khi kết nối lại;
+  **Gửi toàn bộ** gửi cả file. Lịch nghỉ lễ và hạn hồ sơ gốc mặc định (Cài đặt) dùng chung cả team qua `cfg_team.json`.
+- **Sao lưu / Nạp sao lưu**: gói `.zip` gồm dữ liệu, file đính kèm (scan hóa đơn…), mẫu Word, lịch nghỉ; nạp lại được
+  cả gói `.zip` lẫn file `.json` cũ (gộp theo bản sửa sau cùng).
+
+## Quy tắc tool tự giữ (soát toàn diện 11/2026)
+- **Hồ sơ ↔ KUNN theo dõi**: mọi thay đổi ở hồ sơ (ngày GN, số ngày vay, lãi suất, gói, dòng bảng kê, chứng từ bổ sung)
+  tự cập nhật KUNN trong một bước hoàn tác; ngày GN / số KUNN / lãi suất / đáo hạn / bảng “Chứng từ bổ sung” sửa trong
+  trình soạn KUNN & PDGN ghi về hồ sơ khi Lưu / Xuất. Trạng thái bản gốc, “chứng từ thiếu”, ngày nhận đã ghi ở Sổ hóa đơn
+  không bị hồ sơ ghi đè. Hạn bổ sung của KUNN = hạn **sớm nhất** còn chờ.
+- **KUNN chưa giải ngân** (hồ sơ mới mở soạn thảo, chưa bấm “Đã giải ngân”) không tính vào giải ngân tháng / năm, biểu đồ,
+  báo cáo theo gói (hiện riêng “chờ GN”), “Chưa có trong file Excel”, soát trùng hóa đơn (chỉ nhắc “đang ở hồ sơ khác”),
+  lọc “Đã tất toán”. Xóa hồ sơ thì KUNN chưa giải ngân xóa cùng; KUNN đã giải ngân giữ lại.
+- **Không đè KUNN của hồ sơ khác**: số KUNN đang thuộc hồ sơ / KUNN khác (kể cả đã xóa chưa xóa hẳn) → nút Ghi sổ / Soạn
+  khóa, bảng kê KH gửi có số cũ không tự điền, gợi ý số tiếp theo bỏ qua số đã xóa. KUNN đã xóa khỏi theo dõi không tự
+  sống lại khi mở hồ sơ — phải khôi phục ở mục Đã xóa. Thêm KUNN nhập tay trùng số → mở dòng đã có, không tạo bản thứ hai.
+- **Dư nợ hợp nhất** (file Excel + KUNN trong tool + ghi chú trả nợ) dùng ở mọi nơi: Tổng quan, thẻ công ty, vòng hạn mức,
+  tab KUNN (khả dụng theo toàn công ty), Excel tổng hợp. Ghi chú “Trả 1 phần / Tất toán” vẫn có tác dụng sau khi đọc lại
+  file Excel chưa cập nhật; sửa KUNN nhập tay không làm mất ghi chú.
+- **Việc cần làm**: nhắc bổ sung bản gốc theo hạn dd/mm/yyyy (kể cả hồ sơ đã giải ngân), đáo hạn theo bảng theo dõi (đã
+  áp gia hạn / tất toán, gồm KUNN chỉ có trong tool); ẩn ✕ một lần là xong (khóa không đổi theo ngày).
+- **Kiểm tra hồ sơ**: hồ sơ đã giải ngân không báo lại vượt hạn mức / gói theo dư nợ hôm nay; giải ngân một phần hóa đơn
+  / HĐMB / PO không bị báo lệch tiền (chỉ báo khi vay vượt giá trị); CIC đọc “Nhóm 2” dạng chữ, thiếu ngày / nhóm thì
+  không kết luận đạt; MST bên mua mất số 0 đầu không báo sai, hóa đơn xuất cho chi nhánh chỉ nhắc; CLTF in ngày làm việc
+  liền trước là được; dòng thiếu NCC / lệch cột báo “chưa soát được”; số KUNN trùng sổ báo lỗi riêng.
+- **Bảng kê thả vào hồ sơ** áp đơn vị tiền trong file (ĐVT triệu / nghìn / ngoại tệ) như luồng Nạp bảng kê; dòng ghi
+  “VND” cũng được quy đổi. Hủy “Thay bằng N dòng” thì file chỉ lưu kèm, không thành bảng kê thứ hai; bỏ file bảng kê thì
+  hỏi xóa luôn các dòng đã đọc.
+- **Trình soạn**: tab chưa mở vẫn được cập nhật (xuất “cả KUNN + PDGN” đúng); hoàn tác không làm bảng lệch danh sách;
+  bảng dựng lại ghép theo tên (ct / tth / bs), báo khi phần sửa tay trong bảng bị bỏ; đoạn đã sửa tay giữ nền vàng sau
+  khi mở lại và in đỏ khi “Xuất kèm chữ đỏ”; ô tự tính trong bảng không cho gõ đè; Enter khi bôi đen thay vùng chọn;
+  “Xóa định dạng” trả cả thụt lề danh sách; dòng Bên thụ hưởng thêm tay giữ lại; cột “Số tiền” học từ mẫu có dữ liệu;
+  học mẫu không xóa các mục sau bảng chứng từ khi bảng không có dòng Tổng; bằng chữ viết “tư / ngàn / lẻ / chẵn” không
+  báo sai; mở lại bản đã lưu lấy dư nợ / CLTF / bảng chứng từ mới nếu sổ đã đổi (TK thụ hưởng giữ).
+- **Giao diện**: vẽ lại trang không mất chữ đang gõ / ô đang chọn; ô ngày không nhận năm gõ dở; khung xem PDF giữ trang
+  khi lưu trường; Ctrl+K không mở trên trình soạn; lịch đáo hạn nhiều KUNN/ngày hiện danh sách; dòng hồ sơ mở bằng Enter;
+  hộp xóa khách hàng nói đúng (hoàn tác được, gồm hồ sơ giải ngân); hoàn tác ghi nhật ký vào đúng công ty; nạp bảng kê
+  hoàn tác một bước; tên file xuất không thừa gạch dưới; “Ghi vào file bảng kê có sẵn” chèn trước dòng TỔNG.
 
 ## Kiểm thử
 ```bash
