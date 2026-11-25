@@ -286,6 +286,23 @@ test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN 
   assert.match(await page.locator('.kdet').innerText(), /KUNN 5500777\(9\)\.26[\s\S]*Bổ sung bản gốc — hạn/);
   await page.locator('.kdet [data-gk]').first().check();               // tick nhận bản gốc từng chứng từ
   await page.locator('.kdet [data-gk]:checked').waitFor();
+  // KUNN nhiều hóa đơn: danh sách bản gốc gập lại, tìm / lọc “chưa nhận” mà không cuộn dài phần ghi chú
+  await page.evaluate(async () => { const S = window.BKAPP.S; const lines = [...Array(20)].map((_, i) => ({ id: 'gl' + i, ncc: i % 2 ? 'CÔNG TY TNHH THỬ A' : 'HẢI QUAN THỬ', so_hd: String(9100 + i), ngay_hd: '2026-10-01', tien_gn: 1e6, goc: i < 5 ? 'da_nhan' : 'chua' }));
+    await S.store.putKunn({ id: 'kLong', customerId: S.cid, so_kunn: '5500777(30).26', ngay_gn: '2026-10-05', lines, updatedAt: Date.now() }); });
+  await page.click('[data-kf="all"]');
+  await page.locator('.kwrap tbody tr', { hasText: '5500777(30).26' }).click();
+  const gd = page.locator('.kdet details.gocd');
+  await gd.waitFor();
+  assert.equal(await gd.getAttribute('open'), null, 'danh sách dài mặc định gập');
+  assert.match(await gd.locator('summary').innerText(), /đã nhận 5\/20/);
+  await gd.locator('summary').click();
+  await gd.locator('[data-gocs]').selectOption('chua');
+  assert.equal(await gd.locator('.gocls > label:visible').count(), 15);
+  await gd.locator('[data-gocq]').fill('9119');
+  assert.equal(await gd.locator('.gocls > label:visible').count(), 1);
+  await gd.locator('.gocls > label:visible input').check();
+  await page.locator('.kdet details.gocd summary', { hasText: 'đã nhận 6/20' }).waitFor();
+  assert.notEqual(await page.locator('.kdet details.gocd').getAttribute('open'), null, 'mở rồi thì vẽ lại vẫn mở');
   // tab Sổ hóa đơn: biểu đồ, ô tổng — bấm để xem chi tiết
   await page.click('[data-ctab="so"]');
   await page.locator('svg.viz rect.go').first().click();
