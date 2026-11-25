@@ -150,6 +150,18 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Sao lưu / Nạp sao lưu**: gói `.zip` gồm dữ liệu, file đính kèm (scan hóa đơn…), mẫu Word, lịch nghỉ; nạp lại được
   cả gói `.zip` lẫn file `.json` cũ (gộp theo bản sửa sau cùng).
 
+## Thu nợ & lịch sử quá hạn
+- KUNN quá đáo hạn mà KH đã trả: ở khung chi tiết KUNN (tab Theo dõi KUNN) bấm **✓ Đã trả đúng hạn** (quên đánh dấu — không
+  tính quá hạn) hoặc chọn ngày trả thực tế rồi **✓ KH đã trả hết ngày này**. Nhiều KUNN cùng lúc: nút **✓ Đánh dấu đã thu nợ**
+  trên thanh lọc (mặc định ngày trả = ngày đáo hạn, sửa từng dòng được). Sai thì xóa ghi chú “KH đã trả hết” hoặc bấm ↶.
+- Tool tự ghi **lịch sử quá hạn**: trả sau ngày đáo hạn (ngày trả lấy từ ghi chú hoặc cột ngày thu của file Excel), đang
+  quá hạn, quá hạn rồi mới gia hạn. Chip **⏰ Lịch sử quá hạn** cho số lần quá hạn, đang quá hạn, lâu nhất, trung bình,
+  tỷ lệ trả đúng hạn; ô “Quá hạn trả nợ” ở Tổng quan công ty; sheet “Lich su qua han” trong Excel tổng hợp.
+- Lần nào do quên đánh dấu / số liệu sai thì bấm **Không tính** và ghi lý do — vẫn lưu vết (ai, lý do), không cộng vào thống kê;
+  **↺ Tính lại** để bỏ. Lý do quá hạn thật ghi bằng ghi chú “Quá hạn — đang xử lý”.
+- Hồ sơ ↔ bản soạn KUNN & PDGN: ngày GN, số ngày vay, gói / lãi suất, số KUNN, chứng từ bổ sung dùng chung; trường dùng chung
+  có dấu “↔ hồ sơ” trong bản soạn, Lưu / Xuất Word là hồ sơ cập nhật theo.
+
 ## Quy tắc tool tự giữ (soát toàn diện 11/2026)
 - **Hồ sơ ↔ KUNN theo dõi**: mọi thay đổi ở hồ sơ (ngày GN, số ngày vay, lãi suất, gói, dòng bảng kê, chứng từ bổ sung)
   tự cập nhật KUNN trong một bước hoàn tác; ngày GN / số KUNN / lãi suất / đáo hạn / bảng “Chứng từ bổ sung” sửa trong

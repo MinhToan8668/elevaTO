@@ -803,11 +803,38 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: '1.500.000.000 đ' }).waitFor();
   await page.locator('.kdet [data-kmx]').check();
   await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: 'Đã nhận đủ' }).waitFor();
-  // Excel tổng hợp đầy đủ (6 sheet)
+  // KUNN quá hạn mà KH đã trả: đánh dấu đúng hạn (quên tick) → không tính; trả trễ → lưu lịch sử quá hạn; bỏ qua có lý do
+  const isoAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  for (const so of ['1000001(16).26', '1000001(17).26']) {
+    await page.click('#kAdd');
+    await page.fill('#kfSo', so); await page.fill('#kfNg', isoAgo(100)); await page.fill('#kfTien', '1,000,000,000'); await page.fill('#kfSnv', '30');
+    await page.click('#kfOk');
+    await page.locator('.kwrap tbody tr', { hasText: so }).filter({ hasText: 'quá 70 ngày' }).waitFor();
+  }
+  await page.click('#kThu');
+  await page.locator('#tbOk').waitFor();
+  await page.locator('tr', { hasText: '1000001(16).26' }).locator('[data-tb]').check();
+  await page.click('#tbOk');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(16).26' }).filter({ hasText: 'đúng hạn' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(17).26' }).click();
+  await page.fill('#ttD', isoAgo(60));
+  await page.click('[data-tt="ngay"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(17).26' }).filter({ hasText: 'trễ 10 ngày' }).waitFor();
+  await page.click('[data-kf="qh"]');
+  assert.match(await page.locator('.tile', { hasText: 'Số lần quá hạn' }).innerText(), /1 lần/);
+  await shot(page, 'qh_lichsu');
+  const qrow = page.locator('tr[data-qhr="1000001(17).26"]');
+  assert.match(await qrow.innerText(), /10[\s\S]*đã trả trễ/);
+  assert.equal(await page.locator('tr[data-qhr="1000001(16).26"]').count(), 0, 'trả đúng hạn (quên tick) không tính quá hạn');
+  await qrow.locator('[data-qhskip]').click();
+  await page.locator('tr[data-qhr="1000001(17).26"] [data-qhun]').waitFor();
+  assert.match(await page.locator('.tile', { hasText: 'Số lần quá hạn' }).innerText(), /0 lần/);
+  await page.click('[data-kf="all"]');
+  // Excel tổng hợp đầy đủ (7 sheet)
   const [tx] = await Promise.all([page.waitForEvent('download'), page.click('#kXls')]);
   assert.match(tx.suggestedFilename(), /^TongHop_.*\.xlsx$/);
   const wbt = XLSX.read(await readFile(await tx.path()));
-  assert.deepEqual(wbt.SheetNames, ['Theo doi KUNN', 'Han muc', 'Goi lai suat', 'Lich lai suat', 'Chua co trong Excel', 'Da xoa']);
+  assert.deepEqual(wbt.SheetNames, ['Theo doi KUNN', 'Han muc', 'Goi lai suat', 'Lich lai suat', 'Chua co trong Excel', 'Lich su qua han', 'Da xoa']);
   const tk1 = XLSX.utils.sheet_to_json(wbt.Sheets['Theo doi KUNN'], { header: 1, defval: '' });
   assert.ok(tk1.some((r) => r[0] === '1000001(15).26' && r[14] === 'Nhập tay'), 'KUNN nhập tay có trong tổng hợp');
   // KUNN thêm trong tool chưa có trong file Excel → tải dòng để ghi vào file (không báo lỗi)
