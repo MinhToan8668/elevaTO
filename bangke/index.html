@@ -280,10 +280,12 @@ a.logo{color:#fff;text-decoration:none}
 .kwrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}@media(max-width:1100px){.kwrap{grid-template-columns:1fr}}
 .t tr.sel td{background:var(--blue-bg)}.wtxt{color:#8a5a0c}
 .thuno .ttf{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.thuno .ttf .inp{width:auto}.qhl{margin-top:8px;font-size:12.5px;display:grid;gap:3px}.qhl>b{font-size:12px;color:var(--ink2)}tr.dim td{opacity:.55}
-.kdet{padding:14px 16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:80px}.kdet .big{font-size:17px;color:var(--navy)}
+.kdet{padding:14px 16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:80px;max-height:calc(100vh - 96px);overflow:auto}.kdet .big{font-size:17px;color:var(--navy)}
 .tl{list-style:none;display:flex;flex-direction:column;gap:9px;padding:0;margin:0}.tl li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:9px;font-size:13.5px;text-align:left}.tl li>i{display:block;width:16px;height:16px;box-sizing:border-box;border-radius:50%;border:2px solid #9aa5b1;margin-top:2px}
 .tl li.done i{background:var(--ok);border-color:var(--ok)}.tl li.warn i{background:#e0a33b;border-color:#e0a33b}.tl li.bad i{background:var(--err);border-color:var(--err)}.tl small{display:block;font-size:12px;color:var(--ink3)}
-.gocl{display:flex;flex-direction:column;gap:4px;font-size:13px}.gocl em{color:#8a5a0c;font-style:normal}
+.gocl{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.gocd summary{cursor:pointer;padding:2px 0}.gocd summary b{font-size:13px}.gocf{display:flex;gap:6px;margin:6px 0}.gocf .inp{padding:5px 8px;font-size:13px}.gocf input{flex:1;min-width:0}.gocf select{width:auto}
+.gocls{display:flex;flex-direction:column;gap:3px;max-height:240px;overflow:auto;padding-right:4px;border-top:1px solid var(--line);padding-top:6px;margin-top:4px}.gocls label{display:flex;gap:6px;align-items:flex-start;line-height:1.35}.gocls label[hidden]{display:none}.gocl em{color:#8a5a0c;font-style:normal}
 .infog{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}@media(max-width:1100px){.infog{grid-template-columns:1fr}}
 .xlbox{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--card2);border-radius:10px;padding:12px 14px;margin-bottom:10px}.xlbox>div{flex:1;min-width:240px}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media(max-width:900px){.grid3{grid-template-columns:1fr}}
@@ -6942,7 +6944,10 @@ function renderCoKunn(body, c) {
       <ol class="tl">${ms.map(([, t, st, sub]) => `<li class="${st}"><i></i><span>${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></li>`).join('')}</ol>
       ${nd && nd.src === 'man' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kmx="${k.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}</label><span class="hist">hạn ${esc(b.han || '?')}</span></div>`).join('')}</div>` : ''}
       ${nd && nd.src === 'hs' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.none ? '<div class="hist">Không có chứng từ phải bổ sung</div>' : nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kbx="${r.hs.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}${b.ban ? ` <em>(${esc(b.ban)})</em>` : ''}</label><input type="date" class="inp" data-kbh="${r.hs.id}|${i}" value="${esc(BK.toISO(b.han) || '')}" title="Hạn nhận bản gốc — sửa được"></div>`).join('')}<a class="lnk" href="${hashOf({ cid: c.id, hs: r.hs.id })}">Sửa danh sách trong hồ sơ →</a></div>`
-        : k && k.manual ? '' : k ? `<div class="gocl"><b>Bản gốc từng chứng từ</b><label class="bsk">Hạn nhận bản gốc <input type="date" class="inp" data-khan="${k.id}" value="${esc(s ? s.han : '')}" title="Sửa hạn nhận bản gốc"></label>${k.lines.map((l) => `<label><input type="checkbox" data-gk="${k.id}|${l.id}" ${l.goc === 'da_nhan' ? 'checked' : ''}> ${esc(l.ncc)} · HĐ ${esc(l.so_hd)}${l.thieu ? ` <em>— ${esc(l.thieu)}</em>` : ''}</label>`).join('')}</div>` : '<div class="hist">KUNN này chưa có trong sổ hóa đơn của tool (chỉ có trong file Excel).</div>'}
+        : k && k.manual ? '' : k ? `<div class="gocl"><label class="bsk">Hạn nhận bản gốc <input type="date" class="inp" data-khan="${k.id}" value="${esc(s ? s.han : '')}" title="Sửa hạn nhận bản gốc"></label>${(() => { const n = k.lines.length, nDa = k.lines.filter((l) => l.goc === 'da_nhan').length, big = n > 8, open = !big || (V.gocOpen || {})[k.id];
+          return `<details class="gocd" data-gocd="${k.id}" ${open ? 'open' : ''}><summary><b>Bản gốc từng chứng từ</b> <span class="${nDa === n ? 'o' : 'wtxt'}">đã nhận ${nDa}/${n}</span>${big && !open ? ' <span class="hist">— bấm để mở danh sách</span>' : ''}</summary>
+            ${big ? `<div class="gocf"><input class="inp" data-gocq placeholder="Tìm số HĐ, NCC…" aria-label="Tìm chứng từ"><select class="inp" data-gocs aria-label="Lọc"><option value="">Tất cả (${n})</option><option value="chua">Chưa nhận (${n - nDa})</option><option value="da">Đã nhận (${nDa})</option></select></div>` : ''}
+            <div class="gocls">${k.lines.map((l) => `<label data-gst="${l.goc === 'da_nhan' ? 'da' : 'chua'}" data-gtx="${esc(BK.fold(`${l.ncc || ''} ${l.so_hd || ''} ${l.thieu || ''}`))}"><input type="checkbox" data-gk="${k.id}|${l.id}" ${l.goc === 'da_nhan' ? 'checked' : ''}> <span>${esc(l.ncc || '(không tên NCC)')} · HĐ ${esc(l.so_hd || '?')}${l.thieu ? ` <em>— ${esc(l.thieu)}</em>` : ''}</span></label>`).join('')}<div class="hist gocnone" hidden>Không có chứng từ khớp</div></div></details>`; })()}</div>` : '<div class="hist">KUNN này chưa có trong sổ hóa đơn của tool (chỉ có trong file Excel).</div>'}
       <div class="hist">${r.x ? `Thu nợ (theo file Excel): ${r.da_thu ? vnd(r.da_thu) + (r.x.ngay_thu ? ' ngày ' + dd(r.x.ngay_thu) : '') : 'chưa thu'} · gốc còn lại ${vnd(r.con_lai)}` : r.chuaSo ? '! Chưa có dòng trong sổ KHE_UOC của file Excel' : ''}</div>
       ${(() => { if (r.chuaGn) return ''; const eps = qhEpisodes(c, r); const today = BK.todayISO();
         const head = r.live ? `<div class="hist">${r.dLeft != null && r.dLeft < 0 ? `<span class="err">Quá đáo hạn ${-r.dLeft} ngày.</span> KH đã trả mà chưa đánh dấu thì ghi ngày trả dưới đây — trả đúng hạn sẽ không tính quá hạn.` : 'KH trả hết thì ghi ngày trả để tất toán.'}</div>
@@ -7013,6 +7018,12 @@ function renderCoKunn(body, c) {
   $('#lsBulk', body).onclick = () => openLsBulk(c, rows);
   if ($('#kThu', body)) $('#kThu', body).onclick = () => openThuBulk(c, rows);
   bindQh(body, c);
+  $$('[data-gocd]', body).forEach((d) => { d.ontoggle = () => { V.gocOpen = { ...(V.gocOpen || {}), [d.dataset.gocd]: d.open }; }; });
+  $$('.gocd', body).forEach((d) => {
+    const q = $('[data-gocq]', d), st = $('[data-gocs]', d); if (!q) return;
+    const run = () => { const t = BK.fold(q.value.trim()), f = st.value; let n = 0; $$('.gocls>label', d).forEach((l) => { const ok = (!t || l.dataset.gtx.includes(t)) && (!f || l.dataset.gst === f); l.hidden = !ok; if (ok) n++; }); $('.gocnone', d).hidden = !!n; };
+    q.oninput = run; st.onchange = (e) => { e.stopPropagation(); run(); };
+  });
   $$('[data-tt]', body).forEach((b) => { b.onclick = () => {
     const d = b.dataset.tt === 'due' ? sel.dao_han : $('#ttD', body).value;
     if (!d) return toast('Chọn ngày KH trả', 'err'); if (d > BK.todayISO()) return toast('Ngày trả không được sau hôm nay', 'err');
