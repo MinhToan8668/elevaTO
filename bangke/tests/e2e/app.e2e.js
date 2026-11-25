@@ -523,6 +523,16 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   // nhập TK bên thụ hưởng ở bảng bên trái
   await page.fill('[data-l="tth|0|tk"]', '0123456789'); await page.press('[data-l="tth|0|tk"]', 'Tab');
   await kunn.locator('.df', { hasText: '0123456789' }).waitFor();
+  // thêm bên thụ hưởng tay (vd nộp thuế / kho bạc) → có dòng mới, giữ lại, vào văn bản
+  const nTth = await page.locator('[data-l^="tth|"][data-l$="|ten"]').count();
+  await page.click('[data-ladd="tth"]');
+  await page.locator(`[data-l="tth|${nTth}|ten"]`).waitFor();
+  await page.fill(`[data-l="tth|${nTth}|ten"]`, 'Kho bạc Nhà nước Thử'); await page.press(`[data-l="tth|${nTth}|ten"]`, 'Tab');
+  await page.fill(`[data-l="tth|${nTth}|tk"]`, '7111222333'); await page.press(`[data-l="tth|${nTth}|tk"]`, 'Tab');
+  assert.equal(await page.inputValue(`[data-l="tth|${nTth}|ten"]`), 'Kho bạc Nhà nước Thử');
+  await kunn.locator('.df', { hasText: '7111222333' }).waitFor();
+  await page.click(`[data-ldel="tth|${nTth}"]`);
+  await page.locator(`[data-l="tth|${nTth}|ten"]`).waitFor({ state: 'detached' });
   // sửa tay một đoạn + thêm đoạn mới (Enter)
   const p = kunn.locator('.dp', { hasText: 'Tài sản bảo đảm riêng' });
   await p.click(); await page.keyboard.press('End'); await page.keyboard.type(' Bổ sung thêm.');
