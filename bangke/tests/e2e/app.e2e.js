@@ -697,6 +697,19 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   assert.doesNotMatch(await mid.innerText(), /tờ khai|NSNN/i, 'không có tờ khai thì không soát NSNN');
   assert.match(await page.locator('.kbar').innerText(), /1\.420\.066\.541 đ[\s\S]*Đáo hạn[\s\S]*137 ngày/);
   await shot(page, '10-hoso');
+  // TestKey: nạp file HTML công cụ TestKey cũ (bảng key GIẢ) → xem trước, thử tính → dùng → ô TestKey của hồ sơ tự tính
+  const fakeT = { day: Object.fromEntries([...Array(31)].map((_, i) => [i + 1, 10 + i])), mon: Object.fromEntries([...Array(12)].map((_, i) => [i + 1, 200 + i])), cur: { VND: 5 },
+    dig: Object.fromEntries('ABCDEFGHIKMN'.split('').flatMap((ch, p) => [...Array(10)].map((_, d) => [ch + d, d ? p * 10 + d : 0]))) };
+  const tkf = join(await mkdtemp(join(tmpdir(), 'tk-')), 'TestKey_cu.html');
+  await writeFile(tkf, `<!doctype html><html><body><script>\nconst T=${JSON.stringify(fakeT)};\nconst LET='ABCDEFGHIKMN';\n</script></body></html>`);
+  const [tkc] = await Promise.all([page.waitForEvent('filechooser'), page.click('[data-tkload]')]);
+  await tkc.setFiles(tkf);
+  await page.locator('#kpOk').waitFor();
+  assert.match(await page.locator('.modal').innerText(), /TestKey_cu\.html[\s\S]*đọc trực tiếp bảng key/);
+  await page.fill('#kpCn', '880'); await page.fill('#kpD', '2026-11-25'); await page.fill('#kpT', '1.000.000.005');
+  assert.equal(await page.locator('#kpK').innerText(), '880/1265');
+  await page.click('#kpOk');
+  await page.locator('.kbar', { hasText: '123/' }).waitFor();
   // xem chứng từ: sửa số AI đọc → kiểm tra chạy lại
   await page.locator('.dline', { hasText: 'Thông báo tiền điện' }).click();
   await page.locator('.dview').waitFor();

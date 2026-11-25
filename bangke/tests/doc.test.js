@@ -212,3 +212,24 @@ test('soát toàn diện: bằng chữ viết khác hợp lệ (tư / ngàn / l�
   assert.ok(DOCX.parse(xml).blocks[0].ed, 'bk-ed đọc lại được');
   assert.ok(!/bk-ed/.test(DOCX.serialize(d, {})), 'file xuất thật không có dấu');
 });
+
+test('TestKey: nạp bảng key từ file HTML của công cụ cũ (không chạy mã), chữ cái vị trí theo file, thiếu key thì báo nhập tay', () => {
+  // bảng key GIẢ để thử — không phải bảng thật
+  const T = { day: Object.fromEntries([...Array(31)].map((_, i) => [i + 1, 10 + i])), mon: Object.fromEntries([...Array(12)].map((_, i) => [i + 1, 200 + i])), cur: { VND: 5, USD: 6 },
+    dig: { ...Object.fromEntries('ABCDEFGHIKMN'.split('').flatMap((ch, p) => [...Array(10)].map((_, d) => [ch + d, d ? p * 10 + d : 0])).filter(([k]) => !/^A[2-9]$/.test(k))), 'Lưu ý: thiếu A2..A9': null } };
+  const html = `<html><script>\nconst T=${JSON.stringify(T)};\nconst LET='ABCDEFGHIKMN';\nfunction calc(){}\n</script></html>`;
+  const b = DOCX.extractKeyTable(html);
+  assert.equal(DOCX.keyTableError(b), '');
+  assert.equal(b.letters, 'ABCDEFGHIKMN');
+  assert.match(b.note, /thiếu A2/);
+  assert.deepEqual(DOCX.keyTableInfo(b).miss, ['A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9']);
+  // 880 + ngày 25 (34) + tháng 11 (210) + VND 5 + 1.000.000.005 = 001000000005: C1 (21) + N5 (115) = 1265
+  assert.equal(DOCX.testKey('880', '2026-11-25', 1000000005, 'VND', b), '880/1265');
+  assert.throws(() => DOCX.testKey('880', '2026-11-25', 250e9, 'VND', b), /thiếu “A2”.*nhập TestKey tay/);
+  assert.throws(() => DOCX.testKey('880', '2026-11-25', 5, 'EUR', b), /không có loại tiền EUR/);
+  assert.equal(DOCX.extractKeyTable('<html>không có bảng</html>'), null);
+  // JSON thuần và JS không đặt ngoặc kép tên khóa
+  assert.equal(DOCX.keyTableError(DOCX.extractKeyTable(JSON.stringify(T))), '');
+  const js = `var KEY = { day: ${JSON.stringify(T.day)}, mon: ${JSON.stringify(T.mon)}, cur: {VND: 5,}, dig: ${JSON.stringify(T.dig)} };`;
+  assert.equal(DOCX.keyTableError(DOCX.extractKeyTable(js)), '');
+});
