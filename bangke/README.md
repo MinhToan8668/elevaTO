@@ -150,6 +150,24 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Sao lưu / Nạp sao lưu**: gói `.zip` gồm dữ liệu, file đính kèm (scan hóa đơn…), mẫu Word, lịch nghỉ; nạp lại được
   cả gói `.zip` lẫn file `.json` cũ (gộp theo bản sửa sau cùng).
 
+## Lãi suất của hồ sơ
+- “Điều kiện khoản vay” ở đầu hồ sơ có **Gói lãi suất** (nếu công ty có gói / UBG) và ô **Lãi suất %/năm**; dòng dưới ghi rõ
+  nguồn: theo gói nào (kèm hiệu lực), theo gói nhưng đã sửa tay (có nút “↺ theo gói”), nhập tay cho hồ sơ, hoặc đang dùng
+  lãi suất mặc định công ty (tab Thông tin).
+- Lãi suất dùng chung với bản soạn KUNN & PDGN: mở soạn là thấy; sửa trong bản soạn rồi Lưu / Xuất Word là hồ sơ cập nhật.
+  KUNN theo dõi lấy lãi suất này làm lãi suất ban đầu.
+- Số KUNN trùng: khung báo nói rõ trùng với hồ sơ nào (có link mở) hay KUNN nào; chỉ khóa nút soạn / ghi sổ khi số đang
+  thuộc hồ sơ khác. Trùng KUNN nhập tay / sổ hóa đơn thì ghi sổ sẽ gắn hồ sơ vào KUNN đó.
+
+## TestKey
+- **Nạp bảng key**: Cài đặt → 5. TestKey → “🔑 Nạp bảng key / logic TestKey”, hoặc bấm “Nạp bảng key TestKey” ở ô TestKey của
+  hồ sơ. Chọn thẳng file HTML công cụ TestKey cũ (tool đọc khối bảng key trong file, **không chạy mã trong file**), hoặc file
+  `.json`. Có logic / bảng key mới dạng khác thì chọn file đó — AI (Gemini) đọc hiểu và trích bảng key, báo nếu cách tính
+  khác cách tool tính.
+- Trước khi dùng có hộp **xem trước & thử tính** (mã CN, ngày, số tiền, loại tiền → TestKey) để so với công cụ cũ.
+- Bảng key **chỉ lưu trên máy này** (không đưa lên thư mục chung, không có trong repo). Bảng thiếu key nào (vd A2..A9 — số
+  tiền ≥ 200 tỷ) thì gặp số tiền đó tool báo “nhập TestKey tay”, không tự tính sai. Loại tiền “VNĐ” được hiểu là VND.
+
 ## CIC đặt tên rõ ràng
 - Mỗi CIC hiện “CIC <mẫu> · <đối tượng tra>”, dòng dưới: vai trò (KH vay / người đại diện / bảo lãnh…) hoặc DN / cá nhân,
   MST / CCCD, ngày tra, nhóm nợ. Mẫu (S10A, R20…) đọc từ báo cáo, báo cáo không ghi thì lấy từ tên file.

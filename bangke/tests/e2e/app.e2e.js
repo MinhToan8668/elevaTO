@@ -697,6 +697,19 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   assert.doesNotMatch(await mid.innerText(), /tờ khai|NSNN/i, 'không có tờ khai thì không soát NSNN');
   assert.match(await page.locator('.kbar').innerText(), /1\.420\.066\.541 đ[\s\S]*Đáo hạn[\s\S]*137 ngày/);
   await shot(page, '10-hoso');
+  // TestKey: nạp file HTML công cụ TestKey cũ (bảng key GIẢ) → xem trước, thử tính → dùng → ô TestKey của hồ sơ tự tính
+  const fakeT = { day: Object.fromEntries([...Array(31)].map((_, i) => [i + 1, 10 + i])), mon: Object.fromEntries([...Array(12)].map((_, i) => [i + 1, 200 + i])), cur: { VND: 5 },
+    dig: Object.fromEntries('ABCDEFGHIKMN'.split('').flatMap((ch, p) => [...Array(10)].map((_, d) => [ch + d, d ? p * 10 + d : 0]))) };
+  const tkf = join(await mkdtemp(join(tmpdir(), 'tk-')), 'TestKey_cu.html');
+  await writeFile(tkf, `<!doctype html><html><body><script>\nconst T=${JSON.stringify(fakeT)};\nconst LET='ABCDEFGHIKMN';\n</script></body></html>`);
+  const [tkc] = await Promise.all([page.waitForEvent('filechooser'), page.click('[data-tkload]')]);
+  await tkc.setFiles(tkf);
+  await page.locator('#kpOk').waitFor();
+  assert.match(await page.locator('.modal').innerText(), /TestKey_cu\.html[\s\S]*đọc trực tiếp bảng key/);
+  await page.fill('#kpCn', '880'); await page.fill('#kpD', '2026-11-25'); await page.fill('#kpT', '1.000.000.005');
+  assert.equal(await page.locator('#kpK').innerText(), '880/1265');
+  await page.click('#kpOk');
+  await page.locator('.kbar', { hasText: '123/' }).waitFor();
   // xem chứng từ: sửa số AI đọc → kiểm tra chạy lại
   await page.locator('.dline', { hasText: 'Thông báo tiền điện' }).click();
   await page.locator('.dview').waitFor();
@@ -740,6 +753,15 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.selectOption('#hsGoi', 'Gói ưu đãi – UBG 002');
   await page.locator('.hs3', { hasText: 'Gói ưu đãi – UBG 002 8.2%: còn' }).waitFor({ state: 'attached' });
   assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '8.2');
+  // ô lãi suất: hiện theo gói nào; sửa tay → báo đã sửa tay, có nút trả về theo gói
+  assert.equal(await page.inputValue('#hsLs'), '8,2');
+  assert.match(await page.locator('.kb-ls').innerText(), /theo gói Gói ưu đãi – UBG 002/);
+  await page.fill('#hsLs', '8,5'); await page.dispatchEvent('#hsLs', 'change');
+  await page.locator('.kb-ls', { hasText: 'đã sửa tay (gói ghi 8,2%)' }).waitFor();
+  await page.locator('.kbar').scrollIntoViewIfNeeded(); await shot(page, '10b-laisuat');
+  assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '8.5');
+  await page.click('[data-lsgoi]');
+  await page.locator('.kb-ls', { hasText: 'theo gói Gói ưu đãi – UBG 002' }).filter({ hasNotText: 'sửa tay' }).waitFor();
   // 🤖 AI tra soát mục đích vay & phù hợp HĐMB → kết quả vào danh sách kiểm tra
   await page.click('#hsAiMd');
   await page.locator('.ck', { hasText: 'AI: Chưa có HĐMB để đối chiếu điều khoản thanh toán' }).waitFor();
