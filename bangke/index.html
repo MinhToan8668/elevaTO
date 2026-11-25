@@ -2140,6 +2140,48 @@ const DOCX = (() => {
     if (note) out.note = note.slice(0, 300);
     return out;
   }
+  /** Đọc bảng key từ các sheet Excel ({tên: lưới}). Nhận: bảng chữ số (hàng chữ cái × cột 0–9, hoặc ngược lại),
+   *  cột / hàng “Ngày” 1–31, “Tháng” 1–12, “Loại tiền” VND/USD… kèm key bên cạnh. Không chắc thì trả bảng thiếu để AI đọc. */
+  function keyTableFromGrids(grids) {
+    const out = { day: {}, mon: {}, cur: {}, dig: {} }, letters = [];
+    const N = (v) => { if (v == null || v === '') return null; if (typeof v === 'number') return v; const t = String(v).trim().replace(/[\s.,](?=\d{3}\b)/g, ''); return /^-?\d+(\.\d+)?$/.test(t) ? +t : null; };
+    const T = (v) => fold(String(v == null ? '' : v)).trim();
+    const at = (g, r, c) => (g[r] || [])[c];
+    const isL = (v) => /^[A-Z]$/.test(String(v == null ? '' : v).trim());
+    const isD = (v, d) => String(v == null ? '' : v).trim() === String(d);
+    // danh sách nhãn → key: dọc (nhãn ở cột c, key ở cột c+1) hoặc ngang (nhãn ở hàng r, key ở hàng r+1)
+    const list = (g, r0, c0, okKey, put) => {
+      // dọc: các hàng liền nhau ngay dưới nhãn (cho phép 1 hàng tiêu đề); ngang: các ô liền nhau bên phải nhãn — lấy chiều khớp nhiều hơn
+      const V = [], H = [];
+      for (let r = r0 + 1, miss = 0; r < Math.min(g.length, r0 + 45); r++) { const k = at(g, r, c0), v = N(at(g, r, c0 + 1)); if (okKey(k) && v != null) V.push([k, v]); else if (V.length || ++miss > 1) break; }
+      for (let c = c0 + 1, miss = 0; c < Math.min((g[r0] || []).length, c0 + 45); c++) { const k = at(g, r0, c), v = N(at(g, r0 + 1, c)); if (okKey(k) && v != null) H.push([k, v]); else if (H.length || ++miss > 1) break; }
+      const best = H.length > V.length ? H : V; best.forEach(([k, v]) => put(k, v)); return best.length;
+    };
+    const dayK = (k) => { const n = N(k); return Number.isInteger(n) && n >= 1 && n <= 31; }, monK = (k) => { const n = N(k); return Number.isInteger(n) && n >= 1 && n <= 12; }, curK = (k) => /^[A-Z]{3}$/i.test(String(k ?? '').trim());
+    for (const g of Object.values(grids || {})) {
+      for (let r = 0; r < g.length; r++) {
+        const row = g[r] || [];
+        for (let c = 0; c < row.length; c++) {
+          // bảng chữ số: hàng tiêu đề 0..9, các hàng dưới mở đầu bằng chữ cái
+          if ([...Array(10)].every((_, d) => isD(row[c + d], d))) {
+            for (let rr = r + 1; rr < Math.min(g.length, r + 30); rr++) { const L = String(at(g, rr, c - 1) ?? '').trim(); if (!isL(L)) continue; if (!letters.includes(L)) letters.push(L); for (let d = 0; d < 10; d++) { const v = N(at(g, rr, c + d)); if (v != null) out.dig[L + d] = v; } }
+          }
+          // ngược lại: hàng tiêu đề chữ cái (≥ 6 chữ liền), các hàng dưới mở đầu bằng chữ số 0..9
+          if (isL(row[c]) && [...Array(6)].every((_, i) => isL(row[c + i])) && !isL(row[c - 1])) {
+            const hs = []; for (let i = c; isL(row[i]); i++) hs.push(String(row[i]).trim());
+            for (let rr = r + 1; rr < Math.min(g.length, r + 15); rr++) { const D = String(at(g, rr, c - 1) ?? '').trim(); if (!/^\d$/.test(D)) continue; hs.forEach((L, i) => { const v = N(at(g, rr, c + i)); if (v != null) out.dig[L + D] = v; }); }
+            hs.forEach((L) => { if (!letters.includes(L)) letters.push(L); });
+          }
+          const t = T(row[c]);
+          if (/^(ngay|day)\b/.test(t) && !/thang|giai ngan/.test(t)) list(g, r, c, dayK, (k, v) => { out.day[N(k)] = v; });
+          else if (/^(thang|month)\b/.test(t)) list(g, r, c, monK, (k, v) => { out.mon[N(k)] = v; });
+          else if (/loai tien|tien te|^currency|^ma tien|^tien$/.test(t)) list(g, r, c, curK, (k, v) => { out.cur[String(k).trim().toUpperCase()] = v; });
+        }
+      }
+    }
+    if (letters.length >= 6 && letters.length <= 16) out.letters = letters.join('');
+    return out;
+  }
   /** Mô tả bảng key: đủ / thiếu gì (vd thiếu A2..A9 → số tiền ≥ 200 tỷ phải nhập tay). */
   function keyTableInfo(b) {
     const L = /^[A-Z]{6,16}$/.test(b.letters || '') ? b.letters : CHU_VI_TRI;
@@ -2403,7 +2445,7 @@ const DOCX = (() => {
 
   return { kids, attr, unesc, xesc, parse, serialize, walk, ptext, pview, ctext, pReplace, setCellText, setVMerge, vMerge, gridSpan, clone, fieldsIn, expand, listTables, rowList,
     learn, guessKind, words, bangChu, num, fmtN, addMonths, nextPayDay, calc, checks, linesToCt, prepLists, HS_FIELDS, HS_GROUPS, HS, LIST_COLS, shortName,
-    testKey, keyTableError, extractKeyTable, keyTableInfo, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, patchTblPre, legacyOn, learnBs, learnBsAll, learnDienGiai, dienGiai };
+    testKey, keyTableError, extractKeyTable, keyTableFromGrids, keyTableInfo, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, patchTblPre, legacyOn, learnBs, learnBsAll, learnDienGiai, dienGiai };
 })();
 </script>
 <script id="bk-hs">
@@ -6206,17 +6248,22 @@ function hsPickTemplate(kind) {
 }
 /** Chọn file logic / bảng key TestKey: .json, .html / .htm / .js của công cụ cũ, hoặc file khác (AI đọc hiểu). Chỉ lưu trên máy này. */
 function pickKeyFile(after) {
-  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,.html,.htm,.js,.txt,application/json,text/html';
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.xlsx,.xls,.xlsm,.csv,.json,.html,.htm,.js,.txt';
   inp.onchange = () => { if (inp.files[0]) importKeyFile(inp.files[0], after).catch((e) => toast(errMsg(e), 'err', 9000)); };
   inp.click();
 }
 async function importKeyFile(file, after) {
-  const txt = await file.text();
-  let b = DOCX.extractKeyTable(txt), src = 'đọc trực tiếp bảng key trong file', aiNote = '';
+  let txt, b, src = 'đọc trực tiếp bảng key trong file', aiNote = '';
+  if (/\.(xlsx|xls|xlsm|csv)$/i.test(file.name)) {
+    const grids = await readWorkbook(file);
+    b = DOCX.keyTableFromGrids(grids); src = 'đọc bảng key trong file Excel';
+    txt = Object.entries(grids).map(([n, g]) => `## Sheet ${n}\n${BK.gridToPrompt(g, 250, 40)}`).join('\n\n');
+  } else { txt = await file.text(); b = DOCX.extractKeyTable(txt); }
   if (!b || DOCX.keyTableError(b)) {
     if (!aiKeys().length) throw new Error(`Không thấy bảng key trong ${file.name} — nạp API key Gemini (Cài đặt) để AI đọc hiểu file logic mới`);
     toast(`Đang nhờ AI đọc logic TestKey trong ${file.name}…`, '', 6000);
     const r = await aiJson(`Đây là file công cụ / tài liệu tính TestKey (mã kiểm tra giao dịch giải ngân) của ngân hàng. Đọc hiểu logic và trích ĐẦY ĐỦ bảng key, đúng từng con số.
+Nội dung có thể là mã nguồn, bảng tính Excel (mỗi dòng “[số hàng] Cột: giá trị | …”) hoặc tài liệu.
 Thuật toán tool hỗ trợ: TestKey = mã chi nhánh (số) + key[ngày 1–31] + key[tháng 1–12] + key[loại tiền] + tổng key của từng chữ số số tiền (số tiền làm tròn, đệm 0 bên trái cho đủ N chữ số; vị trí i dùng key[chữ cái vị trí i + chữ số đó]).
 Trả JSON: {"day":{"1":…,"31":…},"mon":{"1":…,"12":…},"cur":{"VND":…,"USD":…},"dig":{"A0":…,"A1":…,…},"letters":"chuỗi chữ cái các vị trí theo thứ tự từ trái sang phải, vd ABCDEFGHIKMN","cung_thuat_toan":true/false,"ghi_chu":"khác biệt so với thuật toán trên nếu có, hoặc lưu ý (vd bảng thiếu key nào)"}
 NỘI DUNG FILE ${file.name}:
@@ -8250,13 +8297,13 @@ function openSettings(focus) {
     <label class="f">Ngày nghỉ lễ, Tết (tính đáo hạn — dùng chung cả team qua thư mục chung)<textarea class="inp" id="skHol" rows="6">${esc((S.cfg && S.cfg.hol) || lsGet(HOL_LS) || DOCX.HOL_DEF)}</textarea></label>
     <div class="hist">Mỗi dòng: dd/mm/yyyy [→ dd/mm/yyyy] tên. Lễ rơi vào T7/CN tool tự thêm ngày nghỉ bù. Tết âm lịch, Giỗ Tổ các năm sau là dự kiến — cập nhật theo thông báo chính thức.${S.cfg && S.cfg.by ? ` Lần sửa cuối: ${esc(S.cfg.by)}.` : ''}</div>
     <div class="sec">5. TestKey</div>
-    ${(() => { const kt = keyTable(); return `<div class="hist" style="margin-bottom:6px">${kt ? `✓ Đã nạp bảng key${kt.src ? ` từ <b>${esc(kt.src)}</b>` : ''}${kt.at ? ` lúc ${new Date(kt.at).toLocaleString('vi-VN')}` : ''} — tool tự tính TestKey trong hồ sơ và KUNN theo mã TTKD, ngày GN, số tiền.` : 'Chưa nạp bảng key. Chọn file .json hoặc file HTML công cụ TestKey cũ; có logic / bảng key mới thì chọn file đó — AI đọc hiểu (cần API key Gemini).'} Bảng key chỉ lưu trên máy này.</div>
-      <div class="bar"><button class="btn" id="skKey">🔑 ${kt ? 'Đổi' : 'Nạp'} bảng key / logic TestKey</button>${kt ? '<button class="btn" id="skKeyTry">Thử tính</button><button class="btn danger" id="skKeyDel">Gỡ bảng key</button>' : ''}</div>`; })()}
+    ${(() => { const kt = keyTable(); return `<div class="hist" style="margin-bottom:6px">${kt ? `✓ Đã nạp bảng key${kt.src ? ` từ <b>${esc(kt.src)}</b>` : ''}${kt.at ? ` lúc ${new Date(kt.at).toLocaleString('vi-VN')}` : ''} — tool tự tính TestKey trong hồ sơ và KUNN theo mã TTKD, ngày GN, số tiền.` : 'Chưa nạp bảng key. Chọn file Excel / .json / file HTML công cụ TestKey cũ; có logic / bảng key mới thì chọn file đó — AI đọc hiểu (cần API key Gemini).'} Bảng key chỉ lưu trên máy này.</div>
+      <div class="bar"><button class="btn" id="skTk">🔑 ${kt ? 'Đổi' : 'Nạp'} bảng key / logic TestKey</button>${kt ? '<button class="btn" id="skTkTry">Thử tính</button><button class="btn danger" id="skTkDel">Gỡ bảng key</button>' : ''}</div>`; })()}
     <div id="skMsg" class="hist" style="margin-top:8px"></div></div>
     <div class="mf"><button class="btn" data-close>Đóng</button><button class="btn pri" id="skSave">Lưu cài đặt</button></div>`, 'sm');
-  $('#skKey', m).onclick = () => { m.remove(); pickKeyFile(() => { renderMain(); openSettings(); }); };
-  if ($('#skKeyTry', m)) $('#skKeyTry', m).onclick = () => { const kt = keyTable(); m.remove(); keyPreview(kt, kt.src || 'bảng key đang dùng', 'đã nạp trên máy này', '', () => openSettings()); };
-  if ($('#skKeyDel', m)) $('#skKeyDel', m).onclick = () => { if (!confirm('Gỡ bảng key TestKey khỏi máy này?')) return; lsSet(TK_LS, ''); m.remove(); toast('Đã gỡ bảng key', 'ok'); openSettings(); };
+  $('#skTk', m).onclick = () => { m.remove(); pickKeyFile(() => { renderMain(); openSettings(); }); };
+  if ($('#skTkTry', m)) $('#skTkTry', m).onclick = () => { const kt = keyTable(); m.remove(); keyPreview(kt, kt.src || 'bảng key đang dùng', 'đã nạp trên máy này', '', () => openSettings()); };
+  if ($('#skTkDel', m)) $('#skTkDel', m).onclick = () => { if (!confirm('Gỡ bảng key TestKey khỏi máy này?')) return; lsSet(TK_LS, ''); m.remove(); toast('Đã gỡ bảng key', 'ok'); openSettings(); };
   const collect = () => {
     $$('[data-on]', m).forEach((cb) => { o.keys[+cb.dataset.on].on = cb.checked; });
     const a = $('input[name=sk-act]:checked', m); if (a) o.active = +a.value;

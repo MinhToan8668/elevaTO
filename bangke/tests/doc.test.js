@@ -233,3 +233,23 @@ test('TestKey: nạp bảng key từ file HTML của công cụ cũ (không ch�
   const js = `var KEY = { day: ${JSON.stringify(T.day)}, mon: ${JSON.stringify(T.mon)}, cur: {VND: 5,}, dig: ${JSON.stringify(T.dig)} };`;
   assert.equal(DOCX.keyTableError(DOCX.extractKeyTable(js)), '');
 });
+
+test('TestKey: đọc bảng key từ file Excel — bảng chữ số hai chiều, danh sách Ngày / Tháng / Loại tiền dọc hoặc ngang', () => {
+  // bảng key GIẢ
+  const L = 'ABCDEFGHIKMN'.split('');
+  const a = [['Ngày', 'Key', '', 'Tháng', 'Key', '', 'Loại tiền', 'Key'],
+    ...[...Array(31)].map((_, i) => [i + 1, 10 + i, '', i < 12 ? i + 1 : '', i < 12 ? 200 + i : '', '', ['VND', 'USD', 'EUR'][i] || '', [5, 6, 7][i] ?? '']),
+    [], ['Vị trí', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], ...L.map((ch, p) => [ch, ...[...Array(10)].map((_, d) => (d ? p * 10 + d : 0))])];
+  const b = DOCX.keyTableFromGrids({ Key: a });
+  assert.equal(DOCX.keyTableError(b), '');
+  assert.equal(b.letters, 'ABCDEFGHIKMN');
+  assert.equal(DOCX.testKey('880', '2026-11-25', 1000000005, 'VND', b), '880/1265');
+  // chiều ngược lại: hàng chữ cái, cột chữ số; ngày / tháng nằm ngang
+  const t = [['Ngày', ...[...Array(31)].map((_, i) => i + 1)], ['', ...[...Array(31)].map((_, i) => 10 + i)],
+    ['Tháng', ...[...Array(12)].map((_, i) => i + 1)], ['', ...[...Array(12)].map((_, i) => 200 + i)], ['Loại tiền', 'VND'], ['', 5], [],
+    ['', ...L], ...[...Array(10)].map((_, d) => [String(d), ...L.map((_, p) => (d ? p * 10 + d : 0))])];
+  const b2 = DOCX.keyTableFromGrids({ S1: t });
+  assert.equal(DOCX.keyTableError(b2), '');
+  assert.equal(DOCX.testKey('880', '2026-11-25', 1000000005, 'VND', b2), '880/1265');
+  assert.ok(DOCX.keyTableError(DOCX.keyTableFromGrids({ X: [['abc']] })), 'không có bảng key → để AI đọc');
+});

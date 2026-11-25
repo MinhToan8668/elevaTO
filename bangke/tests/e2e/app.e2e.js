@@ -710,6 +710,23 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   assert.equal(await page.locator('#kpK').innerText(), '880/1265');
   await page.click('#kpOk');
   await page.locator('.kbar', { hasText: '123/' }).waitFor();
+  // Cài đặt → 5. TestKey: bấm được (trước đây trùng id ô API key), nạp bảng key từ file Excel (GIẢ)
+  await page.click('#bSettings');
+  await page.locator('.modal', { hasText: 'Đã nạp bảng key từ TestKey_cu.html' }).waitFor();
+  await page.click('input#skKey'); assert.equal(await page.locator('#skTk').count(), 1, 'bấm ô API key không đóng Cài đặt');
+  const LT = 'ABCDEFGHIKMN'.split('');
+  const tkx = join(await mkdtemp(join(tmpdir(), 'tkx-')), 'BangKey.xlsx');
+  await writeFile(tkx, toXlsx({ Key: [['Ngày', 'Key', '', 'Tháng', 'Key', '', 'Loại tiền', 'Key'], ...[...Array(31)].map((_, i) => [i + 1, 10 + i, '', i < 12 ? i + 1 : '', i < 12 ? 200 + i : '', '', i === 0 ? 'VND' : '', i === 0 ? 5 : '']),
+    [], ['Vị trí', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], ...LT.map((ch, p) => [ch, ...[...Array(10)].map((_, d) => (d ? p * 10 + d : 0))])] }));
+  const [tkx2] = await Promise.all([page.waitForEvent('filechooser'), page.click('#skTk')]);
+  await tkx2.setFiles(tkx);
+  await page.locator('#kpOk').waitFor();
+  assert.match(await page.locator('.modal').innerText(), /BangKey\.xlsx[\s\S]*đọc bảng key trong file Excel/);
+  await page.fill('#kpCn', '880'); await page.fill('#kpD', '2026-11-25'); await page.fill('#kpT', '1.000.000.005');
+  assert.equal(await page.locator('#kpK').innerText(), '880/1265');
+  await page.click('#kpOk');
+  await page.locator('.modal', { hasText: 'Đã nạp bảng key từ BangKey.xlsx' }).waitFor();
+  await page.locator('.modal [data-close]').first().click();
   // xem chứng từ: sửa số AI đọc → kiểm tra chạy lại
   await page.locator('.dline', { hasText: 'Thông báo tiền điện' }).click();
   await page.locator('.dview').waitFor();
