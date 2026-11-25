@@ -816,6 +816,16 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('tr', { hasText: '1000001(16).26' }).locator('[data-tb]').check();
   await page.click('#tbOk');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(16).26' }).filter({ hasText: 'đúng hạn' }).waitFor();
+  // bấm nhầm → ↶ Hoàn tác ngay trên thông báo; bỏ đánh dấu trong khung chi tiết (cũng hoàn tác được)
+  await page.locator('.toast div', { hasText: '1000001(16).26' }).locator('.tact').click();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(16).26' }).filter({ hasText: 'quá 70 ngày' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(16).26' }).click();
+  await page.click('[data-tt="due"]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(16).26' }).filter({ hasText: 'đúng hạn' }).waitFor();
+  await page.click('[data-ttun]');
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(16).26' }).filter({ hasText: 'quá 70 ngày' }).waitFor();
+  await page.locator('.toast div', { hasText: 'Bỏ đánh dấu đã trả KUNN 1000001(16).26' }).locator('.tact').click();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(16).26' }).filter({ hasText: 'đúng hạn' }).waitFor();
   await page.locator('.kwrap tbody tr', { hasText: '1000001(17).26' }).click();
   await page.fill('#ttD', isoAgo(60));
   await page.click('[data-tt="ngay"]');

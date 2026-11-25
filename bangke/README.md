@@ -153,7 +153,8 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 ## Thu nợ & lịch sử quá hạn
 - KUNN quá đáo hạn mà KH đã trả: ở khung chi tiết KUNN (tab Theo dõi KUNN) bấm **✓ Đã trả đúng hạn** (quên đánh dấu — không
   tính quá hạn) hoặc chọn ngày trả thực tế rồi **✓ KH đã trả hết ngày này**. Nhiều KUNN cùng lúc: nút **✓ Đánh dấu đã thu nợ**
-  trên thanh lọc (mặc định ngày trả = ngày đáo hạn, sửa từng dòng được). Sai thì xóa ghi chú “KH đã trả hết” hoặc bấm ↶.
+  trên thanh lọc (mặc định ngày trả = ngày đáo hạn, sửa từng dòng được). Bấm nhầm: nút **↶ Hoàn tác** ngay trên thông báo,
+  nút **↺ Bỏ đánh dấu đã trả** trong khung chi tiết, hoặc ↶ / ↷ (Ctrl+Z / Ctrl+Y) trên thanh trên cùng.
 - Tool tự ghi **lịch sử quá hạn**: trả sau ngày đáo hạn (ngày trả lấy từ ghi chú hoặc cột ngày thu của file Excel), đang
   quá hạn, quá hạn rồi mới gia hạn. Chip **⏰ Lịch sử quá hạn** cho số lần quá hạn, đang quá hạn, lâu nhất, trung bình,
   tỷ lệ trả đúng hạn; ô “Quá hạn trả nợ” ở Tổng quan công ty; sheet “Lich su qua han” trong Excel tổng hợp.
