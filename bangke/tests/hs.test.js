@@ -28,7 +28,7 @@ test('kiểm tra tự sinh: chỉ soát những gì bộ chứng từ có, bắt
   assert.match(msg, /2\|Chưa có CIC trong hồ sơ/);
   assert.match(msg, /0\|3\/3 dòng bảng kê khớp/);
   assert.match(msg, /0\|1 HĐMB còn hiệu lực/);
-  assert.match(msg, /0\|Khả dụng hạn mức đủ — còn 1\.484\.928\.164 đ/);
+  assert.match(msg, /0\|Khả dụng hạn mức đủ — còn 1,484,928,164 đ/);
   assert.doesNotMatch(msg, /UNC|đối chiếu công nợ/, 'không có thì không soát');
   // sửa sai: bảng kê ghi nhầm tiền & ngày, hóa đơn trước HĐMB, HĐMB hết hạn, vượt hạn mức
   const bad = HSC.checks({
@@ -37,7 +37,7 @@ test('kiểm tra tự sinh: chỉ soát những gì bộ chứng từ có, bắt
     ngay_gn: '2026-11-26',
   }, { kh: KH, ledger: { hm: 50e9, du_no: 49.5e9 } });
   const m2 = bad.filter((c) => c.sev === 3).map((c) => c.title + ' ' + c.detail).join('\n');
-  assert.match(m2, /Bảng kê ghi khác Hóa đơn GTGT 830 ngày: bảng kê 05\/11\/2026, chứng từ 04\/11\/2026; tiền: bảng kê 1\.116\.000\.000, chứng từ 1\.116\.900\.000/);
+  assert.match(m2, /Bảng kê ghi khác Hóa đơn GTGT 830 ngày: bảng kê 05\/11\/2026, chứng từ 04\/11\/2026; tiền: bảng kê 1,116,000,000, chứng từ 1,116,900,000/);
   assert.match(m2, /lập trước ngày ký HĐMB 1040006585 \(15\/11\/2026\)/);
   assert.match(m2, /HĐMB 1040006585 hết hiệu lực 20\/11\/2026/);
   assert.match(m2, /Vượt hạn mức khả dụng/);
@@ -322,7 +322,7 @@ test('soát toàn diện: hồ sơ đã GN không báo vượt hạn mức theo 
   const p1 = HSC.checks({ lines: [L('l1', 'Công ty A', '830', '2026-11-01', null, 7e8)], docs: [D('h', 'hoa_don', { so: '830', ngay: '01/11/2026', tien: '1000000000' })], ngay_gn: '2026-11-26' }, { kh: KH });
   assert.ok(!p1.some((x) => x.key === 'ln_l1'), 'giải ngân 700tr trên hóa đơn 1 tỷ là hợp lệ');
   const p2 = HSC.checks({ lines: [L('l1', 'Công ty A', '830', '2026-11-01', null, 1.2e9)], docs: [D('h', 'hoa_don', { so: '830', ngay: '01/11/2026', tien: '1000000000' })], ngay_gn: '2026-11-26' }, { kh: KH });
-  assert.match(p2.find((x) => x.key === 'ln_l1').detail, /giải ngân 1\.200\.000\.000 > giá trị Hóa đơn GTGT 1\.000\.000\.000/);
+  assert.match(p2.find((x) => x.key === 'ln_l1').detail, /giải ngân 1,200,000,000 > giá trị Hóa đơn GTGT 1,000,000,000/);
   // ghép chứng từ: số chính xác ưu tiên trước số chứa đuôi
   const f1 = HSC.checks({ lines: [L('l1', 'Công ty A', '234567', '2026-11-01', 5e6, 5e6)], docs: [D('a', 'hoa_don', { so: '1234567', ngay: '01/11/2026', tien: '9000000' }), D('b', 'hoa_don', { so: '234567', ngay: '01/11/2026', tien: '5000000' })], ngay_gn: '2026-11-26' }, { kh: KH });
   assert.ok(!f1.some((x) => x.key === 'ln_l1'));
