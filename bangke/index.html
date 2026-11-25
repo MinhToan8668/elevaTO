@@ -2391,7 +2391,7 @@ const HSC = (() => {
     to_khai: { l: 'Tờ khai hải quan', g: 'Hải quan & thuế', ord: 7, fields: [F('so', 'Số tờ khai'), F('ngay', 'Ngày đăng ký', 'date'), F('ben_mua', 'Người nhập khẩu'), F('mst_mua', 'MST'), F('tien', 'Tổng thuế phải nộp', 'money'), F('hai_quan', 'Chi cục hải quan')] },
     nsnn: { l: 'Giấy nộp tiền NSNN', g: 'Hải quan & thuế', ord: 8, fields: [F('so', 'Số chứng từ'), F('ngay', 'Ngày', 'date'), F('to_khai', 'Số tờ khai (cách nhau dấu phẩy)'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK KBNN'), F('ngan_hang', 'KBNN / ngân hàng')] },
     unc: { l: 'UNC / lệnh chi', g: 'Thanh toán', ord: 4, fields: [F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên nhận'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận'), F('ngan_hang', 'Ngân hàng nhận')] },
-    cic: { l: 'CIC', g: 'Thẩm định', ord: 9, fields: [F('mau', 'Mẫu báo cáo (S10A, R20…)'), F('ngay', 'Ngày tra cứu', 'date'), F('nhom_no', 'Nhóm nợ cao nhất'), F('ben_mua', 'Tên khách hàng')] },
+    cic: { l: 'CIC', g: 'Thẩm định', ord: 9, fields: [F('mau', 'Mẫu báo cáo (S10A, R20…)'), F('ben_mua', 'Đối tượng tra cứu (doanh nghiệp / cá nhân)'), F('ma_so', 'MST / CCCD của đối tượng'), F('loai_kh', 'Doanh nghiệp hay cá nhân'), F('vai_tro', 'Vai trò (KH vay, người đại diện, bảo lãnh, cổ đông…)'), F('ngay', 'Ngày tra cứu', 'date'), F('nhom_no', 'Nhóm nợ cao nhất')] },
     invoice: { l: 'Invoice / hợp đồng ngoại', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Người bán'), F('mat_hang', 'Hàng hóa / dịch vụ'), F('tien', 'Số tiền', 'money'), F('loai_tien', 'Loại tiền')] },
     cltf: { l: 'Báo cáo CLTF (CL - KERNEL - TF)', g: 'Thẩm định', ord: 9, fields: [F('ngay', 'Đến ngày', 'date'), F('ben_mua', 'Khách hàng / CIF'), F('hm', 'Hạn mức cho vay (LOAN)', 'money'), F('du_no', 'Dư nợ vay hiện tại', 'money'), F('kha_dung', 'Hạn mức còn khả dụng', 'money')] },
     tra_cuu: { l: 'Kết quả tra cứu hóa đơn', g: 'Thẩm định', ord: 9, fields: [F('so', 'Các số hóa đơn đã tra')] },
@@ -2408,7 +2408,7 @@ const HSC = (() => {
 Các loại chứng từ và trường cần đọc:
 ${types}
 mat_hang = tên hàng hóa / dịch vụ chính, ngắn gọn (vd "Thép cuộn cán nóng", "Hạt nhựa PP").
-CIC: mau = mã mẫu báo cáo in trên báo cáo (vd "S10A", "R20", "S11A", "R21" — thường ở góc trên / tiêu đề), ngay = ngày tra cứu / ngày in báo cáo, nhom_no = nhóm nợ cao nhất.
+CIC: mỗi báo cáo CIC là MỘT chứng từ riêng (file có nhiều báo cáo thì tách ra). mau = mã mẫu báo cáo in trên báo cáo (vd "S10A", "R20", "S11A", "R21" — thường ở góc trên / tiêu đề), ben_mua = tên doanh nghiệp hoặc cá nhân ĐƯỢC TRA CỨU in trên báo cáo, ma_so = MST (doanh nghiệp) hoặc số CMND / CCCD (cá nhân) của đối tượng đó, loai_kh = "Doanh nghiệp" hoặc "Cá nhân", vai_tro = vai trò nếu báo cáo / tên file ghi rõ (vd "người đại diện", "bên bảo lãnh", "cổ đông") — không rõ thì "", ngay = ngày tra cứu / ngày in báo cáo, nhom_no = MỘT chữ số 1–5 là nhóm nợ cao nhất (không có nợ xấu thì "1").
 Báo cáo "CL - KERNEL - TF" (CLTF) của ngân hàng là loại cltf: hm = AMOUNT của dòng LOAN / LO-LIMITLOAN, du_no = dư nợ vay đang có, kha_dung = phần còn được dùng.
 Quy tắc: ngày ghi dd/mm/yyyy; số tiền ghi số nguyên không dấu phân cách (vd 1116900000); chép đúng số hiệu như trên giấy; trường không thấy thì để "". Tờ khai: "tien" là tổng thuế phải nộp. conf = độ chắc chắn 0..1 về loại chứng từ.
 Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830","ngay":"04/11/2026",...}}]}${text ? `\n\nNỘI DUNG FILE:\n${text.slice(0, 60000)}` : ''}`;
@@ -2468,6 +2468,23 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
   const findDoc = (docs, types, so) => { const n = normNo(so), d = digits(so); const xs = docs.filter((x) => types.includes(x.loai) && x.f.so); return xs.find((x) => normNo(x.f.so) === n) || (d.length >= 6 ? xs.find((x) => digits(x.f.so) === d) || xs.find((x) => digits(x.f.so).includes(d)) : undefined); };
   /** MST so khớp: AI hay trả số mất 0 đầu; chi nhánh có đuôi -001 → so 10 số đầu. */
   const mst10 = (v) => { let x = digits(v); if (x.length === 9) x = '0' + x; return x.slice(0, 10); };
+  /** Thông tin CIC để đặt tên: mẫu (đọc từ báo cáo, thiếu thì từ tên file), đối tượng tra, DN / cá nhân, vai trò. */
+  function cicInfo(d, kh = {}, fileName = '') {
+    const f = (d && d.f) || {};
+    const mau = String(f.mau || (/(?:^|[^a-z0-9])([sr]\d{2}[a-z]?)(?=[^a-z0-9]|$)/i.exec(fileName || '') || [])[1] || '').trim().toUpperCase();
+    const ten = String(f.ben_mua || '').trim(), ft = fold(ten);
+    const loai = f.loai_kh || (!ten ? '' : /\b(cong ty|cty|tnhh|co phan|ctcp|hop tac xa|doanh nghiep|tap doan|chi nhanh)\b/.test(ft) ? 'Doanh nghiệp' : 'Cá nhân');
+    const laKh = !!(ten && ((kh.name && sameName(ten, kh.name)) || ((kh.hs || {}).ten_kh && sameName(ten, kh.hs.ten_kh)) || (f.ma_so && kh.mst && digits(f.ma_so).slice(0, 10) === digits(kh.mst).slice(0, 10))));
+    const vt = f.vai_tro || (laKh ? 'KH vay' : '');
+    const nm = /[1-5]/.exec(String(f.nhom_no == null ? '' : f.nhom_no));
+    return { mau, ten, ma: String(f.ma_so || ''), loai, vt, laKh, ngay: iso(f.ngay) || '', nhom: nm ? +nm[0] : null, key: laKh || !ten ? '_kh' : fold(ten) };
+  }
+  /** Tên CIC rõ ràng: “CIC S10A · CÔNG TY A” — dòng phụ: vai trò · MST/CCCD · ngày tra · nhóm nợ. */
+  function cicLabel(d, kh = {}, fileName = '') {
+    const x = cicInfo(d, kh, fileName);
+    return { main: `CIC ${x.mau || '(chưa rõ mẫu)'}${x.ten ? ' · ' + x.ten : x.laKh || !x.ten ? ' · ' + (kh.name || 'KH vay') : ''}`,
+      sub: [x.vt || x.loai || (x.ten ? '' : 'KH vay'), x.ma && `${x.loai === 'Cá nhân' ? 'CCCD' : 'MST'} ${x.ma}`, x.ngay && `tra ${dmy(x.ngay)}`, x.nhom != null && `nhóm nợ ${x.nhom}`].filter(Boolean).join(' · '), x };
+  }
   /**
    * @param hs   { lines, docs, ngay_gn, so_tien, so_kunn, ack }
    * @param ctx  { kh: {name, mst, hs:{...}}, kunns: KUNN đã có (để soát trùng), ledger: sổ Excel, today, hol }
@@ -2602,16 +2619,26 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
       if (tks.length && !nss.length) add('nsnn_none', 2, 'Có tờ khai nhưng chưa có giấy nộp tiền NSNN', 'Nếu giải ngân nộp thuế nhập khẩu, cần giấy nộp NSNN / chứng từ thu của KBNN.');
     }
     // CIC
-    const cic = docs.filter((x) => x.loai === 'cic').sort((a, b) => (iso(b.f.ngay) || '').localeCompare(iso(a.f.ngay) || ''))[0];
-    const cicDate = cic ? iso(cic.f.ngay) : iso(prof.ngay_cic_cuoi);
-    if (!cic) add('cic_none', 2, 'Chưa có CIC trong hồ sơ', cicDate ? `Lần tra gần nhất ${dmy(cicDate)}.` : 'Thả file CIC vào hồ sơ, AI đọc ngày tra và nhóm nợ.');
+    const cics = docs.filter((x) => x.loai === 'cic').map((d) => ({ d, x: cicInfo(d, kh) }));
+    if (!cics.length) { const cd0 = iso(prof.ngay_cic_cuoi); add('cic_none', 2, 'Chưa có CIC trong hồ sơ', cd0 ? `Lần tra gần nhất ${dmy(cd0)}.` : 'Thả file CIC vào hồ sơ, AI đọc mẫu báo cáo, đối tượng tra, ngày tra và nhóm nợ.'); }
     else {
-      const age = cicDate ? BK.daysBetween(cicDate, gn) : null;
-      if (age != null && age > 10) add('cic_old', 2, `CIC tra ngày ${dmy(cicDate)} — đã ${age} ngày (hiệu lực 10 ngày)`, '', [cic.id]);
-      const nm = /[1-5]/.exec(String(cic.f.nhom_no == null ? '' : cic.f.nhom_no)), nhom = nm ? +nm[0] : null;
-      if (nhom != null && nhom >= 2) add('cic_nhom', 3, `CIC: KH có nợ nhóm ${nhom}`, '', [cic.id]);
-      if (!cicDate || nhom == null) add('cic_doc', 2, `CIC: chưa đọc được ${[!cicDate && 'ngày tra', nhom == null && 'nhóm nợ'].filter(Boolean).join(' và ')} — mở chứng từ để nhập`, '', [cic.id]);
-      else if (age <= 10 && nhom < 2) add('cic_ok', 0, `CIC ngày ${dmy(cicDate)} còn hiệu lực, không có nợ nhóm 2 trở lên`);
+      // mỗi đối tượng (KH vay, người đại diện, bên bảo lãnh…) xét CIC mới nhất của đối tượng đó
+      const by = new Map(); for (const c of cics) (by.get(c.x.key) || by.set(c.x.key, []).get(c.x.key)).push(c);
+      const multi = by.size > 1, okWho = []; let allOk = true;
+      for (const [k, cs0] of by) {
+        const cs = cs0.slice().sort((a, b) => (b.x.ngay || '').localeCompare(a.x.ngay || '')), last = cs[0], dt = last.x.ngay;
+        const same = cs.filter((c) => c.x.ngay === dt), nh = same.map((c) => c.x.nhom).filter((n) => n != null), nhom = nh.length ? Math.max(...nh) : null;
+        const who = k === '_kh' ? 'KH vay' : last.x.ten, sfx = multi ? '_' + k : '', tag = multi ? ` — ${who}` : '', ids = same.map((c) => c.d.id);
+        const age = dt ? BK.daysBetween(dt, gn) : null;
+        if (age != null && age > 10) { allOk = false; add('cic_old' + sfx, 2, `CIC${tag} tra ngày ${dmy(dt)} — đã ${age} ngày (hiệu lực 10 ngày)`, '', ids); }
+        if (nhom != null && nhom >= 2) { allOk = false; add('cic_nhom' + sfx, 3, `CIC: ${multi ? who : 'KH'} có nợ nhóm ${nhom}`, '', ids); }
+        if (!dt || nhom == null) { allOk = false; add('cic_doc' + sfx, 2, `CIC${tag}: chưa đọc được ${[!dt && 'ngày tra', nhom == null && 'nhóm nợ'].filter(Boolean).join(' và ')} — mở chứng từ để nhập`, '', ids); }
+        else okWho.push(`${who} ${dmy(dt)}`);
+      }
+      // trùng: cùng mẫu, cùng đối tượng, cùng ngày
+      const dup = new Map(); for (const c of cics) { const kk = `${c.x.mau}|${c.x.key}|${c.x.ngay}`; (dup.get(kk) || dup.set(kk, []).get(kk)).push(c); }
+      for (const [kk, cs] of dup) if (cs.length > 1 && cs[0].x.ten && cs[0].x.mau) add('cic_trung_' + kk, 1, `CIC ${cs[0].x.mau || ''} ${cs[0].x.key === '_kh' ? 'của KH vay' : cs[0].x.ten} ngày ${dmy(cs[0].x.ngay) || '?'} có ${cs.length} bản giống nhau`, 'Có thể là file trùng — bỏ bớt (✕) để gói tải lên gọn.', cs.map((c) => c.d.id));
+      if (allOk) add('cic_ok', 0, multi ? `CIC còn hiệu lực, không có nợ nhóm 2 trở lên — ${okWho.join('; ')}` : `CIC ngày ${dmy(cics.map((c) => c.x.ngay).sort().pop())} còn hiệu lực, không có nợ nhóm 2 trở lên`);
     }
     // đủ thông tin để theo dõi sau giải ngân: số KUNN, số ngày vay (→ đáo hạn), lãi suất
     if (lines.length) {
@@ -2830,7 +2857,8 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
   function packageNames(hs, files, order) {
     const ord = order || Object.fromEntries(Object.entries(TYPES).map(([k, t]) => [k, t.ord]));
     const byFile = new Map();
-    for (const d of hs.docs || []) if (!d.del) { const o = ord[d.loai] || 10; if (!byFile.has(d.fileId) || byFile.get(d.fileId).o > o) byFile.set(d.fileId, { o, loai: d.loai, so: d.f.so || d.f.mau }); }
+    const fname = (id) => ((files || []).find((f) => f.id === id) || {}).name || '';
+    for (const d of hs.docs || []) if (!d.del) { const o = ord[d.loai] || 10; let so = d.f.so || d.f.mau; if (d.loai === 'cic') { const x = cicInfo(d, {}, fname(d.fileId)); so = [x.mau, x.ten && fold(x.ten).toUpperCase().replace(/^(CONG TY|CTY)\s+(TNHH|CO PHAN|CP)?\s*/, '').replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24)].filter(Boolean).join('_'); } if (!byFile.has(d.fileId) || byFile.get(d.fileId).o > o) byFile.set(d.fileId, { o, loai: d.loai, so }); }
     const used = {};
     const own = hs.pkgNames || {};
     return files.filter((f) => !(hs.skipUp || {})[f.id]).map((f) => {
@@ -2972,7 +3000,7 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     return out;
   }
 
-  return { ledgerLabels, relocateLedger, LFIELDS, ledgerGuess, readLedgerSheet, pickLedgerSheet, isKunn, hmAt, goiMerge, goiAt, goiActive, goiUsed, lsAt, lsApply, creditAlerts, aiMdSig, TYPES, GROUP_ORDER, promptRead, normDocs, MILESTONES, milestones, stageOf, checks, counts, readLedger, duNoTruoc, tasks, packageNames, sameName, fmtN };
+  return { cicInfo, cicLabel, ledgerLabels, relocateLedger, LFIELDS, ledgerGuess, readLedgerSheet, pickLedgerSheet, isKunn, hmAt, goiMerge, goiAt, goiActive, goiUsed, lsAt, lsApply, creditAlerts, aiMdSig, TYPES, GROUP_ORDER, promptRead, normDocs, MILESTONES, milestones, stageOf, checks, counts, readLedger, duNoTruoc, tasks, packageNames, sameName, fmtN };
 })();
 </script>
 <script id="bk-app">
@@ -5392,7 +5420,8 @@ async function openHoSo(cid, kid, hsId) {
     if (hsx.so_kunn) v.so_kunn = hsx.so_kunn;
     if (hsx.ngay_gn) v.ngay_gn = dd(BK.toISO(hsx.ngay_gn));
     if (hsx.so_ngay_vay) v.so_ngay_vay = hsx.so_ngay_vay;
-    const cic = (hsx.docs || []).filter((d) => d.loai === 'cic' && d.f.ngay).sort((a, b) => (BK.toISO(b.f.ngay) || '').localeCompare(BK.toISO(a.f.ngay) || ''))[0];
+    const cs0 = (hsx.docs || []).filter((d) => !d.del && d.loai === 'cic' && d.f.ngay), csK = cs0.filter((d) => HSC.cicInfo(d, c).key === '_kh');
+    const cic = (csK.length ? csK : cs0).sort((a, b) => (BK.toISO(b.f.ngay) || '').localeCompare(BK.toISO(a.f.ngay) || ''))[0];
     if (cic) v.ngay_cic = cic.f.ngay;
   }
   { const hv = hmVer(c, BK.toISO((hsx && hsx.ngay_gn) || v.ngay_gn) || BK.todayISO()); if (hv) { if (hv.hm_tong) auto.hm_tong = Math.round(hv.hm_tong / 1e6).toLocaleString('en-US'); if ((hv.lines || []).length) for (const f of ['hm_vay', 'hm_lc']) auto[f] = Math.round((hv[f] || 0) / 1e6).toLocaleString('en-US'); if (hv.den_ngay) auto.han_hm = dd(hv.den_ngay); if (hv.so_hdtd) auto.so_hdtd = hv.so_hdtd; if (hv.ngay_hdtd) auto.ngay_hdtd = dd(hv.ngay_hdtd); } }
@@ -7653,8 +7682,9 @@ function renderHoso(el, c) {
   const fileName = (id) => (hs.files.find((f) => f.id === id) || {}).name || '';
   const docLine = (d) => {
     const t = HSC.TYPES[d.loai], bad = cs.some((x) => x.sev >= 2 && x.refs.includes(d.id));
-    const main = d.loai === 'bang_ke' ? `${fileName(d.fileId)}` : `${t.l}${d.f.so ? ' ' + d.f.so : d.f.mau ? ' ' + d.f.mau : ''}`;
-    const sub = d.loai === 'bang_ke' ? `${hs.lines.length} dòng · ${vnd(total)}` : [d.f.ben_ban, d.f.ngay, d.f.tien && vnd(+d.f.tien)].filter(Boolean).join(' · ');
+    const cl = d.loai === 'cic' ? HSC.cicLabel(d, c, fileName(d.fileId)) : null;
+    const main = d.loai === 'bang_ke' ? `${fileName(d.fileId)}` : cl ? cl.main : `${t.l}${d.f.so ? ' ' + d.f.so : d.f.mau ? ' ' + d.f.mau : ''}`;
+    const sub = d.loai === 'bang_ke' ? `${hs.lines.length} dòng · ${vnd(total)}` : cl ? cl.sub : [d.f.ben_ban, d.f.ngay, d.f.tien && vnd(+d.f.tien)].filter(Boolean).join(' · ');
     return `<div class="dline2"><a class="dline ${bad ? 'bad' : ''} ${d.conf < 0.6 && d.loai !== 'bang_ke' ? 'unsure' : ''}" href="${hashOf({ cid: c.id, hs: hs.id, doc: d.id })}"><i></i><span>${esc(main)}<small>${esc(sub)}${d.manual ? ' · nhập tay' : ''}${d.conf < 0.6 && d.loai !== 'bang_ke' ? ' · AI chưa chắc — bấm để xem' : ''}</small></span></a>${d.fileId ? `<button class="eye" data-fprev="${d.fileId}" title="Xem nhanh file">👁</button><button class="eye fx" data-fdel="${d.fileId}" title="Bỏ file này khỏi hồ sơ (hoàn tác được)">✕</button>` : ''}</div>`;
   };
   const FXF = { cic: 'cic', nsnn: 'nsnn', hdmb: 'hdmb', bk: 'bang_ke' };
@@ -7813,7 +7843,7 @@ function renderDocView(el, c, hs) {
   const prevScan = $('#scan', el), keepScan = prevScan && prevScan.dataset.doc === d.id && prevScan.dataset.ready ? prevScan : null;
   if (prevScan && !keepScan && prevScan.dataset.url) URL.revokeObjectURL(prevScan.dataset.url);
   el.innerHTML = `${companyHead(c, 'hoso')}
-    <div class="hstop"><div class="crumb"><a href="${hashOf({ cid: c.id, tab: 'hoso' })}">Hồ sơ giải ngân</a> › <a href="${hashOf({ cid: c.id, hs: hs.id })}">Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : ''}</a> › <b>${esc(t.l)} ${esc(d.f.so || '')}</b></div>
+    <div class="hstop"><div class="crumb"><a href="${hashOf({ cid: c.id, tab: 'hoso' })}">Hồ sơ giải ngân</a> › <a href="${hashOf({ cid: c.id, hs: hs.id })}">Hồ sơ GN ${hs.ngay_gn ? dd(hs.ngay_gn) : ''}</a> › <b>${esc(d.loai === 'cic' ? HSC.cicLabel(d, c, fm.name).main : t.l + ' ' + (d.f.so || ''))}</b></div>
       <span style="flex:1"></span>${nav(i - 1) ? `<a class="btn sm" href="${nav(i - 1)}">‹ Chứng từ trước</a>` : ''}${nav(i + 1) ? `<a class="btn sm" href="${nav(i + 1)}">Chứng từ sau ›</a>` : ''}</div>
     <div class="dview"><section class="scan" id="scan"><div class="hist">Đang mở ${esc(fm.name || '')}…</div></section>
       <section class="dside">
@@ -8006,7 +8036,7 @@ async function previewFiles(hs, fileId) {
     const r = await S.store.getFile(f.id);
     if (!r) { box.innerHTML = '<div class="empty">File không có trên máy này (chưa đồng bộ từ thư mục chung)</div>'; return; }
     const docs = hs.docs.filter((d) => d.fileId === f.id && !d.del);
-    const side = `<aside class="pvs"><b>Tool đọc được</b>${docs.map((d) => `<a class="dline" href="${hashOf({ cid: hs.customerId, hs: hs.id, doc: d.id })}" data-close><i></i><span>${esc(HSC.TYPES[d.loai].l)} ${esc(d.f.so || '')}<small>${esc([d.f.ben_ban, d.f.ngay, d.f.tien && vnd(+d.f.tien)].filter(Boolean).join(' · '))}</small></span></a>`).join('') || '<div class="hist">Chưa đọc</div>'}</aside>`;
+    const side = `<aside class="pvs"><b>Tool đọc được</b>${docs.map((d) => `<a class="dline" href="${hashOf({ cid: hs.customerId, hs: hs.id, doc: d.id })}" data-close><i></i><span>${esc(d.loai === 'cic' ? HSC.cicLabel(d, cust(hs.customerId) || {}, f.name).main : HSC.TYPES[d.loai].l + ' ' + (d.f.so || ''))}<small>${esc(d.loai === 'cic' ? HSC.cicLabel(d, cust(hs.customerId) || {}, f.name).sub : [d.f.ben_ban, d.f.ngay, d.f.tien && vnd(+d.f.tien)].filter(Boolean).join(' · '))}</small></span></a>`).join('') || '<div class="hist">Chưa đọc</div>'}</aside>`;
     const u = URL.createObjectURL(r.blob); urls.push(u);
     const ty = f.type || '';
     let main;
