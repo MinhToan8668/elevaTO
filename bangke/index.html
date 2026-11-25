@@ -200,6 +200,7 @@ svg .hit.go{cursor:pointer}svg .hit.go:hover{fill:rgba(0,91,170,.06)}
 .mbox.full{max-width:none;width:calc(100vw - 24px);height:calc(100vh - 48px);display:flex;flex-direction:column;overflow:hidden}
 .modal:has(.mbox.full){padding:12px;align-items:stretch}
 .hs{flex:1;min-height:0;display:grid;grid-template-columns:var(--hsw,460px) 6px minmax(0,1fr)}
+.dpage td.csel{background-image:linear-gradient(rgba(37,99,235,.18),rgba(37,99,235,.18))!important;outline:1px solid rgba(37,99,235,.55);outline-offset:-1px}
 .hs-drag{cursor:col-resize;background:transparent;border-left:1px solid var(--line)}.hs-drag:hover,.hs-drag.on{background:var(--blue-bg,#dbeafe)}
 .lcards{display:flex;flex-direction:column;gap:6px;margin:4px 0}.lcard{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:rgba(255,255,255,.55)}
 .lcard-h{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);margin-bottom:4px}.lcard-h b{color:var(--ink2)}.lcard-h .sp{flex:1}
@@ -3133,7 +3134,10 @@ async function setTeamCfg(patch) {
 }
 
 function toast(msg, type = '', ms = 4200, act) {
-  const d = document.createElement('div');
+  const box = $('#toast');
+  [...box.children].forEach((x) => { if (x.dataset.msg === msg) x.remove(); });
+  while (box.children.length >= 5) box.firstElementChild.remove();
+  const d = document.createElement('div'); d.dataset.msg = msg;
   d.className = type; d.textContent = msg;
   if (act) { const b = document.createElement('button'); b.className = 'tact'; b.textContent = act.label; b.onclick = () => { d.remove(); act.fn(); }; d.appendChild(b); ms = Math.max(ms, 10000); }
   $('#toast').appendChild(d);
@@ -5384,7 +5388,8 @@ function makeRenderer(ctx) {
         col += span;
         return `<td data-i="${put({ pre: c.pre })}"${span > 1 ? ` colspan="${span}"` : ''}${vm === 'continue' ? ' class="vm"' : ''} style="${bd.join(';')};${fill && !/^auto$/i.test(fill) ? 'background:#' + fill + ';' : ''}${va ? `vertical-align:${va === 'center' ? 'middle' : va}` : 'vertical-align:top'};${wcss}">${blocks(c.blocks)}</td>`;
       }).join('');
-      return `<tr data-i="${put({ pre: r.pre })}">${cells}</tr>`;
+      const th = /<w:trHeight w:val="(\d+)"/.exec(r.pre || '');
+      return `<tr data-i="${put({ pre: r.pre })}"${th && +th[1] > 0 ? ` style="height:${+th[1] / 15}px"` : ''}>${cells}</tr>`;
     }).join('');
     const tW = /<w:tblW w:w="(\d+)" w:type="(\w+)"/.exec(tpx), tInd = /<w:tblInd w:w="(-?\d+)" w:type="dxa"/.exec(tpx);
     const fixed = /<w:tblLayout w:type="fixed"/.test(tpx) && cols.length && cols.every((w) => w >= 25);
@@ -5570,12 +5575,14 @@ async function openHoSo(cid, kid, hsId) {
   $('#hsExp', m).onclick = () => hsExport([HE.cur]).catch((e) => toast(errMsg(e), 'err'));
   $('#hsExpAll', m).onclick = () => hsExport(Object.keys(HS_KINDS)).catch((e) => toast(errMsg(e), 'err'));
   m.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); hsSave().catch((er) => toast(errMsg(er), 'err')); } });
-  hsBindDoc($('#hsScroll', m));
+  hsBindDoc($('#hsScroll', m)); wTableTools($('#hsScroll', m));
   wBind();
   for (const kind of Object.keys(HS_KINDS)) await hsLoadKind(kind).catch((e) => { HE.kinds[kind] = { err: errMsg(e) }; });
   hsTabs(); hsSide(); hsShow();
+  HE.H = []; HE.hi = -1; wSnap(null, true);
 }
 async function hsClose() {
+  if (HE && HE.offUp) HE.offUp();
   if (HE && HE.dirty && !confirm('Có thay đổi chưa lưu. Đóng không lưu?')) return;
   if (HE) { Object.values(HE.kinds).forEach((x) => (x.urls || []).forEach((u) => URL.revokeObjectURL(u))); document.removeEventListener('selectionchange', HE.selH); HE.m.remove(); }
   HE = null;
@@ -5697,8 +5704,9 @@ function hsRefresh(skip) {
         wSnap(K, true);
       }
     }
-    if (K.el) { if (K.hist) wSnap(K, true); hsSyncFields(K.el, skip); if (K.hist) K.hist[K.hi] = K.el.innerHTML; }
+    if (K.el) hsSyncFields(K.el, skip);
   }
+  wSnap(null, true);
   const side = $('#hsSide', HE.m), st = side.scrollTop, fo = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.v || document.activeElement.dataset.l : null;
   const caret = document.activeElement && document.activeElement.selectionStart;
   const open = $$('details.hg', side).map((d) => d.open);
@@ -5833,8 +5841,121 @@ function wRowOp(tr, act) {
   K.dirty = true; HE.dirty = true;
   wSnap(K, true);
 }
+// ── bảng: kéo mép ô đổi độ rộng cột / chiều cao hàng; quét chuột chọn nhiều ô → gộp, định dạng chữ, căn lề, tô nền, kẻ khung cả vùng
+const wSpan = (c) => c.colSpan || 1;
+const wStart = (c) => { let x = 0; for (const o of c.parentNode.cells) { if (o === c) return x; x += wSpan(o); } return x; };
+const wSelOn = () => !!(HE && HE.csel && HE.csel.cells.length > 1 && HE.csel.table.isConnected);
+const wSelParas = () => HE.csel.cells.flatMap((c) => [...c.querySelectorAll(':scope > .dp')]);
+function wSelClear() { if (HE && HE.csel) { HE.csel.cells.forEach((c) => c.classList.remove('csel')); HE.csel = null; } }
+function wSelRect(table, a, b) {
+  const rows = [...table.tBodies[0].rows].filter((r) => r.closest('table') === table);
+  const ra = rows.indexOf(a.parentNode), rb = rows.indexOf(b.parentNode);
+  const r0 = Math.min(ra, rb), r1 = Math.max(ra, rb);
+  const g0 = Math.min(wStart(a), wStart(b)), g1 = Math.max(wStart(a) + wSpan(a) - 1, wStart(b) + wSpan(b) - 1);
+  const cells = []; for (let r = r0; r <= r1; r++) for (const c of rows[r].cells) { const x = wStart(c), y = x + wSpan(c) - 1; if (y >= g0 && x <= g1) cells.push(c); }
+  return { table, cells, rows, r0, r1, g0, g1 };
+}
+const wMoveContent = (from, to) => { const ps = [...from.querySelectorAll(':scope > .dp')].filter((q) => (q.textContent || '').trim() || q.querySelector('.df,.dc,.dx')); ps.forEach((q) => { q.classList.add('ed'); to.appendChild(q); }); };
+/** Thêm / sửa chiều cao hàng trong w:trPr (đúng thứ tự phần tử của Word). */
+function wTrH(pre, tw) {
+  pre = pre || ''; const th = `<w:trHeight w:val="${tw}" w:hRule="atLeast"/>`;
+  if (/<w:trHeight\b[^>]*\/>/.test(pre)) return pre.replace(/<w:trHeight\b[^>]*\/>/, th);
+  const m = /<w:trPr>([\s\S]*?)<\/w:trPr>/.exec(pre);
+  if (m) { const inner = m[1], before = /^((?:\s*<w:(?:cnfStyle|divId|gridBefore|gridAfter|wBefore|wAfter|cantSplit)\b[^>]*\/>)*)/.exec(inner)[1]; return pre.replace(m[0], `<w:trPr>${before}${th}${inner.slice(before.length)}</w:trPr>`); }
+  if (/<w:trPr\/>/.test(pre)) return pre.replace('<w:trPr/>', `<w:trPr>${th}</w:trPr>`);
+  const ex = /<w:tblPrEx>[\s\S]*?<\/w:tblPrEx>/.exec(pre);
+  return ex ? pre.replace(ex[0], ex[0] + `<w:trPr>${th}</w:trPr>`) : `<w:trPr>${th}</w:trPr>` + pre;
+}
+function wTableTools(sc) {
+  let drag = null, sel0 = null;
+  const zoom = () => (HE.zoom || 100) / 100;
+  const edge = (e) => { const td = e.target.closest && e.target.closest('.dpage td'); if (!td || td.closest('.dpage').style.display === 'none') return null; const r = td.getBoundingClientRect(); if (e.clientX >= r.right - 5 && e.clientX <= r.right + 3) return { td, kind: 'col' }; if (e.clientY >= r.bottom - 5 && e.clientY <= r.bottom + 3) return { td, kind: 'row' }; return { td, kind: '' }; };
+  const colDrag = (td, e0) => {
+    const K = HE.kinds[HE.cur], table = td.closest('table'), store = K.store, z = zoom();
+    const rows = [...table.tBodies[0].rows].filter((r) => r.closest('table') === table);
+    const nCol = Math.max(...rows.map((tr) => [...tr.cells].reduce((a, c) => a + wSpan(c), 0)));
+    let cols = [...(store[table.dataset.i].pre || '').matchAll(/<w:gridCol w:w="(\d+)"/g)].map((m) => +m[1]);
+    if (cols.length !== nCol) { cols = Array(nCol).fill(0); for (const tr of rows) { let x = 0; for (const c of tr.cells) { if (wSpan(c) === 1) cols[x] = Math.max(cols[x], (c.getBoundingClientRect().width / z) * 15); x += wSpan(c); } } const kn = cols.filter(Boolean), avg = kn.length ? kn.reduce((a, b) => a + b, 0) / kn.length : 1500; cols = cols.map((w) => w || avg); }
+    const g = wStart(td) + wSpan(td) - 1, c0 = cols.slice(), x0 = e0.clientX, cg = table.querySelector(':scope > colgroup');
+    wSnap(K, true);
+    const apply = (cs) => { table.style.tableLayout = 'fixed'; table.style.width = cs.reduce((a, b) => a + b, 0) / 15 + 'px'; if (cg) cg.innerHTML = cs.map((w) => `<col style="width:${w / 15}px">`).join(''); for (const tr of rows) { let x = 0; for (const c of tr.cells) { c.style.width = cs.slice(x, x + wSpan(c)).reduce((a, b) => a + b, 0) / 15 + 'px'; x += wSpan(c); } } };
+    let cur = null;
+    return {
+      move(e) { const MIN = 300; let d = ((e.clientX - x0) / z) * 15; d = Math.max(MIN - c0[g], d); if (g + 1 < c0.length) d = Math.min(c0[g + 1] - MIN, d); cur = c0.slice(); cur[g] += d; if (g + 1 < cur.length) cur[g + 1] -= d; apply(cur); },
+      end() {
+        if (!cur) return;
+        for (const tr of rows) { let x = 0; for (const c of tr.cells) { const w = cur.slice(x, x + wSpan(c)).reduce((a, b) => a + b, 0); store.push({ ...store[c.dataset.i], pre: DOCX.patchTcPr(store[c.dataset.i].pre, { 'w:tcW': `<w:tcW w:w="${Math.round(w)}" w:type="dxa"/>` }) }); c.dataset.i = store.length - 1; x += wSpan(c); } }
+        const tot = cur.reduce((a, b) => a + b, 0);
+        store.push({ ...store[table.dataset.i], pre: DOCX.patchTblPre(store[table.dataset.i].pre, { 'w:tblW': `<w:tblW w:w="${Math.round(tot)}" w:type="dxa"/>`, 'w:tblLayout': '<w:tblLayout w:type="fixed"/>' }, cur) }); table.dataset.i = store.length - 1;
+        K.dirty = true; HE.dirty = true; wSnap(K, true); wStat();
+      },
+    };
+  };
+  const rowDrag = (td, e0) => {
+    const K = HE.kinds[HE.cur], tr = td.parentNode, z = zoom(), h0 = tr.getBoundingClientRect().height / z, y0 = e0.clientY;
+    wSnap(K, true); let h = null;
+    return {
+      move(e) { h = Math.max(12, h0 + (e.clientY - y0) / z); tr.style.height = h + 'px'; },
+      end() { if (h == null) return; const st = K.store; st.push({ ...st[tr.dataset.i], pre: wTrH(st[tr.dataset.i].pre, Math.round(h * 15)) }); tr.dataset.i = st.length - 1; K.dirty = true; HE.dirty = true; wSnap(K, true); wStat(); },
+    };
+  };
+  sc.addEventListener('mousemove', (e) => {
+    if (drag) { e.preventDefault(); return drag.move(e); }
+    if (sel0 && e.buttons === 1) {
+      const td = e.target.closest && e.target.closest('.dpage td');
+      if (td && td !== sel0 && td.closest('table') === sel0.closest('table')) { e.preventDefault(); getSelection().removeAllRanges(); wSelClear(); HE.csel = wSelRect(td.closest('table'), sel0, td); HE.csel.cells.forEach((c) => c.classList.add('csel')); }
+      return;
+    }
+    const h = edge(e); sc.style.cursor = h && h.kind === 'col' ? 'col-resize' : h && h.kind === 'row' ? 'row-resize' : '';
+  });
+  sc.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || e.target.closest('.rowbar')) return;
+    const h = edge(e);
+    if (h && h.kind) { e.preventDefault(); wSelClear(); drag = h.kind === 'col' ? colDrag(h.td, e) : rowDrag(h.td, e); return; }
+    if (e.shiftKey && h && HE.csel && h.td.closest('table') === HE.csel.table) { e.preventDefault(); const a = HE.csel.anchor || HE.csel.cells[0]; wSelClear(); HE.csel = { ...wSelRect(h.td.closest('table'), a, h.td), anchor: a }; HE.csel.cells.forEach((c) => c.classList.add('csel')); return; }
+    wSelClear(); sel0 = h ? h.td : null;
+    if (h) HE.csel = { table: h.td.closest('table'), cells: [h.td], anchor: h.td };
+  });
+  const up = () => { if (drag) { drag.end(); drag = null; } if (sel0 && HE && HE.csel && HE.csel.cells.length > 1) HE.csel.anchor = sel0; sel0 = null; };
+  document.addEventListener('mouseup', up);
+  HE.offUp = () => document.removeEventListener('mouseup', up);
+}
+/** Định dạng chữ cho mọi đoạn trong các ô đã quét (in đậm / nghiêng / gạch: theo trạng thái ô đầu — giống Word). */
+function wApplyCells(fn, toggle) {
+  const K = HE.kinds[HE.cur]; wSnap(K, true);
+  const sel = getSelection(), ps = wSelParas(); if (!ps.length) return;
+  document.execCommand('styleWithCSS', false, true);
+  const pick = (p) => { p.focus({ preventScroll: true }); const r = document.createRange(); r.selectNodeContents(p); sel.removeAllRanges(); sel.addRange(r); };
+  let want = null; if (toggle) { pick(ps[0]); want = !document.queryCommandState(toggle); }
+  for (const p of ps) { pick(p); if (toggle) { if (document.queryCommandState(toggle) !== want) document.execCommand(toggle); } else fn(p); hsMarkEd(p); }
+  sel.removeAllRanges(); wSnap(K, true); wState();
+}
+/** Gộp vùng ô đã quét thành một ô (gộp ngang từng dòng, rồi gộp dọc). */
+function wMergeSel() {
+  const K = HE.kinds[HE.cur], store = K.store, { cells, rows, r0, r1, g0, g1 } = HE.csel;
+  const setPre = (c, set) => { store.push({ ...store[c.dataset.i], pre: DOCX.patchTcPr(store[c.dataset.i].pre, set) }); c.dataset.i = store.length - 1; };
+  const per = []; for (let r = r0; r <= r1; r++) { const cs = cells.filter((c) => c.parentNode === rows[r]); if (!cs.length) return toast('Vùng chọn không liền — quét lại', 'err'); const a = wStart(cs[0]), b = wStart(cs[cs.length - 1]) + wSpan(cs[cs.length - 1]) - 1; if (a !== g0 || b !== g1) return toast('Vùng chọn không thành hình chữ nhật đều (có ô gộp lệch) — quét lại vùng khác', 'err'); per.push(cs); }
+  wSnap(K, true);
+  const tops = per.map((cs) => { const f = cs[0]; let n = wSpan(f); for (const c of cs.slice(1)) { wMoveContent(c, f); n += wSpan(c); c.remove(); } if (n !== wSpan(f)) { f.colSpan = n; setPre(f, { 'w:gridSpan': n > 1 ? `<w:gridSpan w:val="${n}"/>` : null }); } return f; });
+  if (tops.length > 1) { const top = tops[0]; top.classList.remove('vm'); setPre(top, { 'w:vMerge': '<w:vMerge w:val="restart"/>' }); for (const b of tops.slice(1)) { wMoveContent(b, top); b.classList.add('vm'); b.style.borderTopStyle = 'hidden'; b.dataset.vm = ''; setPre(b, { 'w:vMerge': '<w:vMerge/>' }); } }
+  wSelClear();
+  const p0 = tops[0].querySelector(':scope > .dp'); if (p0) hsMarkEd(p0);
+  K.dirty = true; HE.dirty = true; wSnap(K, true);
+  toast(`Đã gộp ${cells.length} ô`, 'ok');
+}
 /** Công cụ ô bảng: gộp phải / gộp dưới / tách ô / căn dọc / tô nền / chia đều cột / xóa bảng. */
 function wCell(act, arg) {
+  if (wSelOn() && act === 'merge') return wMergeSel();
+  if (wSelOn() && (act === 'va' || act === 'shd')) {
+    const K = HE.kinds[HE.cur], store = K.store; wSnap(K, true);
+    for (const td of HE.csel.cells) {
+      const set = act === 'va' ? { 'w:vAlign': `<w:vAlign w:val="${arg}"/>` } : { 'w:shd': arg === 'none' ? null : `<w:shd w:val="clear" w:color="auto" w:fill="${arg}"/>` };
+      if (act === 'va') td.style.verticalAlign = arg === 'center' ? 'middle' : arg; else td.style.background = arg === 'none' ? '' : '#' + arg;
+      store.push({ ...store[td.dataset.i], pre: DOCX.patchTcPr(store[td.dataset.i].pre, set) }); td.dataset.i = store.length - 1;
+    }
+    const p0 = HE.csel.cells[0].querySelector(':scope > .dp'); if (p0) hsMarkEd(p0, true);
+    K.dirty = true; HE.dirty = true; wSnap(K, true); return;
+  }
   const p = wCurPara(); const td = p && p.closest('td');
   if (!td) return toast('Đặt con trỏ vào một ô của bảng trước', 'err');
   const K = HE.kinds[HE.cur], store = K.store, table = td.closest('table');
@@ -5898,7 +6019,8 @@ function wCell(act, arg) {
 }
 /** Kẻ / bỏ khung: ghi w:tcBorders cho từng ô (Word hiểu đúng, không phụ thuộc kiểu bảng). */
 function wBorders(mode) {
-  const p = wCurPara(); const td = p && p.closest('td');
+  const sel = wSelOn() ? HE.csel : null;
+  const p = sel ? sel.cells[0].querySelector(':scope > .dp') : wCurPara(); const td = sel ? sel.cells[0] : p && p.closest('td');
   if (!td) return toast('Đặt con trỏ vào một ô của bảng trước', 'err');
   const K = HE.kinds[HE.cur], table = td.closest('table'), store = K.store;
   const rows = [...table.tBodies[0].rows];
@@ -5911,6 +6033,19 @@ function wBorders(mode) {
     const css = (on) => (on ? '1px solid #000' : 'none');
     cell.style.borderTop = cell.classList.contains('vm') ? 'hidden' : css(t); cell.style.borderLeft = css(l); cell.style.borderBottom = css(b); cell.style.borderRight = css(r);
   };
+  const has = (c, side) => { const v = getComputedStyle(c)['border' + side + 'Style']; return v && v !== 'none' && v !== 'hidden'; };
+  if (sel) {                                         // vùng ô đã quét: tất cả / bỏ hết / khung ngoài vùng / dưới vùng
+    for (const c of sel.cells) {
+      const r = sel.rows.indexOf(c.parentNode), x = wStart(c), y = x + wSpan(c) - 1;
+      const T = r === sel.r0, B = r === sel.r1, L = x === sel.g0, R = y === sel.g1;
+      if (mode === 'all' || mode === 'cell' || mode === 'row') apply(c, true, true, true, true);
+      else if (mode === 'none' || mode === 'cellnone') apply(c, false, false, false, false);
+      else if (mode === 'bottom') apply(c, has(c, 'Top'), has(c, 'Left'), B || has(c, 'Bottom'), has(c, 'Right'));
+      else apply(c, T || has(c, 'Top'), L || has(c, 'Left'), B || has(c, 'Bottom'), R || has(c, 'Right'));
+    }
+    if (p) hsMarkEd(p, true);
+    K.dirty = true; HE.dirty = true; return;
+  }
   if (mode === 'cell' || mode === 'cellnone') apply(td, mode === 'cell', mode === 'cell', mode === 'cell', mode === 'cell');
   else if (mode === 'bottom') apply(td, false, false, true, false);
   else if (mode === 'row') [...td.parentNode.cells].forEach((c) => apply(c, true, true, true, true));
@@ -6071,6 +6206,7 @@ function wRestore() {
 }
 /** Áp lệnh định dạng chữ: chưa bôi đen thì áp cho cả đoạn đang đứng. */
 function wApply(fn, whole) {
+  if (wSelOn()) return wApplyCells(fn);
   const p = wRestore(); if (!p) return toast('Bấm vào văn bản (hoặc bôi đen đoạn chữ) trước khi định dạng', 'err');
   const K = HE.kinds[HE.cur]; wSnap(K, true);
   const sel = getSelection();
@@ -6104,7 +6240,8 @@ function wCmd(w) {
   if (w === 'frep') return wReplace(false);
   if (w === 'fall') return wReplace(true);
   if (!K || !K.el) return;
-  if (['bold', 'italic', 'underline', 'strikeThrough', 'subscript', 'superscript'].includes(w)) return wApply(() => document.execCommand(w), false);
+  if (['bold', 'italic', 'underline', 'strikeThrough', 'subscript', 'superscript'].includes(w)) return wSelOn() ? wApplyCells(null, w) : wApply(() => document.execCommand(w), false);
+  if (/^jc:/.test(w) && wSelOn()) { wSnap(K, true); const jc = w.split(':')[1]; for (const p of wSelParas()) { p.dataset.jc = jc; p.style.textAlign = { left: 'left', center: 'center', right: 'right', both: 'justify' }[jc]; hsMarkEd(p, true); } wSnap(K, true); return; }
   if (w === 'grow' || w === 'shrink') {
     const p = wCurPara(); if (!p) return toast('Bấm vào văn bản trước', 'err');
     const e = HE.lr.startContainer.nodeType === 1 ? HE.lr.startContainer : HE.lr.startContainer.parentElement;
@@ -6169,26 +6306,45 @@ function wState() {
   const tb = $('#wTbl', m); if (tb) tb.hidden = !p.closest('td');
 }
 /** Lịch sử hoàn tác / làm lại (theo từng trang KUNN / PDGN). */
+// ── lịch sử hoàn tác chung của bản soạn: mỗi bước giữ cả văn bản KUNN, PDGN lẫn ô / danh sách ở khung trái
+function wState0() {
+  const html = {}, dirty = {};
+  for (const [k, K] of Object.entries(HE.kinds)) { if (K.el) html[k] = K.el.innerHTML.replace(/ class="csel"| csel\b/g, ''); dirty[k] = !!K.dirty; }   // ô đang quét chọn không tính là thay đổi
+  return { html, dirty, v: structuredClone(HE.v), lists: structuredClone(HE.lists), ov: [...HE.ov] };
+}
+const wKey = (x) => JSON.stringify([x.html, x.v, x.lists, x.ov]);
 function wSnap(K, now) {
-  if (!K || !K.el || !K.hist) return;
-  clearTimeout(K.ht);
-  const f = () => { const h = K.el.innerHTML; if (K.hist[K.hi] === h) return; K.hist.length = K.hi + 1; K.hist.push(h); K.hsig = (K.hsig || []).slice(0, K.hi + 1); K.hsig.push(listSig()); if (K.hist.length > 120) { K.hist.shift(); K.hsig.shift(); } K.hi = K.hist.length - 1; wStat(); };
-  if (now) f(); else K.ht = setTimeout(f, 450);
+  if (!HE || HE.restoring) return;
+  clearTimeout(HE.ht);
+  const f = () => {
+    if (!HE || HE.restoring) return;
+    const x = wState0(), key = wKey(x); HE.H = HE.H || []; if (HE.hi == null) HE.hi = -1;
+    if (HE.H.length && HE.H[HE.hi] && HE.H[HE.hi].key === key) return;
+    HE.H.length = HE.hi + 1; HE.H.push({ ...x, key }); if (HE.H.length > 150) HE.H.shift(); HE.hi = HE.H.length - 1; wStat();
+  };
+  if (now) f(); else HE.ht = setTimeout(f, 450);
 }
 function wUndo(dir) {
-  const K = HE.kinds[HE.cur]; if (!K || !K.el || !K.hist) return;
-  wSnap(K, true);
-  const ni = K.hi + dir;
-  if (ni < 0 || ni >= K.hist.length) return toast(dir < 0 ? 'Không còn bước nào để hoàn tác' : 'Không còn bước nào để làm lại');
-  K.hi = ni; K.el.innerHTML = K.hist[ni];
-  if (K.hsig && K.hsig[ni] != null && K.hsig[ni] !== listSig()) { try { hsRebuildLists(K); K.hsig[ni] = listSig(); } catch (e) { /* giữ nguyên */ } }
-  hsSyncFields(K.el); K.hist[ni] = K.el.innerHTML;
-  K.dirty = true; HE.dirty = true; HE.lr = null; wStat();
+  if (!HE) return;
+  wSnap(null, true);
+  const ni = (HE.hi ?? 0) + dir;
+  if (!HE.H || ni < 0 || ni >= HE.H.length) return toast(dir < 0 ? 'Không còn bước nào để hoàn tác' : 'Không còn bước nào để làm lại');
+  HE.hi = ni; const x = HE.H[ni];
+  HE.restoring = true;
+  try {
+    HE.v = structuredClone(x.v); HE.lists = structuredClone(x.lists); HE.ov = new Set(x.ov);
+    wSelClear();
+    for (const [k, K] of Object.entries(HE.kinds)) { if (K.el && x.html[k] != null) K.el.innerHTML = x.html[k]; if (x.dirty[k] != null) K.dirty = x.dirty[k] || K.dirty; K.sig = listSig(); }
+    hsRefresh();
+  } finally { HE.restoring = false; }
+  const y = wState0(); HE.H[ni] = { ...y, key: wKey(y) };   // giữ nguyên các bước làm lại
+  HE.dirty = true; HE.lr = null; wStat();
+  toast(dir < 0 ? `↶ Đã hoàn tác (còn ${ni} bước)` : `↷ Đã làm lại`, '', 1500);
 }
 function wStat() {
   if (!HE) return;
   const K = HE.kinds[HE.cur] || {}, el = $('#hsStat', HE.m); if (!el) return;
-  el.textContent = K.el ? `${HS_KINDS[HE.cur]} · ${$$('.dp.ed', K.el).length} đoạn đã sửa · hoàn tác được ${K.hi || 0} bước · ${HE.zoom || 100}%` : '';
+  el.textContent = K.el ? `${HS_KINDS[HE.cur]} · ${$$('.dp.ed', K.el).length} đoạn đã sửa · hoàn tác được ${HE.hi || 0} bước · ${HE.zoom || 100}%` : '';
 }
 function wZoom(d) {
   HE.zoom = Math.max(50, Math.min(200, (HE.zoom || 100) + d));
@@ -8462,6 +8618,7 @@ document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;   // để ô nhập tự hoàn tác chữ
   const k = e.key.toLowerCase();
+  if (HE && (k === 'z' || k === 'y')) { e.preventDefault(); return wUndo(k === 'y' || e.shiftKey ? 1 : -1); }
   if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(false); }
   else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); doUndo(true); }
 });

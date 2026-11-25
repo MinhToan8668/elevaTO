@@ -523,6 +523,13 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   // nhập TK bên thụ hưởng ở bảng bên trái
   await page.fill('[data-l="tth|0|tk"]', '0123456789'); await page.press('[data-l="tth|0|tk"]', 'Tab');
   await kunn.locator('.df', { hasText: '0123456789' }).waitFor();
+  // sửa ở khung trái cũng hoàn tác được (↶ / ↷ của bản soạn)
+  await page.click('[data-w="undo"]');
+  assert.equal(await page.inputValue('[data-l="tth|0|tk"]'), '', 'hoàn tác TK ở khung trái');
+  assert.equal(await kunn.locator('.df', { hasText: '0123456789' }).count(), 0);
+  await page.click('[data-w="redo"]');
+  assert.equal(await page.inputValue('[data-l="tth|0|tk"]'), '0123456789');
+  await kunn.locator('.df', { hasText: '0123456789' }).waitFor();
   // thêm bên thụ hưởng tay (vd nộp thuế / kho bạc) → có dòng mới, giữ lại, vào văn bản
   const nTth = await page.locator('[data-l^="tth|"][data-l$="|ten"]').count();
   await page.click('[data-ladd="tth"]');
@@ -587,6 +594,29 @@ test('soạn KUNN & PDGN: nạp Word cũ của KH → tự nhận trường → 
   await kunn.locator('.dp', { hasText: /^Địa chỉ$/ }).click();
   await page.click('[data-w="va:center"]');
   await page.click('[data-w="dist"]');
+  // kéo mép phải ô → cột rộng ra; kéo mép dưới → hàng cao hơn
+  const rDc = t1.locator('tr', { hasText: 'Địa chỉ' }), c0 = rDc.locator('td').first();
+  let bb = await c0.boundingBox(); const w0 = bb.width;
+  await page.mouse.move(bb.x + bb.width - 1, bb.y + bb.height / 2); await page.mouse.down(); await page.mouse.move(bb.x + bb.width + 40, bb.y + bb.height / 2, { steps: 6 }); await page.mouse.up();
+  assert.ok((await c0.boundingBox()).width > w0 + 20, 'kéo rộng cột');
+  bb = await c0.boundingBox(); const h0 = bb.height;
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height - 1); await page.mouse.down(); await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height + 30, { steps: 6 }); await page.mouse.up();
+  assert.ok((await c0.boundingBox()).height > h0 + 20, 'kéo cao hàng');
+  // quét chọn 2 ô cùng dòng → in đậm cả vùng → gộp → hoàn tác / làm lại
+  const qa = await rDc.locator('td').nth(0).boundingBox(), qb = await rDc.locator('td').nth(1).boundingBox();
+  await page.mouse.move(qa.x + 12, qa.y + 8); await page.mouse.down(); await page.mouse.move(qb.x + 12, qb.y + 8, { steps: 6 }); await page.mouse.up();
+  assert.equal(await t1.locator('td.csel').count(), 2, 'quét chọn 2 ô');
+  await page.click('[data-w="bold"]');
+  assert.match(await rDc.locator('td').first().innerHTML(), /bold|<b>/, 'in đậm cả vùng');
+  await page.click('[data-w="merge:right"]');
+  assert.equal(await rDc.locator('td').count(), 2, 'gộp vùng ô đã chọn');
+  await page.click('[data-w="undo"]');
+  assert.equal(await t1.locator('tr', { hasText: 'Địa chỉ' }).locator('td').count(), 3, 'hoàn tác gộp');
+  await page.click('[data-w="redo"]');
+  assert.equal(await t1.locator('tr', { hasText: 'Địa chỉ' }).locator('td').count(), 2, 'làm lại gộp');
+  await page.keyboard.press('Control+z');   // Ctrl+Z khi con trỏ không ở trong ô chữ → hoàn tác của bản soạn
+  assert.equal(await t1.locator('tr', { hasText: 'Địa chỉ' }).locator('td').count(), 3, 'Ctrl+Z hoàn tác gộp');
+  await kunn.locator('.dp', { hasText: /^Địa chỉ$/ }).click(); await page.click('[data-w="dist"]');
   // AutoFit: bảng thụ hưởng vừa khổ trang
   await kunn.locator('table.lt td').first().locator('.dp').first().click();
   await page.selectOption('#wFit', 'window');

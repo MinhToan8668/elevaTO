@@ -161,6 +161,13 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   kể cả mẫu / bản soạn đã lưu từ trước (tool tự nối khi mở). Mỗi danh sách ở khung trái ghi rõ điền vào bảng nào; mẫu Word
   không có bảng đó thì báo.
 
+## Bảng trong bản soạn & hoàn tác
+- **Kéo mép phải** của ô để đổi độ rộng cột (cột bên cạnh co lại theo), **kéo mép dưới** để đổi chiều cao hàng — ghi vào Word.
+- **Quét chuột** từ ô này sang ô khác (hoặc giữ Shift bấm ô cuối) để chọn nhiều ô: in đậm / nghiêng / gạch / màu / cỡ chữ /
+  căn lề, tô nền, căn dọc, kẻ khung áp cho cả vùng; nút “Gộp phải / Gộp dưới” gộp cả vùng thành một ô.
+- **Hoàn tác / làm lại** (↶ ↷, Ctrl+Z / Ctrl+Y) ghi lại mọi thay đổi của bản soạn: văn bản KUNN, PDGN và các ô / danh sách
+  ở khung trái. Mỗi thao tác một bước; chọn ô không tính là thay đổi. Thông báo trùng không còn chồng thành cột.
+
 ## Định dạng số
 - Mặc định hiển thị như hệ thống ngân hàng: **1,234,567 đ**, lãi suất **8.2%**. Đổi sang kiểu Việt (1.234.567 · 8,2%) ở
   Cài đặt → 5. Định dạng số. Gõ số kiểu nào cũng được. File Word KUNN / PDGN vẫn theo mẫu.
