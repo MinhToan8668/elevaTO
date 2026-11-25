@@ -279,6 +279,7 @@ a.logo{color:#fff;text-decoration:none}
 .note{border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px}.note.warn{background:var(--warn-bg);border:1px solid #f1d29b;color:#8a5a0c}
 .kwrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}@media(max-width:1100px){.kwrap{grid-template-columns:1fr}}
 .t tr.sel td{background:var(--blue-bg)}.wtxt{color:#8a5a0c}
+.thuno .ttf{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.thuno .ttf .inp{width:auto}.qhl{margin-top:8px;font-size:12.5px;display:grid;gap:3px}.qhl>b{font-size:12px;color:var(--ink2)}tr.dim td{opacity:.55}
 .kdet{padding:14px 16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:80px}.kdet .big{font-size:17px;color:var(--navy)}
 .tl{list-style:none;display:flex;flex-direction:column;gap:9px;padding:0;margin:0}.tl li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:9px;font-size:13.5px;text-align:left}.tl li>i{display:block;width:16px;height:16px;box-sizing:border-box;border-radius:50%;border:2px solid #9aa5b1;margin-top:2px}
 .tl li.done i{background:var(--ok);border-color:var(--ok)}.tl li.warn i{background:#e0a33b;border-color:#e0a33b}.tl li.bad i{background:var(--err);border-color:var(--err)}.tl small{display:block;font-size:12px;color:var(--ink3)}
@@ -293,7 +294,8 @@ a.logo{color:#fff;text-decoration:none}
 .kbar{display:flex;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px 14px;margin-bottom:12px;gap:0}
 .kbar>div{padding:9px 18px 9px 0;margin-right:18px;border-right:1px solid var(--line2);display:flex;flex-direction:column}.kbar>div:last-child{border:0}
 .kbar span{font-size:12px;color:var(--ink3)}.kbar b{font-size:18px}.kbar b.err{color:var(--err)}.kbar b.ok{color:var(--ok)}.kbar small{font-size:11.5px;color:var(--ink3)}
-.kbar .kin{flex-direction:row;gap:10px;align-items:flex-end;margin-left:auto}.kbar .kin label{font-size:12px;color:var(--ink3);display:flex;flex-direction:column;gap:2px}.kbar .kin .inp{padding:5px 8px}
+.kbar .kin{flex-direction:row;gap:10px;align-items:flex-end;margin-left:auto}.kbar .kin label{font-size:12px;color:var(--ink3);display:flex;flex-direction:column;gap:2px}.kbar .kin{flex-wrap:wrap;justify-content:flex-end}.kbar .kin label{font-size:13px}.kbar .kin .inp{padding:8px 10px;font-size:15px;min-height:38px}.kbar .kin input[type=date]{min-width:165px}.kbar .kin select{min-width:210px}
+.kin-sync{flex-basis:100%;text-align:right;font-size:12px;color:var(--ink3);margin-top:2px}.kin-sync b{font-size:inherit;font-weight:600;color:var(--ink2)}.hf em.sync{font-style:normal;font-size:11px;color:var(--blue,#2563eb);margin-left:4px}
 .hs3{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr) minmax(260px,330px);gap:14px;align-items:start}@media(max-width:1150px){.hs3{grid-template-columns:1fr}}
 .hscol{display:flex;flex-direction:column;gap:10px}.hscol>header{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.hscol h3{font-size:15px;color:var(--navy);flex:1}.hscol .cnt{display:flex;gap:10px;font-size:12.5px}
 .dgrp{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 11px;display:flex;flex-direction:column;gap:5px}.dgrp h4,.dgrp summary{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
@@ -3290,9 +3292,10 @@ function mergeCustomer(a, b) {
   m.hmHist = byId(a.hmHist, b.hmHist, (h) => h.id);
   m.goiLs = byId(a.goiLs, b.goiLs, (g) => BK.fold(g.ma));
   m.kunnDel = keyed(a.kunnDel, b.kunnDel, (x, y) => ((x.at || 0) >= (y.at || 0) ? x : y));
+  m.qhSkip = keyed(a.qhSkip, b.qhSkip, (x, y) => ((x.at || 0) >= (y.at || 0) ? x : y));
   m.dismiss = { ...(b.dismiss || {}), ...(a.dismiss || {}) };
   if (a.hs || b.hs) m.hs = { ...(a.hs || {}), tk: { ...((b.hs || {}).tk || {}), ...((a.hs || {}).tk || {}) } };
-  for (const k of ['kunnNotes', 'lsAdj', 'kunnDel', 'dismiss']) if (!Object.keys(m[k] || {}).length) delete m[k];
+  for (const k of ['kunnNotes', 'lsAdj', 'kunnDel', 'dismiss', 'qhSkip']) if (!Object.keys(m[k] || {}).length) delete m[k];
   for (const k of ['hmHist', 'goiLs']) if (!(m[k] || []).length) delete m[k];
   return m;
 }
@@ -5499,13 +5502,17 @@ function hsSide() {
   const f = (x) => {
     const val = HE.v[x.k] != null ? HE.v[x.k] : '', auto = x.calc && !HE.ov.has(x.k);
     const big = /chu$|dia_chi|gcn|muc_dich|dien_giai/.test(x.k);
-    return `<label class="hf${used.has(x.k) ? ' used' : ''}${auto ? ' auto' : ''}" data-hf="${x.k}"><span>${esc(x.l)}${x.calc ? (auto ? ' <em>tự tính</em>' : ' <em class="ov">sửa tay <button class="lnk" data-reset="${x.k}">↺ tự tính</button></em>') : ''}</span>${big ? `<textarea class="inp" rows="${x.k === 'dien_giai_ct' ? 4 : 2}" data-v="${x.k}">${esc(val)}</textarea>` : `<input class="inp" data-v="${x.k}" value="${esc(val)}">`}${x.k === 'dien_giai_ct' ? '<button type="button" class="lnk" id="hsDgAI">🤖 AI viết lại câu này</button>' : ''}</label>`;
+    const syn = HE.hsId && /^(ngay_gn|so_ngay_vay|ngay_dao_han|so_kunn|lai_suat)$/.test(x.k) ? '<em class="sync" title="Dùng chung với hồ sơ giải ngân — Lưu / Xuất Word là hồ sơ cập nhật">↔ hồ sơ</em>' : '';
+    return `<label class="hf${used.has(x.k) ? ' used' : ''}${auto ? ' auto' : ''}" data-hf="${x.k}"><span>${esc(x.l)}${syn}${x.calc ? (auto ? ' <em>tự tính</em>' : ' <em class="ov">sửa tay <button class="lnk" data-reset="${x.k}">↺ tự tính</button></em>') : ''}</span>${big ? `<textarea class="inp" rows="${x.k === 'dien_giai_ct' ? 4 : 2}" data-v="${x.k}">${esc(val)}</textarea>` : `<input class="inp" data-v="${x.k}" value="${esc(val)}">`}${x.k === 'dien_giai_ct' ? '<button type="button" class="lnk" id="hsDgAI">🤖 AI viết lại câu này</button>' : ''}</label>`;
   };
   const grp = Object.entries(DOCX.HS_GROUPS).map(([g, l]) => `<details class="hg" ${g !== 'vay' ? 'open' : ''}><summary>${l}</summary>${DOCX.HS_FIELDS.filter((x) => x.g === g).map(f).join('')}</details>`).join('');
   const extra = [...used].filter((k) => !DOCX.HS[k] && !/^(ct|tth)$/.test(k));
   const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="tw"><table class="t hl"><thead><tr><th>#</th>${DOCX.LIST_COLS[L].map(([, l]) => `<th>${l}</th>`).join('')}<th></th></tr></thead><tbody>${HE.lists[L].map((it, i) => `<tr><td>${i + 1}</td>${DOCX.LIST_COLS[L].map(([c]) => `<td><input class="cell-in" data-l="${L}|${i}|${c}" value="${esc(it[c] != null ? it[c] : '')}"${L === 'tth' && c === 'tien' ? ' readonly' : ''}></td>`).join('')}<td><button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button></td></tr>`).join('')}</tbody></table></div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
   const kt = keyTable();
-  side.innerHTML = `<div class="hs-box"><b>Mẫu Word của KH</b>${Object.entries(HS_KINDS).map(([k, l]) => { const K = HE.kinds[k] || {}; return `<div class="hs-tpl"><span>${l}: ${K.t ? `${K.t.own ? 'mẫu riêng KH' : 'mẫu chung'} · ${(K.used || []).length} trường` : '<span class="err">chưa có</span>'}</span><button class="lnk" data-tplload="${k}">⬆ Nạp file Word</button>${K.t ? `<button class="lnk" data-tpldl="${k}" title="Tải mẫu có {{trường}} về để chỉnh trong Word">⬇ Tải mẫu</button>` : ''}</div>`; }).join('')}
+  const hsx = HE.hsId ? hsGet(HE.hsId) : null;
+  side.innerHTML = `${hsx ? `<div class="hs-box"><b>↔ Liên kết hồ sơ giải ngân</b> <span class="hist">GN ${hsx.ngay_gn ? dd(BK.toISO(hsx.ngay_gn)) : '?'}${hsx.so_kunn ? ' · KUNN ' + esc(hsx.so_kunn) : ''}</span>
+      <div class="hist">Ngày GN, số KUNN, lãi suất, số ngày vay / đáo hạn, bảng “Chứng từ bổ sung” lấy từ hồ sơ khi mở; sửa ở đây rồi bấm <b>Lưu</b> hoặc <b>Xuất Word</b> là hồ sơ và KUNN theo dõi cập nhật theo.</div>
+      <button class="lnk" id="hsBack">← Về hồ sơ (đóng bản soạn)</button></div>` : HE.kid ? '<div class="hs-box"><b>Chưa gắn hồ sơ giải ngân</b><div class="hist">Bản soạn từ Sổ hóa đơn — số liệu sửa ở đây chỉ lưu vào KUNN này.</div></div>' : ''}<div class="hs-box"><b>Mẫu Word của KH</b>${Object.entries(HS_KINDS).map(([k, l]) => { const K = HE.kinds[k] || {}; return `<div class="hs-tpl"><span>${l}: ${K.t ? `${K.t.own ? 'mẫu riêng KH' : 'mẫu chung'} · ${(K.used || []).length} trường` : '<span class="err">chưa có</span>'}</span><button class="lnk" data-tplload="${k}">⬆ Nạp file Word</button>${K.t ? `<button class="lnk" data-tpldl="${k}" title="Tải mẫu có {{trường}} về để chỉnh trong Word">⬇ Tải mẫu</button>` : ''}</div>`; }).join('')}
       <div class="hist">File Word lần trước của KH là đủ — tool tự nhận ô cần điền, giữ nguyên phần riêng của KH.</div></div>
     <div class="hs-box ${ck.some((x) => x.sev >= 3) ? 'bad' : ck.length ? 'warn' : 'ok'}"><b>Kiểm tra hồ sơ</b> <span class="hist">${ck.filter((x) => x.sev >= 3).length} lỗi · ${ck.filter((x) => x.sev === 2).length} cần xem</span>
       <ul class="hs-ck">${ck.map((x) => `<li class="${x.sev >= 3 ? 'e' : 'w'}" data-go="${esc(x.key)}">${x.sev >= 3 ? '✗' : '⚠'} ${esc(x.msg)}</li>`).join('') || '<li class="o">✓ Không thấy lỗi logic</li>'}</ul>
@@ -5564,6 +5571,7 @@ function hsBindDoc(sc) {
     if (t.dataset.tplload) return hsPickTemplate(t.dataset.tplload);
     if (t.dataset.tpldl) { const K = HE.kinds[t.dataset.tpldl]; return saveBlob(new Blob([K.t.buf]), `MAU_${HS_KINDS[t.dataset.tpldl]}_${slug(HE.c.name)}.docx`); }
     if (t.id === 'hsAI') return hsAI(t);
+    if (t.id === 'hsBack') return hsClose();
     if (t.id === 'hsDgAI') { e.preventDefault(); return hsDgAI(t); }
     if (t.id === 'hsKey') return hsPickKey();
     if (t.id === 'hsKeyDel') { if (confirm('Gỡ bảng key TestKey khỏi máy này?')) { lsSet(TK_LS, ''); hsRefresh(); } return; }
@@ -6508,6 +6516,7 @@ function renderCoOverview(body, c) {
       ${tile('Hạn mức còn khả dụng', kd != null ? shortMoney(kd) : '—', kd != null ? `${Math.round((kd / hmLedger(c)) * 100)}% của ${shortMoney(hmLedger(c))}` : L ? 'nhập hạn mức ở tab Thông tin' : 'cần file Excel', { tone: kd != null && kd / hmLedger(c) < 0.1 ? 'crit' : '', act: L ? A({ ctab: 'info' }) : A({ xlpick: c.id }) })}
       ${tile(`Giải ngân năm ${year}`, shortMoney(gnYear), `${ksGn.filter((k) => (k.ngay_gn || '').startsWith(year)).length} KUNN${ks.length > ksGn.length ? ` · ${ks.length - ksGn.length} chờ GN` : ''}`, { act: A({ ctab: 'so' }) })}
       ${tile('Đáo hạn gần nhất', nextDh ? dd(nextDh.dao_han) : '—', nextDh ? `KUNN ${nextDh.so} · ${shortMoney(nextDh.con_lai)}` : 'không có', { act: A({ ctab: 'kunn' }) })}
+      ${(() => { const q = qhStats(c, krows); return tile('Quá hạn trả nợ', `${q.on.length} lần`, q.on.length ? `${q.dang.length ? `${q.dang.length} KUNN đang quá hạn · ` : ''}lâu nhất ${q.max} ngày` : 'chưa từng quá hạn', { tone: q.dang.length ? 'crit' : q.on.length ? 'warn' : '', act: A({ ctab: 'kunn', kf: 'qh' }) }); })()}
       ${tile('Chờ bổ sung bản gốc', `${bsPend.length} KUNN`, bsQua.length ? `${bsQua.length} quá hạn` : bsPend.length ? 'chưa quá hạn' : 'không có', { tone: bsQua.length ? 'crit' : '', act: A({ ctab: 'kunn', kf: 'bs' }) })}
     </div>
     ${(() => { const ts = companyTasks(c); return ts.length ? `<section class="card panel"><header><h3>Việc cần làm của công ty</h3><span class="hist">${ts.length} việc</span></header><div class="tlist">${ts.slice(0, V.allTasks ? 200 : 6).map((t, i) => `<div class="trow2"><button class="trow" data-task="${i}"><span class="${SEV[t.sev][1]}">${SEV[t.sev][0]}</span><span>${esc(t.text)}</span><em>${esc(t.when || '')}</em></button><button class="rowdel" data-tdis="${i}" title="Ẩn việc này (đã xử lý / không cần)" aria-label="Ẩn việc">✕</button></div>`).join('')}</div>${ts.length > 6 && !V.allTasks ? `<button class="lnk" id="tMore">Xem cả ${ts.length} việc →</button>` : ''}</section>` : ''; })()}
@@ -6547,7 +6556,7 @@ function renderCoHoso(body, c) {
 }
 
 // ── tab Theo dõi KUNN: sổ Excel (dư nợ, đáo hạn) + sổ hóa đơn (hồ sơ gốc) + hồ sơ (chứng từ bổ sung) ──
-const NOTE_T = { ghi_chu: ['📝', 'Ghi chú'], tra_1_phan: ['💵', 'KH trả nợ 1 phần'], gia_han: ['📅', 'Gia hạn / đổi ngày trả'], qua_han: ['⚠', 'Quá hạn — đang xử lý'], tat_toan: ['✓', 'Đã tất toán (file Excel chưa cập nhật)'] };
+const NOTE_T = { ghi_chu: ['📝', 'Ghi chú'], tra_1_phan: ['💵', 'KH trả nợ 1 phần'], gia_han: ['📅', 'Gia hạn / đổi ngày trả'], qua_han: ['⚠', 'Quá hạn — đang xử lý'], tat_toan: ['✓', 'KH đã trả hết / tất toán'] };
 const notesOf = (c, so) => ((c.kunnNotes || {})[kkey(so)] || []);
 /** Áp ghi chú lên một KUNN của sổ Excel: trả 1 phần (sau lần đọc file), gia hạn, đã tất toán. */
 function applyNotes(c, x, at0) {
@@ -6787,12 +6796,99 @@ function kunnRowsOf(c) {
     if (r.need && !r.need.done && r.need.han) r.need.qua = Math.max(0, BK.daysBetween(r.need.han, today));
     if (!r.x && r.k && (r.k.manual || (r.con_lai != null && !r.chuaGn))) { const a = applyNotes(c, { so: r.so, con_lai: r.con_lai, dao_han: r.dao_han }, r.k.conAt || 0); r.ns = a.ns; r.paid = a.paid; r.closed = a.closed; r.con_lai = a.con; if (a.due !== r.dao_han) { r.dhGoc = r.dao_han; r.dao_han = a.due; } }
     else if (r.x) { const a = applyNotes(c, r.x); r.ns = a.ns; r.paid = a.paid; r.closed = a.closed; r.con_lai = a.con; if (a.due !== r.dao_han) { r.dhGoc = r.dao_han; r.dao_han = a.due; } }
+    else if (r.k && !r.chuaGn) { const a = applyNotes(c, { so: r.so, con_lai: 0, dao_han: r.dao_han }, r.k.conAt || 0); r.ns = a.ns; r.closed = a.closed; if (a.closed) r.con_lai = 0; if (a.due !== r.dao_han) { r.dhGoc = r.dao_han; r.dao_han = a.due; } }
     else r.ns = notesOf(c, r.so);
     r.live = r.chuaGn ? false : r.con_lai == null ? !r.x : r.con_lai > 0.5;
+    { const tt = (r.ns || []).filter((n) => n.type === 'tat_toan' && n.ngay).sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+      r.paidOn = r.live || r.chuaGn ? '' : tt ? BK.toISO(tt.ngay) || '' : r.x && !(r.x.con_lai > 0.5) && r.x.ngay_thu ? BK.toISO(r.x.ngay_thu) || '' : ''; }
     r.ls0 = r.ls; r.lsAdj = (c.lsAdj || {})[kkey(r.so)] || []; r.ls = HSC.lsAt(r.ls0, r.lsAdj, today);
     r.dLeft = r.dao_han ? BK.daysBetween(today, r.dao_han) : null;
   }
   return rows.sort((a, b) => (b.ngay_gn || '').localeCompare(a.ngay_gn || ''));
+}
+/** Các lần quá hạn của một KUNN: trả sau đáo hạn, đang quá hạn, quá hạn rồi được gia hạn. key ổn định để “Không tính”. */
+function qhEpisodes(c, r, today = BK.todayISO()) {
+  if (!r || r.chuaGn || r.del) return [];
+  const out = [], skip = c.qhSkip || {}, ns = r.ns || [];
+  for (const n of ns) if (n.type === 'gia_han' && n.qh && n.qh.ngay > 0) out.push({ tu: n.qh.tu, den: n.qh.den, ngay: n.qh.ngay, kq: `được gia hạn đến ${n.ngay || '?'}`, gh: true });
+  const due = r.dao_han;
+  if (due) {
+    if (r.live && today > due) out.push({ tu: due, den: '', ngay: BK.daysBetween(due, today), kq: 'đang quá hạn', dang: true });
+    else if (!r.live && r.paidOn && r.paidOn > due) out.push({ tu: due, den: r.paidOn, ngay: BK.daysBetween(due, r.paidOn), kq: 'đã trả trễ' });
+  }
+  const why = ns.filter((n) => n.type === 'qua_han' || (n.type === 'ghi_chu' && /quá hạn|qua han|trễ|tre han/i.test(n.text || ''))).map((n) => n.text).filter(Boolean).join(' · ');
+  return out.map((e) => { const key = kkey(r.so) + '|' + e.tu; return { ...e, so: r.so, r, key, why, skip: skip[key] || null, con: r.con_lai ?? r.goc }; });
+}
+function qhStats(c, rows) {
+  const eps = rows.flatMap((r) => qhEpisodes(c, r)), on = eps.filter((e) => !e.skip);
+  const paid = rows.filter((r) => !r.live && !r.chuaGn && r.paidOn && r.dao_han);
+  const late = paid.filter((r) => on.some((e) => e.r === r && !e.dang && !e.gh));
+  return { eps, on, dang: on.filter((e) => e.dang), nK: new Set(on.map((e) => kkey(e.so))).size, max: on.length ? Math.max(...on.map((e) => e.ngay)) : 0,
+    avg: on.length ? Math.round(BK.sum(on.map((e) => e.ngay)) / on.length) : 0, total: BK.sum(on.map((e) => e.ngay)), nPaid: paid.length, nLate: late.length };
+}
+function qhReportHtml(c, rows) {
+  const st = qhStats(c, rows), eps = st.eps.slice().sort((a, b) => (b.dang - a.dang) || (b.tu || '').localeCompare(a.tu || ''));
+  const onTime = st.nPaid ? Math.round(((st.nPaid - st.nLate) / st.nPaid) * 100) : null;
+  return `<div class="note">Tool tự ghi mỗi lần KUNN quá hạn: <b>trả sau ngày đáo hạn</b> (ngày trả lấy từ “✓ KH đã trả hết” hoặc cột ngày thu của file Excel), <b>đang quá hạn</b>, và <b>quá hạn rồi mới gia hạn</b>. Lần nào chỉ do quên đánh dấu đã thu / số liệu sai thì bấm “Không tính” và ghi lý do — vẫn lưu vết, không cộng vào thống kê.</div>
+    <div class="tiles">${tile('Số lần quá hạn', `${st.on.length} lần`, st.on.length ? `${st.nK} KUNN · tổng ${st.total} ngày` : 'chưa từng quá hạn', { tone: st.on.length ? 'warn' : 'good' })}
+      ${tile('Đang quá hạn', `${st.dang.length} KUNN`, st.dang.length ? trieu(BK.sum(st.dang.map((e) => e.con || 0))) : 'không có', { tone: st.dang.length ? 'crit' : 'good' })}
+      ${tile('Quá hạn lâu nhất', st.max ? `${st.max} ngày` : '—', st.on.length ? `trung bình ${st.avg} ngày / lần` : '')}
+      ${tile('Trả đúng hạn', onTime != null ? `${onTime}%` : '—', st.nPaid ? `${st.nPaid - st.nLate}/${st.nPaid} KUNN đã trả có ngày trả` : 'chưa có ngày trả')}</div>
+    <section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Đáo hạn</th><th>Ngày trả / xử lý</th><th class="right">Số ngày quá hạn</th><th>Kết quả</th><th>Lý do / ghi chú</th><th></th></tr></thead><tbody>
+      ${eps.map((e) => `<tr data-qhr="${esc(e.so)}" class="${e.skip ? 'dim' : e.dang ? 'bad' : ''}"><td><b>${esc(e.so)}</b></td><td>${dd(e.tu)}<div class="hist">${thuOf(e.tu)}</div></td><td>${e.den ? dd(e.den) : '<span class="err">chưa trả</span>'}</td><td class="num"><b>${e.ngay}</b></td>
+        <td>${e.skip ? '<span class="m">không tính</span>' : e.dang ? '<span class="pill p-err">✕ đang quá hạn</span>' : `<span class="wtxt">${esc(e.kq)}</span>`}</td><td class="hist">${e.skip ? `Không tính: ${esc(e.skip.ly_do || '')} — ${esc(e.skip.by || '')}` : esc(e.why || '')}</td>
+        <td>${e.skip ? `<button class="lnk" data-qhun="${esc(e.key)}">↺ Tính lại</button>` : `<button class="lnk" data-qhskip="${esc(e.key)}" title="Quên đánh dấu đã thu / số liệu sai — không tính lần này (ghi lý do)">Không tính</button>`}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Chưa có lần quá hạn nào</td></tr>'}
+    </tbody></table></section>`;
+}
+/** Bỏ / tính lại một lần quá hạn (lưu vết người, lý do). */
+async function qhSkipSet(c, key, on) {
+  let ly = '';
+  if (on) { ly = prompt('Lý do không tính lần quá hạn này (vd quên đánh dấu đã thu, file Excel ghi sai ngày):', 'Quên đánh dấu đã thu nợ'); if (ly == null) return; }
+  const c0 = cust(c.id), all = { ...(c0.qhSkip || {}) };
+  if (on) all[key] = { ly_do: ly.trim(), by: userName(), at: Date.now() }; else delete all[key];
+  S.store.labelNext(on ? 'Không tính một lần quá hạn' : 'Tính lại lần quá hạn');
+  await S.store.putCustomer({ ...c0, qhSkip: all, ...meta() });
+  log(c.id, 'qua_han', `${on ? 'Không tính' : 'Tính lại'} lần quá hạn KUNN ${key.split('|')[0]} (đáo hạn ${dd(key.split('|')[1])})${ly ? ': ' + ly : ''}`);
+}
+function bindQh(root, c) {
+  $$('[data-qhskip]', root).forEach((b) => { b.onclick = (e) => { e.stopPropagation(); qhSkipSet(c, b.dataset.qhskip, true); }; });
+  $$('[data-qhun]', root).forEach((b) => { b.onclick = (e) => { e.stopPropagation(); qhSkipSet(c, b.dataset.qhun, false); }; });
+}
+/** Ghi ghi chú “KH đã trả hết” cho nhiều KUNN (ngày trả thực tế; = ngày đáo hạn nếu trả đúng hạn). */
+async function markPaid(c, items) {
+  const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; let late = 0;
+  for (const { r, d } of items) {
+    const k = kkey(r.so), lateN = r.dao_han && d > r.dao_han ? BK.daysBetween(r.dao_han, d) : 0; if (lateN) late++;
+    all[k] = [...(all[k] || []), { id: BK.uid(8), type: 'tat_toan', amount: null, ngay: dd(d), text: lateN ? `Trả trễ ${lateN} ngày` : 'Trả đúng hạn', at: Date.now(), by: userName(), row: r.x ? { con_lai: r.x.con_lai ?? null, da_thu: r.x.da_thu ?? null, ngay_thu: r.x.ngay_thu || '' } : null }];
+  }
+  const label = items.length === 1 ? `KH đã trả hết KUNN ${items[0].r.so} ngày ${dd(items[0].d)}` : `Đánh dấu KH đã trả hết ${items.length} KUNN`;
+  S.store.labelNext(label); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() });
+  log(c.id, 'thu_no', `${label}${late ? ` — ${late} KUNN trả trễ (ghi vào lịch sử quá hạn)` : ''}`);
+  toast(`${label}${late ? ` · ${late} lần trả trễ đã ghi vào lịch sử quá hạn` : ' · đúng hạn'} (hoàn tác bằng ↶)`, 'ok', 7000);
+}
+function openThuBulk(c, rows) {
+  const today = BK.todayISO();
+  const xs = rows.filter((r) => r.live && !r.chuaGn && r.dao_han && r.dao_han < today).sort((a, b) => a.dao_han.localeCompare(b.dao_han));
+  if (!xs.length) return toast('Không có KUNN nào đang quá ngày đáo hạn');
+  const m = modal(`<div class="mh"><h2>✓ Đánh dấu KH đã trả nợ</h2><button class="x" data-close aria-label="Đóng">&times;</button></div><div class="mb">
+    <p class="hist">${xs.length} KUNN đang quá ngày đáo hạn. KUNN nào KH đã trả: tick chọn, ghi <b>ngày trả thực tế</b>. Trả đúng hạn mà chỉ quên đánh dấu thì để ngày trả = ngày đáo hạn — không tính quá hạn. Trả sau đáo hạn thì tool ghi vào lịch sử quá hạn của công ty.</p>
+    <div class="bar"><button class="btn sm" id="tbDue">Dòng đã chọn: trả đúng ngày đáo hạn</button><span class="hist">hoặc</span><input type="date" class="inp" id="tbD" value="${today}" max="${today}" style="width:auto"><button class="btn sm" id="tbSet">Đặt ngày này cho dòng đã chọn</button></div>
+    <div class="tw" style="max-height:380px"><table class="t"><thead><tr><th><input type="checkbox" id="tbAll" aria-label="Chọn tất cả"></th><th>Số KUNN</th><th>Đáo hạn</th><th class="right">Dư nợ</th><th>Ngày KH trả</th><th>Ghi nhận</th></tr></thead><tbody>
+      ${xs.map((r, i) => `<tr><td><input type="checkbox" data-tb="${i}"></td><td><b>${esc(r.so)}</b></td><td>${dd(r.dao_han)}<div class="hist">quá ${-r.dLeft} ngày</div></td><td class="num">${r.con_lai != null ? vnd(r.con_lai) : '—'}</td><td><input type="date" class="inp" data-tbd="${i}" value="${r.dao_han}" max="${today}"></td><td data-tbk="${i}"></td></tr>`).join('')}</tbody></table></div>
+    <div class="bar"><button class="btn pri" id="tbOk">Ghi đã trả cho các KUNN đã chọn</button><button class="btn" data-close>Hủy</button></div></div>`, 'wide');
+  const lab = (i) => { const d = $(`[data-tbd="${i}"]`, m).value, r = xs[i], n = d && d > r.dao_han ? BK.daysBetween(r.dao_han, d) : 0; $(`[data-tbk="${i}"]`, m).innerHTML = !d ? '' : n ? `<span class="wtxt">trả trễ ${n} ngày</span>` : '<span class="o">đúng hạn</span>'; };
+  xs.forEach((_, i) => lab(i));
+  m.addEventListener('change', (e) => { if (e.target.dataset.tbd != null) lab(+e.target.dataset.tbd); });
+  const picked = () => $$('[data-tb]:checked', m).map((x) => +x.dataset.tb);
+  $('#tbAll', m).onchange = (e) => $$('[data-tb]', m).forEach((x) => { x.checked = e.target.checked; });
+  $('#tbDue', m).onclick = () => picked().forEach((i) => { $(`[data-tbd="${i}"]`, m).value = xs[i].dao_han; lab(i); });
+  $('#tbSet', m).onclick = () => { const d = $('#tbD', m).value; if (d) picked().forEach((i) => { $(`[data-tbd="${i}"]`, m).value = d; lab(i); }); };
+  $('#tbOk', m).onclick = async () => {
+    const is = picked(); if (!is.length) return toast('Chưa chọn KUNN nào', 'err');
+    const items = is.map((i) => ({ r: xs[i], d: $(`[data-tbd="${i}"]`, m).value || xs[i].dao_han }));
+    if (items.some((x) => x.d > today)) return toast('Ngày trả không được sau hôm nay', 'err');
+    await markPaid(c, items); m.remove();
+  };
 }
 function renderCoKunn(body, c) {
   if (!renderCoKunn.cleaned) renderCoKunn.cleaned = new Set();
@@ -6806,6 +6902,9 @@ function renderCoKunn(body, c) {
     .concat([...S.store.k.values()].filter((k) => k.customerId === c.id && k.deleted && k.lines && !k.purged && !Object.values(kd).some((d) => d.kid === k.id)).map((k) => ({ so: k.so_kunn, ngay_gn: k.ngay_gn, goc: k.manual ? k.so_tien || 0 : BK.sum(k.lines.map((l) => l.tien_gn)), k, dk: 'k:' + k.id, d: { at: k.deletedAt, by: k.deletedBy, kid: k.id }, del: true, bs: [], ns: [] })))
     .sort((a, b) => (b.d.at || 0) - (a.d.at || 0));
   F.push(['goi', '📦 Theo gói', () => false]);
+  F.push(['qh', '⏰ Lịch sử quá hạn', () => false]);
+  const qs = qhStats(c, rows), nOver = rows.filter((r) => r.live && !r.chuaGn && r.dLeft != null && r.dLeft < 0).length;
+  const chipN = (k, fn) => (k === 'goi' ? '' : k === 'qh' ? (qs.on.length ? ` · ${qs.on.length}` : '') : ` · ${k === 'del' ? gone.length : rows.filter(fn).length}`);
   F.push(['del', '🗑 Đã xóa', () => false]);
   const f = F.find((x) => x[0] === (V.kf || 'live')) || F[0];
   const q = BK.fold(V.kq || '');
@@ -6825,13 +6924,18 @@ function renderCoKunn(body, c) {
     const ms = [[r.ngay_gn, `Giải ngân ${dd(r.ngay_gn)}`, r.chuaGn ? 'todo' : 'done', r.chuaGn ? 'dự kiến — hồ sơ chưa bấm “Đã giải ngân”' : r.hs ? 'Hồ sơ giải ngân đã lưu' : '']];
     const nd = r.need;
     if (nd && !nd.none) ms.push([nd.han, nd.done ? 'Đã nhận đủ bản gốc' : `Bổ sung bản gốc — hạn ${dd(nd.han) || '?'}`, nd.done ? 'done' : nd.qua ? 'bad' : 'warn', nd.done ? '' : nd.src === 'goc' ? `Đã nhận ${nd.nDa}/${nd.n} chứng từ` : nd.pend.map((b) => b.ten).join(', ')]);
-    if (r.dao_han) ms.push([r.dao_han, `Đáo hạn ${dd(r.dao_han)} (${thuOf(r.dao_han)}${DOCX.offDay(r.dao_han, holidays()) ? ' — ngày nghỉ' : ''})`, r.chuaGn ? 'todo' : r.live ? (r.dLeft != null && r.dLeft < 0 ? 'bad' : 'todo') : 'done', r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : 'đã tất toán']);
+    if (r.dao_han) ms.push([r.dao_han, `Đáo hạn ${dd(r.dao_han)} (${thuOf(r.dao_han)}${DOCX.offDay(r.dao_han, holidays()) ? ' — ngày nghỉ' : ''})`, r.chuaGn ? 'todo' : r.live ? (r.dLeft != null && r.dLeft < 0 ? 'bad' : 'todo') : 'done', r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : r.paidOn ? `KH trả ${dd(r.paidOn)}${r.paidOn > r.dao_han ? ` — trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày` : ' — đúng hạn'}` : 'đã tất toán']);
     return `<div><b class="big">KUNN ${esc(r.so)}</b><div class="hist">${vnd(r.goc)}${r.ls ? ` · ${String(r.ls).replace('.', ',')}%` : ''}${r.goi ? ' · ' + esc(r.goi) : ''}</div></div>
       <ol class="tl">${ms.map(([, t, st, sub]) => `<li class="${st}"><i></i><span>${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></li>`).join('')}</ol>
       ${nd && nd.src === 'man' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kmx="${k.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}</label><span class="hist">hạn ${esc(b.han || '?')}</span></div>`).join('')}</div>` : ''}
       ${nd && nd.src === 'hs' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.none ? '<div class="hist">Không có chứng từ phải bổ sung</div>' : nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kbx="${r.hs.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}${b.ban ? ` <em>(${esc(b.ban)})</em>` : ''}</label><input type="date" class="inp" data-kbh="${r.hs.id}|${i}" value="${esc(BK.toISO(b.han) || '')}" title="Hạn nhận bản gốc — sửa được"></div>`).join('')}<a class="lnk" href="${hashOf({ cid: c.id, hs: r.hs.id })}">Sửa danh sách trong hồ sơ →</a></div>`
         : k && k.manual ? '' : k ? `<div class="gocl"><b>Bản gốc từng chứng từ</b><label class="bsk">Hạn nhận bản gốc <input type="date" class="inp" data-khan="${k.id}" value="${esc(s ? s.han : '')}" title="Sửa hạn nhận bản gốc"></label>${k.lines.map((l) => `<label><input type="checkbox" data-gk="${k.id}|${l.id}" ${l.goc === 'da_nhan' ? 'checked' : ''}> ${esc(l.ncc)} · HĐ ${esc(l.so_hd)}${l.thieu ? ` <em>— ${esc(l.thieu)}</em>` : ''}</label>`).join('')}</div>` : '<div class="hist">KUNN này chưa có trong sổ hóa đơn của tool (chỉ có trong file Excel).</div>'}
       <div class="hist">${r.x ? `Thu nợ (theo file Excel): ${r.da_thu ? vnd(r.da_thu) + (r.x.ngay_thu ? ' ngày ' + dd(r.x.ngay_thu) : '') : 'chưa thu'} · gốc còn lại ${vnd(r.con_lai)}` : r.chuaSo ? '! Chưa có dòng trong sổ KHE_UOC của file Excel' : ''}</div>
+      ${(() => { if (r.chuaGn) return ''; const eps = qhEpisodes(c, r); const today = BK.todayISO();
+        const head = r.live ? `<div class="hist">${r.dLeft != null && r.dLeft < 0 ? `<span class="err">Quá đáo hạn ${-r.dLeft} ngày.</span> KH đã trả mà chưa đánh dấu thì ghi ngày trả dưới đây — trả đúng hạn sẽ không tính quá hạn.` : 'KH trả hết thì ghi ngày trả để tất toán.'}</div>
+          <div class="ttf">${r.dao_han && r.dao_han <= today ? `<button class="btn sm pri" data-tt="due" title="Quên đánh dấu — KH trả đúng ngày đáo hạn">✓ Đã trả đúng hạn (${dd(r.dao_han)})</button>` : ''}<input type="date" class="inp" id="ttD" value="${today}" max="${today}" title="Ngày KH trả thực tế"><button class="btn sm" data-tt="ngay">✓ KH đã trả hết ngày này</button></div>`
+          : `<div class="hist">${r.paidOn ? `✓ KH trả hết ngày ${dd(r.paidOn)}${r.dao_han ? (r.paidOn > r.dao_han ? ` — <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' — đúng hạn') : ''}` : '✓ Đã tất toán'}${(r.ns || []).some((n) => n.type === 'tat_toan') ? ' · sai thì xóa ghi chú “KH đã trả hết” bên dưới' : ''}</div>`;
+        return `<div class="lsbox thuno"><b>Thu nợ</b>${head}${eps.length ? `<div class="qhl"><b>Lịch sử quá hạn (${eps.filter((e) => !e.skip).length} lần tính)</b>${eps.map((e) => `<div class="${e.skip ? 'm' : e.dang ? 'err' : 'wtxt'}">${dd(e.tu)} → ${e.den ? dd(e.den) : 'nay'}: <b>${e.ngay} ngày</b> · ${esc(e.skip ? 'không tính — ' + (e.skip.ly_do || '') : e.kq)} ${e.skip ? `<button class="lnk" data-qhun="${esc(e.key)}">↺ Tính lại</button>` : `<button class="lnk" data-qhskip="${esc(e.key)}" title="Quên đánh dấu đã thu / số liệu sai">Không tính</button>`}</div>`).join('')}</div>` : ''}</div>`; })()}
       <div class="lsbox"><b>Lãi suất</b>${r.ls0 != null ? `<div class="hist">Ban đầu ${String(r.ls0).replace('.', ',')}%/năm${r.goi ? ` (gói ${esc(r.goi)})` : ''}</div>` : '<div class="hist">Chưa có lãi suất ban đầu (file Excel / hồ sơ)</div>'}
         ${r.lsAdj.length ? `<ul class="lsl">${r.lsAdj.slice().sort((a, b) => a.tu_ngay.localeCompare(b.tu_ngay)).map((a) => `<li class="${a.tu_ngay <= BK.todayISO() ? '' : 'fut'}"><span>Từ ${dd(a.tu_ngay)}: <b>${String(a.ls).replace('.', ',')}%</b>${a.note ? ` · ${esc(a.note)}` : ''}${a.batch ? ' · <em>hàng loạt</em>' : ''}</span><small>${esc(a.by || '')}</small><button class="lnk" data-lsdel="${esc(a.id)}" title="Xóa lần điều chỉnh này">✕</button></li>`).join('')}</ul>` : ''}
         <div class="lsf"><input type="date" class="inp" id="lsD" title="Áp dụng từ ngày"><input class="inp" id="lsV" placeholder="LS mới %/năm" inputmode="decimal"><input class="inp" id="lsN" placeholder="Ghi chú (vd điều chỉnh định kỳ)"><button class="btn sm" id="lsAdd">＋ Điều chỉnh</button></div></div>
@@ -6842,18 +6946,23 @@ function renderCoKunn(body, c) {
         ${k && k.manual ? `<button class="btn sm" data-kedit="${k.id}">✎ Sửa KUNN nhập tay</button>` : ''}<button class="btn sm danger" data-kdel="1" title="Xóa KUNN khỏi bảng theo dõi — lưu ở mục “Đã xóa”, khôi phục được">🗑 Xóa KUNN</button></div>
       ${histHtml(r.so)}`;
   };
-  if (f[0] === 'goi') { body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l}${k === 'goi' ? '' : ` · ${k === 'del' ? gone.length : rows.filter(fn).length}`}</button>`).join('')}</div>${goiReportHtml(c, rows)}`;
+  if (f[0] === 'qh') { body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l}${chipN(k, fn)}</button>`).join('')}${nOver ? `<button class="chip pri" id="kThu">✓ Đánh dấu đã thu nợ · ${nOver} quá hạn</button>` : ''}</div>${qhReportHtml(c, rows)}`;
+    $$('[data-kf]', body).forEach((b) => { b.onclick = () => { V.kf = b.dataset.kf; renderMain(); }; });
+    $$('[data-qhr]', body).forEach((tr) => { tr.onclick = () => { V.kf = 'all'; V.kq = ''; V.kunnSel = null; V.kunnSelSo = tr.dataset.qhr; renderMain(); }; });
+    bindQh(body, c); if ($('#kThu', body)) $('#kThu', body).onclick = () => openThuBulk(c, rows);
+    return; }
+  if (f[0] === 'goi') { body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l}${chipN(k, fn)}</button>`).join('')}</div>${goiReportHtml(c, rows)}`;
     $$('[data-kf]', body).forEach((b) => { b.onclick = () => { V.kf = b.dataset.kf; renderMain(); }; });
     if ($('#goiX', body)) $('#goiX', body).onclick = () => exportGoiReport(c, rows);
     $$('[data-gkr]', body).forEach((tr) => { tr.onclick = () => { V.kf = 'all'; V.kunnSel = null; V.kunnSelSo = tr.dataset.gkr; renderMain(); }; });
     return; }
-  body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l}${k === 'goi' ? '' : ` · ${k === 'del' ? gone.length : rows.filter(fn).length}`}</button>`).join('')}<button class="chip" id="kXls" title="Xuất toàn bộ: KUNN, hạn mức, gói lãi suất, lịch lãi suất, KUNN chưa có trong file Excel, đã xóa">⬇ Excel tổng hợp</button><button class="chip pri" id="kAdd" title="KUNN chưa làm qua hồ sơ trên tool — nhập tay để theo dõi">＋ Thêm KUNN</button><button class="chip" id="lsBulk" title="Lãi suất thả nổi: điều chỉnh lãi suất các KUNN đang vay từ một ngày">± Điều chỉnh lãi suất</button><span style="flex:1"></span>
+  body.innerHTML = `<div class="bar">${F.map(([k, l, fn]) => `<button class="chip ${f[0] === k ? 'on' : ''}" data-kf="${k}">${l}${chipN(k, fn)}</button>`).join('')}${nOver ? `<button class="chip pri" id="kThu" title="KUNN quá đáo hạn mà KH đã trả: ghi ngày trả để tất toán">✓ Đánh dấu đã thu nợ · ${nOver}</button>` : ''}<button class="chip" id="kXls" title="Xuất toàn bộ: KUNN, hạn mức, gói lãi suất, lịch lãi suất, lịch sử quá hạn, KUNN chưa có trong file Excel, đã xóa">⬇ Excel tổng hợp</button><button class="chip pri" id="kAdd" title="KUNN chưa làm qua hồ sơ trên tool — nhập tay để theo dõi">＋ Thêm KUNN</button><button class="chip" id="lsBulk" title="Lãi suất thả nổi: điều chỉnh lãi suất các KUNN đang vay từ một ngày">± Điều chỉnh lãi suất</button><span style="flex:1"></span>
       <input class="inp" id="kq2" placeholder="Số KUNN, số hóa đơn…" value="${esc(V.kq || '')}" style="width:220px"></div>
     ${f[0] === 'bs' && list.some((r) => r.k && r.need && r.need.src === 'goc') ? `<div class="note">KUNN theo từng hóa đơn (nạp từ bảng kê) — nếu đã nhận đủ bản gốc từ trước: <button class="btn sm" id="kGocAll">✓ Đánh dấu đã nhận đủ cho các KUNN đang lọc</button></div>` : ''}
     ${!c.ledger ? '<div class="note warn">Chưa đọc file Excel quản lý giải ngân của công ty — dư nợ, đáo hạn, thu nợ lấy từ file đó. <button class="lnk" data-ctab2="info">Chọn file →</button></div>' : ''}
     <div class="kwrap"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Dư nợ vay (gốc)</th><th>Bổ sung bản gốc</th></tr></thead><tbody>
       ${list.map((r, i) => `<tr data-kr="${i}" class="${r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${String(r.ls0 ?? '?').replace('.', ',')}%</s> → <b>${String(r.ls).replace('.', ',')}%</b>` : `${String(r.ls).replace('.', ',')}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
-        <td>${r.dao_han ? `<b class="${r.live && r.dLeft != null && r.dLeft <= 15 ? 'wtxt' : ''}">${dd(r.dao_han)}</b><div class="hist">${thuHtml(r.dao_han)} · ${r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : 'đã tất toán'}</div>` : r.chuaGn ? '<span class="hist">chưa giải ngân</span>' : '—'}</td>
+        <td>${r.dao_han ? `<b class="${r.live && r.dLeft != null && r.dLeft <= 15 ? 'wtxt' : ''}">${dd(r.dao_han)}</b><div class="hist">${thuHtml(r.dao_han)} · ${r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `<span class="err">quá ${-r.dLeft} ngày</span>`) : r.paidOn ? `đã trả ${dd(r.paidOn)}${r.paidOn > r.dao_han ? ` · <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' · đúng hạn'}` : 'đã tất toán'}</div>` : r.chuaGn ? '<span class="hist">chưa giải ngân</span>' : '—'}</td>
         <td class="num">${r.con_lai != null ? vnd(r.con_lai) : r.chuaGn ? '<span class="hist">hồ sơ chưa bấm Đã giải ngân</span>' : '<span class="m">—</span>'}${r.da_thu ? `<div class="hist">đã thu ${trieu(r.da_thu)}</div>` : ''}</td><td>${needPill(r)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Không có KUNN</td></tr>'}
       </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${hmLedger(c) ? `toàn công ty: hạn mức ${trieu(hmLedger(c))} · khả dụng ${trieu(hmLedger(c) - duNoOf(c))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet">${det(sel)}</aside></div>`;
   $$('[data-kf]', body).forEach((b) => { b.onclick = () => { V.kf = b.dataset.kf; renderMain(); }; });
@@ -6876,7 +6985,10 @@ function renderCoKunn(body, c) {
     if (type === 'gia_han' && !BK.toISO(ngay)) return toast('Nhập ngày trả mới (dd/mm/yyyy)', 'err');
     if (type === 'ghi_chu' && !text) return toast('Nhập nội dung ghi chú', 'err');
     const row = sel.x ? { con_lai: sel.x.con_lai ?? null, da_thu: sel.x.da_thu ?? null, ngay_thu: sel.x.ngay_thu || '' } : null;
-    await saveNotes((xs) => [...xs, { id: BK.uid(8), type, amount: amount || null, ngay: ngay ? dd(BK.toISO(ngay)) || ngay : '', text, at: Date.now(), by: userName(), row }], `Ghi chú KUNN ${sel.so}`);
+    if (type === 'tat_toan' && ngay && BK.toISO(ngay) > BK.todayISO()) return toast('Ngày trả không được sau hôm nay', 'err');
+    const today = BK.todayISO(), qh = type === 'gia_han' && sel.live && sel.dao_han && sel.dao_han < today ? { tu: sel.dao_han, den: today, ngay: BK.daysBetween(sel.dao_han, today) } : null;
+    await saveNotes((xs) => [...xs, { id: BK.uid(8), type, amount: amount || null, ngay: ngay ? dd(BK.toISO(ngay)) || ngay : type === 'tat_toan' ? dd(today) : '', text, at: Date.now(), by: userName(), row, ...(qh ? { qh } : {}) }], `Ghi chú KUNN ${sel.so}`);
+    if (qh) toast(`Đã gia hạn — lần quá hạn ${qh.ngay} ngày trước đó được lưu vào lịch sử quá hạn`, 'warn', 7000);
   };
   const saveLs = async (fn, label) => { if (/chưa số/i.test(sel.so)) return toast('KUNN chưa có số — điền số KUNN trong hồ sơ trước', 'err'); const c0 = cust(c.id), all = structuredClone(c0.lsAdj || {}); fn(all); for (const k of Object.keys(all)) if (!all[k].length) delete all[k]; S.store.labelNext(label); await S.store.putCustomer({ ...c0, lsAdj: all, ...meta() }); log(c.id, 'lai_suat', label); };
   const dec = (q) => { const n = parseFloat(String(q || '').replace(/\s/g, '').replace(',', '.').replace('%', '')); return Number.isFinite(n) ? n : null; };
@@ -6886,6 +6998,13 @@ function renderCoKunn(body, c) {
     saveLs((all) => { const k = kkey(sel.so); (all[k] = all[k] || []).push({ id: BK.uid(8), tu_ngay: d, ls: v, note, at: Date.now(), by: userName() }); }, `Điều chỉnh lãi suất KUNN ${sel.so} từ ${dd(d)}: ${v}%`);
   };
   $('#lsBulk', body).onclick = () => openLsBulk(c, rows);
+  if ($('#kThu', body)) $('#kThu', body).onclick = () => openThuBulk(c, rows);
+  bindQh(body, c);
+  $$('[data-tt]', body).forEach((b) => { b.onclick = () => {
+    const d = b.dataset.tt === 'due' ? sel.dao_han : $('#ttD', body).value;
+    if (!d) return toast('Chọn ngày KH trả', 'err'); if (d > BK.todayISO()) return toast('Ngày trả không được sau hôm nay', 'err');
+    markPaid(c, [{ r: sel, d }]);
+  }; });
   $('#kAdd', body).onclick = () => openKunnForm(c, null);
   $('#kXls', body).onclick = () => exportTongHop(c);
   if ($('#kGocAll', body)) $('#kGocAll', body).onclick = async () => {
@@ -7066,10 +7185,14 @@ function exportTongHop(c) {
   sheet(la, [18, 12, 12, 30, 16, 12], 'Lich lai suat');
   const xo = xlOutRows(c);
   sheet([xo.head, ...xo.rows], xo.head.map(() => 16), 'Chua co trong Excel');
+  { const q = qhStats(c, rows);
+    sheet([['LỊCH SỬ QUÁ HẠN TRẢ NỢ — ' + c.name], [`Số lần quá hạn: ${q.on.length} (${q.nK} KUNN) · đang quá hạn: ${q.dang.length} · lâu nhất ${q.max} ngày · trung bình ${q.avg} ngày · trả đúng hạn ${q.nPaid ? Math.round(((q.nPaid - q.nLate) / q.nPaid) * 100) + '%' : '—'}`], [],
+      ['Số KUNN', 'Ngày đáo hạn', 'Ngày trả / xử lý', 'Số ngày quá hạn', 'Kết quả', 'Tính vào thống kê', 'Lý do / ghi chú', 'Người bỏ qua'],
+      ...q.eps.map((e) => [e.so, dd(e.tu), e.den ? dd(e.den) : 'chưa trả', e.ngay, e.kq, e.skip ? 'Không' : 'Có', e.skip ? e.skip.ly_do || '' : e.why || '', e.skip ? e.skip.by || '' : ''])], [18, 13, 15, 12, 26, 12, 40, 16], 'Lich su qua han'); }
   const del = Object.entries(c.kunnDel || {}).filter(([, d]) => !d.purged).map(([, d]) => [d.so, d.at ? new Date(d.at).toLocaleString('vi-VN') : '', d.by || '', d.row ? d.row.goc || '' : '']);
   sheet([['Số KUNN', 'Xóa lúc', 'Người xóa', 'Số tiền'], ...del], [18, 20, 16, 16], 'Da xoa');
   download(wb, `TongHop_${slug((c.hs || {}).ten_kh_ngan || c.name)}_${today.split('-').reverse().join('')}.xlsx`);
-  toast('Đã xuất Excel tổng hợp (6 sheet)', 'ok');
+  toast('Đã xuất Excel tổng hợp (7 sheet)', 'ok');
 }
 function kunnsNotInXl(c) {
   const L = c.ledger; if (!L) return [];
@@ -7545,7 +7668,8 @@ function renderHoso(el, c) {
       <div><span>Dư nợ sau GN</span><b>${dnt != null ? vnd(dnt + total) : '—'}</b><small>${L ? `file Excel ${new Date(L.at).toLocaleDateString('vi-VN')} + KUNN trong tool` : dnt != null ? 'theo KUNN trong tool' : 'cần file Excel'}</small></div>
       <div><span>Đáo hạn</span><b class="${off ? 'err' : ''}">${dh ? `${dd(dh)} <small>${thuOf(dh)}</small>` : '—'}</b><small>${dh ? `${snv} ngày${off ? ` · <span class="err">! rơi vào ${esc(off)}</span>` : ''}` : 'nhập ngày GN + số ngày vay'}</small>${off ? (() => { const nx = DOCX.workDay(dh, 1, hol), pv = DOCX.workDay(dh, -1, hol); return `<div class="dhfix"><button class="btn sm" data-snv="${BK.daysBetween(gnIso, pv)}" title="Đáo hạn vào ngày làm việc liền trước">← ${dd(pv)} (${thuOf(pv)}, ${BK.daysBetween(gnIso, pv)} ngày)</button><button class="btn sm" data-snv="${BK.daysBetween(gnIso, nx)}" title="Đáo hạn vào ngày làm việc kế tiếp">→ ${dd(nx)} (${thuOf(nx)}, ${BK.daysBetween(gnIso, nx)} ngày)</button></div>`; })() : ''}</div>
       <div><span>TestKey</span><b>${tk || '—'}</b><small>${tk ? 'theo mã TTKD, ngày, số tiền' : keyTable() ? 'thiếu mã TTKD / ngày / số tiền' : 'chưa nạp bảng key (Soạn KUNN → TestKey)'}</small></div>
-      <div class="kin"><label>Ngày GN dự kiến<input type="date" class="inp" id="hsNgay" value="${esc(gnIso)}"></label><label>Số ngày vay<input class="inp" id="hsSnv" value="${esc(hs.so_ngay_vay || '')}" placeholder="${esc(p.so_ngay_vay || '')}" style="width:80px"></label>${(() => { const gl = goiOf(c), act = HSC.goiAt(gl, gnIso || BK.todayISO()), cur = hs.goi ? gl.find((g) => BK.fold(g.ma) === BK.fold(hs.goi)) : null; if (!gl.length) return ''; const opts = [...act, ...(cur && !act.includes(cur) ? [cur] : [])]; return `<label title="Gói lãi suất / UBG áp dụng cho khoản này">Gói lãi suất<select class="inp" id="hsGoi"><option value="">Lãi suất thông thường${p.lai_suat ? ` (${esc(p.lai_suat)}%)` : ''}</option>${opts.map((g) => `<option value="${esc(g.ma)}" ${cur === g ? 'selected' : ''}>${esc(g.ma)}${g.ls != null ? ` · ${g.ls}%` : ''}${g.den_ngay ? ` · đến ${dd(g.den_ngay)}` : ''}${HSC.goiActive({ ...g, an: false }, gnIso) ? '' : ' (hết hiệu lực)'}</option>`).join('')}</select></label>`; })()}</div>
+      <div class="kin"><label>Ngày GN dự kiến<input type="date" class="inp" id="hsNgay" value="${esc(gnIso)}"></label><label>Số ngày vay<input class="inp" id="hsSnv" value="${esc(hs.so_ngay_vay || '')}" placeholder="${esc(p.so_ngay_vay || '')}" inputmode="numeric" style="width:100px"></label>${(() => { const gl = goiOf(c), act = HSC.goiAt(gl, gnIso || BK.todayISO()), cur = hs.goi ? gl.find((g) => BK.fold(g.ma) === BK.fold(hs.goi)) : null; if (!gl.length) return ''; const opts = [...act, ...(cur && !act.includes(cur) ? [cur] : [])]; return `<label title="Gói lãi suất / UBG áp dụng cho khoản này">Gói lãi suất<select class="inp" id="hsGoi"><option value="">Lãi suất thông thường${p.lai_suat ? ` (${esc(p.lai_suat)}%)` : ''}</option>${opts.map((g) => `<option value="${esc(g.ma)}" ${cur === g ? 'selected' : ''}>${esc(g.ma)}${g.ls != null ? ` · ${g.ls}%` : ''}${g.den_ngay ? ` · đến ${dd(g.den_ngay)}` : ''}${HSC.goiActive({ ...g, an: false }, gnIso) ? '' : ' (hết hiệu lực)'}</option>`).join('')}</select></label>`; })()}
+        <div class="kin-sync">↔ Ngày GN, số ngày vay (đáo hạn), gói / lãi suất, số KUNN, chứng từ bổ sung <b>dùng chung với bản soạn KUNN &amp; PDGN</b>: sửa ở đây thì mở soạn thấy ngay; sửa trong bản soạn thì bấm Lưu / Xuất Word là hồ sơ cập nhật theo. <button class="lnk" id="hsSoan2" ${kunnDup ? 'disabled' : ''}>📝 Mở KUNN &amp; PDGN →</button></div></div>
     </section>
     <div class="hs3">
       <section class="hscol">
@@ -7599,6 +7723,7 @@ function renderHoso(el, c) {
   $('#hsKunn', el).onchange = (e) => patch((x) => { x.so_kunn = e.target.value.trim(); if (x.so_kunn && !x.ms.so_kunn) x.ms.so_kunn = BK.todayISO(); }, 'Nhập số KUNN');
   $('#hsAiMd', el).onclick = () => hsAiMd(hs.id, c).catch((e) => toast(errMsg(e), 'err', 8000));
   $('#hsSoan', el).onclick = () => hsOpenEditor(hs.id).catch((e) => toast(errMsg(e), 'err'));
+  $('#hsSoan2', el).onclick = () => hsOpenEditor(hs.id).catch((e) => toast(errMsg(e), 'err'));
   $('#hsLedger', el).onclick = () => hsToLedger(hs.id).catch((e) => toast(errMsg(e), 'err'));
   $('#hsBkX', el).onclick = () => hsExportBangKe(hs, c);
   $('#hsZip', el).onclick = () => hsZip(hs, c).catch((e) => toast(errMsg(e), 'err'));
