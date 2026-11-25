@@ -1911,7 +1911,7 @@ const DOCX = (() => {
     { re: /Áp dụng FTP[^:]*:\s*([\d.,]+)\s*%/, keys: ['ftp'] },
   ];
   const LCOL = [
-    [/^stt\b/, 'stt'], [/thu huong|ten don vi|nguoi ban|nha cung cap/, 'ben'], [/so tai khoan|account/, 'tk'], [/ngan hang|bank/, 'nh'],
+    [/^stt\b/, 'stt'], [/thu huong|ten don vi|nguoi ban|nha cung cap|chu tai khoan|ten tai khoan|don vi nhan|nguoi nhan/, 'ben'], [/so tai khoan|account/, 'tk'], [/ngan hang|bank/, 'nh'],
     [/^(so )?hop dong|hdmb/, 'hd'], [/so chung tu|so hoa don|so to khai/, 'so'], [/ngay chung tu|ngay hoa don/, 'ngay'],
     [/tien hop dong|tien hoa don|gia tri/, 'tien_hd'], [/tien thanh toan|tien giai ngan|tien vay/, 'tien_tt'], [/so tien/, 'tien'],
   ];
@@ -1921,8 +1921,9 @@ const DOCX = (() => {
     if (/khe uoc nhan no|de nghi giai ngan/.test(t)) return 'kunn';
     return '';
   }
+  const isTthHdr = (r) => { const f = r.cells.map((c) => fold(ctext(c))); return f.some((x) => /so tai khoan|account n/.test(x)) && f.some((x) => /chu tai khoan|ten tai khoan|thu huong|don vi nhan|nguoi nhan|ten don vi/.test(x)); };
   function learnList(t, values) {
-    const hi = t.rows.findIndex((r) => { const f = r.cells.map((c) => fold(ctext(c))); return f.some((x) => /^stt\b/.test(x)) && f.some((x) => /thu huong|nha cung cap|nguoi ban/.test(x)); });
+    const hi = t.rows.findIndex((r) => { const f = r.cells.map((c) => fold(ctext(c))); return (f.some((x) => /^stt\b/.test(x)) && f.some((x) => /thu huong|nha cung cap|nguoi ban/.test(x))) || isTthHdr(r); });
     if (hi < 0) return false;
     const hdr = t.rows[hi], hs = startCols(hdr);
     const col = {};
@@ -1931,7 +1932,7 @@ const DOCX = (() => {
     const L = keys.includes('tk') ? 'tth' : 'ct';
     let end = hi + 1;
     const first = Math.min(...Object.keys(col).map(Number)), sttC = Object.keys(col).find((c) => col[c] === 'stt');
-    const isTot = (r) => /^(tong|cong)\b/.test(fold(ctext(r.cells[0]) || ctext(r.cells[1] || { blocks: [] })));
+    const isTot = (r) => { const x = fold(ctext(r.cells[0]) || ctext(r.cells[1] || { blocks: [] })).trim(); return /^tong\b/.test(x) || (/^cong\b/.test(x) && !/^cong (ty|doan|hoa)\b/.test(x)); };   // “Cộng” ≠ “Công ty” sau khi bỏ dấu
     const isData = (r) => { const ss = startCols(r); let any = false; for (let j = 0; j < r.cells.length; j++) { const k = col[ss[j]], tx = ctext(r.cells[j]).trim(); if (!k && tx && ss[j] < first) return false; if (k && tx) any = true; if (k === 'stt' && tx && !/^\d+[.)]?$/.test(tx)) return false; } return any || sttC == null; };
     while (end < t.rows.length && !isTot(t.rows[end]) && (end === hi + 1 || isData(t.rows[end]))) end++;
     if (end === hi + 1) return false;
@@ -1998,6 +1999,12 @@ const DOCX = (() => {
     return '';
   }
   /** Áp cho mẫu đã lưu từ trước (chưa có {{bs.*}}). */
+  /** Bảng tài khoản thụ hưởng còn là chữ cố định trong mẫu / bản đã lưu (mẫu nạp trước khi tool nhận kiểu bảng này) → đổi thành bảng danh sách {{tth.*}}. */
+  function learnTthAll(doc) {
+    let n = 0;
+    const f = (bs) => bs.forEach((b) => { if (b.t !== 'tbl') return; if (!b.list && b.rows.some(isTthHdr) && !b.rows.some((r) => r.cells.some((c) => /\{\{/.test(ctext(c))))) { if (learnList(b, {})) n++; } b.rows.forEach((r) => r.cells.forEach((c) => f(c.blocks))); });
+    f(doc.blocks); return n;
+  }
   function learnBsAll(doc) { learnDienGiai(doc); const v = {}; const f = (bs) => bs.forEach((b) => { if (b.t === 'tbl') { learnBs(b, v); b.rows.forEach((r) => r.cells.forEach((c) => f(c.blocks))); } }); f(doc.blocks); return v; }
   function learnCltf(t, values, kind) {
     const hi = t.rows.findIndex((r) => r.cells.some((c) => /han muc duoc cap/.test(fold(ctext(c)))));
@@ -2461,7 +2468,7 @@ const DOCX = (() => {
 
   return { kids, attr, unesc, xesc, parse, serialize, walk, ptext, pview, ctext, pReplace, setCellText, setVMerge, vMerge, gridSpan, clone, fieldsIn, expand, listTables, rowList,
     learn, guessKind, words, bangChu, num, fmtN, addMonths, nextPayDay, calc, checks, linesToCt, prepLists, HS_FIELDS, HS_GROUPS, HS, LIST_COLS, shortName,
-    testKey, keyTableError, extractKeyTable, keyTableFromGrids, keyTableInfo, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, patchTblPre, legacyOn, learnBs, learnBsAll, learnDienGiai, dienGiai };
+    testKey, keyTableError, extractKeyTable, keyTableFromGrids, keyTableInfo, HOL_DEF, parseHolidays, offDay, workDay, rProps, pProps, parseStyles, styleChain, parseNumbering, fmtNum, bullet, redRPr, setCb, PH, HL, patchRPr, patchPPr, patchTcPr, patchTblPre, legacyOn, learnBs, learnBsAll, learnTthAll, learnDienGiai, dienGiai };
 })();
 </script>
 <script id="bk-hs">
@@ -5581,7 +5588,7 @@ async function hsLoadKind(kind) {
   const rd = async (p) => { const f = zip.file(p); return f ? f.async('string') : ''; };
   const docXml = await rd('word/document.xml');
   const tpl = DOCX.parse(docXml);
-  DOCX.learnBsAll(tpl);
+  DOCX.learnBsAll(tpl); DOCX.learnTthAll(tpl);
   const rels = await rd('word/_rels/document.xml.rels');
   const imgs = {}, urls = [];
   for (const m of rels.matchAll(/<Relationship [^>]*Id="([^"]+)"[^>]*Target="(media\/[^"]+)"/g)) {
@@ -5595,7 +5602,9 @@ async function hsLoadKind(kind) {
   K.fromSaved = !!(body && HE.saved.tplAt && HE.saved.tplAt[kind] === t.at);
   if (body && !K.fromSaved) toast(`Mẫu ${HS_KINDS[kind]} đã đổi sau lần lưu trước — phần sửa tay cũ trên ${HS_KINDS[kind]} không dùng được, soạn lại từ mẫu mới`, 'err', 7000);
   HE.kinds[kind] = K;
-  hsBuild(kind, K.fromSaved ? DOCX.parse(body) : null);
+  let model = K.fromSaved ? DOCX.parse(body) : null;
+  if (model && DOCX.learnTthAll(model)) model = DOCX.expand(model, HE.lists);   // bản lưu trước đây: bảng TK thụ hưởng còn chữ cũ → nối vào danh sách
+  hsBuild(kind, model);
 }
 function hsBuild(kind, model) {
   const K = HE.kinds[kind];
@@ -5659,7 +5668,8 @@ function hsSide() {
   const lcell = (L, i, c, l, it) => { const v = esc(it[c] != null ? it[c] : ''), ro = L === 'tth' && c === 'tien' && !it._m ? ' readonly' : '', w = WIDE[L].includes(c);
     return `<label class="${w ? 'w' : ''}">${esc(l)}${LONG[L].includes(c) ? `<textarea class="cell-in" rows="1" data-l="${L}|${i}|${c}"${ro}>${v}</textarea>` : `<input class="cell-in" data-l="${L}|${i}|${c}" value="${v}"${ro}>`}</label>`; };
   const tkSrc = (it) => { if (it.tk || !it.ten) return ''; const k = BK.supKey(it.ten); return (HE.memo || {})[k] ? '' : '<span class="err">chưa có số tài khoản</span>'; };
-  const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="lcards">${HE.lists[L].map((it, i) => `<div class="lcard"><div class="lcard-h"><b>#${i + 1}</b>${L === 'tth' ? tkSrc(it) : ''}${L === 'tth' && it.tkSrc ? `<span class="hist">· ${esc(it.tkSrc)}</span>` : ''}<span class="sp"></span>${L === 'tth' && it._g != null && !it._m ? '<span class="hist" title="Dòng này tự lấy theo nhà cung cấp ở bảng chứng từ — sửa / xóa ở bảng chứng từ">tự lấy từ bảng chứng từ</span>' : `<button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button>`}</div><div class="lcard-g">${DOCX.LIST_COLS[L].map(([c, l]) => lcell(L, i, c, l, it)).join('')}</div></div>`).join('')}</div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
+  const LHINT = { ct: 'Điền vào bảng chứng từ giải ngân của KUNN / PDGN.', tth: 'Điền vào bảng chuyển khoản cho bên thụ hưởng (Tên chủ tài khoản · Số tài khoản · Mở tại ngân hàng) — mục “Phương thức giải ngân” của PDGN. Mỗi dòng một tài khoản nhận tiền; dòng theo nhà cung cấp tự lấy từ bảng chứng từ, thêm dòng khi chuyển cho bên khác (thuế, kho bạc…).', bs: 'Điền vào bảng “Chứng từ bổ sung” của PDGN và theo dõi hạn ở tab Theo dõi KUNN.' };
+  const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="hist" style="margin:2px 0 6px">${LHINT[L]}${used.has(L) ? '' : ` <span class="err">Mẫu Word đang mở chưa có bảng này — tool chưa điền được vào văn bản; nạp lại file Word mẫu nếu mẫu có bảng ${L === 'tth' ? 'tài khoản thụ hưởng' : 'tương ứng'}.</span>`}</div><div class="lcards">${HE.lists[L].map((it, i) => `<div class="lcard"><div class="lcard-h"><b>#${i + 1}</b>${L === 'tth' ? tkSrc(it) : ''}${L === 'tth' && it.tkSrc ? `<span class="hist">· ${esc(it.tkSrc)}</span>` : ''}<span class="sp"></span>${L === 'tth' && it._g != null && !it._m ? '<span class="hist" title="Dòng này tự lấy theo nhà cung cấp ở bảng chứng từ — sửa / xóa ở bảng chứng từ">tự lấy từ bảng chứng từ</span>' : `<button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button>`}</div><div class="lcard-g">${DOCX.LIST_COLS[L].map(([c, l]) => lcell(L, i, c, l, it)).join('')}</div></div>`).join('')}</div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
   const kt = keyTable();
   const hsx = HE.hsId ? hsGet(HE.hsId) : null;
   side.innerHTML = `${hsx ? `<div class="hs-box"><b>↔ Liên kết hồ sơ giải ngân</b> <span class="hist">GN ${hsx.ngay_gn ? dd(BK.toISO(hsx.ngay_gn)) : '?'}${hsx.so_kunn ? ' · KUNN ' + esc(hsx.so_kunn) : ''}${hsx.ls ? ' · LS ' + esc(BK.fmtRate(hsx.ls)) + '%' : ''}${hsx.goi ? ' · gói ' + esc(hsx.goi) : ''}</span>

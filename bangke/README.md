@@ -157,6 +157,9 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   thanh toán, invoice, UNC. Bảng kê không ghi TK thì tool tự điền vào bảng Bên thụ hưởng (ghi nguồn “đọc từ …”); TK đã lưu
   cho công ty được ưu tiên. Bấm **Lưu / Xuất Word** là TK được nhớ cho công ty để lần sau dùng lại.
 - Vẽ bảng Word sát bản gốc hơn: viền theo kiểu bảng có kế thừa, viền riêng từng hàng (bảng dán / nối).
+- Bảng chuyển khoản “Tên chủ tài khoản | Số tài khoản | Mở tại ngân hàng” (không có cột STT) được nhận là bảng **Bên thụ hưởng** —
+  kể cả mẫu / bản soạn đã lưu từ trước (tool tự nối khi mở). Mỗi danh sách ở khung trái ghi rõ điền vào bảng nào; mẫu Word
+  không có bảng đó thì báo.
 
 ## Định dạng số
 - Mặc định hiển thị như hệ thống ngân hàng: **1,234,567 đ**, lãi suất **8.2%**. Đổi sang kiểu Việt (1.234.567 · 8,2%) ở

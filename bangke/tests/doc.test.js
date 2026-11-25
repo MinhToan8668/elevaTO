@@ -263,3 +263,18 @@ test('bên thụ hưởng: dòng thêm tay (kể cả còn trống) không bị 
   l = DOCX.prepLists(l.ct, l.tth);
   assert.deepEqual(l.tth.map((t) => [t.ten, t.tien, t.stt]), [['CTY A', '100', '1'], ['Kho bạc', '5', '2']]);
 });
+
+test('bảng “Tên chủ tài khoản | Số tài khoản | Mở tại Ngân hàng” (không có STT) nhận là bảng bên thụ hưởng — cả mẫu đã nạp từ trước', () => {
+  const xml = docXml(P('2.5 Phương thức giải ngân: chuyển khoản vào khoản của bên thụ hưởng :') + TBL(TR('Tên chủ tài khoản', 'Số tài khoản', 'Mở tại Ngân hàng'), TR('Công ty Cũ', '111222333', 'Ngân hàng Cũ – CN HCM')));
+  const doc = DOCX.parse(xml);
+  assert.equal(DOCX.learnTthAll(doc), 1);
+  const t = doc.blocks.find((b) => b.t === 'tbl');
+  assert.equal(t.list, 'tth');
+  assert.equal(DOCX.learnTthAll(doc), 0, 'học rồi thì không học lại');
+  const out = DOCX.expand(DOCX.clone(doc), { tth: [{ ten: 'CÔNG TY A', tk: '604080009294', nh: 'Cathay – CN HCM' }, { ten: 'Kho bạc', tk: '7111', nh: 'KBNN' }] });
+  const tt = out.blocks.find((b) => b.t === 'tbl');
+  assert.equal(tt.rows.length, 3, 'tiêu đề + 2 bên thụ hưởng');
+  const txt = DOCX.serialize(out, { fill: (k) => ({ 'tth.0.ten': 'CÔNG TY A', 'tth.0.tk': '604080009294', 'tth.1.tk': '7111' })[k] || '' });
+  assert.match(txt, /604080009294[\s\S]*7111/);
+  assert.doesNotMatch(txt, /111222333/, 'không còn số cũ của mẫu');
+});
