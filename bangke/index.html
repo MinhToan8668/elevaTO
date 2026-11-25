@@ -96,7 +96,7 @@ label.f{display:block;font-size:12px;color:var(--ink2);font-weight:600}label.f .
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 .toast{position:fixed;right:18px;bottom:18px;z-index:200;display:flex;flex-direction:column;gap:8px}
 .toast div{background:var(--navy);color:#fff;padding:10px 14px;border-radius:10px;box-shadow:var(--shm);max-width:420px;font-size:13px}
-.toast div.err{background:var(--err)}.toast div.ok{background:var(--ok)}
+.toast div.err{background:var(--err)}.toast div.ok{background:var(--ok)}.toast .tact{margin-left:10px;background:#fff;color:var(--navy,#123);border:0;border-radius:8px;padding:4px 10px;font:inherit;font-weight:700;cursor:pointer}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .hist{font-size:11.5px;color:var(--ink3)}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
@@ -2993,9 +2993,10 @@ async function setTeamCfg(patch) {
   if (S.sync && S.sync.state === 'on') S.sync.queue('cfg', [{ id: 'team', ...S.cfg }]);
 }
 
-function toast(msg, type = '', ms = 4200) {
+function toast(msg, type = '', ms = 4200, act) {
   const d = document.createElement('div');
   d.className = type; d.textContent = msg;
+  if (act) { const b = document.createElement('button'); b.className = 'tact'; b.textContent = act.label; b.onclick = () => { d.remove(); act.fn(); }; d.appendChild(b); ms = Math.max(ms, 10000); }
   $('#toast').appendChild(d);
   setTimeout(() => d.remove(), ms);
 }
@@ -6849,6 +6850,7 @@ async function qhSkipSet(c, key, on) {
   S.store.labelNext(on ? 'Không tính một lần quá hạn' : 'Tính lại lần quá hạn');
   await S.store.putCustomer({ ...c0, qhSkip: all, ...meta() });
   log(c.id, 'qua_han', `${on ? 'Không tính' : 'Tính lại'} lần quá hạn KUNN ${key.split('|')[0]} (đáo hạn ${dd(key.split('|')[1])})${ly ? ': ' + ly : ''}`);
+  toast(on ? 'Đã bỏ lần quá hạn này khỏi thống kê (vẫn lưu vết)' : 'Đã tính lại lần quá hạn này', 'ok', 10000, { label: '↶ Hoàn tác', fn: () => doUndo(false) });
 }
 function bindQh(root, c) {
   $$('[data-qhskip]', root).forEach((b) => { b.onclick = (e) => { e.stopPropagation(); qhSkipSet(c, b.dataset.qhskip, true); }; });
@@ -6856,15 +6858,26 @@ function bindQh(root, c) {
 }
 /** Ghi ghi chú “KH đã trả hết” cho nhiều KUNN (ngày trả thực tế; = ngày đáo hạn nếu trả đúng hạn). */
 async function markPaid(c, items) {
-  const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; let late = 0;
+  const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; let late = 0; const ids = [];
   for (const { r, d } of items) {
     const k = kkey(r.so), lateN = r.dao_han && d > r.dao_han ? BK.daysBetween(r.dao_han, d) : 0; if (lateN) late++;
-    all[k] = [...(all[k] || []), { id: BK.uid(8), type: 'tat_toan', amount: null, ngay: dd(d), text: lateN ? `Trả trễ ${lateN} ngày` : 'Trả đúng hạn', at: Date.now(), by: userName(), row: r.x ? { con_lai: r.x.con_lai ?? null, da_thu: r.x.da_thu ?? null, ngay_thu: r.x.ngay_thu || '' } : null }];
+    const id = BK.uid(8); ids.push(id);
+    all[k] = [...(all[k] || []), { id, type: 'tat_toan', amount: null, ngay: dd(d), text: lateN ? `Trả trễ ${lateN} ngày` : 'Trả đúng hạn', at: Date.now(), by: userName(), row: r.x ? { con_lai: r.x.con_lai ?? null, da_thu: r.x.da_thu ?? null, ngay_thu: r.x.ngay_thu || '' } : null }];
   }
   const label = items.length === 1 ? `KH đã trả hết KUNN ${items[0].r.so} ngày ${dd(items[0].d)}` : `Đánh dấu KH đã trả hết ${items.length} KUNN`;
   S.store.labelNext(label); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() });
   log(c.id, 'thu_no', `${label}${late ? ` — ${late} KUNN trả trễ (ghi vào lịch sử quá hạn)` : ''}`);
-  toast(`${label}${late ? ` · ${late} lần trả trễ đã ghi vào lịch sử quá hạn` : ' · đúng hạn'} (hoàn tác bằng ↶)`, 'ok', 7000);
+  toast(`${label}${late ? ` · ${late} lần trả trễ đã ghi vào lịch sử quá hạn` : ' · đúng hạn'}`, 'ok', 10000, { label: '↶ Hoàn tác', fn: () => unmarkPaid(c, ids) });
+}
+/** Bỏ đánh dấu “KH đã trả hết”: xóa đúng các ghi chú đó (ids) — hoặc mọi ghi chú trả hết của một KUNN (so). */
+async function unmarkPaid(c, ids, so) {
+  const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }, set = new Set(ids || []); let n = 0;
+  for (const k of Object.keys(all)) { if (so && k !== kkey(so)) continue; const before = all[k].length; all[k] = all[k].filter((x) => !(x.type === 'tat_toan' && (so ? true : set.has(x.id)))); n += before - all[k].length; if (!all[k].length) delete all[k]; }
+  if (!n) return toast('Không còn gì để hoàn tác');
+  const label = so ? `Bỏ đánh dấu đã trả KUNN ${so}` : `Hoàn tác đánh dấu đã trả (${n} KUNN)`;
+  S.store.labelNext(label); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() });
+  log(c.id, 'thu_no', label);
+  toast(`${label} — KUNN quay lại đang vay`, 'ok', 8000, { label: '↶ Hoàn tác', fn: () => doUndo(false) });
 }
 function openThuBulk(c, rows) {
   const today = BK.todayISO();
@@ -6934,7 +6947,7 @@ function renderCoKunn(body, c) {
       ${(() => { if (r.chuaGn) return ''; const eps = qhEpisodes(c, r); const today = BK.todayISO();
         const head = r.live ? `<div class="hist">${r.dLeft != null && r.dLeft < 0 ? `<span class="err">Quá đáo hạn ${-r.dLeft} ngày.</span> KH đã trả mà chưa đánh dấu thì ghi ngày trả dưới đây — trả đúng hạn sẽ không tính quá hạn.` : 'KH trả hết thì ghi ngày trả để tất toán.'}</div>
           <div class="ttf">${r.dao_han && r.dao_han <= today ? `<button class="btn sm pri" data-tt="due" title="Quên đánh dấu — KH trả đúng ngày đáo hạn">✓ Đã trả đúng hạn (${dd(r.dao_han)})</button>` : ''}<input type="date" class="inp" id="ttD" value="${today}" max="${today}" title="Ngày KH trả thực tế"><button class="btn sm" data-tt="ngay">✓ KH đã trả hết ngày này</button></div>`
-          : `<div class="hist">${r.paidOn ? `✓ KH trả hết ngày ${dd(r.paidOn)}${r.dao_han ? (r.paidOn > r.dao_han ? ` — <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' — đúng hạn') : ''}` : '✓ Đã tất toán'}${(r.ns || []).some((n) => n.type === 'tat_toan') ? ' · sai thì xóa ghi chú “KH đã trả hết” bên dưới' : ''}</div>`;
+          : `<div class="hist">${r.paidOn ? `✓ KH trả hết ngày ${dd(r.paidOn)}${r.dao_han ? (r.paidOn > r.dao_han ? ` — <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' — đúng hạn') : ''}` : '✓ Đã tất toán'}</div>${(r.ns || []).some((n) => n.type === 'tat_toan') ? `<div class="ttf"><button class="btn sm" data-ttun="1" title="Bấm nhầm — KUNN quay lại đang vay">↺ Bỏ đánh dấu đã trả</button></div>` : ''}`;
         return `<div class="lsbox thuno"><b>Thu nợ</b>${head}${eps.length ? `<div class="qhl"><b>Lịch sử quá hạn (${eps.filter((e) => !e.skip).length} lần tính)</b>${eps.map((e) => `<div class="${e.skip ? 'm' : e.dang ? 'err' : 'wtxt'}">${dd(e.tu)} → ${e.den ? dd(e.den) : 'nay'}: <b>${e.ngay} ngày</b> · ${esc(e.skip ? 'không tính — ' + (e.skip.ly_do || '') : e.kq)} ${e.skip ? `<button class="lnk" data-qhun="${esc(e.key)}">↺ Tính lại</button>` : `<button class="lnk" data-qhskip="${esc(e.key)}" title="Quên đánh dấu đã thu / số liệu sai">Không tính</button>`}</div>`).join('')}</div>` : ''}</div>`; })()}
       <div class="lsbox"><b>Lãi suất</b>${r.ls0 != null ? `<div class="hist">Ban đầu ${String(r.ls0).replace('.', ',')}%/năm${r.goi ? ` (gói ${esc(r.goi)})` : ''}</div>` : '<div class="hist">Chưa có lãi suất ban đầu (file Excel / hồ sơ)</div>'}
         ${r.lsAdj.length ? `<ul class="lsl">${r.lsAdj.slice().sort((a, b) => a.tu_ngay.localeCompare(b.tu_ngay)).map((a) => `<li class="${a.tu_ngay <= BK.todayISO() ? '' : 'fut'}"><span>Từ ${dd(a.tu_ngay)}: <b>${String(a.ls).replace('.', ',')}%</b>${a.note ? ` · ${esc(a.note)}` : ''}${a.batch ? ' · <em>hàng loạt</em>' : ''}</span><small>${esc(a.by || '')}</small><button class="lnk" data-lsdel="${esc(a.id)}" title="Xóa lần điều chỉnh này">✕</button></li>`).join('')}</ul>` : ''}
@@ -7005,6 +7018,7 @@ function renderCoKunn(body, c) {
     if (!d) return toast('Chọn ngày KH trả', 'err'); if (d > BK.todayISO()) return toast('Ngày trả không được sau hôm nay', 'err');
     markPaid(c, [{ r: sel, d }]);
   }; });
+  $$('[data-ttun]', body).forEach((b) => { b.onclick = () => { if (confirm(`Bỏ đánh dấu KH đã trả hết KUNN ${sel.so}? KUNN quay lại đang vay.`)) unmarkPaid(c, null, sel.so); }; });
   $('#kAdd', body).onclick = () => openKunnForm(c, null);
   $('#kXls', body).onclick = () => exportTongHop(c);
   if ($('#kGocAll', body)) $('#kGocAll', body).onclick = async () => {
