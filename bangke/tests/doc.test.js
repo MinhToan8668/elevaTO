@@ -253,3 +253,13 @@ test('TestKey: đọc bảng key từ file Excel — bảng chữ số hai chi�
   assert.equal(DOCX.testKey('880', '2026-11-25', 1000000005, 'VND', b2), '880/1265');
   assert.ok(DOCX.keyTableError(DOCX.keyTableFromGrids({ X: [['abc']] })), 'không có bảng key → để AI đọc');
 });
+
+test('bên thụ hưởng: dòng thêm tay (kể cả còn trống) không bị bỏ khi tính lại theo bảng chứng từ', () => {
+  const ct = DOCX.linesToCt([{ id: 'a', ncc: 'CTY A', so_hd: '1', ngay_hd: '2026-11-01', tien_hd: 100, tien_gn: 100 }]);
+  let l = DOCX.prepLists(ct, []);
+  l = DOCX.prepLists(l.ct, [...l.tth, { ten: '', tk: '', nh: '', tien: '', _m: true }]);
+  assert.equal(l.tth.length, 2);
+  l.tth[1].ten = 'Kho bạc'; l.tth[1].tien = '5';
+  l = DOCX.prepLists(l.ct, l.tth);
+  assert.deepEqual(l.tth.map((t) => [t.ten, t.tien, t.stt]), [['CTY A', '100', '1'], ['Kho bạc', '5', '2']]);
+});

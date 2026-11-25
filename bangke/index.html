@@ -2288,7 +2288,7 @@ const DOCX = (() => {
       if (o) usedOld.add(o);
       return { ten: o.ten || x.ben, tk: o.tk || m.tk || '', nh: o.nh || m.nh || '', tien: fmtN(gsum[i]), stt: String(i + 1), _g: i, ...(!o.tk && m.tk && m.src ? { tkSrc: m.src } : {}) };
     }) : (tth || []).map((t, i) => ({ ...t, stt: String(i + 1) }));
-    if (groups.length) for (const t of tth || []) if (!usedOld.has(t) && t._g == null && (t.ten || '').trim()) out.push({ ...t, stt: String(out.length + 1) });   // bên nhận thêm tay (thuế, kho bạc…)
+    if (groups.length) for (const t of tth || []) if (!usedOld.has(t) && t._g == null && (t._m || (t.ten || '').trim())) out.push({ ...t, _m: true, stt: String(out.length + 1) });   // bên nhận thêm tay (thuế, kho bạc…)
     return { ct, tth: out };
   }
   /** Giá trị tự tính (không đè các trường người dùng đã sửa tay: ov). */
@@ -5656,10 +5656,10 @@ function hsSide() {
   const grp = Object.entries(DOCX.HS_GROUPS).map(([g, l]) => `<details class="hg" ${g !== 'vay' ? 'open' : ''}><summary>${l}</summary>${DOCX.HS_FIELDS.filter((x) => x.g === g).map(f).join('')}</details>`).join('');
   const extra = [...used].filter((k) => !DOCX.HS[k] && !/^(ct|tth)$/.test(k));
   const WIDE = { ct: ['ben', 'hd'], tth: ['ten', 'nh'], bs: ['ten', 'han'] }, LONG = { ct: ['hd'], tth: [], bs: [] };
-  const lcell = (L, i, c, l, it) => { const v = esc(it[c] != null ? it[c] : ''), ro = L === 'tth' && c === 'tien' ? ' readonly' : '', w = WIDE[L].includes(c);
+  const lcell = (L, i, c, l, it) => { const v = esc(it[c] != null ? it[c] : ''), ro = L === 'tth' && c === 'tien' && !it._m ? ' readonly' : '', w = WIDE[L].includes(c);
     return `<label class="${w ? 'w' : ''}">${esc(l)}${LONG[L].includes(c) ? `<textarea class="cell-in" rows="1" data-l="${L}|${i}|${c}"${ro}>${v}</textarea>` : `<input class="cell-in" data-l="${L}|${i}|${c}" value="${v}"${ro}>`}</label>`; };
   const tkSrc = (it) => { if (it.tk || !it.ten) return ''; const k = BK.supKey(it.ten); return (HE.memo || {})[k] ? '' : '<span class="err">chưa có số tài khoản</span>'; };
-  const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="lcards">${HE.lists[L].map((it, i) => `<div class="lcard"><div class="lcard-h"><b>#${i + 1}</b>${L === 'tth' ? tkSrc(it) : ''}${L === 'tth' && it.tkSrc ? `<span class="hist">· ${esc(it.tkSrc)}</span>` : ''}<span class="sp"></span><button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button></div><div class="lcard-g">${DOCX.LIST_COLS[L].map(([c, l]) => lcell(L, i, c, l, it)).join('')}</div></div>`).join('')}</div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
+  const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="lcards">${HE.lists[L].map((it, i) => `<div class="lcard"><div class="lcard-h"><b>#${i + 1}</b>${L === 'tth' ? tkSrc(it) : ''}${L === 'tth' && it.tkSrc ? `<span class="hist">· ${esc(it.tkSrc)}</span>` : ''}<span class="sp"></span>${L === 'tth' && it._g != null && !it._m ? '<span class="hist" title="Dòng này tự lấy theo nhà cung cấp ở bảng chứng từ — sửa / xóa ở bảng chứng từ">tự lấy từ bảng chứng từ</span>' : `<button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button>`}</div><div class="lcard-g">${DOCX.LIST_COLS[L].map(([c, l]) => lcell(L, i, c, l, it)).join('')}</div></div>`).join('')}</div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
   const kt = keyTable();
   const hsx = HE.hsId ? hsGet(HE.hsId) : null;
   side.innerHTML = `${hsx ? `<div class="hs-box"><b>↔ Liên kết hồ sơ giải ngân</b> <span class="hist">GN ${hsx.ngay_gn ? dd(BK.toISO(hsx.ngay_gn)) : '?'}${hsx.so_kunn ? ' · KUNN ' + esc(hsx.so_kunn) : ''}${hsx.ls ? ' · LS ' + esc(BK.fmtRate(hsx.ls)) + '%' : ''}${hsx.goi ? ' · gói ' + esc(hsx.goi) : ''}</span>
@@ -5717,7 +5717,7 @@ function hsBindDoc(sc) {
   m.addEventListener('click', async (e) => {
     const t = e.target.closest('button,li,.df,.dc') || e.target;
     if (t.dataset.reset) { e.preventDefault(); HE.ov.delete(t.dataset.reset); HE.dirty = true; return hsRefresh(); }
-    if (t.dataset.ladd) { const L = t.dataset.ladd; (HE.lists[L] = HE.lists[L] || []).push(L === 'ct' ? { ben: '', hd: '', so: '', ngay: '', tien_hd: '', gn: '' } : L === 'bs' ? { ten: '', ban: 'Sao', han: '' } : { ten: '', tk: '', nh: '' }); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
+    if (t.dataset.ladd) { const L = t.dataset.ladd; (HE.lists[L] = HE.lists[L] || []).push(L === 'ct' ? { ben: '', hd: '', so: '', ngay: '', tien_hd: '', gn: '' } : L === 'bs' ? { ten: '', ban: 'Sao', han: '' } : { ten: '', tk: '', nh: '', tien: '', _m: true }); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
     if (t.dataset.ldel) { const [L, i] = t.dataset.ldel.split('|'); HE.lists[L].splice(+i, 1); HE.listsEdited = true; HE.dirty = true; return hsRefresh(); }
     if (t.id === 'hsReCt') { if (!confirm('Lấy lại bảng chứng từ từ các dòng bảng kê của KUNN (bỏ phần đã sửa ở bảng này)?')) return; HE.lists.ct = DOCX.linesToCt(HE.k.lines); HE.listsEdited = false; HE.dirty = true; return hsRefresh(); }
     if (t.dataset.tplload) return hsPickTemplate(t.dataset.tplload);
