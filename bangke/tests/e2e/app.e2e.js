@@ -753,6 +753,15 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.selectOption('#hsGoi', 'Gói ưu đãi – UBG 002');
   await page.locator('.hs3', { hasText: 'Gói ưu đãi – UBG 002 8.2%: còn' }).waitFor({ state: 'attached' });
   assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '8.2');
+  // ô lãi suất: hiện theo gói nào; sửa tay → báo đã sửa tay, có nút trả về theo gói
+  assert.equal(await page.inputValue('#hsLs'), '8,2');
+  assert.match(await page.locator('.kb-ls').innerText(), /theo gói Gói ưu đãi – UBG 002/);
+  await page.fill('#hsLs', '8,5'); await page.dispatchEvent('#hsLs', 'change');
+  await page.locator('.kb-ls', { hasText: 'đã sửa tay (gói ghi 8,2%)' }).waitFor();
+  await page.locator('.kbar').scrollIntoViewIfNeeded(); await shot(page, '10b-laisuat');
+  assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '8.5');
+  await page.click('[data-lsgoi]');
+  await page.locator('.kb-ls', { hasText: 'theo gói Gói ưu đãi – UBG 002' }).filter({ hasNotText: 'sửa tay' }).waitFor();
   // 🤖 AI tra soát mục đích vay & phù hợp HĐMB → kết quả vào danh sách kiểm tra
   await page.click('#hsAiMd');
   await page.locator('.ck', { hasText: 'AI: Chưa có HĐMB để đối chiếu điều khoản thanh toán' }).waitFor();
