@@ -693,6 +693,9 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   const mid = page.locator('.hscol.mid');
   await mid.locator('.ck.s3', { hasText: 'Số tài khoản nhận tiền Điện lực Mẫu không khớp' }).waitFor();
   assert.match(await mid.innerText(), /118000048033 — VietinBank, UNC \/ lệnh chi ghi 0351000998999/);
+  // số TK bên thụ hưởng AI đọc trên chứng từ → dùng để điền bảng Bên thụ hưởng của PDGN (bảng kê không có TK)
+  const bm = await page.evaluate(() => { const B = window.BKAPP, c = B.cust(B.S.cid), h = B.S.store.hosoOf(c.id)[0]; return B.bankMemo({ ...c, hs: { ...(c.hs || {}), tk: {} } }, h); });
+  assert.ok(Object.values(bm).some((x) => x.tk === '118000048033' && /VietinBank/.test(x.nh) && /đọc từ/.test(x.src)), JSON.stringify(bm));
   assert.match(await mid.locator('.okl').first().textContent(), /2\/2 dòng bảng kê khớp số, ngày, tiền với chứng từ/);
   assert.doesNotMatch(await mid.innerText(), /tờ khai|NSNN/i, 'không có tờ khai thì không soát NSNN');
   assert.match(await page.locator('.kbar').innerText(), /1,420,066,541 đ[\s\S]*Đáo hạn[\s\S]*137 ngày/);
@@ -1010,6 +1013,9 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.click('#hsSoan');
   await page.locator('[data-v="lai_suat"]').waitFor({ state: 'attached' });
   await page.evaluate(() => document.querySelectorAll('details.hg').forEach((d) => { d.open = true; }));
+  // bên thụ hưởng: số TK / ngân hàng tự điền từ chứng từ AI đã đọc (bảng kê không có TK), khung trái dạng thẻ
+  assert.ok(await page.locator('.lcard').count() >= 2, 'danh sách dạng thẻ');
+  if (SHOTS) { await page.evaluate(() => { document.getElementById('toast').innerHTML = ''; document.querySelector('.lcards').scrollIntoView({ block: 'start' }); }); await shot(page, '10d-soan-side'); }
   await page.fill('[data-v="lai_suat"]', '9.1'); await page.press('[data-v="lai_suat"]', 'Tab');
   await page.click('#hsSave');
   await page.locator('.toast div', { hasText: 'Hồ sơ cập nhật theo KUNN / PDGN' }).waitFor();

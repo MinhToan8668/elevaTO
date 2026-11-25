@@ -199,7 +199,13 @@ svg .hit.go{cursor:pointer}svg .hit.go:hover{fill:rgba(0,91,170,.06)}
 /* ── soạn KUNN & PDGN ── */
 .mbox.full{max-width:none;width:calc(100vw - 24px);height:calc(100vh - 48px);display:flex;flex-direction:column;overflow:hidden}
 .modal:has(.mbox.full){padding:12px;align-items:stretch}
-.hs{flex:1;min-height:0;display:grid;grid-template-columns:400px minmax(0,1fr)}
+.hs{flex:1;min-height:0;display:grid;grid-template-columns:var(--hsw,460px) 6px minmax(0,1fr)}
+.hs-drag{cursor:col-resize;background:transparent;border-left:1px solid var(--line)}.hs-drag:hover,.hs-drag.on{background:var(--blue-bg,#dbeafe)}
+.lcards{display:flex;flex-direction:column;gap:6px;margin:4px 0}.lcard{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:rgba(255,255,255,.55)}
+.lcard-h{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);margin-bottom:4px}.lcard-h b{color:var(--ink2)}.lcard-h .sp{flex:1}
+.lcard-g{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}.lcard-g label{display:flex;flex-direction:column;gap:1px;font-size:11px;color:var(--ink3);min-width:0}.lcard-g label.w{grid-column:1/-1}
+.lcard-g .cell-in{min-width:0;width:100%;font-size:13px;border:1px solid var(--line);background:#fff;padding:4px 6px}.lcard-g textarea.cell-in{resize:vertical;min-height:30px;font-family:inherit;line-height:1.35}
+.lcard-g .cell-in[readonly]{background:transparent;border-color:transparent;font-weight:600}
 .hs-side{overflow:auto;border-right:1px solid var(--line);padding:10px 12px;background:var(--card2)}
 .hs-doc{display:flex;flex-direction:column;min-width:0;min-height:0}.hs-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 12px}
 .hs-scroll{flex:1;overflow:auto;background:#e9e5de;padding:18px;position:relative}
@@ -2280,7 +2286,7 @@ const DOCX = (() => {
     const out = groups.length ? groups.map((x, i) => {
       const k = BK.supKey(x.ben) || x.ben, o = old.get(k) || oldG.get(i) || {}, m = memo[k] || {};
       if (o) usedOld.add(o);
-      return { ten: o.ten || x.ben, tk: o.tk || m.tk || '', nh: o.nh || m.nh || '', tien: fmtN(gsum[i]), stt: String(i + 1), _g: i };
+      return { ten: o.ten || x.ben, tk: o.tk || m.tk || '', nh: o.nh || m.nh || '', tien: fmtN(gsum[i]), stt: String(i + 1), _g: i, ...(!o.tk && m.tk && m.src ? { tkSrc: m.src } : {}) };
     }) : (tth || []).map((t, i) => ({ ...t, stt: String(i + 1) }));
     if (groups.length) for (const t of tth || []) if (!usedOld.has(t) && t._g == null && (t.ten || '').trim()) out.push({ ...t, stt: String(out.length + 1) });   // bên nhận thêm tay (thuế, kho bạc…)
     return { ct, tth: out };
@@ -2413,7 +2419,7 @@ const DOCX = (() => {
       const id = attr(m[1], 'w:styleId'), type = attr(m[1], 'w:type');
       const b = /<w:basedOn w:val="([^"]+)"/.exec(m[2]);
       const pp = /<w:pPr>[\s\S]*?<\/w:pPr>/.exec(m[2]), rp = /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(m[2].replace(/<w:pPr>[\s\S]*?<\/w:pPr>/, ''));
-      const tb = /<w:tblBorders>([\s\S]*?)<\/w:tblBorders>/.exec(m[2]);
+      const tb = /<w:tblBorders>([\s\S]*?)<\/w:tblBorders>/.exec(m[2].replace(/<w:tblStylePr[\s\S]*?<\/w:tblStylePr>/g, ''));
       st.s[id] = { type, based: b ? b[1] : '', p: pp ? pProps(pp[0]) : {}, r: rp ? rProps(rp[0]) : {}, tb: tb ? tb[1] : '', def: /w:default="1"/.test(m[1]) };
       if (type === 'paragraph' && /w:default="1"/.test(m[1])) st.defP = id;
       if (type === 'table' && /w:default="1"/.test(m[1])) st.defT = id;
@@ -2477,9 +2483,9 @@ const HSC = (() => {
   const F = (k, l, t = '') => ({ k, l, t });
   const TYPES = {
     bang_ke: { l: 'Bảng kê', g: 'Bảng kê', ord: 3, fields: [] },
-    hoa_don: { l: 'Hóa đơn GTGT', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số hóa đơn'), F('ky_hieu', 'Ký hiệu'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên bán'), F('mst_ban', 'MST bên bán'), F('ben_mua', 'Bên mua'), F('mst_mua', 'MST bên mua'), F('mat_hang', 'Hàng hóa / dịch vụ'), F('tien', 'Tổng tiền thanh toán', 'money'), F('loai_tien', 'Loại tiền')] },
-    hdmb: { l: 'Hợp đồng mua bán / đơn đặt hàng', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số hợp đồng'), F('ngay', 'Ngày ký', 'date'), F('ben_ban', 'Bên bán'), F('ben_mua', 'Bên mua'), F('mat_hang', 'Hàng hóa / dịch vụ'), F('tien', 'Giá trị', 'money'), F('hieu_luc_den', 'Hiệu lực đến', 'date'), F('thanh_toan', 'Điều khoản thanh toán')] },
-    po: { l: 'Đơn đặt hàng (PO)', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số PO'), F('ngay', 'Ngày PO', 'date'), F('ben_ban', 'Nhà cung cấp'), F('ben_mua', 'Bên mua'), F('tien', 'Giá trị PO', 'money'), F('mat_hang', 'Mặt hàng')] },
+    hoa_don: { l: 'Hóa đơn GTGT', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số hóa đơn'), F('ky_hieu', 'Ký hiệu'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên bán'), F('mst_ban', 'MST bên bán'), F('ben_mua', 'Bên mua'), F('mst_mua', 'MST bên mua'), F('mat_hang', 'Hàng hóa / dịch vụ'), F('tien', 'Tổng tiền thanh toán', 'money'), F('loai_tien', 'Loại tiền'), F('tk_nhan', 'Số TK nhận tiền (bên bán)'), F('ngan_hang', 'Ngân hàng của TK')] },
+    hdmb: { l: 'Hợp đồng mua bán / đơn đặt hàng', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số hợp đồng'), F('ngay', 'Ngày ký', 'date'), F('ben_ban', 'Bên bán'), F('ben_mua', 'Bên mua'), F('mat_hang', 'Hàng hóa / dịch vụ'), F('tien', 'Giá trị', 'money'), F('hieu_luc_den', 'Hiệu lực đến', 'date'), F('thanh_toan', 'Điều khoản thanh toán'), F('tk_nhan', 'Số TK nhận tiền (bên bán)'), F('ngan_hang', 'Ngân hàng của TK')] },
+    po: { l: 'Đơn đặt hàng (PO)', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số PO'), F('ngay', 'Ngày PO', 'date'), F('ben_ban', 'Nhà cung cấp'), F('ben_mua', 'Bên mua'), F('tien', 'Giá trị PO', 'money'), F('mat_hang', 'Mặt hàng'), F('tk_nhan', 'Số TK nhận tiền (bên bán)'), F('ngan_hang', 'Ngân hàng của TK')] },
     giao_hang: { l: 'Phiếu giao hàng / nhập kho / biên bản', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên giao')] },
     de_nghi_tt: { l: 'Đề nghị thanh toán', g: 'Hóa đơn & hợp đồng', ord: 6, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên nhận tiền'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận tiền'), F('ngan_hang', 'Ngân hàng')] },
     tien_dien: { l: 'Thông báo tiền điện / nước', g: 'Tiền điện, nước', ord: 6, fields: [F('so', 'Mã KH / số thông báo'), F('ky', 'Kỳ'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Đơn vị thu'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận tiền'), F('ngan_hang', 'Ngân hàng'), F('ben_mua', 'Tên khách hàng')] },
@@ -2487,7 +2493,7 @@ const HSC = (() => {
     nsnn: { l: 'Giấy nộp tiền NSNN', g: 'Hải quan & thuế', ord: 8, fields: [F('so', 'Số chứng từ'), F('ngay', 'Ngày', 'date'), F('to_khai', 'Số tờ khai (cách nhau dấu phẩy)'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK KBNN'), F('ngan_hang', 'KBNN / ngân hàng')] },
     unc: { l: 'UNC / lệnh chi', g: 'Thanh toán', ord: 4, fields: [F('ngay', 'Ngày', 'date'), F('ben_ban', 'Bên nhận'), F('tien', 'Số tiền', 'money'), F('tk_nhan', 'TK nhận'), F('ngan_hang', 'Ngân hàng nhận')] },
     cic: { l: 'CIC', g: 'Thẩm định', ord: 9, fields: [F('mau', 'Mẫu báo cáo (S10A, R20…)'), F('ben_mua', 'Đối tượng tra cứu (doanh nghiệp / cá nhân)'), F('ma_so', 'MST / CCCD của đối tượng'), F('loai_kh', 'Doanh nghiệp hay cá nhân'), F('vai_tro', 'Vai trò (KH vay, người đại diện, bảo lãnh, cổ đông…)'), F('ngay', 'Ngày tra cứu', 'date'), F('nhom_no', 'Nhóm nợ cao nhất')] },
-    invoice: { l: 'Invoice / hợp đồng ngoại', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Người bán'), F('mat_hang', 'Hàng hóa / dịch vụ'), F('tien', 'Số tiền', 'money'), F('loai_tien', 'Loại tiền')] },
+    invoice: { l: 'Invoice / hợp đồng ngoại', g: 'Hóa đơn & hợp đồng', ord: 5, fields: [F('so', 'Số'), F('ngay', 'Ngày', 'date'), F('ben_ban', 'Người bán'), F('mat_hang', 'Hàng hóa / dịch vụ'), F('tien', 'Số tiền', 'money'), F('loai_tien', 'Loại tiền'), F('tk_nhan', 'Số TK nhận tiền (bên bán)'), F('ngan_hang', 'Ngân hàng của TK')] },
     cltf: { l: 'Báo cáo CLTF (CL - KERNEL - TF)', g: 'Thẩm định', ord: 9, fields: [F('ngay', 'Đến ngày', 'date'), F('ben_mua', 'Khách hàng / CIF'), F('hm', 'Hạn mức cho vay (LOAN)', 'money'), F('du_no', 'Dư nợ vay hiện tại', 'money'), F('kha_dung', 'Hạn mức còn khả dụng', 'money')] },
     tra_cuu: { l: 'Kết quả tra cứu hóa đơn', g: 'Thẩm định', ord: 9, fields: [F('so', 'Các số hóa đơn đã tra')] },
     kunn_ky: { l: 'KUNN đã ký', g: 'Văn bản đã ký', ord: 1, fields: [F('so', 'Số KUNN')] },
@@ -2503,6 +2509,7 @@ const HSC = (() => {
 Các loại chứng từ và trường cần đọc:
 ${types}
 mat_hang = tên hàng hóa / dịch vụ chính, ngắn gọn (vd "Thép cuộn cán nóng", "Hạt nhựa PP").
+tk_nhan / ngan_hang = số tài khoản nhận tiền và tên ngân hàng (kèm chi nhánh nếu có) CỦA BÊN BÁN / bên nhận tiền nếu chứng từ ghi (thường ở dòng "Số tài khoản", "STK", "Account No", "Tên ngân hàng", "Bank", "Mở tại"); chép đúng từng chữ số, không có thì "".
 CIC: mỗi báo cáo CIC là MỘT chứng từ riêng (file có nhiều báo cáo thì tách ra). mau = mã mẫu báo cáo in trên báo cáo (vd "S10A", "R20", "S11A", "R21" — thường ở góc trên / tiêu đề), ben_mua = tên doanh nghiệp hoặc cá nhân ĐƯỢC TRA CỨU in trên báo cáo, ma_so = MST (doanh nghiệp) hoặc số CMND / CCCD (cá nhân) của đối tượng đó, loai_kh = "Doanh nghiệp" hoặc "Cá nhân", vai_tro = vai trò nếu báo cáo / tên file ghi rõ (vd "người đại diện", "bên bảo lãnh", "cổ đông") — không rõ thì "", ngay = ngày tra cứu / ngày in báo cáo, nhom_no = MỘT chữ số 1–5 là nhóm nợ cao nhất (không có nợ xấu thì "1").
 Báo cáo "CL - KERNEL - TF" (CLTF) của ngân hàng là loại cltf: hm = AMOUNT của dòng LOAN / LO-LIMITLOAN, du_no = dư nợ vay đang có, kha_dung = phần còn được dùng.
 Quy tắc: ngày ghi dd/mm/yyyy; số tiền ghi số nguyên không dấu phân cách (vd 1116900000); chép đúng số hiệu như trên giấy; trường không thấy thì để "". Tờ khai: "tien" là tổng thuế phải nộp. conf = độ chắc chắn 0..1 về loại chứng từ.
@@ -5348,7 +5355,8 @@ function makeRenderer(ctx) {
   function table(t) {
     const tp = /<w:tblPr>[\s\S]*?<\/w:tblPr>/.exec(t.pre); const tpx = tp ? tp[0] : '';
     const sid = (/<w:tblStyle w:val="([^"]+)"/.exec(tpx) || [])[1] || st.defT;
-    const sb = bordersOf(sid && st.s[sid] ? st.s[sid].tb : ''), tb = { ...sb, ...bordersOf((/<w:tblBorders>[\s\S]*?<\/w:tblBorders>/.exec(tpx) || [''])[0]) };
+    const sb = {}; { const ch = []; let x = sid && st.s[sid], n = 0; while (x && n++ < 10) { ch.unshift(x.tb); x = st.s[x.based]; } ch.forEach((t) => Object.assign(sb, bordersOf(t))); }
+    const tb = { ...sb, ...bordersOf((/<w:tblBorders>[\s\S]*?<\/w:tblBorders>/.exec(tpx) || [''])[0]) };
     const cols = [...t.pre.matchAll(/<w:gridCol w:w="(\d+)"/g)].map((m) => +m[1] / 15);
     const width = cols.reduce((a, b) => a + b, 0);
     const jc = (/<w:jc w:val="(\w+)"/.exec(tpx) || [])[1];
@@ -5356,10 +5364,11 @@ function makeRenderer(ctx) {
     const rows = t.rows.map((r, ri) => {
       let col = 0;
       const nC = r.cells.length;
+      const ex = /<w:tblPrEx>[\s\S]*?<\/w:tblPrEx>/.exec(r.pre || ''), rb = ex ? { ...tb, ...bordersOf((/<w:tblBorders>[\s\S]*?<\/w:tblBorders>/.exec(ex[0]) || [''])[0]) } : tb;
       const cells = r.cells.map((c, ci) => {
         const span = DOCX.gridSpan(c), vm = DOCX.vMerge(c);
         const cb = bordersOf((/<w:tcBorders>[\s\S]*?<\/w:tcBorders>/.exec(c.pre) || [''])[0]);
-        const side = (s, edge, inner) => cb[s] || (edge ? tb[s] : tb[inner]) || 'none';
+        const side = (s, edge, inner) => cb[s] || (edge ? rb[s] : rb[inner]) || 'none';
         const bd = [`border-top:${vm === 'continue' ? 'hidden' : side('top', ri === 0, 'insideH')}`, `border-bottom:${side('bottom', ri === nR - 1, 'insideH')}`, `border-left:${side('left', ci === 0, 'insideV')}`, `border-right:${side('right', ci === nC - 1, 'insideV')}`];
         const fill = (/<w:shd [^>]*w:fill="([0-9A-Fa-f]{6})"/.exec(c.pre) || [])[1];
         const va = (/<w:vAlign w:val="(\w+)"/.exec(c.pre) || [])[1];
@@ -5475,9 +5484,17 @@ function hsVal(k) {
   if (m) { const it = (HE.lists[m[1]] || [])[+m[2]]; return it && it[m[3]] != null ? String(it[m[3]]) : ''; }
   return HE.v[k] != null ? String(HE.v[k]) : '';
 }
+/** Số TK / ngân hàng theo bên thụ hưởng: TK công ty đã lưu (ưu tiên) + TK đọc được trên chứng từ của hồ sơ (hóa đơn, HĐMB, đề nghị TT, UNC…). */
+function bankMemo(c, hsx) {
+  const out = {};
+  for (const d of (hsx && hsx.docs) || []) { if (d.del || !d.f || !d.f.ben_ban || !d.f.tk_nhan) continue; const k = BK.supKey(d.f.ben_ban); if (k && !out[k]) out[k] = { tk: String(d.f.tk_nhan).replace(/\s+/g, ''), nh: d.f.ngan_hang || '', src: `đọc từ ${HSC.TYPES[d.loai].l.toLowerCase()} ${d.f.so || ''}`.trim() }; }
+  for (const [k, v] of Object.entries(((c && c.hs) || {}).tk || {})) if (v && (v.tk || v.nh)) out[k] = { ...out[k], ...v, src: 'đã lưu cho công ty' };
+  return out;
+}
 function hsRecalc() {
   const keys = keyTable();
-  const pl = DOCX.prepLists(HE.lists.ct, HE.lists.tth, (HE.c.hs || {}).tk || {});
+  if (!HE.memo) HE.memo = bankMemo(HE.c, HE.hsId ? hsGet(HE.hsId) : null);
+  const pl = DOCX.prepLists(HE.lists.ct, HE.lists.tth, HE.memo);
   HE.lists.ct = pl.ct; HE.lists.tth = pl.tth;
   Object.assign(HE.v, DOCX.calc(HE.v, HE.lists, HE.ov, { keys }));
 }
@@ -5535,8 +5552,12 @@ async function openHoSo(cid, kid, hsId) {
   const m = modal(`<div class="mh"><h2>📝 Soạn KUNN & PDGN — ${esc(c.name)}${k ? ' · KUNN ' + esc(k.so_kunn || '') : ' · hồ sơ mới'}</h2>
     <span style="flex:1"></span><label class="hist" title="File Word xuất ra giữ màu đỏ ở các chỗ tool điền / bạn sửa — để soát trước khi in"><input type="checkbox" id="hsRed"> Xuất kèm chữ đỏ để soát</label>
     <button class="btn sm" id="hsSave" title="Lưu số liệu & phần sửa tay (Ctrl+S)">💾 Lưu</button><button class="btn sm pri" id="hsExp">⬇ Xuất Word</button><button class="btn sm" id="hsExpAll">⬇ Xuất cả KUNN + PDGN</button><button class="x" id="hsClose">&times;</button></div>
-    <div class="hs"><aside class="hs-side" id="hsSide"></aside><section class="hs-doc"><div class="hs-tabs" id="hsTabs"></div>${wRibbon()}<div class="hs-scroll" id="hsScroll"></div><div class="wstat"><span><span class="df">chữ đỏ</span> = tool tự điền (bấm để sửa)</span><span><span class="lg-ed">nền vàng</span> = đoạn đã sửa tay</span><span>☐ bấm để tick</span><span class="sp"></span><span id="hsStat"></span></div></section></div>`, 'full hsm');
+    <div class="hs"><aside class="hs-side" id="hsSide"></aside><div class="hs-drag" id="hsDrag" title="Kéo để đổi độ rộng khung bên trái"></div><section class="hs-doc"><div class="hs-tabs" id="hsTabs"></div>${wRibbon()}<div class="hs-scroll" id="hsScroll"></div><div class="wstat"><span><span class="df">chữ đỏ</span> = tool tự điền (bấm để sửa)</span><span><span class="lg-ed">nền vàng</span> = đoạn đã sửa tay</span><span>☐ bấm để tick</span><span class="sp"></span><span id="hsStat"></span></div></section></div>`, 'full hsm');
   HE.m = m;
+  { const box = $('.hs', m), w0 = +lsGet('bangke_hsw') || 0; if (w0) box.style.setProperty('--hsw', w0 + 'px');
+    const dg = $('#hsDrag', m); dg.onpointerdown = (e) => { e.preventDefault(); dg.classList.add('on'); dg.setPointerCapture(e.pointerId); const x0 = box.getBoundingClientRect().left;
+      dg.onpointermove = (ev) => { const w = Math.max(320, Math.min(window.innerWidth * 0.6, ev.clientX - x0)); box.style.setProperty('--hsw', w + 'px'); };
+      dg.onpointerup = () => { dg.classList.remove('on'); dg.onpointermove = null; lsSet('bangke_hsw', String(parseInt(getComputedStyle(box).getPropertyValue('--hsw'), 10) || 460)); }; }; }
   $('#hsClose', m).onclick = hsClose;
   $('#hsSave', m).onclick = () => hsSave().catch((e) => toast(errMsg(e), 'err'));
   $('#hsExp', m).onclick = () => hsExport([HE.cur]).catch((e) => toast(errMsg(e), 'err'));
@@ -5634,7 +5655,11 @@ function hsSide() {
   };
   const grp = Object.entries(DOCX.HS_GROUPS).map(([g, l]) => `<details class="hg" ${g !== 'vay' ? 'open' : ''}><summary>${l}</summary>${DOCX.HS_FIELDS.filter((x) => x.g === g).map(f).join('')}</details>`).join('');
   const extra = [...used].filter((k) => !DOCX.HS[k] && !/^(ct|tth)$/.test(k));
-  const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="tw"><table class="t hl"><thead><tr><th>#</th>${DOCX.LIST_COLS[L].map(([, l]) => `<th>${l}</th>`).join('')}<th></th></tr></thead><tbody>${HE.lists[L].map((it, i) => `<tr><td>${i + 1}</td>${DOCX.LIST_COLS[L].map(([c]) => `<td><input class="cell-in" data-l="${L}|${i}|${c}" value="${esc(it[c] != null ? it[c] : '')}"${L === 'tth' && c === 'tien' ? ' readonly' : ''}></td>`).join('')}<td><button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button></td></tr>`).join('')}</tbody></table></div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
+  const WIDE = { ct: ['ben', 'hd'], tth: ['ten', 'nh'], bs: ['ten', 'han'] }, LONG = { ct: ['hd'], tth: [], bs: [] };
+  const lcell = (L, i, c, l, it) => { const v = esc(it[c] != null ? it[c] : ''), ro = L === 'tth' && c === 'tien' ? ' readonly' : '', w = WIDE[L].includes(c);
+    return `<label class="${w ? 'w' : ''}">${esc(l)}${LONG[L].includes(c) ? `<textarea class="cell-in" rows="1" data-l="${L}|${i}|${c}"${ro}>${v}</textarea>` : `<input class="cell-in" data-l="${L}|${i}|${c}" value="${v}"${ro}>`}</label>`; };
+  const tkSrc = (it) => { if (it.tk || !it.ten) return ''; const k = BK.supKey(it.ten); return (HE.memo || {})[k] ? '' : '<span class="err">chưa có số tài khoản</span>'; };
+  const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="lcards">${HE.lists[L].map((it, i) => `<div class="lcard"><div class="lcard-h"><b>#${i + 1}</b>${L === 'tth' ? tkSrc(it) : ''}${L === 'tth' && it.tkSrc ? `<span class="hist">· ${esc(it.tkSrc)}</span>` : ''}<span class="sp"></span><button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button></div><div class="lcard-g">${DOCX.LIST_COLS[L].map(([c, l]) => lcell(L, i, c, l, it)).join('')}</div></div>`).join('')}</div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
   const kt = keyTable();
   const hsx = HE.hsId ? hsGet(HE.hsId) : null;
   side.innerHTML = `${hsx ? `<div class="hs-box"><b>↔ Liên kết hồ sơ giải ngân</b> <span class="hist">GN ${hsx.ngay_gn ? dd(BK.toISO(hsx.ngay_gn)) : '?'}${hsx.so_kunn ? ' · KUNN ' + esc(hsx.so_kunn) : ''}${hsx.ls ? ' · LS ' + esc(BK.fmtRate(hsx.ls)) + '%' : ''}${hsx.goi ? ' · gói ' + esc(hsx.goi) : ''}</span>
@@ -6348,7 +6373,7 @@ async function hsSave() {
     tplAt[kind] = K.t.at;
     if (K.dirty) body[kind] = DOCX.serialize(hsModel(kind), { keepMarks: true });
   }
-  const strip = (L) => L.map(({ _g, ...x }) => x);
+  const strip = (L) => L.map(({ _g, tkSrc, ...x }) => x);
   const doc = { v: { ...HE.v }, auto: HE.auto || {}, ov: [...HE.ov], lists: HE.listsEdited ? { ct: strip(HE.lists.ct), tth: strip(HE.lists.tth), bs: strip(HE.lists.bs || []) } : null, body, tplAt, at: Date.now(), by: userName() };
   if (HE.k) doc.ctSrc = JSON.stringify(DOCX.linesToCt(HE.k.lines).map((x) => [x.ben, x.so, x.ngay, x.tien_hd, x.gn]));
   if (!doc.lists) delete doc.lists;
@@ -8436,7 +8461,7 @@ document.addEventListener('keydown', (e) => { if (e.altKey && e.key === 'F9') { 
 window.BKAPP = { exportDashboard, state: S, buildCustomerWorkbook };
 startStore().catch((e) => { console.error(e); toast('Lỗi khởi động: ' + e.message, 'err', 10000); });
 // cổng cho bài kiểm tra tự động (không dùng trong giao diện)
-window.BKAPP = { S, cust, selectCustomer, makeTemplate, TPL, openHoSo };
+window.BKAPP = { S, cust, selectCustomer, makeTemplate, TPL, openHoSo, bankMemo };
 })();
 </script>
 </body>

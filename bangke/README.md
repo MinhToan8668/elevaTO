@@ -150,6 +150,14 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Sao lưu / Nạp sao lưu**: gói `.zip` gồm dữ liệu, file đính kèm (scan hóa đơn…), mẫu Word, lịch nghỉ; nạp lại được
   cả gói `.zip` lẫn file `.json` cũ (gộp theo bản sửa sau cùng).
 
+## Bản soạn KUNN & PDGN
+- Khung bên trái rộng hơn, **kéo thanh giữa** để đổi độ rộng (tool nhớ). Bảng chứng từ, bên thụ hưởng, chứng từ bổ sung
+  hiện dạng thẻ — mỗi dòng một thẻ, ô dài tự xuống dòng, không cuộn ngang.
+- **Số tài khoản / ngân hàng bên thụ hưởng**: AI đọc thêm số TK và ngân hàng của bên bán trên hóa đơn, HĐMB, PO, đề nghị
+  thanh toán, invoice, UNC. Bảng kê không ghi TK thì tool tự điền vào bảng Bên thụ hưởng (ghi nguồn “đọc từ …”); TK đã lưu
+  cho công ty được ưu tiên. Bấm **Lưu / Xuất Word** là TK được nhớ cho công ty để lần sau dùng lại.
+- Vẽ bảng Word sát bản gốc hơn: viền theo kiểu bảng có kế thừa, viền riêng từng hàng (bảng dán / nối).
+
 ## Định dạng số
 - Mặc định hiển thị như hệ thống ngân hàng: **1,234,567 đ**, lãi suất **8.2%**. Đổi sang kiểu Việt (1.234.567 · 8,2%) ở
   Cài đặt → 5. Định dạng số. Gõ số kiểu nào cũng được. File Word KUNN / PDGN vẫn theo mẫu.
