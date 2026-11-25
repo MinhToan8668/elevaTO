@@ -161,8 +161,8 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 
 ## TestKey
 - **Nạp bảng key**: Cài đặt → 5. TestKey → “🔑 Nạp bảng key / logic TestKey”, hoặc bấm “Nạp bảng key TestKey” ở ô TestKey của
-  hồ sơ. Chọn thẳng file HTML công cụ TestKey cũ (tool đọc khối bảng key trong file, **không chạy mã trong file**), hoặc file
-  `.json`. Có logic / bảng key mới dạng khác thì chọn file đó — AI (Gemini) đọc hiểu và trích bảng key, báo nếu cách tính
+  hồ sơ. Chọn thẳng file **Excel** bảng key (tool tự nhận bảng chữ số A..N × 0..9 theo hàng hoặc cột, danh sách Ngày / Tháng /
+  Loại tiền), file HTML công cụ TestKey cũ (tool đọc khối bảng key trong file, **không chạy mã trong file**), hoặc `.json`. Có logic / bảng key mới dạng khác thì chọn file đó — AI (Gemini) đọc hiểu và trích bảng key, báo nếu cách tính
   khác cách tool tính.
 - Trước khi dùng có hộp **xem trước & thử tính** (mã CN, ngày, số tiền, loại tiền → TestKey) để so với công cụ cũ.
 - Bảng key **chỉ lưu trên máy này** (không đưa lên thư mục chung, không có trong repo). Bảng thiếu key nào (vd A2..A9 — số
