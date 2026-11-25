@@ -494,7 +494,10 @@ tr.cur td{background:var(--blue-bg)}tr.dim td{opacity:.6}
 .bulkn{display:flex;gap:12px;align-items:center;margin-bottom:12px}.bulkn>div{flex:1}
 .khist{margin-top:10px;font-size:12.5px}.khist summary{cursor:pointer;font-weight:700}.khist ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:5px}.khist small{display:block;color:var(--ink3)}
 .wrib #wBd{width:118px}.wrib #wFit{width:150px}.wrib .wtbl{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;border-top:1px dashed var(--line2);padding-top:5px;margin-top:2px}.wrib .wtbl[hidden]{display:none}.wrib .wtt{font-size:12px;color:var(--blue);padding:2px 8px;border-radius:6px;background:var(--blue-bg)}.wrib .rg>.hist{padding:0 4px;font-size:11px}
-.bsl{display:flex;flex-direction:column;gap:4px;margin:6px 0}.bsr2{display:grid;grid-template-columns:auto minmax(0,1fr) 58px 58px auto auto;gap:4px;align-items:center}.bsr2 small{font-size:11px;color:var(--ink3);white-space:nowrap}.bsr2 small.err{color:var(--err)}.bsn{width:58px}
+.bsl{display:flex;flex-direction:column;gap:4px;margin:6px 0}.bsr2{display:flex;flex-direction:column;gap:5px;padding:7px 9px;border:1px solid var(--line2);border-radius:10px;background:rgba(255,255,255,.5)}.bsr2.xong{opacity:.7}
+.bsr-top{display:flex;gap:6px;align-items:center}.bsr-top .bsten{flex:1;min-width:0;font-weight:600}
+.bsr2 .bsr-bot{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;padding-left:22px;font-size:12px;color:var(--ink3)}.bsr2 .bsr-bot>span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.bsr2 .bsr-bot select.cell-in{width:auto;min-width:0;flex:none;font-size:12px;padding:2px 4px;border:1px solid var(--line);border-radius:6px}.bsr2 .bsr-bot input.bsn{width:42px;min-width:0;flex:none;text-align:center;padding:2px 4px;border:1px solid var(--line);border-radius:6px}.bsr2 .bsr-bot small{white-space:nowrap}
+.bsdef{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:8px}.bsdef input.bsn{width:42px;min-width:0;flex:none;text-align:center;padding:2px 4px;border:1px solid var(--line);border-radius:6px}.bsr2 small{font-size:11px;color:var(--ink3);white-space:nowrap}.bsr2 small.err{color:var(--err)}.bsn{width:58px}
 .mbox.wide{max-width:1100px}.pkf{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px 10px;margin-top:8px}
 .xlv{background:rgba(255,255,255,.92);border-radius:12px;padding:10px;overflow:auto;height:100%;color:#111}.xlv h4{margin:6px 0}.xlv .t td{white-space:nowrap;font-size:12px}
 </style>
@@ -1051,10 +1054,17 @@ const BK = (() => {
 
   // ─── tiền, tổng ──────────────────────────────────────────────
   function sum(arr) { let s = 0; for (const x of arr) if (typeof x === 'number' && Number.isFinite(x)) s += x; return s; }
+  let NUMFMT = 'us';
+  try { if (typeof localStorage !== 'undefined' && localStorage.getItem('bangke_numfmt') === 'vn') NUMFMT = 'vn'; } catch (e) { /* mặc định */ }
+  const numLoc = () => (NUMFMT === 'vn' ? 'vi-VN' : 'en-US');
+  const setNumFmt = (x) => { NUMFMT = x === 'vn' ? 'vn' : 'us'; };
+  const getNumFmt = () => NUMFMT;
+  /** Lãi suất / tỷ lệ: 8.2 (mặc định) hoặc 8,2 (kiểu Việt). */
+  const fmtRate = (v) => (v == null || v === '' ? '' : NUMFMT === 'vn' ? String(v).replace('.', ',') : String(v));
   function fmtMoney(n, cur) {
     if (n == null || !Number.isFinite(n)) return '';
     const isVnd = !cur || /VN/.test(cur);
-    return n.toLocaleString('vi-VN', { maximumFractionDigits: isVnd ? 0 : 2, minimumFractionDigits: 0 });
+    return n.toLocaleString(numLoc(), { maximumFractionDigits: isVnd ? 0 : 2, minimumFractionDigits: 0 });
   }
   const tolOf = (cur) => (!cur || /VN/i.test(cur) ? 1 : 0.01);
 
@@ -1531,7 +1541,7 @@ const BK = (() => {
     if (k.so_tien != null && lines.length && Math.abs(k.so_tien - tong) > 1 && !(k.ack || []).includes('tong_lech')) out.push({ lineId: null, idx: -1, type: 'tong_lech', sev: 1, text: `Tổng các dòng ${fmtMoney(tong)} ≠ số tiền KUNN ${fmtMoney(k.so_tien)}` });
     return out;
   }
-  return { storedProfile, kunnFixPatches, UNITS, detectUnit, applyUnit, profileColumns, AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
+  return { numLoc, setNumFmt, getNumFmt, fmtRate, storedProfile, kunnFixPatches, UNITS, detectUnit, applyUnit, profileColumns, AUDIT, auditKunn, rowText, FIELDS, FIELD, GOC, CHECK, fold, supKey, mstKey, invNo, parseAmount, toISO, fmtDate, daysBetween, todayISO, colName, colIndex, headerField, scoreHeaderRow, detectHeader, extractTitleInfo, classifyDocNote, extractRows, autoParseSheet, pickSheet, sum, fmtMoney, supId, weakKey, strongKey, analyze, worstFlag, checkNew, normKunn, kunnSummary, addDays, customerSummary, uid, cleanLine, gridToPrompt, parseAIJson, aiMappingToMap, aiRowsToGroups };
 })();
 </script>
 <script id="bk-doc">
@@ -2459,7 +2469,7 @@ const HSC = (() => {
   const num = (v) => { if (v == null || v === '') return null; if (typeof v === 'number') return v; const n = BK.parseAmount(String(v)); return Number.isFinite(n) ? n : null; };
   const iso = (v) => BK.toISO(v);
   const dmy = (v) => BK.fmtDate(iso(v) || '');
-  const fmtN = (n) => (n == null || !Number.isFinite(n) ? '' : Math.round(n).toLocaleString('vi-VN'));
+  const fmtN = (n) => (n == null || !Number.isFinite(n) ? '' : Math.round(n).toLocaleString(BK.numLoc()));
   const digits = (s) => String(s == null ? '' : s).replace(/\D/g, '');
   const normNo = (s) => BK.invNo(s);
 
@@ -3658,7 +3668,7 @@ function renderHeaderOnly() { renderMain(); }
 const VC = { series: '#16A34A', good: '#0ca30c', warn: '#fab219', idle: '#b9b2a6', crit: '#d03b3b', grid: '#ece6da', axis: '#8C7E71' };
 function shortMoney(n) {
   if (n == null || !Number.isFinite(n)) return '—';
-  const a = Math.abs(n), f = (x, d) => x.toLocaleString('vi-VN', { maximumFractionDigits: d });
+  const a = Math.abs(n), f = (x, d) => x.toLocaleString(BK.numLoc(), { maximumFractionDigits: d });
   if (a >= 1e12) return f(n / 1e12, 2) + ' nghìn tỷ';
   if (a >= 1e9) return f(n / 1e9, a >= 1e11 ? 0 : 1) + ' tỷ';
   if (a >= 1e6) return f(n / 1e6, a >= 1e8 ? 0 : 1) + ' tr';
@@ -5627,7 +5637,7 @@ function hsSide() {
   const lst = (L, title) => `<details class="hg" open><summary>${title} <small>${HE.lists[L].length} dòng</small></summary><div class="tw"><table class="t hl"><thead><tr><th>#</th>${DOCX.LIST_COLS[L].map(([, l]) => `<th>${l}</th>`).join('')}<th></th></tr></thead><tbody>${HE.lists[L].map((it, i) => `<tr><td>${i + 1}</td>${DOCX.LIST_COLS[L].map(([c]) => `<td><input class="cell-in" data-l="${L}|${i}|${c}" value="${esc(it[c] != null ? it[c] : '')}"${L === 'tth' && c === 'tien' ? ' readonly' : ''}></td>`).join('')}<td><button class="lnk" data-ldel="${L}|${i}" title="Xóa dòng">✕</button></td></tr>`).join('')}</tbody></table></div><button class="lnk" data-ladd="${L}">＋ Thêm dòng</button>${L === 'ct' && HE.k ? ' · <button class="lnk" id="hsReCt">↺ Lấy lại từ bảng kê KUNN</button>' : ''}</details>`;
   const kt = keyTable();
   const hsx = HE.hsId ? hsGet(HE.hsId) : null;
-  side.innerHTML = `${hsx ? `<div class="hs-box"><b>↔ Liên kết hồ sơ giải ngân</b> <span class="hist">GN ${hsx.ngay_gn ? dd(BK.toISO(hsx.ngay_gn)) : '?'}${hsx.so_kunn ? ' · KUNN ' + esc(hsx.so_kunn) : ''}${hsx.ls ? ' · LS ' + esc(String(hsx.ls).replace('.', ',')) + '%' : ''}${hsx.goi ? ' · gói ' + esc(hsx.goi) : ''}</span>
+  side.innerHTML = `${hsx ? `<div class="hs-box"><b>↔ Liên kết hồ sơ giải ngân</b> <span class="hist">GN ${hsx.ngay_gn ? dd(BK.toISO(hsx.ngay_gn)) : '?'}${hsx.so_kunn ? ' · KUNN ' + esc(hsx.so_kunn) : ''}${hsx.ls ? ' · LS ' + esc(BK.fmtRate(hsx.ls)) + '%' : ''}${hsx.goi ? ' · gói ' + esc(hsx.goi) : ''}</span>
       <div class="hist">Ngày GN, số KUNN, lãi suất, số ngày vay / đáo hạn, bảng “Chứng từ bổ sung” lấy từ hồ sơ khi mở; sửa ở đây rồi bấm <b>Lưu</b> hoặc <b>Xuất Word</b> là hồ sơ và KUNN theo dõi cập nhật theo.</div>
       <button class="lnk" id="hsBack">← Về hồ sơ (đóng bản soạn)</button></div>` : HE.kid ? '<div class="hs-box"><b>Chưa gắn hồ sơ giải ngân</b><div class="hist">Bản soạn từ Sổ hóa đơn — số liệu sửa ở đây chỉ lưu vào KUNN này.</div></div>' : ''}<div class="hs-box"><b>Mẫu Word của KH</b>${Object.entries(HS_KINDS).map(([k, l]) => { const K = HE.kinds[k] || {}; return `<div class="hs-tpl"><span>${l}: ${K.t ? `${K.t.own ? 'mẫu riêng KH' : 'mẫu chung'} · ${(K.used || []).length} trường` : '<span class="err">chưa có</span>'}</span><button class="lnk" data-tplload="${k}">⬆ Nạp file Word</button>${K.t ? `<button class="lnk" data-tpldl="${k}" title="Tải mẫu có {{trường}} về để chỉnh trong Word">⬇ Tải mẫu</button>` : ''}</div>`; }).join('')}
       <div class="hist">File Word lần trước của KH là đủ — tool tự nhận ô cần điền, giữ nguyên phần riêng của KH.</div></div>
@@ -6472,8 +6482,8 @@ const hmLedger = (c, date) => { const v = hmVer(c, date); return (v && v.hm_tong
 const goiOf = (c) => HSC.goiMerge(c && c.ledger ? c.ledger.ubg : [], (c || {}).goiLs);
 /** Các KUNN để tính đã dùng theo gói: dòng file Excel + KUNN của tool chưa có trong file. */
 const goiRowsOf = (c) => { const tk = new Map(S.store.kunnsOf(c.id).map((k) => [kkey(k.so_kunn), k])); const xl = c.ledger ? c.ledger.kunns.map((x) => { const k = tk.get(kkey(x.so)); return { so: x.so, goi: x.goi || (k && k.goi) || '', goc: x.goc, kid: k ? k.id : '', hsId: k ? k.hsId || '' : '' }; }) : []; const have = new Set(xl.map((x) => kkey(x.so))); return xl.concat(S.store.kunnsOf(c.id).filter((k) => !have.has(kkey(k.so_kunn))).map((k) => ({ so: k.so_kunn, goi: k.goi, goc: k.manual ? k.so_tien || 0 : BK.sum(k.lines.map((l) => l.tien_gn)), kid: k.id, hsId: k.hsId || '' }))); };
-const trieu = (n) => (n == null ? '—' : Math.round(n / 1e6).toLocaleString('vi-VN') + ' tr');
-const vnd = (n) => (n == null || !Number.isFinite(n) ? '—' : Math.round(n).toLocaleString('vi-VN') + ' đ');
+const trieu = (n) => (n == null ? '—' : Math.round(n / 1e6).toLocaleString(BK.numLoc()) + ' tr');
+const vnd = (n) => (n == null || !Number.isFinite(n) ? '—' : Math.round(n).toLocaleString(BK.numLoc()) + ' đ');
 const SEV = { 3: ['✕', 'e'], 2: ['!', 'w'], 1: ['→', 'i'], 0: ['✓', 'o'] };
 function goTask(t) {
   if (t.go.hs) return go({ cid: t.cid, hs: t.go.hs, doc: null });
@@ -6818,10 +6828,10 @@ function goiReportHtml(c, rows) {
   if (!gs.length) return '<div class="card empty">Chưa có KUNN / gói lãi suất</div>';
   return `<div class="bar" style="justify-content:space-between"><span class="hist">${gs.filter((x) => !x.none).length} gói · KUNN theo cột Gói của file Excel và gói đã chọn trong hồ sơ</span><button class="btn sm" id="goiX">⬇ Xuất Excel báo cáo theo gói</button></div>
     <div class="goig">${gs.map((x) => { const pct = x.g.tong ? Math.min(100, Math.round((x.gn / x.g.tong) * 100)) : null;
-      return `<section class="card goic ${x.act ? '' : 'dim'}"><header><div><b>${esc(x.g.ma)}</b>${x.g.ls != null ? ` <span class="pill">${String(x.g.ls).replace('.', ',')}%</span>` : ''}${x.none ? '' : x.act ? ' <span class="pill p-ok">đang hiệu lực</span>' : ' <span class="pill">hết hiệu lực</span>'}<div class="hist">${esc(x.g.ten || '')}${x.g.tu_ngay || x.g.den_ngay ? ` · ${x.g.tu_ngay ? dd(x.g.tu_ngay) : '…'} → ${x.g.den_ngay ? dd(x.g.den_ngay) : '…'}` : ''}</div></div></header>
+      return `<section class="card goic ${x.act ? '' : 'dim'}"><header><div><b>${esc(x.g.ma)}</b>${x.g.ls != null ? ` <span class="pill">${BK.fmtRate(x.g.ls)}%</span>` : ''}${x.none ? '' : x.act ? ' <span class="pill p-ok">đang hiệu lực</span>' : ' <span class="pill">hết hiệu lực</span>'}<div class="hist">${esc(x.g.ten || '')}${x.g.tu_ngay || x.g.den_ngay ? ` · ${x.g.tu_ngay ? dd(x.g.tu_ngay) : '…'} → ${x.g.den_ngay ? dd(x.g.den_ngay) : '…'}` : ''}</div></div></header>
         <div class="tiles t4">${tile('Đã giải ngân', trieu(x.gn), `${x.n} KUNN${x.nCho ? ` · chờ GN ${trieu(x.choGn)}` : ''}`)}${tile('Dư nợ hiện tại', trieu(x.dn), `${x.nLive} KUNN đang vay`)}${tile('Hạn mức gói', x.g.tong ? trieu(x.g.tong) : '—', x.g.tong ? `đã dùng ${pct}%` : 'không giới hạn')}${tile('Còn lại', x.con != null ? trieu(x.con) : '—', '', { tone: x.con != null && x.con < 0 ? 'crit' : '' })}</div>
         ${pct != null ? `<div class="gbar"><i style="width:${pct}%" class="${pct >= 90 ? 'hot' : ''}"></i></div>` : ''}
-        ${x.ks.length ? `<details ${x.ks.length <= 6 ? 'open' : ''}><summary>${x.ks.length} KUNN</summary><div class="tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th class="right">Gốc</th><th class="right">Còn lại</th><th>Đáo hạn</th><th class="right">LS</th></tr></thead><tbody>${x.ks.map((r) => `<tr data-gkr="${esc(r.so)}"><td><b>${esc(r.so)}</b></td><td>${dd(r.ngay_gn)}</td><td class="num">${vnd(r.goc)}</td><td class="num">${r.con_lai != null ? vnd(r.con_lai) : '—'}</td><td>${r.dao_han ? dd(r.dao_han) : '—'}</td><td class="num">${r.ls != null ? String(r.ls).replace('.', ',') + '%' : '—'}</td></tr>`).join('')}</tbody></table></div></details>` : '<div class="hist">Chưa có KUNN dùng gói này</div>'}</section>`; }).join('')}</div>`;
+        ${x.ks.length ? `<details ${x.ks.length <= 6 ? 'open' : ''}><summary>${x.ks.length} KUNN</summary><div class="tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th class="right">Gốc</th><th class="right">Còn lại</th><th>Đáo hạn</th><th class="right">LS</th></tr></thead><tbody>${x.ks.map((r) => `<tr data-gkr="${esc(r.so)}"><td><b>${esc(r.so)}</b></td><td>${dd(r.ngay_gn)}</td><td class="num">${vnd(r.goc)}</td><td class="num">${r.con_lai != null ? vnd(r.con_lai) : '—'}</td><td>${r.dao_han ? dd(r.dao_han) : '—'}</td><td class="num">${r.ls != null ? BK.fmtRate(r.ls) + '%' : '—'}</td></tr>`).join('')}</tbody></table></div></details>` : '<div class="hist">Chưa có KUNN dùng gói này</div>'}</section>`; }).join('')}</div>`;
 }
 function exportGoiReport(c, rows) {
   const gs = goiGroups(c, rows), wb = XLSX.utils.book_new();
@@ -7097,7 +7107,7 @@ function renderCoKunn(body, c) {
     const nd = r.need;
     if (nd && !nd.none) ms.push([nd.han, nd.done ? 'Đã nhận đủ bản gốc' : `Bổ sung bản gốc — hạn ${dd(nd.han) || '?'}`, nd.done ? 'done' : nd.qua ? 'bad' : 'warn', nd.done ? '' : nd.src === 'goc' ? `Đã nhận ${nd.nDa}/${nd.n} chứng từ` : nd.pend.map((b) => b.ten).join(', ')]);
     if (r.dao_han) ms.push([r.dao_han, `Đáo hạn ${dd(r.dao_han)} (${thuOf(r.dao_han)}${DOCX.offDay(r.dao_han, holidays()) ? ' — ngày nghỉ' : ''})`, r.chuaGn ? 'todo' : r.live ? (r.dLeft != null && r.dLeft < 0 ? 'bad' : 'todo') : 'done', r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `quá ${-r.dLeft} ngày`) : r.paidOn ? `KH trả ${dd(r.paidOn)}${r.paidOn > r.dao_han ? ` — trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày` : ' — đúng hạn'}` : 'đã tất toán']);
-    return `<div><b class="big">KUNN ${esc(r.so)}</b><div class="hist">${vnd(r.goc)}${r.ls ? ` · ${String(r.ls).replace('.', ',')}%` : ''}${r.goi ? ' · ' + esc(r.goi) : ''}</div></div>
+    return `<div><b class="big">KUNN ${esc(r.so)}</b><div class="hist">${vnd(r.goc)}${r.ls ? ` · ${BK.fmtRate(r.ls)}%` : ''}${r.goi ? ' · ' + esc(r.goi) : ''}</div></div>
       <ol class="tl">${ms.map(([, t, st, sub]) => `<li class="${st}"><i></i><span>${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></li>`).join('')}</ol>
       ${nd && nd.src === 'man' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kmx="${k.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}</label><span class="hist">hạn ${esc(b.han || '?')}</span></div>`).join('')}</div>` : ''}
       ${nd && nd.src === 'hs' ? `<div class="gocl"><b>Chứng từ bổ sung bản gốc</b>${nd.none ? '<div class="hist">Không có chứng từ phải bổ sung</div>' : nd.items.map((b, i) => `<div class="bsk"><label><input type="checkbox" data-kbx="${r.hs.id}|${i}" ${b.xong ? 'checked' : ''}> ${esc(b.ten || '(chưa đặt tên)')}${b.ban ? ` <em>(${esc(b.ban)})</em>` : ''}</label><input type="date" class="inp" data-kbh="${r.hs.id}|${i}" value="${esc(BK.toISO(b.han) || '')}" title="Hạn nhận bản gốc — sửa được"></div>`).join('')}<a class="lnk" href="${hashOf({ cid: c.id, hs: r.hs.id })}">Sửa danh sách trong hồ sơ →</a></div>`
@@ -7111,8 +7121,8 @@ function renderCoKunn(body, c) {
           <div class="ttf">${r.dao_han && r.dao_han <= today ? `<button class="btn sm pri" data-tt="due" title="Quên đánh dấu — KH trả đúng ngày đáo hạn">✓ Đã trả đúng hạn (${dd(r.dao_han)})</button>` : ''}<input type="date" class="inp" id="ttD" value="${today}" max="${today}" title="Ngày KH trả thực tế"><button class="btn sm" data-tt="ngay">✓ KH đã trả hết ngày này</button></div>`
           : `<div class="hist">${r.paidOn ? `✓ KH trả hết ngày ${dd(r.paidOn)}${r.dao_han ? (r.paidOn > r.dao_han ? ` — <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' — đúng hạn') : ''}` : '✓ Đã tất toán'}</div>${(r.ns || []).some((n) => n.type === 'tat_toan') ? `<div class="ttf"><button class="btn sm" data-ttun="1" title="Bấm nhầm — KUNN quay lại đang vay">↺ Bỏ đánh dấu đã trả</button></div>` : ''}`;
         return `<div class="lsbox thuno"><b>Thu nợ</b>${head}${eps.length ? `<div class="qhl"><b>Lịch sử quá hạn (${eps.filter((e) => !e.skip).length} lần tính)</b>${eps.map((e) => `<div class="${e.skip ? 'm' : e.dang ? 'err' : 'wtxt'}">${dd(e.tu)} → ${e.den ? dd(e.den) : 'nay'}: <b>${e.ngay} ngày</b> · ${esc(e.skip ? 'không tính — ' + (e.skip.ly_do || '') : e.kq)} ${e.skip ? `<button class="lnk" data-qhun="${esc(e.key)}">↺ Tính lại</button>` : `<button class="lnk" data-qhskip="${esc(e.key)}" title="Quên đánh dấu đã thu / số liệu sai">Không tính</button>`}</div>`).join('')}</div>` : ''}</div>`; })()}
-      <div class="lsbox"><b>Lãi suất</b>${r.ls0 != null ? `<div class="hist">Ban đầu ${String(r.ls0).replace('.', ',')}%/năm${r.goi ? ` (gói ${esc(r.goi)})` : ''}</div>` : '<div class="hist">Chưa có lãi suất ban đầu (file Excel / hồ sơ)</div>'}
-        ${r.lsAdj.length ? `<ul class="lsl">${r.lsAdj.slice().sort((a, b) => a.tu_ngay.localeCompare(b.tu_ngay)).map((a) => `<li class="${a.tu_ngay <= BK.todayISO() ? '' : 'fut'}"><span>Từ ${dd(a.tu_ngay)}: <b>${String(a.ls).replace('.', ',')}%</b>${a.note ? ` · ${esc(a.note)}` : ''}${a.batch ? ' · <em>hàng loạt</em>' : ''}</span><small>${esc(a.by || '')}</small><button class="lnk" data-lsdel="${esc(a.id)}" title="Xóa lần điều chỉnh này">✕</button></li>`).join('')}</ul>` : ''}
+      <div class="lsbox"><b>Lãi suất</b>${r.ls0 != null ? `<div class="hist">Ban đầu ${BK.fmtRate(r.ls0)}%/năm${r.goi ? ` (gói ${esc(r.goi)})` : ''}</div>` : '<div class="hist">Chưa có lãi suất ban đầu (file Excel / hồ sơ)</div>'}
+        ${r.lsAdj.length ? `<ul class="lsl">${r.lsAdj.slice().sort((a, b) => a.tu_ngay.localeCompare(b.tu_ngay)).map((a) => `<li class="${a.tu_ngay <= BK.todayISO() ? '' : 'fut'}"><span>Từ ${dd(a.tu_ngay)}: <b>${BK.fmtRate(a.ls)}%</b>${a.note ? ` · ${esc(a.note)}` : ''}${a.batch ? ' · <em>hàng loạt</em>' : ''}</span><small>${esc(a.by || '')}</small><button class="lnk" data-lsdel="${esc(a.id)}" title="Xóa lần điều chỉnh này">✕</button></li>`).join('')}</ul>` : ''}
         <div class="lsf"><input type="date" class="inp" id="lsD" title="Áp dụng từ ngày"><input class="inp" id="lsV" placeholder="LS mới %/năm" inputmode="decimal"><input class="inp" id="lsN" placeholder="Ghi chú (vd điều chỉnh định kỳ)"><button class="btn sm" id="lsAdd">＋ Điều chỉnh</button></div></div>
       <div class="knotes"><b>Ghi chú quản lý</b>${(r.ns || []).slice().reverse().map((n) => `<div class="kn"><span>${NOTE_T[n.type][0]}</span><div><b>${esc(NOTE_T[n.type][1])}</b>${n.amount ? ` · ${vnd(n.amount)}` : ''}${n.ngay ? ` · ${esc(n.ngay)}` : ''}${n.text ? `<p>${esc(n.text)}</p>` : ''}<small>${esc(n.by || '')} · ${new Date(n.at).toLocaleString('vi-VN')}</small></div><button class="lnk" data-kndel="${esc(n.id)}" title="Xóa ghi chú">✕</button></div>`).join('') || '<div class="hist">Chưa có — ghi lại KH trả 1 phần, gia hạn, quá hạn đang xử lý…</div>'}
         <div class="knf"><select class="inp" id="knT">${Object.entries(NOTE_T).map(([k, [i, l]]) => `<option value="${k}">${i} ${l}</option>`).join('')}</select><input class="inp" id="knA" placeholder="Số tiền trả (nếu có)"><input class="inp" id="knD" placeholder="Ngày (dd/mm/yyyy)"><input class="inp" id="knX" placeholder="Nội dung…"><button class="btn sm pri" id="knAdd">＋ Ghi</button></div>
@@ -7136,7 +7146,7 @@ function renderCoKunn(body, c) {
     ${f[0] === 'bs' && list.some((r) => r.k && r.need && r.need.src === 'goc') ? `<div class="note">KUNN theo từng hóa đơn (nạp từ bảng kê) — nếu đã nhận đủ bản gốc từ trước: <button class="btn sm" id="kGocAll">✓ Đánh dấu đã nhận đủ cho các KUNN đang lọc</button></div>` : ''}
     ${!c.ledger ? '<div class="note warn">Chưa đọc file Excel quản lý giải ngân của công ty — dư nợ, đáo hạn, thu nợ lấy từ file đó. <button class="lnk" data-ctab2="info">Chọn file →</button></div>' : ''}
     <div class="kwrap"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Dư nợ vay (gốc)</th><th>Bổ sung bản gốc</th></tr></thead><tbody>
-      ${list.map((r, i) => `<tr data-kr="${i}" class="${r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${String(r.ls0 ?? '?').replace('.', ',')}%</s> → <b>${String(r.ls).replace('.', ',')}%</b>` : `${String(r.ls).replace('.', ',')}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
+      ${list.map((r, i) => `<tr data-kr="${i}" class="${r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${BK.fmtRate(r.ls0 ?? '?')}%</s> → <b>${BK.fmtRate(r.ls)}%</b>` : `${BK.fmtRate(r.ls)}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
         <td>${r.dao_han ? `<b class="${r.live && r.dLeft != null && r.dLeft <= 15 ? 'wtxt' : ''}">${dd(r.dao_han)}</b><div class="hist">${thuHtml(r.dao_han)} · ${r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `<span class="err">quá ${-r.dLeft} ngày</span>`) : r.paidOn ? `đã trả ${dd(r.paidOn)}${r.paidOn > r.dao_han ? ` · <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' · đúng hạn'}` : 'đã tất toán'}</div>` : r.chuaGn ? '<span class="hist">chưa giải ngân</span>' : '—'}</td>
         <td class="num">${r.con_lai != null ? vnd(r.con_lai) : r.chuaGn ? '<span class="hist">hồ sơ chưa bấm Đã giải ngân</span>' : '<span class="m">—</span>'}${r.da_thu ? `<div class="hist">đã thu ${trieu(r.da_thu)}</div>` : ''}</td><td>${needPill(r)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Không có KUNN</td></tr>'}
       </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${hmLedger(c) ? `toàn công ty: hạn mức ${trieu(hmLedger(c))} · khả dụng ${trieu(hmLedger(c) - duNoOf(c))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet">${det(sel)}</aside></div>`;
@@ -7241,7 +7251,7 @@ function parseVnd(v) {
   if (!any || last !== t.length) return null;
   return unitAny ? Math.round(sum) : sum >= 1e7 ? sum : sum * 1e6;
 }
-const vndExact = (n) => (n == null || n === '' ? '' : Math.round(n).toLocaleString('vi-VN') + ' đ');
+const vndExact = (n) => (n == null || n === '' ? '' : Math.round(n).toLocaleString(BK.numLoc()) + ' đ');
 /** Tính lại tổng / cho vay / L/C của một mục hạn mức theo các hạn mức con. */
 function hmRecalc(h) {
   const ls = h.lines || [];
@@ -7347,7 +7357,7 @@ function exportTongHop(c) {
   const src = (r) => (r.x ? (r.k ? 'File Excel + tool' : 'File Excel') : r.k && r.k.manual ? 'Nhập tay' : r.k && r.k.hsId ? 'Hồ sơ giải ngân' : 'Bảng kê');
   const head = [`TỔNG HỢP THEO DÕI KUNN — ${c.name}`], info = [`Ngày lập: ${dd(today)} · ${userName()}`];
   sheet([head, info, [], ['Số KUNN', 'Ngày giải ngân', 'Ngày đáo hạn', 'Còn (ngày)', 'Số tiền giải ngân', 'Đã thu', 'Dư nợ vay (gốc)', 'LS ban đầu %', 'LS hiện tại %', 'Gói / UBG', 'Bên thụ hưởng', 'Bổ sung bản gốc', 'Hạn bổ sung', 'Trạng thái', 'Nguồn', 'Ghi chú quản lý'],
-    ...rows.map((r) => [r.so, r.ngay_gn ? dd(r.ngay_gn) : '', r.dao_han ? dd(r.dao_han) : '', r.live && r.dLeft != null ? r.dLeft : '', r.goc || 0, r.da_thu || 0, r.chuaGn ? '' : r.con_lai ?? '', r.ls0 ?? '', r.ls ?? '', r.goi || '', r.ben || '', st(r), r.need && r.need.han ? dd(r.need.han) : '', r.chuaGn ? 'Chưa giải ngân' : r.closed ? 'Đã tất toán' : r.live ? 'Đang vay' : 'Đã tất toán', src(r), (r.ns || []).map((n) => `${NOTE_T[n.type][1]}${n.amount ? ' ' + Math.round(n.amount).toLocaleString('vi-VN') : ''}${n.ngay ? ' ' + n.ngay : ''}${n.text ? ': ' + n.text : ''}`).join(' | ')]),
+    ...rows.map((r) => [r.so, r.ngay_gn ? dd(r.ngay_gn) : '', r.dao_han ? dd(r.dao_han) : '', r.live && r.dLeft != null ? r.dLeft : '', r.goc || 0, r.da_thu || 0, r.chuaGn ? '' : r.con_lai ?? '', r.ls0 ?? '', r.ls ?? '', r.goi || '', r.ben || '', st(r), r.need && r.need.han ? dd(r.need.han) : '', r.chuaGn ? 'Chưa giải ngân' : r.closed ? 'Đã tất toán' : r.live ? 'Đang vay' : 'Đã tất toán', src(r), (r.ns || []).map((n) => `${NOTE_T[n.type][1]}${n.amount ? ' ' + Math.round(n.amount).toLocaleString(BK.numLoc()) : ''}${n.ngay ? ' ' + n.ngay : ''}${n.text ? ': ' + n.text : ''}`).join(' | ')]),
     [], ['TỔNG', '', '', '', BK.sum(rows.filter((r) => !r.chuaGn).map((r) => r.goc || 0)), BK.sum(rows.map((r) => r.da_thu || 0)), BK.sum(rows.filter((r) => r.live).map((r) => r.con_lai || 0))]],
     [18, 12, 12, 8, 17, 15, 17, 9, 9, 22, 30, 30, 12, 12, 16, 50], 'Theo doi KUNN');
   const hist = (c.hmHist || []).filter((h) => !h.del).sort((a, b) => (a.tu_ngay || '').localeCompare(b.tu_ngay || ''));
@@ -7357,7 +7367,7 @@ function exportTongHop(c) {
     hmRows.push([h.so_hdtd || '', h.ngay_hdtd ? dd(h.ngay_hdtd) : '', h.tu_ngay ? dd(h.tu_ngay) : '', h.den_ngay ? dd(h.den_ngay) : '', h === cur ? 'Có' : '', 'TỔNG', h.ghi_chu || '', 'VND', h.hm_tong || '', '', h.hm_tong || '']);
     for (const x of h.lines || []) hmRows.push(['', '', '', '', '', (HM_LOAI.find((y) => y[0] === x.loai) || [, x.loai])[1], x.ten || '', x.tien_te || 'VND', x.han_muc ?? '', x.ty_gia || '', hmLineVnd(x) || '']);
   }
-  if (c.ledger || duNoKnown(c)) hmRows.push([], [`Dư nợ hiện tại (file Excel + KUNN trong tool): ${Math.round(duNoOf(c)).toLocaleString('vi-VN')} đ`], [`Hạn mức còn khả dụng: ${hmLedger(c) ? Math.round(hmLedger(c) - duNoOf(c)).toLocaleString('vi-VN') + ' đ' : '—'}`]);
+  if (c.ledger || duNoKnown(c)) hmRows.push([], [`Dư nợ hiện tại (file Excel + KUNN trong tool): ${Math.round(duNoOf(c)).toLocaleString(BK.numLoc())} đ`], [`Hạn mức còn khả dụng: ${hmLedger(c) ? Math.round(hmLedger(c) - duNoOf(c)).toLocaleString(BK.numLoc()) + ' đ' : '—'}`]);
   sheet(hmRows, [20, 11, 11, 13, 10, 24, 26, 8, 18, 10, 18], 'Han muc');
   const gs = goiGroups(c, rows);
   sheet([['Mã gói', 'Tên gói', 'LS %/năm', 'Từ ngày', 'Đến ngày', 'Hạn mức gói', 'Đã giải ngân', 'Còn lại', 'Số KUNN', 'Dư nợ hiện tại', 'Trạng thái'],
@@ -7541,7 +7551,7 @@ function openLedgerDialog(c, grids, fname, cfg0) {
     try { L = HSC.readLedgerSheet(g, st, { hm: (DOCX.num($('#lgHm', m).value) || 0) * 1e6 || null }); } catch (e) { err = errMsg(e); }
     $('#lgPrev', m).innerHTML = err ? `<div class="note warn">${esc(err)}</div>` : `<div class="note ok" style="margin-top:8px">${L.kunns.length} KUNN · <b>${L.n_live} còn dư nợ · dư nợ ${vnd(L.du_no)}</b>${L.hm ? ` · khả dụng ${vnd(L.hm - L.du_no)}` : ''}</div>
       <div class="tw" style="max-height:36vh"><table class="t"><thead><tr><th>Hạn mức</th><th>Số KUNN</th><th>Ngày GN</th><th>Đáo hạn</th><th>LS</th><th class="right">Số tiền</th><th class="right">Đã thu</th><th class="right">Dư nợ</th></tr></thead><tbody>
-      ${L.kunns.slice(-40).map((k) => `<tr class="${k.con_lai > 0.5 ? '' : 'no'}"><td class="hist">${esc(k.hm)}</td><td><b>${esc(k.so)}</b></td><td>${dd(k.ngay_gn)}</td><td>${dd(k.dao_han)}</td><td>${k.ls != null ? String(k.ls).replace('.', ',') + '%' : ''}</td><td class="num">${money(k.goc)}</td><td class="num">${k.da_thu ? money(k.da_thu) : ''}</td><td class="num"><b>${k.con_lai ? money(k.con_lai) : '0'}</b></td></tr>`).join('')}</tbody></table></div><div class="hist">Hiện 40 dòng cuối · dòng mờ = đã trả hết</div>`;
+      ${L.kunns.slice(-40).map((k) => `<tr class="${k.con_lai > 0.5 ? '' : 'no'}"><td class="hist">${esc(k.hm)}</td><td><b>${esc(k.so)}</b></td><td>${dd(k.ngay_gn)}</td><td>${dd(k.dao_han)}</td><td>${k.ls != null ? BK.fmtRate(k.ls) + '%' : ''}</td><td class="num">${money(k.goc)}</td><td class="num">${k.da_thu ? money(k.da_thu) : ''}</td><td class="num"><b>${k.con_lai ? money(k.con_lai) : '0'}</b></td></tr>`).join('')}</tbody></table></div><div class="hist">Hiện 40 dòng cuối · dòng mờ = đã trả hết</div>`;
     return L;
   };
   draw();
@@ -7612,7 +7622,7 @@ const isExcel = (f) => /\.(xlsx?|xlsm|csv)$/i.test(f.name);
 /** Xem nhanh file Excel: các sheet có dữ liệu, bỏ hàng / cột trống. */
 async function excelHtml(blob) {
   const g = await readWorkbook(blob);
-  const cell = (v) => esc(typeof v === 'number' && v > 30000 && v < 80000 && Number.isInteger(v) ? dd(BK.toISO(v)) : typeof v === 'number' ? v.toLocaleString('vi-VN') : v);
+  const cell = (v) => esc(typeof v === 'number' && v > 30000 && v < 80000 && Number.isInteger(v) ? dd(BK.toISO(v)) : typeof v === 'number' ? v.toLocaleString(BK.numLoc()) : v);
   const sh = Object.entries(g).map(([n, rows]) => {
     const rs = rows.filter((r) => r.some((v) => String(v ?? '').trim())).slice(0, 120);
     const nc = Math.min(20, Math.max(0, ...rs.map((r) => { let k = r.length; while (k && !String(r[k - 1] ?? '').trim()) k--; return k; })));
@@ -7861,11 +7871,11 @@ function renderHoso(el, c) {
           <div class="kb-dh ${off ? 'bad' : ''}"><span>Đáo hạn</span><b class="${off ? 'err' : ''}">${dh ? `${dd(dh)} <small>${thuOf(dh)}</small>` : '—'}</b><small>${dh ? `${snv} ngày${off ? ` · <span class="err">! rơi vào ${esc(off)}</span>` : ''}` : 'nhập ngày GN + số ngày vay'}</small>${off ? (() => { const nx = DOCX.workDay(dh, 1, hol), pv = DOCX.workDay(dh, -1, hol); return `<div class="dhfix"><button class="btn sm" data-snv="${BK.daysBetween(gnIso, pv)}" title="Đáo hạn vào ngày làm việc liền trước">← ${dd(pv)} (${thuOf(pv)}, ${BK.daysBetween(gnIso, pv)} ngày)</button><button class="btn sm" data-snv="${BK.daysBetween(gnIso, nx)}" title="Đáo hạn vào ngày làm việc kế tiếp">→ ${dd(nx)} (${thuOf(nx)}, ${BK.daysBetween(gnIso, nx)} ngày)</button></div>`; })() : ''}</div>
           <div class="kb-lsg">${(() => { const gl = goiOf(c), act = HSC.goiAt(gl, gnIso || BK.todayISO()), cur = hs.goi ? gl.find((g) => BK.fold(g.ma) === BK.fold(hs.goi)) : null; if (!gl.length) return ''; const opts = [...act, ...(cur && !act.includes(cur) ? [cur] : [])]; return `<label title="Gói lãi suất / UBG áp dụng cho khoản này">Gói lãi suất<select class="inp" id="hsGoi"><option value="">Lãi suất thông thường${p.lai_suat ? ` (${esc(p.lai_suat)}%)` : ''}</option>${opts.map((g) => `<option value="${esc(g.ma)}" ${cur === g ? 'selected' : ''}>${esc(g.ma)}${g.ls != null ? ` · ${g.ls}%` : ''}${g.den_ngay ? ` · đến ${dd(g.den_ngay)}` : ''}${HSC.goiActive({ ...g, an: false }, gnIso) ? '' : ' (hết hiệu lực)'}</option>`).join('')}</select></label>`; })()}
           ${(() => { const gl = goiOf(c), g = hs.goi ? gl.find((x) => BK.fold(x.ma) === BK.fold(hs.goi)) : null, lsH = hs.ls != null && hs.ls !== '' ? +hs.ls : null, lsD = DOCX.num(p.lai_suat);
-            const f = (v) => String(v).replace('.', ',') + '%';
+            const f = (v) => BK.fmtRate(v) + '%';
             const src = g ? (lsH != null && g.ls != null && Math.abs(lsH - g.ls) > 1e-9 ? `theo gói <b>${esc(g.ma)}</b> nhưng đã sửa tay (gói ghi ${f(g.ls)}) <button class="lnk" data-lsgoi="1">↺ theo gói</button>` : `theo gói <b>${esc(g.ma)}</b>${g.den_ngay ? ` · hiệu lực đến ${dd(g.den_ngay)}` : ''}`)
               : lsH != null ? `nhập tay cho hồ sơ này${lsD != null && lsD !== lsH ? ` (mặc định công ty ${f(lsD)})` : ''}`
               : lsD != null ? `chưa nhập — KUNN & PDGN dùng lãi suất mặc định công ty <b>${f(lsD)}</b> (tab Thông tin)` : '<span class="err">chưa có lãi suất</span> — nhập ở đây hoặc trong bản soạn KUNN';
-            return `<div class="kb-ls"><label>Lãi suất %/năm<input class="inp" id="hsLs" value="${esc(lsH != null ? String(lsH).replace('.', ',') : '')}" placeholder="${esc(lsD != null ? String(lsD).replace('.', ',') : 'vd 8,2')}" inputmode="decimal"></label><small>${src}${!gl.length ? ` · <a class="lnk" href="${hashOf({ cid: c.id, tab: 'info' })}">Thêm gói lãi suất / UBG →</a>` : ''}</small></div>`; })()}</div>
+            return `<div class="kb-ls"><label>Lãi suất %/năm<input class="inp" id="hsLs" value="${esc(lsH != null ? BK.fmtRate(lsH) : '')}" placeholder="${esc(lsD != null ? BK.fmtRate(lsD) : 'vd 8,2')}" inputmode="decimal"></label><small>${src}${!gl.length ? ` · <a class="lnk" href="${hashOf({ cid: c.id, tab: 'info' })}">Thêm gói lãi suất / UBG →</a>` : ''}</small></div>`; })()}</div>
         </div>
       </div>
     </section>
@@ -7898,15 +7908,16 @@ function renderHoso(el, c) {
           <button class="btn sm" id="hsLedger" ${hs.lines.length && !kunnDup ? '' : 'disabled'} ${kunnDup ? 'title="Số KUNN đang thuộc hồ sơ / KUNN khác — đổi số trước"' : ''}>${kunnRec ? '↻ Cập nhật sổ theo hồ sơ' : 'Ghi vào sổ hóa đơn'}</button><button class="btn sm" id="hsBkX" ${hs.lines.length ? '' : 'disabled'}>⬇ Bảng kê Excel</button></div>
         <div class="obox" id="oxBs"><div class="oh"><b>Chứng từ bổ sung bản gốc</b><span class="${(hs.bo_sung || []).some((b) => !b.xong) ? 'w' : 'o'}">${hs.bs_none ? 'Không cần' : (hs.bo_sung || []).length ? `${(hs.bo_sung || []).filter((b) => b.xong).length}/${hs.bo_sung.length} đã bổ sung` : 'Chưa chọn'}</span></div>
           <div class="hist">Chứng từ nào KH chỉ nộp bản sao và phải bổ sung bản gốc sau — số ngày theo yêu cầu của ĐVKD. Danh sách này điền vào bảng “Chứng từ bổ sung” của PDGN và dùng để theo dõi ở tab Theo dõi KUNN.</div>
-          ${(hs.bo_sung || []).length ? `<div class="bsl">${hs.bo_sung.map((b, i) => `<div class="bsr2"><input type="checkbox" data-bsx="${i}" ${b.xong ? 'checked' : ''} title="Đã nhận bản gốc"><input class="cell-in" data-bsf="${i}|ten" value="${esc(b.ten)}" title="Tên chứng từ"><select class="cell-in" data-bsf="${i}|ban"><option ${b.ban !== 'Gốc' ? 'selected' : ''}>Sao</option><option ${b.ban === 'Gốc' ? 'selected' : ''}>Gốc</option></select><input class="cell-in bsn" data-bsf="${i}|ngay" value="${esc(b.ngay || '')}" placeholder="số ngày" inputmode="numeric" title="Bổ sung trong bao nhiêu ngày kể từ ngày giải ngân"><small class="${b.han ? '' : 'err'}">${b.han ? 'hạn ' + esc(b.han) : 'nhập số ngày'}</small><button class="lnk" data-bsdel="${i}" title="Bỏ">✕</button></div>`).join('')}</div>` : ''}
+          ${(hs.bo_sung || []).length ? `<div class="bsl">${hs.bo_sung.map((b, i) => `<div class="bsr2 ${b.xong ? 'xong' : ''}"><div class="bsr-top"><input type="checkbox" data-bsx="${i}" ${b.xong ? 'checked' : ''} title="Đã nhận bản gốc" aria-label="Đã nhận bản gốc"><input class="cell-in bsten" data-bsf="${i}|ten" value="${esc(b.ten)}" placeholder="Tên chứng từ" title="${esc(b.ten)}"><button class="lnk" data-bsdel="${i}" title="Bỏ chứng từ này" aria-label="Bỏ">✕</button></div>
+            <div class="bsr-bot"><select class="cell-in" data-bsf="${i}|ban" title="KH đang nộp bản"><option value="Sao" ${b.ban !== 'Gốc' ? 'selected' : ''}>nộp bản sao</option><option value="Gốc" ${b.ban === 'Gốc' ? 'selected' : ''}>nộp bản gốc</option></select><span>bổ sung trong <input class="cell-in bsn" data-bsf="${i}|ngay" value="${esc(b.ngay || '')}" placeholder="…" inputmode="numeric" title="Số ngày kể từ ngày giải ngân"> ngày</span><small class="${b.xong ? 'o' : b.han ? '' : 'err'}">${b.xong ? '✓ đã nhận bản gốc' : b.han ? '→ hạn ' + esc(b.han) : 'chưa có số ngày'}</small></div></div>`).join('')}</div>` : ''}
           <div class="bar" style="gap:6px;flex-wrap:wrap"><button class="btn sm" id="hsBsSug" title="Thêm các loại chứng từ đã thả vào hồ sơ (hóa đơn, tiền điện, tờ khai…)">＋ Từ chứng từ đã thả</button><button class="btn sm" id="hsBsAdd">＋ Thêm dòng</button>
             <label class="hist"><input type="checkbox" id="hsBsNone" ${hs.bs_none ? 'checked' : ''}> Không có chứng từ phải bổ sung</label></div>
-          <label class="hist">Số ngày mặc định của công ty <input class="cell-in bsn" id="hsBsDef" value="${esc((c.hs || {}).so_ngay_bs || '')}" placeholder="—" inputmode="numeric"> ngày <span>(để trống = nhập từng lần)</span></label></div>
+          <label class="hist bsdef">Mặc định công ty: bổ sung trong <input class="cell-in bsn" id="hsBsDef" value="${esc((c.hs || {}).so_ngay_bs || '')}" placeholder="—" inputmode="numeric"> ngày <span class="m">(trống = nhập từng chứng từ)</span></label></div>
         <div class="obox" id="oxUp"><div class="oh"><b>Tải lên hệ thống</b><span>${pkg.length} file</span></div>
           <div class="pk">${pkg.map((x) => `<div class="pkr"><input class="cell-in" data-pkn="${x.id}" value="${esc(x.name)}" title="Sửa tên file khi tải về"><button class="lnk" data-fdl="${x.id}" title="Tải file này với tên đã đặt">⬇</button><button class="lnk pkx" data-pkx="${x.id}" title="Bỏ file này khỏi gói tải lên">✕</button></div>`).join('')}</div>
           ${(() => { const sk = hs.files.filter((f) => (hs.skipUp || {})[f.id]); return sk.length ? `<div class="hist pksk">Đã bỏ khỏi gói: ${sk.map((f) => `<button class="lnk" data-pkback="${f.id}" title="Đưa lại vào gói">↺ ${esc(f.name)}</button>`).join(' ')}</div>` : ''; })()}
           <label class="hist"><input type="checkbox" id="hsPkBk" ${hs.pkgBk === false ? '' : 'checked'} ${hs.lines.length ? '' : 'disabled'}> Kèm bảng kê Excel chuẩn (03_BANG_KE…xlsx)</label>
-          <button class="btn sm pri" id="hsZip" ${pkg.length || hs.lines.length ? '' : 'disabled'}>⬇ Tải gói file đã đặt tên (.zip)</button><div class="hist">Tên gói: ${esc(zipName(hs, c))}</div></div>
+          <button class="btn sm pri" id="hsZip" ${pkg.length || hs.lines.length ? '' : 'disabled'}>⬇ Tải gói file đã đặt tên (.zip)</button><div class="hist" style="overflow-wrap:anywhere">Tên gói: ${esc(zipName(hs, c))}</div></div>
         <div class="bar" style="margin-top:6px"><button class="btn sm danger" id="hsDel">Xóa hồ sơ</button></div>
       </section>
     </div>`;
@@ -7918,7 +7929,7 @@ function renderHoso(el, c) {
   $('#hsNgay', el).onchange = (e) => patch((x) => { x.ngay_gn = e.target.value; const g = BK.toISO(x.ngay_gn); for (const b of x.bo_sung || []) { const n = parseInt(b.ngay, 10); if (g && n > 0) b.han = dd(BK.addDays(g, n)); } }, 'Đổi ngày giải ngân');
   if ($('#hsGoi', el)) $('#hsGoi', el).onchange = (e) => { const g = goiOf(c).find((x) => x.ma === e.target.value); patch((x) => { x.goi = e.target.value; x.ls = g && g.ls != null ? String(g.ls) : ''; const nd = g && (g.so_ngay_md || g.so_ngay_max); if (nd && !x.so_ngay_vay) x.so_ngay_vay = String(nd); }, e.target.value ? `Áp dụng gói ${e.target.value}` : 'Bỏ gói lãi suất'); };
   $('#hsSnv', el).onchange = (e) => patch((x) => { x.so_ngay_vay = e.target.value.trim(); }, 'Đổi số ngày vay');
-  $('#hsLs', el).onchange = (e) => { const t = e.target.value.trim(), v = t ? DOCX.num(t) : null; if (t && !(v > 0 && v < 50)) return toast('Lãi suất không hợp lệ — gõ vd 8,2', 'err'); patch((x) => { x.ls = v != null ? String(v) : ''; }, v != null ? `Đổi lãi suất ${String(v).replace('.', ',')}%` : 'Bỏ lãi suất nhập tay'); };
+  $('#hsLs', el).onchange = (e) => { const t = e.target.value.trim(), v = t ? DOCX.num(t) : null; if (t && !(v > 0 && v < 50)) return toast('Lãi suất không hợp lệ — gõ vd 8,2', 'err'); patch((x) => { x.ls = v != null ? String(v) : ''; }, v != null ? `Đổi lãi suất ${BK.fmtRate(v)}%` : 'Bỏ lãi suất nhập tay'); };
   if ($('[data-lsgoi]', el)) $('[data-lsgoi]', el).onclick = () => { const g = goiOf(c).find((x) => BK.fold(x.ma) === BK.fold(hs.goi || '')); if (g) patch((x) => { x.ls = g.ls != null ? String(g.ls) : ''; }, `Lãi suất theo gói ${g.ma}`); };
   $('#hsKunn', el).onchange = (e) => patch((x) => { x.so_kunn = e.target.value.trim(); if (x.so_kunn && !x.ms.so_kunn) x.ms.so_kunn = BK.todayISO(); }, 'Nhập số KUNN');
   $('#hsAiMd', el).onclick = () => hsAiMd(hs.id, c).catch((e) => toast(errMsg(e), 'err', 8000));
@@ -8296,7 +8307,11 @@ function openSettings(focus) {
     <label class="f" style="max-width:320px">Hạn nộp hồ sơ gốc mặc định (số ngày sau giải ngân)<input class="inp" id="skHan" type="number" min="1" value="${hanNgay()}"></label>
     <label class="f">Ngày nghỉ lễ, Tết (tính đáo hạn — dùng chung cả team qua thư mục chung)<textarea class="inp" id="skHol" rows="6">${esc((S.cfg && S.cfg.hol) || lsGet(HOL_LS) || DOCX.HOL_DEF)}</textarea></label>
     <div class="hist">Mỗi dòng: dd/mm/yyyy [→ dd/mm/yyyy] tên. Lễ rơi vào T7/CN tool tự thêm ngày nghỉ bù. Tết âm lịch, Giỗ Tổ các năm sau là dự kiến — cập nhật theo thông báo chính thức.${S.cfg && S.cfg.by ? ` Lần sửa cuối: ${esc(S.cfg.by)}.` : ''}</div>
-    <div class="sec">5. TestKey</div>
+    <div class="sec">5. Định dạng số</div>
+    <div class="bar" style="gap:14px"><label class="hist"><input type="radio" name="sk-nf" value="us" ${BK.getNumFmt() !== 'vn' ? 'checked' : ''}> 1,234,567 · lãi suất 8.2% <span class="m">(như hệ thống ngân hàng — mặc định)</span></label>
+      <label class="hist"><input type="radio" name="sk-nf" value="vn" ${BK.getNumFmt() === 'vn' ? 'checked' : ''}> 1.234.567 · lãi suất 8,2% <span class="m">(kiểu Việt)</span></label></div>
+    <div class="hist">Gõ số kiểu nào cũng được (1,000,000 hay 1.000.000; 8.2 hay 8,2) — đây là cách tool hiển thị. File Word KUNN / PDGN theo mẫu.</div>
+    <div class="sec">6. TestKey</div>
     ${(() => { const kt = keyTable(); return `<div class="hist" style="margin-bottom:6px">${kt ? `✓ Đã nạp bảng key${kt.src ? ` từ <b>${esc(kt.src)}</b>` : ''}${kt.at ? ` lúc ${new Date(kt.at).toLocaleString('vi-VN')}` : ''} — tool tự tính TestKey trong hồ sơ và KUNN theo mã TTKD, ngày GN, số tiền.` : 'Chưa nạp bảng key. Chọn file Excel / .json / file HTML công cụ TestKey cũ; có logic / bảng key mới thì chọn file đó — AI đọc hiểu (cần API key Gemini).'} Bảng key chỉ lưu trên máy này.</div>
       <div class="bar"><button class="btn" id="skTk">🔑 ${kt ? 'Đổi' : 'Nạp'} bảng key / logic TestKey</button>${kt ? '<button class="btn" id="skTkTry">Thử tính</button><button class="btn danger" id="skTkDel">Gỡ bảng key</button>' : ''}</div>`; })()}
     <div id="skMsg" class="hist" style="margin-top:8px"></div></div>
@@ -8336,6 +8351,7 @@ function openSettings(focus) {
   $('#skSave', m).onclick = async () => {
     collect(); aiSave(o);
     lsSet(LS.user, $('#skUser', m).value.trim());
+    const nf = ($('input[name=sk-nf]:checked', m) || {}).value || 'us'; lsSet('bangke_numfmt', nf); BK.setNumFmt(nf);
     const hanV = String(Math.max(1, +$('#skHan', m).value || 30)); lsSet(LS.han, hanV);
     const holV = $('#skHol', m).value; lsSet(HOL_LS, holV);
     await setTeamCfg({ han: +hanV, hol: holV }).catch(() => {});

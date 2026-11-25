@@ -84,7 +84,7 @@ test('tải bảng kê → kiểm tra giải ngân nhầm → hồ sơ gốc →
   await page.locator('.verdict.err', { hasText: 'KHÔNG ĐẠT — 1/2 hóa đơn không được giải ngân' }).waitFor();
   assert.match(await page.locator('.vcard', { hasText: 'Đã giải ngân đủ trước đó' }).innerText(), /^1/);
   const rows = page.locator('.modal tbody tr');
-  assert.match(await rows.nth(0).innerText(), /GN tiếp phần còn lại[\s\S]*8800123\(37\)\.26[\s\S]*400\.000\.000[\s\S]*\b0\b/);
+  assert.match(await rows.nth(0).innerText(), /GN tiếp phần còn lại[\s\S]*8800123\(37\)\.26[\s\S]*400,000,000[\s\S]*\b0\b/);
   assert.match(await rows.nth(1).innerText(), /ĐÃ GIẢI NGÂN ĐỦ trước đó[\s\S]*không được GN lại/);
   await page.locator('.vcard', { hasText: 'Đã giải ngân đủ trước đó' }).click();     // lọc chỉ dòng lỗi
   assert.equal(await page.locator('.modal tbody tr').count(), 1);
@@ -167,7 +167,7 @@ test('AI nhận dạng cột cho bảng kê không có tiêu đề quen thuộc'
   assert.match(prompt, /\[3\] A: 1 \| B: Công ty Alpha/);
   assert.equal(await page.inputValue('[data-ki="so_kunn"]'), '99/2026');
   assert.equal(await page.locator('.modal tbody tr').count(), 2);
-  assert.match(await page.locator('#iSum').innerText(), /1 KUNN · 2 dòng · 8\.000\.000/);
+  assert.match(await page.locator('#iSum').innerText(), /1 KUNN · 2 dòng · 8,000,000/);
   await page.click('#iSave');
   await page.locator('.kunn', { hasText: 'KUNN 99/2026' }).waitFor();
   await ctx.close();
@@ -310,7 +310,7 @@ test('ghi KUNN mới vào file bảng kê tổng hợp có sẵn (bỏ qua KUNN 
   assert.notEqual(await page.inputValue('#dM'), '');
   await page.locator('.modal [data-close]').first().click();
   await page.locator('.tile', { hasText: 'Còn lại chưa giải ngân' }).click();
-  assert.match(await page.locator('#hB').innerText(), /Công ty Sigma\s+701[\s\S]*1\.000[\s\S]*600[\s\S]*400/);
+  assert.match(await page.locator('#hB').innerText(), /Công ty Sigma\s+701[\s\S]*1,000[\s\S]*600[\s\S]*400/);
   await page.locator('.modal [data-close]').first().click();
   await page.locator('#custName', { hasText: 'Công ty Kappa' }).waitFor();
   await ctx.close();
@@ -390,7 +390,7 @@ test('AI rà soát bảng kê đã lưu: tìm dòng lệch cột, AI đề xuấ
   await page.click('[data-tab="kunn"]');
   if (!(await page.locator('[data-editl]').count())) await page.click('[data-toggle] >> text=KUNN K-NK');
   const body = await page.locator('.kunn', { hasText: 'K-NK' }).locator('tbody').innerText();
-  assert.match(body, /KO-040124-4[\s\S]*1\.757,87[\s\S]*USD/);
+  assert.match(body, /KO-040124-4[\s\S]*1,757\.87[\s\S]*USD/);
   assert.doesNotMatch(body, /Đọc sai cột/);
   await page.locator('[data-act="audit"]').click();
   await page.locator('#auB', { hasText: 'Không thấy dòng nào' }).waitFor();
@@ -427,12 +427,12 @@ test('AI tự rà việc gán cột khi tải file: đề xuất đổi cột + 
   await page.locator('[data-cdall="y"]').click();
   await page.click('#cAIgo');
   await page.locator('.aibox', { hasText: 'đã áp dụng' }).waitFor();
-  assert.match(await page.locator('.modal tbody').last().innerText(), /OM-1[\s\S]*1\.200,5/);
+  assert.match(await page.locator('.modal tbody').last().innerText(), /OM-1[\s\S]*1,200\.5/);
   await page.fill('#iNew', 'Công ty Xi');
   await page.click('#iSave');
   const k = page.locator('.kunn', { hasText: '77/2026' });
   await k.locator('table').waitFor();
-  assert.match(await k.locator('tbody').innerText(), /OM-1[\s\S]*1\.200,5[\s\S]*USD/);
+  assert.match(await k.locator('tbody').innerText(), /OM-1[\s\S]*1,200\.5[\s\S]*USD/);
   await ctx.close();
 });
 
@@ -466,13 +466,13 @@ test('kiểm tra dữ liệu đã nạp: phát hiện KUNN ngoại tệ chưa gh
   await page.locator('.modal').waitFor({ state: 'detached' });
   if (!(await page.locator('.kunn', { hasText: 'KU-2' }).locator('table').count())) await page.click('[data-toggle] >> text=KUNN KU-2');
   const kb = await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody').innerText();
-  assert.match(kb, /INV-1[\s\S]*1\.757,87 USD/);
+  assert.match(kb, /INV-1[\s\S]*1,757\.87 USD/);
   assert.doesNotMatch(kb, /920,5 USD/, 'dòng không duyệt giữ nguyên');
   // hoàn tác / làm lại
   await page.click('#bUndo');
   await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody').filter({ hasNotText: 'USD' }).waitFor();
   await page.keyboard.press('Control+y');
-  await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody', { hasText: '1.757,87 USD' }).waitFor();
+  await page.locator('.kunn', { hasText: 'KU-2' }).locator('tbody', { hasText: '1,757.87 USD' }).waitFor();
   // không còn nút xóa ngoài danh sách; xóa nằm trong Sửa thông tin
   assert.equal(await page.locator('[data-cdel]').count(), 0);
   await page.click('#bEditC');
@@ -695,7 +695,7 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   assert.match(await mid.innerText(), /118000048033 — VietinBank, UNC \/ lệnh chi ghi 0351000998999/);
   assert.match(await mid.locator('.okl').first().textContent(), /2\/2 dòng bảng kê khớp số, ngày, tiền với chứng từ/);
   assert.doesNotMatch(await mid.innerText(), /tờ khai|NSNN/i, 'không có tờ khai thì không soát NSNN');
-  assert.match(await page.locator('.kbar').innerText(), /1\.420\.066\.541 đ[\s\S]*Đáo hạn[\s\S]*137 ngày/);
+  assert.match(await page.locator('.kbar').innerText(), /1,420,066,541 đ[\s\S]*Đáo hạn[\s\S]*137 ngày/);
   await shot(page, '10-hoso');
   // TestKey: nạp file HTML công cụ TestKey cũ (bảng key GIẢ) → xem trước, thử tính → dùng → ô TestKey của hồ sơ tự tính
   const fakeT = { day: Object.fromEntries([...Array(31)].map((_, i) => [i + 1, 10 + i])), mon: Object.fromEntries([...Array(12)].map((_, i) => [i + 1, 200 + i])), cur: { VND: 5 },
@@ -771,10 +771,10 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.hs3', { hasText: 'Gói ưu đãi – UBG 002 8.2%: còn' }).waitFor({ state: 'attached' });
   assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '8.2');
   // ô lãi suất: hiện theo gói nào; sửa tay → báo đã sửa tay, có nút trả về theo gói
-  assert.equal(await page.inputValue('#hsLs'), '8,2');
+  assert.equal(await page.inputValue('#hsLs'), '8.2');
   assert.match(await page.locator('.kb-ls').innerText(), /theo gói Gói ưu đãi – UBG 002/);
   await page.fill('#hsLs', '8,5'); await page.dispatchEvent('#hsLs', 'change');
-  await page.locator('.kb-ls', { hasText: 'đã sửa tay (gói ghi 8,2%)' }).waitFor();
+  await page.locator('.kb-ls', { hasText: 'đã sửa tay (gói ghi 8.2%)' }).waitFor();
   await page.locator('.kbar').scrollIntoViewIfNeeded(); await shot(page, '10b-laisuat');
   assert.equal(await page.evaluate(() => window.BKAPP.S.store.hosoOf(window.BKAPP.S.cid)[0].ls), '8.5');
   await page.click('[data-lsgoi]');
@@ -789,9 +789,10 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   // chứng từ bổ sung bản gốc: gợi ý từ chứng từ đã thả, số ngày theo yêu cầu ĐVKD → hạn
   await page.locator('.ck', { hasText: 'Chưa chọn chứng từ phải bổ sung bản gốc' }).locator('[data-fx="bssug"]').click();
   await page.locator('#oxBs .bsr2').first().waitFor();
-  assert.match(await page.locator('#oxBs').innerText(), /nhập số ngày/);
+  assert.match(await page.locator('#oxBs').innerText(), /chưa có số ngày/);
   await page.fill('#oxBs [data-bsf="0|ngay"]', '15'); await page.press('#oxBs [data-bsf="0|ngay"]', 'Tab');
   await page.locator('#oxBs .bsr2', { hasText: 'hạn 11/12/2026' }).first().waitFor();
+  if (SHOTS) { await page.evaluate(() => { document.getElementById('toast').innerHTML = ''; document.getElementById('oxBs').scrollIntoView({ block: 'center' }); }); await shot(page, '10c-bosung'); }
   assert.equal(await page.locator('.ms.done', { hasText: 'Đã giải ngân' }).count(), 0);
   // ghi vào sổ hóa đơn → tab Theo dõi KUNN thấy KUNN mới
   await page.click('#hsLedger');
@@ -828,20 +829,20 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.fill('#knA', '1,000,000,000'); await page.fill('#knX', 'KH trả trước hạn');
   await page.click('#knAdd');
   await page.locator('.kn', { hasText: 'KH trả nợ 1 phần' }).waitFor();
-  assert.match(await page.locator('.kdet').innerText(), /dư nợ còn ≈ 4\.480\.500\.000 đ/);
+  assert.match(await page.locator('.kdet').innerText(), /dư nợ còn ≈ 4,480,500,000 đ/);
   assert.notEqual(await page.locator('.kwrap tfoot').innerText(), tot0, 'dòng tổng cập nhật theo ghi chú');
   // lãi suất thả nổi: điều chỉnh 1 KUNN, rồi hàng loạt (+0.25 điểm %) — bảng hiện LS cũ → mới
   await page.click('[data-kf="live"]');
   await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).click();
   await page.fill('#lsD', '2026-11-01'); await page.fill('#lsV', '8.6'); await page.fill('#lsN', 'điều chỉnh định kỳ');
   await page.click('#lsAdd');
-  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).locator('b', { hasText: '8,6%' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).locator('b', { hasText: '8.6%' }).waitFor();
   await page.click('#lsBulk');
   await page.fill('#lbD', '2026-11-15'); await page.selectOption('#lbM', 'add'); await page.fill('#lbV', '0.25');
   await page.locator('#lbP tr', { hasText: '1000001(4).26' }).locator('td', { hasText: '8.85%' }).waitFor();
   await page.click('#lbOk');
   await page.locator('.toast div', { hasText: 'Điều chỉnh lãi suất' }).first().waitFor();
-  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).locator('b', { hasText: '8,85%' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(4).26' }).locator('b', { hasText: '8.85%' }).waitFor();
   // quên làm hồ sơ trên tool → thêm KUNN nhập tay vào theo dõi (số ngày vay → tự tính đáo hạn), sửa lại được
   await page.click('#kAdd');
   await page.fill('#kfSo', '1000001(15).26'); await page.fill('#kfNg', '2026-11-10'); await page.fill('#kfTien', '2,500,000,000');
@@ -853,10 +854,10 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.click('#kfOk');
   const mr = page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' });
   await mr.waitFor();
-  assert.match(await mr.innerText(), /10\/11\/2026[\s\S]*08\/02\/2027[\s\S]*2\.500\.000\.000 đ[\s\S]*Chờ 1 bản gốc/);
+  assert.match(await mr.innerText(), /10\/11\/2026[\s\S]*08\/02\/2027[\s\S]*2,500,000,000 đ[\s\S]*Chờ 1 bản gốc/);
   await page.click('[data-kedit]');
   await page.fill('#kfCon', '1,500,000,000'); await page.click('#kfOk');
-  await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: '1.500.000.000 đ' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: '1,500,000,000 đ' }).waitFor();
   await page.locator('.kdet [data-kmx]').check();
   await page.locator('.kwrap tbody tr', { hasText: '1000001(15).26' }).filter({ hasText: 'Đã nhận đủ' }).waitFor();
   // KUNN quá hạn mà KH đã trả: đánh dấu đúng hạn (quên tick) → không tính; trả trễ → lưu lịch sử quá hạn; bỏ qua có lý do
@@ -1022,12 +1023,12 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.locator('.toast div', { hasText: 'đã chuyển sang tab Theo dõi KUNN' }).waitFor();
   await page.click('[data-ctab="kunn"]'); await page.click('[data-kf="live"]');
   const gr = page.locator('.kwrap tbody tr', { hasText: '1000001(9).26' });
-  assert.match(await gr.innerText(), /07\/12\/2026[\s\S]*Thứ 2[\s\S]*200\.000\.000 đ/, 'đáo hạn + thứ + dư nợ vay');
+  assert.match(await gr.innerText(), /07\/12\/2026[\s\S]*Thứ 2[\s\S]*200,000,000 đ/, 'đáo hạn + thứ + dư nợ vay');
   assert.match(await page.locator('.kwrap thead').innerText(), /Dư nợ vay \(gốc\)/);
   await page.click('a.logo');
   // trang đầu: nhắc gói lãi suất sắp hết hiệu lực / gần hết hạn mức gói
   await page.locator('.cra', { hasText: 'An Bình Thử' }).filter({ hasText: 'hết hạn duy trì' }).first().waitFor();
-  assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d.]+ tr \/ 150\.000 tr/);
+  assert.match(await page.locator('.ccard', { hasText: 'An Bình Thử' }).innerText(), /Dư nợ [\d,]+ tr \/ 150,000 tr/);
   await ctx.close();
 });
 
@@ -1046,14 +1047,14 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).click()]);   // bấm ô dư nợ là chọn file
   await fc.setFiles(f1);
   await page.locator('.chip.on', { hasText: 'KTLA' }).waitFor();                 // tự gợi ý đúng sheet của công ty
-  assert.match(await page.locator('#lgPrev').innerText(), /2 KUNN · 1 còn dư nợ · dư nợ 7\.533\.742\.585 đ/);
+  assert.match(await page.locator('#lgPrev').innerText(), /2 KUNN · 1 còn dư nợ · dư nợ 7,533,742,585 đ/);
   await page.locator('.chip', { hasText: 'KES' }).click();
   await page.locator('#lgPrev', { hasText: '1 KUNN' }).waitFor();
   await page.locator('.chip', { hasText: 'KTLA' }).click();
   await page.fill('#lgHm', '20,000');
   await page.click('#lgSave');
-  await page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).filter({ hasText: '7,5 tỷ' }).waitFor();
-  assert.match(await page.locator('.tile', { hasText: 'Hạn mức còn khả dụng' }).innerText(), /12,5 tỷ/);
+  await page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).filter({ hasText: '7.5 tỷ' }).waitFor();
+  assert.match(await page.locator('.tile', { hasText: 'Hạn mức còn khả dụng' }).innerText(), /12\.5 tỷ/);
   // file đã sửa: chèn cột, dời tiêu đề, thêm KUNN → Đọc lại
   await page.click('[data-ctab="info"]');
   const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('#xlRe')]);

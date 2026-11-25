@@ -150,6 +150,10 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Sao lưu / Nạp sao lưu**: gói `.zip` gồm dữ liệu, file đính kèm (scan hóa đơn…), mẫu Word, lịch nghỉ; nạp lại được
   cả gói `.zip` lẫn file `.json` cũ (gộp theo bản sửa sau cùng).
 
+## Định dạng số
+- Mặc định hiển thị như hệ thống ngân hàng: **1,234,567 đ**, lãi suất **8.2%**. Đổi sang kiểu Việt (1.234.567 · 8,2%) ở
+  Cài đặt → 5. Định dạng số. Gõ số kiểu nào cũng được. File Word KUNN / PDGN vẫn theo mẫu.
+
 ## Lãi suất của hồ sơ
 - “Điều kiện khoản vay” ở đầu hồ sơ có **Gói lãi suất** (nếu công ty có gói / UBG) và ô **Lãi suất %/năm**; dòng dưới ghi rõ
   nguồn: theo gói nào (kèm hiệu lực), theo gói nhưng đã sửa tay (có nút “↺ theo gói”), nhập tay cho hồ sơ, hoặc đang dùng
