@@ -330,3 +330,22 @@ test('soát toàn diện: hồ sơ đã GN không báo vượt hạn mức theo 
   const cl = HSC.checks({ lines: [L('l1', 'A', '1', '2026-11-20', 10, 10)], docs: [D('c', 'cltf', { ngay: '20/11/2026', kha_dung: '100' })], ngay_gn: '2026-11-23' }, { kh: KH, hol: {} });
   assert.ok(!cl.some((x) => x.key === 'cltf_old'));
 });
+
+test('CIC đặt tên rõ: mẫu (đọc từ báo cáo hoặc tên file), đối tượng tra, KH vay / cá nhân; kiểm tra theo từng đối tượng; báo bản trùng', () => {
+  const kh = { name: 'Công ty Cổ phần Tập đoàn Kim Tín', mst: '0302001234' };
+  const a = { id: 'a', fileId: 'fa', loai: 'cic', f: { mau: 'S10A', ben_mua: 'CÔNG TY CỔ PHẦN TẬP ĐOÀN KIM TÍN', ma_so: '0302001234', ngay: '27/10/2026', nhom_no: '1' } };
+  const b = { id: 'b', fileId: 'fb', loai: 'cic', f: { mau: '', ben_mua: 'NGUYỄN VĂN AN', ma_so: '079080001234', vai_tro: 'Người đại diện', ngay: '27/10/2026', nhom_no: 'Nhóm 2' } };
+  const c = { id: 'c', fileId: 'fc', loai: 'cic', f: { mau: 'S10A', ben_mua: 'Công ty CP Tập đoàn Kim Tín', ngay: '27/10/2026', nhom_no: '1' } };
+  const la = HSC.cicLabel(a, kh), lb = HSC.cicLabel(b, kh, 'CIC_R20_NguyenVanAn.pdf');
+  assert.equal(la.main, 'CIC S10A · CÔNG TY CỔ PHẦN TẬP ĐOÀN KIM TÍN');
+  assert.match(la.sub, /^KH vay · MST 0302001234 · tra 27\/10\/2026 · nhóm nợ 1$/);
+  assert.equal(lb.main, 'CIC R20 · NGUYỄN VĂN AN', 'mẫu lấy từ tên file khi báo cáo không ghi');
+  assert.match(lb.sub, /^Người đại diện · CCCD 079080001234 · tra 27\/10\/2026 · nhóm nợ 2$/);
+  const cs = HSC.checks({ lines: [], docs: [a, b, c], ngay_gn: '2026-10-28' }, { kh });
+  const msg = cs.map((x) => `${x.sev}|${x.key}|${x.title}`).join('\n');
+  assert.match(msg, /3\|cic_nhom_nguyen van an\|CIC: NGUYỄN VĂN AN có nợ nhóm 2/);
+  assert.match(msg, /1\|cic_trung_S10A\|_kh\|2026-10-27\|CIC S10A của KH vay ngày 27\/10\/2026 có 2 bản giống nhau/);
+  assert.ok(!cs.some((x) => x.key === 'cic_ok'));
+  const hs = { files: [{ id: 'fa', name: 'x.pdf' }, { id: 'fb', name: 'CIC_R20_NguyenVanAn.pdf' }], docs: [a, b] };
+  assert.deepEqual(HSC.packageNames(hs, hs.files).map((x) => x.name), ['09_CIC_S10A_TAP_DOAN_KIM_TIN.pdf', '09_CIC_R20_NGUYEN_VAN_AN.pdf']);
+});

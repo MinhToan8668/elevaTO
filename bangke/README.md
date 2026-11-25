@@ -150,6 +150,14 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - **Sao lưu / Nạp sao lưu**: gói `.zip` gồm dữ liệu, file đính kèm (scan hóa đơn…), mẫu Word, lịch nghỉ; nạp lại được
   cả gói `.zip` lẫn file `.json` cũ (gộp theo bản sửa sau cùng).
 
+## CIC đặt tên rõ ràng
+- Mỗi CIC hiện “CIC <mẫu> · <đối tượng tra>”, dòng dưới: vai trò (KH vay / người đại diện / bảo lãnh…) hoặc DN / cá nhân,
+  MST / CCCD, ngày tra, nhóm nợ. Mẫu (S10A, R20…) đọc từ báo cáo, báo cáo không ghi thì lấy từ tên file.
+- Kiểm tra CIC theo **từng đối tượng** (CIC mới nhất của mỗi người / DN): hết hiệu lực, nợ nhóm 2+, thiếu ngày / nhóm nợ
+  báo kèm tên đối tượng; cùng mẫu + đối tượng + ngày có nhiều bản → nhắc bỏ file trùng. Ngày CIC trong KUNN / PDGN lấy CIC
+  của chính KH vay. Tên file trong gói tải lên: `09_CIC_S10A_<tên>`.
+- CIC đọc trước bản này chưa có đối tượng: bấm “AI đọc lại” ở file đó, hoặc mở chứng từ nhập tay.
+
 ## Thu nợ & lịch sử quá hạn
 - KUNN quá đáo hạn mà KH đã trả: ở khung chi tiết KUNN (tab Theo dõi KUNN) bấm **✓ Đã trả đúng hạn** (quên đánh dấu — không
   tính quá hạn) hoặc chọn ngày trả thực tế rồi **✓ KH đã trả hết ngày này**. Nhiều KUNN cùng lúc: nút **✓ Đánh dấu đã thu nợ**
