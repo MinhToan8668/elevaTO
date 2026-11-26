@@ -198,6 +198,14 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
   của chính KH vay. Tên file trong gói tải lên: `09_CIC_S10A_<tên>`.
 - CIC đọc trước bản này chưa có đối tượng: bấm “AI đọc lại” ở file đó, hoặc mở chứng từ nhập tay.
 
+## Sổ KUNN từ file Excel: số dư & ghi chú thu nợ
+- Cột số dư ghi “-” (kiểu kế toán) được hiểu là 0 — KUNN đã trả hết không còn bị tính dư nợ.
+- Cột **Ghi chú** được đọc hiểu: “Trả nợ trước hạn ngày 15/11”, “thu nợ trước hạn ngày 26/1/24, toàn bộ ngày 31/1/24”… → loại
+  (tất toán / trả trước hạn / trả 1 phần / gia hạn / quá hạn) và **ngày thu nợ** (năm thiếu thì suy theo ngày giải ngân). Ngày thu
+  dùng cho lịch sử quá hạn (trả đúng / trễ hạn) khi cột ngày thu trống.
+- Ghi chú khó hiểu: tab Thông tin → “🤖 AI đọc ghi chú thu nợ” — AI bóc loại, ngày thu, số tiền, gia hạn; kết quả lưu theo KUNN,
+  ghi chú đổi thì đọc lại. Bảng xem trước khi chọn sheet có cột Ngày thu và “Ghi chú → tool hiểu”, cuộn ngang được.
+
 ## Thu nợ & lịch sử quá hạn
 - KUNN quá đáo hạn mà KH đã trả: ở khung chi tiết KUNN (tab Theo dõi KUNN) bấm **✓ Đã trả đúng hạn** (quên đánh dấu — không
   tính quá hạn) hoặc chọn ngày trả thực tế rồi **✓ KH đã trả hết ngày này**. Nhiều KUNN cùng lúc: nút **✓ Đánh dấu đã thu nợ**
