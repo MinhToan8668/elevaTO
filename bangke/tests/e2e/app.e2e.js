@@ -1132,6 +1132,7 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   assert.match(await page.locator('#lgPrev').innerText(), /Trả nợ trước hạn ngày 15\/11[\s\S]*→ ✓ KH đã trả hết 15\/11\/2023 · trước hạn 30 ngày/);
   { const tx = await page.locator('#lgPrev').innerText(); assert.match(tx, /THU ĐÚNG HẠN[\s\S]*→ ✓ KH đã trả hết 12\/08\/2025 · đúng hạn/); assert.match(tx, /→ ✓ KH đã trả hết 02\/10\/2025 · trễ 2 ngày[\s\S]*Lần 1: 10\/08\/2025 · 2,000,000,000/); }
   if (SHOTS) { await page.locator('[data-pf="paid"]').click(); await page.evaluate(() => { document.getElementById('toast').innerHTML = ''; document.getElementById('lgPrev').scrollIntoView(); }); await shot(page, '11-so-ghichu'); await page.locator('[data-pf=""]').click(); }
+  await page.fill('#lgHm', '20,000');
   await page.click('#lgSave');
   await page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).filter({ hasText: '12.7 tỷ' }).waitFor();
   await page.evaluate(() => localStorage.setItem('finlens_ai_settings_v1', JSON.stringify({ keys: [{ key: 'AIzaTEST-KEY-1234567890', on: true }], model: 'gemini-3.6-flash', active: 0 })));
@@ -1144,7 +1145,7 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.locator('.kwrap tbody tr', { hasText: '9000001(1).23' }).filter({ hasText: 'đã trả 15/11/2023' }).waitFor();
   // bấm chọn KUNN: bảng giữ nguyên chỗ đang cuộn; Ctrl / Shift + bấm chọn nhiều → làm cùng lúc
   await page.setViewportSize({ width: 1400, height: 380 });
-  const tw = page.locator('.kwrap > section.tw');
+  const tw = page.locator('.kwrap section.tw');
   const sh = await tw.evaluate((n) => { n.scrollTop = n.scrollHeight; return n.scrollTop; });
   assert.ok(sh > 0, 'bảng KUNN có thanh cuộn');
   await page.locator('.kwrap tbody tr').last().click();
@@ -1160,6 +1161,7 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.locator('.kdet', { hasText: 'Đã chọn 4 KUNN' }).waitFor();
   assert.equal(await page.locator('.kwrap tbody tr.msel').count(), 4);
   if (SHOTS) await shot(page, '11-kunn-chon-nhieu');
+  { const hm = await page.locator('.khm').innerText(); assert.match(hm, /Hạn mức được cấp[\s\S]*Dư nợ đang dùng[\s\S]*Còn khả dụng/); }
   await page.fill('#kbNote', 'Đã gọi nhắc KH');
   await page.click('[data-kb="note"]');
   await page.locator('.toast div', { hasText: 'Đã thêm ghi chú cho 4 KUNN' }).waitFor();
