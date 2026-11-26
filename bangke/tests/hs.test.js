@@ -128,7 +128,7 @@ test('gói tải lên hệ thống: đặt tên theo loại chứng từ, xếp 
 test('sổ theo dõi KUNN tự lập (file nhiều sheet): gợi ý đúng sheet công ty, dò cột, nhóm HMTD, file sửa vẫn đọc lại được', () => {
   const head = ['Số KUNN', 'Ngày GN', 'Ngày đáo hạn', 'Lãi suất', 'Số tiền GN', 'Đã trả', 'Dư nợ'];
   const ktla = [
-    ['THEO DÕI KHẾ ƯỚC — KIM TÍN LONG AN'], [], head,
+    ['THEO DÕI KHẾ ƯỚC — KHA TÍN LONG AN'], [], head,
     ['HMTD 2025'],
     ['1050807(1).26', 46217, 46353, 0.0835, 10933435095, 10933435095, 0],
     ['1050807(2).26', 46218, 46352, 0.0835, 17924201640, 17924201640, 0],
@@ -136,8 +136,8 @@ test('sổ theo dõi KUNN tự lập (file nhiều sheet): gợi ý đúng sheet
     ['HMTD 2026'],
     ['1050807(9).26', 46258, 46415, 0.082, 32010146610, 0, 32010146610],
   ];
-  const grids = { 'Tổng hợp Kim Tín Group': [['Tổng'], ['KES', 1]], KES: [['Số KUNN'], ['9990001(1).26', 46200]], KTLA: ktla, 'KTLA - theo dõi GN': [['x']], 'Dòng tiền': [] };
-  const pick = HSC.pickLedgerSheet(grids, 'Công ty TNHH Kim Tín Long An');
+  const grids = { 'Tổng hợp Kha Tín Group': [['Tổng'], ['KES', 1]], KES: [['Số KUNN'], ['9990001(1).26', 46200]], KTLA: ktla, 'KTLA - theo dõi GN': [['x']], 'Dòng tiền': [] };
+  const pick = HSC.pickLedgerSheet(grids, 'Công ty TNHH Kha Tín Long An');
   assert.equal(pick[0].name, 'KTLA');
   const g = HSC.ledgerGuess(ktla);
   assert.equal(g.hr, 2);
@@ -238,10 +238,10 @@ test('lãi suất thả nổi, nhắc hạn mức / gói sắp hết hiệu lự
 });
 
 test('tra soát hóa đơn ↔ HĐMB (bên mua / bán, giá trị, hàng hóa) và mục đích vay; kết quả AI đưa vào kiểm tra', () => {
-  const kh = { name: 'Công ty CP Kim Tín Long An', hs: { muc_dich_pdgn: 'Bổ sung vốn lưu động mua thép, phôi thép phục vụ sản xuất' } };
-  const L = (id, so, tien, so_hdmb) => ({ id, ncc: 'Công ty CP Tập Đoàn Kim Tín', so_hdmb, so_hd: so, ngay_hd: '2026-10-07', tien_hd: tien, tien_gn: tien });
-  const hd = (id, so, mat_hang, tien) => ({ id, loai: 'hoa_don', ok: true, f: { so, ngay: '07/10/2026', ben_ban: 'Công ty CP Tập Đoàn Kim Tín', ben_mua: 'Công ty CP Kim Tín Long An', mat_hang, tien: String(tien) } });
-  const c = { id: 'c1', loai: 'hdmb', ok: true, f: { so: '4300011572', ngay: '01/10/2026', ben_ban: 'Công ty CP Tập Đoàn Kim Tín', ben_mua: 'Công ty TNHH Khác', mat_hang: 'Thép cuộn cán nóng', tien: '80000000000', hieu_luc_den: '31/12/2026' } };
+  const kh = { name: 'Công ty CP Kha Tín Long An', hs: { muc_dich_pdgn: 'Bổ sung vốn lưu động mua thép, phôi thép phục vụ sản xuất' } };
+  const L = (id, so, tien, so_hdmb) => ({ id, ncc: 'Công ty CP Tập Đoàn Kha Tín', so_hdmb, so_hd: so, ngay_hd: '2026-10-07', tien_hd: tien, tien_gn: tien });
+  const hd = (id, so, mat_hang, tien) => ({ id, loai: 'hoa_don', ok: true, f: { so, ngay: '07/10/2026', ben_ban: 'Công ty CP Tập Đoàn Kha Tín', ben_mua: 'Công ty CP Kha Tín Long An', mat_hang, tien: String(tien) } });
+  const c = { id: 'c1', loai: 'hdmb', ok: true, f: { so: '4300099999', ngay: '01/10/2026', ben_ban: 'Công ty CP Tập Đoàn Kha Tín', ben_mua: 'Công ty TNHH Khác', mat_hang: 'Thép cuộn cán nóng', tien: '80000000000', hieu_luc_den: '31/12/2026' } };
   const cs = HSC.checks({ lines: [L('l1', '101', 50e9), L('l2', '102', 40e9)], docs: [hd('d1', '101', 'Thép cuộn cán nóng SAE1006', 50e9), hd('d2', '102', 'Xe ô tô con 5 chỗ', 40e9), c], ngay_gn: '2026-10-27', bs_none: true,
     aiMd: { at: 1, issues: [{ muc_do: 'loi', van_de: 'Hóa đơn 102 mua ô tô không đúng mục đích', chi_tiet: 'Mục đích là mua thép', so_chung_tu: '102' }], sig: 'x' } }, { kh, kunns: [] });
   const k = (p) => cs.filter((x) => x.key.startsWith(p));
@@ -332,13 +332,13 @@ test('soát toàn diện: hồ sơ đã GN không báo vượt hạn mức theo 
 });
 
 test('CIC đặt tên rõ: mẫu (đọc từ báo cáo hoặc tên file), đối tượng tra, KH vay / cá nhân; kiểm tra theo từng đối tượng; báo bản trùng', () => {
-  const kh = { name: 'Công ty Cổ phần Tập đoàn Kim Tín', mst: '0302001234' };
-  const a = { id: 'a', fileId: 'fa', loai: 'cic', f: { mau: 'S10A', ben_mua: 'CÔNG TY CỔ PHẦN TẬP ĐOÀN KIM TÍN', ma_so: '0302001234', ngay: '27/10/2026', nhom_no: '1' } };
+  const kh = { name: 'Công ty Cổ phần Tập đoàn Kha Tín', mst: '0309990001' };
+  const a = { id: 'a', fileId: 'fa', loai: 'cic', f: { mau: 'S10A', ben_mua: 'CÔNG TY CỔ PHẦN TẬP ĐOÀN KHA TÍN', ma_so: '0309990001', ngay: '27/10/2026', nhom_no: '1' } };
   const b = { id: 'b', fileId: 'fb', loai: 'cic', f: { mau: '', ben_mua: 'NGUYỄN VĂN AN', ma_so: '079080001234', vai_tro: 'Người đại diện', ngay: '27/10/2026', nhom_no: 'Nhóm 2' } };
-  const c = { id: 'c', fileId: 'fc', loai: 'cic', f: { mau: 'S10A', ben_mua: 'Công ty CP Tập đoàn Kim Tín', ngay: '27/10/2026', nhom_no: '1' } };
+  const c = { id: 'c', fileId: 'fc', loai: 'cic', f: { mau: 'S10A', ben_mua: 'Công ty CP Tập đoàn Kha Tín', ngay: '27/10/2026', nhom_no: '1' } };
   const la = HSC.cicLabel(a, kh), lb = HSC.cicLabel(b, kh, 'CIC_R20_NguyenVanAn.pdf');
-  assert.equal(la.main, 'CIC S10A · CÔNG TY CỔ PHẦN TẬP ĐOÀN KIM TÍN');
-  assert.match(la.sub, /^KH vay · MST 0302001234 · tra 27\/10\/2026 · nhóm nợ 1$/);
+  assert.equal(la.main, 'CIC S10A · CÔNG TY CỔ PHẦN TẬP ĐOÀN KHA TÍN');
+  assert.match(la.sub, /^KH vay · MST 0309990001 · tra 27\/10\/2026 · nhóm nợ 1$/);
   assert.equal(lb.main, 'CIC R20 · NGUYỄN VĂN AN', 'mẫu lấy từ tên file khi báo cáo không ghi');
   assert.match(lb.sub, /^Người đại diện · CCCD 079080001234 · tra 27\/10\/2026 · nhóm nợ 2$/);
   const cs = HSC.checks({ lines: [], docs: [a, b, c], ngay_gn: '2026-10-28' }, { kh });
@@ -347,7 +347,7 @@ test('CIC đặt tên rõ: mẫu (đọc từ báo cáo hoặc tên file), đố
   assert.match(msg, /1\|cic_trung_S10A\|_kh\|2026-10-27\|CIC S10A của KH vay ngày 27\/10\/2026 có 2 bản giống nhau/);
   assert.ok(!cs.some((x) => x.key === 'cic_ok'));
   const hs = { files: [{ id: 'fa', name: 'x.pdf' }, { id: 'fb', name: 'CIC_R20_NguyenVanAn.pdf' }], docs: [a, b] };
-  assert.deepEqual(HSC.packageNames(hs, hs.files).map((x) => x.name), ['09_CIC_S10A_TAP_DOAN_KIM_TIN.pdf', '09_CIC_R20_NGUYEN_VAN_AN.pdf']);
+  assert.deepEqual(HSC.packageNames(hs, hs.files).map((x) => x.name), ['09_CIC_S10A_TAP_DOAN_KHA_TIN.pdf', '09_CIC_R20_NGUYEN_VAN_AN.pdf']);
 });
 
 test('sổ KUNN tự lập: số dư “-” là 0; ghi chú thu nợ → loại + ngày thu (năm thiếu suy theo ngày GN)', () => {
@@ -357,10 +357,32 @@ test('sổ KUNN tự lập: số dư “-” là 0; ghi chú thu nợ → loại
   assert.equal(t2.kind, 'tat_toan'); assert.equal(t2.last, '2024-01-31');
   assert.equal(HSC.thuFromNote('KUNN 1050807(23).26 · HĐ 01/2026', '2026-01-01'), null, 'không nhầm số KUNN / số HĐ là ngày');
   const grid = [['SỐ KUNN', 'NGÀY GN', 'TIỀN', 'SỐ DƯ', 'Ghi chú'],
-    ['1078429(1).23', '10/08/2023', 6179758772, '-', 'Trả nợ trước hạn ngày 15/11'],
-    ['1078429(2).23', '12/10/2023', 4408799671, 0, 'Trả nợ trước hạn ngày 3/1/24'],
-    ['1078429(3).23', '20/10/2023', 5000000000, 2000000000, '']];
+    ['9000002(1).23', '10/08/2023', 6100000000, '-', 'Trả nợ trước hạn ngày 15/11'],
+    ['9000002(2).23', '12/10/2023', 4400000000, 0, 'Trả nợ trước hạn ngày 3/1/24'],
+    ['9000002(3).23', '20/10/2023', 5000000000, 2000000000, '']];
   const L = HSC.readLedgerSheet(grid, { hr: 0, cols: { so: 0, ngay_gn: 1, goc: 2, con_lai: 3, note: 4 } });
   assert.deepEqual(L.kunns.map((k) => [k.con_lai, k.ngay_thu || '']), [[0, '2023-11-15'], [0, '2024-01-03'], [2000000000, '']]);
   assert.equal(L.n_live, 1); assert.equal(L.du_no, 2000000000);
+});
+
+test('ghi chú thu nợ nhiều kiểu: “thu 5.12.25”, “THU ĐÚNG HẠN”, nhiều lần thu kèm số tiền, “8.2 tỷ” không nhầm là ngày', () => {
+  const T = (n, ref) => HSC.thuFromNote(n, ref, '2026-11-26');
+  assert.deepEqual(T('thu ngày 3.12.25', '2025-06-20').dates, ['2025-12-03']);
+  assert.deepEqual(T('THU 9.1.26', '2025-07-29').dates, ['2026-01-09']);
+  assert.equal(T('THU ĐÚNG HẠN', '2025-07-08').kind, 'dung_han');
+  const a = T('thu 10 tỷ 2.2.26, 5.5 tỷ  đúng hạn3.2.26', '2025-08-21');
+  assert.deepEqual(a.dates, ['2026-02-02', '2026-02-03']); assert.equal(a.last, '2026-02-03');
+  assert.deepEqual(a.pays, [{ amount: 10e9, date: '2026-02-02' }, { amount: 5.5e9, date: '2026-02-03' }]);
+  const b = T('THU 1.5 tỷ 17.11.26, thu 2 tỷ ngày 19.11.26', '2026-06-08');
+  assert.equal(b.kind, 'mot_phan'); assert.equal(b.amount, 3.5e9); assert.deepEqual(b.dates, ['2026-11-17', '2026-11-19']);
+  assert.equal(T('thuế + điện', '2026-11-19'), null, 'không phải ghi chú thu nợ');
+  assert.deepEqual(T('THU NGÀY 15/09/26', '2026-03-31').dates, ['2026-09-15']);
+  // áp vào dòng sổ: đúng hạn không ghi ngày = ngày đáo hạn; còn dư nợ thì không coi là đã trả hết
+  const grid = [['KUNN', 'NGÀY GN', 'ĐÁO HẠN', 'SỐ TIỀN', 'SỐ DƯ', 'Ghi chú'],
+    ['9000003(92).24', '08/07/2025', '22/12/2025', 1100000000, '-', 'THU ĐÚNG HẠN'],
+    ['9000002(15).25', '08/06/2026', '20/11/2026', 41900000000, 26500000000, 'THU 1.5 tỷ 17.11.26, thu 2 tỷ ngày 19.11.26']];
+  const L = HSC.readLedgerSheet(grid, { hr: 0, cols: { so: 0, ngay_gn: 1, dao_han: 2, goc: 3, con_lai: 4, note: 5 } });
+  assert.equal(L.kunns[0].ngay_thu, '2025-12-22');
+  assert.equal(L.kunns[1].ngay_thu, '', 'còn dư nợ → chưa trả hết');
+  assert.equal(L.kunns[1].da_thu_note, 3.5e9);
 });

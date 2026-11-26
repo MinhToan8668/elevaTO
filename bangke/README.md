@@ -214,6 +214,10 @@ không đăng nhập, không máy chủ, không cần mạng (trừ khi dùng AI
 - Tool tự ghi **lịch sử quá hạn**: trả sau ngày đáo hạn (ngày trả lấy từ ghi chú hoặc cột ngày thu của file Excel), đang
   quá hạn, quá hạn rồi mới gia hạn. Chip **⏰ Lịch sử quá hạn** cho số lần quá hạn, đang quá hạn, lâu nhất, trung bình,
   tỷ lệ trả đúng hạn; ô “Quá hạn trả nợ” ở Tổng quan công ty; sheet “Lich su qua han” trong Excel tổng hợp.
+- **Ghi chú thu nợ** trong file Excel được tool đọc thành ngày thu: “thu 5.12.25”, “THU ĐÚNG HẠN” (không ghi ngày = ngày đáo
+  hạn), “trả nợ trước hạn ngày 15/11”, nhiều lần thu kèm số tiền (“thu 2 tỷ 2.2.26, 1.5 tỷ đúng hạn 3.2.26” → trả 1 phần, tổng
+  3.5 tỷ). Dấu chấm chỉ hiểu là ngày khi đủ ngày.tháng.năm (“1.5 tỷ” không nhầm là ngày). Ghi chú khó thì bấm
+  **🤖 AI đọc ghi chú thu nợ**. Bảng xem trước khi chọn sheet hiện đủ mọi dòng, lọc nhanh: còn dư nợ / đã trả hết / có ghi chú.
 - Lần nào do quên đánh dấu / số liệu sai thì bấm **Không tính** và ghi lý do — vẫn lưu vết (ai, lý do), không cộng vào thống kê;
   **↺ Tính lại** để bỏ. Lý do quá hạn thật ghi bằng ghi chú “Quá hạn — đang xử lý”.
 - Hồ sơ ↔ bản soạn KUNN & PDGN: ngày GN, số ngày vay, gói / lãi suất, số KUNN, chứng từ bổ sung dùng chung; trường dùng chung
