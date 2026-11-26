@@ -1041,6 +1041,14 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
   await page.click('[data-ctab="so"]');
   assert.match(await page.locator('.mtab').innerText(), /Tổng hợp giải ngân theo tháng[\s\S]*từ file Excel/, 'dashboard sổ hóa đơn gồm cả KUNN trong file Excel');
   assert.match(await page.locator('.tile', { hasText: 'Tổng đã giải ngân' }).innerText(), /từ file Excel/);
+  // bấm ô tổng → danh sách chi tiết đủ KUNN như số tổng (gồm KUNN chỉ có trong file Excel)
+  const tTot = await page.locator('.tile', { hasText: 'Tổng đã giải ngân' }).innerText(), nTot = +(/(\d+) KUNN/.exec(tTot) || [])[1];
+  await page.locator('.tile', { hasText: 'Giải ngân 12 tháng gần nhất' }).click();
+  await page.locator('#dSum').waitFor();
+  await page.selectOption('#dM', '');
+  assert.match(await page.locator('#dSum').innerText(), new RegExp(`^${nTot} KUNN[\\s\\S]*chỉ có trong file Excel`), 'danh sách đủ ' + nTot + ' KUNN');
+  assert.ok(await page.locator('#dB tr', { hasText: 'Chỉ có trong file Excel' }).count() > 0);
+  await page.locator('.modal [data-close]').first().click();
   const [fcb] = await Promise.all([page.waitForEvent('filechooser'), page.click('#bBulk')]);
   await fcb.setFiles([o1, o2]);
   await page.locator('.modal', { hasText: 'Đã thêm 2 KUNN' }).waitFor();

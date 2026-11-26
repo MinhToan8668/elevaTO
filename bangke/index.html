@@ -3750,7 +3750,7 @@ function months12(today = BK.todayISO()) {
 const AGE = ['1–30 ngày', '31–60 ngày', '61–90 ngày', 'Trên 90 ngày'];
 const ageOf = (q) => (q <= 30 ? 0 : q <= 60 ? 1 : q <= 90 ? 2 : 3);
 const gocCls = (s) => (s.done ? 'done' : s.quaHan ? 'qua' : s.goc === 'thieu' ? 'thieu' : 'chua');
-const GOC_CLS = { done: ['Đã nhận đủ', 'p-ok'], thieu: ['Nhận thiếu', 'p-warn'], chua: ['Chưa nhận, trong hạn', 'p-mute'], qua: ['Quá hạn', 'p-err'] };
+const GOC_CLS = { done: ['Đã nhận đủ', 'p-ok'], thieu: ['Nhận thiếu', 'p-warn'], chua: ['Chưa nhận, trong hạn', 'p-mute'], qua: ['Quá hạn', 'p-err'], xl: ['Chỉ có trong file Excel', 'p-mute'] };
 function portfolio(kunns) {
   const today = BK.todayISO(), ms = months12(today), byM = Object.fromEntries(ms.map((k) => [k, { v: 0, n: 0 }]));
   const goc = { done: 0, thieu: 0, chua: 0, qua: 0 }, aging = [0, 0, 0, 0], overdue = [];
@@ -3842,7 +3842,7 @@ document.addEventListener('change', (e) => {
 function xlKunns(c) {
   if (!c || !c.ledger) return [];
   const have = new Set(S.store.kunnsOf(c.id).map((k) => kkey(k.so_kunn)));
-  return c.ledger.kunns.filter((x) => x.ngay_gn && x.goc > 0 && !have.has(kkey(x.so))).map((x) => ({ id: 'xl:' + c.id + ':' + x.so, customerId: c.id, so_kunn: x.so, ngay_gn: x.ngay_gn, lines: [{ tien_gn: x.goc, ngay_hd: x.ngay_gn }], _xl: true }));
+  return c.ledger.kunns.filter((x) => x.ngay_gn && x.goc > 0 && !have.has(kkey(x.so))).map((x) => ({ id: 'xl:' + c.id + ':' + x.so, customerId: c.id, so_kunn: x.so, ngay_gn: x.ngay_gn, ngay_dh: x.dao_han || '', lines: [{ tien_gn: x.goc, ngay_hd: x.ngay_gn }], _xl: true }));
 }
 /** Bảng tổng hợp giải ngân theo tháng (sổ hóa đơn + file Excel). */
 function monthTable(kunns, n = 12) {
@@ -4020,6 +4020,7 @@ document.addEventListener('click', (e) => {
   if (d.act === 'home') return go({ cid: null });
   if (d.act === 'import') return openImport();
   if (d.act === 'open') { const m = t.closest('.modal'); if (m) m.remove(); return openKunn(d.cid, d.k); }
+  if (d.act === 'kx') { const m = t.closest('.modal'); if (m) m.remove(); V.kf = 'all'; V.kq = ''; V.kunnSel = null; V.kunnSelSo = d.so; return go({ cid: d.cid, tab: 'kunn', hs: null, doc: null }); }
   if (d.act === 'kl') return openKunnList({ cid: d.cid || '', month: d.month || '', by: d.by || 'gn', goc: d.goc || '', age: d.age ?? '' });
   if (d.act === 'check') return openImport(d.cid || S.cid || '', true);
   if (d.act === 'audit') { const m = t.closest('.modal'); if (m) m.remove(); return auditStored(d.cid || S.cid); }
@@ -4038,7 +4039,8 @@ function openKunn(cid, kid) {
 }
 function kunnRows() {
   const today = BK.todayISO();
-  return S.customers.flatMap((c) => S.store.kunnsOf(c.id).map((k) => { const s = BK.kunnSummary(k, { hanNgay: hanNgay(), today }); return { k, c, s, cls: gocCls(s) }; }));
+  return S.customers.flatMap((c) => S.store.kunnsOf(c.id).filter(isGn).map((k) => { const s = BK.kunnSummary(k, { hanNgay: hanNgay(), today }); return { k, c, s, cls: gocCls(s) }; })
+    .concat(xlKunns(c).map((k) => ({ k, c, xl: true, cls: 'xl', s: { tong_gn: k.lines[0].tien_gn || 0, n: 0, nDa: 0, han: '', quaHan: 0 } }))));
 }
 function openKunnList(f) {
   const all = kunnRows();
@@ -4057,11 +4059,12 @@ function openKunnList(f) {
     const c = $('#dC', m).value, mo = $('#dM', m).value, by = $('#dBy', m).value, g = $('#dG', m).value, a = $('#dA', m).value, q = BK.fold($('#dQ', m).value);
     const inPer = (k) => !mo || (by === 'hd' ? k.lines.some((l) => periodMatch(l.ngay_hd || k.ngay_gn, mo)) : periodMatch(k.ngay_gn, mo));
     cur = all.filter((x) => (!c || x.c.id === c) && inPer(x.k)
-      && (!g || (g === 'pending' ? x.cls !== 'done' : x.cls === g)) && (a === '' || (x.cls === 'qua' && ageOf(x.s.quaHan) === +a)) && (!q || BK.fold(x.k.so_kunn).includes(q)))
+      && (!g || (!x.xl && (g === 'pending' ? x.cls !== 'done' : x.cls === g))) && (a === '' || (x.cls === 'qua' && ageOf(x.s.quaHan) === +a)) && (!q || BK.fold(x.k.so_kunn).includes(q)))
       .sort((p, r) => (r.s.quaHan || 0) - (p.s.quaHan || 0) || (r.k.ngay_gn || '').localeCompare(p.k.ngay_gn || ''));
-    $('#dSum', m).textContent = `${cur.length} KUNN · tổng ${money(BK.sum(cur.map((x) => x.s.tong_gn)))} · bấm vào dòng để mở KUNN`;
-    $('#dB', m).innerHTML = cur.slice(0, 1000).map(({ k, c: cc, s, cls }) => `<tr ${A({ act: 'open', cid: cc.id, k: k.id })} class="${cls === 'qua' ? 'bad' : ''}"><td>${esc(cc.name)}</td><td><b>${esc(k.so_kunn)}</b></td><td>${dd(k.ngay_gn)}</td><td>${dd(k.ngay_dh)}</td><td class="num">${money(s.tong_gn)}</td><td class="num">${s.n}</td>
-      <td><span class="pill ${GOC_CLS[cls][1]}">${cls === 'qua' ? `Quá hạn ${s.quaHan} ngày` : GOC_CLS[cls][0]}</span><div class="hist">${s.nDa}/${s.n} dòng đã nhận</div></td><td>${dd(s.han)}</td>
+    const nX = cur.filter((x) => x.xl).length;
+    $('#dSum', m).textContent = `${cur.length} KUNN · tổng ${money(BK.sum(cur.map((x) => x.s.tong_gn)))}${nX ? ` · ${cur.length - nX} có bảng kê trong tool, ${nX} chỉ có trong file Excel (chưa có danh sách hóa đơn)` : ''} · bấm vào dòng để mở KUNN`;
+    $('#dB', m).innerHTML = cur.slice(0, 1000).map(({ k, c: cc, s, cls, xl }) => `<tr ${xl ? A({ act: 'kx', cid: cc.id, so: k.so_kunn }) : A({ act: 'open', cid: cc.id, k: k.id })} class="${cls === 'qua' ? 'bad' : ''}"><td>${esc(cc.name)}</td><td><b>${esc(k.so_kunn)}</b></td><td>${dd(k.ngay_gn)}</td><td>${dd(k.ngay_dh)}</td><td class="num">${money(s.tong_gn)}</td><td class="num">${xl ? '—' : s.n}</td>
+      <td><span class="pill ${GOC_CLS[cls][1]}">${cls === 'qua' ? `Quá hạn ${s.quaHan} ngày` : GOC_CLS[cls][0]}</span>${xl ? '<div class="hist">chưa nạp bảng kê vào tool</div>' : `<div class="hist">${s.nDa}/${s.n} dòng đã nhận</div>`}</td><td>${dd(s.han)}</td>
       <td class="hist" style="max-width:260px">${esc([...new Set(k.lines.map((l) => l.thieu).filter(Boolean))].slice(0, 4).join('; '))}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">Không có KUNN khớp bộ lọc</td></tr>';
   };
   ['dC', 'dM', 'dBy', 'dG', 'dA'].forEach((id) => { $('#' + id, m).onchange = draw; });
