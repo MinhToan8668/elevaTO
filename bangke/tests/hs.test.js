@@ -372,7 +372,7 @@ test('ghi chú thu nợ nhiều kiểu: “thu 5.12.25”, “THU ĐÚNG HẠN�
   assert.equal(T('THU ĐÚNG HẠN', '2025-07-08').kind, 'dung_han');
   const a = T('thu 10 tỷ 2.2.26, 5.5 tỷ  đúng hạn3.2.26', '2025-08-21');
   assert.deepEqual(a.dates, ['2026-02-02', '2026-02-03']); assert.equal(a.last, '2026-02-03');
-  assert.deepEqual(a.pays, [{ amount: 10e9, date: '2026-02-02' }, { amount: 5.5e9, date: '2026-02-03' }]);
+  assert.deepEqual(a.pays, [{ amount: 10e9, date: '2026-02-02', rest: false }, { amount: 5.5e9, date: '2026-02-03', rest: false }]);
   const b = T('THU 1.5 tỷ 17.11.26, thu 2 tỷ ngày 19.11.26', '2026-06-08');
   assert.equal(b.kind, 'mot_phan'); assert.equal(b.amount, 3.5e9); assert.deepEqual(b.dates, ['2026-11-17', '2026-11-19']);
   assert.equal(T('thuế + điện', '2026-11-19'), null, 'không phải ghi chú thu nợ');
@@ -384,7 +384,8 @@ test('ghi chú thu nợ nhiều kiểu: “thu 5.12.25”, “THU ĐÚNG HẠN�
   const L = HSC.readLedgerSheet(grid, { hr: 0, cols: { so: 0, ngay_gn: 1, dao_han: 2, goc: 3, con_lai: 4, note: 5 } });
   assert.equal(L.kunns[0].ngay_thu, '2025-12-22');
   assert.equal(L.kunns[1].ngay_thu, '', 'còn dư nợ → chưa trả hết');
-  assert.equal(L.kunns[1].da_thu_note, 3.5e9);
+  assert.equal(L.kunns[1].da_thu_note, undefined, 'file đã trừ (số tiền − dư nợ = 15.4 tỷ ≥ 3.5 tỷ ghi chú) → không trừ thêm');
+  assert.equal(L.kunns[1].con_lai, 26500000000);
 });
 
 test('ghi chú thu nợ = ngày thu thật: trả trước hạn / thu ngày … → KH trả hết; nhiều lần thu cộng dồn; hẹn thu, gia hạn không tính', () => {
@@ -411,6 +412,11 @@ test('ghi chú thu nợ = ngày thu thật: trả trước hạn / thu ngày …
   // file đã có cột Đã thu → không trừ hai lần
   const e = K({ da_thu: 4e9, con_lai: 6e9, note: 'thu 4 tỷ 1/2/25' });
   assert.equal(e.con_lai, 6e9); assert.equal(e.da_thu_note, undefined);
+  // file đã tự trừ dư nợ (không có cột Đã thu): số tiền − dư nợ = tổng ghi chú → giữ dư nợ của file
+  const e2 = K({ goc: 41.9e9, con_lai: 26.5e9, note: 'THU 1.5 tỷ 17.11.25, thu 13.9 tỷ ngày 19.11.25' });
+  assert.equal(e2.con_lai, 26.5e9); assert.equal(e2.ngay_thu, '');
+  const e3 = K({ goc: 41.9e9, con_lai: 26.5e9, note: 'thu 15.4 tỷ 17.11.25, thu 26.5 tỷ 20.11.25' });
+  assert.equal(e3.con_lai, 0, 'ghi chú có thêm lần thu đủ phần còn lại → trả hết'); assert.equal(e3.ngay_thu, '2025-11-20');
   // hẹn thu / gia hạn / quá hạn: không phải ngày thu
   for (const n of ['hẹn thu 30/12/2026', 'gia hạn đến 10/4/25', 'quá hạn từ 11/3/25, đang xử lý']) { const x = K({ note: n }); assert.equal(x.ngay_thu, '', n); assert.equal(x.con_lai, 10e9, n); }
   assert.equal(K({ note: 'thu 5 tỷ 1/2/25, thu 5 tỷ 30/12/26' }).con_lai, 5e9, 'lần thu sau hôm nay chưa tính');
@@ -419,4 +425,47 @@ test('ghi chú thu nợ = ngày thu thật: trả trước hạn / thu ngày …
   assert.deepEqual([f.con_lai, f.ngay_thu, f.con_lai_file], [0, '2025-02-20', 42345678901]);
   const g = HSC.applyThuNote({ ...a, note: '' }, TD);
   assert.deepEqual([g.con_lai, g.ngay_thu, g.thu_src], [10e9, '', undefined], 'xóa ghi chú → về số của file');
+});
+
+test('ghi chú thu nợ — các kiểu dễ hiểu sai: còn lại / dư nợ, thu lãi / phí, trả 1 phần không ghi số tiền, gia hạn, năm thiếu', () => {
+  const TD = '2026-11-26';
+  const K = (note, o = {}) => HSC.applyThuNote({ so: '9000009(2).26', hm: '', goc: 3e9, da_thu: 0, con_lai: 3e9, ngay_thu: '', ngay_gn: '2026-01-05', dao_han: '2026-12-31', note, ...o }, TD);
+  const P = (x) => x.thu_note ? x.thu_note.pays.map((p) => [p.date, p.amount]) : null;
+  // số tiền sau “còn lại / còn / dư nợ” không phải tiền thu
+  for (const n of ['thu 1 tỷ ngày 5/6/26, còn lại 2 tỷ', 'thu 1 tỷ ngày 5/6/26, còn 2 tỷ', 'dư nợ 3 tỷ, thu 1 tỷ 5/6/26']) {
+    const x = K(n); assert.deepEqual(P(x), [['2026-06-05', 1e9]], n); assert.equal(x.con_lai, 2e9, n); assert.equal(x.ngay_thu, '', n);
+  }
+  // thu lãi / phí không phải trả gốc
+  for (const n of ['trả lãi ngày 25/10', 'đã thu lãi 25/10/26', 'thu lãi 15.000.000 ngày 5/6/26']) { const x = K(n); assert.equal(x.con_lai, 3e9, n); assert.equal(x.ngay_thu, '', n); assert.equal(x.thu_note.kind, 'lai', n); }
+  assert.deepEqual([K('trả trước hạn 1/2/2026 phí 1,5 tr').ngay_thu, K('trả trước hạn 1/2/2026 phí 1,5 tr').con_lai], ['2026-02-01', 0], 'phí không cộng vào tiền gốc');
+  assert.deepEqual(P(K('Thu gốc 1.000.000.000, lãi 5.000.000 ngày 5/6/26')), [['2026-06-05', 1e9]]);
+  // trả 1 phần không ghi số tiền → ghi nhận lần thu, không trừ dư nợ, không coi là trả hết
+  for (const n of ['Đã thu 15/11/2026. Hẹn thu phần còn lại 30/12/2026', 'trả 50% ngày 5/6/26', 'thu 1/2 gốc ngày 5/6/26', 'thu 1 phần ngày 5/6/26']) {
+    const x = K(n); assert.equal(x.con_lai, 3e9, n); assert.equal(x.ngay_thu, '', n); assert.ok(x.thu_note.unk, n);
+  }
+  assert.deepEqual(K('thu 1/2 gốc ngày 5/6/26').thu_note.dates, ['2026-06-05'], '“1/2 gốc” không phải ngày');
+  // gia hạn / hẹn không lấy làm ngày thu; ghép số tiền với ngày trong cùng vế
+  assert.deepEqual(P(K('gia hạn đến 30/12/26, đã thu 1 tỷ 5/6/26')), [['2026-06-05', 1e9]]);
+  assert.equal(K('gia hạn đến 30/12/26, đã thu 1 tỷ 5/6/26').con_lai, 2e9);
+  const tt = K('Tất toán ngày 26/1/24 (đã thu 2 tỷ ngày 20/1/24)', { ngay_gn: '2023-10-01', dao_han: '2024-03-01' });
+  assert.deepEqual(P(tt), [['2024-01-20', 2e9], ['2024-01-26', null]]); assert.equal(tt.ngay_thu, '2024-01-26'); assert.equal(tt.con_lai, 0);
+  const tb = K('thu nợ trước hạn 1 tỷ ngày 26/1/26, toàn bộ ngày 31/1/26');
+  assert.equal(tb.ngay_thu, '2026-01-31'); assert.equal(tb.con_lai, 0);
+  const th = K('thu 15/2/26, KH hẹn trả lãi 15/12/26'); assert.equal(th.ngay_thu, '2026-02-15'); assert.equal(th.con_lai, 0);
+  // quá hạn rồi thu / “đã thanh toán”
+  for (const n of ['nợ quá hạn, đã thu 5/6/26', 'quá hạn 10 ngày, thu 5/6/26', 'đã thanh toán 5/6/26']) assert.equal(K(n).ngay_thu, '2026-06-05', n);
+  // năm thiếu: không lùi về trước ngày giải ngân → là ngày hẹn, chưa thu
+  const y = K('thu 1/12', { ngay_gn: '2026-06-01' }); assert.equal(y.ngay_thu, ''); assert.equal(y.con_lai, 3e9); assert.deepEqual(y.thu_note.hen.map((p) => p.date), ['2026-12-01']);
+  // số tiền: “2.500 tr”, số liền 10 chữ số, “2 tỷ 500 triệu”
+  assert.deepEqual(P(K('thu 2.500 tr ngày 5/6/26')), [['2026-06-05', 2.5e9]]);
+  assert.deepEqual(P(K('thu 2000000000 ngày 5/6/26')), [['2026-06-05', 2e9]]);
+  assert.deepEqual(P(K('thu 2 tỷ 500 triệu ngày 5/6/26')), [['2026-06-05', 2.5e9]]);
+  assert.equal(HSC.thuFromNote('KUNN 9000001(23).26 · HĐ 0001234567', '2026-01-01', TD), null);
+  // file có cột Đã thu: ghi chú liệt kê cả lần đã trừ → chỉ trừ phần thêm; ghi chú chỉ lần mới → trừ cả
+  const f1 = K('thu 1 tỷ 1/2/26, thu 0.5 tỷ 1/3/26', { goc: 3e9, da_thu: 1e9, con_lai: 2e9 });
+  assert.equal(f1.con_lai, 1.5e9);
+  const f2 = K('thu 2 tỷ 1/3/26', { goc: 3e9, da_thu: 1e9, con_lai: 2e9 });
+  assert.equal(f2.con_lai, 0); assert.equal(f2.ngay_thu, '2026-03-01');
+  // “đã thu 3 tỷ” không ghi ngày mà đủ dư nợ → trả hết (không rõ ngày)
+  const nd = K('đã thu 3 tỷ'); assert.equal(nd.con_lai, 0); assert.equal(nd.ngay_thu, '');
 });
