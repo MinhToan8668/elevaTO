@@ -1089,14 +1089,14 @@ test('hồ sơ giải ngân theo công ty: đọc file Excel quản lý GN → t
 test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty, xem trước, lưu cách đọc; file sửa (chèn cột) đọc lại vẫn đúng', async () => {
   const head = ['Số KUNN', 'Ngày GN', 'Ngày đáo hạn', 'Lãi suất', 'Số tiền GN', 'Đã trả', 'Dư nợ'];
   const rows = [['HMTD 2025'], ['1050807(1).26', 46217, 46353, 0.0835, 10933435095, 10933435095, 0], ['1050807(5).26', 46226, 46363, 0.0835, 7533742585, 0, 7533742585]];
-  const f1 = join(dir, 'TONG_HOP_KIM_TIN.xlsx');
-  await writeFile(f1, toXlsx({ 'Tổng hợp Kim Tín Group': [['Tổng hợp']], KES: [head, ['9990001(1).26', 46200, 46300, 0.08, 100000000, 0, 100000000]], KTLA: [['THEO DÕI KUNN'], head, ...rows], 'Dòng tiền': [['x']] }));
-  const f2 = join(dir, 'TONG_HOP_KIM_TIN_sua.xlsx');
+  const f1 = join(dir, 'TONG_HOP_KHA_TIN.xlsx');
+  await writeFile(f1, toXlsx({ 'Tổng hợp Kha Tín Group': [['Tổng hợp']], KES: [head, ['9990001(1).26', 46200, 46300, 0.08, 100000000, 0, 100000000]], KTLA: [['THEO DÕI KUNN'], head, ...rows], 'Dòng tiền': [['x']] }));
+  const f2 = join(dir, 'TONG_HOP_KHA_TIN_sua.xlsx');
   await writeFile(f2, toXlsx({ KES: [head], KTLA: [['THEO DÕI KUNN'], ['Cập nhật'], ['Ghi chú', ...head], ...rows.map((r) => ['', ...r]), ['', '1050807(10).26', 46260, 46420, 0.0835, 6969976665, 0, 6969976665]] }));
   const { ctx, page } = await newPage();
   await page.addInitScript(() => { window.showOpenFilePicker = undefined; });
   await page.goto(base + 'index.html');
-  await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty TNHH Kim Tín Long An'); await page.click('#cfSave');
+  await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty TNHH Kha Tín Long An'); await page.click('#cfSave');
   await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
   const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).click()]);   // bấm ô dư nợ là chọn file
   await fc.setFiles(f1);
@@ -1116,27 +1116,28 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.locator('.xlbox', { hasText: '3 dòng · 2 KUNN còn dư nợ' }).waitFor();
   assert.match(await page.locator('.xlbox').innerText(), /Sheet KTLA/);
   // file kiểu sổ tự lập: SỐ DƯ ghi “-” / 0 = đã trả hết; cột ghi chú thu nợ → ngày thu; ghi chú khó → AI đọc
-  const f3 = join(dir, 'BUS.xlsx');
+  const f3 = join(dir, 'SO_THU.xlsx');
   await writeFile(f3, toXlsx({ Sheet1: [['KUNN', 'NGÀY GIẢI NGÂN', 'NGÀY ĐÁO HẠN', 'SỐ TIỀN', 'SỐ DƯ', 'Ghi chú'],
-    ['7413614(1).23', '03/07/2023', '15/12/2023', 6179758772, '-', 'Trả nợ trước hạn ngày 15/11'],
-    ['7413614(4).23', '29/08/2023', '12/02/2024', 4408799671, 0, 'Trả nợ trước hạn ngày 3/1/24'],
-    ['7413614(9).23', '12/09/2023', '13/03/2024', 1551139740, '-', 'KH chuyển khoản hết sau Tết'],
-    ['1058390(1).26', '14/08/2026', '12/02/2027', 12700318170, 12700318170, '']] }));
-  await page.click('a.logo'); await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty BUS Thử'); await page.click('#cfSave');
+    ['9000001(1).23', '03/07/2023', '15/12/2023', 6100000000, '-', 'Trả nợ trước hạn ngày 15/11'],
+    ['9000001(4).23', '29/08/2023', '12/02/2024', 4400000000, 0, 'Trả nợ trước hạn ngày 3/1/24'],
+    ['9000001(9).23', '12/09/2023', '13/03/2024', 1500000000, '-', 'KH chuyển khoản hết sau Tết'],
+    ['9000004(1).26', '14/08/2026', '12/02/2027', 12700000000, 12700000000, '']] }));
+  await page.click('a.logo'); await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty Sổ Thử'); await page.click('#cfSave');
   await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
   const [fc3] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).click()]);
   await fc3.setFiles(f3);
-  await page.locator('#lgPrev', { hasText: '4 KUNN · 1 còn dư nợ · dư nợ 12,700,318,170 đ' }).waitFor();
+  await page.locator('#lgPrev', { hasText: '4 KUNN · 1 còn dư nợ · dư nợ 12,700,000,000 đ' }).waitFor();
   assert.match(await page.locator('#lgPrev').innerText(), /Trả nợ trước hạn ngày 15\/11[\s\S]*→ Trả nợ trước hạn · 15\/11\/2023/);
+  if (SHOTS) { await page.locator('[data-pf="paid"]').click(); await page.evaluate(() => { document.getElementById('toast').innerHTML = ''; document.getElementById('lgPrev').scrollIntoView(); }); await shot(page, '11-so-ghichu'); await page.locator('[data-pf=""]').click(); }
   await page.click('#lgSave');
   await page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).filter({ hasText: '12.7 tỷ' }).waitFor();
   await page.evaluate(() => localStorage.setItem('finlens_ai_settings_v1', JSON.stringify({ keys: [{ key: 'AIzaTEST-KEY-1234567890', on: true }], model: 'gemini-3.6-flash', active: 0 })));
-  await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items: [{ so: '7413614(9).23', loai: 'tat_toan', ngay_thu: '20/02/2024', so_tien: null, gia_han_den: '', tom_tat: 'Trả hết sau Tết' }] }) }] }, finishReason: 'STOP' }] }) }));
+  await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items: [{ so: '9000001(9).23', loai: 'tat_toan', ngay_thu: '20/02/2024', so_tien: null, gia_han_den: '', tom_tat: 'Trả hết sau Tết' }] }) }] }, finishReason: 'STOP' }] }) }));
   await page.click('[data-ctab="info"]');
   await page.click('#xlAiNote');
   await page.locator('.toast div', { hasText: 'AI đọc xong 3 ghi chú' }).waitFor();
   await page.click('[data-ctab="kunn"]'); await page.click('[data-kf="all"]');
-  await page.locator('.kwrap tbody tr', { hasText: '7413614(9).23' }).filter({ hasText: 'đã trả 20/02/2024' }).waitFor();
-  await page.locator('.kwrap tbody tr', { hasText: '7413614(1).23' }).filter({ hasText: 'đã trả 15/11/2023' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '9000001(9).23' }).filter({ hasText: 'đã trả 20/02/2024' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '9000001(1).23' }).filter({ hasText: 'đã trả 15/11/2023' }).waitFor();
   await ctx.close();
 });

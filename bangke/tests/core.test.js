@@ -256,14 +256,14 @@ test('bảng kê theo PO (chưa có hóa đơn): số PO làm số chứng từ,
   const g = [
     ['', '', '', 'BẢNG KÊ ĐỀ NGHỊ GIẢI NGÂN VIB'], ['', '', '', '', '', '', 'NGÀY', '27/10/2026'], [],
     ['STT', 'MÃ NCC', 'TÊN NCC', 'SỐ PO', 'Số tiền', 'Số tiền đề nghị GN ( Lần 2)', 'Ngày PO', 'Ngày Đề nghị', 'mặt hàng'],
-    ['', '8002101', 'Công Ty Cổ Phần Tập Đoàn Mẫu', '4300011572', 83913500000, 28913500000, '07/10/2026', '27/10/2026', 'Thép'],
+    ['', '8002101', 'Công Ty Cổ Phần Tập Đoàn Mẫu', '4300099999', 83913500000, 28913500000, '07/10/2026', '27/10/2026', 'Thép'],
     ['TỔNG CỘNG', '', '', '', 83913500000, 28913500000], [], ['', '', '', '', '', 35000000000], ['', '', '', '', '', 20000000000],
   ];
   const r = BK.autoParseSheet(g);
   assert.ok(r.ok);
   const ls = r.groups.flatMap((x) => x.lines);
   assert.equal(ls.length, 1);
-  assert.deepEqual([ls[0].so_hd, ls[0].ngay_hd, ls[0].tien_hd, ls[0].tien_gn], ['4300011572', '2026-10-07', 83913500000, 28913500000]);
+  assert.deepEqual([ls[0].so_hd, ls[0].ngay_hd, ls[0].tien_hd, ls[0].tien_gn], ['4300099999', '2026-10-07', 83913500000, 28913500000]);
   assert.ok(!ls[0].lech);
 });
 
@@ -272,7 +272,7 @@ test('bảng kê PO kiểu "Tên NCC | Số PO | Ngày | Số tiền PO | Số t
     ['CÔNG TY CỔ PHẦN MẪU'], [], ['BẢNG KÊ CHỨNG TỪ GIẢI NGÂN'], ['Kèm theo KUNN số ... ngày 27/10/2026'],
     ['Chi tiết theo bảng kê dưới đây:', '', '', '', '', '', 'ĐVT: VNĐ'],
     ['STT', 'Tên NCC', 'Số PO', 'Ngày', 'Số tiền PO', 'Số tiền GN', 'Hàng hóa/Dịch vụ'],
-    [1, 'Công Ty Cổ Phần Tập Đoàn Mẫu', 'PO 4300011572', '07/10/2026', 83913500000, 28913500000, 'Thép'],
+    [1, 'Công Ty Cổ Phần Tập Đoàn Mẫu', 'PO 4300099999', '07/10/2026', 83913500000, 28913500000, 'Thép'],
     ['Tổng số tiền giải ngân Công Ty Cổ Phần Tập Đoàn Mẫu', '', '', '', 83913500000, 28913500000, ''],
     ['Tổng cộng', '', '', '', 83913500000, 28913500000, ''],
   ];
@@ -280,7 +280,7 @@ test('bảng kê PO kiểu "Tên NCC | Số PO | Ngày | Số tiền PO | Số t
   assert.ok(r.ok);
   const ls = r.groups.flatMap((x) => x.lines);
   assert.equal(ls.length, 1);
-  assert.deepEqual([ls[0].ncc, ls[0].so_hd, ls[0].ngay_hd, ls[0].tien_hd, ls[0].tien_gn], ['Công Ty Cổ Phần Tập Đoàn Mẫu', 'PO 4300011572', '2026-10-07', 83913500000, 28913500000]);
+  assert.deepEqual([ls[0].ncc, ls[0].so_hd, ls[0].ngay_hd, ls[0].tien_hd, ls[0].tien_gn], ['Công Ty Cổ Phần Tập Đoàn Mẫu', 'PO 4300099999', '2026-10-07', 83913500000, 28913500000]);
   assert.ok(!r.title.so_kunn, 'không lấy chữ "số" làm số KUNN');
 });
 
