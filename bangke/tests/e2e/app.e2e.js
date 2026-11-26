@@ -1142,5 +1142,32 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.click('[data-ctab="kunn"]'); await page.click('[data-kf="all"]');
   await page.locator('.kwrap tbody tr', { hasText: '9000001(9).23' }).filter({ hasText: 'đã trả 20/02/2024' }).waitFor();
   await page.locator('.kwrap tbody tr', { hasText: '9000001(1).23' }).filter({ hasText: 'đã trả 15/11/2023' }).waitFor();
+  // bấm chọn KUNN: bảng giữ nguyên chỗ đang cuộn; Ctrl / Shift + bấm chọn nhiều → làm cùng lúc
+  await page.setViewportSize({ width: 1400, height: 380 });
+  const tw = page.locator('.kwrap > section.tw');
+  const sh = await tw.evaluate((n) => { n.scrollTop = n.scrollHeight; return n.scrollTop; });
+  assert.ok(sh > 0, 'bảng KUNN có thanh cuộn');
+  await page.locator('.kwrap tbody tr').last().click();
+  assert.ok(Math.abs((await tw.evaluate((n) => n.scrollTop)) - sh) < 3, 'bấm chọn KUNN không nhảy về đầu bảng');
+  await page.setViewportSize({ width: 1400, height: 900 });
+  const rowsK = page.locator('.kwrap tbody tr');
+  await rowsK.nth(0).click();
+  await rowsK.nth(2).click({ modifiers: ['Control'] });
+  await page.locator('.kdet', { hasText: 'Đã chọn 2 KUNN' }).waitFor();
+  await rowsK.nth(3).click({ modifiers: ['Shift'] });
+  await page.locator('.kdet', { hasText: 'Đã chọn 2 KUNN' }).waitFor();   // Shift: đoạn từ dòng vừa chọn (3) đến 4
+  await rowsK.nth(0).click({ modifiers: ['Shift', 'Control'] });
+  await page.locator('.kdet', { hasText: 'Đã chọn 4 KUNN' }).waitFor();
+  assert.equal(await page.locator('.kwrap tbody tr.msel').count(), 4);
+  if (SHOTS) await shot(page, '11-kunn-chon-nhieu');
+  await page.fill('#kbNote', 'Đã gọi nhắc KH');
+  await page.click('[data-kb="note"]');
+  await page.locator('.toast div', { hasText: 'Đã thêm ghi chú cho 4 KUNN' }).waitFor();
+  assert.equal(await page.locator('.kwrap tbody tr span[title*="Đã gọi nhắc KH"]').count(), 4);
+  await page.click('[data-kb="del"]');
+  await page.locator('[data-kf="del"]', { hasText: '· 4' }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.click('#bUndo');
+  await page.locator('[data-kf="del"]', { hasText: '· 0' }).waitFor();
   await ctx.close();
 });

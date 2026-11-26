@@ -285,7 +285,7 @@ a.logo{color:#fff;text-decoration:none}
 .chip{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;background:#fff}.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .note{border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px}.note.warn{background:var(--warn-bg);border:1px solid #f1d29b;color:#8a5a0c}
 .kwrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}@media(max-width:1100px){.kwrap{grid-template-columns:1fr}}
-.t tr.sel td{background:var(--blue-bg)}.wtxt{color:#8a5a0c}
+.t tr.sel td{background:var(--blue-bg)}.t tr.msel td:first-child{box-shadow:inset 3px 0 0 var(--blue,#2563eb)}.kmsl{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;max-height:120px;overflow:auto}.kbg{border-top:1px solid var(--line2);padding-top:8px}.wtxt{color:#8a5a0c}
 .thuno .ttf{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.thuno .ttf .inp{width:auto}.qhl{margin-top:8px;font-size:12.5px;display:grid;gap:3px}.qhl>b{font-size:12px;color:var(--ink2)}tr.dim td{opacity:.55}
 .kdet{padding:14px 16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:80px;max-height:calc(100vh - 96px);overflow:auto}.kdet .big{font-size:17px;color:var(--navy)}
 .tl{list-style:none;display:flex;flex-direction:column;gap:9px;padding:0;margin:0}.tl li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:9px;font-size:13.5px;text-align:left}.tl li>i{display:block;width:16px;height:16px;box-sizing:border-box;border-radius:50%;border:2px solid #9aa5b1;margin-top:2px}
@@ -4033,13 +4033,19 @@ function uiSnapshot(el) {
   const act = document.activeElement, inEl = act && el.contains(act) && /^(INPUT|TEXTAREA|SELECT)$/.test(act.tagName);
   const dirty = [...el.querySelectorAll('input,textarea')].filter((n) => uiKey(n) && !uiCommitted.has(n) && !/^(checkbox|radio|date|file|hidden)$/.test(n.type) && n.value !== n.defaultValue).map((n) => [uiKey(n), n.value]);
   uiCommitted.clear();
-  return { hash: location.hash, dirty, fk: inEl ? uiKey(act) : '', sel: inEl && 'selectionStart' in act ? act.selectionStart : null, scroll: $('#hsScroll') ? null : window.scrollY };
+  const sc = [...el.querySelectorAll(SCROLL_SEL)].map((n, i) => ({ i, cls: n.className, sk: n.dataset.sk || '', t: n.scrollTop, l: n.scrollLeft }));
+  return { hash: location.hash, dirty, fk: inEl ? uiKey(act) : '', sel: inEl && 'selectionStart' in act ? act.selectionStart : null, scroll: $('#hsScroll') ? null : window.scrollY, sc };
 }
+/** Khung có thanh cuộn riêng: vẽ lại (bấm chọn KUNN, lưu ghi chú…) vẫn giữ nguyên chỗ đang xem. data-sk khác (đổi KUNN) thì khung chi tiết về đầu. */
+const SCROLL_SEL = '.tw,.kdet,.gocls,[data-keepscroll]';
 function uiRestore(el, k) {
   if (!k || k.hash !== location.hash) return;
   for (const [key, v] of k.dirty) { const n = el.querySelector(key); if (n && /^(INPUT|TEXTAREA)$/.test(n.tagName) && n.value !== v) n.value = v; }
   if (k.fk) { const n = el.querySelector(k.fk); if (n) { try { n.focus({ preventScroll: true }); if (k.sel != null && 'setSelectionRange' in n && /^(text|search|tel|url|password|)$/.test(n.type || '')) n.setSelectionRange(k.sel, k.sel); } catch (e) { /* select / number */ } } }
   el.querySelectorAll('input[type=date]:not([min])').forEach((n) => { n.min = '1990-01-01'; n.max = '2099-12-31'; });
+  const now = [...el.querySelectorAll(SCROLL_SEL)];
+  for (const x of k.sc || []) { const n = now[x.i]; if (!n || n.className !== x.cls || (n.dataset.sk || '') !== x.sk) continue; if (x.t) n.scrollTop = x.t; if (x.l) n.scrollLeft = x.l; }
+  if (k.scroll != null && Math.abs(window.scrollY - k.scroll) > 2) window.scrollTo(0, k.scroll);
 }
 const uiCommitted = new Set();   // ô vừa bắn change (đã lưu) → không chép lại giá trị cũ sau khi vẽ
 document.addEventListener('change', (e) => { if (e.target && e.target.tagName) uiCommitted.add(e.target); }, true);
@@ -7498,6 +7504,67 @@ function openThuBulk(c, rows) {
     await markPaid(c, items); m.remove();
   };
 }
+/** Khung bên phải khi chọn nhiều KUNN: tổng, danh sách, các thao tác làm cùng lúc. */
+function bulkPanel(xs) {
+  const today = BK.todayISO(), del = xs.some((r) => r.del);
+  const live = xs.filter((r) => !r.del && r.live && !r.chuaGn), paid = xs.filter((r) => !r.del && (r.ns || []).some((n) => n.type === 'tat_toan'));
+  const goc = xs.filter((r) => !r.del && r.k && r.need && r.need.src === 'goc' && !r.need.done);
+  return `<div><div class="big"><b>Đã chọn ${xs.length} KUNN</b></div><div class="hist">Tổng giải ngân ${trieu(BK.sum(xs.map((r) => r.goc || 0)))}${del ? '' : ` · dư nợ ${vnd(BK.sum(xs.map((r) => (r.live ? r.con_lai || 0 : 0))))} · ${live.length} đang vay`}</div>
+    <div class="kmsl">${xs.map((r) => `<span class="pill p-mute">${esc(r.so)}</span>`).join(' ')}</div></div>
+    ${del ? `<div class="bar"><button class="btn pri" data-kb="restore">♻ Khôi phục ${xs.length} KUNN</button><button class="btn danger" data-kb="purge">✕ Xóa hẳn ${xs.length} KUNN</button></div>` : `
+    ${live.length ? `<div class="kbg"><b>✓ KH đã trả hết</b> <span class="hist">${live.length} KUNN đang vay</span>
+      <div class="bar"><button class="btn sm pri" data-kb="paidDue" title="Trả đúng ngày đáo hạn của từng KUNN — không tính quá hạn">Đúng ngày đáo hạn từng KUNN</button><span class="hist">hoặc</span><input type="date" class="inp" id="kbPaidD" value="${today}" max="${today}" style="width:auto"><button class="btn sm" data-kb="paidOn">Trả ngày này</button></div></div>` : ''}
+    ${paid.length ? `<div class="bar"><button class="btn sm" data-kb="unpaid">↺ Bỏ đánh dấu đã trả (${paid.length})</button></div>` : ''}
+    <div class="kbg"><b>📅 Gia hạn / đổi ngày trả</b><div class="bar"><input type="date" class="inp" id="kbGh" style="width:auto"><input class="inp" id="kbGhX" placeholder="Lý do (tuỳ chọn)" style="flex:1;min-width:120px"><button class="btn sm" data-kb="gh">Gia hạn ${xs.length} KUNN</button></div></div>
+    <div class="kbg"><b>± Lãi suất mới</b><div class="bar"><input type="date" class="inp" id="kbLsD" value="${today}" style="width:auto"><input class="inp" id="kbLsV" placeholder="%/năm, vd 8.6" style="width:110px"><input class="inp" id="kbLsN" placeholder="Ghi chú" style="flex:1;min-width:100px"><button class="btn sm" data-kb="ls">Áp dụng</button></div></div>
+    <div class="kbg"><b>📝 Ghi chú chung</b><div class="bar"><input class="inp" id="kbNote" placeholder="Nội dung ghi chú cho các KUNN đã chọn" style="flex:1;min-width:160px"><button class="btn sm" data-kb="note">Thêm ghi chú</button></div></div>
+    ${goc.length ? `<div class="bar"><button class="btn sm" data-kb="goc">✓ Đã nhận đủ bản gốc (${goc.length} KUNN)</button></div>` : ''}
+    <div class="bar"><button class="btn danger" data-kb="del">🗑 Xóa ${xs.length} KUNN</button></div>`}
+    <div class="bar"><button class="btn sm" data-kb="clear">Bỏ chọn (Esc)</button></div>`;
+}
+function bindBulk(body, c, xs, rows, gone) {
+  const clear = () => { V.kms = new Set(); renderMain(); };
+  if (!bindBulk.esc) { bindBulk.esc = true; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.kms && V.kms.size && !document.querySelector('.modal') && !(HE)) { V.kms = new Set(); renderMain(); } }); }
+  $$('[data-kb]', body).forEach((b) => { b.onclick = async () => {
+    const a = b.dataset.kb, today = BK.todayISO(), n = xs.length;
+    if (a === 'clear') return clear();
+    const notesAll = async (label, fn) => { const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; for (const r of xs) { if (/chưa số/i.test(r.so)) continue; const k = kkey(r.so); all[k] = fn([...(all[k] || [])], r); if (!all[k].length) delete all[k]; } S.store.labelNext(label); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() }); log(c.id, 'kunn_bulk', label); };
+    const rowOf = (r) => (r.x ? { con_lai: r.x.con_lai_file ?? r.x.con_lai ?? null, da_thu: r.x.da_thu ?? null, ngay_thu: r.x.ngay_thu_file ?? r.x.ngay_thu ?? '' } : null);
+    if (a === 'paidDue' || a === 'paidOn') {
+      const live = xs.filter((r) => r.live && !r.chuaGn), d0 = $('#kbPaidD', body).value;
+      if (a === 'paidOn' && (!d0 || d0 > today)) return toast('Chọn ngày KH trả (không sau hôm nay)', 'err');
+      const items = live.map((r) => ({ r, d: a === 'paidDue' ? r.dao_han || today : d0 }));
+      const fut = items.filter((x) => x.d > today); if (fut.length) return toast(`${fut.length} KUNN chưa tới ngày đáo hạn — chọn “Trả ngày này”`, 'err');
+      await markPaid(c, items); return clear();
+    }
+    if (a === 'unpaid') { const c0 = cust(c.id), all = { ...(c0.kunnNotes || {}) }; let m = 0; for (const r of xs) { const k = kkey(r.so); if (!all[k]) continue; const b0 = all[k].length; all[k] = all[k].filter((x) => x.type !== 'tat_toan'); m += b0 - all[k].length; if (!all[k].length) delete all[k]; }
+      if (!m) return toast('Các KUNN đã chọn không có đánh dấu đã trả'); S.store.labelNext(`Bỏ đánh dấu đã trả ${m} KUNN`); await S.store.putCustomer({ ...c0, kunnNotes: all, ...meta() }); toast(`Đã bỏ đánh dấu đã trả — bấm ↶ để hoàn tác`, 'ok'); return; }
+    if (a === 'gh') { const d = $('#kbGh', body).value, x = $('#kbGhX', body).value.trim(); if (!d) return toast('Chọn ngày trả mới', 'err');
+      await notesAll(`Gia hạn ${n} KUNN đến ${dd(d)}`, (ns, r) => { const qh = r.live && r.dao_han && r.dao_han < today ? { tu: r.dao_han, den: today, ngay: BK.daysBetween(r.dao_han, today) } : null; return [...ns, { id: BK.uid(8), type: 'gia_han', amount: null, ngay: dd(d), text: x, at: Date.now(), by: userName(), row: rowOf(r), ...(qh ? { qh } : {}) }]; });
+      return toast(`Đã gia hạn ${n} KUNN đến ${dd(d)} — bấm ↶ để hoàn tác`, 'ok'); }
+    if (a === 'note') { const x = $('#kbNote', body).value.trim(); if (!x) return toast('Nhập nội dung ghi chú', 'err');
+      await notesAll(`Ghi chú ${n} KUNN`, (ns, r) => [...ns, { id: BK.uid(8), type: 'ghi_chu', amount: null, ngay: '', text: x, at: Date.now(), by: userName(), row: rowOf(r) }]); return toast(`Đã thêm ghi chú cho ${n} KUNN`, 'ok'); }
+    if (a === 'ls') { const d = $('#kbLsD', body).value, v = parseFloat(String($('#kbLsV', body).value || '').replace(/\s/g, '').replace(',', '.').replace('%', '')), note = $('#kbLsN', body).value.trim();
+      if (!d) return toast('Chọn ngày áp dụng', 'err'); if (!Number.isFinite(v) || v <= 0 || v > 50) return toast('Nhập lãi suất mới (%/năm), vd 8.6', 'err');
+      const c0 = cust(c.id), all = structuredClone(c0.lsAdj || {}); for (const r of xs) { if (/chưa số/i.test(r.so)) continue; const k = kkey(r.so); (all[k] = all[k] || []).push({ id: BK.uid(8), tu_ngay: d, ls: v, note, at: Date.now(), by: userName() }); }
+      const label = `Điều chỉnh lãi suất ${n} KUNN từ ${dd(d)}: ${v}%`; S.store.labelNext(label); await S.store.putCustomer({ ...c0, lsAdj: all, ...meta() }); log(c.id, 'lai_suat', label); return toast(label, 'ok'); }
+    if (a === 'goc') { const ks = xs.filter((r) => r.k && r.need && r.need.src === 'goc' && !r.need.done).map((r) => r.k); S.store.labelNext(`Đã nhận đủ bản gốc ${ks.length} KUNN`);
+      await S.store.putKunns(ks.map((k) => ({ ...k, lines: k.lines.map((l) => ({ ...l, goc: 'da_nhan' })), ...meta() }))); log(c.id, 'goc', `Đánh dấu đã nhận đủ bản gốc ${ks.length} KUNN`); return toast(`Đã đánh dấu ${ks.length} KUNN — bấm ↶ để hoàn tác`, 'ok'); }
+    if (a === 'del') {
+      if (!confirm(`Xóa ${n} KUNN? Các KUNN chuyển sang mục “Đã xóa” (lưu vết, khôi phục được), không còn tính vào bảng theo dõi / dư nợ.`)) return;
+      await S.store.group(`Xóa ${n} KUNN`, async () => {
+        const c0 = cust(c.id), kks = new Set(xs.map((r) => kkey(r.so))), { L, rows: got } = ledgerDrop(c0.ledger, kks), kd = { ...(c0.kunnDel || {}) };
+        for (const r of xs) { const kk = kkey(r.so); kd[kk] = { so: r.so, at: Date.now(), by: userName(), row: got[kk] || null, kid: r.k ? r.k.id : null }; }
+        await S.store.putCustomer({ ...c0, ...(c0.ledger ? { ledger: L } : {}), kunnDel: kd, ...meta() });
+        for (const r of xs) if (r.k) await S.store.delKunn(r.k.id);
+      });
+      log(c.id, 'xoa_kunn', `Xóa ${n} KUNN: ${xs.map((r) => r.so).join(', ')}`); V.kms = new Set(); V.kunnSel = null; V.kunnSelSo = null;
+      return toast(`Đã xóa ${n} KUNN — khôi phục ở mục “🗑 Đã xóa” hoặc bấm ↶`, 'ok', 8000, { label: '↶ Hoàn tác', fn: () => doUndo(false) });
+    }
+    if (a === 'restore') { await S.store.group(`Khôi phục ${n} KUNN`, async () => { for (const r of xs) await kunnRestore(c, r); }); V.kms = new Set(); toast(`Đã khôi phục ${n} KUNN`, 'ok'); return renderMain(); }
+    if (a === 'purge') { if (!confirm(`Xóa hẳn ${n} KUNN? Không khôi phục được nữa.`)) return; await S.store.group(`Xóa hẳn ${n} KUNN`, async () => { for (const r of xs) await kunnPurge(c, r); }); V.kms = new Set(); toast(`Đã xóa hẳn ${n} KUNN`, 'ok'); }
+  }; });
+}
 function renderCoKunn(body, c) {
   if (!renderCoKunn.cleaned) renderCoKunn.cleaned = new Set();
   if (!renderCoKunn.cleaned.has(c.id)) { renderCoKunn.cleaned.add(c.id); cleanDupKunns(c.id).catch(() => {}); }
@@ -7518,6 +7585,10 @@ function renderCoKunn(body, c) {
   const q = BK.fold(V.kq || '');
   const list = (f[0] === 'del' ? gone : rows.filter(f[2])).filter((r) => !q || BK.fold(r.so).includes(q) || (r.k && r.k.lines.some((l) => BK.fold(`${l.so_hd} ${l.ncc}`).includes(q))));
   const sel = list.find((r) => r.k && r.k.id === V.kunnSel) || list.find((r) => r.so === V.kunnSelSo) || list[0];
+  const rk = (r) => (r.del ? 'd:' + r.dk : r.k ? 'k:' + r.k.id : 'x:' + kkey(r.so));
+  if (!V.kms || V.kmsCo !== c.id || V.kmsF !== f[0]) { V.kms = new Set(); V.kmsCo = c.id; V.kmsF = f[0]; }
+  const keysNow = new Set(list.map(rk)); for (const k of [...V.kms]) if (!keysNow.has(k)) V.kms.delete(k);
+  const multi = list.filter((r) => V.kms.has(rk(r)));
   const needPill = (r) => { const n = r.need; if (!n) return '<span class="m">—</span>'; if (n.src === 'goc') return gocPill(r); if (n.none) return '<span class="m">Không cần</span>'; if (n.done) return '<span class="pill p-ok">✓ Đã nhận đủ</span>';
     return `<span class="pill ${n.qua ? 'p-err' : 'p-warn'}">${n.qua ? `✕ Quá hạn ${n.qua} ngày` : `! Chờ ${n.pend.length} bản gốc`}</span><div class="hist">${n.pend.map((b) => esc(b.ten)).join(', ')}${n.han ? ` · hạn ${dd(n.han)}` : ''}</div>`; };
   const gocPill = (r) => !r.s ? '<span class="m">—</span>' : r.s.done ? '<span class="pill p-ok">✓ Đủ</span>' : r.s.quaHan ? `<span class="pill p-err">✕ Quá hạn ${r.s.quaHan} ngày</span>` : `<span class="pill p-warn">! Thiếu ${r.s.n - r.s.nDa}/${r.s.n}</span><div class="hist">hạn ${dd(r.s.han)}</div>`;
@@ -7573,12 +7644,25 @@ function renderCoKunn(body, c) {
     ${f[0] === 'bs' && list.some((r) => r.k && r.need && r.need.src === 'goc') ? `<div class="note">KUNN theo từng hóa đơn (nạp từ bảng kê) — nếu đã nhận đủ bản gốc từ trước: <button class="btn sm" id="kGocAll">✓ Đánh dấu đã nhận đủ cho các KUNN đang lọc</button></div>` : ''}
     ${!c.ledger ? '<div class="note warn">Chưa đọc file Excel quản lý giải ngân của công ty — dư nợ, đáo hạn, thu nợ lấy từ file đó. <button class="lnk" data-ctab2="info">Chọn file →</button></div>' : ''}
     <div class="kwrap"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Dư nợ vay (gốc)</th><th>Bổ sung bản gốc</th></tr></thead><tbody>
-      ${list.map((r, i) => `<tr data-kr="${i}" class="${r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${BK.fmtRate(r.ls0 ?? '?')}%</s> → <b>${BK.fmtRate(r.ls)}%</b>` : `${BK.fmtRate(r.ls)}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
+      ${list.map((r, i) => `<tr data-kr="${i}" class="${multi.length > 1 ? (V.kms.has(rk(r)) ? 'sel msel' : '') : r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${BK.fmtRate(r.ls0 ?? '?')}%</s> → <b>${BK.fmtRate(r.ls)}%</b>` : `${BK.fmtRate(r.ls)}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
         <td>${r.dao_han ? `<b class="${r.live && r.dLeft != null && r.dLeft <= 15 ? 'wtxt' : ''}">${dd(r.dao_han)}</b><div class="hist">${thuHtml(r.dao_han)} · ${r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `<span class="err">quá ${-r.dLeft} ngày</span>`) : r.paidOn ? `đã trả ${dd(r.paidOn)}${r.paidOn > r.dao_han ? ` · <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' · đúng hạn'}` : 'đã tất toán'}</div>` : r.chuaGn ? '<span class="hist">chưa giải ngân</span>' : '—'}</td>
         <td class="num">${r.con_lai != null ? vnd(r.con_lai) : r.chuaGn ? '<span class="hist">hồ sơ chưa bấm Đã giải ngân</span>' : '<span class="m">—</span>'}${r.da_thu ? `<div class="hist">đã thu ${trieu(r.da_thu)}</div>` : ''}</td><td>${needPill(r)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Không có KUNN</td></tr>'}
-      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${hmLedger(c) ? `toàn công ty: hạn mức ${trieu(hmLedger(c))} · khả dụng ${trieu(hmLedger(c) - duNoOf(c))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet">${det(sel)}</aside></div>`;
+      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${hmLedger(c) ? `toàn công ty: hạn mức ${trieu(hmLedger(c))} · khả dụng ${trieu(hmLedger(c) - duNoOf(c))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet" data-sk="${multi.length > 1 ? 'multi' : sel ? esc(rk(sel)) : ''}">${multi.length > 1 ? bulkPanel(multi) : det(sel)}</aside></div>
+    <div class="hist" style="margin-top:6px">Mẹo: giữ <b>Ctrl</b> (Mac: ⌘) rồi bấm để chọn thêm từng KUNN, giữ <b>Shift</b> rồi bấm để chọn liền một đoạn → xóa / đánh dấu đã trả / gia hạn / đổi lãi suất / ghi chú cho nhiều KUNN cùng lúc. <b>Esc</b> để bỏ chọn.</div>`;
   $$('[data-kf]', body).forEach((b) => { b.onclick = () => { V.kf = b.dataset.kf; renderMain(); }; });
-  $$('[data-kr]', body).forEach((tr) => { tr.onclick = () => { const r = list[+tr.dataset.kr]; V.kunnSel = r.k ? r.k.id : null; V.kunnSelSo = r.so; renderMain(); }; });
+  $$('[data-kr]', body).forEach((tr) => {
+    tr.onmousedown = (e) => { if (e.shiftKey || e.ctrlKey || e.metaKey) e.preventDefault(); };   // không bôi đen chữ khi giữ Shift
+    tr.onclick = (e) => {
+      const i = +tr.dataset.kr, r = list[i];
+      if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        if (!V.kms.size && sel) V.kms.add(rk(sel));
+        if (e.shiftKey) { const a = V.kAnchor != null && V.kAnchor < list.length ? V.kAnchor : sel ? list.indexOf(sel) : i; if (!(e.ctrlKey || e.metaKey)) V.kms = new Set(); for (let j = Math.min(a, i); j <= Math.max(a, i); j++) V.kms.add(rk(list[j])); }
+        else { const k = rk(r); if (V.kms.has(k)) V.kms.delete(k); else V.kms.add(k); V.kAnchor = i; }
+      } else { V.kms = new Set(); V.kAnchor = i; }
+      V.kunnSel = r.k ? r.k.id : null; V.kunnSelSo = r.so; renderMain();
+    };
+  });
+  bindBulk(body, c, multi, rows, gone);
   $$('[data-ctab2]', body).forEach((b) => { b.onclick = () => go({ tab: b.dataset.ctab2 }); });
   const kq = $('#kq2', body);
   kq.oninput = () => { V.kq = kq.value; clearTimeout(kq._t); kq._t = setTimeout(() => { renderMain(); const n = $('#kq2'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
