@@ -285,7 +285,13 @@ a.logo{color:#fff;text-decoration:none}
 .chip{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;background:#fff}.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .note{border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px}.note.warn{background:var(--warn-bg);border:1px solid #f1d29b;color:#8a5a0c}
 .kwrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;align-items:start}@media(max-width:1100px){.kwrap{grid-template-columns:1fr}}
-.t tr.sel td{background:var(--blue-bg)}.t tr.msel td:first-child{box-shadow:inset 3px 0 0 var(--blue,#2563eb)}.kmsl{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;max-height:120px;overflow:auto}.kbg{border-top:1px solid var(--line2);padding-top:8px}.wtxt{color:#8a5a0c}
+.t tr.sel td{background:var(--blue-bg)}.t tr.msel td:first-child{box-shadow:inset 3px 0 0 var(--blue,#2563eb)}.kmsl{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;max-height:120px;overflow:auto}.kbg{border-top:1px solid var(--line2);padding-top:8px}
+.kleft{display:flex;flex-direction:column;gap:12px;min-width:0}.khm{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+.khm-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.khm-h b{color:var(--navy)}.khm-h .lnk{margin-left:auto}
+.khm-bar{height:10px;border-radius:99px;background:var(--line2);overflow:hidden}.khm-bar i{display:block;height:100%;border-radius:99px;background:var(--ok)}.khm-bar i.warn{background:var(--warn)}.khm-bar i.err{background:var(--err)}
+.khm-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.khm-g>div{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:14px;background:var(--card2)}
+.khm-g span{font-size:12px;color:var(--ink3)}.khm-g em{font-style:normal;font-weight:600;margin-left:4px}.khm-g b{font-size:18px;font-variant-numeric:tabular-nums}.khm-g small{font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.khm-g .ok b{color:var(--ok)}.khm-g .warn b{color:var(--warn)}.khm-g .err b{color:var(--err)}@media(max-width:700px){.khm-g{grid-template-columns:1fr}}.wtxt{color:#8a5a0c}
 .thuno .ttf{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.thuno .ttf .inp{width:auto}.qhl{margin-top:8px;font-size:12.5px;display:grid;gap:3px}.qhl>b{font-size:12px;color:var(--ink2)}tr.dim td{opacity:.55}
 .kdet{padding:14px 16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:80px;max-height:calc(100vh - 96px);overflow:auto}.kdet .big{font-size:17px;color:var(--navy)}
 .tl{list-style:none;display:flex;flex-direction:column;gap:9px;padding:0;margin:0}.tl li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:9px;font-size:13.5px;text-align:left}.tl li>i{display:block;width:16px;height:16px;box-sizing:border-box;border-radius:50%;border:2px solid #9aa5b1;margin-top:2px}
@@ -7505,6 +7511,19 @@ function openThuBulk(c, rows) {
   };
 }
 /** Khung bên phải khi chọn nhiều KUNN: tổng, danh sách, các thao tác làm cùng lúc. */
+/** Hạn mức tín dụng toàn công ty: hạn mức — dư nợ đang dùng — còn khả dụng, thanh tỷ lệ sử dụng. */
+function hmBox(c) {
+  const hm = hmLedger(c); if (!hm) return '';
+  const dn = duNoOf(c), kd = hm - dn, pct = Math.round((dn / hm) * 1000) / 10, v = hmVer(c);
+  const tone = kd < 0 ? 'err' : pct >= 90 ? 'warn' : 'ok';
+  const fmt = (n) => `<b title="${esc(vnd(n))}">${shortMoney(n)}</b><small>${vnd(n)}</small>`;
+  const sub = [v && v.so_hdtd ? `HĐTD ${esc(v.so_hdtd)}` : '', v && v.den_ngay ? `hiệu lực đến ${dd(v.den_ngay)}` : ''].filter(Boolean).join(' · ');
+  return `<section class="card khm"><div class="khm-h"><b>Hạn mức tín dụng · toàn công ty</b>${sub ? `<span class="hist">${sub}</span>` : ''}<a class="lnk" href="${hashOf({ cid: c.id, tab: 'info' })}">Sửa hạn mức →</a></div>
+    <div class="khm-bar" role="progressbar" aria-valuenow="${Math.min(100, pct)}" aria-valuemin="0" aria-valuemax="100" title="Đã dùng ${pct}% hạn mức"><i class="${tone}" style="width:${Math.min(100, Math.max(0, pct))}%"></i></div>
+    <div class="khm-g"><div><span>Hạn mức được cấp</span>${fmt(hm)}</div>
+      <div><span>Dư nợ đang dùng <em>${pct.toLocaleString(BK.numLoc())}%</em></span>${fmt(dn)}</div>
+      <div class="${tone}"><span>${kd < 0 ? 'Vượt hạn mức' : 'Còn khả dụng'} <em>${(Math.round((Math.abs(kd) / hm) * 1000) / 10).toLocaleString(BK.numLoc())}%</em></span>${fmt(Math.abs(kd))}</div></div></section>`;
+}
 function bulkPanel(xs) {
   const today = BK.todayISO(), del = xs.some((r) => r.del);
   const live = xs.filter((r) => !r.del && r.live && !r.chuaGn), paid = xs.filter((r) => !r.del && (r.ns || []).some((n) => n.type === 'tat_toan'));
@@ -7643,11 +7662,11 @@ function renderCoKunn(body, c) {
       <input class="inp" id="kq2" placeholder="Số KUNN, số hóa đơn…" value="${esc(V.kq || '')}" style="width:220px"></div>
     ${f[0] === 'bs' && list.some((r) => r.k && r.need && r.need.src === 'goc') ? `<div class="note">KUNN theo từng hóa đơn (nạp từ bảng kê) — nếu đã nhận đủ bản gốc từ trước: <button class="btn sm" id="kGocAll">✓ Đánh dấu đã nhận đủ cho các KUNN đang lọc</button></div>` : ''}
     ${!c.ledger ? '<div class="note warn">Chưa đọc file Excel quản lý giải ngân của công ty — dư nợ, đáo hạn, thu nợ lấy từ file đó. <button class="lnk" data-ctab2="info">Chọn file →</button></div>' : ''}
-    <div class="kwrap"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Dư nợ vay (gốc)</th><th>Bổ sung bản gốc</th></tr></thead><tbody>
+    <div class="kwrap"><div class="kleft"><section class="card tw"><table class="t click"><thead><tr><th>Số KUNN</th><th>Giải ngân</th><th>Đáo hạn</th><th class="right">Dư nợ vay (gốc)</th><th>Bổ sung bản gốc</th></tr></thead><tbody>
       ${list.map((r, i) => `<tr data-kr="${i}" class="${multi.length > 1 ? (V.kms.has(rk(r)) ? 'sel msel' : '') : r === sel ? 'sel' : ''}"><td><b>${esc(r.so)}</b>${r.soLech ? `<div class="hist wtxt" title="Số KUNN trong hồ sơ / sổ hóa đơn khác file Excel">≠ hồ sơ ghi ${esc(r.soLech)}</div>` : ''}${r.ns && r.ns.length ? ` <span title="${esc(r.ns.map((n) => NOTE_T[n.type][1] + (n.text ? ': ' + n.text : '')).join(' · '))}">${NOTE_T[r.ns[r.ns.length - 1].type][0]}</span>` : ''}${r.ls != null ? `<div class="hist">${r.lsAdj.length && r.ls !== r.ls0 ? `<s>${BK.fmtRate(r.ls0 ?? '?')}%</s> → <b>${BK.fmtRate(r.ls)}%</b>` : `${BK.fmtRate(r.ls)}%`}${r.goi ? ' · ' + esc(r.goi) : ''}</div>` : ''}</td><td>${dd(r.ngay_gn)}<div class="hist">${trieu(r.goc)}</div></td>
         <td>${r.dao_han ? `<b class="${r.live && r.dLeft != null && r.dLeft <= 15 ? 'wtxt' : ''}">${dd(r.dao_han)}</b><div class="hist">${thuHtml(r.dao_han)} · ${r.chuaGn ? 'chưa giải ngân' : r.live ? (r.dLeft >= 0 ? `còn ${r.dLeft} ngày` : `<span class="err">quá ${-r.dLeft} ngày</span>`) : r.paidOn ? `đã trả ${dd(r.paidOn)}${r.paidOn > r.dao_han ? ` · <span class="wtxt">trễ ${BK.daysBetween(r.dao_han, r.paidOn)} ngày</span>` : ' · đúng hạn'}` : 'đã tất toán'}</div>` : r.chuaGn ? '<span class="hist">chưa giải ngân</span>' : '—'}</td>
         <td class="num">${r.con_lai != null ? vnd(r.con_lai) : r.chuaGn ? '<span class="hist">hồ sơ chưa bấm Đã giải ngân</span>' : '<span class="m">—</span>'}${r.da_thu ? `<div class="hist">đã thu ${trieu(r.da_thu)}</div>` : ''}</td><td>${needPill(r)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Không có KUNN</td></tr>'}
-      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${hmLedger(c) ? `toàn công ty: hạn mức ${trieu(hmLedger(c))} · khả dụng ${trieu(hmLedger(c) - duNoOf(c))}` : ''}</td></tr></tfoot>` : ''}</table></section><aside class="card kdet" data-sk="${multi.length > 1 ? 'multi' : sel ? esc(rk(sel)) : ''}">${multi.length > 1 ? bulkPanel(multi) : det(sel)}</aside></div>
+      </tbody>${list.length ? `<tfoot><tr><td><b>Tổng · ${list.length} KUNN</b></td><td>${trieu(BK.sum(list.map((r) => r.goc)))}</td><td></td><td class="num"><b>${vnd(BK.sum(list.map((r) => r.con_lai || 0)))}</b></td><td class="hist">${f[0] === 'all' ? '' : 'các KUNN đang lọc'}</td></tr></tfoot>` : ''}</table></section>${hmBox(c)}</div><aside class="card kdet" data-sk="${multi.length > 1 ? 'multi' : sel ? esc(rk(sel)) : ''}">${multi.length > 1 ? bulkPanel(multi) : det(sel)}</aside></div>
     <div class="hist" style="margin-top:6px">Mẹo: giữ <b>Ctrl</b> (Mac: ⌘) rồi bấm để chọn thêm từng KUNN, giữ <b>Shift</b> rồi bấm để chọn liền một đoạn → xóa / đánh dấu đã trả / gia hạn / đổi lãi suất / ghi chú cho nhiều KUNN cùng lúc. <b>Esc</b> để bỏ chọn.</div>`;
   $$('[data-kf]', body).forEach((b) => { b.onclick = () => { V.kf = b.dataset.kf; renderMain(); }; });
   $$('[data-kr]', body).forEach((tr) => {
