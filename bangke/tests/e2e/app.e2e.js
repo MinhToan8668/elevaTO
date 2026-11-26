@@ -1121,13 +1121,16 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
     ['9000001(1).23', '03/07/2023', '15/12/2023', 6100000000, '-', 'Trả nợ trước hạn ngày 15/11'],
     ['9000001(4).23', '29/08/2023', '12/02/2024', 4400000000, 0, 'Trả nợ trước hạn ngày 3/1/24'],
     ['9000001(9).23', '12/09/2023', '13/03/2024', 1500000000, '-', 'KH chuyển khoản hết sau Tết'],
-    ['9000004(1).26', '14/08/2026', '12/02/2027', 12700000000, 12700000000, '']] }));
+    ['9000004(1).26', '14/08/2026', '12/02/2027', 12700000000, 12700000000, ''],
+    ['9000004(2).25', '01/07/2025', '12/08/2025', 1200000000, 1200000000, 'THU ĐÚNG HẠN'],
+    ['9000004(3).25', '05/07/2025', '30/09/2025', 3000000000, 3000000000, '2 tỷ ngày 10.8.25, 1 tỷ ngày 2.10.25']] }));
   await page.click('a.logo'); await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty Sổ Thử'); await page.click('#cfSave');
   await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
   const [fc3] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).click()]);
   await fc3.setFiles(f3);
-  await page.locator('#lgPrev', { hasText: '4 KUNN · 1 còn dư nợ · dư nợ 12,700,000,000 đ' }).waitFor();
-  assert.match(await page.locator('#lgPrev').innerText(), /Trả nợ trước hạn ngày 15\/11[\s\S]*→ Trả nợ trước hạn · 15\/11\/2023/);
+  await page.locator('#lgPrev', { hasText: '6 KUNN · 1 còn dư nợ · dư nợ 12,700,000,000 đ' }).waitFor();
+  assert.match(await page.locator('#lgPrev').innerText(), /Trả nợ trước hạn ngày 15\/11[\s\S]*→ ✓ KH đã trả hết 15\/11\/2023 · trước hạn 30 ngày/);
+  { const tx = await page.locator('#lgPrev').innerText(); assert.match(tx, /THU ĐÚNG HẠN[\s\S]*→ ✓ KH đã trả hết 12\/08\/2025 · đúng hạn/); assert.match(tx, /→ ✓ KH đã trả hết 02\/10\/2025 · trễ 2 ngày[\s\S]*Lần 1: 10\/08\/2025 · 2,000,000,000/); }
   if (SHOTS) { await page.locator('[data-pf="paid"]').click(); await page.evaluate(() => { document.getElementById('toast').innerHTML = ''; document.getElementById('lgPrev').scrollIntoView(); }); await shot(page, '11-so-ghichu'); await page.locator('[data-pf=""]').click(); }
   await page.click('#lgSave');
   await page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).filter({ hasText: '12.7 tỷ' }).waitFor();
@@ -1135,7 +1138,7 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items: [{ so: '9000001(9).23', loai: 'tat_toan', ngay_thu: '20/02/2024', so_tien: null, gia_han_den: '', tom_tat: 'Trả hết sau Tết' }] }) }] }, finishReason: 'STOP' }] }) }));
   await page.click('[data-ctab="info"]');
   await page.click('#xlAiNote');
-  await page.locator('.toast div', { hasText: 'AI đọc xong 3 ghi chú' }).waitFor();
+  await page.locator('.toast div', { hasText: 'AI đọc xong 5 ghi chú' }).waitFor();
   await page.click('[data-ctab="kunn"]'); await page.click('[data-kf="all"]');
   await page.locator('.kwrap tbody tr', { hasText: '9000001(9).23' }).filter({ hasText: 'đã trả 20/02/2024' }).waitFor();
   await page.locator('.kwrap tbody tr', { hasText: '9000001(1).23' }).filter({ hasText: 'đã trả 15/11/2023' }).waitFor();
