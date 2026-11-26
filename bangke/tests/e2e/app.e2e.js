@@ -1115,5 +1115,28 @@ test('sổ theo dõi KUNN tự lập nhiều sheet: chọn sheet của công ty,
   await fc2.setFiles(f2);
   await page.locator('.xlbox', { hasText: '3 dòng · 2 KUNN còn dư nợ' }).waitFor();
   assert.match(await page.locator('.xlbox').innerText(), /Sheet KTLA/);
+  // file kiểu sổ tự lập: SỐ DƯ ghi “-” / 0 = đã trả hết; cột ghi chú thu nợ → ngày thu; ghi chú khó → AI đọc
+  const f3 = join(dir, 'BUS.xlsx');
+  await writeFile(f3, toXlsx({ Sheet1: [['KUNN', 'NGÀY GIẢI NGÂN', 'NGÀY ĐÁO HẠN', 'SỐ TIỀN', 'SỐ DƯ', 'Ghi chú'],
+    ['7413614(1).23', '03/07/2023', '15/12/2023', 6179758772, '-', 'Trả nợ trước hạn ngày 15/11'],
+    ['7413614(4).23', '29/08/2023', '12/02/2024', 4408799671, 0, 'Trả nợ trước hạn ngày 3/1/24'],
+    ['7413614(9).23', '12/09/2023', '13/03/2024', 1551139740, '-', 'KH chuyển khoản hết sau Tết'],
+    ['1058390(1).26', '14/08/2026', '12/02/2027', 12700318170, 12700318170, '']] }));
+  await page.click('a.logo'); await page.click('#bAddCo'); await page.fill('#cfName', 'Công ty BUS Thử'); await page.click('#cfSave');
+  await page.locator('.ctabs a.act', { hasText: 'Tổng quan' }).waitFor();
+  const [fc3] = await Promise.all([page.waitForEvent('filechooser'), page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).click()]);
+  await fc3.setFiles(f3);
+  await page.locator('#lgPrev', { hasText: '4 KUNN · 1 còn dư nợ · dư nợ 12,700,318,170 đ' }).waitFor();
+  assert.match(await page.locator('#lgPrev').innerText(), /Trả nợ trước hạn ngày 15\/11[\s\S]*→ Trả nợ trước hạn · 15\/11\/2023/);
+  await page.click('#lgSave');
+  await page.locator('.tile', { hasText: 'Dư nợ vay hiện tại' }).filter({ hasText: '12.7 tỷ' }).waitFor();
+  await page.evaluate(() => localStorage.setItem('finlens_ai_settings_v1', JSON.stringify({ keys: [{ key: 'AIzaTEST-KEY-1234567890', on: true }], model: 'gemini-3.6-flash', active: 0 })));
+  await page.route(/aiplatform\.googleapis\.com|generativelanguage\.googleapis\.com/, (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items: [{ so: '7413614(9).23', loai: 'tat_toan', ngay_thu: '20/02/2024', so_tien: null, gia_han_den: '', tom_tat: 'Trả hết sau Tết' }] }) }] }, finishReason: 'STOP' }] }) }));
+  await page.click('[data-ctab="info"]');
+  await page.click('#xlAiNote');
+  await page.locator('.toast div', { hasText: 'AI đọc xong 3 ghi chú' }).waitFor();
+  await page.click('[data-ctab="kunn"]'); await page.click('[data-kf="all"]');
+  await page.locator('.kwrap tbody tr', { hasText: '7413614(9).23' }).filter({ hasText: 'đã trả 20/02/2024' }).waitFor();
+  await page.locator('.kwrap tbody tr', { hasText: '7413614(1).23' }).filter({ hasText: 'đã trả 15/11/2023' }).waitFor();
   await ctx.close();
 });

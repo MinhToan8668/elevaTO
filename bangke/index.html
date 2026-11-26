@@ -100,7 +100,7 @@ label.f{display:block;font-size:12px;color:var(--ink2);font-weight:600}label.f .
 .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .hist{font-size:11.5px;color:var(--ink3)}.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
-.muted{color:var(--ink3)}.right{text-align:right}
+.muted{color:var(--ink3)}.right{text-align:right}.t th.right,.t td.right{text-align:right}
 /* dashboard */
 .crumb{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}.crumb a{cursor:pointer;color:var(--blue)}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}.tile{text-align:left}.tile .ts{font-size:12px;color:var(--ink3)}
@@ -2876,11 +2876,11 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     for (const r of ku.slice(hi + 1)) {
       const so = r[col.so] == null ? '' : String(r[col.so]).trim();
       if (!so || /^tong/.test(fold(so))) continue;
-      const goc = num(r[col.goc]) || 0, thu = num(r[col.da_thu]) || 0;
-      const cl = col.con_lai != null ? num(r[col.con_lai]) : null;
-      const k = { so, hm: String(r[col.hm] || '').trim(), ngay_gn: iso(r[col.ngay_gn]), dao_han: iso(r[col.dao_han]), so_ngay: num(r[col.so_ngay]), ls: num(r[col.ls]), goi: String(r[col.goi] || '').trim(), goc, da_thu: thu, ngay_thu: iso(r[col.ngay_thu]), con_lai: cl != null && cl !== 0 ? cl : Math.max(0, goc - thu), ben: String(r[col.ben] || '').trim(), ct: String(r[col.ct] || '').trim(), note: String(r[col.note] || '').trim() };
+      const goc = num(r[col.goc]) || 0, thu = numZ(r[col.da_thu]) || 0;
+      const cl = col.con_lai != null ? numZ(r[col.con_lai]) : null;
+      const k = { so, hm: String(r[col.hm] || '').trim(), ngay_gn: iso(r[col.ngay_gn]), dao_han: iso(r[col.dao_han]), so_ngay: num(r[col.so_ngay]), ls: num(r[col.ls]), goi: String(r[col.goi] || '').trim(), goc, da_thu: thu, ngay_thu: iso(r[col.ngay_thu]), con_lai: cl != null && (cl !== 0 || typeof r[col.con_lai] === 'string' || thu) ? Math.max(0, cl) : Math.max(0, goc - thu), ben: String(r[col.ben] || '').trim(), ct: String(r[col.ct] || '').trim(), note: String(r[col.note] || '').trim() };
       if (k.ls != null && k.ls < 1) k.ls = +(k.ls * 100).toFixed(4);
-      kunns.push(k);
+      kunns.push(applyThuNote(k));
     }
     const profile = {}, hmList = [];
     const dm = g('danh_muc');
@@ -3044,6 +3044,33 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     return { hr, cols, rows: data.length, why };
   }
   /** Đọc sổ KUNN theo cấu hình cột (cfg.cols: chỉ số cột). Hàng tiêu đề nhóm (vd "HMTD 2025") → hạn mức của các dòng dưới. */
+  /** Ô số kiểu kế toán: “-” nghĩa là 0. */
+  const numZ = (v) => (typeof v === 'string' && /^\s*[-–—]\s*$/.test(v) ? 0 : num(v));
+  const THU_KIND = { tat_toan: 'Tất toán / trả hết', truoc_han: 'Trả nợ trước hạn', gia_han: 'Gia hạn', mot_phan: 'Trả 1 phần', qua_han: 'Quá hạn', thu: 'Thu nợ' };
+  /** Đọc ghi chú lịch thu / trả nợ: “Trả nợ trước hạn ngày 15/11”, “thu nợ trước hạn ngày 26/1/24, toàn bộ ngày 31/1/24”…
+   *  → { kind, dates:[ISO], last } — năm thiếu thì suy theo ngày giải ngân (không vượt hôm nay). */
+  function thuFromNote(note, ref, today = BK.todayISO()) {
+    const t = String(note == null ? '' : note).trim(); if (!t) return null;
+    const f = fold(t), y0 = ref ? +String(ref).slice(0, 4) : +today.slice(0, 4), p2 = (n) => String(n).padStart(2, '0');
+    const ds = [];
+    for (const m of t.matchAll(/(\d{1,2})\s*[\/-]\s*(\d{1,2})(?:\s*[\/-]\s*(\d{2,4}))?/g)) {
+      const d = +m[1], mo = +m[2]; if (d < 1 || d > 31 || mo < 1 || mo > 12) continue;
+      let y = m[3] ? +m[3] : null; if (y != null && y < 100) y += 2000;
+      if (y == null) { y = y0; if (ref && `${y}-${p2(mo)}-${p2(d)}` < ref) y++; if (`${y}-${p2(mo)}-${p2(d)}` > today) y--; }
+      ds.push(`${y}-${p2(mo)}-${p2(d)}`);
+    }
+    const kind = /tat toan|toan bo|tra het|thu het|thu du|tra du/.test(f) ? 'tat_toan' : /truoc han/.test(f) ? 'truoc_han' : /gia han/.test(f) ? 'gia_han' : /\b(1|mot) phan\b/.test(f) ? 'mot_phan' : /qua han|no xau/.test(f) ? 'qua_han' : /\b(thu|tra)\b/.test(f) ? 'thu' : '';
+    if (!ds.length && !kind) return null;
+    return { kind, label: THU_KIND[kind] || 'Ghi chú', dates: ds, last: ds.length ? ds.slice().sort().pop() : '', text: t };
+  }
+  /** Ghi chú thu nợ → ngày thu (khi cột ngày thu trống và KUNN đã hết dư nợ, hoặc ghi chú nói trả hết). */
+  function applyThuNote(k) {
+    const t = thuFromNote(k.note, k.ngay_gn || k.dao_han);
+    if (!t) return k;
+    k.thu_note = t;
+    if (!k.ngay_thu && t.last && (!(k.con_lai > 0.5) || t.kind === 'tat_toan')) { k.ngay_thu = t.last; k.thu_src = 'ghi chú'; }
+    return k;
+  }
   function readLedgerSheet(grid, cfg, opts = {}) {
     const c = cfg.cols || {};
     if (c.so == null) throw new Error('Chưa chọn cột Số KUNN');
@@ -3058,11 +3085,11 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
         continue;
       }
       const g = (k) => (c[k] == null ? null : row[c[k]]);
-      const goc = num(g('goc')) || 0, thu = num(g('da_thu')) || 0;
-      const clRaw = g('con_lai'), cl = clRaw === '' || clRaw == null ? null : num(clRaw);
+      const goc = num(g('goc')) || 0, thu = numZ(g('da_thu')) || 0;
+      const clRaw = g('con_lai'), cl = clRaw === '' || clRaw == null ? null : numZ(clRaw);
       let ls = num(g('ls'));
       if (ls != null && ls < 1) ls = +(ls * 100).toFixed(4);
-      kunns.push({ so, hm, ngay_gn: iso(g('ngay_gn')), dao_han: iso(g('dao_han')), so_ngay: null, ls, goi: String(g('goi') || '').trim(), goc, da_thu: thu, ngay_thu: iso(g('ngay_thu')), con_lai: cl != null ? Math.max(0, cl) : Math.max(0, goc - thu), ben: String(g('ben') || '').trim(), ct: '', note: String(g('note') || '').trim() });
+      kunns.push(applyThuNote({ so, hm, ngay_gn: iso(g('ngay_gn')), dao_han: iso(g('dao_han')), so_ngay: null, ls, goi: String(g('goi') || '').trim(), goc, da_thu: thu, ngay_thu: iso(g('ngay_thu')), con_lai: cl != null ? Math.max(0, cl) : Math.max(0, goc - thu), ben: String(g('ben') || '').trim(), ct: '', note: String(g('note') || '').trim() }));
     }
     if (!kunns.length) throw new Error('Không đọc được dòng KUNN nào trong sheet này — kiểm tra cột Số KUNN');
     const live = kunns.filter((k) => k.con_lai > 0.5);
@@ -3110,7 +3137,7 @@ Trả JSON: {"docs":[{"loai":"hoa_don","trang":"1-2","conf":0.95,"f":{"so":"830"
     return out;
   }
 
-  return { cicInfo, cicLabel, ledgerLabels, relocateLedger, LFIELDS, ledgerGuess, readLedgerSheet, pickLedgerSheet, isKunn, hmAt, goiMerge, goiAt, goiActive, goiUsed, lsAt, lsApply, creditAlerts, aiMdSig, TYPES, GROUP_ORDER, promptRead, normDocs, MILESTONES, milestones, stageOf, checks, counts, readLedger, duNoTruoc, tasks, packageNames, sameName, fmtN };
+  return { thuFromNote, applyThuNote, THU_KIND, cicInfo, cicLabel, ledgerLabels, relocateLedger, LFIELDS, ledgerGuess, readLedgerSheet, pickLedgerSheet, isKunn, hmAt, goiMerge, goiAt, goiActive, goiUsed, lsAt, lsApply, creditAlerts, aiMdSig, TYPES, GROUP_ORDER, promptRead, normDocs, MILESTONES, milestones, stageOf, checks, counts, readLedger, duNoTruoc, tasks, packageNames, sameName, fmtN };
 })();
 </script>
 <script id="bk-app">
@@ -3437,9 +3464,10 @@ function mergeCustomer(a, b) {
   m.goiLs = byId(a.goiLs, b.goiLs, (g) => BK.fold(g.ma));
   m.kunnDel = keyed(a.kunnDel, b.kunnDel, (x, y) => ((x.at || 0) >= (y.at || 0) ? x : y));
   m.qhSkip = keyed(a.qhSkip, b.qhSkip, (x, y) => ((x.at || 0) >= (y.at || 0) ? x : y));
+  m.thuAI = keyed(a.thuAI, b.thuAI, (x, y) => ((x.at || 0) >= (y.at || 0) ? x : y));
   m.dismiss = { ...(b.dismiss || {}), ...(a.dismiss || {}) };
   if (a.hs || b.hs) m.hs = { ...(a.hs || {}), tk: { ...((b.hs || {}).tk || {}), ...((a.hs || {}).tk || {}) } };
-  for (const k of ['kunnNotes', 'lsAdj', 'kunnDel', 'dismiss', 'qhSkip']) if (!Object.keys(m[k] || {}).length) delete m[k];
+  for (const k of ['kunnNotes', 'lsAdj', 'kunnDel', 'dismiss', 'qhSkip', 'thuAI']) if (!Object.keys(m[k] || {}).length) delete m[k];
   for (const k of ['hmHist', 'goiLs']) if (!(m[k] || []).length) delete m[k];
   return m;
 }
@@ -7128,6 +7156,35 @@ function duNoOf(c, exceptSo, hs) {
 const isOwn = (r, hs) => !!(hs && r.k && ((hs.id && r.k.hsId === hs.id) || (hs.kid && r.k.id === hs.kid)));
 /** Có số liệu dư nợ đáng tin (file Excel, hoặc ít nhất một KUNN khác trong tool đang có dư nợ) — không thì để trống, không ghi 0. */
 const duNoKnown = (c, exceptSo, hs) => { if (!c) return false; if (c.ledger) return true; const ex = exceptSo && !/chưa số/i.test(exceptSo) ? kkey(exceptSo) : ''; return kunnRowsOf(c).some((r) => r.live && r.con_lai != null && !(ex && kkey(r.so) === ex) && !isOwn(r, hs)); };
+/** Kết quả AI đọc ghi chú thu nợ (c.thuAI[kkey] = {note, loai, ngay_thu, so_tien, gia_han_den, tom_tat}) áp lên dòng file Excel nếu ghi chú chưa đổi. */
+function thuAiApply(c, x) {
+  const a = (c.thuAI || {})[kkey(x.so)];
+  if (!a || a.note !== String(x.note || '').trim()) return x;
+  const iso = BK.toISO(a.ngay_thu) || '';
+  return { ...x, ngay_thu: x.ngay_thu && x.thu_src !== 'ghi chú' ? x.ngay_thu : iso || x.ngay_thu, thu_src: iso ? 'AI đọc ghi chú' : x.thu_src, thu_note: { kind: a.loai, label: HSC.THU_KIND[a.loai] || a.tom_tat || 'Ghi chú', dates: iso ? [iso] : [], last: iso, text: x.note, ai: a.tom_tat || '' } };
+}
+async function aiThuNotes(c) {
+  if (!aiKeys().length) return openSettings('ai');
+  const L = c.ledger; const xs = (L ? L.kunns : []).filter((x) => String(x.note || '').trim());
+  if (!xs.length) return toast('File Excel không có ghi chú để đọc');
+  setBusy('thuai:' + c.id, true); toast(`AI đang đọc ${xs.length} ghi chú thu nợ…`, '', 6000);
+  try {
+    const out = { ...(cust(c.id).thuAI || {}) };
+    for (let i = 0; i < xs.length; i += 120) {
+      const part = xs.slice(i, i + 120);
+      const r = await aiJson(`Bạn là chuyên viên tín dụng ngân hàng Việt Nam. Mỗi dòng là một khế ước nhận nợ (KUNN) kèm ghi chú tay của cán bộ về thu / trả nợ của khách. Đọc hiểu từng ghi chú và bóc tách:
+- loai: "tat_toan" (đã trả hết), "truoc_han" (trả nợ trước hạn), "mot_phan" (trả 1 phần), "gia_han" (gia hạn), "qua_han" (quá hạn / đang xử lý), "thu" (thu nợ đúng hạn), "khac".
+- ngay_thu: ngày KH trả hết hoặc ngày thu gần nhất, dạng dd/mm/yyyy; ghi chú thiếu năm thì suy theo ngày giải ngân (ngày thu sau ngày giải ngân, không sau hôm nay ${dd(BK.todayISO())}); không có thì "".
+- so_tien: số tiền thu nếu ghi chú có ghi (số nguyên đồng), không có thì null. gia_han_den: ngày gia hạn đến (dd/mm/yyyy) nếu có. tom_tat: tóm tắt ≤ 12 chữ.
+Chỉ dựa vào ghi chú, không tự đoán. Trả JSON {"items":[{"so":"…","loai":"…","ngay_thu":"…","so_tien":null,"gia_han_den":"","tom_tat":"…"}]}
+DỮ LIỆU: ${JSON.stringify(part.map((x) => ({ so: x.so, ngay_gn: x.ngay_gn, dao_han: x.dao_han, goc: x.goc, con_lai: x.con_lai, ghi_chu: String(x.note).slice(0, 300) })))}`, { thinking: 'low', maxTokens: 32768 });
+      for (const it of (r && r.items) || []) { const x = part.find((y) => kkey(y.so) === kkey(it.so)); if (!x) continue; out[kkey(x.so)] = { note: String(x.note).trim(), loai: String(it.loai || 'khac'), ngay_thu: String(it.ngay_thu || ''), so_tien: it.so_tien ?? null, gia_han_den: String(it.gia_han_den || ''), tom_tat: String(it.tom_tat || ''), at: Date.now() }; }
+    }
+    const c0 = cust(c.id); S.store.labelNext('AI đọc ghi chú thu nợ'); await S.store.putCustomer({ ...c0, thuAI: out, ...meta() });
+    const n = xs.filter((x) => out[kkey(x.so)] && out[kkey(x.so)].ngay_thu).length;
+    toast(`AI đọc xong ${xs.length} ghi chú — ${n} KUNN có ngày thu nợ (dùng cho lịch sử quá hạn, đã trả đúng / trễ hạn)`, 'ok', 8000);
+  } finally { setBusy('thuai:' + c.id, false); }
+}
 function kunnRowsOf(c) {
   const L = c.ledger, tool = dedupeTool(S.store.kunnsOf(c.id)), hos = S.store.hosoOf(c.id), today = BK.todayISO();
   const byKey = new Map(tool.map((k) => [kkey(k.so_kunn), k]));
@@ -7136,7 +7193,8 @@ function kunnRowsOf(c) {
   const hid = c.kunnDel || {};
   const core = (so) => kkey(String(so || '').replace(/\.\s*\d{2,4}\s*$/, ''));
   const exact = new Set((L ? L.kunns : []).map((x) => kkey(x.so)));
-  for (const x of L ? L.kunns : []) {
+  for (const x0 of L ? L.kunns : []) {
+    const x = thuAiApply(c, x0);
     // KUNN trong hồ sơ ghi lệch đuôi năm so với file Excel (vd …(23).27 / …(23).26), cùng ngày GN → coi là một
     let k = byKey.get(kkey(x.so));
     if (!k) k = tool.find((t) => !seen.has(t.id) && !exact.has(kkey(t.so_kunn)) && core(t.so_kunn) === core(x.so) && t.ngay_gn === x.ngay_gn) || null;
@@ -7309,7 +7367,8 @@ function renderCoKunn(body, c) {
           return `<details class="gocd" data-gocd="${k.id}" ${open ? 'open' : ''}><summary><b>Bản gốc từng chứng từ</b> <span class="${nDa === n ? 'o' : 'wtxt'}">đã nhận ${nDa}/${n}</span>${big && !open ? ' <span class="hist">— bấm để mở danh sách</span>' : ''}</summary>
             ${big ? `<div class="gocf"><input class="inp" data-gocq placeholder="Tìm số HĐ, NCC…" aria-label="Tìm chứng từ"><select class="inp" data-gocs aria-label="Lọc"><option value="">Tất cả (${n})</option><option value="chua">Chưa nhận (${n - nDa})</option><option value="da">Đã nhận (${nDa})</option></select></div>` : ''}
             <div class="gocls">${k.lines.map((l) => `<label data-gst="${l.goc === 'da_nhan' ? 'da' : 'chua'}" data-gtx="${esc(BK.fold(`${l.ncc || ''} ${l.so_hd || ''} ${l.thieu || ''}`))}"><input type="checkbox" data-gk="${k.id}|${l.id}" ${l.goc === 'da_nhan' ? 'checked' : ''}> <span>${esc(l.ncc || '(không tên NCC)')} · HĐ ${esc(l.so_hd || '?')}${l.thieu ? ` <em>— ${esc(l.thieu)}</em>` : ''}</span></label>`).join('')}<div class="hist gocnone" hidden>Không có chứng từ khớp</div></div></details>`; })()}</div>` : '<div class="hist">KUNN này chưa có trong sổ hóa đơn của tool (chỉ có trong file Excel).</div>'}
-      <div class="hist">${r.x ? `Thu nợ (theo file Excel): ${r.da_thu ? vnd(r.da_thu) + (r.x.ngay_thu ? ' ngày ' + dd(r.x.ngay_thu) : '') : 'chưa thu'} · gốc còn lại ${vnd(r.con_lai)}` : r.chuaSo ? '! Chưa có dòng trong sổ KHE_UOC của file Excel' : ''}</div>
+      <div class="hist">${r.x ? `Thu nợ (theo file Excel): ${r.da_thu ? vnd(r.da_thu) : !(r.x.con_lai > 0.5) ? 'đã hết dư nợ' : 'chưa thu'}${r.x.ngay_thu ? ' ngày ' + dd(r.x.ngay_thu) + (r.x.thu_src ? ` (${esc(r.x.thu_src)})` : '') : ''} · gốc còn lại ${vnd(r.con_lai)}` : r.chuaSo ? '! Chưa có dòng trong sổ KHE_UOC của file Excel' : ''}</div>
+      ${r.x && r.x.note ? `<div class="hist">Ghi chú file Excel: <i>${esc(r.x.note)}</i>${r.x.thu_note ? ` <span class="o">→ ${esc(r.x.thu_note.label)}${r.x.thu_note.dates.length ? ' · ' + r.x.thu_note.dates.map(dd).join(', ') : ''}</span>` : ''}</div>` : ''}
       ${(() => { if (r.chuaGn) return ''; const eps = qhEpisodes(c, r); const today = BK.todayISO();
         const head = r.live ? `<div class="hist">${r.dLeft != null && r.dLeft < 0 ? `<span class="err">Quá đáo hạn ${-r.dLeft} ngày.</span> KH đã trả mà chưa đánh dấu thì ghi ngày trả dưới đây — trả đúng hạn sẽ không tính quá hạn.` : 'KH trả hết thì ghi ngày trả để tất toán.'}</div>
           <div class="ttf">${r.dao_han && r.dao_han <= today ? `<button class="btn sm pri" data-tt="due" title="Quên đánh dấu — KH trả đúng ngày đáo hạn">✓ Đã trả đúng hạn (${dd(r.dao_han)})</button>` : ''}<input type="date" class="inp" id="ttD" value="${today}" max="${today}" title="Ngày KH trả thực tế"><button class="btn sm" data-tt="ngay">✓ KH đã trả hết ngày này</button></div>`
@@ -7615,7 +7674,7 @@ function renderCoInfo(body, c) {
   body.innerHTML = `<div class="infog"><div class="infol">
     <section class="card panel"><header><h3>Dư nợ — đọc từ file Excel quản lý giải ngân</h3>${L ? `<span class="pill p-ok">✓ Đọc lúc ${new Date(L.at).toLocaleString('vi-VN')}</span>` : ''}</header>
       <div class="xlbox"><div><b>${L ? esc(L.file || 'file Excel') : 'Chưa chọn file'}</b><div class="hist">${L ? `Sheet ${esc(L.sheet || 'KHE_UOC')} · ${L.kunns.length} dòng · ${L.n_live} KUNN còn dư nợ${L.ubg.length ? ` · ${L.ubg.length} gói UBG` : ''}` : 'File Excel bạn đang theo dõi KUNN — file mẫu QUẢN LÝ GIẢI NGÂN hoặc file tự lập nhiều sheet (mỗi công ty một sheet): tool gợi ý sheet & cột, bạn xác nhận một lần. Tool chỉ ĐỌC file.'}</div></div>
-        ${L ? '<button class="btn sm" id="xlRe">↻ Đọc lại file</button>' : ''}${L && cust(c.id).ledgerCfg ? '<button class="btn sm" id="xlCfg">Đổi sheet / cột</button>' : ''}<button class="btn sm ${L ? '' : 'pri'}" id="xlPick">${L ? 'Chọn file khác' : '📂 Chọn file Excel'}</button></div>
+        ${L ? '<button class="btn sm" id="xlRe">↻ Đọc lại file</button>' : ''}${L && L.kunns.some((x) => String(x.note || '').trim()) ? `<button class="btn sm" id="xlAiNote" title="AI đọc hiểu cột ghi chú (lịch thu / trả nợ, gia hạn…) → ngày thu nợ, loại thu">🤖 AI đọc ghi chú thu nợ${Object.keys(cust(c.id).thuAI || {}).length ? ' (đọc lại)' : ''}</button>` : ''}${L && cust(c.id).ledgerCfg ? '<button class="btn sm" id="xlCfg">Đổi sheet / cột</button>' : ''}<button class="btn sm ${L ? '' : 'pri'}" id="xlPick">${L ? 'Chọn file khác' : '📂 Chọn file Excel'}</button></div>
       ${L ? `<div class="tiles t4">${tile('Dư nợ vay (gốc)', shortMoney(duNoOf(c)), `${kunnRowsOf(c).filter((r) => r.live).length} KUNN đang vay`)}${tile('Hạn mức', shortMoney(hmLedger(c)), hmVer(c) ? `theo ${esc(hmVer(c).so_hdtd || 'hạn mức đang áp dụng')}${(hmVer(c).lines || []).length ? ` · ${hmVer(c).lines.length} hạn mức con` : ''}` : L.hmList.map((h) => `${h.ma}: ${shortMoney(h.han_muc)}`).join(' · '))}${(() => { const hm = hmLedger(c), dnx = duNoOf(c), kd = hm ? hm - dnx : null; return tile('Còn khả dụng', kd != null ? shortMoney(kd) : '—', kd != null && kd < 0 ? (hm * 50 < dnx ? '! Hạn mức nhỏ hơn dư nợ rất nhiều — có thể nhập sai đơn vị (vd gõ “300 tỷ”)' : '! Dư nợ vượt hạn mức') : '', { tone: kd != null && kd < 0 ? 'crit' : '' }); })()}${(() => { const n = kunnsNotInXl(c); return tile('Chưa có trong file Excel', String(n.length), n.length ? 'KUNN thêm trong tool — sao chép / tải để ghi vào file' : 'file Excel đã đủ KUNN', { tone: n.length ? '' : 'good' }); })()}</div>
       ${(() => { const n = kunnsNotInXl(c); return n.length ? `<div class="note xlout"><div><b>${n.length} KUNN thêm trong tool chưa có trong file Excel:</b> ${n.slice(0, 8).map((k) => esc(k.so_kunn)).join(', ')}${n.length > 8 ? '…' : ''}<div class="hist">Dòng xuất ra theo đúng thứ tự cột của sheet ${esc((cust(c.id).ledgerCfg || {}).sheet || 'KHE_UOC')} — dán vào cuối bảng trong file Excel, lần đọc lại sau tool tự ghép.</div></div><button class="btn sm pri" id="xlCopy">📋 Sao chép để dán vào Excel</button><button class="btn sm" id="xlDl">⬇ Tải file Excel</button></div>` : ''; })()}` : ''}
     </section>
@@ -7637,6 +7696,7 @@ function renderCoInfo(body, c) {
   if ($('#xlCopy', body)) $('#xlCopy', body).onclick = async () => { const { rows } = xlOutRows(c); const tsv = rows.map((r) => r.map((v) => String(v ?? '').replace(/[\t\n]/g, ' ')).join('\t')).join('\n'); try { await navigator.clipboard.writeText(tsv); toast(`Đã sao chép ${rows.length} dòng — mở file Excel, chọn ô đầu dòng trống cuối bảng rồi dán (Ctrl+V)`, 'ok', 8000); } catch (e) { toast('Trình duyệt chặn sao chép — dùng nút Tải file Excel', 'err'); } };
   if ($('#xlDl', body)) $('#xlDl', body).onclick = () => { const { head, rows } = xlOutRows(c); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([head, ...rows]); XLSX.utils.book_append_sheet(wb, ws, 'KUNN them'); download(wb, `KUNN_chua_co_trong_Excel_${slug((c.hs || {}).ten_kh_ngan || c.name)}_${BK.todayISO().split('-').reverse().join('')}.xlsx`); };
   if ($('#xlRe', body)) $('#xlRe', body).onclick = () => pickLedger(c, false);
+  if ($('#xlAiNote', body)) $('#xlAiNote', body).onclick = () => aiThuNotes(c).catch((e) => toast(errMsg(e), 'err', 8000));
   if ($('#xlCfg', body)) $('#xlCfg', body).onclick = async () => { const h = await S.store.getMeta('ledgerHandle:' + c.id); let f = null; try { if (h) f = await h.getFile(); } catch (e) { /* hỏi lại */ } if (!f) return pickLedger(c, true); openLedgerDialog(c, await readWorkbook(f), f.name, cust(c.id).ledgerCfg); };
   $('#bEditC', body).onclick = () => editCustomer(cust(c.id));
   $('#pfSave', body).onclick = async () => {
@@ -7744,8 +7804,8 @@ function openLedgerDialog(c, grids, fname, cfg0) {
     let L = null, err = '';
     try { L = HSC.readLedgerSheet(g, st, { hm: (DOCX.num($('#lgHm', m).value) || 0) * 1e6 || null }); } catch (e) { err = errMsg(e); }
     $('#lgPrev', m).innerHTML = err ? `<div class="note warn">${esc(err)}</div>` : `<div class="note ok" style="margin-top:8px">${L.kunns.length} KUNN · <b>${L.n_live} còn dư nợ · dư nợ ${vnd(L.du_no)}</b>${L.hm ? ` · khả dụng ${vnd(L.hm - L.du_no)}` : ''}</div>
-      <div class="tw" style="max-height:36vh"><table class="t"><thead><tr><th>Hạn mức</th><th>Số KUNN</th><th>Ngày GN</th><th>Đáo hạn</th><th>LS</th><th class="right">Số tiền</th><th class="right">Đã thu</th><th class="right">Dư nợ</th></tr></thead><tbody>
-      ${L.kunns.slice(-40).map((k) => `<tr class="${k.con_lai > 0.5 ? '' : 'no'}"><td class="hist">${esc(k.hm)}</td><td><b>${esc(k.so)}</b></td><td>${dd(k.ngay_gn)}</td><td>${dd(k.dao_han)}</td><td>${k.ls != null ? BK.fmtRate(k.ls) + '%' : ''}</td><td class="num">${money(k.goc)}</td><td class="num">${k.da_thu ? money(k.da_thu) : ''}</td><td class="num"><b>${k.con_lai ? money(k.con_lai) : '0'}</b></td></tr>`).join('')}</tbody></table></div><div class="hist">Hiện 40 dòng cuối · dòng mờ = đã trả hết</div>`;
+      <div class="tw" style="max-height:36vh;overflow:auto"><table class="t" style="min-width:1150px"><thead><tr><th>Hạn mức</th><th>Số KUNN</th><th>Ngày GN</th><th>Đáo hạn</th><th>LS</th><th class="right">Số tiền</th><th class="right">Đã thu</th><th class="right">Dư nợ</th><th>Ngày thu</th><th>Ghi chú → tool hiểu</th></tr></thead><tbody>
+      ${L.kunns.slice(-40).map((k) => `<tr class="${k.con_lai > 0.5 ? '' : 'no'}"><td class="hist">${esc(k.hm)}</td><td><b>${esc(k.so)}</b></td><td>${dd(k.ngay_gn)}</td><td>${dd(k.dao_han)}</td><td>${k.ls != null ? BK.fmtRate(k.ls) + '%' : ''}</td><td class="num">${money(k.goc)}</td><td class="num">${k.da_thu ? money(k.da_thu) : ''}</td><td class="num"><b>${k.con_lai ? money(k.con_lai) : '0'}</b></td><td>${k.ngay_thu ? dd(k.ngay_thu) : ''}${k.thu_src ? '<div class="hist">từ ghi chú</div>' : ''}</td><td class="hist" style="min-width:220px;max-width:340px">${k.note ? `${esc(k.note)}${k.thu_note ? `<div class="o">→ ${esc(k.thu_note.label)}${k.thu_note.dates.length ? ' · ' + k.thu_note.dates.map(dd).join(', ') : ''}</div>` : ''}` : ''}</td></tr>`).join('')}</tbody></table></div><div class="hist">Hiện 40 dòng cuối · dòng mờ = đã trả hết</div>`;
     return L;
   };
   draw();

@@ -349,3 +349,18 @@ test('CIC đặt tên rõ: mẫu (đọc từ báo cáo hoặc tên file), đố
   const hs = { files: [{ id: 'fa', name: 'x.pdf' }, { id: 'fb', name: 'CIC_R20_NguyenVanAn.pdf' }], docs: [a, b] };
   assert.deepEqual(HSC.packageNames(hs, hs.files).map((x) => x.name), ['09_CIC_S10A_TAP_DOAN_KIM_TIN.pdf', '09_CIC_R20_NGUYEN_VAN_AN.pdf']);
 });
+
+test('sổ KUNN tự lập: số dư “-” là 0; ghi chú thu nợ → loại + ngày thu (năm thiếu suy theo ngày GN)', () => {
+  const t1 = HSC.thuFromNote('Trả nợ trước hạn ngày 15/11', '2023-08-10', '2026-11-26');
+  assert.equal(t1.kind, 'truoc_han'); assert.deepEqual(t1.dates, ['2023-11-15']);
+  const t2 = HSC.thuFromNote('thu nợ trước hạn ngày 26/1/24, toàn bộ ngày 31/1/2024', '2023-10-01', '2026-11-26');
+  assert.equal(t2.kind, 'tat_toan'); assert.equal(t2.last, '2024-01-31');
+  assert.equal(HSC.thuFromNote('KUNN 1050807(23).26 · HĐ 01/2026', '2026-01-01'), null, 'không nhầm số KUNN / số HĐ là ngày');
+  const grid = [['SỐ KUNN', 'NGÀY GN', 'TIỀN', 'SỐ DƯ', 'Ghi chú'],
+    ['1078429(1).23', '10/08/2023', 6179758772, '-', 'Trả nợ trước hạn ngày 15/11'],
+    ['1078429(2).23', '12/10/2023', 4408799671, 0, 'Trả nợ trước hạn ngày 3/1/24'],
+    ['1078429(3).23', '20/10/2023', 5000000000, 2000000000, '']];
+  const L = HSC.readLedgerSheet(grid, { hr: 0, cols: { so: 0, ngay_gn: 1, goc: 2, con_lai: 3, note: 4 } });
+  assert.deepEqual(L.kunns.map((k) => [k.con_lai, k.ngay_thu || '']), [[0, '2023-11-15'], [0, '2024-01-03'], [2000000000, '']]);
+  assert.equal(L.n_live, 1); assert.equal(L.du_no, 2000000000);
+});
